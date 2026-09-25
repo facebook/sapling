@@ -841,6 +841,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool shouldInvalidateDirectory,
       bool propagateErrors,
       bool hadConflicts,
+      bool localOnlyRemains,
       std::vector<folly::Try<CheckoutActionResult>>& actionResults);
 
   // Synchronous helpers for checkoutUpdateEntry. The caller must hold the
@@ -1319,6 +1320,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified,
       bool& hadConflicts,
+      bool& localOnlyRemains,
       bool reportLocalOnlyAsConflicts,
       bool removeLocalOnly);
 

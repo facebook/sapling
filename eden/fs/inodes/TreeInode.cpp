@@ -4418,12 +4418,14 @@ struct TreeInode::CheckoutSetup {
   bool shouldInvalidateDirectory{false};
   bool propagateErrors{false};
   bool hadConflicts{false};
+  bool localOnlyRemains{false};
 };
 
 struct TreeInode::CheckoutFinalizeState {
   bool shouldInvalidateDirectory{false};
   size_t numErrors{0};
   bool hadConflicts{false};
+  bool localOnlyRemains{false};
 };
 
 TreeInode::CheckoutSetup TreeInode::beginCheckout(
@@ -4464,6 +4466,7 @@ TreeInode::CheckoutSetup TreeInode::beginCheckout(
       pendingLoads,
       setup.shouldInvalidateDirectory,
       setup.hadConflicts,
+      setup.localOnlyRemains,
       reportLocalOnlyAsConflicts,
       removeLocalOnly);
 
@@ -4482,16 +4485,19 @@ TreeInode::processCheckoutActionResults(
     bool shouldInvalidateDirectory,
     bool propagateErrors,
     bool hadConflicts,
+    bool localOnlyRemains,
     std::vector<folly::Try<CheckoutActionResult>>& actionResults) {
   CheckoutFinalizeState state;
   state.shouldInvalidateDirectory = shouldInvalidateDirectory;
   state.hadConflicts = hadConflicts;
+  state.localOnlyRemains = localOnlyRemains;
 
   // Record any errors that occurred
   for (size_t n = 0; n < actionResults.size(); ++n) {
     auto& result = actionResults[n];
     if (!result.hasException()) {
       state.hadConflicts |= result.value().hadConflicts;
+      state.localOnlyRemains |= result.value().localOnlyRemains;
       state.shouldInvalidateDirectory |=
           (result.value().invalidationRequired == InvalidationRequired::Yes);
       continue;
@@ -4547,7 +4553,8 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
            actions = std::move(setup.actions),
            shouldInvalidateDirectory = setup.shouldInvalidateDirectory,
            propagateErrors = setup.propagateErrors,
-           hadConflicts = setup.hadConflicts](
+           hadConflicts = setup.hadConflicts,
+           localOnlyRemains = setup.localOnlyRemains](
               vector<folly::Try<CheckoutActionResult>> actionResults) mutable
               -> ImmediateFuture<CheckoutSubtreeResult> {
             auto finalizeStateTry = self->processCheckoutActionResults(
@@ -4556,6 +4563,7 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
                 shouldInvalidateDirectory,
                 propagateErrors,
                 hadConflicts,
+                localOnlyRemains,
                 actionResults);
             if (finalizeStateTry.hasException()) {
               return makeImmediateFuture<CheckoutSubtreeResult>(
@@ -4596,7 +4604,9 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
                             ctx,
                             toTree = std::move(toTree),
                             numErrors = finalizeState.numErrors,
-                            hadConflicts = finalizeState.hadConflicts](auto&&) {
+                            hadConflicts = finalizeState.hadConflicts,
+                            localOnlyRemains =
+                                finalizeState.localOnlyRemains](auto&&) {
                   // Update our state in the overlay
                   self->saveOverlayPostCheckout(ctx, toTree.get());
 
@@ -4605,7 +4615,7 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
                       "checkout: finished update of {}: {} errors",
                       self->getLogPath(),
                       numErrors);
-                  return CheckoutSubtreeResult{hadConflicts};
+                  return CheckoutSubtreeResult{hadConflicts, localOnlyRemains};
                 });
           })
       .ensure([ctx] { ctx->increaseCheckoutCounter(1); });
@@ -4654,6 +4664,7 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
       setup.shouldInvalidateDirectory,
       setup.propagateErrors,
       setup.hadConflicts,
+      setup.localOnlyRemains,
       actionResults);
   if (finalizeStateTry.hasException()) {
     finalizeStateTry.exception().throw_exception();
@@ -4685,7 +4696,8 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
       self->getLogPath(),
       finalizeState.numErrors);
 
-  co_return CheckoutSubtreeResult{finalizeState.hadConflicts};
+  co_return CheckoutSubtreeResult{
+      finalizeState.hadConflicts, finalizeState.localOnlyRemains};
 }
 
 bool TreeInode::canShortCircuitCheckout(
@@ -4755,6 +4767,7 @@ void TreeInode::computeCheckoutActions(
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified,
     bool& hadConflicts,
+    bool& localOnlyRemains,
     bool reportLocalOnlyAsConflicts,
     bool removeLocalOnly) {
   auto computeActionsSpan = ctx->createSpan("computeCheckoutActions");
@@ -4890,7 +4903,11 @@ void TreeInode::computeCheckoutActions(
   };
 
   diffLoop(contents->entries);
-  if (reportLocalOnlyAsConflicts || removeLocalOnly) {
+  // A dry run removes nothing, so any local-only entry would survive checkout
+  // to an empty tree and block replacing this directory with a file.
+  const bool localOnlyBlocksRemoval =
+      ctx->isDryRun() && !toTree && !reportLocalOnlyAsConflicts;
+  if (reportLocalOnlyAsConflicts || removeLocalOnly || localOnlyBlocksRemoval) {
     auto existsInTree = [](const Tree* tree, PathComponentPiece name) {
       return tree && tree->find(name) != tree->cend();
     };
@@ -4901,6 +4918,10 @@ void TreeInode::computeCheckoutActions(
       if (existsInTree(fromTree, it->first) ||
           existsInTree(toTree, it->first)) {
         continue;
+      }
+      if (localOnlyBlocksRemoval) {
+        localOnlyRemains = true;
+        break;
       }
       auto action =
           processLocalOnlyCheckoutEntry(ctx, it, pendingLoads, hadConflicts);
@@ -5396,7 +5417,6 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     // We can proceed, but we still flag this as a conflict.
     ctx->addConflict(
         ConflictType::MISSING_REMOVED, this, oldScmEntry->first, dtype);
-    hadConflicts = true;
   } else {
     // The file was removed locally, but modified in the new tree.
     ctx->addConflict(
@@ -5974,10 +5994,18 @@ ImmediateFuture<CheckoutActionResult> TreeInode::checkoutUpdateEntry(
               -> ImmediateFuture<CheckoutActionResult> {
             auto hadConflicts = checkoutResult.hadConflicts;
             if (ctx->isDryRun()) {
+              if (checkoutResult.localOnlyRemains && newScmEntry &&
+                  !newScmEntry->second.isTree()) {
+                ctx->addConflict(
+                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+                hadConflicts = true;
+              }
               // If this is a dry run, simply report conflicts and don't update
               // or invalidate the inode.
               return CheckoutActionResult{
-                  InvalidationRequired::No, hadConflicts};
+                  InvalidationRequired::No,
+                  hadConflicts,
+                  checkoutResult.localOnlyRemains};
             }
 
             const auto& localName = getInodeName(ctx, treeInode);
@@ -6132,7 +6160,15 @@ folly::coro::now_task<CheckoutActionResult> TreeInode::co_checkoutUpdateEntry(
   auto hadConflicts = checkoutResult.hadConflicts;
 
   if (ctx->isDryRun()) {
-    co_return CheckoutActionResult{InvalidationRequired::No, hadConflicts};
+    if (checkoutResult.localOnlyRemains && newScmEntry &&
+        !newScmEntry->second.isTree()) {
+      ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+      hadConflicts = true;
+    }
+    co_return CheckoutActionResult{
+        InvalidationRequired::No,
+        hadConflicts,
+        checkoutResult.localOnlyRemains};
   }
 
   const auto& localName = getInodeName(ctx, treeInode);

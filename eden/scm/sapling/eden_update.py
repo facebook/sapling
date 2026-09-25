@@ -101,6 +101,7 @@ def update(
                 )
                 if conflicts:
                     _abort_on_eden_conflict_error(repo, conflicts)
+                    _check_directory_conflicts(repo, conflicts, destctx)
             # We do still need to make sure to update the merge state though.
             # In the non-force code path the merge state is updated in
             # _handle_update_conflicts().
@@ -183,6 +184,25 @@ def _abort_on_eden_conflict_error(repo, conflicts):
 
 def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:
     return repo.ui.configbool("experimental", "abort-on-eden-conflict-error")
+
+
+def _check_directory_conflicts(repo, conflicts, destctx):
+    if not repo.ui.configbool("experimental", "abort-on-eden-directory-conflict"):
+        return
+    blocked = [
+        conflict["path"]
+        for conflict in conflicts
+        if conflict["conflict_type"] == "DIRECTORY_NOT_EMPTY"
+        and conflict["path"] in destctx
+    ]
+    if blocked:
+        raise error.Abort(
+            _(
+                "nonempty directories conflict with files in the destination commit:\n %s"
+            )
+            % "\n ".join(blocked),
+            hint=_("remove the local files or goto --clean to discard them"),
+        )
 
 
 def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
@@ -302,9 +322,8 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             action = (path, path, path, False, src.node())
             prompt = "versions differ"
         elif conflict_type == "DIRECTORY_NOT_EMPTY":
-            # This is a file in a directory that Eden would have normally
-            # removed as part of the checkout, but it could not because this
-            # untracked file was here. Just leave it be.
+            # Local contents may survive removal of a tracked directory when
+            # the destination does not replace it with a file.
             continue
         else:
             raise RuntimeError(
@@ -314,6 +333,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
 
         actions[action_type].append((path, action, prompt))
 
+    _check_directory_conflicts(repo, conflicts, destctx)
     return actions
 
 

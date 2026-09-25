@@ -17,6 +17,7 @@ use staticconfig::static_config;
 pub static EDEN_CONFIG: StaticConfig = static_config!("builtin:eden" => r###"
 [experimental]
 abort-on-eden-conflict-error = true
+abort-on-eden-directory-conflict = true
 
 [fsmonitor]
 timeout = 1
@@ -24,6 +25,9 @@ timeout = 1
 
 #[cfg(windows)]
 pub static EDEN_CONFIG: StaticConfig = static_config!("builtin:eden" => r###"
+[experimental]
+abort-on-eden-directory-conflict = true
+
 [fsmonitor]
 timeout = 1
 "###);

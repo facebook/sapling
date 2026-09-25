@@ -126,6 +126,11 @@ if sys.platform == "win32":
         ],
         "hg.split_test.SplitTest": ["test_split_one_commit_into_two"],
         "hg.status_deadlock_test.StatusDeadlockTest": True,
+        "hg.symlink_test.SymlinkTest": [
+            # ProjectedFS rejects creating a file under a directory that a
+            # blocked checkout is holding, so the race cannot be staged.
+            "test_update_symlink_with_file_created_during_checkout",
+        ],
         "hg.status_test.StatusTest": [
             # TODO: Opening a file with O_TRUNC inside an EdenFS mount fails on Windows
             "test_partial_truncation_after_open_modifies_file",

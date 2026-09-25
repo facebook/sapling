@@ -18,6 +18,9 @@ from eden.fs.service.eden.thrift_types import (
     AclInfo,
     AclInfoOrError,
     AttributesRequestScope,
+    CheckoutMode,
+    CheckOutRevisionParams,
+    ConflictType,
     DirListAttributeDataOrError,
     FileAttributes,
     GetAttributesFromFilesParams,
@@ -521,6 +524,32 @@ class _RestrictedTreeTestMethods(_MethodsBase, metaclass=abc.ABCMeta):
             self.repo.hg("update", self.swapped_commit)
             entries = os.listdir(os.path.join(self.mount, "regular"))
             self.assertIn("file.txt", entries)
+
+    async def test_checkout_unrestricted_to_restricted_with_deleted_file(
+        self,
+    ) -> None:
+        """A locally deleted tracked file does not block the transition."""
+        self.repo.hg("update", self.initial_commit)
+        os.unlink(os.path.join(self.mount, "regular", "file.txt"))
+
+        async with self.eden.get_async_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=self.swapped_commit.encode(),
+                checkoutMode=CheckoutMode.NORMAL,
+                params=CheckOutRevisionParams(),
+            )
+        # An unrestricted destination leaves the unchanged entry alone and
+        # reports nothing for it.
+        expected = (
+            [(b"regular/file.txt", ConflictType.MISSING_REMOVED)]
+            if self.expect_restricted
+            else []
+        )
+        self.assertEqual(
+            expected, [(conflict.path, conflict.type) for conflict in conflicts]
+        )
+        self._assert_dir_blocked(os.path.join(self.mount, "regular"))
 
     def test_checkout_unrestricted_to_restricted_force(self) -> None:
         """Force checkout (-C) of unrestricted -> restricted with dirty

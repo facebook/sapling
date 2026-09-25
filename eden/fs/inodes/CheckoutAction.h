@@ -28,11 +28,17 @@ class ObjectStore;
 
 struct CheckoutSubtreeResult {
   bool hadConflicts{false};
+  /**
+   * A dry run found local-only entries that would survive checkout to an
+   * empty tree, so the directory could not be replaced with a file.
+   */
+  bool localOnlyRemains{false};
 };
 
 struct CheckoutActionResult {
   InvalidationRequired invalidationRequired{InvalidationRequired::No};
   bool hadConflicts{false};
+  bool localOnlyRemains{false};
 };
 
 /**

@@ -1487,7 +1487,7 @@ pub(crate) fn check_conflicts(
     }
 }
 
-fn truncated_error_list(
+pub(crate) fn truncated_error_list(
     errors: impl IntoIterator<Item = impl Display>,
     limit: usize,
 ) -> Vec<String> {
