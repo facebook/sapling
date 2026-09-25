@@ -112,6 +112,31 @@ class SymlinkTest(EdenHgTestCase):
         self.assertFalse(os.path.islink(self.get_path("symlink")))
         self.assertEqual("local\n", self.read_file("symlink/subdir/untracked"))
 
+    async def test_update_locally_replaced_symlink_to_directory(self) -> None:
+        self.backing_repo.write_file("symlink/tracked", "tracked\n")
+        directory_commit = self.backing_repo.commit("Add directory")
+        self.repo.update(self.symlink_commit)
+        os.unlink(self.get_path("symlink"))
+        self.write_file("symlink/untracked", "local\n")
+        async with self.eden.get_async_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=directory_commit.encode(),
+                checkoutMode=CheckoutMode.DRY_RUN,
+                params=CheckOutRevisionParams(),
+            )
+        # FIXME: Recurse into the local directory instead of treating it as a file.
+        self.assertEqual(
+            [(b"symlink", ConflictType.MODIFIED_MODIFIED)],
+            [(conflict.path, conflict.type) for conflict in conflicts],
+        )
+        with self.assertRaisesRegex(
+            hgrepo.HgError, "file metadata for symlink not found at target commit"
+        ):
+            self.repo.update(directory_commit)
+        self.assertEqual(self.symlink_commit, self.repo.get_head_hash())
+        self.assertEqual("local\n", self.read_file("symlink/untracked"))
+
     def test_show_symlink_commit(self) -> None:
         self.repo.update(self.symlink_commit)
         self.assertEqual(
