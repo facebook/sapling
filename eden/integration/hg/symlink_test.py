@@ -7,8 +7,13 @@
 # pyre-strict
 
 import os
+import sys
 
-from eden.fs.service.eden.thrift_types import CheckoutMode, CheckOutRevisionParams
+from eden.fs.service.eden.thrift_types import (
+    CheckoutMode,
+    CheckOutRevisionParams,
+    ConflictType,
+)
 from eden.integration.lib import hgrepo
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
@@ -68,6 +73,44 @@ class SymlinkTest(EdenHgTestCase):
         self.assertEqual([], conflicts)
         self.assertEqual(self.simple_commit, self.repo.get_head_hash())
         self.assertEqual("local\n", self.read_file("symlink/untracked"))
+
+    async def test_update_symlink_after_failed_directory_removal(self) -> None:
+        self.backing_repo.write_file("symlink/tracked", "tracked\n")
+        directory_commit = self.backing_repo.commit("Add directory")
+        self.repo.update(directory_commit)
+        self.write_file("symlink/tracked", "local\n")
+        async with self.eden.get_async_thrift_client() as client:
+            conflicts = await client.checkOutRevision(
+                mountPoint=self.mount_path_bytes,
+                snapshotHash=self.symlink_commit.encode(),
+                checkoutMode=CheckoutMode.NORMAL,
+                params=CheckOutRevisionParams(),
+            )
+        expected = [
+            (b"symlink/tracked", ConflictType.MODIFIED_REMOVED),
+            (b"symlink", ConflictType.DIRECTORY_NOT_EMPTY),
+        ]
+        if sys.platform != "win32":
+            # FIXME: Do not attempt replacement after directory removal fails.
+            # ProjectedFS rejects the directory invalidation first, so Windows
+            # never reaches the replacement attempt.
+            expected.append((b"symlink", ConflictType.ERROR))
+        self.assertCountEqual(
+            expected, [(conflict.path, conflict.type) for conflict in conflicts]
+        )
+        for error in (c for c in conflicts if c.type == ConflictType.ERROR):
+            self.assertIn("new file created with this name", error.message)
+        self.assertEqual("local\n", self.read_file("symlink/tracked"))
+
+    def test_update_symlink_over_untracked_descendant_clean(self) -> None:
+        self.backing_repo.write_file("symlink/subdir/tracked", "tracked\n")
+        directory_commit = self.backing_repo.commit("Add directory")
+        self.repo.update(directory_commit)
+        self.write_file("symlink/subdir/untracked", "local\n")
+        self.repo.update(self.symlink_commit, clean=True)
+        # FIXME: Clean checkout must remove descendants blocking the symlink.
+        self.assertFalse(os.path.islink(self.get_path("symlink")))
+        self.assertEqual("local\n", self.read_file("symlink/subdir/untracked"))
 
     def test_show_symlink_commit(self) -> None:
         self.repo.update(self.symlink_commit)
