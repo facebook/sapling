@@ -38,12 +38,40 @@ use crate::derive_hg_augmented_manifest::derive_augmented_manifest_for_uploaded_
 
 const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
 
+/// What the ACL manifest pass made of one directory.
+#[derive(Debug, Clone)]
+pub enum DirectoryAcl {
+    /// No ACL file here and no child carrying a node, so there was provably
+    /// nothing to build. The sparse common case.
+    NotNeeded,
+    /// Built and came to nothing: an ACL file that does not parse leaves the
+    /// directory unrestricted, and an empty child node is not carried.
+    Empty,
+    Node(AclManifestDirectoryEntry),
+}
+
+impl DirectoryAcl {
+    fn node(&self) -> Option<&AclManifestDirectoryEntry> {
+        match self {
+            Self::Node(entry) => Some(entry),
+            Self::NotNeeded | Self::Empty => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct BuiltTree {
     pub directory: HgAugmentedDirectoryNode,
     /// Carries the node's flags as well as its id, so the containing directory
     /// can list this tree as a child without loading it back.
-    pub acl: Option<AclManifestDirectoryEntry>,
+    pub acl: DirectoryAcl,
+}
+
+/// One tree of a batch, once built.
+#[derive(Debug)]
+pub struct UploadTreeAugmented {
+    pub node_id: HgNodeHash,
+    pub acl: DirectoryAcl,
 }
 
 struct ChildNode {
@@ -180,21 +208,128 @@ fn bottom_up_order(child_indices: &[Vec<usize>]) -> Vec<usize> {
     order
 }
 
-/// Build and store the augmented manifest for one uploaded tree.
-///
-/// Every directory inside the tree must already be derived; a missing one is an
-/// error, since reporting success having built nothing would leave exactly the
-/// coverage hole this path exists to close.
+/// Where the children of the tree being built are resolved from.
+struct ChildSources<'a> {
+    children: &'a TreeChildren,
+    /// Trees built earlier in the same batch. What the map adds over a
+    /// blobstore lookup is their ACL flags, which the envelope does not record.
+    siblings: &'a HashMap<HgNodeHash, BuiltTree>,
+}
+
+/// Build and store the augmented manifest for one uploaded tree. Every
+/// directory inside it must already be derived; a missing one is an error.
 pub async fn build_augmented_manifest_for_uploaded_tree(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     restricted_paths: &RestrictedPathsConfigBased,
     envelope: &HgManifestEnvelope,
 ) -> Result<BuiltTree> {
-    let manifest =
-        HgBlobManifest::parse(envelope.clone()).context("parsing uploaded Mercurial manifest")?;
-    let children = load_children(ctx, blobstore, &manifest).await?;
-    let acl = build_acl_node(ctx, blobstore, restricted_paths, &manifest, &children).await?;
+    // A batch of one, so every child directory is external by construction.
+    let batch = UploadedTreeBatch::parse(vec![envelope.clone()])?;
+    let tree = batch
+        .in_build_order()
+        .next()
+        .context("a batch of one uploaded tree has one tree to build")?;
+    build_uploaded_tree(
+        ctx,
+        blobstore,
+        restricted_paths,
+        tree.manifest,
+        ChildSources {
+            children: tree.children,
+            siblings: &HashMap::new(),
+        },
+    )
+    .await
+}
+
+/// Build and store an augmented manifest for every uploaded tree, bottom-up. A
+/// child neither in the batch nor already derived fails the whole batch.
+pub async fn build_augmented_manifests_for_uploaded_trees(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    restricted_paths: &RestrictedPathsConfigBased,
+    trees: Vec<HgManifestEnvelope>,
+) -> Result<Vec<UploadTreeAugmented>> {
+    let batch = UploadedTreeBatch::parse(trees)?;
+    let ordered = batch.in_build_order();
+
+    let mut built: HashMap<HgNodeHash, BuiltTree> = HashMap::with_capacity(ordered.len());
+    let mut augmented = Vec::with_capacity(ordered.len());
+    for tree in ordered {
+        let result = build_uploaded_tree(
+            ctx,
+            blobstore,
+            restricted_paths,
+            tree.manifest,
+            ChildSources {
+                children: tree.children,
+                siblings: &built,
+            },
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "building the augmented manifest for uploaded tree {}",
+                tree.node_id
+            )
+        })?;
+        augmented.push(UploadTreeAugmented {
+            node_id: tree.node_id,
+            acl: result.acl.clone(),
+        });
+        built.insert(tree.node_id, result);
+    }
+
+    Ok(augmented)
+}
+
+async fn build_uploaded_tree(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    restricted_paths: &RestrictedPathsConfigBased,
+    manifest: &HgBlobManifest,
+    sources: ChildSources<'_>,
+) -> Result<BuiltTree> {
+    let children = load_children(ctx, blobstore, manifest.node_id(), sources).await?;
+
+    let acl_file_name = restricted_paths.config().acl_file_name().to_string();
+    let acl_file_element = MPathElement::new(acl_file_name.as_bytes().to_vec())?;
+    let own_acl_file =
+        manifest
+            .content()
+            .files
+            .get(&acl_file_element)
+            .and_then(|entry| match entry {
+                Entry::Leaf((_, filenode_id)) => Some(*filenode_id),
+                Entry::Tree(_) => None,
+            });
+
+    let acl = if own_acl_file.is_none() && children.values().all(|child| child.acl.is_none()) {
+        DirectoryAcl::NotNeeded
+    } else {
+        let own_acl_file = match own_acl_file {
+            Some(filenode_id) => Some(filenode_id.load(ctx, blobstore).await?.content_id()),
+            None => None,
+        };
+        let node = acl_node_for_directory(
+            ctx,
+            blobstore,
+            DirectoryAclInputs {
+                acl_file_name: &acl_file_name,
+                own_acl_file,
+                children: children
+                    .iter()
+                    .filter_map(|(name, child)| child.acl.clone().map(|acl| (name.clone(), acl)))
+                    .collect(),
+            },
+        )
+        .await?;
+        match node {
+            Some(entry) => DirectoryAcl::Node(entry),
+            None => DirectoryAcl::Empty,
+        }
+    };
 
     let directories = children
         .iter()
@@ -203,48 +338,63 @@ pub async fn build_augmented_manifest_for_uploaded_tree(
     let directory = derive_augmented_manifest_for_uploaded_tree(
         ctx,
         blobstore,
-        &manifest,
+        manifest,
         &directories,
-        acl.as_ref().map(|entry| entry.id),
+        acl.node().map(|entry| entry.id),
     )
     .await?;
 
     Ok(BuiltTree { directory, acl })
 }
 
-/// Resolve every child directory from its own stored augmented manifest, keyed
-/// on the hg node id the uploaded bytes record for it.
+/// Resolve every child directory, from the batch when it arrived there and from
+/// its own stored augmented manifest otherwise.
 async fn load_children(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    manifest: &HgBlobManifest,
+    tree: HgNodeHash,
+    sources: ChildSources<'_>,
 ) -> Result<HashMap<MPathElement, ChildNode>> {
-    let wanted: Vec<(MPathElement, HgNodeHash)> = manifest
-        .content()
-        .files
+    let resolved = sources
+        .children
+        .in_batch
         .iter()
-        .filter_map(|(name, entry)| match entry {
-            Entry::Tree(id) => Some((name.clone(), id.into_nodehash())),
-            Entry::Leaf(_) => None,
+        .map(|(name, node_id)| {
+            // Only reachable if the batch is not a DAG, since bottom-up
+            // ordering otherwise puts every in-batch child before its parent.
+            let sibling = sources.siblings.get(node_id).ok_or_else(|| {
+                anyhow!("tree {tree} contains {name} ({node_id}), which is not derived yet")
+            })?;
+            anyhow::Ok((
+                name.clone(),
+                ChildNode {
+                    directory: sibling.directory.clone(),
+                    // Built moments ago, so its flags are known.
+                    acl: sibling.acl.node().cloned().map(AclChildNode::Known),
+                },
+            ))
         })
-        .collect();
+        .collect::<Result<Vec<_>>>()?;
 
-    // The futures are materialised before the stream: a closure that borrows
-    // `ctx` and `blobstore` inlined into `stream::iter` cannot be inferred as
-    // higher-ranked, and the whole upload chain then fails to prove `Send`.
-    let lookups: Vec<_> = wanted
-        .into_iter()
+    // Materialised before the stream: a closure borrowing `ctx` inlined into
+    // `stream::iter` is not inferred higher-ranked, and `Send` then fails.
+    let lookups: Vec<_> = sources
+        .children
+        .external
+        .iter()
         .map(|(name, node_id)| async move {
             let envelope = HgAugmentedManifestEnvelope::load(
                 ctx,
                 blobstore,
-                HgAugmentedManifestId::new(node_id),
+                HgAugmentedManifestId::new(*node_id),
             )
             .await?
-            .ok_or_else(|| anyhow!("child directory {name} ({node_id}) is not derived yet"))?;
+            .ok_or_else(|| {
+                anyhow!("tree {tree} contains {name} ({node_id}), which is not derived yet")
+            })?;
             let acl = envelope.augmented_manifest.acl_manifest_directory_id;
             anyhow::Ok((
-                name,
+                name.clone(),
                 ChildNode {
                     directory: HgAugmentedDirectoryNode {
                         treenode: envelope.augmented_manifest.hg_node_id,
@@ -260,54 +410,12 @@ async fn load_children(
         })
         .collect();
 
-    stream::iter(lookups)
+    let fetched: Vec<(MPathElement, ChildNode)> = stream::iter(lookups)
         .buffer_unordered(MAX_CONCURRENT_CHILD_LOOKUPS)
         .try_collect()
-        .await
-}
+        .await?;
 
-async fn build_acl_node(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn KeyedBlobstore>,
-    restricted_paths: &RestrictedPathsConfigBased,
-    manifest: &HgBlobManifest,
-    children: &HashMap<MPathElement, ChildNode>,
-) -> Result<Option<AclManifestDirectoryEntry>> {
-    let acl_file_name = restricted_paths.config().acl_file_name().to_string();
-    let acl_file_element = MPathElement::new(acl_file_name.as_bytes().to_vec())?;
-    let own_acl_file =
-        manifest
-            .content()
-            .files
-            .get(&acl_file_element)
-            .and_then(|entry| match entry {
-                Entry::Leaf((_, filenode_id)) => Some(*filenode_id),
-                Entry::Tree(_) => None,
-            });
-    // The ACL manifest is sparse, and the node is a function of this tree's own
-    // contents, so with no ACL file here and no child carrying a node there is
-    // provably nothing to build.
-    if own_acl_file.is_none() && children.values().all(|child| child.acl.is_none()) {
-        return Ok(None);
-    }
-
-    let own_acl_file = match own_acl_file {
-        Some(filenode_id) => Some(filenode_id.load(ctx, blobstore).await?.content_id()),
-        None => None,
-    };
-    acl_node_for_directory(
-        ctx,
-        blobstore,
-        DirectoryAclInputs {
-            acl_file_name: &acl_file_name,
-            own_acl_file,
-            children: children
-                .iter()
-                .filter_map(|(name, child)| child.acl.clone().map(|acl| (name.clone(), acl)))
-                .collect(),
-        },
-    )
-    .await
+    Ok(resolved.into_iter().chain(fetched).collect())
 }
 
 #[cfg(test)]
