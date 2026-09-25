@@ -56,7 +56,7 @@ rust_library(
         "//common/rust/build_info:build_info",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
-        "//common/rust/zippydb/zippydb-thrift:zippydb_thrift",
+        "//common/rust/thrift/srclient:srclient",
         "//configerator/structs/infrasec/if:acl-rust",
         "//crewmate/rust:crewmate_access",
         "//crypto/keychain_service:if-rust",
@@ -102,5 +102,8 @@ rust_library(
         "//security/source_control/verify_integrity:verify_integrity_client_lib",
         "//security/source_control/verify_integrity/if:verify_integrity_service-rust",
         "//signedsources:signedsources",
+        "//ucp/iac_land_gate/if:iac_land_gate-rust",
+        "//ucp/iac_land_gate/if:iac_land_gate-rust-clients",
+        "//ucp/iac_land_gate/if:iac_land_gate-rust-srclients",
     ],
 )
