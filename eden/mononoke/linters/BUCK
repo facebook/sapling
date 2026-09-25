@@ -1,3 +1,4 @@
+load("@fbsource//tools/build_defs:fbsource_utils.bzl", "is_fbcode_mode_win")
 load("//linttool:defs.bzl", "python_binary_through_command_alias")
 load("//linttool:linttool_linter_test.bzl", "external_linter_test")
 
@@ -6,6 +7,7 @@ oncall("scm_server_treehugger")
 python_binary_through_command_alias(
     name = "jk_exists_linter",
     main_src = "jk_exists_linter.py",
+    package_style = "outplace" if is_fbcode_mode_win() else None,
     visibility = [],
 )
 
