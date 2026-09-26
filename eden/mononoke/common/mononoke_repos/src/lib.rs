@@ -129,6 +129,25 @@ impl<R> MononokeRepos<R> {
         drop(lock);
     }
 
+    /// Registers a repo as assigned to this service without building it. The
+    /// repo is reported by `iter_names` and `iter_ids`, but `get_by_name` and
+    /// `get_by_id` return `None` for it until something builds it.
+    ///
+    /// No-op if the repo is already present: registering an assignment only
+    /// ever adds one, and never un-builds a repo that is already loaded.
+    pub fn add_placeholder(&self, repo_name: &str, repo_id: i32) {
+        // Acquire the lock to avoid race conditions during update.
+        let lock = self.update_lock.lock();
+        // Presence check under update_lock is atomic vs add/remove/reload/populate.
+        if self.name_to_repo_map.load().contains_key(repo_name) {
+            drop(lock);
+            return;
+        }
+        self.add_or_update_inner(repo_name, repo_id, RepoSlot::empty());
+        // Drop the lock to allow other threads to update the repos.
+        drop(lock);
+    }
+
     pub fn add_stats_handle_for_repo(&self, repo_name: &str, handle: AbortHandle) {
         // Acquire the lock to avoid race conditions during update.
         let lock = self.update_lock.lock();

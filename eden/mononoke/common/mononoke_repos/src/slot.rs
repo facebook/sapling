@@ -44,7 +44,7 @@ enum SlotState<R> {
 
 impl<R> RepoSlot<R> {
     /// A slot for a repo assigned to this service but not built.
-    pub fn empty() -> Self {
+    pub(crate) fn empty() -> Self {
         Self {
             state: ArcSwap::from_pointee(SlotState::Empty),
         }
