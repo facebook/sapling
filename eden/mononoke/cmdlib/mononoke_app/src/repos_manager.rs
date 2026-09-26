@@ -83,6 +83,12 @@ define_stats! {
 ///
 /// This allows repos to be added or removed from the MononokeRepos
 /// collection.
+///
+/// Dropping the manager aborts the background config reconcile loop, and that
+/// loop is the only path that rebuilds a served repo when its config changes.
+/// A server must therefore keep its manager alive for as long as it serves
+/// repos — in particular when it runs without ShardManager (e.g. locally),
+/// where no `RepoShardedProcess` is constructed to hold it.
 pub struct MononokeReposManager<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     configs: Arc<MononokeConfigs>,
@@ -680,6 +686,7 @@ impl<Repo> Drop for MononokeReposManager<Repo> {
         // Stop the loop; otherwise it would run forever on a torn-down manager.
         if let Some(handle) = self.reconcile_loop_handle.as_ref() {
             handle.abort();
+            info!("Config reconcile loop stopped: repos manager dropped");
         }
     }
 }

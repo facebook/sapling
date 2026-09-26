@@ -145,8 +145,7 @@ pub struct ScsServerProcess {
 }
 
 impl ScsServerProcess {
-    fn new(repos_mgr: MononokeReposManager<Repo>) -> Self {
-        let repos_mgr = Arc::new(repos_mgr);
+    fn new(repos_mgr: Arc<MononokeReposManager<Repo>>) -> Self {
         Self { repos_mgr }
     }
 }
@@ -261,7 +260,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     } else {
         Some(ShardedService::SourceControlService)
     };
-    let repos_mgr = runtime.block_on(app.open_managed_repos(service_name))?;
+    // Held until after wait_until_terminated: dropping the manager aborts the
+    // config reconcile loop, which is the only thing that rebuilds repos on
+    // config change. Without ShardManager (local runs) nothing else holds it.
+    let repos_mgr = Arc::new(runtime.block_on(app.open_managed_repos(service_name))?);
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
@@ -357,7 +359,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     if let Some(executor) = args.sharded_executor_args.build_executor(
         fb,
         runtime.clone(),
-        || Arc::new(ScsServerProcess::new(repos_mgr)),
+        || Arc::new(ScsServerProcess::new(repos_mgr.clone())),
         false, // disable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
@@ -386,6 +388,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         args.shutdown_timeout_args.shutdown_timeout,
         None,
     )?;
+    drop(repos_mgr);
 
     info!("Exiting...");
     Ok(())
