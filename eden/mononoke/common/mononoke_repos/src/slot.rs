@@ -29,6 +29,7 @@ use arc_swap::ArcSwap;
 /// so a caller that resolved a slot from an older snapshot still observes state
 /// transitions made through a newer one.
 pub struct RepoSlot<R> {
+    name: String,
     /// Read on every repo lookup, so it is swapped rather than locked: serving
     /// a built repo is a read, and readers must not have to exclude each other
     /// to do it.
@@ -44,17 +45,26 @@ enum SlotState<R> {
 
 impl<R> RepoSlot<R> {
     /// A slot for a repo assigned to this service but not built.
-    pub(crate) fn empty() -> Self {
+    pub(crate) fn empty(name: String) -> Self {
         Self {
+            name,
             state: ArcSwap::from_pointee(SlotState::Empty),
         }
     }
 
     /// A slot for a repo that is already built.
-    pub(crate) fn ready(repo: Arc<R>) -> Self {
+    pub(crate) fn ready(name: String, repo: Arc<R>) -> Self {
         Self {
+            name,
             state: ArcSwap::from_pointee(SlotState::Ready(repo)),
         }
+    }
+
+    /// Which repo this slot is for. A slot outlives any one map snapshot, so it
+    /// has to carry its own identity rather than rely on the key it was found
+    /// under.
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// The built repo, or `None` if this slot has not been built.
@@ -74,7 +84,7 @@ mod tests {
 
     #[mononoke::test]
     fn test_empty_slot_holds_no_repo() {
-        let repo_slot: RepoSlot<i32> = RepoSlot::empty();
+        let repo_slot: RepoSlot<i32> = RepoSlot::empty("foo".to_string());
         assert!(
             repo_slot.loaded().is_none(),
             "an unbuilt slot must look absent to every reader"
@@ -83,14 +93,14 @@ mod tests {
 
     #[mononoke::test]
     fn test_ready_slot_hands_out_its_repo() {
-        let repo_slot = RepoSlot::ready(Arc::new(42));
+        let repo_slot = RepoSlot::ready("foo".to_string(), Arc::new(42));
         assert_eq!(repo_slot.loaded().as_deref(), Some(&42));
     }
 
     #[mononoke::test]
     fn test_reading_a_slot_shares_rather_than_copies() {
         let repo = Arc::new(42);
-        let repo_slot = RepoSlot::ready(Arc::clone(&repo));
+        let repo_slot = RepoSlot::ready("foo".to_string(), Arc::clone(&repo));
 
         // Two reads must hand back the same allocation, not clones of the repo:
         // a repo is expensive and callers rely on sharing one instance.
