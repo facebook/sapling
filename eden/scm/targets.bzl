@@ -93,6 +93,8 @@ def _apply_autocargo_dep_overrides(autocargo, dep_kind, overrides):
         #
         # The missing HashMap impl is gated behind wezterm-dynamic/std. The published
         # wezterm-dynamic 0.2.1 does not have that feature, so disable it in OSS manifests.
+        # The OSS manifests also need an explicit version: the vendored Buck target does not
+        # carry one into them, and cargo rejects a dependency with no version, path or git.
         _set_autocargo_dep_override(
             autocargo,
             dep_kind,
@@ -106,7 +108,10 @@ def _apply_autocargo_dep_overrides(autocargo, dep_kind, overrides):
             autocargo,
             dep_kind,
             "wezterm-dynamic",
-            {"features": []},
+            {
+                "features": [],
+                "version": "0.2.1",
+            },
             override_kind = "oss_dependencies_override",
         )
         _add_extra_buck_dependency(autocargo, dep_kind, "fbsource//third-party/rust/vendor/wezterm-dynamic:0.2")
