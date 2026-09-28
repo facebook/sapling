@@ -231,7 +231,7 @@ impl<R: Send + Sync + 'static> RepoSlot<R> {
     ///
     /// `build` is handed in per call rather than held by the slot, and takes an
     /// owned name because it runs on a task that outlives this call.
-    pub async fn get_or_build<Build, Fut>(self: &Arc<Self>, build: Build) -> Result<Arc<R>>
+    pub(crate) async fn get_or_build<Build, Fut>(self: &Arc<Self>, build: Build) -> Result<Arc<R>>
     where
         Build: FnOnce(String) -> Fut + Send + 'static,
         Fut: Future<Output = Result<R>> + Send + 'static,

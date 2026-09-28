@@ -12,12 +12,19 @@ use anyhow::Ok;
 use anyhow::Result;
 use anyhow::bail;
 use arc_swap::ArcSwap;
+use futures::future::BoxFuture;
 use futures::stream::AbortHandle;
 use parking_lot::Mutex;
 
 mod slot;
 
 pub use crate::slot::RepoSlot;
+
+/// The future is owned rather than borrowing the loader: the load runs on a
+/// task that outlives the call that started it.
+pub trait RepoLoader<R>: Send + Sync {
+    fn load(&self, repo_name: String) -> BoxFuture<'static, Result<R>>;
+}
 
 /// Set of repos currently associated with an instance of Mononoke
 /// service or command. This type doesn't derive clone and thus
@@ -27,6 +34,9 @@ pub struct MononokeRepos<R> {
     id_to_name_map: ArcSwap<HashMap<i32, String>>,
     update_lock: Arc<Mutex<()>>, // Dedicated lock for guarding update operations.
     stats_handles: ArcSwap<HashMap<String, AbortHandle>>,
+    /// Absent for a collection whose repos are all built elsewhere and handed
+    /// in through `add` and friends.
+    loader: Option<Arc<dyn RepoLoader<R>>>,
 }
 
 impl<R> MononokeRepos<R> {
@@ -38,6 +48,16 @@ impl<R> MononokeRepos<R> {
             id_to_name_map: ArcSwap::from_pointee(HashMap::new()),
             update_lock: Arc::new(Mutex::new(())),
             stats_handles: ArcSwap::from_pointee(HashMap::new()),
+            loader: None,
+        }
+    }
+
+    /// Set once, at construction, so a collection never exists in a state
+    /// where it is meant to build but cannot.
+    pub fn new_lazy(loader: Arc<dyn RepoLoader<R>>) -> Self {
+        Self {
+            loader: Some(loader),
+            ..Self::new()
         }
     }
 
@@ -349,6 +369,33 @@ impl<R> MononokeRepos<R> {
         self.name_to_repo_map.store(Arc::new(name_to_repo_map));
         drop(lock);
         true
+    }
+}
+
+impl<R: Send + Sync + 'static> MononokeRepos<R> {
+    /// Concurrent callers for the same repo share a single build, and a caller
+    /// that goes away neither cancels nor restarts it.
+    ///
+    /// `None` covers both "not assigned to this service" and "assigned, but
+    /// this collection cannot load anything", deliberately: splitting them
+    /// would send a reader looking at shard assignment over a wiring mistake.
+    pub async fn get(&self, repo_name: &str) -> Result<Option<Arc<R>>> {
+        let Some(repo_slot) = self.name_to_repo_map.load().get(repo_name).cloned() else {
+            return Ok(None);
+        };
+
+        if let Some(repo) = repo_slot.loaded() {
+            return Ok(Some(repo));
+        }
+
+        let Some(loader) = self.loader.clone() else {
+            return Ok(None);
+        };
+
+        repo_slot
+            .get_or_build(move |repo_name| loader.load(repo_name))
+            .await
+            .map(Some)
     }
 }
 
