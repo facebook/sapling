@@ -380,6 +380,42 @@ impl<'a> DiffRouter<'a> {
         })
     }
 
+    /// Builds a unified-diff input that names the file by content ID, so the
+    /// diff service does not have to load the changeset to find it.
+    ///
+    /// Keeps `CommitPath` where the diff service needs the changeset: bubble
+    /// commits, whose content it can only read after opening the bubble from
+    /// the changeset, and repos that interpret Git LFS pointers, whose pointer
+    /// it reads from the changeset's file change.
+    async fn unified_diff_input(
+        content: &ChangesetPathContentContext<Repo>,
+        replacement_path: Option<String>,
+    ) -> Result<DiffInput, ServiceError> {
+        let repo_ctx = content.repo_ctx();
+        if repo_ctx.in_bubble() || repo_ctx.config().git_configs.git_lfs_interpret_pointers {
+            return Self::input_from_changeset(content, replacement_path);
+        }
+
+        let Some(file) = content
+            .file()
+            .await
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?
+        else {
+            return Self::input_from_changeset(content, replacement_path);
+        };
+        let content_id = file
+            .id()
+            .await
+            .map_err(|e| remote_infra_error(format!("{e:?}")))?;
+        let path = match replacement_path {
+            Some(replacement_path) => replacement_path,
+            None => NonRootMPath::try_from(content.path().clone())
+                .map_err(|e| remote_infra_error(format!("{e:?}")))?
+                .to_string(),
+        };
+        Ok(DiffInput::content_with_path(content_id, path))
+    }
+
     async fn remote_unified_diff(
         &self,
         ctx: &CoreContext,
@@ -393,15 +429,15 @@ impl<'a> DiffRouter<'a> {
         // The Base file is the "old" file, with Other is the "new" one
         // the replacement path goes in the "old" file, so that it can show
         // the new path after a move.
-        let base_input = path_context
-            .get_old_content()
-            .map(|c| Self::input_from_changeset(c, replacement_path))
-            .transpose()?;
+        let base_input = match path_context.get_old_content() {
+            Some(c) => Some(Self::unified_diff_input(c, replacement_path).await?),
+            None => None,
+        };
 
-        let other_input = path_context
-            .get_new_content()
-            .map(|c| Self::input_from_changeset(c, None))
-            .transpose()?;
+        let other_input = match path_context.get_new_content() {
+            Some(c) => Some(Self::unified_diff_input(c, None).await?),
+            None => None,
+        };
 
         let copy_info = path_context.copy_info();
 

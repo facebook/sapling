@@ -918,6 +918,17 @@ impl<R: RepoDerivedDataRef> RepoContext<R> {
             .config()
             .is_enabled(MappedHgChangesetId::VARIANT)
     }
+
+    /// Whether this context is bound to an ephemeral bubble. A bound context
+    /// also reads persistent commits, so this does not mean a changeset
+    /// read through it is ephemeral.
+    pub fn in_bubble(&self) -> bool {
+        self.repo()
+            .repo_derived_data()
+            .manager()
+            .bubble_id()
+            .is_some()
+    }
 }
 
 impl<R: RepoDerivedDataRef + RepoIdentityRef> RepoContext<R> {
