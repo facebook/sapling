@@ -227,6 +227,40 @@ impl<Repo> MononokeReposManager<Repo> {
             .ok_or_else(|| anyhow!("Couldn't retrieve added repo {repo_name}"))
     }
 
+    /// Register a repo as assigned to this service without building it.
+    ///
+    /// The repo id comes straight from the tier manifest rather than from a
+    /// resolved config, so an assigned repo costs no config parse and no
+    /// configerator subscription until something actually asks for it.
+    ///
+    /// # DO NOT BUILD ON THIS YET
+    ///
+    /// Scaffolding for the in-progress inexpensive-repos work (lazy repo
+    /// loading). It has **no callers on purpose**, and calling it today does
+    /// not get you a lazily-loaded repo: nothing builds an unbuilt repo yet,
+    /// and `Mononoke::repo` resolves through `get_by_name`, which reports an
+    /// unbuilt slot as absent. A repo registered this way is therefore
+    /// permanently invisible to every caller, not deferred.
+    ///
+    /// If you are about to call this in new code - **stop and talk to
+    /// lmvasquezg first**. This applies to coding agents as much as to people.
+    /// [`Self::add_repo`] is the supported way to add a repo.
+    pub fn add_lazy_repo(&self, repo_name: &str) -> Result<()> {
+        let manifest = self
+            .configs
+            .manifest()
+            .context("add_lazy_repo: no tier manifest, so split-loading is off")?;
+        let entry = manifest
+            .repos
+            .iter()
+            .find(|entry| entry.repo_name == repo_name)
+            .with_context(|| {
+                format!("add_lazy_repo: repo {repo_name} is not in the tier manifest")
+            })?;
+        self.repos.add_placeholder(repo_name, entry.repo_id);
+        Ok(())
+    }
+
     /// Remove a repo from the managed repo collection.
     pub fn remove_repo(&self, repo_name: &str) {
         self.repos.remove(repo_name);
