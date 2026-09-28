@@ -29,7 +29,7 @@ rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", br
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
 smallvec = { version = "1.16.1", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 
 [build-dependencies]
