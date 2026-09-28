@@ -179,11 +179,11 @@ bool dirEntryMatchesTreeEntry(
              dirEntry.aclRootState(), treeEntry.aclRootState());
 }
 
-bool canRefreshStaleDeniedAclRootState(
+bool canRefreshStaleAclRootState(
     const ObjectStore& objectStore,
     const DirEntry& dirEntry,
     const TreeEntry& treeEntry) {
-  if (!dirEntry.isRestricted() || treeEntry.isRestricted()) {
+  if (dirEntry.isRestricted() == treeEntry.isRestricted()) {
     return false;
   }
   if (!compareTreeEntryType(
@@ -191,19 +191,26 @@ bool canRefreshStaleDeniedAclRootState(
           treeEntry.getType())) {
     return false;
   }
+  // The tree is authoritative for the ACL-root bit once it is known to
+  // describe the same object; local content it cannot speak for is never
+  // tightened.
   if (dirEntry.isMaterialized()) {
-    return true;
+    return dirEntry.isRestricted();
   }
   return dirEntry.getObjectIdPtr() != nullptr &&
       objectStore.areObjectsKnownIdentical(
           dirEntry.getObjectId(), treeEntry.getObjectId());
 }
 
-bool refreshStaleDeniedAclRootStates(
+// Returns true when a denial was cleared, which is what triggers the overlay
+// write-back. A directory whose entries only gained denials is therefore not
+// rewritten; when a write does happen it persists the whole DirContents,
+// including an entry tightened in the same pass.
+bool refreshStaleAclRootStates(
     const ObjectStore& objectStore,
     DirContents& dir,
     const Tree& tree) {
-  bool changed = false;
+  bool clearedDenial = false;
   for (auto& entry : dir) {
     auto it = tree.find(entry.first);
     if (it == tree.cend()) {
@@ -211,17 +218,16 @@ bool refreshStaleDeniedAclRootStates(
     }
     auto& dirEntry = entry.second;
     const auto& treeEntry = it->second;
-    if (canRefreshStaleDeniedAclRootState(objectStore, dirEntry, treeEntry)) {
-      auto newState = makeAclRootState(
-          /*isRestricted=*/false,
-          preferKnownAclState(treeEntry.hasACL(), dirEntry.hasACL()));
-      if (dirEntry.aclRootState() != newState) {
-        dirEntry.setAclRootState(newState);
-        changed = true;
+    if (canRefreshStaleAclRootState(objectStore, dirEntry, treeEntry)) {
+      if (dirEntry.isRestricted() && !treeEntry.isRestricted()) {
+        clearedDenial = true;
       }
+      dirEntry.setAclRootState(makeAclRootState(
+          treeEntry.isRestricted(),
+          preferKnownAclState(treeEntry.hasACL(), dirEntry.hasACL())));
     }
   }
-  return changed;
+  return clearedDenial;
 }
 
 } // namespace
@@ -2027,7 +2033,7 @@ TreeInode::buildUnrestrictedDirContents(
 
   if (!overlayDir.empty()) {
     auto refreshedStaleDeniedAclRootStates =
-        refreshStaleDeniedAclRootStates(getObjectStore(), overlayDir, tree);
+        refreshStaleAclRootStates(getObjectStore(), overlayDir, tree);
 
     if (auto differences = findEntryDifferences(overlayDir, tree)) {
       std::string diffString;

@@ -437,6 +437,66 @@ TEST_F(
   EXPECT_TRUE(loadedIt->second.isRestricted());
 }
 
+TEST_F(
+    RestrictedTreeCachingTest,
+    unrestrictedParentLoad_refreshesNewlyRestrictedChildEntry) {
+  FakeTreeBuilder builder;
+  builder.setFile("parent/child/file.txt", "secret content");
+  builder.setDirIsRestricted("parent/child");
+  initMount(builder);
+
+  auto* overlay = testMount_->getEdenMount()->getOverlay();
+  auto rootInode = testMount_->getEdenMount()->getRootInode();
+  auto parentIno = [&] {
+    auto contents = rootInode->lockContentsRead();
+    auto it = contents->entries.find("parent"_pc);
+    EXPECT_NE(it, contents->entries.end());
+    return it->second.getInodeNumber();
+  }();
+
+  const auto& parentTree = builder.getStoredTree("parent"_relpath)->get();
+  auto childIt = parentTree.find("child"_pc);
+  ASSERT_NE(childIt, parentTree.cend());
+  ASSERT_TRUE(childIt->second.isRestricted());
+  const auto childObjectId = childIt->second.getObjectId();
+
+  // Overlay written while the child was still readable.
+  auto staleChildInode = overlay->allocateInodeNumber();
+  DirContents staleContents{kPathMapDefaultCaseSensitive};
+  staleContents.emplace(
+      "child"_pc,
+      DirEntry{
+          dtype_to_mode(
+              mode_to_dtype(modeFromTreeEntryType(childIt->second.getType()))),
+          staleChildInode,
+          childObjectId,
+          /*isRestricted=*/false,
+          /*hasACL=*/std::nullopt});
+  overlay->saveOverlayDir(parentIno, staleContents, /*isMaterialized=*/false);
+
+  auto parentInode = testMount_->getTreeInode("parent"_relpath);
+  {
+    auto contents = parentInode->lockContentsRead();
+    auto it = contents->entries.find("child"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    EXPECT_EQ(staleChildInode, it->second.getInodeNumber());
+    EXPECT_TRUE(it->second.isRestricted());
+    EXPECT_FALSE(it->second.isMaterialized());
+  }
+
+  // A newly discovered denial is not written back; the overlay record is
+  // left alone.
+  auto persistedOverlay = overlay->loadOverlayDir(parentIno);
+  auto persistedIt = persistedOverlay.find("child"_pc);
+  ASSERT_NE(persistedIt, persistedOverlay.end());
+  EXPECT_EQ(staleChildInode, persistedIt->second.getInodeNumber());
+  EXPECT_FALSE(persistedIt->second.isRestricted());
+
+  // The parent tree alone carries the restriction; no child fetch is needed.
+  EXPECT_EQ(0, testMount_->getBackingStore()->getAccessCount(childObjectId));
+  EXPECT_TRUE(testMount_->getTreeInode("parent/child"_relpath)->isRestricted());
+}
+
 // --- Checkout tests ---
 
 TEST_F(
