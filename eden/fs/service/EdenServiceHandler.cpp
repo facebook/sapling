@@ -806,7 +806,6 @@ bool shouldUseSaplingRemoteAPI(
   //   - prefetchFiles
   //   - suppressFileList
   // - searchRoot - root is always the repository root
-  // - predictiveGlob - This pathway only accepts suffixes
   // - listOnlyFiles - Only files will be returned
   // Ignore
   //   - prefetchMetadata, it is explicitly called
@@ -821,11 +820,6 @@ bool shouldUseSaplingRemoteAPI(
         "globFiles request cannot be offloaded to SaplingRemoteAPI due to prefetching: prefetchFiles={}, suppressFileList={}. Falling back to local pathway",
         *params.prefetchFiles(),
         *params.suppressFileList());
-    useSaplingRemoteAPISuffixes = false;
-  } else if (params.predictiveGlob()) {
-    XLOG(
-        DBG3,
-        "globFiles request cannot be offloaded to SaplingRemoteAPI due to predictiveGlob, falling back to local pathway");
     useSaplingRemoteAPISuffixes = false;
   } else if (!(*params.listOnlyFiles())) {
     XLOG(
@@ -4847,123 +4841,11 @@ EdenServiceHandler::semifuture_ensureMaterialized(
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
-  auto isBackground = *params->background();
-  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-  auto task = folly::coro::co_invoke(
-      [self = shared_from_this()](std::unique_ptr<GlobParams> p)
-          -> folly::coro::Task<std::unique_ptr<Glob>> {
-        co_return co_await self->co_predictiveGlobFilesImpl(std::move(p));
-      },
-      std::move(params));
-
-  if (server_->usingThriftSerialExecution()) {
-    // Already globally serialized — just handle background detach.
-    if (isBackground) {
-      folly::futures::detachOn(
-          server_->getServerState()->getThreadPool().get(),
-          std::move(task).semi());
-      return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>())
-          .semi();
-    }
-    return std::move(task).semi();
-  }
-
-  // Pin all coroutine resumptions to a SerialExecutor so CPU work
-  // between co_await points is serialized, matching the futures path.
-  // Without co_withExecutor, the coroutine would escape the serial
-  // executor after the first external co_await (e.g. getTopUsedDirs),
-  // allowing concurrent fan-out from multiple requests.
-  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
-      server_->getServer()->getThreadManager().get());
-  auto pinned = folly::coro::co_withExecutor(serial, std::move(task));
-  if (isBackground) {
-    folly::futures::detachOn(serial, std::move(pinned).start());
-    return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>())
-        .semi();
-  }
-  return std::move(pinned).start();
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint());
+  XLOG(WARN, "predictiveGlobFiles is deprecated and no longer prefetches");
+  return folly::makeSemiFuture(std::make_unique<Glob>());
 }
 
-folly::coro::now_task<std::unique_ptr<Glob>>
-EdenServiceHandler::co_predictiveGlobFilesImpl(
-    std::unique_ptr<GlobParams> params) {
-  auto mountHandle = lookupMount(params->mountPoint());
-  if (!params->revisions().value().empty()) {
-    params->revisions() =
-        resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
-  }
-  ThriftGlobImpl globber{*params};
-  auto requestContext = getRequestContext();
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
-      DBG3, false, requestContext, *params->mountPoint(), globber.logString());
-
-  /* set predictive glob fetch parameters */
-  auto& serverState = server_->getServerState();
-  auto numResults =
-      serverState->getEdenConfig()->predictivePrefetchProfileSize.getValue();
-  auto user = folly::StringPiece{serverState->getUserInfo().getUsername()};
-  auto backingStore = mountHandle.getObjectStore().getBackingStore();
-  auto repo_optional = backingStore->getRepoName();
-  if (repo_optional == std::nullopt) {
-    auto& r = *backingStore.get();
-    throw std::runtime_error(
-        folly::to<std::string>(
-            "mount must use SaplingBackingStore, type is ", typeid(r).name()));
-  }
-
-  auto repo = repo_optional.value();
-  auto os = getOperatingSystemName();
-
-  std::optional<std::string> sandcastleAlias;
-  std::optional<uint64_t> startTime;
-  std::optional<uint64_t> endTime;
-  auto scAliasEnv = std::getenv("SANDCASTLE_ALIAS");
-  sandcastleAlias = scAliasEnv ? std::make_optional(std::string(scAliasEnv))
-                               : sandcastleAlias;
-
-  const auto& predictiveGlob = params->predictiveGlob().as_const();
-  if (predictiveGlob.has_value()) {
-    numResults = predictiveGlob->numTopDirectories().value_or(numResults);
-    user = predictiveGlob->user().has_value() ? predictiveGlob->user().value()
-                                              : user;
-    repo = predictiveGlob->repo().has_value() ? predictiveGlob->repo().value()
-                                              : repo;
-    os = predictiveGlob->os().has_value() ? predictiveGlob->os().value() : os;
-    startTime = predictiveGlob->startTime().has_value()
-        ? predictiveGlob->startTime().value()
-        : startTime;
-    endTime = predictiveGlob->endTime().has_value()
-        ? predictiveGlob->endTime().value()
-        : endTime;
-  }
-
-  auto& fetchContext = helper->getPrefetchFetchContext();
-
-  co_await folly::coro::co_reschedule_on_current_executor;
-
-  auto globs = co_await usageService_->getTopUsedDirs(
-      user,
-      repo,
-      numResults,
-      os,
-      startTime,
-      endTime,
-      std::move(sandcastleAlias));
-
-  auto resultTry = co_await co_awaitTry(globber.glob(
-      mountHandle.getEdenMountPtr(),
-      serverState,
-      std::move(globs),
-      fetchContext.copy()));
-  if (resultTry.hasException()) {
-    XLOGF(
-        ERR,
-        "Error fetching predictive file globs: {}",
-        folly::exceptionStr(resultTry.exception()));
-    resultTry.exception().throw_exception();
-  }
-  co_return std::move(resultTry.value());
-}
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   auto isBackground = *params->background();
