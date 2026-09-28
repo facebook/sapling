@@ -340,7 +340,7 @@ async fn run_sync(
     let start_id = args.start_id;
     let exit_path = args.exit_file.clone();
     let batch_size = args.batch_size.unwrap_or(DEFAULT_BATCH_SIZE);
-    let replayed_sync_counter = LatestReplayedSyncCounter::new(&repo)?;
+    let replayed_sync_counter = LatestReplayedSyncCounter::new(&repo, LATEST_REPLAYED_REQUEST_KEY)?;
 
     borrowed!(ctx);
     let can_continue = move || {

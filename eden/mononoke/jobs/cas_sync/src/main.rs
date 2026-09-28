@@ -59,7 +59,6 @@ use crate::errors::PipelineError;
 use crate::errors::PipelineError::AnonymousError;
 use crate::errors::PipelineError::EntryError;
 
-const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request-cas";
 const SLEEP_SECS: u64 = 1;
 
 #[derive(Copy, Clone)]
@@ -395,23 +394,27 @@ pub fn loop_over_log_entries<'a>(
 
 pub struct LatestReplayedSyncCounter {
     mutable_counters: ArcMutableCounters,
+    counter_name: String,
 }
 
 impl LatestReplayedSyncCounter {
-    fn new(source_repo: &Repo) -> Result<Self, Error> {
+    fn new(source_repo: &Repo, counter_name: impl Into<String>) -> Result<Self, Error> {
         let mutable_counters = source_repo.mutable_counters_arc();
-        Ok(Self { mutable_counters })
+        Ok(Self {
+            mutable_counters,
+            counter_name: counter_name.into(),
+        })
     }
 
     async fn get_counter(&self, ctx: &CoreContext) -> Result<Option<i64>, Error> {
         self.mutable_counters
-            .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
+            .get_counter(ctx, &self.counter_name)
             .await
     }
 
     async fn set_counter(&self, ctx: &CoreContext, value: i64) -> Result<bool, Error> {
         self.mutable_counters
-            .set_counter(ctx, LATEST_REPLAYED_REQUEST_KEY, value, None)
+            .set_counter(ctx, &self.counter_name, value, None)
             .await
     }
 }
