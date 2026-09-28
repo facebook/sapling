@@ -45,7 +45,6 @@ use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
-use crate::locked_transaction::LockedBookmarkTransaction;
 use crate::subscription::SqlBookmarksSubscription;
 use crate::transaction::SqlBookmarksTransaction;
 
@@ -356,28 +355,6 @@ impl SqlBookmarks {
 
     pub fn write_connection(&self) -> &Connection {
         &self.connections.write_connection
-    }
-
-    /// Start a locked transaction for a specific bookmark.
-    ///
-    /// This acquires a per-bookmark SQL-level lock (FOR UPDATE) and reads
-    /// the current bookmark value, all within the same transaction. The
-    /// lock is held until the returned `LockedBookmarkTransaction` is
-    /// committed or rolled back.
-    ///
-    /// Used by pessimistic pushrebase to serialize writers per bookmark.
-    pub async fn start_locked_transaction(
-        &self,
-        ctx: &CoreContext,
-        bookmark: &BookmarkKey,
-    ) -> Result<LockedBookmarkTransaction> {
-        LockedBookmarkTransaction::new(
-            ctx,
-            &self.connections.write_connection,
-            self.repo_id,
-            bookmark.clone(),
-        )
-        .await
     }
 
     pub fn connection(&self, ctx: &CoreContext, freshness: Freshness) -> &Connection {

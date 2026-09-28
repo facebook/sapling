@@ -397,12 +397,6 @@ impl Convert for RawPushrebaseParams {
                     })
                     .transpose()?
                     .unwrap_or_default(),
-                pessimistic_locking_bookmarks: self
-                    .pessimistic_locking_bookmarks
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(BookmarkKey::new)
-                    .collect::<Result<Vec<_>>>()?,
                 merge_resolution_override: MergeResolutionOverride::UseJk, // request-scoped, not loaded from config
                 land_instance_id: None, // request-scoped, not loaded from config
                 phab_diff_id: None,     // request-scoped, not loaded from config

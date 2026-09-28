@@ -40,7 +40,7 @@ Run the x-repo with submodules setup
   heads/master_bookmark
 
 
-  $ QUIET_LOGGING_LOG_FILE="$TESTTMP/xrepo_sync_last_logs.out" wait_for_xrepo_sync 2 "$SUBMODULE_REPO_ID"
+  $ QUIET_LOGGING_LOG_FILE="$TESTTMP/xrepo_sync_last_logs.out" wait_for_xrepo_sync 2
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
   $ wait_for_bookmark_move_away_edenapi large_repo master_bookmark $(hg whereami)

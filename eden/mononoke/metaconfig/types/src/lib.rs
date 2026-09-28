@@ -1046,9 +1046,6 @@ pub struct PushrebaseFlags {
     /// them will be rejected as before so downstream checks (e.g. Hack
     /// type-checking in CI land) still trigger.
     pub merge_resolution_excluded_path_prefixes: PrefixTrie,
-    /// Bookmarks that use pessimistic locking for pushrebase.
-    /// Only effective when the pushrebase_pessimistic_locking JustKnob is enabled.
-    pub pessimistic_locking_bookmarks: Vec<BookmarkKey>,
     /// Per-request override for `pushrebase_enable_merge_resolution`.
     /// `UseJk` defers to the JustKnob; `ForceOn`/`ForceOff` wins. Request-scoped,
     /// never loaded from configerator — set on a cloned `PushrebaseFlags`
@@ -1185,7 +1182,6 @@ impl Default for PushrebaseFlags {
             not_generated_filenodes_limit: 500,
             monitoring_bookmark: None,
             merge_resolution_excluded_path_prefixes: PrefixTrie::new(),
-            pessimistic_locking_bookmarks: Vec::new(),
             merge_resolution_override: MergeResolutionOverride::UseJk,
             land_instance_id: None,
             phab_diff_id: None,

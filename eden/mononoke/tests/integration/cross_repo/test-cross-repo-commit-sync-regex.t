@@ -57,12 +57,12 @@
 
   $ mononoke_x_repo_sync 2 0 tail --bookmark-regex "master_bookmark" \
   > --catch-up-once |& grep -E '(processing|skipping)'
-  [INFO] skipping log entry #4 for anotherbookmark
+  [INFO] skipping log entry #2 for anotherbookmark
+  [INFO] skipping log entry #3 for somebookmark
+  [INFO] processing log entry #4
   [INFO] skipping log entry #5 for somebookmark
-  [INFO] processing log entry #6
-  [INFO] skipping log entry #7 for somebookmark
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_2'";
-  0|xreposync_from_2|7
+  0|xreposync_from_2|5
 
 
 -- use verify-bookmarks command. One inconsistency.
@@ -114,4 +114,4 @@
 
 -- mutable counter was not updated, because the once command was used
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_2'";
-  0|xreposync_from_2|7
+  0|xreposync_from_2|5

@@ -9,18 +9,7 @@ dott_test(
     name = "server",
     # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
     disable_all_network_access_target = True,
-    dott_files = glob(
-        [
-            "*.t",
-        ],
-        exclude = [
-            # Pessimistic locking requires MySQL (SQLite deadlocks
-            # because LockedBookmarkTransaction holds the single
-            # shared connection during rebase).
-            "test-pushrebase-pessimistic-locking.t",
-            "test-pushrebase-pessimistic-locking-stack.t",
-        ],
-    ),
+    dott_files = glob(["*.t"]),
     enable_remote_execution = True,
     deps = [
         "//eden/mononoke:mononoke",
@@ -43,31 +32,9 @@ dott_test(
     dott_files = [
         "test-infinitepush-mutation.t",
         "test-pushrebase.t",
-        "test-pushrebase-per-bookmark-locking.t",
-        "test-pushrebase-per-bookmark-locking-conflict.t",
-        "test-pushrebase-per-bookmark-locking-shadow.t",
-        "test-pushrebase-per-bookmark-locking-stack.t",
         "test-server-init.t",
         "test-server-lookup.t",
     ],
-    use_mysql = True,
-    deps = [
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-# Pessimistic locking tests are heavy (SQL locks + full pushrebase) and
-# time out in dev-rust-oss debug builds. Run only in fbcode opt builds.
-dott_test(
-    name = "server-mysql-pessimistic",
-    disable_all_network_access_target = True,
-    dott_files = [
-        "test-pushrebase-pessimistic-locking.t",
-        "test-pushrebase-pessimistic-locking-stack.t",
-    ],
-    rust_allow_oss_build = False,
     use_mysql = True,
     deps = [
         "//eden/mononoke:mononoke",

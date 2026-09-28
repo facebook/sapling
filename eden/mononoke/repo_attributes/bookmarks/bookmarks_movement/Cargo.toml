@@ -22,7 +22,6 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 commit_graph = { version = "0.1.0", path = "../../commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../../features/cross_repo_sync" }
-dbbookmarks = { version = "0.1.0", path = "../dbbookmarks" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_derivation_queues/if" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }

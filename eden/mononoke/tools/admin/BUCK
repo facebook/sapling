@@ -153,7 +153,6 @@ rust_binary(
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_cache:bookmarks_cache",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_movement:bookmarks_movement",
-        "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_attributes/commit_graph/preloaded_commit_graph_storage:preloaded_commit_graph_storage",

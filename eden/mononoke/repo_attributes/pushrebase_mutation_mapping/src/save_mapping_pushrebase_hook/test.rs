@@ -57,9 +57,6 @@ struct Repo {
     bookmarks: dyn Bookmarks,
 
     #[facet]
-    sql_bookmarks: dbbookmarks::SqlBookmarks,
-
-    #[facet]
     filestore_config: FilestoreConfig,
 }
 

@@ -13,7 +13,6 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
-use dbbookmarks::SqlBookmarks;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use git_ref_content_mapping::GitRefContentMapping;
@@ -107,9 +106,6 @@ pub struct Repo {
 
     #[facet]
     git_source_of_truth_config: dyn GitSourceOfTruthConfig,
-
-    #[facet]
-    sql_bookmarks: SqlBookmarks,
 }
 
 impl Repo {

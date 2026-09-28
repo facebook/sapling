@@ -123,70 +123,6 @@ mononoke_queries! {
          (id, repo_id, name, category, from_changeset_id, to_changeset_id, reason, timestamp)
          VALUES {values}"
     }
-
-    // Per-bookmark lock acquisition. MySQL uses FOR UPDATE for row-level
-    // locking; SQLite relies on its database-level write lock.
-    pub read AcquireBookmarkLock(repo_id: RepositoryId, name: BookmarkName) -> (i32) {
-        mysql("SELECT 1 FROM bookmark_update_locks WHERE repo_id = {repo_id} AND name = {name} FOR UPDATE")
-        sqlite("SELECT 1 FROM bookmark_update_locks WHERE repo_id = {repo_id} AND name = {name}")
-    }
-
-    // Insert a lock row if it doesn't exist (graceful fallback for
-    // bookmarks that predate the lock table).
-    pub write EnsureBookmarkLockRow(values: (repo_id: RepositoryId, name: BookmarkName)) {
-        insert_or_ignore,
-        "{insert_or_ignore} INTO bookmark_update_locks (repo_id, name) VALUES {values}"
-    }
-
-    // Read the current bookmark value within an existing transaction
-    // that already holds a FOR UPDATE lock on the bookmark.
-    pub read ReadBookmarkUnderLock(repo_id: RepositoryId, name: BookmarkName, category: BookmarkCategory) -> (ChangesetId) {
-        "SELECT changeset_id FROM bookmarks WHERE repo_id = {repo_id} AND name = {name} AND category = {category}"
-    }
-
-    // Allocate a globally unique monotonic log ID via auto-increment.
-    pub write AllocateBookmarkLogId() {
-        none,
-        "INSERT INTO bookmark_log_id_sequence VALUES (NULL)"
-    }
-
-    // Read the auto-increment ID that was just allocated.
-    pub read ReadLastInsertId() -> (u64) {
-        mysql("SELECT LAST_INSERT_ID()")
-        sqlite("SELECT last_insert_rowid()")
-    }
-
-    // Read the max ID for a single repo in bookmarks_update_log. The PK
-    // on bookmarks_update_log is (repo_id, id), so this is a fast index
-    // seek rather than a full table scan. Used by the seeding logic in
-    // allocate_log_ids_from_sequence to ensure the sequence stays ahead
-    // of any per-repo writes that may have happened on the old path.
-    pub read FindRepoMaxBookmarkLogId(repo_id: RepositoryId) -> (Option<u64>) {
-        "SELECT MAX(id) FROM bookmarks_update_log WHERE repo_id = {repo_id}"
-    }
-
-    // Read the max ID across a set of repos in bookmarks_update_log. The PK
-    // on bookmarks_update_log is (repo_id, id), so this remains an index-
-    // friendly query (one seek per repo_id in the IN list) rather than a
-    // full table scan. Used by multi_repo_bookmarks_transaction's seeding
-    // logic to bump the sequence above all participating repos' maxes.
-    pub read FindReposMaxBookmarkLogId(>list repo_ids: RepositoryId) -> (Option<u64>) {
-        "SELECT MAX(id) FROM bookmarks_update_log WHERE repo_id IN {repo_ids}"
-    }
-
-    // Seed the sequence table with an explicit ID so that subsequent
-    // auto-increment allocations start above existing log entries.
-    // Uses INSERT OR IGNORE to be idempotent if two concurrent
-    // transactions race to seed the same value.
-    pub write SeedSequenceId(id: u64) {
-        insert_or_ignore,
-        "{insert_or_ignore} INTO bookmark_log_id_sequence (id) VALUES ({id})"
-    }
-
-    // Read the current max ID in the sequence table (NULL if empty).
-    pub read ReadMaxSequenceId() -> (Option<u64>) {
-        "SELECT MAX(id) FROM bookmark_log_id_sequence"
-    }
 }
 
 struct NewUpdateLogEntry {
@@ -250,63 +186,26 @@ struct SqlBookmarksTransactionPayload {
     mirror_batches: Vec<(BookmarkKey, BookmarkKind, Vec<MirrorBookmarkMove>)>,
 }
 
-/// Source of log IDs for a bookmark transaction.
-enum LogIdSource {
-    /// Old path: sequential IDs starting from MAX(id) + 1.
-    Sequential { next_id: u64 },
-    /// New path: pre-allocated IDs from the auto-increment sequence table.
-    PreAllocated { ids: Vec<u64>, cursor: usize },
-}
-
 /// Structure representing the log entries to insert when executing a
 /// SqlBookmarksTransactionPayload.
 struct TransactionLogUpdates<'a> {
-    id_source: LogIdSource,
+    next_log_id: u64,
     log_entries: Vec<(u64, &'a BookmarkKey, &'a NewUpdateLogEntry)>,
 }
 
 impl<'a> TransactionLogUpdates<'a> {
-    fn sequential(next_log_id: u64) -> Self {
+    fn new(next_log_id: u64) -> Self {
         Self {
-            id_source: LogIdSource::Sequential {
-                next_id: next_log_id,
-            },
+            next_log_id,
             log_entries: Vec::new(),
         }
     }
 
-    fn pre_allocated(ids: Vec<u64>) -> Self {
-        Self {
-            id_source: LogIdSource::PreAllocated { ids, cursor: 0 },
-            log_entries: Vec::new(),
-        }
-    }
-
-    fn push_log_entry(
-        &mut self,
-        bookmark: &'a BookmarkKey,
-        entry: &'a NewUpdateLogEntry,
-    ) -> Result<u64> {
-        let id = match &mut self.id_source {
-            LogIdSource::Sequential { next_id } => {
-                let id = *next_id;
-                *next_id += 1;
-                id
-            }
-            LogIdSource::PreAllocated { ids, cursor } => {
-                let id = *ids.get(*cursor).ok_or_else(|| {
-                    anyhow!(
-                        "Pre-allocated ID cursor {} exceeds available IDs ({})",
-                        *cursor,
-                        ids.len()
-                    )
-                })?;
-                *cursor += 1;
-                id
-            }
-        };
+    fn push_log_entry(&mut self, bookmark: &'a BookmarkKey, entry: &'a NewUpdateLogEntry) -> u64 {
+        let id = self.next_log_id;
         self.log_entries.push((id, bookmark, entry));
-        Ok(id)
+        self.next_log_id += 1;
+        id
     }
 }
 
@@ -321,89 +220,6 @@ impl SqlBookmarksTransactionPayload {
             deletes: Vec::new(),
             mirror_batches: Vec::new(),
         }
-    }
-
-    fn use_per_bookmark_locking(&self) -> bool {
-        let switch = self.repo_id.id().to_string();
-        justknobs::eval("scm/mononoke:per_bookmark_locking", None, Some(&switch))
-    }
-
-    fn use_per_bookmark_locking_shadow_mode(&self) -> bool {
-        let switch = self.repo_id.id().to_string();
-        justknobs::eval(
-            "scm/mononoke:per_bookmark_locking_shadow",
-            None,
-            Some(&switch),
-        )
-    }
-
-    /// Acquire per-bookmark locks for all bookmarks being modified.
-    /// Locks are acquired in sorted order to prevent deadlocks.
-    async fn acquire_bookmark_locks(
-        &self,
-        _ctx: &CoreContext,
-        mut txn: SqlTransaction,
-    ) -> Result<SqlTransaction> {
-        let mut bookmark_names: Vec<&BookmarkName> = Vec::new();
-        for (bk, _, _) in &self.force_sets {
-            bookmark_names.push(bk.name());
-        }
-        for (bk, _, _, _) in &self.creates {
-            bookmark_names.push(bk.name());
-        }
-        for (bk, _, _, _, _) in &self.updates {
-            bookmark_names.push(bk.name());
-        }
-        for (bk, _) in &self.force_deletes {
-            bookmark_names.push(bk.name());
-        }
-        for (bk, _, _) in &self.deletes {
-            bookmark_names.push(bk.name());
-        }
-        for (bk, _, _) in &self.mirror_batches {
-            bookmark_names.push(bk.name());
-        }
-
-        // Sort for deterministic lock ordering (prevents deadlocks).
-        // No dedup needed: each bookmark operation type enforces unique bookmarks
-        // via the BookmarkTransaction trait, so no bookmark appears twice.
-        bookmark_names.sort();
-
-        for name in bookmark_names {
-            txn = acquire_single_bookmark_lock(txn, &self.repo_id, name).await?;
-        }
-        Ok(txn)
-    }
-
-    /// Allocate N globally unique log IDs via the auto-increment sequence table.
-    async fn allocate_log_ids(
-        _ctx: &CoreContext,
-        txn: SqlTransaction,
-        repo_id: RepositoryId,
-        count: usize,
-    ) -> Result<(SqlTransaction, Vec<u64>)> {
-        allocate_log_ids_from_sequence(txn, repo_id, count).await
-    }
-
-    /// Count the number of log entries this transaction will produce.
-    fn count_log_entries(&self) -> usize {
-        self.force_sets.len()
-            + self
-                .creates
-                .iter()
-                .filter(|(_, _, _, log)| log.is_some())
-                .count()
-            + self
-                .updates
-                .iter()
-                .filter(|(_, _, _, _, log)| log.is_some())
-                .count()
-            + self.force_deletes.len()
-            + self
-                .deletes
-                .iter()
-                .filter(|(_, _, log)| log.is_some())
-                .count()
     }
 
     async fn find_next_update_log_id(
@@ -460,9 +276,7 @@ impl SqlBookmarksTransactionPayload {
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         let mut data = Vec::new();
         for (bookmark, cs_id, log_entry) in self.force_sets.iter() {
-            let log_id = log
-                .push_log_entry(bookmark, log_entry)
-                .map_err(BookmarkTransactionError::RetryableError)?;
+            let log_id = log.push_log_entry(bookmark, log_entry);
             data.push((self.repo_id, Some(log_id), bookmark, cs_id));
         }
         let data = data
@@ -491,9 +305,7 @@ impl SqlBookmarksTransactionPayload {
         for (bookmark, cs_id, kind, maybe_log_entry) in self.creates.iter() {
             let log_id = maybe_log_entry
                 .as_ref()
-                .map(|log_entry| log.push_log_entry(bookmark, log_entry))
-                .transpose()
-                .map_err(BookmarkTransactionError::RetryableError)?;
+                .map(|log_entry| log.push_log_entry(bookmark, log_entry));
             data.push((self.repo_id, log_id, bookmark, cs_id, kind))
         }
         let data = data
@@ -696,9 +508,7 @@ impl SqlBookmarksTransactionPayload {
         for (bookmark, old_cs_id, new_cs_id, kinds, maybe_log_entry) in self.updates.iter() {
             let log_id = maybe_log_entry
                 .as_ref()
-                .map(|log_entry| log.push_log_entry(bookmark, log_entry))
-                .transpose()
-                .map_err(BookmarkTransactionError::RetryableError)?;
+                .map(|log_entry| log.push_log_entry(bookmark, log_entry));
 
             if new_cs_id == old_cs_id && log_id.is_none() {
                 // This is a no-op update.  Check if the bookmark already points to the correct
@@ -743,8 +553,7 @@ impl SqlBookmarksTransactionPayload {
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         for (bookmark, log_entry) in self.force_deletes.iter() {
-            log.push_log_entry(bookmark, log_entry)
-                .map_err(BookmarkTransactionError::RetryableError)?;
+            log.push_log_entry(bookmark, log_entry);
             let (txn_, _) = DeleteBookmark::query_with_transaction(
                 txn,
                 &self.repo_id,
@@ -766,9 +575,7 @@ impl SqlBookmarksTransactionPayload {
         for (bookmark, old_cs_id, maybe_log_entry) in self.deletes.iter() {
             maybe_log_entry
                 .as_ref()
-                .map(|log_entry| log.push_log_entry(bookmark, log_entry))
-                .transpose()
-                .map_err(BookmarkTransactionError::RetryableError)?;
+                .map(|log_entry| log.push_log_entry(bookmark, log_entry));
             let (txn_, result) = DeleteBookmarkIf::query_with_transaction(
                 txn,
                 &self.repo_id,
@@ -792,70 +599,8 @@ impl SqlBookmarksTransactionPayload {
         ctx: &CoreContext,
         txn: SqlTransaction,
     ) -> Result<(SqlTransaction, u64), BookmarkTransactionError> {
-        let use_new_path = self.use_per_bookmark_locking();
-        let shadow_mode = !use_new_path && self.use_per_bookmark_locking_shadow_mode();
-
-        if shadow_mode {
-            // Shadow mode: log what per-bookmark locking would do, without
-            // changing the transaction path. We can't run both paths in the
-            // same SQL transaction because the old path's SELECT MAX(id)
-            // would still take the gap lock.
-            let bookmark_names: Vec<String> = self
-                .force_sets
-                .iter()
-                .map(|(bk, _, _)| bk.name())
-                .chain(self.creates.iter().map(|(bk, _, _, _)| bk.name()))
-                .chain(self.updates.iter().map(|(bk, _, _, _, _)| bk.name()))
-                .chain(self.force_deletes.iter().map(|(bk, _)| bk.name()))
-                .chain(self.deletes.iter().map(|(bk, _, _)| bk.name()))
-                .chain(self.mirror_batches.iter().map(|(bk, _, _)| bk.name()))
-                .map(|n| n.to_string())
-                .collect();
-            ctx.scuba()
-                .clone()
-                .add(
-                    "per_bookmark_lock_bookmark_count",
-                    bookmark_names.len() as i64,
-                )
-                .add("per_bookmark_lock_repo_id", self.repo_id.id())
-                .add("per_bookmark_lock_bookmarks", bookmark_names)
-                .log_with_msg("per_bookmark_locking_shadow", None);
-        }
-
-        let (mut txn, mut log) = if use_new_path {
-            // New path: per-bookmark locks + auto-increment IDs
-            let new_path_start = std::time::Instant::now();
-            let txn = self
-                .acquire_bookmark_locks(ctx, txn)
-                .await
-                .map_err(BookmarkTransactionError::RetryableError)?;
-            let lock_acquired_us = new_path_start.elapsed().as_micros() as i64;
-            let log_entry_count = self.count_log_entries();
-            let (txn, ids) = Self::allocate_log_ids(ctx, txn, self.repo_id, log_entry_count)
-                .await
-                .map_err(BookmarkTransactionError::RetryableError)?;
-            let id_alloc_us = new_path_start.elapsed().as_micros() as i64 - lock_acquired_us;
-
-            // Unsampled telemetry: one row per bookmark-write on repos that have
-            // flipped per_bookmark_locking on. Lets us see lock-acquisition and
-            // ID-allocation latency distributions in production. Volume scales
-            // with bookmark-write rate; expected to be modest for current
-            // Phase 3 targets and revisitable if rolled out to fbsource master.
-            ctx.scuba()
-                .clone()
-                .unsampled()
-                .add("per_bookmark_lock_acquired_us", lock_acquired_us)
-                .add("per_bookmark_log_ids_allocated_us", id_alloc_us)
-                .add("per_bookmark_lock_repo_id", self.repo_id.id())
-                .add("per_bookmark_lock_entry_count", log_entry_count as i64)
-                .log_with_msg("per_bookmark_locking_active", None);
-
-            (txn, TransactionLogUpdates::pre_allocated(ids))
-        } else {
-            // Old path: optimistic locking via repo-level SELECT MAX(id)
-            let (txn, next_id) = Self::find_next_update_log_id(ctx, txn, self.repo_id).await?;
-            (txn, TransactionLogUpdates::sequential(next_id))
-        };
+        let (mut txn, next_id) = Self::find_next_update_log_id(ctx, txn, self.repo_id).await?;
+        let mut log = TransactionLogUpdates::new(next_id);
 
         txn = self.store_force_sets(ctx, txn, &mut log).await?;
         txn = self.store_creates(ctx, txn, &mut log).await?;
@@ -1185,113 +930,4 @@ pub(crate) async fn insert_bookmarks(
         .collect::<Vec<_>>();
     InsertBookmarks::query(conn, ctx.sql_query_telemetry(), rows.as_slice()).await?;
     Ok(())
-}
-
-/// Acquire a per-bookmark FOR UPDATE lock on a single bookmark.
-///
-/// If the lock row doesn't exist (legacy bookmark predating the lock table),
-/// creates it via INSERT IGNORE and re-acquires. This graceful fallback
-/// eliminates the need for a coordinated backfill migration.
-///
-/// Used by both `SqlBookmarksTransactionPayload::acquire_bookmark_locks`
-/// (per-bookmark locking optimistic path) and `LockedBookmarkTransaction::new`
-/// (pessimistic path).
-pub(crate) async fn acquire_single_bookmark_lock(
-    txn: SqlTransaction,
-    repo_id: &RepositoryId,
-    name: &BookmarkName,
-) -> Result<SqlTransaction> {
-    let (txn, rows) = AcquireBookmarkLock::query_with_transaction(txn, repo_id, name).await?;
-
-    if rows.is_empty() {
-        // Lock row doesn't exist (legacy bookmark). Create it and re-acquire.
-        let data = [(repo_id, name)];
-        let (txn, _) = EnsureBookmarkLockRow::query_with_transaction(txn, &data[..]).await?;
-        let (txn, _) = AcquireBookmarkLock::query_with_transaction(txn, repo_id, name).await?;
-        Ok(txn)
-    } else {
-        Ok(txn)
-    }
-}
-
-/// Allocate N globally unique log IDs via the auto-increment sequence table.
-///
-/// On every call, ensures the sequence table is seeded above this repo's
-/// current MAX(id) in bookmarks_update_log so that the next auto-increment
-/// allocation cannot collide with an existing (repo_id, id) row.
-///
-/// Self-healing across old↔new path transitions: if a repo is rolled back
-/// to the legacy path and then re-enabled, its bookmarks_update_log max may
-/// have advanced past the sequence value. This check catches that on the
-/// next allocation and bumps the sequence accordingly. No-op on the common
-/// case where the sequence is already ahead.
-///
-/// Both queries used (ReadMaxSequenceId, FindRepoMaxBookmarkLogId) are PK
-/// seeks: the sequence table has a single column PK, and bookmarks_update_log
-/// has PK (repo_id, id). This makes the seed check cheap enough to run on
-/// every bookmark write.
-///
-/// Used by both `SqlBookmarksTransactionPayload::allocate_log_ids` (per-bookmark
-/// locking optimistic path) and `LockedBookmarkTransaction::commit` (pessimistic
-/// path).
-pub(crate) async fn allocate_log_ids_from_sequence(
-    mut txn: SqlTransaction,
-    repo_id: RepositoryId,
-    count: usize,
-) -> Result<(SqlTransaction, Vec<u64>)> {
-    if count == 0 {
-        return Ok((txn, vec![]));
-    }
-
-    let (txn_, seq_rows) = ReadMaxSequenceId::query_with_transaction(txn).await?;
-    txn = txn_;
-    let seq_max = seq_rows.first().and_then(|r| r.0).unwrap_or(0);
-
-    let (txn_, repo_rows) = FindRepoMaxBookmarkLogId::query_with_transaction(txn, &repo_id).await?;
-    txn = txn_;
-    let repo_max = repo_rows.first().and_then(|r| r.0).unwrap_or(0);
-
-    if repo_max > seq_max {
-        // The sequence is behind this repo's max. Bump it past repo_max so
-        // the next allocation cannot collide with an existing log row. Uses
-        // INSERT OR IGNORE so that concurrent transactions racing to bump
-        // for the same target value are idempotent — only one INSERT wins,
-        // both transactions then proceed to the allocation loop and get
-        // strictly higher IDs from auto-increment.
-        //
-        // Strictly greater (not >=) because when seq_max == repo_max, the
-        // next auto-increment allocation already gives seq_max + 1 which is
-        // strictly above repo_max. Equality includes the (0, 0) empty case
-        // and the steady-state case where the previous allocation set both
-        // to the same value — neither needs a bump.
-        let target = repo_max + 1;
-        let (txn_, _) = SeedSequenceId::query_with_transaction(txn, &target).await?;
-        txn = txn_;
-    }
-
-    // Allocate N IDs by inserting N individual rows, reading back each
-    // ID immediately after its INSERT via LAST_INSERT_ID(). We must read
-    // after each INSERT because MySQL auto-increment is NOT transactional:
-    // the AUTO-INC lock is per-statement (not per-transaction), so another
-    // connection can allocate an ID between any two of our INSERTs,
-    // creating gaps. Reading LAST_INSERT_ID() after each INSERT is safe
-    // because it is per-connection — it always returns the last auto-
-    // increment value generated by THIS connection regardless of other
-    // connections' activity.
-    //
-    // Performance: N is typically 1 (single-bookmark transactions); the
-    // rare multi-bookmark case (e.g., git import) has N < 100.
-    let mut ids = Vec::with_capacity(count);
-    for _ in 0..count {
-        let (txn_, _) = AllocateBookmarkLogId::query_with_transaction(txn).await?;
-        let (txn_, rows) = ReadLastInsertId::query_with_transaction(txn_).await?;
-        txn = txn_;
-        let id = rows
-            .into_iter()
-            .next()
-            .ok_or_else(|| anyhow!("ReadLastInsertId returned no rows"))?
-            .0;
-        ids.push(id);
-    }
-    Ok((txn, ids))
 }

@@ -72,7 +72,6 @@ fn init_just_knobs_for_test() {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
         "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
     }));
@@ -158,7 +157,7 @@ async fn fetch_bonsai_changesets(
 
 async fn do_pushrebase(
     ctx: &CoreContext,
-    repo: &(impl PushrebaseRepo + BonsaiHgMappingRef),
+    repo: &(impl Repo + BonsaiHgMappingRef),
     config: &PushrebaseFlags,
     onto_bookmark: &BookmarkKey,
     pushed_set: &HashSet<HgChangesetId>,
@@ -201,7 +200,7 @@ fn master_bookmark() -> BookmarkKey {
 
 async fn push_and_verify(
     ctx: &CoreContext,
-    repo: &(impl PushrebaseRepo + BonsaiHgMappingRef),
+    repo: &(impl Repo + BonsaiHgMappingRef),
     parent: ChangesetId,
     bookmark: &BookmarkKey,
     content: BTreeMap<&str, Option<&str>>,
@@ -531,7 +530,6 @@ async fn range_diff_manifest_kind_is_knob_routed_and_equivalent(
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
         "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(true),
     }));
@@ -4756,72 +4754,49 @@ async fn batched_pushrebase_rebase_failure_preserves_conflict_checks(
         .commit()
         .await?;
 
-    // Exercise optimistic batching and pessimistic checks both with and without
-    // a bookmark move between the speculative check and lock acquisition.
-    for speculative_head in [None, Some(base), Some(server)] {
-        bookmark(&ctx, &repo, book.clone()).set_to(base).await?;
-        let mut requests = Vec::new();
-        let mut receivers = Vec::new();
-        for (path, content) in [
-            ("before", client_content),
-            ("broken", "client\ntwo\nthree\nfour\nfive\n"),
-            ("after", client_content),
-        ] {
-            let cs_id = CreateCommitContext::new(&ctx, &repo, vec![base])
-                .add_file(path, content)
-                .commit()
-                .await?;
-            let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
-            let mut stack =
-                index_pushrebase_request(&ctx, &repo, &config, &book, &hashset![bcs]).await?;
-            stack.precompute(&ctx, &repo, &config, &book).await?;
-            let (tx, rx) = oneshot::channel();
-            requests.push(queued_pushrebase_request(&ctx, stack, tx));
-            receivers.push(rx);
-        }
+    bookmark(&ctx, &repo, book.clone()).set_to(base).await?;
+    let mut requests = Vec::new();
+    let mut receivers = Vec::new();
+    for (path, content) in [
+        ("before", client_content),
+        ("broken", "client\ntwo\nthree\nfour\nfive\n"),
+        ("after", client_content),
+    ] {
+        let cs_id = CreateCommitContext::new(&ctx, &repo, vec![base])
+            .add_file(path, content)
+            .commit()
+            .await?;
+        let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
+        let mut stack =
+            index_pushrebase_request(&ctx, &repo, &config, &book, &hashset![bcs]).await?;
+        stack.precompute(&ctx, &repo, &config, &book).await?;
+        let (tx, rx) = oneshot::channel();
+        requests.push(queued_pushrebase_request(&ctx, stack, tx));
+        receivers.push(rx);
+    }
 
-        bookmark(&ctx, &repo, book.clone()).set_to(server).await?;
-        let requeued = if let Some(speculative_head) = speculative_head {
-            let checked =
-                speculative_batch_check(&repo, &config, Some(speculative_head), requests).await;
-            assert_eq!(checked.len(), 3);
-            match rebase_batch_under_lock(
-                &repo,
-                &config,
-                Some(speculative_head),
-                Some(server),
-                checked,
-                &mut [],
-            )
-            .await
-            {
-                Err((requests, _)) => requests,
-                Ok(_) => panic!("the conflicting merge should abort the batch"),
-            }
-        } else {
-            do_batched_pushrebase(&ctx, &repo, &config, &book, requests, &[]).await
-        };
-        let error = receivers.remove(1).await?.expect_err("merge should fail");
-        assert!(matches!(error.inner(), PushrebaseError::Conflicts(_)));
-        assert_eq!(requeued.len(), 2);
-        assert_eq!(requeued[0].stack.conflict_check_base, server);
-        assert_eq!(requeued[0].stack.carried_merge_file_info.len(), 1);
-        assert_eq!(requeued[1].stack.conflict_check_base, base);
-        assert!(requeued[1].stack.carried_merge_file_info.is_empty());
+    bookmark(&ctx, &repo, book.clone()).set_to(server).await?;
+    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &book, requests, &[]).await;
+    let error = receivers.remove(1).await?.expect_err("merge should fail");
+    assert!(matches!(error.inner(), PushrebaseError::Conflicts(_)));
+    assert_eq!(requeued.len(), 2);
+    assert_eq!(requeued[0].stack.conflict_check_base, server);
+    assert_eq!(requeued[0].stack.carried_merge_file_info.len(), 1);
+    assert_eq!(requeued[1].stack.conflict_check_base, base);
+    assert!(requeued[1].stack.carried_merge_file_info.is_empty());
 
-        let requeued = do_batched_pushrebase(&ctx, &repo, &config, &book, requeued, &[]).await;
-        assert!(requeued.is_empty());
-        for receiver in receivers {
-            receiver.await?.map_err(|error| anyhow!(error))?;
-        }
-        let head = get_bookmark_value(&ctx, &repo, &book)
-            .await?
-            .expect("bookmark should be set after pushrebase");
-        let files = list_working_copy(&ctx, &repo, head).await?;
-        for path in ["before", "after"] {
-            let content = &files[&NonRootMPath::new(path)?];
-            assert_eq!(&content[..], b"server\ntwo\nthree\nfour\nclient\n");
-        }
+    let requeued = do_batched_pushrebase(&ctx, &repo, &config, &book, requeued, &[]).await;
+    assert!(requeued.is_empty());
+    for receiver in receivers {
+        receiver.await?.map_err(|error| anyhow!(error))?;
+    }
+    let head = get_bookmark_value(&ctx, &repo, &book)
+        .await?
+        .expect("bookmark should be set after pushrebase");
+    let files = list_working_copy(&ctx, &repo, head).await?;
+    for path in ["before", "after"] {
+        let content = &files[&NonRootMPath::new(path)?];
+        assert_eq!(&content[..], b"server\ntwo\nthree\nfour\nclient\n");
     }
     Ok(())
 }
@@ -5455,154 +5430,6 @@ async fn pushrebase_noop_merge_local_equals_base_not_flagged(
         1,
         "base==other branch must not trip our duplicate-content detection"
     );
-    Ok(())
-}
-
-fn pessimistic_config() -> PushrebaseFlags {
-    PushrebaseFlags {
-        pessimistic_locking_bookmarks: vec![master_bookmark()],
-        ..Default::default()
-    }
-}
-
-fn init_just_knobs_for_pessimistic_test() {
-    override_just_knobs(JustKnobsInMemory::new(hashmap! {
-        "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
-        "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
-    }));
-}
-
-// NOTE: Full end-to-end pessimistic pushrebase cannot be tested with
-// SQLite unit tests because TestRepoFactory shares a single SQLite
-// connection across all facets. LockedBookmarkTransaction holds the
-// connection open during rebase, and save_changesets ->
-// CommitGraphWriter::add_many tries to acquire the same connection,
-// causing a deadlock. Full E2E is covered by integration tests (MySQL).
-
-#[mononoke::fbinit_test]
-async fn pessimistic_pushrebase_conflict(fb: FacebookInit) -> Result<(), Error> {
-    init_just_knobs_for_pessimistic_test();
-    let ctx = CoreContext::test_mock(fb);
-    let repo: PushrebaseTestRepo = Linear::get_repo(fb).await;
-
-    let book = master_bookmark();
-    bookmark(&ctx, &repo, book.clone())
-        .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
-        .await?;
-
-    let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-    let p = repo
-        .bonsai_hg_mapping()
-        .get_bonsai_from_hg(&ctx, root)
-        .await?
-        .ok_or_else(|| Error::msg("Root is missing"))?;
-
-    let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![p])
-        .add_file("files", "conflicting content")
-        .commit()
-        .await?;
-    let bcs = bcs_id.load(&ctx, repo.repo_blobstore()).await?;
-
-    let config = pessimistic_config();
-    let result = do_pushrebase_bonsai(&ctx, &repo, &config, &book, &hashset![bcs], &[]).await;
-
-    should_have_conflicts(result);
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn pessimistic_dispatch_selection(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo: PushrebaseTestRepo = Linear::get_repo(fb).await;
-
-    let book = master_bookmark();
-    let other_book = BookmarkKey::new("other_bookmark")?;
-    let config = pessimistic_config();
-    let repo_id_str = repo.repo_identity().id().to_string();
-
-    init_just_knobs_for_test();
-    let use_pessimistic = justknobs::eval(
-        "scm/mononoke:per_bookmark_locking",
-        None,
-        Some(&repo_id_str),
-    ) && config.pessimistic_locking_bookmarks.contains(&book);
-    assert!(!use_pessimistic, "should be optimistic when knob is off");
-
-    init_just_knobs_for_pessimistic_test();
-    let use_pessimistic = justknobs::eval(
-        "scm/mononoke:per_bookmark_locking",
-        None,
-        Some(&repo_id_str),
-    ) && config.pessimistic_locking_bookmarks.contains(&other_book);
-    assert!(
-        !use_pessimistic,
-        "should be optimistic when bookmark not in pessimistic list"
-    );
-
-    let use_pessimistic = justknobs::eval(
-        "scm/mononoke:per_bookmark_locking",
-        None,
-        Some(&repo_id_str),
-    ) && config.pessimistic_locking_bookmarks.contains(&book);
-    assert!(
-        use_pessimistic,
-        "should be pessimistic when knob is on and bookmark is in list"
-    );
-
-    let config_empty = PushrebaseFlags::default();
-    let use_pessimistic = justknobs::eval(
-        "scm/mononoke:per_bookmark_locking",
-        None,
-        Some(&repo_id_str),
-    ) && config_empty.pessimistic_locking_bookmarks.contains(&book);
-    assert!(
-        !use_pessimistic,
-        "should be optimistic with empty pessimistic_locking_bookmarks"
-    );
-
-    drop(ctx);
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn pessimistic_locked_transaction_lifecycle(fb: FacebookInit) -> Result<(), Error> {
-    init_just_knobs_for_pessimistic_test();
-    let ctx = CoreContext::test_mock(fb);
-    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
-
-    let book = master_bookmark();
-
-    let root_cs = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("file", "content")
-        .commit()
-        .await?;
-
-    bookmark(&ctx, &repo, book.clone()).set_to(root_cs).await?;
-
-    let child_cs = CreateCommitContext::new(&ctx, &repo, vec![root_cs])
-        .add_file("file2", "content2")
-        .commit()
-        .await?;
-
-    let sql_bookmarks = repo.sql_bookmarks();
-    let locked_txn = sql_bookmarks.start_locked_transaction(&ctx, &book).await?;
-
-    assert_eq!(locked_txn.current_value(), Some(root_cs));
-
-    let log_id = locked_txn
-        .commit(&ctx, child_cs, BookmarkUpdateReason::Pushrebase, vec![])
-        .await?;
-
-    assert!(log_id.is_some(), "CAS should succeed under the lock");
-
-    let new_value = repo
-        .bookmarks()
-        .get(ctx.clone(), &book, bookmarks::Freshness::MostRecent)
-        .await?;
-    assert_eq!(new_value, Some(child_cs));
-
     Ok(())
 }
 
@@ -6856,7 +6683,6 @@ async fn manifest_rebase_with_content_manifests(fb: FacebookInit) -> Result<(), 
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:per_bookmark_locking".to_string() => KnobVal::Bool(false),
         "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
     }));

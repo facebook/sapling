@@ -17,7 +17,6 @@ use clap::Subcommand;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use commit_throughput::CommitThroughputArgs;
-use dbbookmarks::SqlBookmarks;
 use filestore::FilestoreConfig;
 use hook_manager::manager::HookManager;
 use metaconfig_types::RepoConfig;
@@ -68,9 +67,6 @@ pub struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
-
-    #[facet]
-    sql_bookmarks: SqlBookmarks,
 
     #[facet]
     commit_graph: CommitGraph,

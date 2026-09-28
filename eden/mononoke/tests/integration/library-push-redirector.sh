@@ -672,33 +672,11 @@ function mononoke_x_repo_sync_forever() {
   echo "$XREPOSYNC_PID" >> "$DAEMON_PIDS"
 }
 
-# Wait for xrepo sync (15s at most). Argument N means "wait for the Nth entry
-# of the source repo's bookmarks_update_log to be successfully synced". Under
-# per_bookmark_locking, log ids are allocated from a global sequence and are
-# no longer contiguous per-repo, so the Nth source-repo entry's id no longer
-# equals N. We look up the actual id and grep for that.
-#
-# Optional second argument: source repo id. Defaults to $REPOIDSMALL (the
-# common cross-repo case). Tests using non-standard repo ids (e.g. submodule
-# expansion) should pass it explicitly, e.g. wait_for_xrepo_sync 2 "$SUBMODULE_REPO_ID".
+# Wait for xrepo sync (15s at most).
 function wait_for_xrepo_sync {
-  local nth_entry="$1"
-  local source_repo="${2:-${XREPO_SYNC_SOURCE_REPO:-$REPOIDSMALL}}"
-  local actual_id=""
-  # Wait briefly for the entry to exist in the source repo's log
-  for _ in $(seq 1 30); do
-    actual_id=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
-      "SELECT id FROM bookmarks_update_log WHERE repo_id = $source_repo ORDER BY id LIMIT 1 OFFSET $((nth_entry - 1))" \
-      2>/dev/null)
-    [[ -n "$actual_id" ]] && break
-    sleep 0.1
-  done
-  # Fall back to the literal input if the entry isn't in the DB yet
-  : "${actual_id:=$nth_entry}"
-
   local attempts=150
   for _ in $(seq 1 $attempts); do
-    grep -q "successful sync bookmark update log #$actual_id" "$TESTTMP/xreposync.out" && return 0
+    grep -q "successful sync bookmark update log #$1" "$TESTTMP/xreposync.out" && return 0
     sleep 0.1
   done
 

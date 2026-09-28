@@ -68,18 +68,18 @@
   [INFO] processing log entry #1
   [INFO] 0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d
   [INFO] successful sync bookmark update log #1
-  [INFO] processing log entry #3
+  [INFO] processing log entry #2
   [INFO] 1 unsynced ancestors of 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12
   [INFO] syncing 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12
   [INFO] changeset 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 synced as d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411 in * (glob)
-  [INFO] successful sync bookmark update log #3
-  [INFO] processing log entry #4
+  [INFO] successful sync bookmark update log #2
+  [INFO] processing log entry #3
   [INFO] 2 unsynced ancestors of 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b
   [INFO] syncing 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 via pushrebase for master_bookmark
   [INFO] changeset 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 synced as d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411 * (glob)
   [INFO] syncing 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b via pushrebase for master_bookmark
   [INFO] changeset 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b synced as 3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e * (glob)
-  [INFO] successful sync bookmark update log #4
+  [INFO] successful sync bookmark update log #3
   [INFO] X Repo Sync execution finished from small repo small-mon to large repo large-mon
 
 -- Show the bookmarks after the sync
@@ -110,11 +110,11 @@
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 1
-  [INFO] processing log entry #8
+  [INFO] processing log entry #4
   [INFO] 1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   [INFO] syncing a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   [INFO] changeset a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 synced as 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 * (glob)
-  [INFO] successful sync bookmark update log #8
+  [INFO] successful sync bookmark update log #4
   [INFO] X Repo Sync execution finished from small repo small-mon to large repo large-mon
 
   $ testtool_drawdag -R large-mon << EOF
@@ -132,11 +132,11 @@
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 1
-  [INFO] processing log entry #11
+  [INFO] processing log entry #5
   [INFO] 1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   [INFO] syncing a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 via pushrebase for master_bookmark
   [INFO] changeset a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 synced as 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e * (glob)
-  [INFO] successful sync bookmark update log #11
+  [INFO] successful sync bookmark update log #5
   [INFO] X Repo Sync execution finished from small repo small-mon to large repo large-mon
 
   $ mononoke_admin bookmarks --repo-name large-mon list
@@ -171,9 +171,9 @@
   * (glob)
   [INFO] Starting up X Repo Sync from small repo small-mon to large repo large-mon
   [INFO] queue size is 1
-  [INFO] processing log entry #13
+  [INFO] processing log entry #6
   [INFO] 1 unsynced ancestors of c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   [INFO] syncing c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   [INFO] changeset c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0 synced as 5c3f0368dead91cb214d9b3983ae632c160960e35ee91ac6f11ad96e5601849d * (glob)
-  [INFO] successful sync bookmark update log #13
+  [INFO] successful sync bookmark update log #6
   [INFO] X Repo Sync execution finished from small repo small-mon to large repo large-mon

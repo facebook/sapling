@@ -16,7 +16,6 @@ use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
-use dbbookmarks::SqlBookmarks;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use insert::InsertArgs;
@@ -128,9 +127,6 @@ pub struct Repo {
 
     #[facet]
     sql_query_config: SqlQueryConfig,
-
-    #[facet]
-    sql_bookmarks: SqlBookmarks,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {

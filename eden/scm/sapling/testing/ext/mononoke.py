@@ -1019,11 +1019,6 @@ forbid_p2_root_rebases=false
     if env.getenv("ALLOW_CHANGE_XREPO_MAPPING_EXTRA"):
         append_config("allow_change_xrepo_mapping_extra=true")
 
-    if env.getenv("PUSHREBASE_PESSIMISTIC_LOCKING_BOOKMARKS"):
-        bookmarks = env.getenv("PUSHREBASE_PESSIMISTIC_LOCKING_BOOKMARKS").split()
-        toml_list = ", ".join(f'"{b}"' for b in bookmarks)
-        append_config(f"pessimistic_locking_bookmarks = [{toml_list}]")
-
     append_config(
         """
 [hook_manager_params]

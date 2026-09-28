@@ -76,7 +76,6 @@ use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::sync_commit;
 use dag_types::Location;
-use dbbookmarks::SqlBookmarks;
 use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -257,9 +256,6 @@ pub struct Repo {
 
     #[facet]
     pub bookmarks: dyn Bookmarks,
-
-    #[facet]
-    pub sql_bookmarks: SqlBookmarks,
 
     #[facet]
     pub phases: dyn Phases,

@@ -121,7 +121,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_cache:bookmarks_cache",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_movement:bookmarks_movement",
-        "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/commit_graph/sql_commit_graph_storage:sql_commit_graph_storage",
         "//eden/mononoke/repo_attributes/commit_rate_limit:commit_rate_limit_config",

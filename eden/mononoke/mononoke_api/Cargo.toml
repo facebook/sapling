@@ -41,7 +41,6 @@ commit_rate_limit_config = { version = "0.1.0", path = "../repo_attributes/commi
 content_manifest_derivation = { version = "0.1.0", path = "../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../features/cross_repo_sync" }
-dbbookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks/dbbookmarks" }
 deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
 derivation_queue_thrift = { version = "0.1.0", path = "../repo_attributes/repo_derivation_queues/if" }
 derivative = "2.2"

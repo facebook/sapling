@@ -84,15 +84,15 @@
   * Starting session with id * (glob)
   * Starting up X Repo Sync from small repo small to large repo large (glob)
   * queue size is 3 (glob)
-  * processing log entry #3 (glob)
+  * processing log entry #1 (glob)
   * 0 unsynced ancestors of 7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e (glob)
-  * successful sync bookmark update log #3 (glob)
-  [INFO] processing log entry #4
+  * successful sync bookmark update log #1 (glob)
+  [INFO] processing log entry #2
   * 0 unsynced ancestors of 7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e (glob)
-  [INFO] successful sync bookmark update log #4
-  [INFO] processing log entry #5
+  [INFO] successful sync bookmark update log #2
+  [INFO] processing log entry #3
   * 0 unsynced ancestors of 7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e (glob)
-  [INFO] successful sync bookmark update log #5
+  [INFO] successful sync bookmark update log #3
   * X Repo Sync execution finished from small repo small to large repo large (glob)
 
   $ mononoke_admin bookmarks --repo-name large list
@@ -138,13 +138,13 @@
   * Starting session with id * (glob)
   * Starting up X Repo Sync from small repo small to large repo large (glob)
   * queue size is 1 (glob)
-  [INFO] processing log entry #10
+  [INFO] processing log entry #4
   * 2 unsynced ancestors of 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
   * syncing dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f via pushrebase for master_bookmark (glob)
   * changeset dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f synced as ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9 * (glob)
   * syncing 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be via pushrebase for master_bookmark (glob)
   * changeset 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be synced as e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb * (glob)
-  [INFO] successful sync bookmark update log #10
+  [INFO] successful sync bookmark update log #4
   * X Repo Sync execution finished from small repo small to large repo large (glob)
 
   $ mononoke_admin bookmarks --repo-name large list
@@ -178,19 +178,19 @@
   [INFO] Starting session with id * (glob)
   [INFO] Starting up X Repo Sync from small repo small to large repo large
   [INFO] queue size is 3
-  [INFO] processing log entry #13
+  [INFO] processing log entry #5
   [INFO] 0 unsynced ancestors of dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f
-  [INFO] successful sync bookmark update log #13
-  [INFO] processing log entry #14
+  [INFO] successful sync bookmark update log #5
+  [INFO] processing log entry #6
   [INFO] 1 unsynced ancestors of 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
   [INFO] syncing 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
   [INFO] changeset 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3 synced as b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 in * (glob)
-  [INFO] successful sync bookmark update log #14
-  [INFO] processing log entry #15
+  [INFO] successful sync bookmark update log #6
+  [INFO] processing log entry #7
   [INFO] 1 unsynced ancestors of 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
   [INFO] syncing 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
   [INFO] changeset 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708 synced as f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e in * (glob)
-  [INFO] successful sync bookmark update log #15
+  [INFO] successful sync bookmark update log #7
   [INFO] X Repo Sync execution finished from small repo small to large repo large
 
 -- check the state of bookmarks in the large repo
