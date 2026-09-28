@@ -45,11 +45,13 @@ use mercurial_mutation::HgMutationStoreRef;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileEnvelopeMut;
 use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::blobs::store_manifest_envelope;
 use metaconfig_types::RepoConfig;
 use mononoke_api::MononokeRepo;
 use mononoke_api::errors::MononokeError;
@@ -351,7 +353,11 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         Ok(())
     }
 
-    /// Store Tree into blobstore
+    /// Store Tree into blobstore, returning the envelope it was stored as.
+    ///
+    /// Take the envelope from here rather than rebuilding it from the raw
+    /// bytes: `upload_node_id` and `computed_node_id` legitimately differ for a
+    /// mirror upload, and a second construction site loses that distinction.
     pub async fn store_tree(
         &self,
         upload_node_id: HgNodeHash,
@@ -359,7 +365,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         p2: Option<HgNodeHash>,
         contents: Bytes,
         computed_node_id: Option<HgNodeHash>,
-    ) -> Result<(), MononokeError> {
+    ) -> Result<HgManifestEnvelope, MononokeError> {
         if computed_node_id.is_some() {
             self.repo_ctx
                 .authorization_context()
@@ -374,14 +380,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             path: RepoPath::RootPath, // only used for logging
             computed_node_id,
         };
-        let (_, upload_future) = entry.upload(
-            self.ctx().clone(),
-            Arc::new(self.repo().repo_blobstore().clone()),
-        )?;
+        let (envelope, _path) = entry.into_verified_envelope()?;
+        store_manifest_envelope(self.ctx(), self.repo().repo_blobstore(), envelope.clone())
+            .await
+            .map_err(MononokeError::from)?;
 
-        upload_future.await.map_err(MononokeError::from)?;
-
-        Ok(())
+        Ok(envelope)
     }
 
     /// Store HgChangeset. The function also generates bonsai changeset and stores all necessary mappings.
