@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-include "fb303/thrift/fb303_core.thrift"
 include "eden/mononoke/git/git_types/if/git_types_thrift.thrift"
 include "eden/mononoke/repo_attributes/filenodes/if/filenodes.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
@@ -286,7 +285,7 @@ safe permanent server exception InternalError {
 }
 
 @rust.RequestContext
-service DerivedDataService extends fb303_core.BaseService {
+service DerivedDataService {
   /// Request derivation for given commit. Service will find all underived commits
   /// and dependency for other derived data types
   DeriveResponse derive(1: DeriveRequest request) throws (
