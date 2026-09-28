@@ -10,8 +10,6 @@
 use std::fs::File;
 use std::io::Write;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -35,6 +33,7 @@ use megarepo_api::MegarepoApi;
 use metaconfig_types::ShardedService;
 use mononoke_api::CoreContext;
 use mononoke_api::repo::Repo;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use mononoke_app::args::HooksAppExtension;
@@ -267,7 +266,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
-    let will_exit = Arc::new(AtomicBool::new(false));
     let (sm_shutdown_sender, sm_shutdown_receiver) = tokio::sync::oneshot::channel::<bool>();
 
     if let Some(max_memory) = args.max_memory {
@@ -317,7 +315,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .await
             .expect("Failed to build thrift factory")
     });
-    let thrift = setup_thrift_server(fb, &args, source_control_server, factory)
+    let thrift = setup_thrift_server(&app, &args, source_control_server, factory)
         .context("Failed to set up Thrift server")?;
 
     let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift)
@@ -375,7 +373,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     app.wait_until_terminated(
         move || {
             let _ = sm_shutdown_sender.send(true);
-            will_exit.store(true, Ordering::Relaxed)
         },
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
@@ -395,7 +392,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 }
 
 fn setup_thrift_server(
-    fb: FacebookInit,
+    app: &MononokeApp,
     args: &ScsServerArgs,
     source_control_server: SourceControlServiceImpl,
     exec: thrift_factory::ThriftFactory,
@@ -427,13 +424,14 @@ fn setup_thrift_server(
         net_config: None,
     };
 
-    Ok(ThriftServerBuilder::new(fb)
+    Ok(ThriftServerBuilder::new(app.fb)
         .with_name(SERVICE_NAME)
         .expect("failed to set name")
         .with_address(&args.host, args.port, false)?
         .with_tls()
         .expect("failed to enable TLS")
         .with_cancel_if_client_disconnected()
+        .with_custom_status_impl(app.server_status())
         .with_static_better_overload_handler(&boh_config)
         .context("Failed to configure BetterOverloadHandler")?
         .add_factory(exec, move || service, Some(metadata::create_metadata()))

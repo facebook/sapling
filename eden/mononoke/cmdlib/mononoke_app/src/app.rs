@@ -12,7 +12,9 @@ use std::fs;
 use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -84,6 +86,8 @@ use crate::extension::AppExtensionArgsBox;
 use crate::extension::BoxedAppExtensionArgs;
 use crate::monitoring::MonitoringAppExtension;
 use crate::repos_manager::MononokeReposManager;
+#[cfg(fbcode_build)]
+use crate::server_status::MononokeAppServerStatus;
 
 define_stats! {
     prefix = "mononoke.app";
@@ -99,6 +103,7 @@ pub struct MononokeApp {
     extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     configs: Arc<MononokeConfigs>,
     repo_factory: Arc<RepoFactory>,
+    quiescing: Arc<AtomicBool>,
 }
 
 impl BaseApp for MononokeApp {
@@ -131,6 +136,7 @@ impl MononokeApp {
             extension_args,
             configs,
             repo_factory,
+            quiescing: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -228,6 +234,17 @@ impl MononokeApp {
         Ok(())
     }
 
+    /// Status to serve from a Thrift server's `getStatus` interface, via
+    /// `ThriftServerBuilder::with_custom_status_impl`.
+    ///
+    /// The status flips to `STOPPING` when this app starts to quiesce, so
+    /// callers see the instance leave rotation for the whole of the shutdown
+    /// grace period instead of only once the server stops.
+    #[cfg(fbcode_build)]
+    pub fn server_status(&self) -> MononokeAppServerStatus {
+        MononokeAppServerStatus::new(self.quiescing.clone())
+    }
+
     /// Run a server future, and wait until a termination signal is received.
     ///
     /// When the termination signal is received, the `quiesce` callback is
@@ -263,10 +280,14 @@ impl MononokeApp {
             .runtime
             .take()
             .ok_or_else(|| anyhow!("MononokeApp already started"))?;
+        let quiescing = self.quiescing.clone();
         let server = async move { server(self).await };
         runtime.block_on(run_until_terminated(
             server,
-            quiesce,
+            move || {
+                quiescing.store(true, Ordering::Relaxed);
+                quiesce();
+            },
             shutdown_grace_period,
             shutdown,
             shutdown_timeout,

@@ -81,6 +81,7 @@ rust_library(
             []
             if rust_oss.is_oss_build()
             else [
+                "//common/rust/srserver:srserver",
                 "//configerator/structs/infrasec/if:acl-rust",
                 "//eden/mononoke/facebook/ods3_schemas:MononokeAppStats_ods3-rs_bindings",
             ]

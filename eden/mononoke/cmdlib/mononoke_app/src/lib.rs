@@ -14,12 +14,16 @@ mod extension;
 pub mod monitoring;
 mod pager;
 mod repos_manager;
+#[cfg(fbcode_build)]
+mod server_status;
 
 pub use app::MononokeApp;
 pub use builder::MononokeAppBuilder;
 pub use extension::AppExtension;
 pub use repos_manager::MononokeReposManager;
 pub use running::ShutdownGracePeriod;
+#[cfg(fbcode_build)]
+pub use server_status::MononokeAppServerStatus;
 
 #[doc(hidden)]
 pub mod macro_export {
