@@ -100,6 +100,21 @@ impl<R> MononokeRepos<R> {
         result.into_iter()
     }
 
+    /// Names of the repos that are **built**, unlike [`Self::iter_names`],
+    /// which also reports repos that are merely assigned. Rebuild decisions
+    /// need this one: an unbuilt repo has no resolved config to compare
+    /// against, so counting it as loaded makes it look permanently drifted.
+    pub fn iter_loaded_names(&self) -> impl Iterator<Item = String> + use<R> {
+        let result: Vec<_> = self
+            .name_to_repo_map
+            .load()
+            .iter()
+            .filter(|(_, repo_slot)| repo_slot.loaded().is_some())
+            .map(|(name, _)| name.to_string())
+            .collect();
+        result.into_iter()
+    }
+
     /// Returns an iterator over the set of repo-ids corresponding
     /// to the repos currently loaded for the service / command.
     pub fn iter_ids(&self) -> impl Iterator<Item = i32> + use<R> {

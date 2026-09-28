@@ -93,6 +93,37 @@ fn test_add_placeholder_twice_leaves_one_assignment() {
 }
 
 #[mononoke::test]
+fn test_iter_loaded_names_excludes_a_placeholder() {
+    let repos: MononokeRepos<i32> = MononokeRepos::new();
+    repos.add("built", 1, 100);
+    repos.add_placeholder("assigned", 2);
+
+    let mut assigned: Vec<_> = repos.iter_names().collect();
+    assigned.sort();
+    assert_eq!(
+        assigned,
+        vec!["assigned", "built"],
+        "iter_names reports assignment, so both are listed"
+    );
+
+    assert_eq!(
+        repos.iter_loaded_names().collect::<Vec<_>>(),
+        vec!["built"],
+        "an assigned-but-unbuilt repo must not be reported as loaded"
+    );
+}
+
+#[mononoke::test]
+fn test_iter_loaded_names_includes_a_placeholder_once_built() {
+    let repos: MononokeRepos<i32> = MononokeRepos::new();
+    repos.add_placeholder("foo", 1);
+    assert_eq!(repos.iter_loaded_names().count(), 0);
+
+    repos.add("foo", 1, 100);
+    assert_eq!(repos.iter_loaded_names().collect::<Vec<_>>(), vec!["foo"]);
+}
+
+#[mononoke::test]
 fn test_remove_drops_a_placeholder() {
     let repos: MononokeRepos<i32> = MononokeRepos::new();
     repos.add_placeholder("foo", 1);

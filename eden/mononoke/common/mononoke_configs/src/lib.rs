@@ -322,7 +322,9 @@ impl MononokeConfigs {
         }
     }
 
-    /// Create a per-repo ConfigHandle on-demand (called by ShardManager on_add_shard).
+    /// Create a per-repo ConfigHandle on-demand. Reached from ShardManager
+    /// on_add_shard via `repos_manager::add_repo` -> `get_or_load_repo_config`;
+    /// nothing in the sharding layer calls it directly.
     pub fn load_repo_config_handle(&self, repo_name: &str) -> Result<()> {
         // Fast path: already loaded
         if self

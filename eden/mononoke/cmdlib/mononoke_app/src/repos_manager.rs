@@ -423,7 +423,7 @@ where
         + 'static,
 {
     fn loaded_names(&self) -> HashSet<String> {
-        self.repos.iter_names().collect()
+        self.repos.iter_loaded_names().collect()
     }
 
     async fn build_and_apply(
