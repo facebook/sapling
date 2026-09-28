@@ -2415,16 +2415,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Kill switch for predictive prefetch profiles feature.
-   */
-  ConfigSetting<bool> enablePredictivePrefetchProfiles{
-      "prefetch-profiles:predictive-prefetching-enabled",
-      true,
-      this};
-
-  /**
-   * Used to control file access logging for predictive prefetch
-   * profiles.
+   * Used to control file access logging.
    */
   ConfigSetting<bool> logFileAccesses{
       "prefetch-profiles:file-access-logging-enabled",
@@ -2442,17 +2433,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint32_t> logFileAccessesSamplingDenominator{
       "prefetch-profiles:file-access-logging-sampling-denominator",
       0,
-      this};
-
-  // [predictive-prefetch-profiles]
-
-  /**
-   * The number of globs to use for a predictive prefetch profile,
-   * 1500 by default.
-   */
-  ConfigSetting<uint32_t> predictivePrefetchProfileSize{
-      "predictive-prefetch-profiles:size",
-      1500,
       this};
 
   // [redirections]

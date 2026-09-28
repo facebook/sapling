@@ -46,7 +46,6 @@ struct EntryAttributes;
 struct EntryAttributeFlags;
 template <typename T>
 class ImmediateFuture;
-class UsageService;
 
 extern const char* const kServiceName;
 
@@ -139,8 +138,7 @@ class EdenServiceHandler
  public:
   explicit EdenServiceHandler(
       std::vector<std::string> originalCommandLine,
-      EdenServer* server,
-      std::unique_ptr<UsageService> usageService);
+      EdenServer* server);
   ~EdenServiceHandler() override;
 
   EdenServiceHandler(EdenServiceHandler const&) = delete;
@@ -720,8 +718,6 @@ class EdenServiceHandler
   // Recovery installs a new handler. Publishers from the old handler retain
   // this state so they still report the shutdown that terminated their stream.
   std::shared_ptr<std::atomic<bool>> streamJournalChangedShuttingDown_;
-
-  std::unique_ptr<UsageService> usageService_;
 
   std::optional<ActivityBuffer<ThriftRequestTraceEvent>>
       thriftRequestActivityBuffer_;

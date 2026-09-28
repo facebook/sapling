@@ -97,15 +97,6 @@ if (WIN32)
   find_package(Prjfs MODULE REQUIRED)
 endif()
 
-if (
-    "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND
-    EXISTS "${CMAKE_SOURCE_DIR}/eden/fs/service/facebook/CMakeLists.txt"
-)
-  set(EDEN_HAVE_USAGE_SERVICE ON)
-else()
-  set(EDEN_HAVE_USAGE_SERVICE OFF)
-endif()
-
 if (WIN32)
   set(DEFAULT_ETC_EDEN_DIR "C:/ProgramData/Facebook/eden")
 else()

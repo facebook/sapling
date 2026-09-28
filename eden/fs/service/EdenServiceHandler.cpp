@@ -88,7 +88,6 @@
 #include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
-#include "eden/fs/service/UsageService.h"
 #include "eden/fs/service/gen-cpp2/eden_constants.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
@@ -1002,14 +1001,12 @@ EdenServiceHandler::initThriftRequestActivityBuffer() {
 
 EdenServiceHandler::EdenServiceHandler(
     std::vector<std::string> originalCommandLine,
-    EdenServer* server,
-    std::unique_ptr<UsageService> usageService)
+    EdenServer* server)
     : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server},
       streamJournalChangedShuttingDown_{
           std::make_shared<std::atomic<bool>>(false)},
-      usageService_{std::move(usageService)},
       thriftRequestActivityBuffer_(initThriftRequestActivityBuffer()),
       thriftRequestTraceBus_(
           TraceBus<ThriftRequestTraceEvent>::create(

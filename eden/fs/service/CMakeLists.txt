@@ -86,12 +86,3 @@ if (NOT WIN32)
       eden_notifications
   )
 endif()
-
-if(EDEN_HAVE_USAGE_SERVICE)
-  add_subdirectory(facebook)
-  target_link_libraries(
-    eden_service
-    PUBLIC
-      eden_smartplatform_service
-  )
-endif()

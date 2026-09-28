@@ -45,6 +45,8 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "nfs:wheel-access-rate-limit-count",
     "nfs:wheel-access-rate-limit-window-seconds",
     "overlay:direct-serialization",
+    "predictive-prefetch-profiles:size",
+    "prefetch-profiles:predictive-prefetching-enabled",
     "telemetry:enable-xplatlogger-cli-usage",
     "telemetry:enable-xplatlogger-errors",
     "telemetry:enable-xplatlogger-events",

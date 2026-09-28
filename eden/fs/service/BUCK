@@ -346,19 +346,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "usage_service",
-    srcs = [
-        "UsageService.cpp",
-    ],
-    deps = [
-        "//folly/logging:logging",
-    ],
-    exported_deps = [
-        "//folly/coro/safe:now_task",
-    ],
-)
-
-cpp_library(
     name = "server",
     srcs = [
         "EdenCPUThreadPool.cpp",
@@ -383,7 +370,6 @@ cpp_library(
         ":thrift_glob_impl",
         ":thrift_startup_status_subscriber",
         ":thrift_util",
-        ":usage_service",
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
         "//common/network:hostname",
         "//eden/common/telemetry:log_info",
@@ -414,11 +400,6 @@ cpp_library(
         "//eden/fs/rust/redirect_ffi:redirect-ffi",  # @manual
         "//eden/fs/rust/redirect_ffi:redirect-ffi-cpp-wrapper",
         "//eden/fs/rust/redirect_ffi:redirect-ffi@header",
-        # TODO: The edenfs_smartplatform_service dependency fans out to a ton
-        # of other dependencies, slowing down OSS builds and tests. We ideally
-        # should move it to facebook/main.cpp to avoid the cost in unit tests
-        # and OSS builds and tests.
-        "//eden/fs/service/facebook:edenfs_smartplatform_service",  # @manual
         "//eden/fs/service/facebook:server_observer",  # @manual
         "//eden/fs/store:context",
         "//eden/fs/store:filtered_backing_store",

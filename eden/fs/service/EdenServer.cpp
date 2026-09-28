@@ -102,7 +102,6 @@
 #include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftStreamStartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
-#include "eden/fs/service/UsageService.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/BlobCache.h"
@@ -134,10 +133,6 @@
 
 #ifdef EDEN_HAVE_PROCESS_ATTRIBUTION
 #include "eden/common/utils/facebook/ProcessAttribution.h" // @manual
-#endif
-
-#ifdef EDEN_HAVE_USAGE_SERVICE
-#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
 #endif
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
@@ -3016,15 +3011,7 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
       std::chrono::duration_cast<std::chrono::seconds>(
           edenConfig->thriftWorkersJoinTimeout.getValue()));
 
-#ifdef EDEN_HAVE_USAGE_SERVICE
-  auto usageService = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(
-      serverState_->getThreadPool(), serverState_->getReloadableConfig());
-#else
-  auto usageService = std::make_unique<NullUsageService>();
-#endif
-
-  handler_ = make_shared<EdenServiceHandler>(
-      originalCommandLine_, this, std::move(usageService));
+  handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
 
   // Get the path to the thrift socket.
