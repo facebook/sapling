@@ -46,3 +46,6 @@ thiserror = "2.0.21"
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 zk_leader_election = { version = "0.1.0", path = "../../cmdlib/zk_leader_election" }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }

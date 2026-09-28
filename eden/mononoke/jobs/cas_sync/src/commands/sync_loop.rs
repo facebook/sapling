@@ -478,3 +478,36 @@ async fn run_sync(
     .try_collect::<()>()
     .await
 }
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn shared_lock_paths_have_unambiguous_components() {
+        let legacy_hyphenated_repo = shared_lock_path("foo-bar", None);
+        let namespaced_repo = shared_lock_path("foo", Some("bar"));
+        assert_ne!(
+            legacy_hyphenated_repo, namespaced_repo,
+            "A legacy repo name must not collide with a namespaced lock"
+        );
+
+        let hyphenated_use_case = shared_lock_path("foo", Some("bar-baz"));
+        let hyphenated_repo = shared_lock_path("foo-bar", Some("baz"));
+        assert_ne!(
+            hyphenated_use_case, hyphenated_repo,
+            "Repo and use-case boundaries must be preserved"
+        );
+    }
+
+    #[mononoke::test]
+    fn shared_lock_path_preserves_legacy_format() {
+        assert_eq!(
+            shared_lock_path("foo-bar", None),
+            "mononoke_cas_sync_job_foo-bar",
+            "The production lock path must remain unchanged"
+        );
+    }
+}

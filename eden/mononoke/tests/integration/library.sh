@@ -167,7 +167,7 @@ function mononoke_cas_sync {
     --repo-name $HG_REPO_NAME \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --tracing-test-format \
-     sync-loop --start-id "$START_ID" --batch-size 20
+     sync-loop --start-id "$START_ID" --batch-size 20 "$@"
 }
 
 

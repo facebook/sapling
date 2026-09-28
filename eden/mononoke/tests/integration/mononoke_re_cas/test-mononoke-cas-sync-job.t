@@ -48,6 +48,16 @@ Sync all bookmarks moves
   [INFO] [execute{repo=repo}] successful sync of entries [1, 2, 3, 4]
   [INFO] [execute{repo=repo}] Finished mononoke RE CAS sync command execution for repo repo
 
+An explicit CAS use case gets its own progress counter.
+  $ mononoke_cas_sync repo 0 --use-case source-control-testing 2>&1 | grep -E 'using repo|syncing log entries|successful sync'
+  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0) and CAS use case "source-control-testing"
+  [INFO] [execute{repo=repo}] syncing log entries [1, 2, 3, 4] ...
+  [INFO] [execute{repo=repo}] successful sync of entries [1, 2, 3, 4]
+
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT name, value FROM mutable_counters WHERE repo_id = 0 AND name GLOB 'latest-replayed-request-cas*' ORDER BY name"
+  latest-replayed-request-cas|4
+  latest-replayed-request-cas-source-control-testing|4
+
 Validate that the whole working copy for the top commit D is already present in CAS, nothing should be uploaded if incremental sync is correct.
 All trees and blobs should be present!
   $ mononoke_admin cas-store --repo-name repo upload --full -i $D
