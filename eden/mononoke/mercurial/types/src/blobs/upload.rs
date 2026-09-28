@@ -40,6 +40,7 @@ use crate::FileBytes;
 use crate::HgBlobNode;
 use crate::HgFileEnvelopeMut;
 use crate::HgFileNodeId;
+use crate::HgManifestEnvelope;
 use crate::HgManifestEnvelopeMut;
 use crate::HgManifestId;
 use crate::HgNodeHash;
@@ -88,24 +89,27 @@ pub struct UploadHgTreeEntry {
     pub computed_node_id: Option<HgNodeHash>,
 }
 
+/// Store a manifest envelope under its own node id.
+pub async fn store_manifest_envelope(
+    ctx: &CoreContext,
+    blobstore: &impl KeyedBlobstore,
+    envelope: HgManifestEnvelope,
+) -> Result<HgManifestId> {
+    let manifest_id = HgManifestId::new(envelope.node_id());
+    blobstore
+        .put(
+            ctx,
+            manifest_id.blobstore_key(),
+            envelope.into_blob().into(),
+        )
+        .await?;
+    Ok(manifest_id)
+}
+
 impl UploadHgTreeEntry {
-    // Given the content of a manifest, ensure that there is a matching Entry in the repo.
-    // This may not upload the entry or the data blob if the repo is aware of that data already
-    // existing in the underlying store.
-    //
-    // Note that the Entry may not be consistent - parents do not have to be uploaded at this
-    // point, as long as you know their HgNodeHashes; this is also given to you as part of the
-    // result type, so that you can parallelise uploads. Consistency will be verified when adding
-    // the entries to a changeset.
-    pub fn upload(
-        self,
-        ctx: CoreContext,
-        blobstore: Arc<dyn KeyedBlobstore>,
-    ) -> Result<(
-        HgManifestId,
-        BoxFuture<'static, Result<(HgManifestId, RepoPath)>>,
-    )> {
-        STATS::upload_hg_tree_entry.add_value(1);
+    /// Build the envelope this tree is stored as, checking the supplied node id
+    /// against the contents.
+    pub fn into_verified_envelope(self) -> Result<(HgManifestEnvelope, RepoPath)> {
         let UploadHgTreeEntry {
             upload_node_id,
             contents,
@@ -139,8 +143,7 @@ impl UploadHgTreeEntry {
             }
         };
 
-        // This is the blob that gets uploaded. Manifest contents are usually small so they're
-        // stored inline.
+        // Manifest contents are usually small so they're stored inline.
         let envelope = HgManifestEnvelopeMut {
             node_id,
             p1,
@@ -148,20 +151,33 @@ impl UploadHgTreeEntry {
             computed_node_id: new_computed_node_id,
             contents,
         };
-        let envelope_blob = envelope.freeze().into_blob();
 
-        let manifest_id = HgManifestId::new(node_id);
-        let blobstore_key = manifest_id.blobstore_key();
+        Ok((envelope.freeze(), path))
+    }
 
-        // Upload the blob.
-        let upload = {
-            let path = path.clone();
-            async move {
-                blobstore
-                    .put(&ctx, blobstore_key, envelope_blob.into())
-                    .await?;
-                Ok((manifest_id, path))
-            }
+    // Given the content of a manifest, ensure that there is a matching Entry in the repo.
+    // This may not upload the entry or the data blob if the repo is aware of that data already
+    // existing in the underlying store.
+    //
+    // Note that the Entry may not be consistent - parents do not have to be uploaded at this
+    // point, as long as you know their HgNodeHashes; this is also given to you as part of the
+    // result type, so that you can parallelise uploads. Consistency will be verified when adding
+    // the entries to a changeset.
+    pub fn upload(
+        self,
+        ctx: CoreContext,
+        blobstore: Arc<dyn KeyedBlobstore>,
+    ) -> Result<(
+        HgManifestId,
+        BoxFuture<'static, Result<(HgManifestId, RepoPath)>>,
+    )> {
+        STATS::upload_hg_tree_entry.add_value(1);
+        let (envelope, path) = self.into_verified_envelope()?;
+        let manifest_id = HgManifestId::new(envelope.node_id());
+
+        let upload = async move {
+            store_manifest_envelope(&ctx, &blobstore, envelope).await?;
+            Ok((manifest_id, path))
         };
 
         Ok((manifest_id, upload.boxed()))

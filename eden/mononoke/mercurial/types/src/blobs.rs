@@ -41,3 +41,4 @@ pub use upload::UploadHgFileContents;
 pub use upload::UploadHgFileEntry;
 pub use upload::UploadHgNodeHash;
 pub use upload::UploadHgTreeEntry;
+pub use upload::store_manifest_envelope;
