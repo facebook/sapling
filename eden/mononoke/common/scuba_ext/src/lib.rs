@@ -109,7 +109,13 @@ impl MononokeScubaSampleBuilder {
         scuba_logging_type: ScubaLoggingType,
     ) -> Result<ScubaSampleBuilder, IoError> {
         Ok(match scuba_logging_type {
+            #[cfg(fbcode_build)]
             ScubaLoggingType::ScubaTable(scuba_table) => ScubaSampleBuilder::new(fb, scuba_table),
+            #[cfg(not(fbcode_build))]
+            ScubaLoggingType::ScubaTable(scuba_table) => {
+                let _ = fb;
+                ScubaSampleBuilder::new(scuba_table)
+            }
             ScubaLoggingType::LocalFile(path) => {
                 ScubaSampleBuilder::with_discard().with_log_file(path)?
             }
