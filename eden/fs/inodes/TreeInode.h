@@ -1168,6 +1168,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   BuildUnrestrictedDirContentsResult buildUnrestrictedDirContents(
       InodeNumber inodeNumber,
       const Tree& tree,
+      folly::FunctionRef<std::string()> logPath,
       std::optional<MiniTracer::Span> loadOverlayDirSpan = std::nullopt);
 
   /**

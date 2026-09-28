@@ -533,8 +533,8 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
       .getTree(*treeId, fetchContext)
       .thenValue([self = inodePtrFromThis(),
                   savedTreeId = *treeId](std::shared_ptr<const Tree> tree) {
-        auto newContentsResult =
-            self->buildUnrestrictedDirContents(self->getNodeId(), *tree);
+        auto newContentsResult = self->buildUnrestrictedDirContents(
+            self->getNodeId(), *tree, [&] { return self->getLogPath(); });
 
         auto renameLock = self->getMount()->acquireRenameLock();
 
@@ -1654,7 +1654,13 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                    loadOverlayDirSpan = std::move(
                        loadOverlayDirSpan)]() mutable -> unique_ptr<InodeBase> {
                 auto dirContents = self->buildUnrestrictedDirContents(
-                    number, *tree, std::move(loadOverlayDirSpan));
+                    number,
+                    *tree,
+                    [&] {
+                      return fmt::format(
+                          "{}/{}", self->getLogPath(), childName);
+                    },
+                    std::move(loadOverlayDirSpan));
                 if (dirContents.refreshedStaleDeniedAclRootStates) {
                   // This path only loads non-materialized entries whose tree
                   // fetch succeeded as unrestricted.
@@ -2012,6 +2018,7 @@ TreeInode::BuildUnrestrictedDirContentsResult
 TreeInode::buildUnrestrictedDirContents(
     InodeNumber inodeNumber,
     const Tree& tree,
+    folly::FunctionRef<std::string()> logPath,
     std::optional<MiniTracer::Span> loadOverlayDirSpan) {
   // Even if the inode is not materialized, it may have inode
   // numbers stored in the overlay.
@@ -2031,7 +2038,7 @@ TreeInode::buildUnrestrictedDirContents(
       XLOGF(
           ERR,
           "loaded inode {} (inode number {}) from overlay but the entries don't correspond with the tree.  Something is wrong!\n{}",
-          getLogPath(),
+          logPath(),
           inodeNumber,
           diffString);
     }
