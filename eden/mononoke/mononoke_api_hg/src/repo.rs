@@ -22,6 +22,7 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
+use cacheblob::MemWritesBlobstore;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use dag_types::Location;
@@ -40,6 +41,8 @@ use futures::TryStreamExt;
 use futures::stream;
 use futures_util::try_join;
 use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::upload_augmented_manifest::UploadTreeAugmented;
+use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStoreRef;
 use mercurial_types::HgChangesetId;
@@ -68,6 +71,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
 use repo_update_logger::CommitInfo;
 use repo_update_logger::log_new_commits;
+use restricted_paths::RestrictedPathsArc;
 use tracing::debug;
 use unbundle::upload_changeset;
 
@@ -386,6 +390,34 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .map_err(MononokeError::from)?;
 
         Ok(envelope)
+    }
+
+    /// Build the augmented manifest envelopes for a batch of already-stored
+    /// trees, so they exist before the changeset that references them is
+    /// uploaded.
+    ///
+    /// A tree whose child is neither in the batch nor already derived is an
+    /// error: the batch builds completely or not at all.
+    ///
+    /// Every put lands in a `MemWritesBlobstore` overlay that dies with this
+    /// call, so the counters are produced with nothing persisted.
+    pub async fn build_augmented_manifests_for_uploaded_trees(
+        &self,
+        trees: Vec<HgManifestEnvelope>,
+    ) -> Result<Vec<UploadTreeAugmented>, Error> {
+        let repo_blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
+            self.repo().repo_blobstore().clone(),
+            |inner| Arc::new(MemWritesBlobstore::new(inner)),
+        );
+        let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo_blobstore);
+        let restricted_paths = self.repo().restricted_paths_arc();
+        build_augmented_manifests_for_uploaded_trees(
+            self.ctx(),
+            &blobstore,
+            restricted_paths.config_based(),
+            trees,
+        )
+        .await
     }
 
     /// Store HgChangeset. The function also generates bonsai changeset and stores all necessary mappings.

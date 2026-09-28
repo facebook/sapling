@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+pub use mercurial_derivation::upload_augmented_manifest::DirectoryAcl;
+pub use mercurial_derivation::upload_augmented_manifest::UploadTreeAugmented;
 pub use mercurial_types::HgFileNodeId;
 pub use mercurial_types::HgManifestId;
 pub use mercurial_types::HgParents;
