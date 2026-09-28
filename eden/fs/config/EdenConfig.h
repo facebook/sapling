@@ -2998,6 +2998,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Interval at which EdenFS rechecks restricted tree roots that are hidden
+   * from their parent's listing in omitted mode. Set to 0 to disable.
+   */
+  ConfigSetting<std::chrono::nanoseconds> restrictedRootRefreshInterval{
+      "acl:restricted-root-refresh-interval",
+      std::chrono::seconds(0),
+      this};
+
+  /**
    * Whether EdenFS should compute UNDER_ACL and local empty ACL info from
    * source-control tree ACL metadata.
    */

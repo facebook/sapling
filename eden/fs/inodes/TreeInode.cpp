@@ -528,6 +528,34 @@ ImmediateFuture<folly::Unit> TreeInode::recheckPermissionIfExpired(
           });
 }
 
+void TreeInode::recheckHiddenRestrictedChildren(
+    const std::vector<PathComponent>& names,
+    const ObjectFetchContextPtr& context) {
+  for (const auto& name : names) {
+    folly::futures::detachOn(
+        getMount()->getServerThreadPool().get(),
+        folly::makeSemiFuture()
+            .deferValue([self = inodePtrFromThis(),
+                         name,
+                         context = context.copy()](folly::Unit) {
+              return self->getOrLoadChildTree(name, context)
+                  .thenValue([context = context.copy()](TreeInodePtr child) {
+                    return child->recheckPermissionIfExpired(context);
+                  })
+                  .semi();
+            })
+            .deferError([self = inodePtrFromThis(),
+                         name](folly::exception_wrapper&& ew) {
+              XLOGF(
+                  DBG3,
+                  "skipping permission recheck for {}/{}: {}",
+                  self->getLogPath(),
+                  name,
+                  folly::exceptionStr(ew));
+            }));
+  }
+}
+
 ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
     const ObjectFetchContextPtr& fetchContext) {
   auto treeId = getContentsUnchecked().rlock()->treeId;
@@ -6784,6 +6812,34 @@ size_t TreeInode::unloadChildrenNow() {
       [](InodeBase*) { return true; },
       [](InodeBase*, const InodeMapLock&) { return false; },
       neverCancel);
+}
+
+void TreeInode::recheckHiddenRestrictedDescendants(
+    const ObjectFetchContextPtr& context) {
+  // What goes stale here is the kernel's cached listing of this directory, so
+  // a directory the kernel does not hold has nothing to refresh and does not
+  // justify a check_permission call. The filter is on the parent: a hidden
+  // child is absent from the listing, so it never gets a dentry of its own.
+  // The refcount read races with the kernel, which only costs a tick.
+  if (debugGetFsRefcount() != 0) {
+    std::vector<PathComponent> hidden;
+    {
+      auto contents = lockContentsRead();
+      for (const auto& entry : contents->entries.all()) {
+        if (entry.second.isRestricted()) {
+          hidden.emplace_back(entry.first);
+        }
+      }
+    }
+    // Enqueued after the contents lock is released: the pool threads take that
+    // same lock to load the child, so they would park until this call returned.
+    recheckHiddenRestrictedChildren(hidden, context);
+  }
+
+  auto neverCancel = [] { return false; };
+  for (const auto& child : getTreeChildren(this, neverCancel)) {
+    child->recheckHiddenRestrictedDescendants(context);
+  }
 }
 
 size_t TreeInode::unloadChildrenUnreferencedByFs(

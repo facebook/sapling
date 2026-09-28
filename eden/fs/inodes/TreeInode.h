@@ -1092,6 +1092,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
         aclRootState_.load(std::memory_order_relaxed));
   }
 
+  /**
+   * Recheck hidden restricted children of this tree and of its loaded
+   * descendants that the kernel still references. Only already-loaded tree
+   * children are walked; no inode is loaded just to visit it.
+   */
+  void recheckHiddenRestrictedDescendants(const ObjectFetchContextPtr& context);
+
  private:
   /** The daemon's acl:restricted-content-mode snapshot from ServerState. */
   RestrictedContentMode restrictedContentMode() const;
@@ -1144,6 +1151,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   ImmediateFuture<folly::Unit> recheckPermissionIfExpired(
       const ObjectFetchContextPtr& fetchContext);
+
+  /**
+   * Enqueue a TTL-gated permission recheck on the server pool for each named
+   * child of this directory. A child that transitions invalidates this
+   * directory's listing, so the next enumeration shows it. Nothing runs on
+   * the calling thread.
+   */
+  void recheckHiddenRestrictedChildren(
+      const std::vector<PathComponent>& names,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Transition this inode from restricted to unrestricted. Fetch the real

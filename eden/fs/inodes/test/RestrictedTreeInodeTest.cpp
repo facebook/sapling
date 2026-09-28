@@ -1341,3 +1341,104 @@ TEST(
   EXPECT_TRUE(sawInodeInvalidation(*fuse, parentInode->getNodeId()));
 }
 #endif // __linux__
+
+#ifndef _WIN32
+namespace {
+// Reads the restricted bit of parent/restricted_child straight out of the
+// parent's DirContents, bypassing the omitted-mode listing filter.
+bool restrictedChildIsHidden(const TreeInodePtr& parentInode) {
+  auto contents = parentInode->lockContentsRead();
+  return contents->entries.find("restricted_child"_pc)->second.isRestricted();
+}
+
+ObjectId restrictedChildId(const TreeInodePtr& parentInode) {
+  auto contents = parentInode->lockContentsRead();
+  return contents->entries.find("restricted_child"_pc)->second.getObjectId();
+}
+
+bool listsRestrictedChild(const TreeInodePtr& parentInode) {
+  auto context = ObjectFetchContext::getNullContext();
+  auto result =
+      parentInode->fuseReaddir(FuseDirList{4096}, 0, context).extract();
+  return std::any_of(result.begin(), result.end(), [](const auto& entry) {
+    return entry.name == "restricted_child";
+  });
+}
+} // namespace
+
+TEST(
+    RestrictedTreeInode,
+    omittedMode_backgroundRefreshRechecksHiddenRestrictedChild) {
+  auto testMount = makeOmittedModeTestMount();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto childId = restrictedChildId(parentInode);
+  auto* backingStore = testMount->getBackingStore().get();
+  backingStore->setCheckPermissionResult(childId, true);
+
+  // The kernel holds the parent's listing, so the walk has something to
+  // refresh.
+  parentInode->incFsRefcount();
+
+  EXPECT_FALSE(listsRestrictedChild(parentInode));
+  EXPECT_EQ(0, backingStore->getCheckPermissionCount(childId));
+
+  rootInode->recheckHiddenRestrictedDescendants(context);
+  testMount->drainServerExecutor();
+
+  EXPECT_EQ(1, backingStore->getCheckPermissionCount(childId));
+  EXPECT_FALSE(restrictedChildIsHidden(parentInode));
+  EXPECT_TRUE(listsRestrictedChild(parentInode));
+}
+
+TEST(
+    RestrictedTreeInode,
+    omittedMode_backgroundRefreshSkipsTreeTheKernelDoesNotHold) {
+  auto testMount = makeOmittedModeTestMount();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto childId = restrictedChildId(parentInode);
+  auto* backingStore = testMount->getBackingStore().get();
+  backingStore->setCheckPermissionResult(childId, true);
+
+  ASSERT_EQ(0, parentInode->debugGetFsRefcount());
+  rootInode->recheckHiddenRestrictedDescendants(context);
+  testMount->drainServerExecutor();
+  EXPECT_EQ(0, backingStore->getCheckPermissionCount(childId));
+  EXPECT_TRUE(restrictedChildIsHidden(parentInode));
+
+  // The refcount is the only thing that was holding the check back.
+  parentInode->incFsRefcount();
+  rootInode->recheckHiddenRestrictedDescendants(context);
+  testMount->drainServerExecutor();
+  EXPECT_EQ(1, backingStore->getCheckPermissionCount(childId));
+  EXPECT_FALSE(restrictedChildIsHidden(parentInode));
+}
+
+TEST(
+    RestrictedTreeInode,
+    omittedMode_backgroundRefreshLeavesDeniedChildHidden) {
+  auto testMount = makeOmittedModeTestMount();
+  auto rootInode = testMount->getEdenMount()->getRootInode();
+  auto parentInode = testMount->getTreeInode("parent"_relpath);
+  auto context = ObjectFetchContext::getNullContext();
+  auto childId = restrictedChildId(parentInode);
+  auto* backingStore = testMount->getBackingStore().get();
+  backingStore->setCheckPermissionResult(childId, false);
+  parentInode->incFsRefcount();
+
+  rootInode->recheckHiddenRestrictedDescendants(context);
+  testMount->drainServerExecutor();
+  EXPECT_EQ(1, backingStore->getCheckPermissionCount(childId));
+  EXPECT_TRUE(restrictedChildIsHidden(parentInode));
+  EXPECT_FALSE(listsRestrictedChild(parentInode));
+
+  // Within the TTL a second walk schedules no new check.
+  rootInode->recheckHiddenRestrictedDescendants(context);
+  testMount->drainServerExecutor();
+  EXPECT_EQ(1, backingStore->getCheckPermissionCount(childId));
+  EXPECT_TRUE(restrictedChildIsHidden(parentInode));
+}
+#endif // _WIN32

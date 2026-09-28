@@ -81,6 +81,7 @@
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeAccessLogger.h"
@@ -1480,6 +1481,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
     cgroupFileCacheReclaimTask_.updateInterval(0s);
   }
 #endif
+
+  refreshRestrictedRootsTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.restrictedRootRefreshInterval.getValue()));
 
   accidentalUnmountRecoveryTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -4263,6 +4268,49 @@ void EdenServer::accidentalUnmountRecovery() {
                 .semi();
           });
     }
+  }
+}
+
+void EdenServer::refreshRestrictedRoots() {
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      ObjectFetchContext::StaticCauseDetail::fromLiteral(
+          "EdenServer::refreshRestrictedRoots"));
+  std::vector<EdenMountHandle> omittedMounts;
+  for (auto& mountHandle : getMountPoints()) {
+    if (mountHandle.getObjectStore().getRestrictedContentMode() ==
+        RestrictedContentMode::Omitted) {
+      omittedMounts.push_back(mountHandle);
+    }
+  }
+  if (omittedMounts.empty()) {
+    return;
+  }
+  // The walk visits every loaded TreeInode, so its cost grows with the mount
+  // (about 100ms at 400k loaded inodes), which is too slow for the main
+  // EventBase this task runs on. Run it on the server pool, one round at a
+  // time: a tick that arrives while the previous round is still walking is
+  // skipped rather than queued behind it.
+  if (restrictedRootRefreshInFlight_->exchange(true)) {
+    return;
+  }
+  // Shared by every scheduled walk; the flag clears when the last one is done,
+  // whether it returned or threw.
+  auto inFlight = std::shared_ptr<void>(
+      nullptr,
+      [flag = restrictedRootRefreshInFlight_](void*) { flag->store(false); });
+  for (auto& mountHandle : omittedMounts) {
+    mountHandle.getEdenMount().getServerThreadPool()->add([mountHandle,
+                                                           inFlight] {
+      try {
+        mountHandle.getRootInode()->recheckHiddenRestrictedDescendants(context);
+      } catch (const std::exception& ex) {
+        XLOGF(
+            WARN,
+            "restricted root refresh failed for {}: {}",
+            mountHandle.getEdenMount().getPath(),
+            ex.what());
+      }
+    });
   }
 }
 

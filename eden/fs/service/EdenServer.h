@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -762,6 +763,10 @@ class EdenServer : private TakeoverHandler {
   // Detects when NFS backed repos are being crawled.
   void detectNfsCrawl();
 
+  // Rechecks restricted roots that omitted mode hides from their parent's
+  // listing, so that a re-grant becomes visible without an explicit access.
+  void refreshRestrictedRoots();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -1085,6 +1090,13 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::scheduleCgroupFileCacheReclaim>
       cgroupFileCacheReclaimTask_{this, "cgroup_file_cache_reclaim"};
 #endif
+  PeriodicFnTask<&EdenServer::refreshRestrictedRoots>
+      refreshRestrictedRootsTask_{this, "refresh_restricted_roots"};
+  // Set while a refresh round is walking on the server pool; a tick that finds
+  // it set is skipped so rounds cannot pile up. Owned through a shared_ptr so
+  // a walk that outlives this EdenServer clears its own copy, not a member.
+  const std::shared_ptr<std::atomic<bool>> restrictedRootRefreshInFlight_{
+      std::make_shared<std::atomic<bool>>(false)};
   PeriodicFnTask<&EdenServer::accidentalUnmountRecovery>
       accidentalUnmountRecoveryTask_{this, "accidental_unmount_recovery"};
   PeriodicFnTask<&EdenServer::checkMountHealth> mountHealthCheckTask_{
