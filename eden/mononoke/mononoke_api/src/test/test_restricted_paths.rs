@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+mod test_restricted_paths_bypassing;
+
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
