@@ -395,6 +395,68 @@ async fn test_acl_bypass_delete_slacl_via_stack_with_add(fb: FacebookInit) -> Re
     .await
 }
 
+// ---------------------------------------------------------------------------
+// Merge tests — restriction must be enforced against ALL parents, not just
+// the first.
+// ---------------------------------------------------------------------------
+
+/// A merge changeset that modifies `secret/.slacl` is blocked when ANY parent
+/// restricts the directory and the caller lacks maintainer access — even when
+/// the restricting `.slacl` lives only on the second parent.
+#[mononoke::fbinit_test]
+async fn test_acl_bypass_merge_modify_slacl_restricted_in_one_parent(
+    fb: FacebookInit,
+) -> Result<()> {
+    let repo = build_secret_restricted_repo(fb).await?;
+    let changes = BTreeMap::from([(
+        MPath::try_from("secret/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
+    )]);
+
+    // First parent is an unrelated branch with no restricted content; the
+    // second parent carries the restricted `secret/.slacl`. A naive
+    // first-parent-only check would miss the restriction.
+    // FIXME(T255927050): should be Blocked("does not have maintainer access")
+    run_merge_changeset_test(
+        fb,
+        "authorized_user",
+        repo,
+        &[
+            &[("public/file.txt", "unrelated branch")],
+            &[("secret/.slacl", SLACL_CONTENT)],
+        ],
+        changes,
+        "merge modify .slacl (read-only user)",
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
+/// The merge companion: a maintainer of the restricting ACL CAN modify
+/// `secret/.slacl` in a merge changeset.
+#[mononoke::fbinit_test]
+async fn test_acl_merge_modify_slacl_with_maintainer_allowed(fb: FacebookInit) -> Result<()> {
+    let repo = build_secret_restricted_repo(fb).await?;
+    let changes = BTreeMap::from([(
+        MPath::try_from("secret/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
+    )]);
+
+    run_merge_changeset_test(
+        fb,
+        "maintainer_user",
+        repo,
+        &[
+            &[("public/file.txt", "unrelated branch")],
+            &[("secret/.slacl", SLACL_CONTENT)],
+        ],
+        changes,
+        "merge modify .slacl (maintainer)",
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
 // ---- helpers ----
 
 /// Standard `CreateChangesetChecks` that validates all conditions.
@@ -569,30 +631,7 @@ async fn run_single_changeset_test(
         )
         .await;
 
-    match expected {
-        ExpectedOutcome::Blocked(expected_substr) => {
-            let err = result.err().ok_or_else(|| {
-                anyhow::anyhow!("expected create_changeset to fail, but it succeeded")
-            })?;
-            let err_msg = format!("{:#}", err);
-            assert!(
-                err_msg.contains(expected_substr),
-                "Error should contain '{}', got: {}",
-                expected_substr,
-                err_msg,
-            );
-        }
-        ExpectedOutcome::Allowed => {
-            result.map_err(|e| {
-                anyhow::anyhow!(
-                    "expected create_changeset to succeed, but it failed: {:#}",
-                    e
-                )
-            })?;
-        }
-    }
-
-    Ok(())
+    assert_outcome("create_changeset", result.map(|_| ()), expected)
 }
 
 /// Shared test driver for stack-commit ACL bypass tests.
@@ -630,26 +669,80 @@ async fn run_stack_changeset_test(
         .create_changeset_stack(vec![parent], infos, stack_changes, None, test_checks())
         .await;
 
+    assert_outcome("create_changeset_stack", result.map(|_| ()), expected)
+}
+
+/// Shared test driver for merge-changeset ACL bypass tests.
+///
+/// Builds two independent root parents from `parent_files_per_parent` (one
+/// file-set per parent), then creates a single merge changeset with both
+/// parents applying `changes`. Used to prove that `.slacl` validation blocks
+/// when ANY parent restricts the touched directory and the caller lacks
+/// maintainer access — not just the first parent.
+async fn run_merge_changeset_test(
+    fb: FacebookInit,
+    username: &str,
+    repo: Repo,
+    parent_files_per_parent: &[&[(&str, &str)]],
+    changes: BTreeMap<MPath, CreateChange>,
+    changeset_msg: &str,
+    expected: ExpectedOutcome,
+) -> Result<()> {
+    let ctx = test_ctx_with_identity(fb, username).await?;
+
+    let mut parents = Vec::new();
+    for parent_files in parent_files_per_parent {
+        let mut commit_ctx = CreateCommitContext::new_root(&ctx, &repo);
+        for &(path, content) in *parent_files {
+            commit_ctx = commit_ctx.add_file(path, content);
+        }
+        parents.push(commit_ctx.commit().await?);
+    }
+
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
+    let repo_ctx = mononoke
+        .repo(ctx, "test")
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("repo 'test' not found"))?
+        .build()
+        .await?;
+
+    let result = repo_ctx
+        .create_changeset(
+            parents,
+            test_create_info(changeset_msg)?,
+            changes,
+            None,
+            test_checks(),
+        )
+        .await;
+
+    assert_outcome("create_changeset", result.map(|_| ()), expected)
+}
+
+/// Assert that a `create_changeset`-family call produced the expected outcome.
+/// For `Blocked`, the error message must contain the given substring; for
+/// `Allowed`, the call must have succeeded. `op` names the operation for
+/// failure messages.
+fn assert_outcome(
+    op: &str,
+    result: std::result::Result<(), crate::errors::MononokeError>,
+    expected: ExpectedOutcome,
+) -> Result<()> {
     match expected {
         ExpectedOutcome::Blocked(expected_substr) => {
-            let err = result.err().ok_or_else(|| {
-                anyhow::anyhow!("expected create_changeset_stack to fail, but it succeeded")
-            })?;
-            let err_msg = format!("{:#}", err);
+            let err = result
+                .err()
+                .ok_or_else(|| anyhow::anyhow!("expected {op} to fail, but it succeeded"))?;
+            let err_msg = format!("{err:#}");
             assert!(
                 err_msg.contains(expected_substr),
-                "Error should contain '{}', got: {}",
-                expected_substr,
-                err_msg,
+                "Error should contain '{expected_substr}', got: {err_msg}",
             );
         }
         ExpectedOutcome::Allowed => {
-            result.map_err(|e| {
-                anyhow::anyhow!(
-                    "expected create_changeset_stack to succeed, but it failed: {:#}",
-                    e
-                )
-            })?;
+            result
+                .map_err(|e| anyhow::anyhow!("expected {op} to succeed, but it failed: {e:#}"))?;
         }
     }
 
