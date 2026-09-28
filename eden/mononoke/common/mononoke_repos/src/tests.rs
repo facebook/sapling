@@ -7,9 +7,35 @@
 
 //! Unit tests for `MononokeRepos`. `mod tests;` submodule so `super` is the crate root.
 
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+
+use futures::FutureExt;
 use mononoke_macros::mononoke;
 
 use super::*;
+
+/// Loads `42`, and counts how often it was asked to.
+#[derive(Default)]
+struct CountingLoader {
+    calls: AtomicUsize,
+}
+
+impl RepoLoader<i32> for CountingLoader {
+    fn load(&self, _repo_name: String) -> BoxFuture<'static, Result<i32>> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        async { Ok(42) }.boxed()
+    }
+}
+
+/// For the cases answerable without a load: already there, or never assigned.
+struct NeverLoads;
+
+impl RepoLoader<i32> for NeverLoads {
+    fn load(&self, repo_name: String) -> BoxFuture<'static, Result<i32>> {
+        panic!("must not load {repo_name}")
+    }
+}
 
 #[mononoke::test]
 fn test_reload_if_present() {
@@ -132,4 +158,53 @@ fn test_remove_drops_a_placeholder() {
     assert_eq!(repos.iter_names().count(), 0);
     assert_eq!(repos.iter_ids().count(), 0);
     assert!(!repos.reload_if_present(1, "foo".to_string(), 100));
+}
+
+#[mononoke::test]
+async fn test_an_unassigned_repo_is_absent_rather_than_an_error() {
+    let repos: MononokeRepos<i32> = MononokeRepos::new_lazy(Arc::new(NeverLoads));
+
+    assert!(
+        repos.get("nope").await.unwrap().is_none(),
+        "a repo this service was never assigned is absent, not an error"
+    );
+}
+
+#[mononoke::test]
+async fn test_a_built_repo_is_served_without_building() {
+    let repos: MononokeRepos<i32> = MononokeRepos::new_lazy(Arc::new(NeverLoads));
+    repos.add("foo", 1, 100);
+
+    let repo = repos.get("foo").await.unwrap().expect("foo is built");
+    assert_eq!(*repo, 100);
+}
+
+#[mononoke::test]
+async fn test_an_unbuilt_repo_is_absent_without_a_loader() {
+    let repos: MononokeRepos<i32> = MononokeRepos::new();
+    repos.add_placeholder("foo", 1);
+
+    // Pins the absence of a second error state: a caller never has to tell
+    // this apart from a routing problem.
+    assert!(repos.get("foo").await.unwrap().is_none());
+}
+
+#[mononoke::test]
+async fn test_an_unbuilt_repo_is_built_on_first_request() {
+    let loader = Arc::new(CountingLoader::default());
+    let repos: MononokeRepos<i32> = MononokeRepos::new_lazy(loader.clone());
+    repos.add_placeholder("foo", 1);
+
+    let repo = repos.get("foo").await.unwrap().expect("foo is assigned");
+    assert_eq!(*repo, 42);
+    assert_eq!(loader.calls.load(Ordering::SeqCst), 1);
+
+    // The second request is served from the slot the first one filled.
+    let repo = repos.get("foo").await.unwrap().expect("foo is built now");
+    assert_eq!(*repo, 42);
+    assert_eq!(
+        loader.calls.load(Ordering::SeqCst),
+        1,
+        "a repo that is already built must not be built again"
+    );
 }

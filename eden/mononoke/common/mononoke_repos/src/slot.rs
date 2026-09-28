@@ -278,9 +278,63 @@ impl<R: Send + Sync + 'static> RepoSlot<R> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
+    use anyhow::bail;
     use mononoke_macros::mononoke;
+    use tokio::sync::Notify;
+    use tokio::task::JoinHandle;
 
     use super::*;
+
+    /// Builds `42`, but not until the test releases it, so the two concurrency
+    /// tests can hold a build in flight instead of racing for one.
+    #[derive(Default)]
+    struct Gate {
+        calls: AtomicUsize,
+        started: Notify,
+        release: Notify,
+    }
+
+    impl Gate {
+        async fn build(self: Arc<Self>) -> Result<i32> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            self.started.notify_one();
+            self.release.notified().await;
+            Ok(42)
+        }
+    }
+
+    fn call(repo_slot: &Arc<RepoSlot<i32>>, gate: &Arc<Gate>) -> JoinHandle<Result<Arc<i32>>> {
+        let (repo_slot, gate) = (Arc::clone(repo_slot), Arc::clone(gate));
+        mononoke::spawn_task(async move { repo_slot.get_or_build(|_| gate.build()).await })
+    }
+
+    async fn never_built(repo_name: String) -> Result<i32> {
+        panic!("must not build {repo_name}")
+    }
+
+    async fn failing_build(repo_name: String) -> Result<i32> {
+        bail!("no config for {repo_name}")
+    }
+
+    /// The one failure a build cannot report for itself.
+    async fn panicking_build(repo_name: String) -> Result<i32> {
+        panic!("build of {repo_name} blew up")
+    }
+
+    /// Builds run on a detached task, so completion is observed by polling
+    /// rather than by awaiting the caller that triggered it.
+    async fn wait_until_loaded(repo_slot: &RepoSlot<i32>) -> Option<Arc<i32>> {
+        for _ in 0..10_000 {
+            if let Some(repo) = repo_slot.loaded() {
+                return Some(repo);
+            }
+            tokio::task::yield_now().await;
+        }
+        None
+    }
 
     #[mononoke::test]
     fn test_empty_slot_holds_no_repo() {
@@ -308,5 +362,102 @@ mod tests {
         let second = repo_slot.loaded().expect("slot was built");
         assert!(Arc::ptr_eq(&first, &second));
         assert!(Arc::ptr_eq(&first, &repo));
+    }
+
+    #[mononoke::test]
+    async fn test_concurrent_callers_share_one_build() {
+        let gate = Arc::new(Gate::default());
+        let repo_slot = Arc::new(RepoSlot::empty("foo".to_string()));
+
+        let first = call(&repo_slot, &gate);
+
+        gate.started.notified().await;
+        assert!(
+            repo_slot.loaded().is_none(),
+            "a repo must not be visible while its build is still running"
+        );
+
+        // Every later caller arrives while that build is in flight.
+        let rest: Vec<_> = (0..9).map(|_| call(&repo_slot, &gate)).collect();
+        for _ in 0..100 {
+            tokio::task::yield_now().await;
+        }
+        gate.release.notify_one();
+
+        for caller in std::iter::once(first).chain(rest) {
+            assert_eq!(*caller.await.unwrap().unwrap(), 42);
+        }
+        assert_eq!(
+            gate.calls.load(Ordering::SeqCst),
+            1,
+            "10 concurrent callers must produce exactly one build"
+        );
+    }
+
+    #[mononoke::test]
+    async fn test_build_survives_its_caller_being_cancelled() {
+        let gate = Arc::new(Gate::default());
+        let repo_slot = Arc::new(RepoSlot::empty("foo".to_string()));
+
+        let caller = call(&repo_slot, &gate);
+        gate.started.notified().await;
+
+        // The only caller goes away mid-build, as a disconnecting client would.
+        caller.abort();
+        assert!(caller.await.unwrap_err().is_cancelled());
+        gate.release.notify_one();
+
+        assert_eq!(
+            wait_until_loaded(&repo_slot).await.as_deref(),
+            Some(&42),
+            "the build must finish and apply its outcome even with no caller left waiting"
+        );
+        assert_eq!(
+            gate.calls.load(Ordering::SeqCst),
+            1,
+            "the abandoned build must not be restarted"
+        );
+    }
+
+    #[mononoke::test]
+    async fn test_a_built_slot_is_served_without_rebuilding() {
+        let repo_slot = Arc::new(RepoSlot::ready("foo".to_string(), Arc::new(100)));
+
+        let repo = repo_slot.get_or_build(never_built).await.unwrap();
+        assert_eq!(*repo, 100);
+    }
+
+    #[mononoke::test]
+    async fn test_failed_build_is_reported_and_retried() {
+        let repo_slot = Arc::new(RepoSlot::empty("foo".to_string()));
+
+        let err = repo_slot.get_or_build(failing_build).await.unwrap_err();
+        assert!(
+            err.to_string().contains("Failed to build repo foo"),
+            "unexpected error: {err:#}"
+        );
+
+        // The slot is left retryable rather than poisoned.
+        assert!(repo_slot.loaded().is_none());
+        assert!(repo_slot.get_or_build(failing_build).await.is_err());
+    }
+
+    #[mononoke::test]
+    async fn test_a_panicking_build_leaves_the_slot_retryable() {
+        let repo_slot = Arc::new(RepoSlot::empty("foo".to_string()));
+
+        let err = repo_slot.get_or_build(panicking_build).await.unwrap_err();
+        assert!(
+            err.to_string().contains("Failed to build repo foo"),
+            "unexpected error: {err:#}"
+        );
+
+        // The point of the test: a dying build must release the slot. Left
+        // mid-build it would wedge the repo for the life of the process.
+        let repo = repo_slot
+            .get_or_build(|_| async { Ok(42) })
+            .await
+            .expect("a panicking build must leave the slot retryable");
+        assert_eq!(*repo, 42);
     }
 }

@@ -13,3 +13,6 @@ arc-swap = { version = "1.9.2", features = ["weak"] }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
+
+[dev-dependencies]
+tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
