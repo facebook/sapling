@@ -72,6 +72,11 @@ const DEFAULT_BATCH_SIZE: u64 = 10;
 // Replays bookmark's moves
 pub struct CommandArgs {
     #[clap(
+        long = "use-case",
+        help = "CAS use case override. Sync state is isolated by use case when set"
+    )]
+    use_case: Option<String>,
+    #[clap(
         long = "start-id",
         help = "if current counter is not set then `start-id` will be used"
     )]
@@ -141,10 +146,28 @@ pub struct MononokeCasSyncProcessExecutor {
     repo_name: String,
 }
 
+fn namespaced_state_key(base: &str, use_case: Option<&str>) -> String {
+    match use_case {
+        Some(use_case) => format!("{base}-{}", encode_repo_name(use_case)),
+        None => base.to_owned(),
+    }
+}
+
+fn shared_lock_path(repo_name: &str, use_case: Option<&str>) -> String {
+    match use_case {
+        Some(use_case) => format!(
+            "{JOB_NAME}:{}:{}",
+            encode_repo_name(repo_name),
+            encode_repo_name(use_case),
+        ),
+        None => format!("{JOB_NAME}_{}", encode_repo_name(repo_name)),
+    }
+}
+
 #[async_trait]
 impl LeaderElection for MononokeCasSyncProcessExecutor {
     fn get_shared_lock_path(&self) -> String {
-        format!("{}_{}", JOB_NAME, encode_repo_name(self.repo_name.clone()))
+        shared_lock_path(&self.repo_name, self.args.use_case.as_deref())
     }
 }
 
@@ -295,18 +318,23 @@ async fn run_sync(
             format_err!("mononoke_cas_sync_config is not found for the repo {repo_name}")
         })?;
 
+    let use_case = args
+        .use_case
+        .as_deref()
+        .unwrap_or(&sync_config.use_case_public);
     let re_cas_client = CasChangesetsUploader::new(build_mononoke_cas_client(
         fb,
         ctx.clone(),
         &repo_name,
         false,
-        &sync_config.use_case_public,
+        use_case,
     )?);
 
     info!(
-        "using repo \"{}\" repoid {:?}",
+        "using repo \"{}\" repoid {:?} and CAS use case \"{}\"",
         repo.repo_identity().name(),
-        repo.repo_identity().id()
+        repo.repo_identity().id(),
+        use_case,
     );
 
     let log_to_scuba = app.args::<CasSyncArgs>()?.log_to_scuba;
@@ -318,6 +346,7 @@ async fn run_sync(
 
     scuba_sample.add_common_server_data();
     scuba_sample.add("repo_name", repo_name.clone());
+    scuba_sample.add("use_case", use_case);
 
     let reporting_handler = build_reporting_handler(
         ctx,
@@ -340,7 +369,8 @@ async fn run_sync(
     let start_id = args.start_id;
     let exit_path = args.exit_file.clone();
     let batch_size = args.batch_size.unwrap_or(DEFAULT_BATCH_SIZE);
-    let replayed_sync_counter = LatestReplayedSyncCounter::new(&repo, LATEST_REPLAYED_REQUEST_KEY)?;
+    let counter_name = namespaced_state_key(LATEST_REPLAYED_REQUEST_KEY, args.use_case.as_deref());
+    let replayed_sync_counter = LatestReplayedSyncCounter::new(&repo, counter_name.clone())?;
 
     borrowed!(ctx);
     let can_continue = move || {
@@ -370,7 +400,7 @@ async fn run_sync(
                         .or(start_id)
                         .ok_or_else(|| {
                             format_err!(
-                                "{LATEST_REPLAYED_REQUEST_KEY} counter not found. Pass `--start-id` flag to set the counter"
+                                "{counter_name} counter not found. Pass `--start-id` flag to set the counter"
                             )
                         }),
                 )

@@ -40,7 +40,7 @@ Check that new entry was added to the sync database. 4 pushes
 Sync all bookmarks moves
   $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
-  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
+  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0) and CAS use case "source-control-testing"
   [INFO] [execute{repo=repo}] syncing log entries [1, 2, 3, 4] ...
   [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)
   [INFO] [execute{repo=repo}] log entries [1, 2, 3, 4] synced (4 commits uploaded, upload stats: uploaded digests: 12, already present digests: 0, uploaded bytes: 2.6 KiB, the largest uploaded blob: 862 B), took overall * sec (glob)

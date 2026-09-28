@@ -45,7 +45,7 @@ content. Without filtering, the sync would upload 6 digests (3 per commit).
 With filtering, the restricted tree is skipped from commit B, resulting in 5.
   $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
-  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
+  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0) and CAS use case "source-control-testing"
   [INFO] [execute{repo=repo}] syncing log entries [1, 2] ...
   [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)
   [INFO] [execute{repo=repo}] Found 1 restricted path roots for changeset *: [NonRootMPath("restricted")] (glob)

@@ -48,7 +48,7 @@ Check that new entry was added to the sync database. 4 pushes
 Sync all bookmarks moves and test the "stats" output. This should be stable due to the use of "random", that's why we never expect already present blobs, and uploaded sum should be the same for all runs. Upload should include both bookmarks master_bookmark and other.
   $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
-  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
+  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0) and CAS use case "source-control-testing"
   [INFO] [execute{repo=repo}] syncing log entries [1, 2, 3, 4, 5] ...
   [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)
   [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)

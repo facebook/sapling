@@ -37,7 +37,7 @@
 Sync all bookmarks moves (the second move is a merge commit)
   $ mononoke_cas_sync repo 0
   [INFO] [execute{repo=repo}] Initiating mononoke RE CAS sync command execution
-  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0)
+  [INFO] [execute{repo=repo}] using repo "repo" repoid RepositoryId(0) and CAS use case "source-control-testing"
   [INFO] [execute{repo=repo}] syncing log entries [1, 2] ...
   [INFO] [execute{repo=repo}] log entry BookmarkUpdateLogEntry * is a creation of bookmark (glob)
   [INFO] [execute{repo=repo}] log entries [1, 2] synced (3 commits uploaded, upload stats: uploaded digests: 8, already present digests: 0, uploaded bytes: 1.6 KiB, the largest uploaded blob: 914 B), took overall * sec (glob)
