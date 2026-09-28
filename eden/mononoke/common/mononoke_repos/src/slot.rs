@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -14,6 +15,7 @@ use arc_swap::ArcSwap;
 use futures::FutureExt;
 use futures::channel::oneshot;
 use futures::future::Shared;
+use mononoke_macros::mononoke;
 use parking_lot::Mutex;
 
 /// The result of one build, handed to every caller waiting on it.
@@ -64,7 +66,7 @@ enum SlotState<R> {
 }
 
 /// What [`RepoSlot::claim_build`] decided the caller should do.
-pub enum Claim<R> {
+enum Claim<R> {
     /// Already built.
     Ready(Arc<R>),
     /// Someone else is already building this repo.
@@ -131,7 +133,7 @@ impl<R> RepoSlot<R> {
     /// the old one can still be in flight. Harmless while nothing evicts - the
     /// orphaned slot is unreachable and its result dropped - but eviction has
     /// to account for it.
-    pub fn claim_build(self: &Arc<Self>) -> Claim<R> {
+    fn claim_build(self: &Arc<Self>) -> Claim<R> {
         if let Some(claim) = self.peek() {
             return claim;
         }
@@ -186,7 +188,7 @@ impl<R> RepoSlot<R> {
 /// cannot leave the slot stuck in [`SlotState::Building`] behind an
 /// already-resolved handle - a state nothing recovers from, because the slot
 /// never looks claimable again.
-pub struct BuildCompletion<R> {
+struct BuildCompletion<R> {
     repo_slot: Arc<RepoSlot<R>>,
     send_outcome: Option<oneshot::Sender<BuildOutcome<R>>>,
 }
@@ -194,7 +196,7 @@ pub struct BuildCompletion<R> {
 impl<R> BuildCompletion<R> {
     /// Publishes the result of the build. Takes `self` by value so the
     /// obligation is discharged exactly once.
-    pub fn finish(mut self, outcome: BuildOutcome<R>) {
+    fn finish(mut self, outcome: BuildOutcome<R>) {
         self.publish(outcome);
     }
 
@@ -220,6 +222,57 @@ impl<R> Drop for BuildCompletion<R> {
         self.publish(Err(Arc::new(anyhow!(
             "Build of repo {repo_name} ended without producing a result"
         ))));
+    }
+}
+
+impl<R: Send + Sync + 'static> RepoSlot<R> {
+    /// The built repo, building it with `build` if this is the first caller to
+    /// ask.
+    ///
+    /// `build` is handed in per call rather than held by the slot, and takes an
+    /// owned name because it runs on a task that outlives this call.
+    pub async fn get_or_build<Build, Fut>(self: &Arc<Self>, build: Build) -> Result<Arc<R>>
+    where
+        Build: FnOnce(String) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<R>> + Send + 'static,
+    {
+        let pending = match self.claim_build() {
+            Claim::Ready(repo) => return Ok(repo),
+            Claim::Wait(pending) => pending,
+            Claim::Start(completion, pending) => {
+                // Detached rather than driven by the caller's future: a caller
+                // that goes away mid-build (client disconnect, deadline) must
+                // neither cancel the build nor force the next caller to restart
+                // it. Builds run to tens of seconds, so restart-on-cancel would
+                // livelock a repo behind any client timeout shorter than its
+                // build.
+                //
+                // Unbounded by design for now: one spawn per assigned repo at
+                // most, and no service calls this yet. A concurrency bound has
+                // to exist before any service switches to building on first
+                // request, or a restart releases one build per assigned repo at
+                // once.
+                let repo_name = self.name.clone();
+                mononoke::spawn_task(async move {
+                    completion.finish(build(repo_name).await.map(Arc::new).map_err(Arc::new));
+                });
+                pending
+            }
+        };
+
+        self.wait_for_build(pending).await
+    }
+
+    async fn wait_for_build(&self, pending: SharedBuild<R>) -> Result<Arc<R>> {
+        match pending.await {
+            Ok(Ok(repo)) => Ok(repo),
+            Ok(Err(error)) => Err(anyhow!("Failed to build repo {}: {error:#}", self.name)),
+            // Unreachable while `BuildCompletion` is the only way to finish a
+            // build, since it reports on `Drop` as well as on `finish` and so
+            // cannot lose the sender. Kept as the honest answer if that ever
+            // stops being true.
+            Err(oneshot::Canceled) => Err(anyhow!("Build task for repo {} went away", self.name)),
+        }
     }
 }
 
