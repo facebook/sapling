@@ -433,8 +433,8 @@ async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
     .await;
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<errors::ErrorKind>(),
-        Ok(errors::ErrorKind::InvalidSize(..))
+        res.unwrap_err().downcast::<errors::FilestoreError>(),
+        Ok(errors::FilestoreError::InvalidSize(..))
     );
     Ok(())
 }
@@ -462,8 +462,8 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
     .await;
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<errors::ErrorKind>(),
-        Ok(errors::ErrorKind::InvalidContentId(..))
+        res.unwrap_err().downcast::<errors::FilestoreError>(),
+        Ok(errors::FilestoreError::InvalidContentId(..))
     );
 
     // Correct content Id should succeed
@@ -504,8 +504,8 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
     .await;
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<errors::ErrorKind>(),
-        Ok(errors::ErrorKind::InvalidSha1(..))
+        res.unwrap_err().downcast::<errors::FilestoreError>(),
+        Ok(errors::FilestoreError::InvalidSha1(..))
     );
 
     // Correct content Id should succeed
@@ -550,8 +550,8 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     .await;
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<errors::ErrorKind>(),
-        Ok(errors::ErrorKind::InvalidGitSha1(..))
+        res.unwrap_err().downcast::<errors::FilestoreError>(),
+        Ok(errors::FilestoreError::InvalidGitSha1(..))
     );
 
     // Correct content Id should succeed
@@ -596,8 +596,8 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
     .await;
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<errors::ErrorKind>(),
-        Ok(errors::ErrorKind::InvalidSha256(..))
+        res.unwrap_err().downcast::<errors::FilestoreError>(),
+        Ok(errors::FilestoreError::InvalidSha256(..))
     );
 
     // Correct content Id should succeed
@@ -642,8 +642,8 @@ async fn filestore_put_seeded_blake3(fb: FacebookInit) -> Result<()> {
     .await;
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<errors::ErrorKind>(),
-        Ok(errors::ErrorKind::InvalidBlake3(..))
+        res.unwrap_err().downcast::<errors::FilestoreError>(),
+        Ok(errors::FilestoreError::InvalidBlake3(..))
     );
 
     // Correct content Id should succeed
@@ -1272,8 +1272,9 @@ async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> 
 
     println!("res = {res:#?}");
     assert_matches!(
-        res.unwrap_err().downcast::<filestore::rechunk::ErrorKind>(),
-        Ok(filestore::rechunk::ErrorKind::ContentNotFound(..))
+        res.unwrap_err()
+            .downcast::<filestore::rechunk::RechunkError>(),
+        Ok(filestore::rechunk::RechunkError::ContentNotFound(..))
     );
 
     Ok(())

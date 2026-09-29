@@ -17,9 +17,9 @@ use assert_matches::assert_matches;
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bonsai_hg_mapping::BonsaiHgMappingError;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bonsai_hg_mapping::CachingBonsaiHgMapping;
-use bonsai_hg_mapping::ErrorKind;
 use bonsai_hg_mapping::SqlBonsaiHgMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -78,8 +78,8 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         .await
         .expect_err("Conflicting entries should have produced an error");
     assert_matches!(
-        result.downcast::<ErrorKind>(),
-        Ok(ErrorKind::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_bc_entry
+        result.downcast::<BonsaiHgMappingError>(),
+        Ok(BonsaiHgMappingError::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_bc_entry
     );
 
     let same_hg_entry = BonsaiHgMappingEntry {
@@ -91,8 +91,8 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         .await
         .expect_err("Conflicting entries should have produced an error");
     assert_matches!(
-        result.downcast::<ErrorKind>(),
-        Ok(ErrorKind::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_hg_entry
+        result.downcast::<BonsaiHgMappingError>(),
+        Ok(BonsaiHgMappingError::ConflictingEntries(ref e0, ref e1)) if e0 == &entry && e1 == &same_hg_entry
     );
 }
 

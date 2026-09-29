@@ -24,7 +24,7 @@ use tokio_util::codec::Decoder;
 use tokio_util::codec::FramedRead;
 use tracing::debug;
 
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::part_header;
 use crate::part_header::PartHeader;
 use crate::part_header::PartHeaderType;
@@ -155,7 +155,7 @@ impl OuterDecoder {
 
                 let part_header = Self::decode_header(buf.split_to(header_len).freeze());
                 if let Err(e) = part_header {
-                    let next = match e.downcast::<ErrorKind>() {
+                    let next = match e.downcast::<HgBundleError>() {
                         Ok(ek) => {
                             if ek.is_app_error() {
                                 (Ok(Some(Err(ek.into()))), OuterState::DiscardPayload)
@@ -194,7 +194,7 @@ impl OuterDecoder {
             OuterState::StreamEnd => (Ok(Some(Ok(OuterFrame::StreamEnd))), OuterState::StreamEnd),
 
             OuterState::Invalid => (
-                Err(ErrorKind::Bundle2Decode("byte stream corrupt".into()).into()),
+                Err(HgBundleError::Bundle2Decode("byte stream corrupt".into()).into()),
                 OuterState::Invalid,
             ),
         }

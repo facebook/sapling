@@ -34,7 +34,7 @@ define_stats! {
 }
 
 #[derive(Debug, Eq, DeriveError, PartialEq)]
-pub enum ErrorKind {
+pub enum FilenodeWriterError {
     #[error("Invalid copy: {0:?} copied from {1:?}")]
     InvalidCopy(RepoPath, RepoPath),
 }
@@ -202,7 +202,7 @@ async fn insert_filenodes(
             let (frompath, fromnode) = copyinfo;
             let from_pwh = PathHash::from_repo_path(frompath);
             if from_pwh.is_tree != ph.is_tree {
-                let e = ErrorKind::InvalidCopy(filenode.path.clone(), frompath.clone());
+                let e = FilenodeWriterError::InvalidCopy(filenode.path.clone(), frompath.clone());
                 return Err(e.into());
             }
             copydata_rows.push((

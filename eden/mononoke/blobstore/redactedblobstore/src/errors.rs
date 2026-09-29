@@ -8,7 +8,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum RedactionError {
     #[error("The blob {0} is censored.\n Task/Sev: {1}")]
     Redacted(String, String),
 }

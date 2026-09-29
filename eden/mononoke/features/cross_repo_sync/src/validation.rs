@@ -441,8 +441,8 @@ fn wrap_mover_result(
             Ok(opt_mpath) => Ok(opt_mpath.map(Some)),
             Err(err) => {
                 for cause in err.chain() {
-                    if let Some(movers::ErrorKind::RemovePrefixWholePathFailure) =
-                        cause.downcast_ref::<movers::ErrorKind>()
+                    if let Some(movers::MoverError::RemovePrefixWholePathFailure) =
+                        cause.downcast_ref::<movers::MoverError>()
                     {
                         return Ok(Some(None));
                     }

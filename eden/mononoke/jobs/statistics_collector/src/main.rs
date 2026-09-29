@@ -59,7 +59,7 @@ use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
-use redactedblobstore::ErrorKind as RedactedBlobstoreError;
+use redactedblobstore::RedactionError;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
@@ -300,8 +300,8 @@ pub async fn number_of_lines_unless_redacted(
 ) -> Result<i64, Error> {
     match number_of_lines(bytes_stream).await {
         Ok(lines) => Ok(lines),
-        Err(e) => match e.downcast_ref::<RedactedBlobstoreError>() {
-            Some(RedactedBlobstoreError::Redacted(..)) => Ok(0),
+        Err(e) => match e.downcast_ref::<RedactionError>() {
+            Some(RedactionError::Redacted(..)) => Ok(0),
             _ => Err(e),
         },
     }

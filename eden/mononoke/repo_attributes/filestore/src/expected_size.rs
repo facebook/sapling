@@ -8,7 +8,7 @@
 use anyhow::Result;
 use bytes::BytesMut;
 
-use crate::errors::ErrorKind;
+use crate::errors::FilestoreError;
 use crate::incremental_hash::AdvisorySize;
 
 /// ExpectedSize is an opaque struct that lets us encapsulate the incoming size for a Filestore
@@ -31,14 +31,14 @@ impl ExpectedSize {
         if size == self.0 {
             return Ok(());
         }
-        Err(ErrorKind::InvalidSize(self.clone(), size).into())
+        Err(FilestoreError::InvalidSize(self.clone(), size).into())
     }
 
     pub fn check_less(&self, size: u64) -> Result<()> {
         if size <= self.0 {
             return Ok(());
         }
-        Err(ErrorKind::InvalidSize(self.clone(), size).into())
+        Err(FilestoreError::InvalidSize(self.clone(), size).into())
     }
 
     pub fn new_buffer(&self) -> BytesMut {

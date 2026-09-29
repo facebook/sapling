@@ -21,7 +21,7 @@ use mercurial_types::RepoPath;
 use super::DataEntry;
 use super::HistoryEntry;
 use super::Part;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 
 pub trait WirePackPartProcessor {
     type Data;
@@ -91,7 +91,7 @@ where
         }
 
         if state != State::End {
-            Err(ErrorKind::WirePackEncode(format!(
+            Err(HgBundleError::WirePackEncode(format!(
                 "invalid encode stream: unexpected None (state: {state:?})"
             )))?;
         }
@@ -130,7 +130,7 @@ impl State {
         *self = match state {
             State::HistoryMeta => Self::next_history_state(path, entry_count),
             other => {
-                bail!(ErrorKind::WirePackEncode(format!(
+                bail!(HgBundleError::WirePackEncode(format!(
                     "invalid encode stream: unexpected history meta entry (state: {other:?})"
                 )));
             }
@@ -144,7 +144,7 @@ impl State {
             State::History { path, entry_count } => {
                 ensure!(
                     entry_count > 0,
-                    ErrorKind::WirePackEncode(format!(
+                    HgBundleError::WirePackEncode(format!(
                         "invalid encode stream: saw history entry for {} after count dropped to 0",
                         entry.node
                     ))
@@ -152,7 +152,7 @@ impl State {
                 Self::next_history_state(path, entry_count - 1)
             }
             other => {
-                bail!(ErrorKind::WirePackEncode(format!(
+                bail!(HgBundleError::WirePackEncode(format!(
                     "invalid encode stream: unexpected history entry for {} (state: {:?})",
                     entry.node, other
                 )));
@@ -169,7 +169,7 @@ impl State {
             } => {
                 ensure!(
                     path == expected_path,
-                    ErrorKind::WirePackEncode(format!(
+                    HgBundleError::WirePackEncode(format!(
                         "invalid encode stream: saw data meta for path '{path}', expected path '{expected_path}'\
                          (entry_count: {entry_count})"
                     ))
@@ -177,7 +177,7 @@ impl State {
                 Self::next_data_state(path, entry_count)
             }
             other => {
-                bail!(ErrorKind::WirePackEncode(format!(
+                bail!(HgBundleError::WirePackEncode(format!(
                     "invalid encode stream: saw unexpected data meta for {path} (entry count: {entry_count}, \
                      state: {other:?}"
                 ),));
@@ -192,7 +192,7 @@ impl State {
             State::Data { path, entry_count } => {
                 ensure!(
                     entry_count > 0,
-                    ErrorKind::WirePackEncode(format!(
+                    HgBundleError::WirePackEncode(format!(
                         "invalid encode stream: saw history entry for {} after count dropped to 0",
                         entry.node
                     ))
@@ -200,7 +200,7 @@ impl State {
                 Self::next_data_state(path, entry_count - 1)
             }
             other => {
-                bail!(ErrorKind::WirePackEncode(format!(
+                bail!(HgBundleError::WirePackEncode(format!(
                     "invalid encode stream: unexpected data entry for {} (state: {:?})",
                     entry.node, other
                 )));
@@ -214,7 +214,7 @@ impl State {
         *self = match state {
             State::HistoryMeta => State::End,
             other => {
-                bail!(ErrorKind::WirePackEncode(format!(
+                bail!(HgBundleError::WirePackEncode(format!(
                     "invalid encode stream: unexpected end (state: {other:?})"
                 )));
             }

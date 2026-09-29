@@ -16,7 +16,7 @@ use mononoke_types::ContentMetadataV2;
 use strum::IntoEnumIterator;
 
 use crate::StoreRequest;
-use crate::errors::ErrorKind;
+use crate::errors::FilestoreError;
 use crate::errors::InvalidHash;
 use crate::fetch_key::Alias;
 use crate::fetch_key::AliasBlob;
@@ -78,7 +78,7 @@ pub async fn finalize<B: KeyedBlobstore>(
         expected_size.check_equals(total_size)?;
 
         {
-            use ErrorKind::*;
+            use FilestoreError::*;
             check_hash(*req_content_id, content_id).map_err(InvalidContentId)?;
             check_hash(*req_sha1, sha1).map_err(InvalidSha1)?;
             check_hash(*req_sha256, sha256).map_err(InvalidSha256)?;

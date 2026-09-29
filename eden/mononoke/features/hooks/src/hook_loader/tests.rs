@@ -24,7 +24,7 @@ use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::HookManager;
-use crate::errors::ErrorKind;
+use crate::errors::HookError;
 use crate::hook_loader::load_hooks;
 
 async fn hook_manager_repo(fb: FacebookInit, repo: &HookTestRepo) -> HookManager {
@@ -83,9 +83,9 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
     )
     .await
     .unwrap_err()
-    .downcast::<ErrorKind>()
+    .downcast::<HookError>()
     {
-        Ok(ErrorKind::InvalidRustHook(hook_name)) => {
+        Ok(HookError::InvalidRustHook(hook_name)) => {
             assert_eq!(hook_name, "hook1".to_string());
         }
         _ => panic!("Unexpected err type"),
@@ -164,9 +164,9 @@ async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
     )
     .await
     .unwrap_err()
-    .downcast::<ErrorKind>()
+    .downcast::<HookError>()
     {
-        Ok(ErrorKind::NoSuchHookToDisable(hooks)) => {
+        Ok(HookError::NoSuchHookToDisable(hooks)) => {
             assert_eq!(hashset!["hook1".to_string()], hooks);
         }
         _ => panic!("Unexpected err type"),

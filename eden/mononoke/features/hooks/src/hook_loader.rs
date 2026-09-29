@@ -88,7 +88,7 @@ pub async fn load_hooks(
             {
                 FileHook(hook)
             } else {
-                return Err(ErrorKind::InvalidRustHook(hook.name.clone()).into());
+                return Err(HookError::InvalidRustHook(hook.name.clone()).into());
             }
         };
 
@@ -132,7 +132,7 @@ pub async fn load_hooks(
     }
 
     if !hooks_not_disabled.is_empty() {
-        return Err(ErrorKind::NoSuchHookToDisable(hooks_not_disabled).into());
+        return Err(HookError::NoSuchHookToDisable(hooks_not_disabled).into());
     }
 
     for bookmark_hook in config.bookmarks.clone() {
@@ -145,7 +145,7 @@ pub async fn load_hooks(
         let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
         let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
         if !diff.is_empty() {
-            return Err(ErrorKind::NoSuchBookmarkHook(
+            return Err(HookError::NoSuchBookmarkHook(
                 bookmark,
                 diff.into_iter().cloned().collect(),
             )

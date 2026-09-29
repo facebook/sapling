@@ -32,7 +32,7 @@ use tracing::warn;
 use crate::Bundle2Item;
 use crate::capabilities;
 use crate::changegroup;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::infinitepush;
 use crate::part_header::PartHeader;
 use crate::part_header::PartHeaderType;
@@ -89,7 +89,7 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
                 .cloned()
                 .collect();
             if !unknown_params.is_empty() {
-                bail!(ErrorKind::BundleUnknownPartParams(
+                bail!(HgBundleError::BundleUnknownPartParams(
                     *header.part_type(),
                     unknown_params,
                 ));
@@ -98,7 +98,7 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
         }
         None => {
             if header.mandatory() {
-                bail!(ErrorKind::BundleUnknownPart(header));
+                bail!(HgBundleError::BundleUnknownPart(header));
             }
             Ok(None)
         }
@@ -110,7 +110,7 @@ pub fn get_cg_version(header: PartHeader, field: &str) -> Result<changegroup::un
         .mparams()
         .get(field)
         .or_else(|| header.aparams().get(field));
-    let err = ErrorKind::CgDecode(format!(
+    let err = HgBundleError::CgDecode(format!(
         "No changegroup version in Part Header in field {field}"
     ))
     .into();
@@ -118,12 +118,13 @@ pub fn get_cg_version(header: PartHeader, field: &str) -> Result<changegroup::un
     version
         .ok_or(err)
         .and_then(|version_bytes| {
-            str::from_utf8(version_bytes).map_err(|e| ErrorKind::CgDecode(format!("{e:?}")).into())
+            str::from_utf8(version_bytes)
+                .map_err(|e| HgBundleError::CgDecode(format!("{e:?}")).into())
         })
         .and_then(|version_str| {
             version_str
                 .parse::<changegroup::unpacker::CgVersion>()
-                .map_err(|e| ErrorKind::CgDecode(format!("{e:?}")).into())
+                .map_err(|e| HgBundleError::CgDecode(format!("{e:?}")).into())
         })
 }
 

@@ -68,8 +68,8 @@ use tracing::info;
 use crate::LfsRepos;
 use crate::Repo;
 use crate::config::ServerConfig;
-use crate::errors::ErrorKind;
-use crate::errors::LfsServerContextErrorKind;
+use crate::errors::LfsServerContextError;
+use crate::errors::LfsServerError;
 use crate::middleware::LfsMethod;
 use crate::middleware::RequestContext;
 
@@ -121,7 +121,7 @@ impl LfsServerContext {
             None => HttpsConnector::new(),
         }
         .map_err(Error::from)
-        .context(ErrorKind::HttpClientInitializationFailed)?;
+        .context(LfsServerError::HttpClientInitializationFailed)?;
 
         let client = Client::builder(TokioExecutor::new()).build(connector);
         let server_hostname =
@@ -152,7 +152,7 @@ impl LfsServerContext {
         host: String,
         headers: &Option<&HeaderMap>,
         method: LfsMethod,
-    ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
+    ) -> Result<RepositoryRequestContext, LfsServerContextError> {
         let (
             repo,
             client,
@@ -179,9 +179,7 @@ impl LfsServerContext {
                     inner.compression_sniff_enabled,
                 ),
                 None => {
-                    return Err(LfsServerContextErrorKind::RepositoryDoesNotExist(
-                        repository,
-                    ));
+                    return Err(LfsServerContextError::RepositoryDoesNotExist(repository));
                 }
             }
         };
@@ -253,7 +251,7 @@ async fn acl_check(
     repo: &impl RepoPermissionCheckerRef,
     enforce_authorization: bool,
     method: LfsMethod,
-) -> Result<(), LfsServerContextErrorKind> {
+) -> Result<(), LfsServerContextError> {
     let authz = AuthorizationContext::new(ctx);
     let acl_check = if method.is_read_only() {
         authz.check_full_repo_read(ctx, repo).await
@@ -262,7 +260,7 @@ async fn acl_check(
     };
 
     if acl_check.is_denied() && enforce_authorization {
-        Err(LfsServerContextErrorKind::Forbidden)
+        Err(LfsServerContextError::Forbidden)
     } else {
         Ok(())
     }
@@ -324,12 +322,12 @@ impl<S: Stream<Item = Result<Bytes, Error>> + Send + 'static> Drop for HttpClien
     }
 }
 
-fn host_maybe_port_to_host(host_maybe_port: &str) -> Result<String, LfsServerContextErrorKind> {
+fn host_maybe_port_to_host(host_maybe_port: &str) -> Result<String, LfsServerContextError> {
     Ok(host_maybe_port
         .parse::<Uri>()
-        .map_err(|_e| LfsServerContextErrorKind::MissingHostHeader)?
+        .map_err(|_e| LfsServerContextError::MissingHostHeader)?
         .authority()
-        .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
+        .ok_or(LfsServerContextError::MissingHostHeader)?
         .host()
         .to_string())
 }
@@ -350,13 +348,13 @@ fn should_force_http_scheme(host: &str, headers: &Option<&HeaderMap>, server: &S
     false
 }
 
-fn get_host_header(headers: &Option<&HeaderMap>) -> Result<String, LfsServerContextErrorKind> {
+fn get_host_header(headers: &Option<&HeaderMap>) -> Result<String, LfsServerContextError> {
     let host_maybe_port = headers
-        .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
+        .ok_or(LfsServerContextError::MissingHostHeader)?
         .get(http::header::HOST)
-        .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
+        .ok_or(LfsServerContextError::MissingHostHeader)?
         .to_str()
-        .map_err(|_e| LfsServerContextErrorKind::MissingHostHeader)?;
+        .map_err(|_e| LfsServerContextError::MissingHostHeader)?;
 
     host_maybe_port_to_host(host_maybe_port)
 }
@@ -366,7 +364,7 @@ impl RepositoryRequestContext {
         state: &mut State,
         repository: String,
         method: LfsMethod,
-    ) -> Result<Self, LfsServerContextErrorKind> {
+    ) -> Result<Self, LfsServerContextError> {
         let req_ctx = state.borrow_mut::<RequestContext>();
         req_ctx.set_request(repository.clone(), method);
 
@@ -441,7 +439,7 @@ impl RepositoryRequestContext {
         // general case: if your server is sending you 5GB of data and you drop the future, you
         // don't want to read all that later just to reuse a connection).
         let fut = async move {
-            let res = res.await.context(ErrorKind::UpstreamDidNotRespond)?;
+            let res = res.await.context(LfsServerError::UpstreamDidNotRespond)?;
 
             let (head, body) = res.into_parts();
 
@@ -450,7 +448,7 @@ impl RepositoryRequestContext {
                     .into_data_stream()
                     .try_concat_body(&head.headers)?
                     .await?;
-                return Err(ErrorKind::UpstreamError(
+                return Err(LfsServerError::UpstreamError(
                     head.status,
                     String::from_utf8_lossy(&body).to_string(),
                 )
@@ -473,7 +471,7 @@ impl RepositoryRequestContext {
     pub async fn upstream_batch(
         &self,
         batch: &RequestBatch,
-    ) -> Result<Option<ResponseBatch>, ErrorKind> {
+    ) -> Result<Option<ResponseBatch>, LfsServerError> {
         // If upstream is disabled, we won't send an upstream request
         if !self.repo.repo_config().lfs.use_upstream_lfs_server {
             debug!("No Upstream LFS server configured for repo");
@@ -486,23 +484,23 @@ impl RepositoryRequestContext {
         };
 
         let body: Bytes = serde_json::to_vec(&batch)
-            .map_err(|e| ErrorKind::SerializationFailed(e.into()))?
+            .map_err(|e| LfsServerError::SerializationFailed(e.into()))?
             .into();
 
         let req = Request::post(uri)
             .body(body.into_body())
-            .map_err(|e| ErrorKind::Error(e.into()))?;
+            .map_err(|e| LfsServerError::Error(e.into()))?;
 
         let res = self
             .dispatch(req)
             .await
-            .map_err(ErrorKind::UpstreamBatchNoResponse)?
+            .map_err(LfsServerError::UpstreamBatchNoResponse)?
             .concat()
             .await
-            .map_err(ErrorKind::UpstreamBatchNoResponse)?;
+            .map_err(LfsServerError::UpstreamBatchNoResponse)?;
 
         let batch = serde_json::from_slice::<ResponseBatch>(&res)
-            .map_err(|e| ErrorKind::UpstreamBatchInvalid(e.into()))?;
+            .map_err(|e| LfsServerError::UpstreamBatchInvalid(e.into()))?;
 
         Ok(Some(batch))
     }
@@ -518,12 +516,12 @@ pub struct UriBuilder {
 }
 
 impl UriBuilder {
-    fn pick_uri(&self) -> Result<&BaseUri, ErrorKind> {
+    fn pick_uri(&self) -> Result<&BaseUri, LfsServerError> {
         self.server
             .self_uris
             .iter()
             .find(|&x| x.authority.host() == self.host)
-            .ok_or_else(|| ErrorKind::HostNotAllowlisted(self.host.clone()))
+            .ok_or_else(|| LfsServerError::HostNotAllowlisted(self.host.clone()))
     }
 
     fn scheme_override(&self) -> Option<Scheme> {
@@ -534,7 +532,7 @@ impl UriBuilder {
         }
     }
 
-    pub fn upload_uri(&self, object: &RequestObject) -> Result<Uri, ErrorKind> {
+    pub fn upload_uri(&self, object: &RequestObject) -> Result<Uri, LfsServerError> {
         self.pick_uri()?
             .build(
                 format_args!(
@@ -546,10 +544,10 @@ impl UriBuilder {
                 ),
                 self.scheme_override(),
             )
-            .map_err(|e| ErrorKind::UriBuilderFailed("upload_uri", e))
+            .map_err(|e| LfsServerError::UriBuilderFailed("upload_uri", e))
     }
 
-    pub fn download_uri(&self, content_id: &ContentId) -> Result<Uri, ErrorKind> {
+    pub fn download_uri(&self, content_id: &ContentId) -> Result<Uri, LfsServerError> {
         self.pick_uri()?
             .build(
                 format_args!(
@@ -560,7 +558,7 @@ impl UriBuilder {
                 ),
                 self.scheme_override(),
             )
-            .map_err(|e| ErrorKind::UriBuilderFailed("download_uri", e))
+            .map_err(|e| LfsServerError::UriBuilderFailed("download_uri", e))
     }
 
     pub fn consistent_download_uri(
@@ -568,7 +566,7 @@ impl UriBuilder {
         content_id: &ContentId,
         routing_key: String,
         tasks_per_content: NonZeroU16,
-    ) -> Result<Uri, ErrorKind> {
+    ) -> Result<Uri, LfsServerError> {
         self.pick_uri()?
             .build(
                 format_args!(
@@ -581,25 +579,25 @@ impl UriBuilder {
                 ),
                 self.scheme_override(),
             )
-            .map_err(|e| ErrorKind::UriBuilderFailed("consistent_download_uri", e))
+            .map_err(|e| LfsServerError::UriBuilderFailed("consistent_download_uri", e))
     }
 
-    pub fn upstream_batch_uri(&self) -> Result<Option<Uri>, ErrorKind> {
+    pub fn upstream_batch_uri(&self) -> Result<Option<Uri>, LfsServerError> {
         self.server
             .upstream_uri
             .as_ref()
             .map(|uri| {
                 uri.build(format_args!("objects/batch"), None)
-                    .map_err(|e| ErrorKind::UriBuilderFailed("upstream_batch_uri", e))
+                    .map_err(|e| LfsServerError::UriBuilderFailed("upstream_batch_uri", e))
             })
             .transpose()
     }
 }
 
-fn parse_and_check_uri(src: &str) -> Result<BaseUri, ErrorKind> {
+fn parse_and_check_uri(src: &str) -> Result<BaseUri, LfsServerError> {
     let uri = src
         .parse::<Uri>()
-        .map_err(|_e| ErrorKind::InvalidUri(src.to_string(), "invalid uri"))?;
+        .map_err(|_e| LfsServerError::InvalidUri(src.to_string(), "invalid uri"))?;
 
     let Parts {
         scheme,
@@ -609,9 +607,10 @@ fn parse_and_check_uri(src: &str) -> Result<BaseUri, ErrorKind> {
     } = uri.into_parts();
 
     Ok(BaseUri {
-        scheme: scheme.ok_or_else(|| ErrorKind::InvalidUri(src.to_string(), "missing scheme"))?,
+        scheme: scheme
+            .ok_or_else(|| LfsServerError::InvalidUri(src.to_string(), "missing scheme"))?,
         authority: authority
-            .ok_or_else(|| ErrorKind::InvalidUri(src.to_string(), "missing authority"))?,
+            .ok_or_else(|| LfsServerError::InvalidUri(src.to_string(), "missing authority"))?,
         path_and_query,
     })
 }

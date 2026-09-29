@@ -333,7 +333,7 @@ pub async fn fetch_concat<B: KeyedBlobstore + Clone + 'static>(
 ) -> Result<Bytes, Error> {
     let key: FetchKey = key.into();
     let bytes = fetch_concat_impl(blobstore, ctx, &key, None).await?;
-    bytes.ok_or_else(|| errors::ErrorKind::MissingContent(key).into())
+    bytes.ok_or_else(|| errors::FilestoreError::MissingContent(key).into())
 }
 
 /// Similar to `fetch_concat, but requires the content to be a known exact
@@ -347,7 +347,7 @@ pub async fn fetch_concat_exact<'a, B: KeyedBlobstore + Clone + 'static>(
     let key = key.into();
     fetch_concat_impl(blobstore, ctx, &key, Some(size))
         .await?
-        .ok_or_else(|| errors::ErrorKind::MissingContent(key).into())
+        .ok_or_else(|| errors::FilestoreError::MissingContent(key).into())
 }
 
 /// Fetch content associated with the key as a stream
@@ -365,7 +365,7 @@ pub fn fetch_stream<'a, B: KeyedBlobstore + Clone + 'static, K: Into<FetchKey>>(
     async move {
         let stream = fetch(blobstore, &ctx, &key)
             .await?
-            .ok_or(errors::ErrorKind::MissingContent(key))?;
+            .ok_or(errors::FilestoreError::MissingContent(key))?;
         Result::<_, Error>::Ok(stream)
     }
     .try_flatten_stream()

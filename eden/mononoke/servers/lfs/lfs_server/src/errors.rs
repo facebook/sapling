@@ -13,7 +13,7 @@ use lfs_protocol::ResponseObject;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum LfsServerError {
     #[error("Client cancelled the request")]
     ClientCancelled,
     #[error("An error occurred forwarding the request to upstream")]
@@ -71,7 +71,7 @@ pub enum ErrorKind {
 }
 
 #[derive(Debug, Error)]
-pub enum LfsServerContextErrorKind {
+pub enum LfsServerContextError {
     #[error("Operated not permitted")]
     Forbidden,
     #[error("Client not authenticated")]
@@ -82,9 +82,9 @@ pub enum LfsServerContextErrorKind {
     MissingHostHeader,
 }
 
-impl From<LfsServerContextErrorKind> for HttpError {
-    fn from(e: LfsServerContextErrorKind) -> HttpError {
-        use LfsServerContextErrorKind::*;
+impl From<LfsServerContextError> for HttpError {
+    fn from(e: LfsServerContextError) -> HttpError {
+        use LfsServerContextError::*;
         match e {
             Forbidden => HttpError::e403(e),
             RepositoryDoesNotExist(_) => HttpError::e400(e),

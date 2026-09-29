@@ -13,7 +13,7 @@ pub use mononoke_types::NonRootMPath;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum HookError {
     #[error("No such hook '{0}'")]
     NoSuchHook(String),
 

@@ -28,7 +28,7 @@ use tokio::io::AsyncReadExt;
 use tokio_util::codec::FramedRead;
 
 use crate::Bundle2Item;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::part_inner::inner_stream;
 use crate::part_outer::OuterFrame;
 use crate::part_outer::outer_stream;
@@ -65,7 +65,7 @@ pub type Bundle2Stream<R> =
 
 pub fn bundle2_stream<R>(
     read: R,
-    app_errors: Option<Arc<Mutex<Vec<ErrorKind>>>>,
+    app_errors: Option<Arc<Mutex<Vec<HgBundleError>>>>,
 ) -> Bundle2Stream<R>
 where
     R: AsyncBufRead + Unpin + Send + 'static,
@@ -84,7 +84,7 @@ where
 
             while let Some(res) = stream.try_next().await? {
                 match res {
-                    Err(e) => match e.downcast::<ErrorKind>() {
+                    Err(e) => match e.downcast::<HgBundleError>() {
                         Ok(ek) => {
                             if ek.is_app_error() {
                                 if let Some(app_errors) = app_errors.as_ref() {

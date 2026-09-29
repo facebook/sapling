@@ -33,7 +33,7 @@ use tokio::io::AsyncRead;
 use tokio::io::ReadBuf;
 use tokio_util::codec::Decoder;
 
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 
 pub trait BytesExt {
     fn get_str(&mut self, len: usize) -> Result<String>;
@@ -98,7 +98,7 @@ impl<R: AsyncBufRead> Decompressor<R> {
             Some("GZ") => Ok(Self::Gzip(GzipDecoder::new(read))),
             Some("ZS") => Ok(Self::Zstd(ZstdDecoder::new(read))),
             Some("UN") | None => Ok(Self::Uncompressed(read)),
-            Some(s) => bail!(ErrorKind::Bundle2Decode(format!(
+            Some(s) => bail!(HgBundleError::Bundle2Decode(format!(
                 "unknown compression '{s}'"
             ),)),
         }

@@ -18,7 +18,7 @@ use bytes::BytesMut;
 use mercurial_types::delta::Delta;
 use mercurial_types::delta::Fragment;
 
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 
 const DELTA_HEADER_LEN: usize = 12;
 
@@ -43,7 +43,7 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
 
         let delta_len = (new_len as usize) + DELTA_HEADER_LEN;
         if remaining < delta_len {
-            bail!(ErrorKind::InvalidDelta(format!(
+            bail!(HgBundleError::InvalidDelta(format!(
                 "expected {delta_len} bytes, {remaining} remaining"
             )));
         }
@@ -59,12 +59,12 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     }
 
     if remaining != 0 {
-        bail!(ErrorKind::InvalidDelta(format!(
+        bail!(HgBundleError::InvalidDelta(format!(
             "{remaining} trailing bytes in encoded delta"
         ),));
     }
 
-    Delta::new(frags).with_context(|| ErrorKind::InvalidDelta("invalid fragment list".into()))
+    Delta::new(frags).with_context(|| HgBundleError::InvalidDelta("invalid fragment list".into()))
 }
 
 #[cfg(test)]
@@ -98,15 +98,15 @@ mod test {
     fn invalid_deltas() {
         let short_delta = BytesMut::from(&b"\0\0\0\0\0\0\0\0\0\0\0\x20"[..]);
         assert_matches!(
-            err_downcast!(decode_delta(short_delta).unwrap_err(), err: ErrorKind => err),
-            Ok(ErrorKind::InvalidDelta(ref msg))
+            err_downcast!(decode_delta(short_delta).unwrap_err(), err: HgBundleError => err),
+            Ok(HgBundleError::InvalidDelta(ref msg))
             if msg == "expected 44 bytes, 12 remaining"
         );
 
         let short_header = BytesMut::from(&b"\0\0\0\0\0\0"[..]);
         assert_matches!(
-            err_downcast!(decode_delta(short_header).unwrap_err(), err: ErrorKind => err),
-            Ok(ErrorKind::InvalidDelta(ref msg))
+            err_downcast!(decode_delta(short_header).unwrap_err(), err: HgBundleError => err),
+            Ok(HgBundleError::InvalidDelta(ref msg))
             if msg == "6 trailing bytes in encoded delta"
         );
 
@@ -114,8 +114,8 @@ mod test {
         let start_after_end = BytesMut::from(&b"\0\0\0\x02\0\0\0\0\0\0\0\0"[..]);
         match decode_delta(start_after_end) {
             Ok(bad) => panic!("unexpected success {bad:?}"),
-            Err(err) => match err_downcast_ref!(err, err: ErrorKind => err) {
-                Some(&ErrorKind::InvalidDelta(..)) => {}
+            Err(err) => match err_downcast_ref!(err, err: HgBundleError => err) {
+                Some(&HgBundleError::InvalidDelta(..)) => {}
                 Some(bad) => panic!("Bad ErrorKind {bad:?}"),
                 None => panic!("Unexpected error {err:?}"),
             },

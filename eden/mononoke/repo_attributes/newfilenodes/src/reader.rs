@@ -70,7 +70,7 @@ define_stats! {
 const REMOTE_CACHE_TIMEOUT_MILLIS: u64 = 100;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum FilenodeReaderError {
     #[error("Filenodes internal error: path is not found: {0:?}")]
     PathNotFound(PathHashBytes),
 
@@ -234,7 +234,7 @@ impl FilenodesReader {
                         ctx.client_correlator(),
                         Some("newfilenodes::reader"),
                     )
-                    .map_err(ErrorKind::SqlError)?;
+                    .map_err(FilenodeReaderError::SqlError)?;
 
                     let used_consistent_reads = cons_read_opts.is_some();
 
@@ -263,8 +263,8 @@ impl FilenodesReader {
                         // the result and possibly fallback to reading from master
                         match read_result {
                             Ok(FilenodeResult::Present(None))
-                            | Err(ErrorKind::FixedCopyInfoMissing(_))
-                            | Err(ErrorKind::PathNotFound(_)) => {
+                            | Err(FilenodeReaderError::FixedCopyInfoMissing(_))
+                            | Err(FilenodeReaderError::PathNotFound(_)) => {
                                 // If the filenode wasn't found, or its copy info was missing, it might be present
                                 // on the master.
                                 STATS::gets_master.add_value(1);
@@ -396,7 +396,7 @@ async fn select_filenode_from_sql(
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
     cons_read_opts: Option<ConsistentReadOptions>,
-) -> Result<FilenodeResult<Option<FilenodeInfo>>, ErrorKind> {
+) -> Result<FilenodeResult<Option<FilenodeInfo>>, FilenodeReaderError> {
     let partial = select_partial_filenode(
         ctx,
         connections,
@@ -446,7 +446,7 @@ async fn select_partial_filenode(
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
     cons_read_opts: Option<ConsistentReadOptions>,
-) -> Result<Option<PartialFilenode>, ErrorKind> {
+) -> Result<Option<PartialFilenode>, FilenodeReaderError> {
     let connection = connections
         .read_connections
         .checkout(pwh, AcquireReason::Filenodes);
@@ -554,7 +554,7 @@ async fn select_partial_history(
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
     limit: Option<u64>,
-) -> Result<Option<Vec<PartialFilenode>>, ErrorKind> {
+) -> Result<Option<Vec<PartialFilenode>>, FilenodeReaderError> {
     let connection = connections.checkout(pwh, AcquireReason::History);
 
     recorder.increment();
@@ -594,7 +594,7 @@ async fn select_partial_history(
     let history = rows
         .into_iter()
         .map(convert_row_to_partial_filenode)
-        .collect::<Result<Vec<PartialFilenode>, ErrorKind>>()?;
+        .collect::<Result<Vec<PartialFilenode>, FilenodeReaderError>>()?;
 
     // TODO: It'd be nice to have some eviction here.
     // TODO: It'd be nice to chain those.
@@ -602,15 +602,18 @@ async fn select_partial_history(
     Ok(Some(history))
 }
 
-fn convert_row_to_partial_filenode(row: FilenodeRow) -> Result<PartialFilenode, ErrorKind> {
+fn convert_row_to_partial_filenode(
+    row: FilenodeRow,
+) -> Result<PartialFilenode, FilenodeReaderError> {
     let (filenode, linknode, p1, p2, has_copyinfo, from_path_hash, from_node) = row;
 
     let copyfrom = if has_copyinfo == 0 {
         None
     } else {
-        let from_path_hash = from_path_hash.ok_or(ErrorKind::FixedCopyInfoMissing(filenode))?;
+        let from_path_hash =
+            from_path_hash.ok_or(FilenodeReaderError::FixedCopyInfoMissing(filenode))?;
 
-        let from_node = from_node.ok_or(ErrorKind::FixedCopyInfoMissing(filenode))?;
+        let from_node = from_node.ok_or(FilenodeReaderError::FixedCopyInfoMissing(filenode))?;
 
         Some((from_path_hash, from_node))
     };
@@ -633,7 +636,7 @@ async fn fill_paths(
     repo_id: RepositoryId,
     rows: Vec<PartialFilenode>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Vec<FilenodeInfo>, ErrorKind> {
+) -> Result<Vec<FilenodeInfo>, FilenodeReaderError> {
     let path_hashes_to_fetch = rows
         .iter()
         .filter_map(|r| r.copyfrom.as_ref().map(|c| c.0.clone()));
@@ -656,13 +659,13 @@ async fn fill_paths(
                 Some((from_path_hash, from_node)) => {
                     let from_path = path_hashes_to_paths
                         .get(&from_path_hash)
-                        .ok_or_else(|| ErrorKind::PathNotFound(from_path_hash.clone()))?;
+                        .ok_or_else(|| FilenodeReaderError::PathNotFound(from_path_hash.clone()))?;
                     let repo_path = if pwh.is_tree {
                         RepoPath::dir(&from_path.0[..])
-                            .map_err(|e| ErrorKind::InvalidPath(from_path.clone(), e))?
+                            .map_err(|e| FilenodeReaderError::InvalidPath(from_path.clone(), e))?
                     } else {
                         RepoPath::file(&from_path.0[..])
-                            .map_err(|e| ErrorKind::InvalidPath(from_path.clone(), e))?
+                            .map_err(|e| FilenodeReaderError::InvalidPath(from_path.clone(), e))?
                     };
                     Some((repo_path, from_node))
                 }
@@ -677,7 +680,7 @@ async fn fill_paths(
                 linknode,
             };
 
-            Result::<_, ErrorKind>::Ok(ret)
+            Result::<_, FilenodeReaderError>::Ok(ret)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -690,7 +693,7 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
     repo_id: RepositoryId,
     iter: I,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<HashMap<PathHashBytes, PathBytes>, ErrorKind> {
+) -> Result<HashMap<PathHashBytes, PathBytes>, FilenodeReaderError> {
     let futs = iter
         .chunk_by(|path_hash| connections.shard_id(path_hash))
         .into_iter()
@@ -714,7 +717,7 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
                 .into_iter()
                 .collect::<HashMap<_, _>>();
 
-                Result::<_, ErrorKind>::Ok(output)
+                Result::<_, FilenodeReaderError>::Ok(output)
             }
         })
         .collect::<Vec<_>>();
@@ -742,12 +745,12 @@ where
     }
 }
 
-async fn enforce_sql_timeout<T, Fut>(fut: Fut) -> Result<T, ErrorKind>
+async fn enforce_sql_timeout<T, Fut>(fut: Fut) -> Result<T, FilenodeReaderError>
 where
     Fut: Future<Output = Result<T>>,
 {
     if !sql_timeout_knobs::should_enforce_sql_timeouts() {
-        return fut.await.map_err(ErrorKind::SqlError);
+        return fut.await.map_err(FilenodeReaderError::SqlError);
     }
 
     let sql_timeout_ms = justknobs::get_as::<u64>(
@@ -757,10 +760,10 @@ where
 
     match timeout(Duration::from_millis(sql_timeout_ms), fut).await {
         Ok(Ok(r)) => Ok(r),
-        Ok(Err(e)) => Err(ErrorKind::SqlError(e)),
+        Ok(Err(e)) => Err(FilenodeReaderError::SqlError(e)),
         Err(e) => {
             STATS::sql_timeouts.add_value(1);
-            Err(ErrorKind::SqlTimeout(e))
+            Err(FilenodeReaderError::SqlTimeout(e))
         }
     }
 }

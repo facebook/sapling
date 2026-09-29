@@ -28,7 +28,7 @@ use super::HistoryEntry;
 use super::Kind;
 use super::Part;
 use super::WIREPACK_END;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::utils::BytesExt;
 
 #[derive(Debug)]
@@ -68,14 +68,14 @@ impl Decoder for WirePackUnpacker {
                          buffer. State: {:?}, First 128 bytes: {:?}",
                         len, self.state, bytes,
                     );
-                    bail!(ErrorKind::WirePackDecode(msg));
+                    bail!(HgBundleError::WirePackDecode(msg));
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete wirepack: expected state End, found {:?}",
                         self.state
                     );
-                    bail!(ErrorKind::WirePackDecode(msg));
+                    bail!(HgBundleError::WirePackDecode(msg));
                 }
                 Ok(None)
             }
@@ -154,7 +154,7 @@ impl UnpackerInner {
                     None => return Ok((None, Data(f, entry_count))),
                 },
                 End => return Ok((None, End)),
-                Invalid => bail!(ErrorKind::WirePackDecode("byte stream corrupt".into())),
+                Invalid => bail!(HgBundleError::WirePackDecode("byte stream corrupt".into())),
             }
         }
     }
@@ -200,21 +200,21 @@ impl UnpackerInner {
         let filename = if filename_len == 0 {
             match self.kind {
                 Kind::Tree => RepoPath::root(),
-                Kind::File => bail!(ErrorKind::WirePackDecode(
+                Kind::File => bail!(HgBundleError::WirePackDecode(
                     "file packs cannot contain zero-length filenames".into(),
                 )),
             }
         } else {
             let mpath = buf.get_path(filename_len).with_context(|| {
                 let msg = format!("invalid filename of length {filename_len}");
-                ErrorKind::WirePackDecode(msg)
+                HgBundleError::WirePackDecode(msg)
             })?;
 
             match self.kind {
                 Kind::Tree => RepoPath::dir(mpath),
                 Kind::File => RepoPath::file(mpath),
             }
-            .with_context(|| ErrorKind::WirePackDecode("invalid filename".into()))?
+            .with_context(|| HgBundleError::WirePackDecode("invalid filename".into()))?
         };
 
         trace!("decoding entries for filename: {}", filename);

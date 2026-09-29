@@ -43,7 +43,7 @@ use super::chunk::Chunk;
 use super::infinitepush::infinitepush_mutation_packer;
 use super::obsmarkers::MetadataEntry;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::PartHeaderType;
 use crate::part_header::PartId;
@@ -67,7 +67,7 @@ where
             payload.push(b'\n');
             anyhow::Ok(payload)
         })
-        .map_err(|err| err.context(ErrorKind::ListkeyGeneration));
+        .map_err(|err| err.context(HgBundleError::ListkeyGeneration));
 
     builder.set_data_future(fut);
 
@@ -87,7 +87,7 @@ where
             payload.write_all(value.as_ref())?;
             anyhow::Ok(payload)
         })
-        .map_err(|err| err.context(ErrorKind::PhaseHeadsGeneration))
+        .map_err(|err| err.context(HgBundleError::PhaseHeadsGeneration))
         .timed()
         .map(move |(stats, result)| {
             if result.is_ok() {

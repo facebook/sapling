@@ -28,7 +28,7 @@ use tokio_util::codec::FramedWrite;
 
 use crate::chunk::Chunk;
 use crate::chunk::NewChunkEncoder;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::part_encode::PartEncode;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::PartId;
@@ -94,10 +94,10 @@ where
     pub fn add_stream_param(&mut self, key: String, val: String) -> Result<&mut Self> {
         if &key.to_lowercase() == "compression" {
             let msg = "stream compression is not implemented";
-            bail!(ErrorKind::Bundle2Encode(msg.into()));
+            bail!(HgBundleError::Bundle2Encode(msg.into()));
         }
         if is_mandatory_param(&key)
-            .with_context(|| ErrorKind::Bundle2Encode("stream key is invalid".into()))?
+            .with_context(|| HgBundleError::Bundle2Encode("stream key is invalid".into()))?
         {
             self.header.m_stream_params.insert(key.to_lowercase(), val);
         } else {

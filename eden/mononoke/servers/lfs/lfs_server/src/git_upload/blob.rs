@@ -33,7 +33,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use stats::prelude::*;
 
-use crate::errors::ErrorKind;
+use crate::errors::LfsServerError;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 
@@ -69,10 +69,11 @@ where
         *ctx.repo.filestore_config(),
         &ctx.ctx,
         &StoreRequest::with_git_sha1(size, oid),
-        body.map_err(|()| ErrorKind::ClientCancelled).err_into(),
+        body.map_err(|()| LfsServerError::ClientCancelled)
+            .err_into(),
     )
     .await
-    .context(ErrorKind::FilestoreWriteFailure)?;
+    .context(LfsServerError::FilestoreWriteFailure)?;
 
     STATS::upload_success.add_value(1);
 
@@ -107,7 +108,7 @@ pub async fn git_upload_blob(state: &mut State) -> Result<impl TryIntoResponse +
 
     if let Some(max_upload_size) = ctx.max_upload_size() {
         if size > max_upload_size {
-            return Err(HttpError::e400(ErrorKind::UploadTooLarge(
+            return Err(HttpError::e400(LfsServerError::UploadTooLarge(
                 size,
                 max_upload_size,
             )));

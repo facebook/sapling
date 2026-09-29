@@ -50,7 +50,7 @@ mod mem_writes_bonsai_hg_mapping;
 use futures::FutureExt;
 
 pub use crate::caching::CachingBonsaiHgMapping;
-pub use crate::errors::ErrorKind;
+pub use crate::errors::BonsaiHgMappingError;
 pub use crate::mem_writes_bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 
 define_stats! {
@@ -465,12 +465,12 @@ impl SqlBonsaiHgMapping {
 
         match by_hg_rows.into_iter().chain(by_bcs_rows).next() {
             Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
-            Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
+            Some((hg_cs_id, bcs_id)) => Err(BonsaiHgMappingError::ConflictingEntries(
                 BonsaiHgMappingEntry { hg_cs_id, bcs_id },
                 entry,
             )
             .into()),
-            None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
+            None => Err(BonsaiHgMappingError::RaceConditionWithDelete(entry).into()),
         }
     }
 

@@ -30,7 +30,7 @@ use thiserror::Error;
 pub const CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS: &str = "scm/mononoke/repos/commitsyncmaps/all";
 
 #[derive(Debug, Eq, Error, PartialEq)]
-pub enum ErrorKind {
+pub enum CommitSyncConfigError {
     #[error("{0:?} is not a part of any CommitSyncConfig")]
     NotPartOfAnyCommitSyncConfig(RepositoryId),
     #[error("{0:?} is a part of multiple CommitSyncConfigs")]
@@ -101,7 +101,8 @@ pub trait LiveCommitSyncConfig: Send + Sync {
             .await?;
 
         maybe_version.ok_or_else(|| {
-            ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
+            CommitSyncConfigError::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone())
+                .into()
         })
     }
 
@@ -115,7 +116,7 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     /// Returns a config that applies to all config versions
     fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
         self.get_common_config_if_exists(repo_id)?
-            .ok_or_else(|| ErrorKind::NotPartOfAnyConfigs(repo_id).into())
+            .ok_or_else(|| CommitSyncConfigError::NotPartOfAnyConfigs(repo_id).into())
     }
 
     /// Returns a config that applies to all config versions if it exists
@@ -299,9 +300,10 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
             for config in &config_version_set.versions {
                 if config.version_name.as_ref() == Some(&version_name.0) {
                     if version.is_some() {
-                        return Err(
-                            ErrorKind::MultipleConfigsForSameVersion(version_name.clone()).into(),
-                        );
+                        return Err(CommitSyncConfigError::MultipleConfigsForSameVersion(
+                            version_name.clone(),
+                        )
+                        .into());
                     }
                     version = Some(config.clone().convert()?);
                 }
@@ -333,7 +335,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
             match (iter.next(), iter.next()) {
                 (None, _) => Ok(None),
                 (Some(config), None) => Ok(Some(config)),
-                (Some(_), Some(_)) => Err(ErrorKind::PartOfMultipleConfigs(repo_id)),
+                (Some(_), Some(_)) => Err(CommitSyncConfigError::PartOfMultipleConfigs(repo_id)),
             }?
         };
         maybe_common_config.map(Convert::convert).transpose()

@@ -29,7 +29,7 @@ use super::CgDeltaChunk;
 use super::Part;
 use super::Section;
 use crate::delta;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::utils::BytesExt;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -54,7 +54,7 @@ impl FromStr for CgVersion {
         match s {
             "02" => Ok(CgVersion::Cg2Version),
             "03" => Ok(CgVersion::Cg3Version),
-            bad => Err(ErrorKind::CgDecode(format!(
+            bad => Err(HgBundleError::CgDecode(format!(
                 "Non supported Cg version in Part Header {bad}"
             ))
             .into()),
@@ -134,14 +134,14 @@ impl Decoder for CgUnpacker {
                          buffer. State: {:?}, First 128 bytes: {:?}",
                         len, self.state, bytes,
                     );
-                    bail!(ErrorKind::CgDecode(msg));
+                    bail!(HgBundleError::CgDecode(msg));
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete changegroup: expected state End, found {:?}",
                         self.state
                     );
-                    bail!(ErrorKind::CgDecode(msg));
+                    bail!(HgBundleError::CgDecode(msg));
                 }
                 Ok(None)
             }
@@ -202,7 +202,7 @@ impl CgUnpacker {
                     State::Filename,
                 )),
                 Some(CgChunk::Delta(_)) => {
-                    Err(ErrorKind::CgDecode("Empty TreeManifest has expected".into()).into())
+                    Err(HgBundleError::CgDecode("Empty TreeManifest has expected".into()).into())
                 }
             },
             State::Filename => {
@@ -215,7 +215,7 @@ impl CgUnpacker {
             }
             State::Filelog(filename) => Self::decode_filelog_chunk(buf, filename, version),
             State::End => Ok((None, State::End)),
-            State::Invalid => Err(ErrorKind::CgDecode("byte stream corrupt".into()).into()),
+            State::Invalid => Err(HgBundleError::CgDecode("byte stream corrupt".into()).into()),
         }
     }
 
@@ -256,7 +256,7 @@ impl CgUnpacker {
                 Self::chunk_header_len(version),
                 chunk_len,
             );
-            bail!(ErrorKind::CgDecode(msg));
+            bail!(HgBundleError::CgDecode(msg));
         }
 
         if buf.len() < chunk_len {
@@ -328,7 +328,7 @@ impl CgUnpacker {
         let _ = buf.split_to(4);
         let filename = buf.get_path(filename_len - 4).with_context(|| {
             let msg = format!("invalid filename of length {filename_len}");
-            ErrorKind::CgDecode(msg)
+            HgBundleError::CgDecode(msg)
         })?;
         Ok(DecodeRes::Some(filename))
     }

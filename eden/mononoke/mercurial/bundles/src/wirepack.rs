@@ -27,7 +27,7 @@ use mercurial_types::RepoPath;
 use revisionstore_types::Metadata;
 
 use crate::delta;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::utils::BytesExt;
 
 pub mod converter;
@@ -146,14 +146,12 @@ impl HistoryEntry {
         let copy_from = if copy_from_len > 0 {
             let path = buf.get_path(copy_from_len)?;
             match kind {
-                Kind::Tree => bail!(ErrorKind::WirePackDecode(format!(
+                Kind::Tree => bail!(HgBundleError::WirePackDecode(format!(
                     "tree entry {node} is marked as copied from path {path}, but they cannot be copied"
                 ))),
-                Kind::File => {
-                    Some(RepoPath::file(path).with_context(|| {
-                        ErrorKind::WirePackDecode("invalid copy from path".into())
-                    })?)
-                }
+                Kind::File => Some(RepoPath::file(path).with_context(|| {
+                    HgBundleError::WirePackDecode("invalid copy from path".into())
+                })?),
             }
         } else {
             None
@@ -170,7 +168,7 @@ impl HistoryEntry {
     #[cfg(test)]
     pub(crate) fn encode(&self, kind: Kind, buf: &mut Vec<u8>) -> Result<()> {
         self.verify(kind).with_context(|| {
-            ErrorKind::WirePackEncode("attempted to encode an invalid history entry".into())
+            HgBundleError::WirePackEncode("attempted to encode an invalid history entry".into())
         })?;
         buf.put_slice(self.node.as_ref());
         buf.put_slice(self.p1.as_ref());
@@ -191,12 +189,12 @@ impl HistoryEntry {
     pub fn verify(&self, kind: Kind) -> Result<()> {
         if let Some(ref path) = self.copy_from {
             match *path {
-                RepoPath::RootPath => bail!(ErrorKind::InvalidWirePackEntry(format!(
+                RepoPath::RootPath => bail!(HgBundleError::InvalidWirePackEntry(format!(
                     "history entry for {} is copied from the root path, which isn't allowed",
                     self.node
                 ))),
                 RepoPath::DirectoryPath(ref path) => {
-                    bail!(ErrorKind::InvalidWirePackEntry(format!(
+                    bail!(HgBundleError::InvalidWirePackEntry(format!(
                         "history entry for {} is copied from directory {}, which isn't allowed",
                         self.node, path
                     )))
@@ -204,7 +202,7 @@ impl HistoryEntry {
                 RepoPath::FilePath(ref path) => {
                     ensure!(
                         kind == Kind::File,
-                        ErrorKind::InvalidWirePackEntry(format!(
+                        HgBundleError::InvalidWirePackEntry(format!(
                             "history entry for {} is copied from file {}, but the pack is of \
                              kind {}",
                             self.node, path, kind
@@ -212,7 +210,7 @@ impl HistoryEntry {
                     );
                     ensure!(
                         path.len() <= (u16::MAX as usize),
-                        ErrorKind::InvalidWirePackEntry(format!(
+                        HgBundleError::InvalidWirePackEntry(format!(
                             "history entry for {} is copied from a path of length {} -- maximum \
                              length supported is {}",
                             self.node,
@@ -354,7 +352,7 @@ impl DataEntry {
         // fulltext.
         ensure!(
             self.delta_base != NULL_HASH || self.delta.maybe_fulltext().is_some(),
-            ErrorKind::InvalidWirePackEntry(format!(
+            HgBundleError::InvalidWirePackEntry(format!(
                 "data entry for {} has a null base but is not a fulltext",
                 self.node
             ))

@@ -8,7 +8,7 @@
 use cached_config::ModificationTime;
 use fbinit::FacebookInit;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
-use live_commit_sync_config::ErrorKind;
+use live_commit_sync_config::CommitSyncConfigError;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_macros::mononoke;
@@ -386,9 +386,12 @@ async fn test_query_by_version_name(fb: FacebookInit) {
 
     assert_eq!(r1_v1.version_name, v1);
     // This version is not for r3, so we did not get a repo
-    assert!(is_error_kind!(
+    assert!(matches!(
         r3_v1_res,
-        ErrorKind::UnknownCommitSyncConfigVersion(_, _)
+        Err(e) if matches!(
+            e.downcast_ref::<CommitSyncConfigError>(),
+            Some(CommitSyncConfigError::UnknownCommitSyncConfigVersion(_, _))
+        )
     ));
 
     // Let's make a change to our config source: add a new version

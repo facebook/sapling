@@ -45,7 +45,7 @@ use stats::prelude::*;
 
 use crate::compression_sniff;
 use crate::config::ServerConfig;
-use crate::errors::ErrorKind;
+use crate::errors::LfsServerError;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 use crate::scuba::LfsScubaKey;
@@ -203,13 +203,13 @@ async fn fetch_by_key(
         if has_redaction_root_cause(&e).is_some() {
             HttpError::e410(e)
         } else {
-            HttpError::e500(e.context(ErrorKind::FilestoreReadFailure))
+            HttpError::e500(e.context(LfsServerError::FilestoreReadFailure))
         }
     })?;
 
     // Return a 404 if the stream doesn't exist.
     let (stream, size) = fetched
-        .ok_or(ErrorKind::ObjectDoesNotExist(key))
+        .ok_or(LfsServerError::ObjectDoesNotExist(key))
         .map_err(HttpError::e404)?;
 
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
@@ -289,7 +289,7 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse + use<>,
     } = state.take();
 
     let content_id = ContentId::from_str(&content_id)
-        .context(ErrorKind::InvalidContentId)
+        .context(LfsServerError::InvalidContentId)
         .map_err(HttpError::e400)?;
 
     let key = FetchKey::Canonical(content_id);
@@ -301,7 +301,7 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse +
     let DownloadParamsSha256 { repository, oid } = state.take();
 
     let oid = Sha256::from_str(&oid)
-        .context(ErrorKind::InvalidOid)
+        .context(LfsServerError::InvalidOid)
         .map_err(HttpError::e400)?;
 
     let key = FetchKey::Aliased(Alias::Sha256(oid));

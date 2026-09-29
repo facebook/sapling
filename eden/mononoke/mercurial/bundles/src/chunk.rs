@@ -17,7 +17,7 @@ use bytes::BytesMut;
 use tokio_util::codec::Decoder;
 use tokio_util::codec::Encoder;
 
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 
 /// A bundle2 chunk.
 ///
@@ -49,7 +49,7 @@ impl Chunk {
     pub fn new(val: impl Into<Bytes>) -> Result<Self> {
         let bytes: Bytes = val.into();
         if bytes.len() > i32::MAX as usize {
-            bail!(ErrorKind::Bundle2Chunk(format!(
+            bail!(HgBundleError::Bundle2Chunk(format!(
                 "chunk of length {} exceeds maximum {}",
                 bytes.len(),
                 i32::MAX
@@ -140,7 +140,7 @@ impl Decoder for ChunkDecoder {
             return Ok(Some(Chunk::error()));
         }
         if len < 0 {
-            bail!(ErrorKind::Bundle2Chunk(format!(
+            bail!(HgBundleError::Bundle2Chunk(format!(
                 "chunk length must be >= -1, found {len}"
             ),));
         }
@@ -209,8 +209,8 @@ mod test {
 
         let err = chunk_err.unwrap_err();
         assert_matches!(
-            err.downcast::<ErrorKind>().unwrap(),
-            ErrorKind::Bundle2Chunk(_)
+            err.downcast::<HgBundleError>().unwrap(),
+            HgBundleError::Bundle2Chunk(_)
         );
     }
 

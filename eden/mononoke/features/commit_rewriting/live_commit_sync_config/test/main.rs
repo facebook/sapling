@@ -18,18 +18,6 @@ use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use pushredirect::TestPushRedirectionConfig;
 
-macro_rules! is_error_kind {
-    ($result_expression:expr, $( $pattern:pat_param )|+ $( if $guard: expr )?) => {
-        match $result_expression {
-            Ok(_) => false,
-            Err(e) => match e.downcast_ref::<ErrorKind>() {
-                $( Some($pattern) )|+ $( if $guard )? => true,
-                _ => false
-            }
-        }
-    }
-}
-
 mod all_changes;
 mod all_simple;
 mod current_simple;

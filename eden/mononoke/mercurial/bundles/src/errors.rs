@@ -11,7 +11,7 @@ use crate::part_header::PartHeader;
 use crate::part_header::PartHeaderType;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum HgBundleError {
     #[error("bundle2 decode error: {0}")]
     Bundle2Decode(String),
     #[error("changegroup decode error: {0}")]
@@ -40,10 +40,12 @@ pub enum ErrorKind {
     PhaseHeadsGeneration,
 }
 
-impl ErrorKind {
+impl HgBundleError {
     pub fn is_app_error(&self) -> bool {
         match self {
-            &ErrorKind::BundleUnknownPart(_) | &ErrorKind::BundleUnknownPartParams(..) => true,
+            &HgBundleError::BundleUnknownPart(_) | &HgBundleError::BundleUnknownPartParams(..) => {
+                true
+            }
             _ => false,
         }
     }

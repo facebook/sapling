@@ -28,7 +28,7 @@ use mercurial_types::HgChangesetId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum StockBookmarkError {
     #[error("invalid bookmarks line: {0}")]
     InvalidBookmarkLine(String),
     #[error("invalid hash: {0}")]
@@ -86,19 +86,21 @@ impl StockBookmarks {
             // <hash><space><bookmark name>, where hash is 40 bytes, the space is 1 byte
             // and the bookmark name is at least 1 byte.
             if line.len() < 42 || line[40] != b' ' {
-                bail!(ErrorKind::InvalidBookmarkLine(
+                bail!(StockBookmarkError::InvalidBookmarkLine(
                     String::from_utf8_lossy(line.as_ref()).into_owned(),
                 ));
             }
             let bmname = &line[41..];
             let hash_slice = &line[..40];
             let hash = AsciiStr::from_ascii(&hash_slice).with_context(|| {
-                ErrorKind::InvalidHash(String::from_utf8_lossy(hash_slice).into_owned())
+                StockBookmarkError::InvalidHash(String::from_utf8_lossy(hash_slice).into_owned())
             })?;
             bookmarks.insert(
                 bmname.into(),
                 HgChangesetId::from_ascii_str(hash).with_context(|| {
-                    ErrorKind::InvalidHash(String::from_utf8_lossy(hash_slice).into_owned())
+                    StockBookmarkError::InvalidHash(
+                        String::from_utf8_lossy(hash_slice).into_owned(),
+                    )
                 })?,
             );
         }
@@ -173,40 +175,40 @@ mod tests {
         let reader = Cursor::new(&b"111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
-            ErrorKind::InvalidBookmarkLine(_)
+            err_downcast!(bookmarks.unwrap_err(), e: StockBookmarkError => e).unwrap(),
+            StockBookmarkError::InvalidBookmarkLine(_)
         );
 
         // no space or bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
-            ErrorKind::InvalidBookmarkLine(_)
+            err_downcast!(bookmarks.unwrap_err(), e: StockBookmarkError => e).unwrap(),
+            StockBookmarkError::InvalidBookmarkLine(_)
         );
 
         // no bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111 \n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
-            ErrorKind::InvalidBookmarkLine(_)
+            err_downcast!(bookmarks.unwrap_err(), e: StockBookmarkError => e).unwrap(),
+            StockBookmarkError::InvalidBookmarkLine(_)
         );
 
         // no space after hash
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111ab\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            err_downcast!(bookmarks.unwrap_err(), e: ErrorKind => e).unwrap(),
-            ErrorKind::InvalidBookmarkLine(_)
+            err_downcast!(bookmarks.unwrap_err(), e: StockBookmarkError => e).unwrap(),
+            StockBookmarkError::InvalidBookmarkLine(_)
         );
 
         // short hash
         let reader = Cursor::new(&b"111111111111111111111111111111111111111  1ab\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         let err = bookmarks.unwrap_err();
-        match err_downcast_ref!(err, err: ErrorKind => err) {
-            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {ok:?}"),
+        match err_downcast_ref!(err, err: StockBookmarkError => err) {
+            Some(ok @ StockBookmarkError::InvalidHash(..)) => println!("OK: {ok:?}"),
             Some(bad) => panic!("other ErrorKind error: {bad:?}"),
             None => panic!("other error: {err:?}"),
         };
@@ -214,8 +216,8 @@ mod tests {
         // non-ASCII
         let reader = Cursor::new(&b"111111111111111111111111111111111111111\xff test\n"[..]);
         let err = StockBookmarks::from_reader(reader).unwrap_err();
-        match err_downcast_ref!(err, err: ErrorKind => err) {
-            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {ok:?}"),
+        match err_downcast_ref!(err, err: StockBookmarkError => err) {
+            Some(ok @ StockBookmarkError::InvalidHash(..)) => println!("OK: {ok:?}"),
             Some(bad) => panic!("other ErrorKind error: {bad:?}"),
             None => panic!("other error: {err:?}"),
         };
@@ -223,8 +225,8 @@ mod tests {
         // not a valid hex string
         let reader = Cursor::new(&b"abcdefgabcdefgabcdefgabcdefgabcdefgabcde test\n"[..]);
         let err = StockBookmarks::from_reader(reader).unwrap_err();
-        match err_downcast_ref!(err, err: ErrorKind => err) {
-            Some(ok @ ErrorKind::InvalidHash(..)) => println!("OK: {ok:?}"),
+        match err_downcast_ref!(err, err: StockBookmarkError => err) {
+            Some(ok @ StockBookmarkError::InvalidHash(..)) => println!("OK: {ok:?}"),
             Some(bad) => panic!("other ErrorKind error: {bad:?}"),
             None => panic!("other error: {err:?}"),
         };

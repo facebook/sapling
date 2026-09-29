@@ -26,7 +26,7 @@ pub struct InvalidHash<T: Debug> {
 }
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum FilestoreError {
     #[error("Invalid size: {0:?} was expected, {1:?} was observed")]
     InvalidSize(ExpectedSize, u64),
 

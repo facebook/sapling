@@ -19,7 +19,7 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
 use crate::chunk::Chunk;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::utils::BytesExt;
 
 pub type PartId = u32;
@@ -252,7 +252,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
     let type_size = header_bytes.get_u8() as usize;
     let part_type_encoded = header_bytes
         .get_str(type_size)
-        .with_context(|| ErrorKind::Bundle2Decode("invalid part type".into()))?;
+        .with_context(|| HgBundleError::Bundle2Decode("invalid part type".into()))?;
     let part_type = PartHeaderType::decode(&part_type_encoded)?;
 
     let mandatory = part_type_encoded.chars().any(|c| c.is_ascii_uppercase());
@@ -264,7 +264,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     let mut param_sizes = Vec::with_capacity(nmparams + naparams);
     let mut header = PartHeaderBuilder::with_capacity(part_type, mandatory, nmparams, naparams)
-        .with_context(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
+        .with_context(|| HgBundleError::Bundle2Decode("invalid part header".into()))?;
 
     for _ in 0..(nmparams + naparams) {
         // TODO: ensure none of the params is empty
@@ -283,11 +283,11 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
                     part_id,
                     cur
                 );
-                ErrorKind::Bundle2Decode(err_msg)
+                HgBundleError::Bundle2Decode(err_msg)
             })?;
         header
             .add_mparam(key, val)
-            .with_context(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
+            .with_context(|| HgBundleError::Bundle2Decode("invalid part header".into()))?;
     }
 
     for (cur, (ksize, vsize)) in param_sizes
@@ -305,11 +305,11 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
                     part_id,
                     cur
                 );
-                ErrorKind::Bundle2Decode(err_msg)
+                HgBundleError::Bundle2Decode(err_msg)
             })?;
         header
             .add_aparam(key, val)
-            .with_context(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
+            .with_context(|| HgBundleError::Bundle2Decode("invalid part header".into()))?;
     }
 
     Ok(header.build(part_id))

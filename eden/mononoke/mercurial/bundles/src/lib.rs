@@ -28,7 +28,7 @@ mod types;
 pub mod wirepack;
 
 mod errors;
-pub use crate::errors::ErrorKind;
+pub use crate::errors::HgBundleError;
 mod utils;
 
 use std::fmt;

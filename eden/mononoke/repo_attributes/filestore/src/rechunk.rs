@@ -28,7 +28,7 @@ use crate::get_metadata;
 use crate::store;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum RechunkError {
     #[error("Content not found: {0:?}")]
     ContentNotFound(ContentId),
 }
@@ -46,7 +46,7 @@ pub async fn force_rechunk<B: KeyedBlobstore + Clone + 'static>(
         .load(ctx, blobstore)
         .map_err(move |err| match err {
             LoadableError::Error(err) => err,
-            LoadableError::Missing(_) => ErrorKind::ContentNotFound(content_id).into(),
+            LoadableError::Missing(_) => RechunkError::ContentNotFound(content_id).into(),
         })
         .await?;
     do_rechunk_file_contents(blobstore, config, ctx, file_contents, content_id).await
@@ -70,7 +70,7 @@ pub async fn rechunk<B: KeyedBlobstore + Clone + 'static>(
     let metadata = get_metadata(blobstore, ctx, &fetch_key).await?;
     let content_metadata: ContentMetadataV2 = match metadata {
         Some(content_metadata) => content_metadata,
-        None => return Err(ErrorKind::ContentNotFound(content_id).into()),
+        None => return Err(RechunkError::ContentNotFound(content_id).into()),
     };
 
     match chunk_size {
@@ -149,7 +149,7 @@ async fn rechunk_if_uses_larger_chunk_size<B: KeyedBlobstore + Clone + 'static>(
         .load(ctx, blobstore)
         .map_err(move |err| match err {
             LoadableError::Error(err) => err,
-            LoadableError::Missing(_) => ErrorKind::ContentNotFound(content_id).into(),
+            LoadableError::Missing(_) => RechunkError::ContentNotFound(content_id).into(),
         })
         .await?;
 

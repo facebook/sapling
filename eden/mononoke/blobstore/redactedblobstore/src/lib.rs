@@ -25,7 +25,7 @@ use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::debug;
 
-pub use crate::errors::ErrorKind;
+pub use crate::errors::RedactionError;
 pub use crate::redaction_config_blobstore::ArcRedactionConfigBlobstore;
 pub use crate::redaction_config_blobstore::RedactionConfigBlobstore;
 pub use crate::store::RedactedBlobs;
@@ -172,10 +172,11 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
                         if log_only {
                             Ok(&self.blobstore)
                         } else {
-                            Err(
-                                ErrorKind::Redacted(key.to_string(), metadata.task.to_string())
-                                    .into(),
+                            Err(RedactionError::Redacted(
+                                key.to_string(),
+                                metadata.task.to_string(),
                             )
+                            .into())
                         }
                     })
             }
@@ -332,8 +333,8 @@ impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
 }
 
 pub fn has_redaction_root_cause(e: &Error) -> Option<(&str, &str)> {
-    match e.root_cause().downcast_ref::<ErrorKind>() {
-        Some(ErrorKind::Redacted(key, reason)) => Some((key.as_str(), reason.as_str())),
+    match e.root_cause().downcast_ref::<RedactionError>() {
+        Some(RedactionError::Redacted(key, reason)) => Some((key.as_str(), reason.as_str())),
         None => None,
     }
 }
@@ -388,8 +389,8 @@ mod test {
             .await;
 
         assert_matches!(
-            res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Redacted(_, ref task)) if task == redacted_task
+            res.expect_err("the key should be redacted").downcast::<RedactionError>(),
+            Ok(RedactionError::Redacted(_, ref task)) if task == redacted_task
         );
 
         //Test key added to the blob
@@ -406,8 +407,8 @@ mod test {
         let res = blob.get(ctx, redacted_key).await;
 
         assert_matches!(
-            res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Redacted(_, ref task)) if *task == redacted_task
+            res.expect_err("the key should be redacted").downcast::<RedactionError>(),
+            Ok(RedactionError::Redacted(_, ref task)) if *task == redacted_task
         );
 
         // Test accessing a key which exists and is accessible

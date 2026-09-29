@@ -16,7 +16,7 @@ use byteorder::ByteOrder;
 use bytes::BytesMut;
 use tokio_util::codec::Decoder;
 
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::types::StreamHeader;
 use crate::utils::is_mandatory_param;
 
@@ -35,7 +35,7 @@ impl Decoder for StartDecoder {
 
         let header_len = {
             if &buf[..4] != b"HG20" {
-                bail!(ErrorKind::Bundle2Decode(
+                bail!(HgBundleError::Bundle2Decode(
                     "invalid bundle magic string".into(),
                 ));
             }
@@ -78,20 +78,20 @@ fn decode_stream_params(
         let mut key_val = header.splitn(2, |c| *c == b'=');
         let key = key_val
             .next()
-            .ok_or_else(|| ErrorKind::Bundle2Decode("bad stream level key".into()))?;
+            .ok_or_else(|| HgBundleError::Bundle2Decode("bad stream level key".into()))?;
         let val = key_val
             .next()
-            .ok_or_else(|| ErrorKind::Bundle2Decode("bad stream level val".into()))?;
+            .ok_or_else(|| HgBundleError::Bundle2Decode("bad stream level val".into()))?;
         let key_decoded = percent_encoding::percent_decode(key);
         let val_decoded = percent_encoding::percent_decode(val);
         let key_str = key_decoded.decode_utf8().with_context(|| {
-            ErrorKind::Bundle2Decode("stream level key is invalid UTF-8".into())
+            HgBundleError::Bundle2Decode("stream level key is invalid UTF-8".into())
         })?;
         let val_str = val_decoded.decode_utf8().with_context(|| {
-            ErrorKind::Bundle2Decode("stream level val is invalid UTF-8".into())
+            HgBundleError::Bundle2Decode("stream level val is invalid UTF-8".into())
         })?;
         if is_mandatory_param(&key_str)
-            .with_context(|| ErrorKind::Bundle2Decode("stream key is invalid".to_string()))?
+            .with_context(|| HgBundleError::Bundle2Decode("stream key is invalid".to_string()))?
         {
             m_stream_params.insert(key_str.to_lowercase(), val_str.into_owned());
         } else {

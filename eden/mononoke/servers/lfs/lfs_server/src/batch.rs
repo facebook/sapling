@@ -57,7 +57,7 @@ use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tracing::debug;
 use tracing::trace;
 
-use crate::errors::ErrorKind;
+use crate::errors::LfsServerError;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::lfs_server_context::UriBuilder;
 use crate::middleware::LfsMethod;
@@ -174,7 +174,7 @@ impl UpstreamObjects {
 async fn upstream_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
-) -> Result<UpstreamObjects, ErrorKind> {
+) -> Result<UpstreamObjects, LfsServerError> {
     let objects = objects.to_vec();
 
     let batch = RequestBatch {
@@ -254,7 +254,7 @@ async fn resolve_internal_object(
     let content_id = match content_id {
         Ok(content_id) => content_id,
         Err(LoadableError::Missing(_)) => return Ok(None),
-        Err(e) => return Err(Error::from(e).context(ErrorKind::LocalAliasLoadError)),
+        Err(e) => return Err(Error::from(e).context(LfsServerError::LocalAliasLoadError)),
     };
 
     // The filestore may allow aliases to be created before the contents are created (the creation
@@ -318,18 +318,18 @@ fn generate_routing_key(tasks_per_content: NonZeroU16, oid: Sha256) -> String {
 async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
-) -> Result<ServerObjects, ErrorKind> {
+) -> Result<ServerObjects, LfsServerError> {
     let futs = objects.iter().map(|req| async move {
         let obj = resolve_internal_object(ctx, req.oid.into())
             .await
-            .map_err(ErrorKind::Error)?;
+            .map_err(LfsServerError::Error)?;
 
         let consistent_routing = match obj {
             Some(obj) => consistent_routing(ctx, obj, GlobalTimeWindowCounterBuilder).await,
             None => Some(NonZeroU16::new(1).unwrap()),
         };
 
-        Result::<_, ErrorKind>::Ok((obj, consistent_routing))
+        Result::<_, LfsServerError>::Ok((obj, consistent_routing))
     });
 
     let objs = future::try_join_all(futs).await?;
@@ -355,7 +355,7 @@ async fn internal_objects(
             }
             None => None,
         })
-        .collect::<Result<ServerObjects, ErrorKind>>()
+        .collect::<Result<ServerObjects, LfsServerError>>()
 }
 
 fn batch_upload_response_objects(
@@ -364,8 +364,8 @@ fn batch_upload_response_objects(
     objects: &[RequestObject],
     upstream: &UpstreamObjects,
     internal: &ServerObjects,
-) -> Result<Vec<ResponseObject>, ErrorKind> {
-    let objects: Result<Vec<ResponseObject>, ErrorKind> = objects
+) -> Result<Vec<ResponseObject>, LfsServerError> {
+    let objects: Result<Vec<ResponseObject>, LfsServerError> = objects
         .iter()
         .map(|object| {
             let status = match (
@@ -391,7 +391,7 @@ fn batch_upload_response_objects(
                     ObjectStatus::Err {
                         error: ObjectError {
                             code: StatusCode::BAD_REQUEST.as_u16(),
-                            message: ErrorKind::UploadTooLarge(object.size, max_upload_size)
+                            message: LfsServerError::UploadTooLarge(object.size, max_upload_size)
                                 .to_string(),
                         },
                     }
@@ -421,7 +421,7 @@ fn batch_upload_response_objects(
 async fn batch_upload(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
-) -> Result<ResponseBatch, ErrorKind> {
+) -> Result<ResponseBatch, LfsServerError> {
     let (upstream, internal) = future::try_join(
         upstream_objects(ctx, &batch.objects),
         internal_objects(ctx, &batch.objects),
@@ -464,9 +464,10 @@ fn route_download_for_object<'a>(
         // If our upstream failed, then we don't know whether the object is available anywhere, so
         // that's an error.
         Err(cause) => {
-            let err =
-                Error::new(ErrorKind::ObjectNotInternallyAvailableAndUpstreamUnavailable(*oid))
-                    .context(cause.to_string());
+            let err = Error::new(
+                LfsServerError::ObjectNotInternallyAvailableAndUpstreamUnavailable(*oid),
+            )
+            .context(cause.to_string());
             return Err(err);
         }
     }
@@ -573,7 +574,7 @@ async fn batch_download(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
-) -> Result<ResponseBatch, ErrorKind> {
+) -> Result<ResponseBatch, LfsServerError> {
     if justknobs::eval(
         SKIP_UPSTREAM_FOR_DOWNLOADS_JK,
         None,
@@ -584,7 +585,7 @@ async fn batch_download(
         let upstream = Ok(UpstreamObjects::NoUpstream);
         let objects =
             batch_download_response_objects(&batch.objects, &upstream, &internal_objects, scuba)
-                .map_err(ErrorKind::Error)?;
+                .map_err(LfsServerError::Error)?;
         return Ok(ResponseBatch {
             transfer: Transfer::Basic,
             objects,
@@ -634,7 +635,7 @@ async fn batch_download(
                 batch_download_response_objects(&batch.objects, &upstream_objects.map_err(Error::from), &internal_objects, scuba)
             }
         }
-    }.map_err(ErrorKind::Error)?;
+    }.map_err(LfsServerError::Error)?;
 
     Ok(ResponseBatch {
         transfer: Transfer::Basic,
@@ -666,7 +667,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse + use<>, Ht
         .try_concat_body_opt(headers)
         .map_err(HttpError::e400)?
         .await
-        .context(ErrorKind::ClientCancelled)
+        .context(LfsServerError::ClientCancelled)
         .map_err(HttpError::e400)?;
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
@@ -678,7 +679,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse + use<>, Ht
     );
 
     let request_batch = serde_json::from_slice::<RequestBatch>(&body)
-        .context(ErrorKind::InvalidBatch)
+        .context(LfsServerError::InvalidBatch)
         .map_err(HttpError::e400)?;
 
     ScubaMiddlewareState::maybe_add(
@@ -705,7 +706,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse + use<>, Ht
     );
 
     let res = res.map_err(|e| match e {
-        ErrorKind::HostNotAllowlisted(_) => HttpError::e400(e),
+        LfsServerError::HostNotAllowlisted(_) => HttpError::e400(e),
         _ => HttpError::e500(e),
     })?;
     let body = serde_json::to_string(&res).map_err(HttpError::e500)?;

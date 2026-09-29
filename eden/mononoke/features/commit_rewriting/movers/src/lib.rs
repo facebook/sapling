@@ -27,7 +27,7 @@ use thiserror::Error;
 // conditional logic, i.e. the code either does something or skips it based on None or Some.
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum MoverError {
     #[error("Cannot remove prefix, equal to the whole path")]
     RemovePrefixWholePathFailure,
     #[error("Cannot apply prefix action {0:?} to {1:?}")]
@@ -149,7 +149,7 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
                     // this is a mistake (either configuration or somebody
                     // checked in a file named like this).
                     // TODO(ikostia, T53963059): large repo should prohibit such files
-                    Error::from(ErrorKind::RemovePrefixWholePathFailure)
+                    Error::from(MoverError::RemovePrefixWholePathFailure)
                 })
         }
         PrefixAction::Change(replacement_prefix) => Ok(PathAction::Change(
@@ -245,7 +245,7 @@ impl Mover for CrossRepoMover {
                     PathAction::DoNotSync => None,
                 })
                 .with_context(|| {
-                    ErrorKind::PrefixActionFailure(orig_prefix_action.clone(), source_path.clone())
+                    MoverError::PrefixActionFailure(orig_prefix_action.clone(), source_path.clone())
                 })?,
         };
         if let (Some(mapped_path), Some(reverse_mover)) = (&mapped_path, &self.reverse_mover) {
@@ -292,7 +292,7 @@ fn get_small_repo_and_others_from_config(
 ) -> Result<(&SmallRepoCommitSyncConfig, Vec<&SmallRepoCommitSyncConfig>)> {
     let small_repo = match &commit_sync_config.small_repos.get(&small_repo_id) {
         Some(config) => *config,
-        None => return Err(Error::from(ErrorKind::SmallRepoNotFound(small_repo_id))),
+        None => return Err(Error::from(MoverError::SmallRepoNotFound(small_repo_id))),
     };
     let others: Vec<_> = commit_sync_config
         .small_repos

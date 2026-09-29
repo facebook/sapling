@@ -53,7 +53,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use stats::prelude::*;
 
-use crate::errors::ErrorKind;
+use crate::errors::LfsServerError;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 use crate::scuba::LfsScubaKey;
@@ -149,15 +149,15 @@ fn find_actions(
         Transfer::Basic => objects
             .into_iter()
             .find(|o| o.object == *object)
-            .ok_or_else(|| ErrorKind::UpstreamMissingObject(*object).into())
+            .ok_or_else(|| LfsServerError::UpstreamMissingObject(*object).into())
             .and_then(|o| match o.status {
                 ObjectStatus::Ok {
                     authenticated: false,
                     actions,
                 } => Ok(actions),
-                _ => Err(ErrorKind::UpstreamInvalidObject(o).into()),
+                _ => Err(LfsServerError::UpstreamInvalidObject(o).into()),
             }),
-        Transfer::Unknown => Err(ErrorKind::UpstreamInvalidTransfer.into()),
+        Transfer::Unknown => Err(LfsServerError::UpstreamInvalidTransfer.into()),
     }
 }
 
@@ -180,7 +180,7 @@ where
         data,
     )
     .await
-    .context(ErrorKind::FilestoreWriteFailure)?;
+    .context(LfsServerError::FilestoreWriteFailure)?;
 
     STATS::internal_success.add_value(1);
 
@@ -211,7 +211,7 @@ where
     let res = ctx
         .upstream_batch(&batch)
         .await
-        .context(ErrorKind::UpstreamBatchError)?;
+        .context(LfsServerError::UpstreamBatchError)?;
 
     let batch = match res {
         Some(res) => res,
@@ -238,7 +238,7 @@ where
         // be reused.
         ctx.dispatch(req)
             .await
-            .context(ErrorKind::UpstreamUploadError)?
+            .context(LfsServerError::UpstreamUploadError)?
             .discard()
             .await?;
 
@@ -272,11 +272,11 @@ where
     let mut sink = internal_send.fanout(upstream_send);
 
     let internal_recv = internal_recv
-        .map_err(|()| ErrorKind::ClientCancelled)
+        .map_err(|()| LfsServerError::ClientCancelled)
         .err_into();
 
     let upstream_recv = upstream_recv
-        .map_err(|()| ErrorKind::ClientCancelled)
+        .map_err(|()| LfsServerError::ClientCancelled)
         .err_into();
 
     let internal_upload = internal_upload(ctx, oid, size, internal_recv);
@@ -299,7 +299,7 @@ where
     let consume_stream = async {
         sink.send_all(&mut data)
             .await
-            .map_err(|_| ErrorKind::ClientCancelled)
+            .map_err(|_| LfsServerError::ClientCancelled)
             .map_err(Error::from)?;
 
         sink.close().await?;
@@ -348,19 +348,19 @@ async fn sync_internal_and_upstream(
             let batch = ctx
                 .upstream_batch(&batch)
                 .await
-                .context(ErrorKind::UpstreamBatchError)?
-                .ok_or(ErrorKind::ObjectCannotBeSynced(object))?;
+                .context(LfsServerError::UpstreamBatchError)?
+                .ok_or(LfsServerError::ObjectCannotBeSynced(object))?;
 
             let action = find_actions(batch, &object)?
                 .remove(&Operation::Download)
-                .ok_or(ErrorKind::ObjectCannotBeSynced(object))?;
+                .ok_or(LfsServerError::ObjectCannotBeSynced(object))?;
 
             let req = Request::get(action.href).body(Body::default())?;
 
             let stream = ctx
                 .dispatch(req)
                 .await
-                .context(ErrorKind::ObjectCannotBeSynced(object))?
+                .context(LfsServerError::ObjectCannotBeSynced(object))?
                 .into_inner();
 
             internal_upload(ctx, oid, size, stream).await?;
@@ -398,7 +398,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse + use<>, H
 
     if let Some(max_upload_size) = ctx.max_upload_size() {
         if size > max_upload_size {
-            Err(HttpError::e400(ErrorKind::UploadTooLarge(
+            Err(HttpError::e400(LfsServerError::UploadTooLarge(
                 size,
                 max_upload_size,
             )))?;

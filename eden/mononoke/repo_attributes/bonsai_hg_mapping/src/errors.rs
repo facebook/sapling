@@ -10,7 +10,7 @@ use thiserror::Error;
 use super::BonsaiHgMappingEntry;
 
 #[derive(Debug, Eq, Error, PartialEq)]
-pub enum ErrorKind {
+pub enum BonsaiHgMappingError {
     #[error("Connection error")]
     ConnectionError,
     #[error("Conflicting entries: stored:{0:?} current:{1:?}")]

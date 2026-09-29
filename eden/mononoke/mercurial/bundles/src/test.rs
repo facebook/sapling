@@ -40,7 +40,7 @@ use crate::bundle2::StreamEvent;
 use crate::bundle2::bundle2_stream;
 use crate::bundle2_encode::Bundle2EncodeBuilder;
 use crate::changegroup;
-use crate::errors::ErrorKind;
+use crate::errors::HgBundleError;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::PartHeaderBuilder;
 use crate::part_header::PartHeaderType;
@@ -93,8 +93,8 @@ async fn test_parse_unknown_compression() {
         .await
         .err()
         .unwrap();
-    assert_matches!(outer_stream_err.downcast::<ErrorKind>().unwrap(),
-                    ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
+    assert_matches!(outer_stream_err.downcast::<HgBundleError>().unwrap(),
+                    HgBundleError::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
 }
 
 #[mononoke::test]
@@ -215,7 +215,7 @@ async fn test_unknown_part_uncompressed() {
     let app_errors = app_errors.lock().unwrap();
     assert_eq!(app_errors.len(), 1);
     assert_matches!(&app_errors[0],
-                    ErrorKind::BundleUnknownPart(header)
+                    HgBundleError::BundleUnknownPart(header)
                     if header.part_type() == &PartHeaderType::Listkeys && header.mandatory());
 }
 
@@ -548,7 +548,7 @@ fn path(bytes: &[u8]) -> NonRootMPath {
 async fn parse_stream_start<R: AsyncBufRead + Send + Unpin + 'static>(
     reader: R,
     compression: Option<&str>,
-    app_errors: Arc<Mutex<Vec<ErrorKind>>>,
+    app_errors: Arc<Mutex<Vec<HgBundleError>>>,
 ) -> Result<BoxStream<'static, Result<StreamEvent<Bundle2Item<'static>, Remainder<R>>>>> {
     let mut m_stream_params = HashMap::new();
     let a_stream_params = HashMap::new();
