@@ -65,8 +65,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use tracing::error;
 
-use crate::errors::*;
-
 define_stats! {
     prefix = "mononoke.blobrepo_commit";
     process_file_entry: timeseries(Rate, Sum),
@@ -130,7 +128,9 @@ impl ChangesetHandle {
                     .bonsai_hg_mapping()
                     .get_bonsai_from_hg(&ctx, hg_cs)
                     .await?
-                    .ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs))?;
+                    .ok_or_else(|| {
+                        anyhow!("Bonsai changeset not found for hg changeset {hg_cs}")
+                    })?;
                 let bonsai_cs = csid.load(&ctx, repo.repo_blobstore()).await?;
                 Ok::<_, Error>(bonsai_cs)
             }
@@ -509,7 +509,7 @@ pub async fn process_entries<'a>(
                     entry_processor.process_root_manifest(ctx, mfid).await?;
                     Ok(Some(mfid))
                 } else {
-                    Err(Error::from(ErrorKind::BadRootManifest(mfid)))
+                    Err(anyhow!("Root manifest is not a manifest (type {mfid})"))
                 }
             }
         }

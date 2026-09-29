@@ -35,7 +35,6 @@ rust_library(
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobrepo:blobrepo_common",
-        "//eden/mononoke/blobrepo:blobrepo_errors",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",

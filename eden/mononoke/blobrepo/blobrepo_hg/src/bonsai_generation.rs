@@ -8,6 +8,7 @@
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -38,8 +39,6 @@ use mononoke_types::MPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
-
-use crate::errors::*;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub async fn create_bonsai_changeset_object(
@@ -194,7 +193,7 @@ async fn get_copy_info(
         Some((copy_from_path, copy_from_node)) => {
             let copy_from_path = copy_from_path
                 .mpath()
-                .ok_or(ErrorKind::UnexpectedRootPath)?;
+                .ok_or_else(|| anyhow!("Root path wasn't expected at this context"))?;
 
             let parents_bonsai_and_mfs =
                 stream::iter(bonsai_parents.into_iter().zip(parent_manifests));
@@ -226,13 +225,9 @@ async fn get_copy_info(
                     copy_from_path.clone(),
                     bonsai_cs_copied_from.clone(),
                 ))),
-                None => Err(ErrorKind::IncorrectCopyInfo {
-                    from_path: copy_from_path.clone(),
-                    from_node: copy_from_node,
-                    to_path: copy_to_path,
-                    to_node: node_id,
-                }
-                .into()),
+                None => Err(anyhow!(
+                    "Incorrect copy info: not found a file version {copy_from_path} {copy_from_node} the file {copy_to_path} {node_id} was copied from"
+                )),
             }
         }
         None => Ok(None),

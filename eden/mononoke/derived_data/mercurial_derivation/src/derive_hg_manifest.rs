@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
-use blobrepo_errors::ErrorKind;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -473,9 +473,10 @@ async fn resolve_conflict(
     parents: &[Traced<ParentIndex, (FileType, HgFileNodeId)>],
 ) -> Result<(FileType, HgFileNodeId), Error> {
     let make_err = || {
-        ErrorKind::UnresolvedConflicts(
-            path.clone(),
-            parents.iter().map(|p| *p.untraced()).collect::<Vec<_>>(),
+        anyhow!(
+            "Unresolved conflict at {} with parents: {:?}",
+            path,
+            parents.iter().map(|p| *p.untraced()).collect::<Vec<_>>()
         )
     };
 

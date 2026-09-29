@@ -51,7 +51,6 @@ use sorted_vector_map::SortedVectorMap;
 use stats::prelude::*;
 use uuid::Uuid;
 
-use crate::ErrorKind;
 use crate::bonsai_generation::create_bonsai_changeset_object;
 use crate::bonsai_generation::save_bonsai_changeset_object;
 use crate::repo_commit::*;
@@ -200,12 +199,9 @@ impl CreateChangeset {
 
                 if let Some(expected_nodeid) = expected_nodeid {
                     if cs_id != expected_nodeid {
-                        return Err(ErrorKind::InconsistentChangesetHash(
-                            expected_nodeid,
-                            cs_id,
-                            hg_cs,
-                        )
-                        .into());
+                        return Err(anyhow!(
+                            "Inconsistent node hash for changeset: provided: {expected_nodeid}, computed: {cs_id} for blob: {hg_cs:#?}"
+                        ));
                     }
                 }
 

@@ -27,18 +27,6 @@ rust_library(
 )
 
 rust_library(
-    name = "blobrepo_errors",
-    srcs = glob(["errors/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "errors"},
-    deps = [
-        "fbsource//third-party/rust:ascii",
-        "fbsource//third-party/rust:thiserror",
-        "//eden/mononoke/mercurial:mercurial_types",
-        "//eden/mononoke/mononoke_types:mononoke_types",
-    ],
-)
-
-rust_library(
     name = "blobrepo_hg",
     srcs = glob(["blobrepo_hg/src/**/*.rs"]),
     autocargo = {
@@ -61,7 +49,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:uuid",
         ":blobrepo_common",
-        ":blobrepo_errors",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
