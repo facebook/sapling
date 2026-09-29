@@ -20,7 +20,6 @@ blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
-bonsai_blob_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_blob_mapping" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }

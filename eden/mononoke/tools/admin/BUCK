@@ -203,7 +203,6 @@ rust_binary(
             "//eden/mononoke/blobstore:redactedblobstore",
             "//eden/mononoke/common/sql_construct:sql_construct",
             "//eden/mononoke/metaconfig:metaconfig_parser",
-            "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
             "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
             "//eden/mononoke/tools/repo_spec_writer:repo_spec_writer",
             # Tupperware log reader (for `backfill-status --detailed` worker logs).
