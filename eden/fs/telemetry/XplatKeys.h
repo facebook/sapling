@@ -151,10 +151,6 @@ inline constexpr std::string_view kAtime = "atime";
 inline constexpr std::string_view kCtime = "ctime";
 inline constexpr std::string_view kMtime = "mtime";
 
-// --- InodeLoadingFailed ---
-inline constexpr std::string_view kLoadError = "load_error";
-inline constexpr std::string_view kCausedByX2p = "caused_by_x2p";
-
 // --- WorkingCopyGc ---
 inline constexpr std::string_view kNumInvalidated = "num_invalidated";
 inline constexpr std::string_view kNumDeletedInodes = "num_deleted_inodes";

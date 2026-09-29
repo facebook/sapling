@@ -579,9 +579,6 @@ void InodeMap::inodeLoadFailed(
     mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
   }
 
-  // Temporarily log every inode load failure and associated error string.
-  // This data will help us understand the impact of X2P errors on EdenFS.
-  edenFsEventsLogger_->logEvent(InodeLoadingFailed{errStr.toStdString()});
   ex.with_exception([&](const std::exception& e) {
     mount_->getServerState()->getErrorLogger().log(
         EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(e))
