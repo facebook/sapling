@@ -45,8 +45,10 @@ pub enum AsyncRequestsSubcommand {
     /// Lists asynchronous requests (by default the ones active
     /// now or updated within last 5 mins).
     List(AsyncRequestsListArgs),
-    /// Marks "dead" ready requests (whose params blob is missing from the
-    /// blobstore, i.e. `show` fails with "Missing blob") as failed.
+    /// Marks "dead" ready requests as failed: those whose params blob is
+    /// missing from the blobstore (i.e. `show` fails with "Missing blob"),
+    /// and, with `--older-than-days`, those that have sat uncollected in
+    /// `ready` past that age.
     FailDeadReadyRequests(AsyncRequestsFailDeadReadyRequestsArgs),
     /// Shows request details.
     Show(AsyncRequestsShowArgs),

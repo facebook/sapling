@@ -70,11 +70,13 @@ pub struct DequeuedRequest {
 
 /// One page of an orphan scan (see [`AsyncMethodRequestQueue::list_orphan_requests`]).
 ///
-/// An "orphan" is a queue row whose serialized params blob
-/// (`args_blobstore_key`) is no longer present in the blobstore, so the
-/// request can never be processed or shown.
+/// An "orphan" is a `ready` queue row that should be failed: either its
+/// serialized params blob (`args_blobstore_key`) is no longer present in the
+/// blobstore (so the request can never be processed or shown), or, when an age
+/// cutoff is supplied, it has sat uncollected in `ready` past that cutoff.
 pub struct OrphanScanBatch {
-    /// Rows in this batch whose params blob is missing from the blobstore.
+    /// Rows in this batch that should be failed: params blob missing, or older
+    /// than the age cutoff when one was supplied.
     pub orphans: Vec<LongRunningRequestEntry>,
     /// The largest `id` scanned in this batch, to be passed as the cursor for
     /// the next batch. `None` if the batch was empty (i.e. the scan is done).
@@ -675,8 +677,11 @@ impl AsyncMethodRequestQueue {
         }
     }
 
-    /// Scan one batch of `ready` requests for "orphans": rows whose params
-    /// blob (`args_blobstore_key`) is missing from the blobstore.
+    /// Scan one batch of `ready` requests for "orphans": rows that should be
+    /// failed because their params blob (`args_blobstore_key`) is missing from
+    /// the blobstore, or, when `max_age_secs` is supplied, because they have
+    /// sat uncollected in `ready` for at least that many seconds (an
+    /// uncollected result whose client will never poll it).
     ///
     /// Only `ready` requests are considered, since those are the ones expected
     /// to have a persisted params blob; in-flight (`new`/`inprogress`) requests
@@ -686,9 +691,10 @@ impl AsyncMethodRequestQueue {
     /// This fetches up to `batch_size` `ready` rows with `id` greater than
     /// `after_id` (pass `None` to start from the beginning) in a single DB
     /// query, then checks blob presence for each with up to `concurrency`
-    /// concurrent blobstore lookups. Callers page through all `ready` requests
-    /// by feeding [`OrphanScanBatch::last_scanned_id`] back in as `after_id`
-    /// until a batch scans fewer than `batch_size` rows.
+    /// concurrent blobstore lookups. Rows already past the age cutoff are dead
+    /// regardless of their blob and skip the lookup. Callers page through all
+    /// `ready` requests by feeding [`OrphanScanBatch::last_scanned_id`] back in
+    /// as `after_id` until a batch scans fewer than `batch_size` rows.
     ///
     /// A blob whose presence cannot be determined (e.g. a transient blobstore
     /// error) is treated as a hard error rather than reported as an orphan, so
@@ -699,6 +705,7 @@ impl AsyncMethodRequestQueue {
         after_id: Option<RowId>,
         batch_size: usize,
         concurrency: usize,
+        max_age_secs: Option<i64>,
     ) -> Result<OrphanScanBatch, Error> {
         let after_id = after_id.unwrap_or(RowId(0));
         let entries = self
@@ -710,8 +717,20 @@ impl AsyncMethodRequestQueue {
         let scanned = entries.len();
         let last_scanned_id = entries.last().map(|entry| entry.id.clone());
 
+        // Rows that became `ready` at or before this cutoff have sat
+        // uncollected too long and are treated as dead without a blob lookup.
+        let age_cutoff = max_age_secs.map(|secs| {
+            Timestamp::from_timestamp_secs(Timestamp::now().timestamp_seconds() - secs)
+        });
+
         let orphans = stream::iter(entries)
             .map(|entry| async {
+                if let Some(cutoff) = age_cutoff.as_ref() {
+                    let ready_since = entry.ready_at.unwrap_or(entry.created_at);
+                    if ready_since <= *cutoff {
+                        return Ok::<_, Error>(Some(entry));
+                    }
+                }
                 let key = &entry.args_blobstore_key.0;
                 let present = self
                     .blobstore

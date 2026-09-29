@@ -17,10 +17,12 @@ use prettytable::format;
 use prettytable::row;
 
 #[derive(Args)]
-/// Marks "dead" `ready` requests as `failed`: `ready` requests whose serialized
-/// params blob is missing from the blobstore. Such requests can never be
-/// processed or shown (`show` on them fails with "Missing blob"), so they are
-/// transitioned to the `failed` state in the queue.
+/// Marks "dead" `ready` requests as `failed`. A `ready` request is dead when
+/// its serialized params blob is missing from the blobstore (such requests can
+/// never be processed or shown -- `show` on them fails with "Missing blob"),
+/// or, with `--older-than-days`, when it has sat uncollected in `ready` past
+/// that age (a result whose client never polled it and never will). Dead
+/// requests are transitioned to the `failed` state in the queue.
 ///
 /// Only `ready` requests are scanned: in-flight (`new`/`inprogress`) requests
 /// have just had their params written and are not interesting, and skipping
@@ -37,6 +39,12 @@ pub struct AsyncRequestsFailDeadReadyRequestsArgs {
     /// Maximum number of concurrent blobstore presence checks per batch.
     #[clap(long, default_value = "100")]
     concurrency: usize,
+    /// Also fail `ready` requests older than this many days, based on when they
+    /// became `ready` (falling back to when they were created), even if their
+    /// params blob still exists. Omit to only fail requests whose params blob
+    /// is missing. Rows past this age skip the blobstore lookup.
+    #[clap(long)]
+    older_than_days: Option<u64>,
 }
 
 pub async fn fail_dead_ready_requests(
@@ -49,9 +57,17 @@ pub async fn fail_dead_ready_requests(
     let mut total_marked: u64 = 0;
     let mut dead = Vec::new();
 
+    let max_age_secs = args.older_than_days.map(|days| days as i64 * 24 * 60 * 60);
+
     loop {
         let batch = queue
-            .list_orphan_requests(&ctx, after_id, args.batch_size, args.concurrency)
+            .list_orphan_requests(
+                &ctx,
+                after_id,
+                args.batch_size,
+                args.concurrency,
+                max_age_secs,
+            )
             .await
             .context("scanning for dead ready requests")?;
         total_scanned += batch.scanned;
