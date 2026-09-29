@@ -12,6 +12,7 @@
 #include <folly/container/F14Map.h>
 #include <folly/small_vector.h>
 #include <folly/synchronization/DistributedMutex.h>
+#include <chrono>
 #include <list>
 #include <mutex>
 
@@ -124,6 +125,10 @@ class ObjectCache : public std::enable_shared_from_this<
                         ObjectCache<ObjectType, Flavor, ObjectCacheStats>> {
  public:
   using ObjectPtr = std::shared_ptr<const ObjectType>;
+  using Clock = std::chrono::steady_clock;
+
+  /// Expiry of an entry that stays until evicted.
+  static constexpr Clock::time_point kNeverExpires = Clock::time_point::max();
 
   enum class Interest {
     /**
@@ -230,11 +235,17 @@ class ObjectCache : public std::enable_shared_from_this<
    * Inserts a object into the cache for future lookup. If the new total size
    * exceeds the maximum cache size and the minimum entry count, old entries are
    * evicted.
+   *
+   * An object inserted with an expiry is treated as absent once that time has
+   * passed; the next lookup removes it and the next insert replaces it. An
+   * insert for an id that is present and unexpired keeps the existing entry
+   * and its expiry.
    */
   template <ObjectCacheFlavor F = Flavor>
   typename std::enable_if_t<F == ObjectCacheFlavor::Simple, void> insertSimple(
       ObjectId id,
-      ObjectPtr object);
+      ObjectPtr object,
+      Clock::time_point expiresAt = kNeverExpires);
 
   /**
    * Returns true if the cache contains a object for the given id.
@@ -289,8 +300,15 @@ class ObjectCache : public std::enable_shared_from_this<
     // WARNING: leaves index unset. Since the items map and evictionQueue are
     // circular, initialization of index must happen after the CacheItem is
     // constructed.
-    explicit CacheItem(ObjectId id, ObjectPtr b, size_t size)
-        : id{std::move(id)}, object{std::move(b)}, size{size} {}
+    explicit CacheItem(
+        ObjectId id,
+        ObjectPtr b,
+        size_t size,
+        Clock::time_point expiresAt)
+        : id{std::move(id)},
+          object{std::move(b)},
+          size{size},
+          expiresAt{expiresAt} {}
 
     // The folly::SafeIntrusiveListHook needs special handling to be
     // copied/moved, removing the move/copy constructor and assignment to
@@ -306,6 +324,7 @@ class ObjectCache : public std::enable_shared_from_this<
     /// this rather than asking the object again, so the accounting stays
     /// balanced even if the object's reported size changes.
     size_t size;
+    Clock::time_point expiresAt;
     folly::SafeIntrusiveListHook hook;
 
     /// Incremented on every LikelyNeededAgain or WantInterestHandle.
@@ -359,7 +378,8 @@ class ObjectCache : public std::enable_shared_from_this<
   getInterestHandleCore(
       LockedState& state,
       const ObjectId& id,
-      Interest interest) noexcept;
+      Interest interest,
+      EvictedObjects& evicted) noexcept;
 
   /**
    * The "core" implementation for the method insertInterestHandle().
@@ -403,12 +423,16 @@ class ObjectCache : public std::enable_shared_from_this<
   preProcessInterestHandle(ObjectId id, ObjectPtr object, Interest interest);
 
   /**
-   * If an object for the given id is in cache, return it. If the object is
-   * not in cache, return nullptr (and an empty interest handle).
+   * If an object for the given id is in cache and has not expired, return it.
+   * Otherwise return nullptr; an expired entry is removed on the way.
    *
    * Does not do anything related to interest handles.
    */
-  CacheItem* getImpl(const ObjectId& id, State& state);
+  CacheItem* getImpl(const ObjectId& id, State& state, EvictedObjects& evicted);
+
+  static bool isExpired(const CacheItem& item) {
+    return item.expiresAt != kNeverExpires && Clock::now() >= item.expiresAt;
+  }
 
   /**
    * Inserts an object into the cache for future lookup. If the new total size
@@ -423,6 +447,7 @@ class ObjectCache : public std::enable_shared_from_this<
       ObjectId id,
       ObjectPtr object,
       size_t size,
+      Clock::time_point expiresAt,
       State& state,
       EvictedObjects& evicted);
 

@@ -26,6 +26,8 @@ const auto id6 = ObjectId::fromHex("0000000000000000000000000000000000000006");
 const auto id7 = ObjectId::fromHex("0000000000000000000000000000000000000007");
 const auto id8 = ObjectId::fromHex("0000000000000000000000000000000000000008");
 const auto id9 = ObjectId::fromHex("0000000000000000000000000000000000000009");
+const auto id10 = ObjectId::fromHex("000000000000000000000000000000000000000a");
+const auto id11 = ObjectId::fromHex("000000000000000000000000000000000000000b");
 
 const auto entry0Name = PathComponent{"a"};
 const auto entry1Name = PathComponent{"b"};
@@ -76,16 +78,35 @@ const auto bigTreeSize = tree4->getSizeBytes();
 const auto cacheMaxSize = smallTreeSize * 3 + 1; // cache fits 3 small trees
 const auto cacheMinEntries = 1; // must keep at least one tree in cache
 
+const auto restrictedEntryName = PathComponent{"r"};
+const auto restrictedEntry = TreeEntry{
+    ObjectId{id0},
+    TreeEntryType::TREE,
+    /*isRestricted=*/true,
+    /*hasACL=*/true};
+const auto restrictedTree_id = id10;
+const auto restrictedTree = std::make_shared<const Tree>(
+    Tree::container{
+        {{restrictedEntryName, restrictedEntry}},
+        kPathMapDefaultCaseSensitive},
+    restrictedTree_id);
+
+const auto deniedTree_id = id11;
+const auto deniedTree = std::make_shared<const Tree>(
+    Tree::Restricted{},
+    Tree::container{kPathMapDefaultCaseSensitive},
+    deniedTree_id);
+
 } // namespace
 
 struct TreeCacheTest : ::testing::Test {
  protected:
+  std::shared_ptr<EdenConfig> rawEdenConfig;
   std::shared_ptr<ReloadableConfig> edenConfig;
   std::shared_ptr<TreeCache> cache;
 
   void SetUp() override {
-    std::shared_ptr<EdenConfig> rawEdenConfig{
-        EdenConfig::createTestEdenConfig()};
+    rawEdenConfig = EdenConfig::createTestEdenConfig();
 
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
         cacheMaxSize, ConfigSourceType::Default, true);
@@ -180,4 +201,37 @@ TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
       std::shared_ptr<const Tree>{nullptr}, cache->get(tree2->getObjectId()));
   EXPECT_TRUE(cache->contains(tree4->getObjectId()));
   EXPECT_EQ(tree4, cache->get(tree4->getObjectId()));
+}
+
+TEST_F(TreeCacheTest, restrictedTreeIsServedWithinTtl) {
+  cache->insert(restrictedTree_id, restrictedTree);
+
+  EXPECT_TRUE(cache->contains(restrictedTree_id));
+  EXPECT_EQ(restrictedTree, cache->get(restrictedTree_id));
+}
+
+TEST_F(TreeCacheTest, restrictedTreeIsNotCachedWhenTtlIsZero) {
+  rawEdenConfig->restrictedTreeTtlSeconds.setValue(
+      0, ConfigSourceType::Default, true);
+
+  cache->insert(restrictedTree_id, restrictedTree);
+
+  EXPECT_FALSE(cache->contains(restrictedTree_id));
+  EXPECT_EQ(nullptr, cache->get(restrictedTree_id));
+}
+
+TEST_F(TreeCacheTest, deniedTreePlaceholderIsNotCached) {
+  cache->insert(deniedTree_id, deniedTree);
+
+  EXPECT_FALSE(cache->contains(deniedTree_id));
+  EXPECT_EQ(nullptr, cache->get(deniedTree_id));
+}
+
+TEST_F(TreeCacheTest, unrestrictedTreeDoesNotExpire) {
+  rawEdenConfig->restrictedTreeTtlSeconds.setValue(
+      0, ConfigSourceType::Default, true);
+
+  cache->insert(tree0_id, tree0);
+
+  EXPECT_EQ(tree0, cache->get(tree0_id));
 }

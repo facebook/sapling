@@ -6,6 +6,9 @@
  */
 
 #include "eden/fs/store/TreeCache.h"
+
+#include <chrono>
+
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -17,10 +20,7 @@ static constexpr folly::StringPiece kTreeCacheItems{"tree_cache.items"};
 
 namespace {
 
-bool treeHasRestrictedAclMetadata(const Tree& tree) {
-  if (tree.isRestricted()) {
-    return true;
-  }
+bool treeHasRestrictedChild(const Tree& tree) {
   for (const auto& entry : tree) {
     if (entry.second.isRestricted()) {
       return true;
@@ -39,10 +39,28 @@ std::shared_ptr<const Tree> TreeCache::get(const ObjectId& id) {
 }
 
 void TreeCache::insert(ObjectId id, std::shared_ptr<const Tree> tree) {
-  if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue() &&
-      !treeHasRestrictedAclMetadata(*tree)) {
-    return insertSimple(std::move(id), std::move(tree));
+  auto config = config_->getEdenConfig();
+  if (!config->enableInMemoryTreeCaching.getValue()) {
+    return;
   }
+  if (tree->isRestricted()) {
+    // The empty placeholder for a denied tree is fetched by id when access is
+    // later granted (TreeInode::transitionToUnrestricted); served from here it
+    // would become the directory's contents.
+    return;
+  }
+  if (treeHasRestrictedChild(*tree)) {
+    // A restricted entry records an ACL denial that the rest of EdenFS
+    // re-evaluates every restrictedTreeTtlSeconds; a cached copy must not
+    // outlive that interval.
+    auto ttl =
+        std::chrono::seconds{config->restrictedTreeTtlSeconds.getValue()};
+    if (ttl.count() == 0) {
+      return;
+    }
+    return insertSimple(std::move(id), std::move(tree), Clock::now() + ttl);
+  }
+  insertSimple(std::move(id), std::move(tree));
 }
 
 TreeCache::TreeCache(std::shared_ptr<ReloadableConfig> config, EdenStatsPtr stats)

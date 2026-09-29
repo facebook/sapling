@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/ObjectCache.h"
 #include <gtest/gtest.h>
+#include <chrono>
 
 using namespace folly::literals;
 using namespace facebook::eden;
@@ -732,4 +733,61 @@ TEST(ObjectCache, evictedObjectIsDestroyedAfterTheLockIsReleased) {
   cache->insertSimple(id9, object9);
 
   EXPECT_EQ(1, objectCountSeenByDeleter);
+}
+
+TEST(ObjectCache, objectWithFutureExpiryIsServed) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          10, 0, makeRefPtr<EdenStats>());
+
+  cache->insertSimple(
+      id3, object3, std::chrono::steady_clock::now() + std::chrono::hours{1});
+
+  EXPECT_TRUE(cache->contains(id3));
+  EXPECT_EQ(object3, cache->getSimple(id3));
+}
+
+TEST(ObjectCache, expiredObjectIsRemovedOnLookup) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          10, 0, makeRefPtr<EdenStats>());
+
+  cache->insertSimple(
+      id3, object3, std::chrono::steady_clock::now() - std::chrono::hours{1});
+
+  EXPECT_FALSE(cache->contains(id3));
+  EXPECT_EQ(nullptr, cache->getSimple(id3));
+  EXPECT_EQ(0, cache->getObjectCount());
+  EXPECT_EQ(0, cache->getTotalSizeBytes());
+}
+
+TEST(ObjectCache, expiredObjectIsReplacedOnInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          10, 0, makeRefPtr<EdenStats>());
+  auto stale = std::make_shared<CacheObject>(id3, 3);
+  auto fresh = std::make_shared<CacheObject>(id3, 4);
+
+  cache->insertSimple(
+      id3, stale, std::chrono::steady_clock::now() - std::chrono::hours{1});
+  cache->insertSimple(
+      id3, fresh, std::chrono::steady_clock::now() + std::chrono::hours{1});
+
+  EXPECT_EQ(fresh, cache->getSimple(id3));
+  EXPECT_EQ(4, cache->getTotalSizeBytes());
+}
+
+TEST(ObjectCache, duplicateInsertKeepsTheLiveEntryAndItsExpiry) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          10, 0, makeRefPtr<EdenStats>());
+  auto first = std::make_shared<CacheObject>(id3, 3);
+  auto second = std::make_shared<CacheObject>(id3, 3);
+
+  cache->insertSimple(
+      id3, first, std::chrono::steady_clock::now() + std::chrono::hours{1});
+  cache->insertSimple(
+      id3, second, std::chrono::steady_clock::now() - std::chrono::hours{1});
+
+  EXPECT_EQ(first, cache->getSimple(id3));
 }

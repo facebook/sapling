@@ -61,6 +61,9 @@ class TreeCache
    * Inserts a tree into the cache for future lookup. If the new total size
    * exceeds the maximum cache size and the minimum entry count, old entries are
    * evicted.
+   *
+   * A tree that is restricted, or has a restricted child entry, is served for
+   * at most acl:restricted-tree-ttl-seconds and then re-fetched.
    */
   void insert(ObjectId id, std::shared_ptr<const Tree> tree);
 

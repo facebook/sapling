@@ -46,8 +46,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
   using TreeAuxStats = std::array<int64_t, 3>;
 
   void SetUp() override {
-    std::shared_ptr<EdenConfig> rawEdenConfig{
-        EdenConfig::createTestEdenConfig()};
+    rawEdenConfig = EdenConfig::createTestEdenConfig();
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
         kTreeCacheMaximumSize, ConfigSourceType::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
@@ -218,6 +217,7 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
   std::shared_ptr<FakeBackingStore> fakeBackingStoreWithKeyedBlake3;
   std::shared_ptr<FakeBackingStore> fakeBackingStoreWithTreeAuxPrefetching;
   std::shared_ptr<BackingStore> backingStoreWithKeyedBlake3;
+  std::shared_ptr<EdenConfig> rawEdenConfig;
   std::shared_ptr<TreeCache> treeCache;
   EdenStatsPtr stats;
   std::shared_ptr<ObjectStore> objectStore;
@@ -397,7 +397,7 @@ TEST_P(ObjectStoreTest, getTree_doesNotCacheRestrictedTree) {
       ObjectFetchContext::FromNetworkFetch, loggingContext->requests[1].origin);
 }
 
-TEST_P(ObjectStoreTest, getTree_doesNotCacheTreeWithRestrictedChild) {
+TEST_P(ObjectStoreTest, getTree_cachesTreeWithRestrictedChildWithinTtl) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "restricted"_pc,
@@ -415,10 +415,12 @@ TEST_P(ObjectStoreTest, getTree_doesNotCacheTreeWithRestrictedChild) {
   EXPECT_EQ(
       ObjectFetchContext::FromNetworkFetch, loggingContext->requests[0].origin);
   EXPECT_EQ(
-      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[1].origin);
+      ObjectFetchContext::FromMemoryCache, loggingContext->requests[1].origin);
 }
 
-TEST_P(ObjectStoreTest, treeCache_doesNotInsertTreeWithRestrictedChild) {
+TEST_P(
+    ObjectStoreTest,
+    treeCache_doesNotCacheTreeWithRestrictedChildWhenTtlIsZero) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "restricted"_pc,
@@ -430,6 +432,8 @@ TEST_P(ObjectStoreTest, treeCache_doesNotInsertTreeWithRestrictedChild) {
   auto* parentTree = fakeBackingStore->putTree(entries);
   parentTree->setReady();
   auto parentTreeId = parentTree->get().getObjectId();
+  rawEdenConfig->restrictedTreeTtlSeconds.setValue(
+      0, ConfigSourceType::Default, true);
 
   treeCache->insert(parentTreeId, parentTree->getFuture().get());
 
@@ -492,7 +496,7 @@ TEST_P(ObjectStoreTest, getTree_prefetchUsesTreeCacheWhenBypassDisabled) {
   EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyTreeId));
 }
 
-TEST_P(ObjectStoreTest, getRootTree_doesNotSeedCacheWithRestrictedChild) {
+TEST_P(ObjectStoreTest, getRootTree_seedsCacheWithRestrictedChild) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(
       "restricted"_pc,
@@ -508,13 +512,13 @@ TEST_P(ObjectStoreTest, getRootTree_doesNotSeedCacheWithRestrictedChild) {
   commit->setReady();
 
   auto rootResult = objectStore->getRootTree(rootId, context).get(0ms);
-  EXPECT_EQ(nullptr, treeCache->get(rootResult.treeId));
+  EXPECT_NE(nullptr, treeCache->get(rootResult.treeId));
 
   objectStore->getTree(rootResult.treeId, context).get(0ms);
 
   ASSERT_EQ(1, loggingContext->requests.size());
   EXPECT_EQ(
-      ObjectFetchContext::FromNetworkFetch, loggingContext->requests[0].origin);
+      ObjectFetchContext::FromMemoryCache, loggingContext->requests[0].origin);
 }
 
 TEST_P(ObjectStoreTest, getTree_prefetch_missing_aux_data) {

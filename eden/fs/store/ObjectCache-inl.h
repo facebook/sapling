@@ -130,8 +130,9 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
   if (interest == Interest::None) {
     return GetResult{};
   }
+  EvictedObjects evicted;
   auto state = getShard(id).lock();
-  return getInterestHandleCore(state, id, interest);
+  return getInterestHandleCore(state, id, interest, evicted);
 }
 
 template <
@@ -145,9 +146,10 @@ typename std::enable_if_t<
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandleCore(
     LockedState& state,
     const ObjectId& id,
-    Interest interest) noexcept {
+    Interest interest,
+    EvictedObjects& evicted) noexcept {
   ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle;
-  auto item = getImpl(id, *state);
+  auto item = getImpl(id, *state, evicted);
   if (!item) {
     return GetResult{};
   }
@@ -189,9 +191,10 @@ typename std::enable_if_t<
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getSimple(
     const ObjectId& id) {
   XLOGF(DBG6, "ObjectCache::getSimple {}", id);
+  EvictedObjects evicted;
   auto state = getShard(id).lock();
 
-  if (auto item = getImpl(id, *state)) {
+  if (auto item = getImpl(id, *state, evicted)) {
     return item->object;
   }
   return nullptr;
@@ -204,9 +207,15 @@ template <
 typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::CacheItem*
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
     const ObjectId& id,
-    State& state) {
+    State& state,
+    EvictedObjects& evicted) {
   XLOGF(DBG6, "ObjectCache::getImpl {}", id);
   auto* item = folly::get_ptr(state.items, id);
+  if (item && isExpired(*item)) {
+    XLOGF(DBG6, "ObjectCache::getImpl expired {}", id);
+    evictItem(state, *item, evicted);
+    item = nullptr;
+  }
   if (!item) {
     XLOG(DBG6, "ObjectCache::getImpl missed");
     stats_->increment(&ObjectCacheStats::getMiss);
@@ -314,8 +323,8 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandleCore(
     uint64_t cacheItemGeneration,
     ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle,
     EvictedObjects& evicted) {
-  auto [item, inserted] =
-      insertImpl(std::move(id), std::move(object), size, *state, evicted);
+  auto [item, inserted] = insertImpl(
+      std::move(id), std::move(object), size, kNeverExpires, *state, evicted);
   switch (interest) {
     case Interest::UnlikelyNeededAgain:
     case Interest::None:
@@ -346,12 +355,14 @@ template <ObjectCacheFlavor F>
 typename std::enable_if_t<F == ObjectCacheFlavor::Simple, void>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertSimple(
     ObjectId id,
-    ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr object) {
+    ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr object,
+    Clock::time_point expiresAt) {
   XLOGF(DBG6, "ObjectCache::insertSimple {}", id);
   auto size = object->getSizeBytes();
   EvictedObjects evicted;
   auto state = getShard(id).lock();
-  insertImpl(std::move(id), std::move(object), size, *state, evicted);
+  insertImpl(
+      std::move(id), std::move(object), size, expiresAt, *state, evicted);
 }
 
 template <
@@ -365,16 +376,24 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertImpl(
     ObjectId id,
     ObjectPtr object,
     size_t size,
+    Clock::time_point expiresAt,
     State& state,
     EvictedObjects& evicted) {
   XLOGF(DBG6, "ObjectCache::insertImpl {}", id);
+
+  // An expired entry gives way to the fresh object rather than being renewed.
+  if (auto* expired = folly::get_ptr(state.items, id);
+      expired && isExpired(*expired)) {
+    evictItem(state, *expired, evicted);
+  }
 
   ObjectId key = id;
 
   // the following should be no except
 
   auto [iter, inserted] = state.items.try_emplace(
-      std::move(key), CacheItem{std::move(id), std::move(object), size});
+      std::move(key),
+      CacheItem{std::move(id), std::move(object), size, expiresAt});
 
   auto* itemPtr = &iter->second;
   if (inserted) {
@@ -402,7 +421,8 @@ template <
 bool ObjectCache<ObjectType, Flavor, ObjectCacheStats>::contains(
     const ObjectId& id) const {
   auto state = getShard(id).lock();
-  return 1 == state->items.count(id);
+  auto* item = folly::get_ptr(state->items, id);
+  return item != nullptr && !isExpired(*item);
 }
 
 template <
@@ -582,7 +602,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::invalidate(
   EvictedObjects evicted;
   auto state = getShard(id).lock();
 
-  if (auto item = getImpl(id, *state)) {
+  if (auto item = getImpl(id, *state, evicted)) {
     evictItem(*state, *item, evicted);
   }
 };
