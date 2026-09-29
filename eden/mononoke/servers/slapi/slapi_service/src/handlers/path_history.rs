@@ -36,7 +36,7 @@ use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 use crate::utils::to_mpath;
 
 /// XXX: This number was chosen arbitrarily.
@@ -136,7 +136,7 @@ async fn fetch_history_for_path<R: MononokeRepo>(
         .path_with_history(
             to_mpath(&path)?
                 .into_optional_non_root_path()
-                .context(ErrorKind::UnexpectedEmptyPath)?,
+                .context(SaplingRemoteApiServiceError::UnexpectedEmptyPath)?,
         )
         .await?
         .history(ChangesetPathHistoryOptions {
@@ -179,12 +179,12 @@ async fn hgid_to_changeset<R: MononokeRepo>(
             .changeset(GitSha1::from_byte_array(commit.into_byte_array()))
             .await
             .context("Failed to resolve git hash")?
-            .ok_or(ErrorKind::HgIdNotFound(commit))?,
+            .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(commit))?,
         SlapiCommitIdentityScheme::Hg => repo
             .changeset(commit)
             .await
             .context("Failed to resolve hgid")?
-            .ok_or(ErrorKind::HgIdNotFound(commit))?,
+            .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(commit))?,
     };
 
     Ok(cs)

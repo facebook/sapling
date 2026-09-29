@@ -42,7 +42,7 @@ use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
@@ -61,13 +61,17 @@ async fn fetch_bookmark<R: MononokeRepo>(
         SlapiCommitIdentityScheme::Git => repo
             .resolve_bookmark_git(bookmark.clone(), freshness)
             .await
-            .map_err(|e| ErrorKind::BookmarkResolutionFailed(bookmark.clone(), e.into()))?
+            .map_err(|e| {
+                SaplingRemoteApiServiceError::BookmarkResolutionFailed(bookmark.clone(), e.into())
+            })?
             .map(|id| HgId::from_slice(id.as_ref()))
             .transpose()?,
         SlapiCommitIdentityScheme::Hg => repo
             .resolve_bookmark(bookmark.clone(), freshness)
             .await
-            .map_err(|e| ErrorKind::BookmarkResolutionFailed(bookmark.clone(), e.into()))?
+            .map_err(|e| {
+                SaplingRemoteApiServiceError::BookmarkResolutionFailed(bookmark.clone(), e.into())
+            })?
             .map(|id| HgId::from(id.into_nodehash())),
     };
 
@@ -154,7 +158,7 @@ async fn set_bookmark<R: MononokeRepo>(
                         repo.changeset(to)
                             .await
                             .context("failed to resolve 'to' hgid")?
-                            .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
+                            .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(to_hgid))?
                             .id(),
                     )
                 },
@@ -163,7 +167,7 @@ async fn set_bookmark<R: MononokeRepo>(
                         repo.changeset(from)
                             .await
                             .context("failed to resolve 'from' hgid")?
-                            .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
+                            .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(from_hgid))?
                             .id(),
                     )
                 },
@@ -186,7 +190,7 @@ async fn set_bookmark<R: MononokeRepo>(
                 .changeset(to)
                 .await
                 .context("failed to resolve 'to' hgid")?
-                .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
+                .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(to_hgid))?
                 .id();
 
             repo.create_bookmark(&BookmarkKey::new(&bookmark)?, to, pushvars, None)
@@ -199,7 +203,7 @@ async fn set_bookmark<R: MononokeRepo>(
                 .changeset(from)
                 .await
                 .context("failed to resolve 'from' hgid")?
-                .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
+                .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(from_hgid))?
                 .id();
 
             repo.delete_bookmark(&BookmarkKey::new(&bookmark)?, Some(from), pushvars)

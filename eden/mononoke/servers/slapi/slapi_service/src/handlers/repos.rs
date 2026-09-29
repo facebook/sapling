@@ -15,7 +15,7 @@ use mononoke_api::Repo;
 use serde::Serialize;
 
 use crate::context::ServerContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 #[derive(Clone, Serialize, Debug)]
 struct ReposResponse {
@@ -29,7 +29,7 @@ pub async fn repos(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     let repos = mononoke.repo_names().collect::<Vec<_>>();
     let response = ReposResponse { repos };
     let bytes: Bytes = serde_json::to_vec(&response)
-        .context(ErrorKind::SerializationFailed)
+        .context(SaplingRemoteApiServiceError::SerializationFailed)
         .map_err(HttpError::e500)?
         .into();
 

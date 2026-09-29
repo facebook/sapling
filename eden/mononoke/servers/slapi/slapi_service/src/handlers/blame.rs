@@ -36,7 +36,7 @@ use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 use crate::utils::to_hg_path_nonroot;
 use crate::utils::to_mpath;
 
@@ -113,12 +113,12 @@ async fn blame_file_data<R: MononokeRepo>(
             .changeset(GitSha1::from_byte_array(key.hgid.into_byte_array()))
             .await
             .context("failed to resolve blame git hash")?
-            .ok_or(ErrorKind::HgIdNotFound(key.hgid))?,
+            .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(key.hgid))?,
         SlapiCommitIdentityScheme::Hg => repo
             .changeset(key.hgid)
             .await
             .context("failed to resolve blame hgid")?
-            .ok_or(ErrorKind::HgIdNotFound(key.hgid))?,
+            .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(key.hgid))?,
     };
 
     let disable_mutable_blame: bool = justknobs::eval(
@@ -131,7 +131,7 @@ async fn blame_file_data<R: MononokeRepo>(
         .path_with_history(
             to_mpath(&key.path)?
                 .into_optional_non_root_path()
-                .context(ErrorKind::UnexpectedEmptyPath)?,
+                .context(SaplingRemoteApiServiceError::UnexpectedEmptyPath)?,
         )
         .await?
         .blame(!disable_mutable_blame)

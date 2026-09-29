@@ -50,7 +50,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::Error;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 const TIMEOUT_SECS: Duration = Duration::from_hours(4);
 
@@ -291,7 +291,9 @@ async fn list_bookmarks_for_pattern<R: MononokeRepo>(
         let hgid = repo
             .resolve_bookmark(pattern.clone(), Freshness::MaybeStale)
             .await
-            .map_err(|e| ErrorKind::BookmarkResolutionFailed(pattern.clone(), e.into()))?
+            .map_err(|e| {
+                SaplingRemoteApiServiceError::BookmarkResolutionFailed(pattern.clone(), e.into())
+            })?
             .map(|id| HgId::from(id.into_nodehash()));
 
         match hgid {

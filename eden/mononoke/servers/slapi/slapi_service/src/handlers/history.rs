@@ -27,7 +27,7 @@ use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 use crate::utils::to_mpath;
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
@@ -81,20 +81,24 @@ async fn fetch_history_for_key<R: MononokeRepo>(
     let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
     let mpath = to_mpath(&key.path)?
         .into_optional_non_root_path()
-        .context(ErrorKind::UnexpectedEmptyPath)?;
+        .context(SaplingRemoteApiServiceError::UnexpectedEmptyPath)?;
 
     let file = repo
         .file(filenode_id)
         .await
-        .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?
-        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
+        .with_context(|| SaplingRemoteApiServiceError::FileFetchFailed(key.clone()))?
+        .with_context(|| SaplingRemoteApiServiceError::KeyDoesNotExist(key.clone()))?;
 
     // Fetch the file's history and convert the entries into
     // the expected on-the-wire format.
     let history = file
         .history(mpath, length)
         .err_into::<Error>()
-        .map_err(move |e| e.context(ErrorKind::HistoryFetchFailed(key.clone())))
+        .map_err(move |e| {
+            e.context(SaplingRemoteApiServiceError::HistoryFetchFailed(
+                key.clone(),
+            ))
+        })
         .and_then(|entry| async { WireHistoryEntry::try_from(entry) })
         .boxed();
 

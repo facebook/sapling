@@ -81,7 +81,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::context::ServerContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 use crate::handlers::git_objects::fetch_git_object;
 use crate::middleware::request_dumper::RequestDumper;
 use crate::utils::custom_cbor_stream;
@@ -245,7 +245,7 @@ async fn fetch_tree<R: MononokeRepo>(
         let maybe_ctx = id
             .context(repo.clone())
             .await
-            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
+            .with_context(|| SaplingRemoteApiServiceError::TreeFetchFailed(key.clone()))?;
 
         if let Some(ctx) = maybe_ctx {
             let populate_all_metadata = route_to_augmented;
@@ -287,7 +287,7 @@ async fn fetch_tree<R: MononokeRepo>(
                 let (data, _) = ctx
                     .content()
                     .await
-                    .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
+                    .with_context(|| SaplingRemoteApiServiceError::TreeFetchFailed(key.clone()))?;
 
                 entry.with_data(Some(data.into()));
             }
@@ -333,8 +333,8 @@ async fn fetch_tree<R: MononokeRepo>(
     let ctx = id
         .context(repo.clone())
         .await
-        .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
-        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
+        .with_context(|| SaplingRemoteApiServiceError::TreeFetchFailed(key.clone()))?
+        .with_context(|| SaplingRemoteApiServiceError::KeyDoesNotExist(key.clone()))?;
 
     if attributes.manifest_blob {
         repo.ctx()
@@ -344,7 +344,7 @@ async fn fetch_tree<R: MononokeRepo>(
         let (data, _) = ctx
             .content()
             .await
-            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
+            .with_context(|| SaplingRemoteApiServiceError::TreeFetchFailed(key.clone()))?;
 
         entry.with_data(Some(data.into()));
     }
@@ -459,7 +459,7 @@ async fn fetch_child_file_metadata<R: MononokeRepo>(
     let ctx = repo
         .file(HgFileNodeId::new(child_key.hgid.into()))
         .await?
-        .ok_or_else(|| ErrorKind::FileFetchFailed(child_key.clone()))?;
+        .ok_or_else(|| SaplingRemoteApiServiceError::FileFetchFailed(child_key.clone()))?;
 
     let metadata = ctx.content_metadata().await?;
     Ok(TreeChildEntry::new_file_entry(

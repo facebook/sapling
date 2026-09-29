@@ -72,7 +72,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::context::ServerContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 use crate::handlers::git_objects::fetch_git_object;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::get_repo;
@@ -190,8 +190,8 @@ async fn fetch_file<R: MononokeRepo>(
     let ctx = id
         .context(repo)
         .await
-        .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?
-        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
+        .with_context(|| SaplingRemoteApiServiceError::FileFetchFailed(key.clone()))?
+        .with_context(|| SaplingRemoteApiServiceError::KeyDoesNotExist(key.clone()))?;
 
     let parents = ctx.hg_parents().into();
     let mut file = FileEntry::new(key.clone(), parents);
@@ -199,7 +199,7 @@ async fn fetch_file<R: MononokeRepo>(
     let fetch_content = async {
         if attrs.content {
             Ok(Some(ctx.content().await.with_context(|| {
-                ErrorKind::FileFetchFailed(key.clone())
+                SaplingRemoteApiServiceError::FileFetchFailed(key.clone())
             })?))
         } else {
             anyhow::Ok(None)
@@ -209,7 +209,7 @@ async fn fetch_file<R: MononokeRepo>(
     let fetch_aux_data = async {
         if attrs.aux_data {
             Ok(Some(ctx.content_metadata().await.with_context(|| {
-                ErrorKind::FileAuxDataFetchFailed(key.clone())
+                SaplingRemoteApiServiceError::FileAuxDataFetchFailed(key.clone())
             })?))
         } else {
             anyhow::Ok(None)
@@ -353,7 +353,7 @@ async fn store_hg_filenode<R: MononokeRepo>(
     item: UploadHgFilenodeRequest,
 ) -> Result<UploadTokensResponse, Error> {
     // TODO(liubovd): validate signature of the upload token (item.token) and
-    // return 'ErrorKind::UploadHgFilenodeRequestInvalidToken' if it's invalid.
+    // return 'SaplingRemoteApiServiceError::UploadHgFilenodeRequestInvalidToken' if it's invalid.
     // This will be added later, for now assume tokens are always valid.
 
     let node_id = item.data.node_id;
@@ -382,7 +382,7 @@ async fn store_hg_filenode<R: MononokeRepo>(
         _ => None,
     }
     .ok_or_else(|| {
-        ErrorKind::UploadHgFilenodeRequestInvalidToken(
+        SaplingRemoteApiServiceError::UploadHgFilenodeRequestInvalidToken(
             node_id.clone(),
             "the provided token is not for file content".into(),
         )

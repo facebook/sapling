@@ -34,7 +34,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use super::get_request_body;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 static CBOR_MIME: LazyLock<Mime> = LazyLock::new(|| "application/cbor".parse().unwrap());
 
@@ -45,7 +45,7 @@ pub fn cbor_mime() -> Mime {
 pub fn to_cbor_bytes<S: Serialize>(s: &S) -> Result<Bytes, Error> {
     serde_cbor::to_vec(s)
         .map(Bytes::from)
-        .context(ErrorKind::SerializationFailed)
+        .context(SaplingRemoteApiServiceError::SerializationFailed)
 }
 
 /// Serialize each item of the input stream as CBOR and return a streaming
@@ -75,7 +75,7 @@ where
 pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Result<R, HttpError> {
     let body = get_request_body(state).await?;
     serde_cbor::from_slice(&body)
-        .context(ErrorKind::DeserializationFailed)
+        .context(SaplingRemoteApiServiceError::DeserializationFailed)
         .map_err(HttpError::e400)
 }
 

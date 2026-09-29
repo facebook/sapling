@@ -21,8 +21,8 @@ use mononoke_api_hg::RepoContextHgExt;
 use rate_limiting::Metric;
 
 use crate::context::ServerContext;
-use crate::errors::ErrorKind;
 use crate::errors::MononokeErrorExt;
+use crate::errors::SaplingRemoteApiServiceError;
 use crate::middleware::request_dumper::RequestDumper;
 
 pub mod cbor;
@@ -67,7 +67,11 @@ pub async fn get_repo<R: MononokeRepo>(
         .mononoke_api()
         .repo(rctx.ctx.with_mutated_scuba(|_| scuba), name)
         .await
-        .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))?;
+        .map_err(|e| {
+            e.into_http_error(SaplingRemoteApiServiceError::RepoLoadFailed(
+                name.to_string(),
+            ))
+        })?;
 
     let repo = match repo {
         Some(repo) => repo,
@@ -82,19 +86,22 @@ pub async fn get_repo<R: MononokeRepo>(
                 .load()
                 .contains_key(name)
             {
-                Err(HttpError::e503(ErrorKind::RepoNotLoaded(name.to_string())))
+                Err(HttpError::e503(
+                    SaplingRemoteApiServiceError::RepoNotLoaded(name.to_string()),
+                ))
             } else {
-                Err(HttpError::e404(ErrorKind::RepoDoesNotExist(
-                    name.to_string(),
-                )))
+                Err(HttpError::e404(
+                    SaplingRemoteApiServiceError::RepoDoesNotExist(name.to_string()),
+                ))
             };
         }
     };
 
-    repo.build()
-        .await
-        .map(|repo| repo.hg())
-        .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))
+    repo.build().await.map(|repo| repo.hg()).map_err(|e| {
+        e.into_http_error(SaplingRemoteApiServiceError::RepoLoadFailed(
+            name.to_string(),
+        ))
+    })
 }
 
 pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
@@ -103,10 +110,10 @@ pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
     let body = body
         .into_data_stream()
         .try_concat_body_opt(headers)
-        .context(ErrorKind::InvalidContentLength)
+        .context(SaplingRemoteApiServiceError::InvalidContentLength)
         .map_err(HttpError::e400)?
         .await
-        .context(ErrorKind::ClientCancelled)
+        .context(SaplingRemoteApiServiceError::ClientCancelled)
         .map_err(HttpError::e400)?;
 
     if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {

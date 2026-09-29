@@ -32,7 +32,7 @@ use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 /// Rebase a stack of commits onto a bookmark, and update the bookmark to the top of the newly-rebased stack.
 pub struct LandStackHandler;
@@ -104,7 +104,7 @@ async fn land_stack<R: MononokeRepo>(
                 repo.changeset(head)
                     .await
                     .context("failed to resolve head")?
-                    .ok_or(ErrorKind::HgIdNotFound(head_hgid))?
+                    .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(head_hgid))?
                     .id(),
             )
         },
@@ -113,7 +113,7 @@ async fn land_stack<R: MononokeRepo>(
                 repo.changeset(base)
                     .await
                     .context("failed to resolve base")?
-                    .ok_or(ErrorKind::HgIdNotFound(base_hgid))?
+                    .ok_or(SaplingRemoteApiServiceError::HgIdNotFound(base_hgid))?
                     .id(),
             )
         },
@@ -160,7 +160,9 @@ async fn land_stack<R: MononokeRepo>(
 
     let new_head_hgid = all_hgids
         .get(&new_head)
-        .ok_or(ErrorKind::BonsaiChangesetToHgIdError(new_head))
+        .ok_or(SaplingRemoteApiServiceError::BonsaiChangesetToHgIdError(
+            new_head,
+        ))
         .context("failed to fetch hgid for new head")?
         .into_nodehash()
         .into();
@@ -170,7 +172,9 @@ async fn land_stack<R: MononokeRepo>(
         .map(|id| {
             all_hgids
                 .get(id)
-                .ok_or(ErrorKind::BonsaiChangesetToHgIdError(*id))
+                .ok_or(SaplingRemoteApiServiceError::BonsaiChangesetToHgIdError(
+                    *id,
+                ))
                 .context("failed to fetch hgids for old ids")
                 .map(|id| id.into_nodehash().into())
         })
@@ -181,7 +185,9 @@ async fn land_stack<R: MononokeRepo>(
         .map(|id| {
             all_hgids
                 .get(id)
-                .ok_or(ErrorKind::BonsaiChangesetToHgIdError(*id))
+                .ok_or(SaplingRemoteApiServiceError::BonsaiChangesetToHgIdError(
+                    *id,
+                ))
                 .context("failed to fetch hgids for new ids")
                 .map(|id| id.into_nodehash().into())
         })

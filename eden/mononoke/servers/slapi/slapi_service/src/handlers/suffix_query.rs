@@ -26,7 +26,7 @@ use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 pub struct SuffixQueryHandler;
 
@@ -65,7 +65,7 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
             .changeset(commit.clone())
             .await
             .with_context(|| anyhow!("Error getting changeset {}", commit.clone()))?
-            .ok_or_else(|| ErrorKind::CommitIdNotFound(commit.clone()))
+            .ok_or_else(|| SaplingRemoteApiServiceError::CommitIdNotFound(commit.clone()))
             .map_err(HttpError::e400)?;
 
         Ok(try_stream! {

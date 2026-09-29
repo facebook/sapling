@@ -46,19 +46,21 @@ use mononoke_types::path::MPath;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::errors::ErrorKind;
+use crate::errors::SaplingRemoteApiServiceError;
 
 /// Convert a Mercurial `RepoPath` or `RepoPathBuf` into an `MPath`.
 /// The input will be copied due to differences in data representation.
 pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<MPath> {
     let path_bytes = path.as_ref().as_byte_slice();
-    MPath::new(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
+    MPath::new(path_bytes)
+        .with_context(|| SaplingRemoteApiServiceError::InvalidPath(path_bytes.to_vec()))
 }
 
 /// Convert an `MPath` into a Mercurial `RepoPathBuf`.
 /// The input will be copied due to differences in data representation.
 pub fn to_hg_path(path: &MPath) -> Result<RepoPathBuf> {
-    RepoPathBuf::from_utf8(path.to_vec()).with_context(|| ErrorKind::InvalidPath(path.to_vec()))
+    RepoPathBuf::from_utf8(path.to_vec())
+        .with_context(|| SaplingRemoteApiServiceError::InvalidPath(path.to_vec()))
 }
 
 /// Convert a `NonRootMPath` into a Mercurial `RepoPathBuf`.
@@ -84,7 +86,7 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
             .map(|file| {
                 to_mpath(file)?
                     .into_optional_non_root_path()
-                    .context(ErrorKind::UnexpectedEmptyPath)
+                    .context(SaplingRemoteApiServiceError::UnexpectedEmptyPath)
             })
             .collect::<Result<_, _>>()?,
         message: cs.message.into(),
