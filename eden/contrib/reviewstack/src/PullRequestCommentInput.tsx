@@ -7,7 +7,10 @@
 
 import type {ChangeEvent, KeyboardEvent} from 'react';
 
+import {pendingScrollRestoreAtom} from './jotai';
+import {capturePullRequestScrollPosition} from './pullRequestScroll';
 import {Box, Button, Flash, Textarea} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import {useCallback, useRef, useState} from 'react';
 
 type Props = {
@@ -69,6 +72,7 @@ export default function PullRequestCommentInput({
   const [comment, setComment] = useState<string>(initialComment);
   const [disabled, setDisabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -85,10 +89,15 @@ export default function PullRequestCommentInput({
   const onAddComment = useCallback(async () => {
     setDisabled(true);
     setError(null);
+    // Capture before the request. Removing focus or an inline editor while the
+    // mutation is in flight can change the scroll offset before the subsequent
+    // pull request refresh starts.
+    setPendingScrollRestore(capturePullRequestScrollPosition());
 
     try {
       await addComment(comment);
     } catch (e) {
+      setPendingScrollRestore(null);
       const errorMessage = formatErrorMessage(e);
       setError(errorMessage);
       // If adding the comment fails, let the user try again.
@@ -100,7 +109,15 @@ export default function PullRequestCommentInput({
       setComment(initialComment);
       setDisabled(false);
     }
-  }, [addComment, resetInputAfterAddingComment, comment, initialComment, setDisabled, setComment]);
+  }, [
+    addComment,
+    resetInputAfterAddingComment,
+    comment,
+    initialComment,
+    setDisabled,
+    setComment,
+    setPendingScrollRestore,
+  ]);
 
   const isAddCommentDisabled = disabled || (!allowEmptyMessage && comment.trim() === '');
 
