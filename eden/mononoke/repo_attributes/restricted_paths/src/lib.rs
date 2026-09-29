@@ -17,8 +17,11 @@ pub(crate) mod restriction_info;
 #[cfg(test)]
 mod test_utils;
 
+use std::collections::BTreeSet;
+use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
@@ -108,6 +111,10 @@ impl RestrictedPathsAuthorizationError {
 pub enum RestrictedPathsError {
     #[error(transparent)]
     AuthorizationError(RestrictedPathsAuthorizationError),
+    #[error("{0}")]
+    AclFileAuthorizationError(String),
+    #[error("{0}")]
+    InvalidRequest(String),
     #[error("Internal error: {0}")]
     InternalError(#[from] anyhow::Error),
 }
@@ -369,6 +376,147 @@ impl RestrictedPaths {
         roots: Vec<MPath>,
     ) -> Result<Vec<PathRestrictionInfo>> {
         restriction_info::find_restricted_descendants(self, ctx, cs_id, roots).await
+    }
+
+    // -----------------------------------------------------------------------
+    // Public ACL file change validation
+    // -----------------------------------------------------------------------
+
+    /// Validate that the caller may modify any `.slacl` files touched by
+    /// the given changesets in this stack.
+    ///
+    /// # COVERED
+    /// - Explicit add / modify / delete of files whose basename equals
+    ///   `acl_file_name` (typically `.slacl`).
+    /// - Stack-internal add-then-modify of the same `.slacl` path.
+    ///
+    /// # NOT COVERED (deliberately, for performance)
+    /// - **Implicit `.slacl` deletes** (e.g., a file added at `secret`
+    ///   that replaces directory `secret/` and its `.slacl`). Detecting
+    ///   this would require `find_restricted_descendants`, which triggers
+    ///   `AclManifest` derivation — too expensive for the changeset
+    ///   creation hot path. Land-time hooks catch this before it becomes
+    ///   public, and the read-time path still blocks unauthorized access.
+    /// - **Non-`.slacl` file modifications inside restricted directories.**
+    ///   The threat model is read access; deleting/modifying protected
+    ///   code does not grant access to it.
+    /// - **Root-level `.slacl`** (a `.slacl` file at the repository root).
+    ///   Degenerate case: the validator's `NonRootMPath::try_from(MPath::ROOT)`
+    ///   path silently returns no restriction info. Acceptable because
+    ///   no real repo currently uses a root-level `.slacl`; documented
+    ///   here for reviewer awareness.
+    ///
+    /// Skips entirely if the repo has no restricted paths configured, or if
+    /// the JustKnob `scm/mononoke:enforce_acl_file_protection_on_create` is
+    /// off.
+    pub async fn validate_acl_file_changes_in_changesets(
+        &self,
+        ctx: &CoreContext,
+        repo_name: &str,
+        parent_cs_ids: &[ChangesetId],
+        touched_paths_per_changeset: &[&[NonRootMPath]],
+    ) -> std::result::Result<(), RestrictedPathsError> {
+        // 1. Early return if no restricted paths. Checked before the JustKnob
+        //    so repos without restrictions never evaluate it.
+        if !self.may_have_restricted_paths() {
+            return Ok(());
+        }
+
+        // 2. JustKnob gate — owned by this method, NOT duplicated at call sites.
+        if !justknobs::eval(
+            "scm/mononoke:enforce_acl_file_protection_on_create",
+            ctx.metadata()
+                .client_request_info()
+                .map(|info| info.correlator.as_str()),
+            Some(repo_name),
+        ) {
+            return Ok(());
+        }
+
+        let acl_file_name = self.config().acl_file_name();
+
+        // 3. Extract `.slacl` parent dirs by basename match (pure, sync).
+        //    Per-changeset list. Root-path .slacl uses MPath::ROOT.
+        let acl_file_dirs_stack: Vec<Vec<MPath>> = touched_paths_per_changeset
+            .iter()
+            .map(|touched| {
+                touched
+                    .iter()
+                    .filter(|path| path.basename().as_ref() == acl_file_name.as_bytes())
+                    .map(|path| {
+                        let (parent_opt, _) = path.split_dirname();
+                        parent_opt.map_or(MPath::ROOT, MPath::from)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // 4. Track dirs touched by earlier stack entries — block
+        //    add-then-modify of the same .slacl in a single stack.
+        let mut dirs_touched_in_stack: BTreeSet<MPath> = BTreeSet::new();
+
+        for touched_dirs in &acl_file_dirs_stack {
+            for dir_path in touched_dirs {
+                if dirs_touched_in_stack.contains(dir_path) {
+                    return Err(RestrictedPathsError::InvalidRequest(format!(
+                        "Cannot modify ACL file at {dir_path}: .slacl at this path was \
+                         already modified by an earlier changeset in this stack. \
+                         Split into separate submissions.",
+                    )));
+                }
+
+                // Targeted restriction lookup using the existing primitive.
+                // Root-path .slacl falls through to the empty-slice branch
+                // (NonRootMPath::try_from(MPath::ROOT) errs), which returns
+                // no restrictions — see method docstring NOT COVERED list.
+                let restriction_infos: Vec<PathRestrictionInfo> =
+                    match NonRootMPath::try_from(dir_path.clone()) {
+                        Ok(non_root) => {
+                            // Merge changesets: the caller needs access in EVERY
+                            // parent, so gather restrictions from all of them.
+                            let parents: Vec<Option<ChangesetId>> = if parent_cs_ids.is_empty() {
+                                vec![None]
+                            } else {
+                                parent_cs_ids.iter().copied().map(Some).collect()
+                            };
+                            futures::future::try_join_all(parents.into_iter().map(|parent| {
+                                self.get_path_restriction_info(
+                                    ctx,
+                                    parent,
+                                    std::slice::from_ref(&non_root),
+                                )
+                            }))
+                            .await?
+                            .into_iter()
+                            .flatten()
+                            .collect()
+                        }
+                        Err(_) => {
+                            // Root path — no restriction lookup possible via this
+                            // primitive. Skip (degenerate case).
+                            Vec::new()
+                        }
+                    };
+
+                for info in &restriction_infos {
+                    let acl = MononokeIdentity::from_str(&info.repo_region_acl)
+                        .context("Failed to parse repo_region_acl")?;
+                    let has_access = self.has_maintainer_access(ctx, &[&acl]).await?;
+                    if !has_access {
+                        return Err(RestrictedPathsError::AclFileAuthorizationError(format!(
+                            "Cannot modify ACL file at {}: directory is restricted \
+                             by {} (restriction root: {}). Caller does not have \
+                             maintainer access.",
+                            dir_path, info.repo_region_acl, info.restriction_root,
+                        )));
+                    }
+                }
+            }
+
+            dirs_touched_in_stack.extend(touched_dirs.iter().cloned());
+        }
+
+        Ok(())
     }
 
     // -----------------------------------------------------------------------

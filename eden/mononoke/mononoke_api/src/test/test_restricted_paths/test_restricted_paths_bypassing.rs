@@ -58,7 +58,6 @@ const RESTRICTED_IDENTITY: &str = "REPO_REGION:repos/hg/test/=secret_project";
 /// What the test expects from `create_changeset`.
 enum ExpectedOutcome {
     /// The operation must fail; the error message must contain the given substring.
-    #[allow(dead_code)]
     Blocked(&'static str),
     /// The operation must succeed.
     Allowed,
@@ -75,7 +74,6 @@ async fn test_acl_bypass_delete_slacl_in_restricted_dir(fb: FacebookInit) -> Res
     let repo = build_secret_restricted_repo(fb).await?;
     let changes = BTreeMap::from([(MPath::try_from("secret/.slacl")?, CreateChange::Deletion)]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "unauthorized_user",
@@ -86,7 +84,7 @@ async fn test_acl_bypass_delete_slacl_in_restricted_dir(fb: FacebookInit) -> Res
         ],
         changes,
         "delete .slacl",
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -101,7 +99,6 @@ async fn test_acl_bypass_modify_slacl_in_restricted_dir(fb: FacebookInit) -> Res
         CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
     )]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "unauthorized_user",
@@ -109,7 +106,7 @@ async fn test_acl_bypass_modify_slacl_in_restricted_dir(fb: FacebookInit) -> Res
         &[("secret/.slacl", SLACL_CONTENT)],
         changes,
         "modify .slacl",
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -131,7 +128,6 @@ async fn test_acl_bypass_implicit_delete_dir_to_file(fb: FacebookInit) -> Result
         (MPath::try_from("secret/data.txt")?, CreateChange::Deletion),
     ]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "unauthorized_user",
@@ -142,7 +138,7 @@ async fn test_acl_bypass_implicit_delete_dir_to_file(fb: FacebookInit) -> Result
         ],
         changes,
         "replace dir with file",
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -158,7 +154,6 @@ async fn test_acl_bypass_add_nested_slacl_under_restricted(fb: FacebookInit) -> 
         CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
     )]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "unauthorized_user",
@@ -169,7 +164,7 @@ async fn test_acl_bypass_add_nested_slacl_under_restricted(fb: FacebookInit) -> 
         ],
         changes,
         "add nested .slacl",
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -185,7 +180,6 @@ async fn test_acl_bypass_normal_file_in_restricted_dir(fb: FacebookInit) -> Resu
         CreateChange::Tracked(CreateChangeFile::new_regular("hello"), None),
     )]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "unauthorized_user",
@@ -196,6 +190,13 @@ async fn test_acl_bypass_normal_file_in_restricted_dir(fb: FacebookInit) -> Resu
         ],
         changes,
         "add normal file in restricted dir",
+        // DELIBERATELY NOT COVERED. Modifying non-.slacl files inside
+        // restricted directories is allowed at create time — the threat
+        // model is read access, which is enforced at read time via the
+        // closest-public-ancestor AclManifest lookup. Adding write-time
+        // validation here would require checking every file path against
+        // the parent's AclManifest (expensive). Test kept to document
+        // the policy choice.
         ExpectedOutcome::Allowed,
     )
     .await
@@ -218,7 +219,6 @@ async fn test_acl_bypass_implicit_delete_no_explicit_slacl(fb: FacebookInit) -> 
         ),
     )]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "unauthorized_user",
@@ -229,6 +229,15 @@ async fn test_acl_bypass_implicit_delete_no_explicit_slacl(fb: FacebookInit) -> 
         ],
         changes,
         "implicit delete via dir-to-file",
+        // DELIBERATELY NOT COVERED. Detecting implicit .slacl deletes
+        // requires find_restricted_descendants, which triggers AclManifest
+        // derivation — too expensive for the changeset-creation hot path.
+        // The .slacl is gone, but the attacker did not gain read access
+        // to the protected code (the threat model is read access, not
+        // destruction). Land-time hooks catch the missing .slacl before
+        // it becomes public; read-time enforcement still blocks
+        // unauthorized reads. Test kept to document the policy choice —
+        // flip back to Blocked if we change our minds.
         ExpectedOutcome::Allowed,
     )
     .await
@@ -298,7 +307,6 @@ async fn test_acl_read_only_user_cannot_modify_slacl(fb: FacebookInit) -> Result
         CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
     )]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_single_changeset_test(
         fb,
         "authorized_user",
@@ -306,7 +314,7 @@ async fn test_acl_read_only_user_cannot_modify_slacl(fb: FacebookInit) -> Result
         &[("secret/.slacl", SLACL_CONTENT)],
         changes,
         "modify .slacl (read-only user)",
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -353,7 +361,6 @@ async fn test_acl_bypass_stack_delete_slacl_in_c2(fb: FacebookInit) -> Result<()
     )]);
     let c2_changes = BTreeMap::from([(MPath::try_from("secret/.slacl")?, CreateChange::Deletion)]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_stack_changeset_test(
         fb,
         "unauthorized_user",
@@ -361,7 +368,7 @@ async fn test_acl_bypass_stack_delete_slacl_in_c2(fb: FacebookInit) -> Result<()
         &[("secret/.slacl", SLACL_CONTENT)],
         vec![c1_changes, c2_changes],
         vec!["stack C1: unrelated change", "stack C2: delete .slacl"],
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -379,7 +386,6 @@ async fn test_acl_bypass_delete_slacl_via_stack_with_add(fb: FacebookInit) -> Re
         CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
     )]);
 
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_stack_changeset_test(
         fb,
         "unauthorized_user",
@@ -390,7 +396,7 @@ async fn test_acl_bypass_delete_slacl_via_stack_with_add(fb: FacebookInit) -> Re
             "stack C1: delete .slacl",
             "stack C2: re-add .slacl with different ACL",
         ],
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }
@@ -416,7 +422,6 @@ async fn test_acl_bypass_merge_modify_slacl_restricted_in_one_parent(
     // First parent is an unrelated branch with no restricted content; the
     // second parent carries the restricted `secret/.slacl`. A naive
     // first-parent-only check would miss the restriction.
-    // FIXME(T255927050): should be Blocked("does not have maintainer access")
     run_merge_changeset_test(
         fb,
         "authorized_user",
@@ -427,7 +432,7 @@ async fn test_acl_bypass_merge_modify_slacl_restricted_in_one_parent(
         ],
         changes,
         "merge modify .slacl (read-only user)",
-        ExpectedOutcome::Allowed,
+        ExpectedOutcome::Blocked("does not have maintainer access"),
     )
     .await
 }

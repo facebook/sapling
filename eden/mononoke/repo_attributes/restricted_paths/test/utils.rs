@@ -723,6 +723,8 @@ impl RestrictedPathsTestData {
         let was_denied = match result {
             Ok(()) => false,
             Err(RestrictedPathsError::AuthorizationError(_)) => true,
+            Err(RestrictedPathsError::AclFileAuthorizationError(err))
+            | Err(RestrictedPathsError::InvalidRequest(err)) => return Err(anyhow::anyhow!(err)),
             Err(RestrictedPathsError::InternalError(err)) => return Err(err),
         };
 
@@ -751,6 +753,8 @@ impl RestrictedPathsTestData {
         let was_denied = match result {
             Ok(()) => false,
             Err(RestrictedPathsError::AuthorizationError(_)) => true,
+            Err(RestrictedPathsError::AclFileAuthorizationError(err))
+            | Err(RestrictedPathsError::InvalidRequest(err)) => return Err(anyhow::anyhow!(err)),
             Err(RestrictedPathsError::InternalError(err)) => return Err(err),
         };
 

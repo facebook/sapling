@@ -247,6 +247,10 @@ impl From<RestrictedPathsError> for MononokeError {
             RestrictedPathsError::AuthorizationError(err) => {
                 MononokeError::RestrictedPathsAuthorizationError(err)
             }
+            RestrictedPathsError::AclFileAuthorizationError(err) => {
+                MononokeError::AuthorizationError(err)
+            }
+            RestrictedPathsError::InvalidRequest(err) => MononokeError::InvalidRequest(err),
             RestrictedPathsError::InternalError(err) => MononokeError::InternalError(err.into()),
         }
     }
