@@ -25,6 +25,8 @@ rate_limiting_config = { version = "0.1.0", path = "../../ratelimiting" }
 rate_limiting_config_services = { version = "0.1.0", path = "../../ratelimiting/services" }
 rust = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_services = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_services = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

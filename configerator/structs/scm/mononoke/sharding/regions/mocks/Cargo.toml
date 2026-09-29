@@ -22,6 +22,9 @@ fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git"
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 regions__clients = { package = "regions_clients", version = "0.1.0", path = "../clients" }
 regions__types = { package = "regions", version = "0.1.0", path = ".." }
+thrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_clients = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_mocks = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

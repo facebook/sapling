@@ -13,5 +13,6 @@ thrift_library(
     thrift_srcs = {"xdb_gc.thrift": None},
     deps = [
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

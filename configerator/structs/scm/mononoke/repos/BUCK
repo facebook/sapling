@@ -17,6 +17,7 @@ thrift_library(
     thrift_srcs = {"repos.thrift": None},
     deps = [
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )
 
@@ -33,5 +34,6 @@ thrift_library(
     deps = [
         ":repos",
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

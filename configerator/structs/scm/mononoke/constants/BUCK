@@ -14,6 +14,8 @@ thrift_library(
     thrift_rust_options = "serde",
     thrift_srcs = {"constants.thrift": None},
     deps = [
+        "//configerator/structs/scm/mononoke/sharding:regions",
         "//configerator/structs/scm/mononoke/sharding:sharding",
+        "//thrift/annotation:thrift",
     ],
 )

@@ -11,5 +11,6 @@ thrift_library(
     thrift_srcs = {"config.thrift": None},
     deps = [
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

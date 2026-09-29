@@ -9,6 +9,7 @@ const CRATEMAP: &str = "\
 configerator/structs/scm/mononoke/load_limiter/load_limiter.thrift crate //configerator/structs/scm/mononoke/load_limiter:load_limiter_config-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

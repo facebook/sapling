@@ -16,6 +16,7 @@ thrift_library(
     thrift_srcs = {
         "processname.thrift": None,
     },
+    deps = ["//thrift/annotation:thrift"],
 )
 
 thrift_library(
@@ -32,6 +33,7 @@ thrift_library(
     thrift_srcs = {
         "regions.thrift": None,
     },
+    deps = ["//thrift/annotation:thrift"],
 )
 
 thrift_library(
@@ -52,5 +54,6 @@ thrift_library(
         ":processname",
         ":regions",
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

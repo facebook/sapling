@@ -7,6 +7,8 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 configerator/structs/scm/mononoke/sharding/regions.thrift crate //configerator/structs/scm/mononoke/sharding:regions-rust
+thrift/annotation/scope.thrift thrift->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

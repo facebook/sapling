@@ -11,6 +11,7 @@ configerator/structs/scm/mononoke/sharding/regions.thrift regions //configerator
 configerator/structs/scm/mononoke/sharding/sharding.thrift crate //configerator/structs/scm/mononoke/sharding:sharding-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

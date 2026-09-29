@@ -10,6 +10,7 @@ configerator/structs/scm/mononoke/repos/commitsync.thrift crate //configerator/s
 configerator/structs/scm/mononoke/repos/repos.thrift repos //configerator/structs/scm/mononoke/repos:repos-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

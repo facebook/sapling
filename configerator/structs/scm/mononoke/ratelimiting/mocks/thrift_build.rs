@@ -10,7 +10,7 @@ configerator/structs/scm/mononoke/ratelimiting/ratelimits.thrift crate //confige
 thrift/annotation/cpp.thrift cpp //thrift/annotation:cpp-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift cpp->scope //thrift/annotation:scope-rust
-thrift/annotation/thrift.thrift cpp->thrift //thrift/annotation:thrift-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {
