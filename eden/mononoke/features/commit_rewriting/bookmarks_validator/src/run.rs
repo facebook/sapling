@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -12,8 +13,12 @@ use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
+use backsyncer::discover_deleted_bookmarks;
+use backsyncer::list_publishing_bookmarks;
 use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkPrefix;
 use bookmarks::Freshness;
 use context::CoreContext;
 use cross_repo_sync::BookmarkDiff;
@@ -22,9 +27,13 @@ use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::find_bookmark_diff;
+use cross_repo_sync::find_bookmark_diff_for_source_bookmark;
+use cross_repo_sync::get_bookmark_renamer;
 use environment::MononokeEnvironment;
 use futures::TryStreamExt;
 use futures::future;
+use futures::stream;
+use futures::stream::StreamExt;
 use mononoke_types::ChangesetId;
 use pushredirect::PushRedirectionConfig;
 use pushredirect::SqlPushRedirectionConfigBuilder;
@@ -39,6 +48,9 @@ define_stats! {
       (large_repo_name: String, small_repo_name: String)
   ),
 }
+
+const PREFIX_VALIDATION_JUST_KNOB: &str = "scm/mononoke:bookmarks_validator_prefix_polling";
+const BOOKMARK_VALIDATION_CONCURRENCY: usize = 100;
 
 pub(crate) async fn loop_forever<R: CrossRepo>(
     ctx: &CoreContext,
@@ -88,7 +100,13 @@ pub(crate) async fn loop_forever<R: CrossRepo>(
             .is_some_and(|enables| enables.public_push);
 
         if enabled {
-            let res = validate(ctx, &syncers, large_repo_name, small_repo_name).await;
+            let prefix_validation_enabled =
+                justknobs::eval(PREFIX_VALIDATION_JUST_KNOB, None, Some(small_repo_name));
+            let res = if prefix_validation_enabled {
+                validate_by_bookmark(ctx, &syncers, large_repo_name, small_repo_name).await
+            } else {
+                validate(ctx, &syncers, large_repo_name, small_repo_name).await
+            };
             if let Err(err) = res {
                 match err {
                     ValidationError::InfraError(error) => {
@@ -138,6 +156,155 @@ impl From<Error> for ValidationError {
     }
 }
 
+async fn validate_by_bookmark<R: CrossRepo>(
+    ctx: &CoreContext,
+    syncers: &Syncers<R>,
+    large_repo_name: &str,
+    small_repo_name: &str,
+) -> Result<(), ValidationError> {
+    let (mut bookmarks, deleted_bookmarks) = future::try_join(
+        discover_validation_bookmarks(ctx, syncers),
+        discover_deleted_validation_bookmarks(ctx, syncers),
+    )
+    .await?;
+    bookmarks.extend(deleted_bookmarks);
+
+    info!("validating {} bookmarks", bookmarks.len());
+    let results = stream::iter(bookmarks)
+        .map(|bookmark| async move {
+            let result = async {
+                let diff = find_bookmark_diff_for_source_bookmark(
+                    ctx.clone(),
+                    &syncers.small_to_large,
+                    bookmark.clone(),
+                )
+                .await?;
+                match diff {
+                    Some(diff) => {
+                        validate_diff(ctx, syncers, large_repo_name, small_repo_name, diff).await
+                    }
+                    None => Ok(()),
+                }
+            }
+            .await;
+            (bookmark, result)
+        })
+        .buffer_unordered(BOOKMARK_VALIDATION_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+
+    let mut first_infra_error = None;
+    let mut first_validation_error = None;
+    for (bookmark, result) in results {
+        if let Err(error) = result {
+            match &error {
+                ValidationError::InfraError(error) => {
+                    error!("infra error while validating {bookmark}: {error:?}");
+                }
+                ValidationError::ValidationError(message) => {
+                    error!("validation failed for {bookmark}: {message}");
+                }
+            }
+            match error {
+                error @ ValidationError::InfraError(_) => {
+                    first_infra_error.get_or_insert(error);
+                }
+                error @ ValidationError::ValidationError(_) => {
+                    first_validation_error.get_or_insert(error);
+                }
+            }
+        }
+    }
+    match first_infra_error.or(first_validation_error) {
+        Some(error) => Err(error),
+        None => Ok(()),
+    }
+}
+
+async fn discover_validation_bookmarks<R: CrossRepo>(
+    ctx: &CoreContext,
+    syncers: &Syncers<R>,
+) -> Result<HashSet<BookmarkKey>, Error> {
+    let commit_sync_data = &syncers.small_to_large;
+    let mut bookmarks = list_publishing_bookmarks(
+        ctx,
+        commit_sync_data.get_source_repo(),
+        &BookmarkPrefix::empty(),
+    )
+    .await?;
+
+    // Common bookmarks live outside the small repo's configured target prefix.
+    // Always include their source-side names, even when absent, so deletion of
+    // a common bookmark is still validated.
+    let source_repo_id = commit_sync_data.get_source_repo_id();
+    let target_repo_id = commit_sync_data.get_target_repo_id();
+    let target_to_source = get_bookmark_renamer(
+        Arc::clone(commit_sync_data.get_live_commit_sync_config()),
+        target_repo_id,
+        source_repo_id,
+    )
+    .await?;
+    for target_bookmark in commit_sync_data.get_common_pushrebase_bookmarks().await? {
+        let category = *target_bookmark.category();
+        let source_bookmark = target_to_source(&target_bookmark).ok_or_else(|| {
+            format_err!(
+                "target bookmark {target_bookmark:?} did not map to source repo {source_repo_id}"
+            )
+        })?;
+        bookmarks.insert(BookmarkKey::with_name_and_category(
+            source_bookmark.into_name(),
+            category,
+        ));
+    }
+    Ok(bookmarks)
+}
+
+async fn discover_deleted_validation_bookmarks<R: CrossRepo>(
+    ctx: &CoreContext,
+    syncers: &Syncers<R>,
+) -> Result<HashSet<BookmarkKey>, Error> {
+    let commit_sync_data = &syncers.small_to_large;
+    let source_repo_id = commit_sync_data.get_source_repo_id();
+    let target_repo_id = commit_sync_data.get_target_repo_id();
+    let common_config = commit_sync_data
+        .get_live_commit_sync_config()
+        .get_common_config(source_repo_id)?;
+    let target_prefix = BookmarkPrefix::new_ascii(
+        common_config
+            .small_repos
+            .get(&source_repo_id)
+            .ok_or_else(|| {
+                format_err!("source repo {source_repo_id} missing from commit sync config")
+            })?
+            .bookmark_prefix
+            .clone(),
+    );
+    let target_to_source = get_bookmark_renamer(
+        Arc::clone(commit_sync_data.get_live_commit_sync_config()),
+        target_repo_id,
+        source_repo_id,
+    )
+    .await?;
+
+    discover_deleted_bookmarks(
+        ctx,
+        commit_sync_data,
+        (source_repo_id, BookmarkPrefix::empty()),
+        (target_repo_id, target_prefix),
+        |_, _| true,
+        move |repo_id, bookmark| {
+            if repo_id == source_repo_id {
+                return Ok(Some(bookmark));
+            }
+            let Some(source_bookmark) = target_to_source(&bookmark) else {
+                return Ok(None);
+            };
+            Ok(Some(source_bookmark))
+        },
+    )
+    .await
+}
+
 async fn validate<R: CrossRepo>(
     ctx: &CoreContext,
     syncers: &Syncers<R>,
@@ -149,52 +316,63 @@ async fn validate<R: CrossRepo>(
 
     info!("got {} bookmark diffs", diffs.len());
     for diff in diffs {
-        info!("processing {:?}", diff);
-        use BookmarkDiff::*;
-
-        let (large_bookmark, large_cs_id, small_cs_id) = match diff {
-            // Target is large, source is small here
-            InconsistentValue {
-                target_bookmark,
-                target_cs_id,
-                source_cs_id,
-            } => (target_bookmark, Some(target_cs_id), source_cs_id),
-            MissingInTarget {
-                target_bookmark,
-                source_cs_id,
-            } => (target_bookmark, None, Some(source_cs_id)),
-            NoSyncOutcome { target_bookmark } => {
-                return Err(ValidationError::ValidationError(format!(
-                    "unexpected no sync outcome for {target_bookmark}"
-                )));
-            }
-        };
-
-        // Check that large_bookmark actually pointed to a commit equivalent to small_cs_id
-        // not so long ago.
-        let max_log_records =
-            justknobs::get_as::<u32>("scm/mononoke:bookmarks_validator_max_log_records", None);
-        let max_delay_secs: u32 = 300;
-        let in_history = check_large_bookmark_history(
-            ctx,
-            syncers,
-            &large_bookmark,
-            &large_cs_id,
-            &small_cs_id,
-            max_log_records,
-            max_delay_secs,
-        )
-        .await?;
-        if in_history {
-            info!("all is well");
-        } else {
-            let err_msg = format!(
-                "{large_bookmark} points to {large_cs_id:?} in {large_repo_name}, but points to {small_cs_id:?} in {small_repo_name}",
-            );
-            return Err(ValidationError::ValidationError(err_msg));
-        }
+        validate_diff(ctx, syncers, large_repo_name, small_repo_name, diff).await?;
     }
     Ok(())
+}
+
+async fn validate_diff<R: CrossRepo>(
+    ctx: &CoreContext,
+    syncers: &Syncers<R>,
+    large_repo_name: &str,
+    small_repo_name: &str,
+    diff: BookmarkDiff,
+) -> Result<(), ValidationError> {
+    info!("processing {:?}", diff);
+    use BookmarkDiff::*;
+
+    let (large_bookmark, large_cs_id, small_cs_id) = match diff {
+        // Target is large, source is small here
+        InconsistentValue {
+            target_bookmark,
+            target_cs_id,
+            source_cs_id,
+        } => (target_bookmark, Some(target_cs_id), source_cs_id),
+        MissingInTarget {
+            target_bookmark,
+            source_cs_id,
+        } => (target_bookmark, None, Some(source_cs_id)),
+        NoSyncOutcome { target_bookmark } => {
+            return Err(ValidationError::ValidationError(format!(
+                "unexpected no sync outcome for {target_bookmark}"
+            )));
+        }
+    };
+
+    // Check that large_bookmark actually pointed to a commit equivalent to small_cs_id
+    // not so long ago.
+    let max_log_records =
+        justknobs::get_as::<u32>("scm/mononoke:bookmarks_validator_max_log_records", None);
+    let max_delay_secs: u32 = 300;
+    let in_history = check_large_bookmark_history(
+        ctx,
+        syncers,
+        &large_bookmark,
+        &large_cs_id,
+        &small_cs_id,
+        max_log_records,
+        max_delay_secs,
+    )
+    .await?;
+    if in_history {
+        info!("all is well");
+        Ok(())
+    } else {
+        let err_msg = format!(
+            "{large_bookmark} points to {large_cs_id:?} in {large_repo_name}, but points to {small_cs_id:?} in {small_repo_name}",
+        );
+        Err(ValidationError::ValidationError(err_msg))
+    }
 }
 
 // Check that commit equivalent to maybe_small_cs_id was in large_bookmark log recently
