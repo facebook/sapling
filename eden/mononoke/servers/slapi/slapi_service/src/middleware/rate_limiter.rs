@@ -12,6 +12,8 @@ use backend_if::RimBackend;
 use context::CoreContext;
 #[cfg(fbcode_build)]
 use edenapi_types::file::FILE_COUNT_HEADER;
+#[cfg(fbcode_build)]
+use edenapi_types::tree::TREE_COUNT_HEADER;
 use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -142,23 +144,30 @@ impl Middleware for ThrottleMiddleware {
                 .try_borrow::<MetadataState>()
                 .map(|metadata| metadata.metadata().tenant_info());
             if let Some(tenant) = tenant {
-                // Older clients keep QPS-only accounting. The file count is advisory.
-                let files = (Method::borrow_from(state) == Method::POST
-                    && Uri::borrow_from(state).path().ends_with("/files2"))
-                .then(|| {
-                    HeaderMap::borrow_from(state)
-                        .get(FILE_COUNT_HEADER)?
-                        .to_str()
-                        .ok()?
-                        .parse::<u32>()
-                        .ok()
-                })
-                .flatten();
-                let requirements = [
-                    Some(("qps", 1.0)),
-                    files.map(|n| ("file_fetches", f64::from(n))),
-                ];
-                // Check independently so an unconfigured file resource cannot bypass QPS.
+                // Older clients keep QPS-only accounting. Fetch counts are advisory.
+                let fetches = (Method::borrow_from(state) == Method::POST)
+                    .then(|| {
+                        // The API prefix is stripped; the encoded repo is one path segment.
+                        let (_, endpoint) = Uri::borrow_from(state)
+                            .path()
+                            .strip_prefix('/')?
+                            .split_once('/')?;
+                        let (header, resource) = match endpoint {
+                            "files2" => (FILE_COUNT_HEADER, "file_fetches"),
+                            "trees" => (TREE_COUNT_HEADER, "tree_fetches"),
+                            _ => return None,
+                        };
+                        let count = HeaderMap::borrow_from(state)
+                            .get(header)?
+                            .to_str()
+                            .ok()?
+                            .parse::<u32>()
+                            .ok()?;
+                        Some((resource, f64::from(count)))
+                    })
+                    .flatten();
+                let requirements = [Some(("qps", 1.0)), fetches];
+                // Check independently so an unconfigured fetch resource cannot bypass QPS.
                 for requirement in requirements.into_iter().flatten() {
                     if let Some(response) =
                         apply_rim_decision(state, &ctx, &tenant, rim_backend, requirement).await

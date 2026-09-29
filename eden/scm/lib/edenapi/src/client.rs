@@ -134,6 +134,7 @@ use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::file::FILE_COUNT_HEADER;
 use edenapi_types::make_hash_lookup_request;
+use edenapi_types::tree::TREE_COUNT_HEADER;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hg_http::http_client;
@@ -624,12 +625,13 @@ impl Client {
             self.config().max_trees_per_batch,
             min_batch_size,
             |keys| {
+                let headers = [(TREE_COUNT_HEADER, keys.len().to_string())];
                 let req = TreeRequest {
                     keys,
                     attributes: attrs,
                 };
                 self.log_request(&req, "trees");
-                (req, [])
+                (req, headers)
             },
             |url, keys| {
                 let mut url = url.clone();

@@ -313,6 +313,11 @@ impl Arbitrary for TreeEntry {
     }
 }
 
+/// Number of keys in this HTTP request's `TreeRequest`, for both regular and
+/// augmented trees. Sent as an unsigned decimal integer so servers can perform
+/// admission checks before decoding the request body.
+pub const TREE_COUNT_HEADER: &str = "x-sapling-tree-count";
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeRequest {
