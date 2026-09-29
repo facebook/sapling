@@ -13,7 +13,7 @@ use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 
 #[derive(thiserror::Error, Debug)]
-pub enum CasChangesetUploaderErrorKind {
+pub enum CasChangesetUploaderError {
     #[error("The following changeset is unexpectedly missing: {0}")]
     InvalidChangeset(ChangesetId),
     #[error("Diff changeset's manifest with its parents failed: {0}")]

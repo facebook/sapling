@@ -20,7 +20,7 @@ use bytesize::ByteSize;
 use cas_client::CasClient;
 use cloned::cloned;
 use context::CoreContext;
-pub use errors::CasChangesetUploaderErrorKind;
+pub use errors::CasChangesetUploaderError;
 use futures::FutureExt;
 use futures::future;
 use futures::stream::StreamExt;
@@ -230,20 +230,20 @@ where
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
-    ) -> Result<(HgChangesetId, HgManifestId), CasChangesetUploaderErrorKind> {
+    ) -> Result<(HgChangesetId, HgManifestId), CasChangesetUploaderError> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
             .get_hg_from_bonsai(ctx, *changeset_id)
             .await
             .map(|cs| {
-                cs.ok_or(CasChangesetUploaderErrorKind::InvalidChangeset(
+                cs.ok_or(CasChangesetUploaderError::InvalidChangeset(
                     changeset_id.clone(),
                 ))
             })??;
         let hg_manifest = hg_cs_id
             .load(ctx, &repo.repo_blobstore())
             .await
-            .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?
+            .map_err(|e| CasChangesetUploaderError::Error(e.into()))?
             .manifestid();
         Ok((hg_cs_id, hg_manifest))
     }
@@ -262,13 +262,13 @@ where
         changeset_id: &ChangesetId,
         upload_policy: UploadPolicy,
         prior_lookup_policy: PriorLookupPolicy,
-    ) -> Result<UploadStats, CasChangesetUploaderErrorKind> {
+    ) -> Result<UploadStats, CasChangesetUploaderError> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
             .get_hg_from_bonsai(ctx, *changeset_id)
             .await
             .map(|cs| {
-                cs.ok_or(CasChangesetUploaderErrorKind::InvalidChangeset(
+                cs.ok_or(CasChangesetUploaderError::InvalidChangeset(
                     changeset_id.clone(),
                 ))
             })??;
@@ -277,7 +277,7 @@ where
         let hg_cs = hg_cs_id
             .load(ctx, &blobstore)
             .await
-            .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
+            .map_err(|e| CasChangesetUploaderError::Error(e.into()))?;
 
         let hg_root_manifest_id = HgAugmentedManifestId::new(hg_cs.manifestid().into_nodehash());
 
@@ -294,7 +294,7 @@ where
                 let parent_hg_cs = p.load(ctx, &blobstore);
                 let hg_cs = hg_cs_id.load(ctx, &blobstore);
                 let (parent_hg_cs, hg_cs) = try_join!(parent_hg_cs, hg_cs)
-                    .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
+                    .map_err(|e| CasChangesetUploaderError::Error(e.into()))?;
 
                 parent_hg_cs
                     .manifestid()
@@ -305,7 +305,7 @@ where
                         Diff::Changed(path, _, entry) => Some((path, entry)),
                     })
                     .try_filter_map(future::ok)
-                    .map_err(CasChangesetUploaderErrorKind::DiffChangesetFailed)
+                    .map_err(CasChangesetUploaderError::DiffChangesetFailed)
                     .boxed()
             }
 
@@ -313,11 +313,11 @@ where
                 let hg_cs = hg_cs_id
                     .load(ctx, &repo.repo_blobstore())
                     .await
-                    .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
+                    .map_err(|e| CasChangesetUploaderError::Error(e.into()))?;
                 hg_cs
                     .manifestid()
                     .list_all_entries(ctx.clone(), repo.repo_blobstore_arc())
-                    .map_err(CasChangesetUploaderErrorKind::DiffChangesetFailed)
+                    .map_err(CasChangesetUploaderError::DiffChangesetFailed)
                     .boxed()
             }
         }
@@ -508,7 +508,7 @@ where
         path: Option<MPath>,
         upload_policy: UploadPolicy,
         prior_lookup_policy: PriorLookupPolicy,
-    ) -> Result<UploadStats, CasChangesetUploaderErrorKind> {
+    ) -> Result<UploadStats, CasChangesetUploaderError> {
         let start_time = std::time::Instant::now();
         let upload_counter: Arc<UploadCounters> = Arc::new(Default::default());
         let final_upload_counter = upload_counter.clone();
@@ -566,7 +566,7 @@ where
                                     )
                                     .await
                                     .map_err(|error| {
-                                        CasChangesetUploaderErrorKind::FileUploadFailedWithFullPath(
+                                        CasChangesetUploaderError::FileUploadFailedWithFullPath(
                                             leaf.1,
                                             path.clone(),
                                             error,
@@ -584,7 +584,7 @@ where
                     }
                 }
                 None => {
-                    return Err(CasChangesetUploaderErrorKind::PathNotFound(path));
+                    return Err(CasChangesetUploaderError::PathNotFound(path));
                 }
             }
         }
@@ -653,7 +653,7 @@ where
                                 )
                                 .await
                                 .map_err(|error| {
-                                    CasChangesetUploaderErrorKind::TreeUploadFailed(
+                                    CasChangesetUploaderError::TreeUploadFailed(
                                         hg_augmented_manifest_id,
                                         error,
                                     )
@@ -689,7 +689,7 @@ where
                                                 )
                                                 .await
                                                 .map_err(|error| {
-                                                    CasChangesetUploaderErrorKind::FileUploadFailed(
+                                                    CasChangesetUploaderError::FileUploadFailed(
                                                         leaf.1, elem, error,
                                                     )
                                                 })?;
@@ -743,7 +743,7 @@ where
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
-    ) -> Result<bool, CasChangesetUploaderErrorKind> {
+    ) -> Result<bool, CasChangesetUploaderError> {
         let (_, hg_root_manifest_id) = self
             .get_manifest_id_from_changeset(ctx, repo, changeset_id)
             .await?;
@@ -754,6 +754,6 @@ where
         self.client
             .is_augmented_tree_uploaded(ctx, repo.repo_blobstore(), &hg_root_augmented_manifest_id)
             .await
-            .map_err(CasChangesetUploaderErrorKind::Error)
+            .map_err(CasChangesetUploaderError::Error)
     }
 }
