@@ -221,7 +221,6 @@ pub fn eden_clone(
 /// `worktree add`:
 ///   - `[redirections]`: user-specific redirections
 ///   - `[profiles]`: active prefetch profiles such as `"edenfs"`
-///   - `[predictive-prefetch]`: predictive prefetch settings
 ///
 /// Returning the raw TOML lets callers read source state under a short-lived lock and
 /// apply it later after the destination checkout has been created.
@@ -269,13 +268,9 @@ pub fn apply_eden_user_config_snapshot(
 fn has_copyable_eden_user_config(source_table: &toml::Table) -> bool {
     let source_redirections = source_table.get("redirections").and_then(|v| v.as_table());
     let source_profiles = source_table.get("profiles").and_then(|v| v.as_table());
-    let source_predictive = source_table
-        .get("predictive-prefetch")
-        .and_then(|v| v.as_table());
 
     source_redirections.is_some_and(|t| !t.is_empty())
         || source_profiles.is_some_and(|t| !t.is_empty())
-        || source_predictive.is_some_and(|t| !t.is_empty())
 }
 
 /// Apply the copyable user-specific portions of a parsed Eden client config to the
@@ -288,15 +283,11 @@ fn apply_eden_user_config_table(
 ) -> Result<()> {
     let source_redirections = source_table.get("redirections").and_then(|v| v.as_table());
     let source_profiles = source_table.get("profiles").and_then(|v| v.as_table());
-    let source_predictive = source_table
-        .get("predictive-prefetch")
-        .and_then(|v| v.as_table());
 
     let has_redirections = source_redirections.is_some_and(|t| !t.is_empty());
     let has_profiles = source_profiles.is_some_and(|t| !t.is_empty());
-    let has_predictive = source_predictive.is_some_and(|t| !t.is_empty());
 
-    if !has_redirections && !has_profiles && !has_predictive {
+    if !has_redirections && !has_profiles {
         return Ok(());
     }
 
@@ -321,12 +312,6 @@ fn apply_eden_user_config_table(
     }
     if let Some(profiles) = source_profiles {
         dest_table.insert("profiles".to_string(), toml::Value::Table(profiles.clone()));
-    }
-    if let Some(predictive) = source_predictive {
-        dest_table.insert(
-            "predictive-prefetch".to_string(),
-            toml::Value::Table(predictive.clone()),
-        );
     }
 
     let new_content = toml::to_string(&dest_table).context("failed to serialize config.toml")?;
