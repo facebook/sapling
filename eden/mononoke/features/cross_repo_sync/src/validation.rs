@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksMaybeStaleExt;
+use bookmarks::Freshness;
 use bulk_derivation::BulkDerivation;
 use cloned::cloned;
 use commit_transformation::SubmoduleDeps;
@@ -68,6 +69,7 @@ use tracing::info;
 use tracing::warn;
 
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
+use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_syncers_lib::Syncers;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::sync_commit::CommitSyncData;
@@ -1286,6 +1288,76 @@ pub async fn find_bookmark_diff<R: Repo>(
     Ok(diff)
 }
 
+/// Find the cross-repository difference for one source-side bookmark.
+///
+/// The caller supplies the source key even when it no longer exists. This is
+/// what allows prefix-scoped consumers to validate target-only bookmarks
+/// discovered by a separate inventory comparison without scanning every
+/// bookmark in either repository again. `None` means there is no actionable
+/// difference: either the bookmark does not map to the target, both sides are
+/// consistent, or the source has no sync outcome and the target is absent.
+/// The last case intentionally matches [`find_bookmark_diff`], which only
+/// reports `NoSyncOutcome` for a bookmark already present in the target.
+pub async fn find_bookmark_diff_for_source_bookmark<R: Repo>(
+    ctx: CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    source_bookmark: BookmarkKey,
+) -> Result<Option<BookmarkDiff>, Error> {
+    let Some(target_bookmark) = commit_sync_data.rename_bookmark(&source_bookmark).await? else {
+        return Ok(None);
+    };
+    let source_repo = commit_sync_data.get_source_repo();
+    let target_repo = commit_sync_data.get_target_repo();
+    let (source_cs_id, target_cs_id) = future::try_join(
+        source_repo
+            .bookmarks()
+            .get(ctx.clone(), &source_bookmark, Freshness::MaybeStale),
+        target_repo
+            .bookmarks()
+            .get(ctx.clone(), &target_bookmark, Freshness::MaybeStale),
+    )
+    .await?;
+
+    let Some(source_cs_id) = source_cs_id else {
+        return Ok(
+            target_cs_id.map(|target_cs_id| BookmarkDiff::InconsistentValue {
+                target_bookmark,
+                target_cs_id,
+                source_cs_id: None,
+            }),
+        );
+    };
+
+    let remapped_source_cs_id = match commit_sync_data
+        .get_commit_sync_outcome(&ctx, source_cs_id)
+        .await?
+    {
+        Some(CommitSyncOutcome::RewrittenAs(cs_id, _))
+        | Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, _)) => cs_id,
+        Some(CommitSyncOutcome::NotSyncCandidate(_)) => {
+            return Err(format_err!("{source_cs_id} is not a sync candidate"));
+        }
+        None => {
+            return Ok(target_cs_id.map(|_| BookmarkDiff::NoSyncOutcome { target_bookmark }));
+        }
+    };
+
+    Ok(match target_cs_id {
+        Some(target_cs_id) if target_cs_id != remapped_source_cs_id => {
+            Some(BookmarkDiff::InconsistentValue {
+                target_bookmark,
+                target_cs_id,
+                source_cs_id: Some(source_cs_id),
+            })
+        }
+        None => Some(BookmarkDiff::MissingInTarget {
+            target_bookmark,
+            source_cs_id,
+        }),
+        Some(_) => None,
+    })
+}
+
 /// Given a list of differences of a given type (`T`)
 /// report them in the logs and return an appropriate result
 pub fn report_different<
@@ -1716,6 +1788,7 @@ mod test {
     use mononoke_types::RepositoryId;
     use rendezvous::RendezVousOptions;
     use sql_construct::SqlConstruct;
+    use synced_commit_mapping::EquivalentWorkingCopyEntry;
     use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use synced_commit_mapping::SyncedCommitMapping;
     use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -1757,6 +1830,150 @@ mod test {
 
         let actual_diff = find_bookmark_diff(ctx.clone(), &commit_sync_data).await?;
         assert!(!actual_diff.is_empty());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_bookmark_diff_for_source_bookmark(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _config) = init(fb, CommitSyncDirection::Forward).await?;
+        let commit_sync_data = &syncers.small_to_large;
+        let small_repo = commit_sync_data.get_small_repo();
+        let large_repo = commit_sync_data.get_large_repo();
+        let source_bookmark = BookmarkKey::new("feature")?;
+        let target_bookmark = BookmarkKey::new("prefix/feature")?;
+        let master = BookmarkKey::new("master")?;
+        let source_cs_id = small_repo
+            .bookmarks()
+            .get(ctx.clone(), &master, bookmarks::Freshness::MostRecent)
+            .await?
+            .ok_or_else(|| Error::msg("small repo master not found"))?;
+        let target_cs_id = large_repo
+            .bookmarks()
+            .get(ctx.clone(), &master, bookmarks::Freshness::MostRecent)
+            .await?
+            .ok_or_else(|| Error::msg("large repo master not found"))?;
+
+        bookmark(&ctx, &small_repo, source_bookmark.clone())
+            .set_to(source_cs_id)
+            .await?;
+        assert_eq!(
+            find_bookmark_diff_for_source_bookmark(
+                ctx.clone(),
+                commit_sync_data,
+                source_bookmark.clone(),
+            )
+            .await?,
+            Some(BookmarkDiff::MissingInTarget {
+                target_bookmark: target_bookmark.clone(),
+                source_cs_id,
+            })
+        );
+
+        bookmark(&ctx, &large_repo, target_bookmark.clone())
+            .set_to(target_cs_id)
+            .await?;
+        assert_eq!(
+            find_bookmark_diff_for_source_bookmark(
+                ctx.clone(),
+                commit_sync_data,
+                source_bookmark.clone(),
+            )
+            .await?,
+            None
+        );
+
+        bookmark(&ctx, &small_repo, source_bookmark.clone())
+            .delete()
+            .await?;
+        assert_eq!(
+            find_bookmark_diff_for_source_bookmark(ctx.clone(), commit_sync_data, source_bookmark,)
+                .await?,
+            Some(BookmarkDiff::InconsistentValue {
+                target_bookmark,
+                target_cs_id,
+                source_cs_id: None,
+            })
+        );
+
+        let unsynced_source_bookmark = BookmarkKey::new("unsynced")?;
+        let unsynced_target_bookmark = BookmarkKey::new("prefix/unsynced")?;
+        let unsynced_cs_id = CreateCommitContext::new(&ctx, &small_repo, vec![source_cs_id])
+            .add_file("unsynced", "content")
+            .commit()
+            .await?;
+        bookmark(&ctx, &small_repo, unsynced_source_bookmark.clone())
+            .set_to(unsynced_cs_id)
+            .await?;
+
+        // Match the batch API: a source-only bookmark with no sync outcome is
+        // not actionable until its target bookmark exists.
+        assert_eq!(
+            find_bookmark_diff_for_source_bookmark(
+                ctx.clone(),
+                commit_sync_data,
+                unsynced_source_bookmark.clone(),
+            )
+            .await?,
+            None
+        );
+
+        bookmark(&ctx, &large_repo, unsynced_target_bookmark.clone())
+            .set_to(target_cs_id)
+            .await?;
+        assert_eq!(
+            find_bookmark_diff_for_source_bookmark(
+                ctx.clone(),
+                commit_sync_data,
+                unsynced_source_bookmark,
+            )
+            .await?,
+            Some(BookmarkDiff::NoSyncOutcome {
+                target_bookmark: unsynced_target_bookmark,
+            })
+        );
+
+        assert_eq!(
+            find_bookmark_diff_for_source_bookmark(
+                ctx.clone(),
+                &syncers.large_to_small,
+                BookmarkKey::new("outside-prefix")?,
+            )
+            .await?,
+            None
+        );
+
+        let not_sync_candidate = CreateCommitContext::new(&ctx, &large_repo, vec![target_cs_id])
+            .add_file("outside-prefix", "content")
+            .commit()
+            .await?;
+        bookmark(&ctx, &large_repo, "prefix/not-sync-candidate")
+            .set_to(not_sync_candidate)
+            .await?;
+        assert!(
+            commit_sync_data
+                .get_mapping()
+                .insert_equivalent_working_copy(
+                    &ctx,
+                    EquivalentWorkingCopyEntry {
+                        large_repo_id: large_repo.repo_identity().id(),
+                        large_bcs_id: not_sync_candidate,
+                        small_repo_id: small_repo.repo_identity().id(),
+                        small_bcs_id: None,
+                        version_name: Some(CommitSyncConfigVersion("noop".to_string())),
+                    },
+                )
+                .await?
+        );
+        let error = find_bookmark_diff_for_source_bookmark(
+            ctx,
+            &syncers.large_to_small,
+            BookmarkKey::new("prefix/not-sync-candidate")?,
+        )
+        .await
+        .expect_err("a not-sync-candidate bookmark must fail validation");
+        assert!(error.to_string().contains("is not a sync candidate"));
 
         Ok(())
     }

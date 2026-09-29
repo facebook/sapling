@@ -75,6 +75,7 @@ pub use validation::BookmarkDiff;
 pub use validation::UpdateLargeRepoBookmarksMode;
 pub use validation::VerifyBookmarksRunMode;
 pub use validation::find_bookmark_diff;
+pub use validation::find_bookmark_diff_for_source_bookmark;
 pub use validation::report_different;
 pub use validation::update_large_repo_bookmarks;
 pub use validation::verify_bookmarks;
