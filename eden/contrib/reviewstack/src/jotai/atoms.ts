@@ -63,6 +63,7 @@ import {broadcastLogoutMessage, subscribeToLogout} from '../github/logoutBroadca
 import queryGraphQL from '../github/queryGraphQL';
 import reviewThreadsForVersion from '../reviewThreadsForVersion';
 import {parseSaplingStackBody} from '../saplingStack';
+import saplingVersionDiffPairs from '../saplingVersionDiff';
 import {getPathForChange, getTreeEntriesForChange} from '../utils';
 import {atom} from 'jotai';
 import {atomWithStorage} from 'jotai/utils';
@@ -783,17 +784,33 @@ export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs |
       return null;
     }
 
-    // Sapling submits every commit in a stack as a PR based on the repository's
-    // main branch. GitHub's merge-base comparison therefore includes all lower
-    // commits in the stack. Compare the selected Sapling commit with its Git
-    // parent so the diff contains only the change represented by this PR.
-    if (beforeCommitID == null && get(stackedPullRequestAtom).type === 'sapling') {
-      const afterCommit = await get(gitHubCommitAtom(afterCommitID));
-      const parentCommitID = afterCommit?.parents.length === 1 ? afterCommit.parents[0] : null;
-      if (parentCommitID != null) {
-        return get(
-          gitHubDiffForCommitsAtom({baseCommitID: parentCommitID, commitID: afterCommitID}),
-        );
+    // A lower commit can change between two versions of a Sapling PR. Directly
+    // comparing the version heads would include that lower commit's delta.
+    // Instead, isolate each version against its own Git parent, then compare
+    // the two isolated changes.
+    if (get(stackedPullRequestAtom).type === 'sapling') {
+      const [beforeCommit, afterCommit] = await Promise.all([
+        beforeCommitID == null ? Promise.resolve(null) : get(gitHubCommitAtom(beforeCommitID)),
+        get(gitHubCommitAtom(afterCommitID)),
+      ]);
+      if (afterCommit != null) {
+        const pairs = saplingVersionDiffPairs(beforeCommit, afterCommit);
+        if (pairs != null) {
+          const afterDiff = await get(gitHubDiffForCommitsAtom(pairs.after));
+          if (pairs.before == null) {
+            return afterDiff;
+          }
+          const beforeDiff = await get(gitHubDiffForCommitsAtom(pairs.before));
+          if (beforeDiff != null && afterDiff != null) {
+            return {
+              diff: diffVersions(beforeDiff.diff, afterDiff.diff),
+              commitIDs: {
+                before: pairs.before.commitID,
+                after: pairs.after.commitID,
+              },
+            };
+          }
+        }
       }
     }
 
@@ -853,6 +870,17 @@ export const gitHubPullRequestComparisonFilesAtom = atom<Promise<CommitCompariso
     const client = await get(gitHubClientAtom);
     const diff = await get(gitHubPullRequestVersionDiffAtom);
     if (client == null || diff?.commitIDs == null) {
+      return [];
+    }
+
+    const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
+    if (
+      comparableVersions?.beforeCommitID != null &&
+      get(stackedPullRequestAtom).type === 'sapling'
+    ) {
+      // No single GitHub comparison represents a diff between two isolated
+      // Sapling changes. Head-to-head metadata includes changes from rebased
+      // stack parents, so omit its misleading line totals and rename hints.
       return [];
     }
 
