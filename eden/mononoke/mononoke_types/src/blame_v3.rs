@@ -26,12 +26,17 @@ use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::HistoryManifestFileId;
 use crate::typed_hash::MononokeId;
 
+/// Version of the BlameV3 derivation. It participates in both the blobstore
+/// key and the XDB mapping row, so bumping it makes previously derived blame
+/// unreachable and forces rederivation rather than reusing stored values.
+pub const BLAME_V3_VERSION: i32 = 2;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BlameV3Id(HistoryManifestFileId);
 
 impl BlameV3Id {
     pub fn blobstore_key(&self) -> String {
-        format!("blame_v3.{}", self.0.blobstore_key())
+        format!("blame_v3.v{}.{}", BLAME_V3_VERSION, self.0.blobstore_key())
     }
     pub fn sampling_fingerprint(&self) -> u64 {
         self.0.sampling_fingerprint()

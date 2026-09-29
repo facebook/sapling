@@ -26,13 +26,12 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
 use mononoke_types::HistoryManifestDirectoryId;
+use mononoke_types::blame_v3::BLAME_V3_VERSION;
 
 use crate::batch_v3::derive_blame_v3_in_batch;
 use crate::derive_from_predecessor_v3::derive_blame_v3_from_predecessor;
 use crate::derive_v3::derive_blame_v3;
 use crate::mapping_v2::RootBlameV2;
-
-const BLAME_V3_VERSION: i32 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RootBlameV3 {
