@@ -31,6 +31,8 @@ use config_reconcile::RepoGeneration;
 use config_reconcile::RepoManager;
 use config_reconcile::RepoState;
 use facet::AsyncBuildable;
+use futures::FutureExt;
+use futures::future::BoxFuture;
 use futures::stream;
 use futures::stream::AbortHandle;
 use futures::stream::StreamExt;
@@ -51,6 +53,7 @@ use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
 use mononoke_repos::MononokeRepos;
+use mononoke_repos::RepoLoader;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use repos::RepoSpec;
@@ -105,6 +108,46 @@ pub struct MononokeReposManager<Repo> {
     reconcile_loop_handle: Option<JoinHandle<()>>,
 }
 
+/// Captures no manager on purpose: the collection holding this is itself held
+/// by the manager, so a reference back would be a cycle.
+///
+/// Duplicates `add_repo` rather than sharing one body with it, because
+/// `add_repo` also needs the repo id from the resolved config and would have
+/// to resolve it a second time on every eager deep-shard load.
+struct ConfigDefinedRepoLoader {
+    configs: Arc<MononokeConfigs>,
+    repo_factory: Arc<RepoFactory>,
+    redaction_disabled: bool,
+}
+
+impl<Repo> RepoLoader<Repo> for ConfigDefinedRepoLoader
+where
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+        + Send
+        + Sync
+        + 'static,
+{
+    fn load(&self, repo_name: String) -> BoxFuture<'static, Result<Repo>> {
+        let configs = self.configs.clone();
+        let repo_factory = self.repo_factory.clone();
+        let redaction_disabled = self.redaction_disabled;
+        async move {
+            // get_or_load_repo_config subscribes the per-repo ConfigHandle
+            // internally.
+            let mut repo_config = configs.get_or_load_repo_config(&repo_name)?;
+            if redaction_disabled {
+                repo_config.redaction = Redaction::Disabled;
+            }
+            let common_config = configs.repo_configs().common.clone();
+            let repo = repo_factory
+                .build(repo_name, repo_config, common_config)
+                .await?;
+            anyhow::Ok(repo)
+        }
+        .boxed()
+    }
+}
+
 impl<Repo> MononokeReposManager<Repo> {
     // Create a new `MononokeReposManager`.
     // Unlike `new_with_redaction_disabled`, we don't expose the mechanism to access redacted blobs
@@ -145,7 +188,11 @@ impl<Repo> MononokeReposManager<Repo> {
             + Sync
             + 'static,
     {
-        let repos = Arc::new(MononokeRepos::new());
+        let repos = Arc::new(MononokeRepos::new_lazy(Arc::new(ConfigDefinedRepoLoader {
+            configs: configs.clone(),
+            repo_factory: repo_factory.clone(),
+            redaction_disabled,
+        })));
         let repo_names_in_tier = Arc::new(ArcSwap::from_pointee(HashMap::new()));
         let reconcile_driver = Arc::new(ReconcileDriver {
             configs: configs.clone(),
