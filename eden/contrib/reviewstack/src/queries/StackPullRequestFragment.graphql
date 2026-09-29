@@ -7,6 +7,11 @@ fragment StackPullRequestFragment on PullRequest {
   state
   isDraft
   reviewDecision
+  latestReviews(first: 100) {
+    nodes {
+      state
+    }
+  }
   headRefOid
   totalCommentsCount
   comments {

@@ -32,6 +32,7 @@ import type {
   MarkPullRequestReadyForReviewInput,
   MarkPullRequestReadyForReviewMutationData,
   PullRequestReviewDecision,
+  PullRequestReviewState,
   PullRequestState,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
@@ -91,6 +92,7 @@ type NormalizedStackPullRequestFragment = {
   state: PullRequestState;
   isDraft: boolean;
   reviewDecision: PullRequestReviewDecision | null | undefined;
+  latestReviewStates: PullRequestReviewState[];
   headRefOid: GitObjectID;
   numComments: number;
   cachedAt: number;
@@ -608,13 +610,19 @@ export default class CachingGitHubClient implements GitHubClient {
               state,
               isDraft,
               reviewDecision,
+              latestReviewStates,
               headRefOid,
               numComments,
               cachedAt,
             } = result;
             // Refetch cache entries written before StackPullRequestFragment
-            // included the draft state, and refresh mutable review metadata.
-            if (typeof isDraft !== 'boolean' || !isFreshStackPullRequestCacheEntry(cachedAt)) {
+            // included the draft or latest-review state, and refresh mutable
+            // review metadata.
+            if (
+              typeof isDraft !== 'boolean' ||
+              !Array.isArray(latestReviewStates) ||
+              !isFreshStackPullRequestCacheEntry(cachedAt)
+            ) {
               resolve(null);
               return;
             }
@@ -626,6 +634,7 @@ export default class CachingGitHubClient implements GitHubClient {
               state,
               isDraft,
               reviewDecision,
+              latestReviews: {nodes: latestReviewStates.map(state => ({state}))},
               headRefOid,
               totalCommentsCount: numComments,
               comments: {totalCount: numComments},
@@ -781,7 +790,8 @@ function normalizePullRequestFragment(
   name: string,
   fragment: StackPullRequestFragment,
 ): NormalizedStackPullRequestFragment {
-  const {number, title, updatedAt, state, isDraft, reviewDecision, headRefOid} = fragment;
+  const {number, title, updatedAt, state, isDraft, reviewDecision, latestReviews, headRefOid} =
+    fragment;
   return {
     owner,
     name,
@@ -791,6 +801,9 @@ function normalizePullRequestFragment(
     state,
     isDraft,
     reviewDecision,
+    latestReviewStates: (latestReviews?.nodes ?? [])
+      .map(review => review?.state)
+      .filter(notEmpty),
     headRefOid,
     numComments: countPullRequestComments(fragment),
     cachedAt: Date.now(),
