@@ -52,6 +52,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use backsyncer::advance_bookmark_counter;
+use backsyncer::discover_deleted_bookmarks;
 use backsyncer::format_counter as format_backsyncer_counter;
 use backsyncer::get_bookmark_counter_or_initialize;
 use backsyncer::list_publishing_bookmarks;
@@ -60,7 +61,6 @@ use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
-use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use bulk_derivation::BulkDerivation;
 use clientinfo::ClientEntryPoint;
@@ -74,6 +74,7 @@ use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
+use cross_repo_sync::get_bookmark_renamer;
 use cross_repo_sync::log_debug;
 use cross_repo_sync::log_error;
 use cross_repo_sync::log_info;
@@ -317,7 +318,7 @@ async fn run_in_tailing_mode(
     match tailing_args {
         TailingArgs::CatchUpOnce(commit_sync_data) => {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
-            let outcome = tail_iteration(
+            let outcome = tail_iteration_with_deletions(
                 ctx,
                 &commit_sync_data,
                 &target_mutable_counters,
@@ -339,89 +340,122 @@ async fn run_in_tailing_mode(
             }
         }
         TailingArgs::LoopForever(commit_sync_data) => {
-            let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
-
-            loop {
-                let scuba_sample = base_scuba_sample.clone();
-                // We only care about public pushes because draft pushes are not in the bookmark
-                // update log at all.
-                let enabled = live_commit_sync_config
-                    .push_redirector_enabled_for_public(ctx, source_repo_id)
-                    .await?;
-
-                // Pushredirection is enabled - we need to disable forward sync in that case
-                if enabled {
-                    log_noop_iteration(scuba_sample);
-                    tokio::time::sleep(sleep_duration).await;
-                    continue;
-                }
-
-                let outcome = tail_iteration(
-                    ctx,
-                    &commit_sync_data,
-                    &target_mutable_counters,
-                    scuba_sample.clone(),
-                    &common_pushrebase_bookmarks,
-                    &backpressure_params,
-                    &derived_data_types,
-                    sleep_duration,
-                    &maybe_bookmark_regex,
-                    pushrebase_rewrite_dates,
-                )
-                .boxed()
-                .await?;
-
-                if outcome.failed_bookmarks > 0 {
-                    log_error(
-                        ctx,
-                        format!(
-                            "{} forward-sync bookmark workers failed for {} -> {}; retrying after the configured polling delay",
-                            outcome.failed_bookmarks,
-                            commit_sync_data.get_source_repo().repo_identity().name(),
-                            commit_sync_data.get_target_repo().repo_identity().name(),
-                        ),
-                    );
-                    tokio::time::sleep(sleep_duration).await;
-                } else if !outcome.made_progress {
-                    log_noop_iteration(scuba_sample);
-                    // Maintain the working copy equivalence mapping so we don't build up a backlog
-                    for target_bookmark in common_pushrebase_bookmarks.iter() {
-                        let target_bookmark_value = commit_sync_data
-                            .get_large_repo()
-                            .bookmarks()
-                            .get(
-                                ctx.clone(),
-                                target_bookmark,
-                                bookmarks::Freshness::MostRecent,
-                            )
-                            .await?
-                            .ok_or_else(|| {
-                                anyhow!(
-                                    "Bookmark {target_bookmark} does not exist in the large repo"
-                                )
-                            })?;
-
-                        sync_commit(
-                            ctx,
-                            target_bookmark_value,
-                            &commit_sync_data.reverse(),
-                            CandidateSelectionHint::Only,
-                            CommitSyncContext::XRepoSyncJob,
-                            false,
-                        )
-                        .await?;
-                    }
-
-                    tokio::time::sleep(sleep_duration).await;
-                }
-            }
+            tail_forever(
+                ctx,
+                &commit_sync_data,
+                &target_mutable_counters,
+                &common_pushrebase_bookmarks,
+                &base_scuba_sample,
+                &backpressure_params,
+                &derived_data_types,
+                sleep_duration,
+                &maybe_bookmark_regex,
+                pushrebase_rewrite_dates,
+                &live_commit_sync_config,
+            )
+            .await?;
         }
     }
 
     Ok(())
 }
 
-async fn tail_iteration<R>(
+async fn tail_forever<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    target_mutable_counters: &ArcMutableCounters,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+    base_scuba_sample: &MononokeScubaSampleBuilder,
+    backpressure_params: &BackpressureParams,
+    derived_data_types: &[DerivableType],
+    sleep_duration: Duration,
+    maybe_bookmark_regex: &Option<Regex>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    live_commit_sync_config: &Arc<CfgrLiveCommitSyncConfig>,
+) -> Result<(), Error>
+where
+    R: crate::sync::Repo,
+{
+    let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
+    loop {
+        let scuba_sample = base_scuba_sample.clone();
+        // We only care about public pushes because draft pushes are not in the bookmark
+        // update log at all.
+        let enabled = live_commit_sync_config
+            .push_redirector_enabled_for_public(ctx, source_repo_id)
+            .await?;
+
+        // Pushredirection is enabled - we need to disable forward sync in that case
+        if enabled {
+            log_noop_iteration(scuba_sample);
+            tokio::time::sleep(sleep_duration).await;
+            continue;
+        }
+
+        let outcome = tail_iteration_with_deletions(
+            ctx,
+            commit_sync_data,
+            target_mutable_counters,
+            scuba_sample.clone(),
+            common_pushrebase_bookmarks,
+            backpressure_params,
+            derived_data_types,
+            sleep_duration,
+            maybe_bookmark_regex,
+            pushrebase_rewrite_dates,
+        )
+        .boxed()
+        .await?;
+
+        if outcome.failed_bookmarks > 0 {
+            log_error(
+                ctx,
+                format!(
+                    "{} forward-sync bookmark workers failed for {} -> {}; retrying after the configured polling delay",
+                    outcome.failed_bookmarks,
+                    commit_sync_data.get_source_repo().repo_identity().name(),
+                    commit_sync_data.get_target_repo().repo_identity().name(),
+                ),
+            );
+            tokio::time::sleep(sleep_duration).await;
+        } else if !outcome.made_progress {
+            log_noop_iteration(scuba_sample);
+            // Maintain the working copy equivalence mapping so we don't build up a backlog
+            for target_bookmark in common_pushrebase_bookmarks {
+                let target_bookmark_value = commit_sync_data
+                    .get_large_repo()
+                    .bookmarks()
+                    .get(
+                        ctx.clone(),
+                        target_bookmark,
+                        bookmarks::Freshness::MostRecent,
+                    )
+                    .await?
+                    .ok_or_else(|| {
+                        anyhow!("Bookmark {target_bookmark} does not exist in the large repo")
+                    })?;
+
+                sync_commit(
+                    ctx,
+                    target_bookmark_value,
+                    &commit_sync_data.reverse(),
+                    CandidateSelectionHint::Only,
+                    CommitSyncContext::XRepoSyncJob,
+                    false,
+                )
+                .await?;
+            }
+
+            tokio::time::sleep(sleep_duration).await;
+        }
+    }
+}
+
+/// Run ordinary and deleted-bookmark polling serially so two workers in this
+/// process never advance the same per-bookmark cursor concurrently. A source
+/// bookmark deleted or recreated between discovery and replay is picked up by
+/// the ordered per-bookmark log on a later iteration.
+async fn tail_iteration_with_deletions<R>(
     ctx: &CoreContext,
     commit_sync_data: &CommitSyncData<R>,
     target_mutable_counters: &ArcMutableCounters,
@@ -436,11 +470,79 @@ async fn tail_iteration<R>(
 where
     R: crate::sync::Repo,
 {
-    let bookmark_polling_enabled = justknobs::eval(
+    let bookmark_polling_enabled = bookmark_polling_enabled(commit_sync_data);
+    let mut outcome = tail_iteration(
+        ctx,
+        commit_sync_data,
+        target_mutable_counters,
+        scuba_sample.clone(),
+        common_pushrebase_bookmarks,
+        backpressure_params,
+        derived_data_types,
+        sleep_duration,
+        maybe_bookmark_regex,
+        pushrebase_rewrite_dates,
+        bookmark_polling_enabled,
+    )
+    .await?;
+    if bookmark_polling_enabled {
+        match tail_deleted_bookmarks(
+            ctx,
+            commit_sync_data,
+            target_mutable_counters,
+            scuba_sample,
+            common_pushrebase_bookmarks,
+            backpressure_params,
+            derived_data_types,
+            sleep_duration,
+            maybe_bookmark_regex,
+            pushrebase_rewrite_dates,
+        )
+        .await
+        {
+            Ok(deletion_outcome) => {
+                outcome.made_progress |= deletion_outcome.made_progress;
+                outcome.failed_bookmarks += deletion_outcome.failed_bookmarks;
+            }
+            Err(error) => {
+                log_error(
+                    ctx,
+                    format!("failed to process deleted bookmarks: {error:#}"),
+                );
+                outcome.failed_bookmarks += 1;
+            }
+        }
+    }
+    Ok(outcome)
+}
+
+fn bookmark_polling_enabled<R>(commit_sync_data: &CommitSyncData<R>) -> bool
+where
+    R: crate::sync::Repo,
+{
+    justknobs::eval(
         BOOKMARK_POLLING_JUST_KNOB,
         None,
         Some(commit_sync_data.get_source_repo().repo_identity().name()),
-    );
+    )
+}
+
+async fn tail_iteration<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    target_mutable_counters: &ArcMutableCounters,
+    scuba_sample: MononokeScubaSampleBuilder,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+    backpressure_params: &BackpressureParams,
+    derived_data_types: &[DerivableType],
+    sleep_duration: Duration,
+    maybe_bookmark_regex: &Option<Regex>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    bookmark_polling_enabled: bool,
+) -> Result<TailIterationOutcome, Error>
+where
+    R: crate::sync::Repo,
+{
     if bookmark_polling_enabled {
         tail_by_bookmark(
             ctx,
@@ -571,18 +673,121 @@ async fn tail_by_bookmark<R>(
 where
     R: crate::sync::Repo,
 {
-    let global_counter_name = format_counter(commit_sync_data);
-    let global_counter: BookmarkUpdateLogId = target_mutable_counters
-        .get_counter(ctx, &global_counter_name)
-        .await?
-        .ok_or_else(|| format_err!("counter not found"))?
-        .try_into()?;
     let bookmarks = list_publishing_bookmarks(
         ctx,
         commit_sync_data.get_source_repo(),
         &BookmarkPrefix::empty(),
     )
     .await?;
+    tail_bookmarks(
+        ctx,
+        commit_sync_data,
+        target_mutable_counters,
+        bookmarks,
+        scuba_sample,
+        common_pushrebase_bookmarks,
+        backpressure_params,
+        derived_data_types,
+        sleep_duration,
+        maybe_bookmark_regex,
+        pushrebase_rewrite_dates,
+    )
+    .await
+}
+
+async fn tail_deleted_bookmarks<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    target_mutable_counters: &ArcMutableCounters,
+    scuba_sample: MononokeScubaSampleBuilder,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+    backpressure_params: &BackpressureParams,
+    derived_data_types: &[DerivableType],
+    sleep_duration: Duration,
+    maybe_bookmark_regex: &Option<Regex>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
+) -> Result<TailIterationOutcome, Error>
+where
+    R: crate::sync::Repo,
+{
+    let source_repo_id = commit_sync_data.get_source_repo_id();
+    let common_config = commit_sync_data
+        .get_live_commit_sync_config()
+        .get_common_config(source_repo_id)?;
+    let target_bookmark_prefix = BookmarkPrefix::new_ascii(
+        common_config
+            .small_repos
+            .get(&source_repo_id)
+            .ok_or_else(|| {
+                format_err!("source repo {source_repo_id} missing from commit sync config")
+            })?
+            .bookmark_prefix
+            .clone(),
+    );
+    let target_repo_id = commit_sync_data.get_target_repo_id();
+    let target_to_source = get_bookmark_renamer(
+        Arc::clone(commit_sync_data.get_live_commit_sync_config()),
+        target_repo_id,
+        source_repo_id,
+    )
+    .await?;
+    let deleted_bookmarks = discover_deleted_bookmarks(
+        ctx,
+        commit_sync_data,
+        (source_repo_id, BookmarkPrefix::empty()),
+        (target_repo_id, target_bookmark_prefix),
+        |repo_id, bookmark| {
+            repo_id != target_repo_id || !common_pushrebase_bookmarks.contains(bookmark)
+        },
+        move |repo_id, bookmark| {
+            if repo_id == source_repo_id {
+                return Ok(Some(bookmark));
+            }
+            let Some(source_bookmark) = target_to_source(&bookmark) else {
+                return Ok(None);
+            };
+            Ok(Some(source_bookmark))
+        },
+    )
+    .await?;
+    tail_bookmarks(
+        ctx,
+        commit_sync_data,
+        target_mutable_counters,
+        deleted_bookmarks,
+        scuba_sample,
+        common_pushrebase_bookmarks,
+        backpressure_params,
+        derived_data_types,
+        sleep_duration,
+        maybe_bookmark_regex,
+        pushrebase_rewrite_dates,
+    )
+    .await
+}
+
+async fn tail_bookmarks<R>(
+    ctx: &CoreContext,
+    commit_sync_data: &CommitSyncData<R>,
+    target_mutable_counters: &ArcMutableCounters,
+    bookmarks: HashSet<BookmarkKey>,
+    scuba_sample: MononokeScubaSampleBuilder,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+    backpressure_params: &BackpressureParams,
+    derived_data_types: &[DerivableType],
+    sleep_duration: Duration,
+    maybe_bookmark_regex: &Option<Regex>,
+    pushrebase_rewrite_dates: PushrebaseRewriteDates,
+) -> Result<TailIterationOutcome, Error>
+where
+    R: crate::sync::Repo,
+{
+    let global_counter_name = format_counter(commit_sync_data);
+    let global_counter: BookmarkUpdateLogId = target_mutable_counters
+        .get_counter(ctx, &global_counter_name)
+        .await?
+        .ok_or_else(|| format_err!("counter not found"))?
+        .try_into()?;
     let results = stream::iter(bookmarks)
         .map(|bookmark| {
             let scuba_sample = scuba_sample.clone();
@@ -622,6 +827,7 @@ where
             }
         }
     }
+
     Ok(outcome)
 }
 
@@ -980,6 +1186,8 @@ fn main(fb: FacebookInit) -> Result<()> {
 
 #[cfg(test)]
 mod test {
+    use bookmarks::BookmarkUpdateReason;
+    use bookmarks::BookmarksRef;
     use cross_repo_sync::CommitSyncData;
     use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::test_utils::init_small_large_repo;
@@ -1068,6 +1276,7 @@ mod test {
                 Duration::ZERO,
                 &bookmark_regex,
                 PushrebaseRewriteDates::No,
+                true,
             )
             .boxed(),
         )
@@ -1170,6 +1379,67 @@ mod test {
                 .is_none()
         );
 
+        let target_first_bookmark = commit_sync_data
+            .rename_bookmark(&Source(first_bookmark.clone()))
+            .await?
+            .expect("test bookmark is mapped");
+        let source_value = small_repo
+            .bookmarks()
+            .get(ctx.clone(), &first_bookmark, Freshness::MostRecent)
+            .await?
+            .expect("source bookmark exists before deletion");
+        let mut transaction = small_repo.bookmarks().create_transaction(ctx.clone());
+        transaction.delete(
+            &first_bookmark,
+            source_value,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        assert!(transaction.commit().await?.is_some());
+        let deletion_id = small_repo
+            .bookmark_update_log()
+            .read_next_bookmark_log_entries_by_bookmark(
+                ctx.clone(),
+                first_bookmark.clone(),
+                BookmarkUpdateLogId(0),
+                u64::MAX,
+                Freshness::MostRecent,
+            )
+            .try_collect::<Vec<_>>()
+            .await?
+            .last()
+            .expect("deleted bookmark has an update-log entry")
+            .id;
+        let deletion_outcome = tail_deleted_bookmarks(
+            &ctx,
+            &commit_sync_data,
+            &counters,
+            MononokeScubaSampleBuilder::with_discard(),
+            &common_bookmarks,
+            &backpressure_params,
+            &[],
+            Duration::ZERO,
+            &None,
+            PushrebaseRewriteDates::No,
+        )
+        .await?;
+        assert!(deletion_outcome.made_progress);
+        assert_eq!(deletion_outcome.failed_bookmarks, 0);
+        assert_eq!(
+            large_repo
+                .bookmarks()
+                .get(ctx.clone(), &target_first_bookmark, Freshness::MostRecent,)
+                .await?,
+            None,
+        );
+        assert_eq!(
+            counters
+                .get_counter(
+                    &ctx,
+                    &format_bookmark_counter(&commit_sync_data, &first_bookmark)?,
+                )
+                .await?,
+            Some(deletion_id.try_into()?),
+        );
         Ok(())
     }
 }
