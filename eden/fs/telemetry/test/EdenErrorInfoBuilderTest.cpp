@@ -10,6 +10,7 @@
 #include <cerrno>
 #include <stdexcept>
 #include <system_error>
+#include <utility>
 
 #include <folly/CPortability.h>
 
@@ -228,6 +229,62 @@ TEST(EdenErrorInfoTest, RoutesToXplatLoggerWithoutLegacyGate) {
       xplatLogger.events()[0].event.getStringMap().at("component"), "thrift");
   EXPECT_EQ(
       getCounter(*stats, "telemetry.errors_via_xplat_logger") - before, 1);
+}
+
+TEST(EdenErrorInfoTest, RateLimitsPerErrorType) {
+  CapturingXplatLogger xplatLogger;
+  auto config = EdenConfig::createTestEdenConfig();
+  config->enableErrorLogging.setValue(true, ConfigSourceType::UserConfig);
+  config->errorLogMaxPerMinute.setValue(1, ConfigSourceType::UserConfig);
+  config->errorLogBurst.setValue(1, ConfigSourceType::UserConfig);
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  auto stats = makeRefPtr<EdenStats>();
+  ErrorLogger errorLogger{reloadableConfig, &xplatLogger, stats.copy()};
+
+  std::runtime_error ex("mount not found");
+  auto logAs = [&](std::string errorType) {
+    return errorLogger.log(
+        EdenErrorInfo::thrift(ex, "unmount")
+            .withErrorType(std::move(errorType)));
+  };
+
+  EXPECT_EQ(logAs("first"), ErrorLogOutcome::Logged);
+  EXPECT_EQ(logAs("first"), ErrorLogOutcome::RateLimited);
+  EXPECT_EQ(logAs("first"), ErrorLogOutcome::RateLimited);
+  EXPECT_EQ(logAs("second"), ErrorLogOutcome::Logged);
+  EXPECT_EQ(xplatLogger.events().size(), 2);
+  EXPECT_EQ(getCounter(*stats, "telemetry.errors_rate_limited"), 2);
+
+  // Turning the limit off admits the next event, which carries the number of
+  // events dropped before it.
+  config->errorLogMaxPerMinute.setValue(0, ConfigSourceType::UserConfig);
+  EXPECT_EQ(logAs("first"), ErrorLogOutcome::Logged);
+  ASSERT_EQ(xplatLogger.events().size(), 3);
+  const auto& extras =
+      xplatLogger.events()[2].event.getStringMap().at("extras");
+  EXPECT_NE(extras.find("\"suppressed_count\":2"), std::string::npos);
+  EXPECT_EQ(
+      xplatLogger.events()[0].event.getStringMap().at("extras").find(
+          "suppressed_count"),
+      std::string::npos);
+}
+
+TEST(EdenErrorInfoTest, RateLimitAppliesWhenErrorLoggingDisabled) {
+  CapturingXplatLogger xplatLogger;
+  auto config = EdenConfig::createTestEdenConfig();
+  config->errorLogMaxPerMinute.setValue(1, ConfigSourceType::UserConfig);
+  config->errorLogBurst.setValue(1, ConfigSourceType::UserConfig);
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(config);
+  ErrorLogger errorLogger{reloadableConfig, &xplatLogger};
+
+  std::runtime_error ex("mount not found");
+  EXPECT_EQ(
+      errorLogger.log(EdenErrorInfo::thrift(ex, "unmount")),
+      ErrorLogOutcome::Disabled);
+  EXPECT_EQ(
+      errorLogger.log(EdenErrorInfo::thrift(ex, "unmount")),
+      ErrorLogOutcome::RateLimited);
+  EXPECT_TRUE(xplatLogger.events().empty());
 }
 
 TEST(EdenErrorInfoTest, DoesNotLogWithoutXplatLogger) {

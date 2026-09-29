@@ -1309,16 +1309,22 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 }));
       } catch (...) {
         auto ew = folly::exception_wrapper{std::current_exception()};
-        XLOGF(
-            ERR, "Error while stopping \"{}\" for takeover: {}", mountPath, ew);
+        auto outcome = ErrorLogOutcome::Disabled;
         ew.with_exception([&](const std::exception& ex) {
-          serverState_->getErrorLogger().log(
+          outcome = serverState_->getErrorLogger().log(
               EdenErrorInfo::takeover(ex)
                   .withMountPoint(std::string(mountPath.view()))
                   .withMountStatus(
                       fmt::format("{}", info.edenMount->getState()))
                   .withErrorType("takeover_shutdown_failed"));
         });
+        if (outcome != ErrorLogOutcome::RateLimited) {
+          XLOGF(
+              ERR,
+              "Error while stopping \"{}\" for takeover: {}",
+              mountPath,
+              ew);
+        }
         futures.push_back(
             makeFuture<optional<TakeoverData::MountInfo>>(std::move(ew)));
       }
@@ -1346,18 +1352,21 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
           // log the error but continue trying to perform graceful takeover
           // of the other mount points.
           if (!result.hasValue()) {
-            XLOGF(
-                ERR,
-                "error stopping \"{}\" during takeover shutdown: {}",
-                path,
-                result.exception().what());
+            auto outcome = ErrorLogOutcome::Disabled;
             result.exception().with_exception([&](const std::exception& ex) {
-              serverState->getErrorLogger().log(
+              outcome = serverState->getErrorLogger().log(
                   EdenErrorInfo::takeover(
                       ErrorArg::fromExceptionWithoutTrace(ex))
                       .withMountPoint(path.asString())
                       .withErrorType("takeover_shutdown_failed"));
             });
+            if (outcome != ErrorLogOutcome::RateLimited) {
+              XLOGF(
+                  ERR,
+                  "error stopping \"{}\" during takeover shutdown: {}",
+                  path,
+                  result.exception().what());
+            }
             continue;
           }
 

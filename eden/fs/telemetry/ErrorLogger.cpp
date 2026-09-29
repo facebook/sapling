@@ -12,6 +12,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/telemetry/DaemonError.h"
+#include "eden/fs/telemetry/EdenComponent.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IXplatLogger.h"
@@ -33,16 +34,34 @@ bool ErrorLogger::isEnabled() const {
       config_->getEdenConfig()->enableErrorLogging.getValue();
 }
 
-void ErrorLogger::log(EdenErrorInfoBuilder builder) {
-  if (!config_ || !xplatLogger_) {
-    return;
+ErrorLogOutcome ErrorLogger::log(EdenErrorInfoBuilder builder) {
+  if (!config_) {
+    return ErrorLogOutcome::Disabled;
   }
   auto edenConfig = config_->getEdenConfig();
-  if (!edenConfig->enableErrorLogging.getValue()) {
-    return;
+
+  std::string_view key = builder.errorType().has_value()
+      ? std::string_view{*builder.errorType()}
+      : toString(builder.component());
+  auto suppressed = rateLimiter_.tryAcquire(
+      key,
+      edenConfig->errorLogMaxPerMinute.getValue() / 60.0,
+      edenConfig->errorLogBurst.getValue());
+  if (!suppressed.has_value()) {
+    if (edenStats_) {
+      edenStats_->increment(&TelemetryStats::errorsRateLimited);
+    }
+    return ErrorLogOutcome::RateLimited;
+  }
+
+  if (!xplatLogger_ || !edenConfig->enableErrorLogging.getValue()) {
+    return ErrorLogOutcome::Disabled;
   }
 
   auto event = builder.createEvent();
+  if (*suppressed > 0) {
+    event.info.suppressedCount = *suppressed;
+  }
   if (event.info.stackTrace.has_value() &&
       edenConfig->enableStackTraceUpload.getValue()) {
     event.info.stackTrace =
@@ -55,6 +74,7 @@ void ErrorLogger::log(EdenErrorInfoBuilder builder) {
   DynamicEvent de;
   event.populate(de);
   xplatLogger_->logEvent(xplat_keys::kErrorsCategory, de);
+  return ErrorLogOutcome::Logged;
 }
 
 } // namespace facebook::eden

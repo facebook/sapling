@@ -63,6 +63,10 @@ struct DaemonError : public TypelessEvent {
     if (info.isDogfoodingHost.has_value()) {
       extrasObj["is_dogfooding_host"] = *info.isDogfoodingHost;
     }
+    if (info.suppressedCount.has_value()) {
+      extrasObj["suppressed_count"] =
+          static_cast<int64_t>(*info.suppressedCount);
+    }
     if (!extrasObj.empty()) {
       event.addString("extras", folly::toJson(extrasObj));
     }

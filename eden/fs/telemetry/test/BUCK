@@ -138,6 +138,19 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "event_rate_limiter_test",
+    srcs = [
+        "EventRateLimiterTest.cpp",
+    ],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/telemetry:event_rate_limiter",
+    ],
+)
+
+cpp_unittest(
     name = "error_info_builder_test",
     srcs = [
         "EdenErrorInfoBuilderTest.cpp",

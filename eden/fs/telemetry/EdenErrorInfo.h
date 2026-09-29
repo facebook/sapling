@@ -69,6 +69,7 @@ class EdenErrorInfo {
   std::optional<std::string> repoName;
   std::optional<std::string> fetchType;
   std::optional<bool> isDogfoodingHost;
+  std::optional<uint64_t> suppressedCount;
 
   // Per-component factory methods.
   // Return an EdenErrorInfoBuilder for optional chaining (withMountPoint, etc.)

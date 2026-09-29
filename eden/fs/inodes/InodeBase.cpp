@@ -119,16 +119,18 @@ void InodeBase::removeOverlayData() noexcept {
     // Nothing more can be done: the inode is gone and fsck reclaims orphaned
     // overlay data. The usual cause is overlay data left corrupt by a crash
     // that did not sync the filesystem.
-    XLOGF(
-        ERR,
-        "error removing overlay data of unlinked inode {} ({}): {}",
-        ino_,
-        getLogPath(),
-        folly::exceptionStr(ex));
-    mount_->getServerState()->getErrorLogger().log(
+    auto outcome = mount_->getServerState()->getErrorLogger().log(
         EdenErrorInfo::overlay(ex, ino_.getRawValue())
             .withMountPoint(mount_->getPath().asString())
             .withErrorType("overlay_unload_failed"));
+    if (outcome != ErrorLogOutcome::RateLimited) {
+      XLOGF(
+          ERR,
+          "error removing overlay data of unlinked inode {} ({}): {}",
+          ino_,
+          getLogPath(),
+          folly::exceptionStr(ex));
+    }
   }
 }
 

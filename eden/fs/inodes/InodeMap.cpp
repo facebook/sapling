@@ -545,14 +545,17 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     return promises;
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
-    XLOGF(ERR, "error marking inode {} loaded: {}", number, ew.what());
+    auto outcome = ErrorLogOutcome::Disabled;
     ew.with_exception([&](const std::exception& e) {
-      mount_->getServerState()->getErrorLogger().log(
+      outcome = mount_->getServerState()->getErrorLogger().log(
           EdenErrorInfo::objectStore(e)
               .withInode(number.getRawValue())
               .withMountPoint(mount_->getPath().asString())
               .withErrorType("inode_load_complete_failed"));
     });
+    if (outcome != ErrorLogOutcome::RateLimited) {
+      XLOGF(ERR, "error marking inode {} loaded: {}", number, ew.what());
+    }
     for (auto& promise : promises) {
       promise.setException(ew);
     }
@@ -568,8 +571,6 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
 void InodeMap::inodeLoadFailed(
     InodeNumber number,
     const folly::exception_wrapper& ex) {
-  auto errStr = folly::exceptionStr(ex);
-  XLOGF(ERR, "failed to load inode {}: {}", number, errStr);
   auto promises = extractPendingPromises(number);
   for (auto& promise : promises) {
     promise.setException(ex);
@@ -579,13 +580,17 @@ void InodeMap::inodeLoadFailed(
     mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
   }
 
+  auto outcome = ErrorLogOutcome::Disabled;
   ex.with_exception([&](const std::exception& e) {
-    mount_->getServerState()->getErrorLogger().log(
+    outcome = mount_->getServerState()->getErrorLogger().log(
         EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(e))
             .withInode(number.getRawValue())
             .withMountPoint(mount_->getPath().asString())
             .withErrorType("inode_loading_failed"));
   });
+  if (outcome != ErrorLogOutcome::RateLimited) {
+    XLOGF(ERR, "failed to load inode {}: {}", number, folly::exceptionStr(ex));
+  }
   stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }
 

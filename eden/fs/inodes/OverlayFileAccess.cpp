@@ -155,13 +155,15 @@ FileOffset OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
-    XLOGF(
-        ERR,
-        "overlay file for {} is too short for header: size={}",
-        ino,
-        st.st_size);
-    overlay_->getErrorLogger().log(
+    auto outcome = overlay_->getErrorLogger().log(
         EdenErrorInfo::overlay("corrupt overlay file", ino.get()));
+    if (outcome != ErrorLogOutcome::RateLimited) {
+      XLOGF(
+          ERR,
+          "overlay file for {} is too short for header: size={}",
+          ino,
+          st.st_size);
+    }
     throw InodeError(
         EIO,
         inode ? inode->inodePtrFromThis() : InodePtr{},

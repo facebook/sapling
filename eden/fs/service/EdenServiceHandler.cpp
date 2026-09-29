@@ -1086,12 +1086,15 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
                    ->mount(std::move(initialConfig), *argument->readOnly())
                    .unit();
              }).thenError([this](const folly::exception_wrapper& ex) {
-               XLOGF(ERR, "Error: {}", ex.what());
+               auto outcome = ErrorLogOutcome::Disabled;
                ex.with_exception([&](const std::exception& e) {
-                 server_->getServerState()->getErrorLogger().log(
+                 outcome = server_->getServerState()->getErrorLogger().log(
                      EdenErrorInfo::thrift(
                          ErrorArg::fromExceptionWithoutTrace(e), "mount"));
                });
+               if (outcome != ErrorLogOutcome::RateLimited) {
+                 XLOGF(ERR, "Error: {}", ex.what());
+               }
                throw newEdenError(ex);
              }))
       .semi();

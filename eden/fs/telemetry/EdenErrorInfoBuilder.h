@@ -31,6 +31,14 @@ class EdenErrorInfoBuilder {
   EdenErrorInfoBuilder& withErrorName(std::string name);
   EdenErrorInfoBuilder& withMountStatus(std::string status);
   EdenErrorInfoBuilder& withErrorType(std::string errorType);
+
+  EdenComponent component() const {
+    return component_;
+  }
+  const std::optional<std::string>& errorType() const {
+    return errorType_;
+  }
+
   EdenErrorInfo create();
   DaemonError createEvent();
 

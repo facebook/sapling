@@ -117,6 +117,21 @@ cpp_library(
 )
 
 cpp_library(
+    name = "event_rate_limiter",
+    srcs = [
+        "EventRateLimiter.cpp",
+    ],
+    headers = [
+        "EventRateLimiter.h",
+    ],
+    exported_deps = [
+        "//folly:synchronized",
+        "//folly:token_bucket",
+        "//folly/container:f14_hash",
+    ],
+)
+
+cpp_library(
     name = "error_logger",
     srcs = [
         "ErrorLogger.cpp",
@@ -135,6 +150,7 @@ cpp_library(
         "//eden/fs/config:config",
     ],
     exported_deps = [
+        ":event_rate_limiter",
         "//eden/common/utils:ref_ptr",
     ],
 )

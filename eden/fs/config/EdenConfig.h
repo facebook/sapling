@@ -1782,6 +1782,27 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Maximum number of error events per minute, per `error_type`, that
+   * `ErrorLogger` admits on this host. Errors above this rate are dropped and
+   * counted; the count is attached to the next admitted event of the same type
+   * as `suppressed_count` in the `extras` column. 0 disables rate limiting.
+   *
+   * The limit is applied before `enableErrorLogging`, so callers that gate
+   * their local log line on the returned outcome are protected even when
+   * Scuba logging is off.
+   */
+  ConfigSetting<uint32_t> errorLogMaxPerMinute{
+      "telemetry:error-log-max-per-minute",
+      6,
+      this};
+
+  /**
+   * Number of error events of a single `error_type` admitted immediately
+   * before `errorLogMaxPerMinute` starts to apply.
+   */
+  ConfigSetting<uint32_t> errorLogBurst{"telemetry:error-log-burst", 10, this};
+
+  /**
    * Whether to upload stack traces to Manifold when logging errors.
    */
   ConfigSetting<bool> enableStackTraceUpload{
