@@ -132,6 +132,7 @@ use edenapi_types::WorkspacesDataResponse;
 use edenapi_types::bookmark::Bookmark2Request;
 use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
+use edenapi_types::file::FILE_COUNT_HEADER;
 use edenapi_types::make_hash_lookup_request;
 use futures::future::BoxFuture;
 use futures::prelude::*;
@@ -383,9 +384,9 @@ impl Client {
 
     /// Prepare a collection of POST requests for the given keys.
     /// The keys will be grouped into batches of the specified size and
-    /// passed to the `make_req` callback, which should insert them into
-    /// a struct that will be CBOR-encoded and used as the request body.
-    fn prepare_requests<T, K, F, R, G>(
+    /// passed to `make_req`, which returns the body to CBOR-encode and
+    /// any endpoint-specific headers for that batch.
+    fn prepare_requests<T, K, F, R, G, H>(
         &self,
         fctx: Option<FetchContext>,
         base_path: &str,
@@ -397,7 +398,8 @@ impl Client {
     ) -> Result<Vec<Request>, SaplingRemoteApiError>
     where
         K: IntoIterator<Item = T>,
-        F: FnMut(Vec<T>) -> R,
+        F: FnMut(Vec<T>) -> (R, H),
+        H: IntoIterator<Item = (&'static str, String)>,
         G: FnMut(&Url, &Vec<T>) -> Url,
         R: ToWire,
     {
@@ -406,11 +408,14 @@ impl Client {
             .into_iter()
             .map(|keys| {
                 let url = mutate_url(&url, &keys);
-                let req = make_req(keys).to_wire();
+                let (body, headers) = make_req(keys);
                 self.configure_request(base_path, self.inner.client.post(url))?
-                    .cbor(&req)
+                    .cbor(&body.to_wire())
                     .map_err(SaplingRemoteApiError::RequestSerializationFailed)
                     .map(|mut req| {
+                        for (name, value) in headers {
+                            req.set_header(name, value);
+                        }
                         req.set_fetch_cause(
                             fctx.as_ref().map(|fctx| fctx.cause().to_str().to_string()),
                         );
@@ -624,7 +629,7 @@ impl Client {
                     attributes: attrs,
                 };
                 self.log_request(&req, "trees");
-                req
+                (req, [])
             },
             |url, keys| {
                 let mut url = url.clone();
@@ -661,9 +666,10 @@ impl Client {
             self.config().max_files_per_batch,
             min_batch_size,
             |reqs| {
+                let headers = [(FILE_COUNT_HEADER, reqs.len().to_string())];
                 let req = FileRequest { reqs };
                 self.log_request(&req, "files");
-                req
+                (req, headers)
             },
             |url, keys| {
                 let mut url = url.clone();
@@ -944,7 +950,7 @@ impl Client {
             |keys| {
                 let req = HistoryRequest { keys, length };
                 self.log_request(&req, "history");
-                req
+                (req, [])
             },
             |url, keys| {
                 let mut url = url.clone();
@@ -998,7 +1004,7 @@ impl Client {
                     cursor: cursor_for_paths,
                 };
                 self.log_request(&req, "path_history");
-                req
+                (req, [])
             },
             |url, _paths| url.clone(),
         )?;
@@ -1025,7 +1031,7 @@ impl Client {
             |files| {
                 let req = BlameRequest { files };
                 self.log_request(&req, "blame");
-                req
+                (req, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -1149,7 +1155,7 @@ impl Client {
                     lookup_behavior: lookup_behavior.clone(),
                 };
                 self.log_request(&req, "commit_translate_id");
-                req
+                (req, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -1299,11 +1305,14 @@ impl Client {
             items,
             Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
             None,
-            |ids| Batch::<_> {
-                batch: ids
-                    .into_iter()
-                    .map(|item| UploadHgFilenodeRequest { data: item })
-                    .collect(),
+            |ids| {
+                let req = Batch::<_> {
+                    batch: ids
+                        .into_iter()
+                        .map(|item| UploadHgFilenodeRequest { data: item })
+                        .collect(),
+                };
+                (req, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -1326,11 +1335,14 @@ impl Client {
             items,
             Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
             None,
-            |ids| Batch::<_> {
-                batch: ids
-                    .into_iter()
-                    .map(|item| UploadTreeRequest { entry: item })
-                    .collect(),
+            |ids| {
+                let req = Batch::<_> {
+                    batch: ids
+                        .into_iter()
+                        .map(|item| UploadTreeRequest { entry: item })
+                        .collect(),
+                };
+                (req, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -1625,7 +1637,7 @@ impl SaplingRemoteApi for Client {
             prefixes,
             Some(MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST),
             None,
-            |prefixes| Batch::<_> { batch: prefixes },
+            |prefixes| (Batch::<_> { batch: prefixes }, []),
             |url, _keys| url.clone(),
         )?;
         self.fetch_vec_with_retry::<CommitHashLookupResponse>(requests)
@@ -1764,7 +1776,7 @@ impl SaplingRemoteApi for Client {
             |requests| {
                 let batch = CommitLocationToHashRequestBatch { requests };
                 self.log_request(&batch, "commit_location_to_hash");
-                batch
+                (batch, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -1800,7 +1812,7 @@ impl SaplingRemoteApi for Client {
                     unfiltered: Some(true),
                 };
                 self.log_request(&batch, "commit_hash_to_location");
-                batch
+                (batch, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -1923,15 +1935,18 @@ impl SaplingRemoteApi for Client {
             items,
             Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
             None,
-            |ids| Batch::<LookupRequest> {
-                batch: ids
-                    .into_iter()
-                    .map(|id| LookupRequest {
-                        id,
-                        bubble_id,
-                        copy_from_bubble_id,
-                    })
-                    .collect(),
+            |ids| {
+                let req = Batch::<LookupRequest> {
+                    batch: ids
+                        .into_iter()
+                        .map(|id| LookupRequest {
+                            id,
+                            bubble_id,
+                            copy_from_bubble_id,
+                        })
+                        .collect(),
+                };
+                (req, [])
             },
             |url, _keys| url.clone(),
         )?;
@@ -2128,7 +2143,7 @@ impl SaplingRemoteApi for Client {
             |commits| {
                 let req = CommitMutationsRequest { commits };
                 self.log_request(&req, "commit_mutations");
-                req
+                (req, [])
             },
             |url, _keys| url.clone(),
         )?;

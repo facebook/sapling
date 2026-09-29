@@ -248,6 +248,11 @@ pub struct FileSpec {
     pub attrs: FileAttributes,
 }
 
+/// Number of entries in this HTTP request's `FileRequest::reqs`, including
+/// auxiliary-data-only entries. Sent as an unsigned decimal integer so servers
+/// can perform admission checks before decoding the request body.
+pub const FILE_COUNT_HEADER: &str = "x-sapling-file-count";
+
 #[auto_wire]
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
