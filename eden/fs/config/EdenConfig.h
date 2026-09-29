@@ -2347,6 +2347,17 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> treeCacheShards{"treecache:shards", 16, this};
 
+  /**
+   * Whether glob and prefetch requests bypass the in-memory tree cache and
+   * the in-memory tree aux data cache. Those requests walk far more trees than
+   * the caches can hold, so caching their trees only evicts what other callers
+   * have warm.
+   */
+  ConfigSetting<bool> treeCacheBypassGlobAndPrefetch{
+      "treecache:bypass-glob-and-prefetch",
+      true,
+      this};
+
   // [notifications]
 
   /**

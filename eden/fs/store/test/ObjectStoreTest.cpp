@@ -457,6 +457,41 @@ TEST_P(ObjectStoreTest, getTree_cachesTreeWithAccessibleAclChild) {
       ObjectFetchContext::FromMemoryCache, loggingContext->requests[1].origin);
 }
 
+TEST_P(ObjectStoreTest, getTree_prefetchBypassesTreeCache) {
+  auto prefetchContext = ObjectFetchContext::getNullPrefetchContext();
+
+  objectStore->getTree(readyTreeId, prefetchContext).get(0ms);
+  objectStore->getTree(readyTreeId, prefetchContext).get(0ms);
+
+  EXPECT_FALSE(treeCache->contains(readyTreeId));
+  EXPECT_EQ(2, fakeBackingStore->getAccessCount(readyTreeId));
+
+  objectStore->getTree(readyTreeId, context).get(0ms);
+
+  EXPECT_TRUE(treeCache->contains(readyTreeId));
+}
+
+TEST_P(ObjectStoreTest, getTree_prefetchUsesTreeCacheWhenBypassDisabled) {
+  auto config = EdenConfig::createTestEdenConfig();
+  config->treeCacheBypassGlobAndPrefetch.setValue(
+      false, ConfigSourceType::Default, true);
+  auto cachingObjectStore = ObjectStore::create(
+      fakeBackingStore,
+      treeCache,
+      stats.copy(),
+      std::make_shared<ProcessInfoCache>(),
+      makeTestEdenFsEventsLogger(),
+      std::make_shared<ReloadableConfig>(config),
+      GetParam());
+  auto prefetchContext = ObjectFetchContext::getNullPrefetchContext();
+
+  cachingObjectStore->getTree(readyTreeId, prefetchContext).get(0ms);
+  cachingObjectStore->getTree(readyTreeId, prefetchContext).get(0ms);
+
+  EXPECT_TRUE(treeCache->contains(readyTreeId));
+  EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyTreeId));
+}
+
 TEST_P(ObjectStoreTest, getRootTree_doesNotSeedCacheWithRestrictedChild) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.emplace(

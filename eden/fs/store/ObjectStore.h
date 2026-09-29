@@ -492,6 +492,7 @@ class ObjectStore : public IObjectStore,
   void maybeCacheTreeAuxInMemCache(
       const ObjectId& id,
       const BackingStore::GetTreeResult& treeResult) const;
+  bool bypassInMemoryTreeCaches(const ObjectFetchContext& context) const;
 
   folly::coro::now_task<BackingStore::GetTreeAuxResult> co_getTreeAuxDataImpl(
       const ObjectId& id,
