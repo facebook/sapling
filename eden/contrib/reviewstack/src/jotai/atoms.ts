@@ -1956,6 +1956,7 @@ export const fileContentsDeltaAtom = atomFamily(
 export type PendingScrollRestore = {
   scrollLeft: number;
   scrollTop: number;
+  timelineScrollTop: number;
 } | null;
 
 /**
