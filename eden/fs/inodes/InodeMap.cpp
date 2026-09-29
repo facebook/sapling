@@ -301,13 +301,19 @@ void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
 }
 
 ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
+  // Nearly every lookup is for an already loaded inode and mutates nothing, so
+  // it must not serialize behind the write lock that starting a load needs.
+  if (auto inode = lookupLoadedInode(number)) {
+    return inode;
+  }
+
   // Lock the data.
   // We hold it while doing most of our work below, but explicitly unlock it
   // before triggering inode loading or before fulfilling any Promises.
   auto data = data_.wlock();
   std::vector<InodeTraceEvent> startLoadEvents;
 
-  // Check to see if this Inode is already loaded
+  // The inode may have finished loading between the two locks.
   auto loadedIter = data->loadedInodes_.find(number);
   if (loadedIter != data->loadedInodes_.end()) {
     auto inode = loadedIter->second.getPtr();
