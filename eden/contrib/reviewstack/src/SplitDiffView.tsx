@@ -216,9 +216,19 @@ const SplitDiffViewTable = React.memo(
       [expandedSeparators, setExpandedSeparators],
     );
 
-    const {historical: historicalThreads, before, after} = threadsForDiffDisplay(allThreads);
-    const threads = {before, after};
     const {hunks} = patch;
+    const oldLines = new Set<number>();
+    hunks.forEach(({oldStart, oldLines: count}) => {
+      for (let line = oldStart; line < oldStart + count; line++) {
+        oldLines.add(line);
+      }
+    });
+    const {
+      historical: historicalThreads,
+      before,
+      after,
+    } = threadsForDiffDisplay(allThreads, oldLines, commitIDs?.before);
+    const threads = {before, after};
     const lastHunkIndex = hunks.length - 1;
     const rows: React.ReactElement[] = historicalThreads.map(thread => (
       <tr key={`historical-${thread.id}`}>

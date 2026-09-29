@@ -87,7 +87,11 @@ export default function InlineCommentThread({thread}: Props): React.ReactElement
   };
 
   return (
-    <Box backgroundColor="canvas.subtle" fontFamily="normal" padding={2}>
+    <Box
+      backgroundColor="canvas.subtle"
+      fontFamily="normal"
+      padding={2}
+      sx={thread.isHistorical ? {opacity: 0.65, fontStyle: 'italic'} : undefined}>
       <Box
         backgroundColor="canvas.default"
         borderColor="border.default"
