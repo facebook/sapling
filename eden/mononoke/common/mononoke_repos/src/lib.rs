@@ -385,16 +385,20 @@ impl<R> MononokeRepos<R> {
         drop(lock);
         true
     }
-}
 
-impl<R: Send + Sync + 'static> MononokeRepos<R> {
     /// Concurrent callers for the same repo share a single build, and a caller
     /// that goes away neither cancels nor restarts it.
     ///
     /// `None` covers both "not assigned to this service" and "assigned, but
     /// this collection cannot load anything", deliberately: splitting them
     /// would send a reader looking at shard assignment over a wiring mistake.
-    pub async fn get(&self, repo_name: &str) -> Result<Option<Arc<R>>> {
+    ///
+    /// Bounded because the build runs on a detached task. The bound is on the
+    /// method so a collection that never builds stays usable for any `R`.
+    pub async fn get(&self, repo_name: &str) -> Result<Option<Arc<R>>>
+    where
+        R: Send + Sync + 'static,
+    {
         let Some(repo_slot) = self.name_to_repo_map.load().get(repo_name).cloned() else {
             return Ok(None);
         };
