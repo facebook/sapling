@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! RIM-backed rate limiting on the EdenAPI QPS path. Supports both comparison
+//! RIM-backed rate limiting on the EdenAPI request path. Supports both comparison
 //! against the legacy rate limiter and authoritative enforcement. RIM failures
 //! always fail open.
 //!
@@ -22,11 +22,10 @@ use tokio::time::timeout;
 use tracing::debug;
 use tracing::warn;
 
-const RIM_RESOURCE_QPS: &str = "qps";
 const RIM_ACQUIRE_TIMEOUT: Duration = Duration::from_millis(500);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum RimQpsDecision {
+pub(crate) enum RimDecision {
     Allow,
     Reject,
     FailOpen,
@@ -52,19 +51,22 @@ pub(crate) fn init(rim_backend: RimBackend) {
     }
 }
 
-pub(crate) async fn check_qps(
+pub(crate) async fn check_rate_limit(
     ctx: &CoreContext,
     tenant: &TenantInfo,
     rim_backend: RimBackend,
-) -> RimQpsDecision {
+    (resource, units): (&str, f64),
+) -> RimDecision {
     let Some(tenancy_path) = tenant.tenancy_path() else {
-        return RimQpsDecision::FailOpen;
+        return RimDecision::FailOpen;
     };
-    let requirements = HashMap::from([(RIM_RESOURCE_QPS.to_string(), 1.0)]);
+    let requirements = HashMap::from([(resource.to_owned(), units)]);
 
     let log = |tag: &str, detail: String| {
         let mut scuba = ctx.scuba().clone();
         scuba.add("rim_tenancy_path", tenant.to_string());
+        scuba.add("rim_resource", resource);
+        scuba.add("rim_units", units);
         scuba.log_with_msg(tag, detail);
     };
 
@@ -76,41 +78,48 @@ pub(crate) async fn check_qps(
     {
         Ok(Ok(result)) => result,
         Ok(Err(e)) => {
-            log("RIM QPS check error", e.to_string());
-            return RimQpsDecision::FailOpen;
+            log("RIM rate-limit check error", e.to_string());
+            return RimDecision::FailOpen;
         }
         Err(_) => {
             log(
-                "RIM QPS check timeout",
+                "RIM rate-limit check timeout",
                 format!("timeout after {RIM_ACQUIRE_TIMEOUT:?}"),
             );
-            return RimQpsDecision::FailOpen;
+            return RimDecision::FailOpen;
         }
     };
 
     if result.rejected() {
+        log("RIM rejected request", format!("code={:?}", result.code()));
+        RimDecision::Reject
+    } else if result.failed() {
         log(
-            "RIM rejected QPS request",
+            "RIM rate-limit check failed",
             format!("code={:?}", result.code()),
         );
-        RimQpsDecision::Reject
-    } else if result.failed() {
-        log("RIM QPS check failed", format!("code={:?}", result.code()));
-        RimQpsDecision::FailOpen
+        RimDecision::FailOpen
     } else {
-        RimQpsDecision::Allow
+        RimDecision::Allow
     }
 }
 
-pub(crate) async fn report_qps(ctx: &CoreContext, tenant: &TenantInfo, rim_backend: RimBackend) {
+pub(crate) async fn report_load(
+    ctx: &CoreContext,
+    tenant: &TenantInfo,
+    rim_backend: RimBackend,
+    (resource, units): (&str, f64),
+) {
     let Some(tenancy_path) = tenant.tenancy_path() else {
         return;
     };
-    let usage = HashMap::from([(RIM_RESOURCE_QPS.to_string(), 1.0)]);
+    let usage = HashMap::from([(resource.to_owned(), units)]);
 
     let log = |tag: &str, detail: String| {
         let mut scuba = ctx.scuba().clone();
         scuba.add("rim_tenancy_path", tenant.to_string());
+        scuba.add("rim_resource", resource);
+        scuba.add("rim_units", units);
         scuba.log_with_msg(tag, detail);
     };
 

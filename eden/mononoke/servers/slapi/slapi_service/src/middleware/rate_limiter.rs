@@ -10,6 +10,8 @@ use anyhow::anyhow;
 #[cfg(fbcode_build)]
 use backend_if::RimBackend;
 use context::CoreContext;
+#[cfg(fbcode_build)]
+use edenapi_types::file::FILE_COUNT_HEADER;
 use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -19,6 +21,10 @@ use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::build_error_response_in_place;
+#[cfg(fbcode_build)]
+use http::HeaderMap;
+#[cfg(fbcode_build)]
+use http::Method;
 use http::Response;
 use http::StatusCode;
 use http::Uri;
@@ -27,17 +33,17 @@ use permission_checker::TenantInfo;
 
 use crate::handlers::JsonErrorFormatter;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::RimQpsDecision;
+use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::check_qps;
+use crate::utils::rim_rate_limiter::check_rate_limit;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::report_qps;
+use crate::utils::rim_rate_limiter::report_load;
 
 #[cfg(fbcode_build)]
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
 
 #[cfg(fbcode_build)]
-const RIM_REJECTION_MESSAGE: &str = "RIM QPS rate limit exceeded";
+const RIM_REJECTION_MESSAGE: &str = "RIM rate limit exceeded";
 
 #[cfg(fbcode_build)]
 fn rim_rejection_response(state: &mut State) -> Response<Body> {
@@ -62,27 +68,28 @@ async fn apply_rim_decision(
     ctx: &CoreContext,
     tenant: &TenantInfo,
     rim_backend: RimBackend,
-    decision: RimQpsDecision,
+    requirement: (&str, f64),
 ) -> Option<Response<Body>> {
-    match decision {
-        RimQpsDecision::Allow => {
-            report_qps(ctx, tenant, rim_backend).await;
+    match check_rate_limit(ctx, tenant, rim_backend, requirement).await {
+        RimDecision::Allow => {
+            report_load(ctx, tenant, rim_backend, requirement).await;
             None
         }
-        RimQpsDecision::Reject if justknobs::eval(RIM_ENFORCE_JK, None, None) => {
+        RimDecision::Reject if justknobs::eval(RIM_ENFORCE_JK, None, None) => {
             Some(rim_rejection_response(state))
         }
-        RimQpsDecision::Reject => {
+        RimDecision::Reject => {
             let mut scuba = ctx.scuba().clone();
             scuba.add("rim_tenancy_path", tenant.to_string());
+            scuba.add("rim_resource", requirement.0);
             scuba.log_with_msg(
-                "RIM would have rejected QPS request but enforcement is disabled",
+                "RIM would have rejected request but enforcement is disabled",
                 format!("JustKnob {RIM_ENFORCE_JK} is disabled"),
             );
-            report_qps(ctx, tenant, rim_backend).await;
+            report_load(ctx, tenant, rim_backend, requirement).await;
             None
         }
-        RimQpsDecision::FailOpen => None,
+        RimDecision::FailOpen => None,
     }
 }
 
@@ -135,12 +142,29 @@ impl Middleware for ThrottleMiddleware {
                 .try_borrow::<MetadataState>()
                 .map(|metadata| metadata.metadata().tenant_info());
             if let Some(tenant) = tenant {
-                let rim_decision = check_qps(&ctx, &tenant, rim_backend).await;
-
-                if let Some(response) =
-                    apply_rim_decision(state, &ctx, &tenant, rim_backend, rim_decision).await
-                {
-                    return Some(response);
+                // Older clients keep QPS-only accounting. The file count is advisory.
+                let files = (Method::borrow_from(state) == Method::POST
+                    && Uri::borrow_from(state).path().ends_with("/files2"))
+                .then(|| {
+                    HeaderMap::borrow_from(state)
+                        .get(FILE_COUNT_HEADER)?
+                        .to_str()
+                        .ok()?
+                        .parse::<u32>()
+                        .ok()
+                })
+                .flatten();
+                let requirements = [
+                    Some(("qps", 1.0)),
+                    files.map(|n| ("file_fetches", f64::from(n))),
+                ];
+                // Check independently so an unconfigured file resource cannot bypass QPS.
+                for requirement in requirements.into_iter().flatten() {
+                    if let Some(response) =
+                        apply_rim_decision(state, &ctx, &tenant, rim_backend, requirement).await
+                    {
+                        return Some(response);
+                    }
                 }
             }
         }
