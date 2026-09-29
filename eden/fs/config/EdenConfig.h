@@ -2764,22 +2764,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether EdenFS uses EdenAPI to make suffix queries
-   */
-  ConfigSetting<bool> enableEdenAPISuffixQuery{
-      "glob:use-edenapi-suffix-query",
-      false,
-      this};
-
-  /**
-   * Allowed suffix queries for offloading to EdenAPI
-   */
-  ConfigSetting<std::unordered_set<std::string>> allowedSuffixQueries{
-      "glob:allowed-suffix-queries",
-      {},
-      this};
-
-  /**
    * When true, maintain previous behavior where we sort/dedupe list of file ids
    * when prefetching.
    */

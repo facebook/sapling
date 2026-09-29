@@ -376,15 +376,6 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
-   * Get file paths matching the given globs
-   */
-  folly::coro::now_task<BackingStore::GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes,
-      const ObjectFetchContextPtr& context) const;
-
-  /**
    * Check whether the caller has access to the given manifest ID,
    * but only if the TTL since lastCheck has expired. Returns true
    * if access is allowed, false if denied or TTL not yet expired.
@@ -511,12 +502,6 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
-
-  folly::coro::now_task<BackingStore::GetGlobFilesResult> getGlobFilesImpl(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes,
-      const ObjectFetchContextPtr& context) const;
 
   /**
    * During status and checkout, it's common to look up the SHA-1 for a given

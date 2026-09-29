@@ -5,16 +5,6 @@
 
 setup backing repo
 
-  $ cat > $TESTTMP/.edenrc <<EOF
-  > [glob]
-  > use-edenapi-suffix-query = true
-  > allowed-suffix-queries = [".bcmap", ".txt", ".rs", ".dot"]
-  > EOF
-#if no-windows
-  $ eden restart 2>1 > /dev/null
-#else
-  $ eden --home-dir $TESTTMP restart 2>1 > /dev/null
-#endif
   $ newclientrepo crepo1 serverrepo
   $ drawdag <<'EOS'
   > B
@@ -36,7 +26,7 @@ test raw edenapi queries
   $ sl debugapi -e suffix_query -i "{'Hg': '$(sl whereami)'}" -i "['.bcmap']" -i "['html']"
   [{"file_path": "html/baz.bcmap"}]
 
-test eden glob with allowlisted queries
+test eden glob
   $ eden debug logging eden/fs/service=DBG4 > /dev/null
   $ eden glob '**/*.bcmap' --list-only-files
   foo.bcmap
@@ -50,12 +40,6 @@ test eden glob with allowlisted queries
   baz.bcmap
   $ cd ../..
 
-
-# Disable due to only allowing configured suffix queries in glob offloading
-# EdenAPI eagerepo implementation for glob is currently mocked out so don't need to add things to repo yet
-# test eden glob
-
-  $ eden debug logging eden/fs/service=DBG4 > /dev/null
   $ eden glob '**/*.txt' --list-only-files
   baz.txt
   foo.txt

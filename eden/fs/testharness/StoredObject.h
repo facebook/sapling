@@ -21,7 +21,6 @@ class StoredObject;
 using StoredBlob = StoredObject<const Blob>;
 using StoredId = StoredObject<ObjectId>;
 using StoredTree = StoredObject<const Tree>;
-using StoredGlob = StoredObject<const std::vector<std::string>>;
 
 /**
  * A helper class for TestBackingStore.

@@ -14,8 +14,6 @@ cpp_library(
         "Blob.h",
         "BlobAuxData.h",
         "EntryAttributeFlags.h",
-        "GlobEntry.h",
-        "LocalFiles.h",
         "RootId.h",
         "TreeAuxData.h",
     ],

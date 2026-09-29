@@ -148,7 +148,6 @@ class FilteredBackingStore
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, co_getBlobAuxData);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getTree);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getRootTree);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getGlobFiles);
   FRIEND_TEST(
       FakeSubstringFilteredBackingStoreTest,
       restrictedTreePreservedAfterFiltering);
@@ -199,11 +198,6 @@ class FilteredBackingStore
       const RootId& rootId,
       const std::vector<std::string>& paths,
       const ObjectFetchContextPtr& context) override;
-
-  folly::coro::now_task<GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes) override;
 
   ImmediateFuture<bool> checkPermission(const ObjectId& manifestId) override;
 

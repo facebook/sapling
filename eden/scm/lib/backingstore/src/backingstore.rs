@@ -28,7 +28,6 @@ use edenapi::BlockingResponse;
 use edenapi::RECENT_DOGFOODING_REQUESTS;
 use edenapi::configmodel::ConfigExt;
 use edenapi::configmodel::config::ContentHash;
-use edenapi::types::CommitId;
 use log::warn;
 #[cfg(fbcode_build)]
 use metrics_fb::install as install_metrics_sink;
@@ -526,31 +525,6 @@ impl BackingStore {
         // No need to maybe_reload() - flush intends to operate on current backingstore.
         // It wouldn't hurt, though, since reloading also flushes.
         self.inner.load().flush();
-    }
-
-    #[instrument(level = "trace", skip(self))]
-    pub fn get_glob_files(
-        &self,
-        commit_id: &[u8],
-        suffixes: Vec<String>,
-        prefixes: Option<Vec<String>>,
-    ) -> Result<Option<Vec<String>>> {
-        // Lots of room for future optimizations here, such as handling the string conversion inside
-        // the Response, probably by implementing map similar to how then is currently implemented.
-        // Another option is to hand down the async object through to C++ when the FFI layer supports
-        // it more robustly.
-        let result = BlockingResponse::from_async(
-            self.maybe_reload()
-                .repo
-                .eden_api()
-                .map_err(|err| err.tag_network())?
-                .suffix_query(CommitId::Hg(HgId::from_hex(commit_id)?), suffixes, prefixes),
-        )?
-        .entries
-        .iter()
-        .map(|res| res.file_path.to_string())
-        .collect();
-        Ok(Some(result))
     }
 
     #[instrument(level = "trace", skip(self))]

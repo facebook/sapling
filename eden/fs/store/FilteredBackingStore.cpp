@@ -592,44 +592,6 @@ folly::coro::now_task<folly::Unit> FilteredBackingStore::co_prefetchBlobs(
   co_return folly::unit;
 }
 
-folly::coro::now_task<BackingStore::GetGlobFilesResult>
-FilteredBackingStore::getGlobFiles(
-    const RootId& id,
-    const std::vector<std::string>& globs,
-    const std::vector<std::string>& prefixes) {
-  auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
-  auto getGlobFilesResult =
-      co_await backingStore_->getGlobFiles(parsedRootId, globs, prefixes);
-
-  // Parallelize filter checks matching the futures path's collectAllSafe.
-  std::vector<folly::coro::Task<std::pair<std::string, FilterCoverage>>>
-      filterTasks;
-  filterTasks.reserve(getGlobFilesResult.globFiles.size());
-  for (auto& path : getGlobFilesResult.globFiles) {
-    filterTasks.emplace_back(
-        folly::coro::co_invoke(
-            [](Filter* filter, std::string p, std::string fid)
-                -> folly::coro::Task<std::pair<std::string, FilterCoverage>> {
-              auto coverage = co_await filter->co_getFilterCoverageForPath(
-                  RelativePathPiece(p), fid);
-              co_return std::pair(std::move(p), coverage);
-            },
-            filter_.get(),
-            std::move(path),
-            std::string{parsedFilterId}));
-  }
-  auto filterResults =
-      co_await folly::coro::collectAllRange(std::move(filterTasks));
-
-  std::vector<std::string> filteredPaths;
-  for (auto& [path, coverage] : filterResults) {
-    if (coverage != FilterCoverage::RECURSIVELY_FILTERED) {
-      filteredPaths.emplace_back(std::move(path));
-    }
-  }
-  co_return GetGlobFilesResult{std::move(filteredPaths), id};
-}
-
 void FilteredBackingStore::periodicManagementTask() {
   backingStore_->periodicManagementTask();
 }

@@ -54,14 +54,4 @@ class ThriftGlobImpl {
   folly::StringPiece searchRootUser_;
 };
 
-folly::coro::now_task<std::vector<BackingStore::GetGlobFilesResult>>
-getLocalGlobResults(
-    const std::shared_ptr<EdenMount>& edenMount,
-    const std::shared_ptr<ServerState>& serverState,
-    bool includeDotfiles,
-    const std::vector<std::string>& suffixGlobs,
-    const std::vector<std::string>& prefixes,
-    const TreeInodePtr& rootInode,
-    const ObjectFetchContextPtr& context);
-
 } // namespace facebook::eden

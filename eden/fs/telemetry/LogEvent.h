@@ -66,34 +66,6 @@ struct StarGlob : public EdenFSEvent {
   }
 };
 
-struct SuffixGlob : public EdenFSEvent {
-  double duration = 0.0;
-  std::string glob_request;
-  std::string client_cmdline;
-  bool is_local;
-
-  SuffixGlob(
-      double duration,
-      std::string glob_request,
-      std::string client_cmdline,
-      bool is_local)
-      : duration(duration),
-        glob_request(std::move(glob_request)),
-        client_cmdline(std::move(client_cmdline)),
-        is_local(is_local) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addDouble("duration", duration);
-    event.addString("glob_request", glob_request);
-    event.addString("client_cmdline", client_cmdline);
-    event.addBool("is_local", is_local);
-  }
-
-  const char* getType() const override {
-    return "suffix_glob";
-  }
-};
-
 struct ExpensiveGlob : public EdenFSEvent {
   double duration = 0.0;
   std::string glob_request;

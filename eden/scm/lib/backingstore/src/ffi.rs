@@ -102,10 +102,6 @@ pub(crate) mod ffi {
         // TODO: cri: ClientRequestInfo
     }
 
-    pub struct GlobFilesData {
-        files: Vec<String>,
-    }
-
     pub struct FileAuxData {
         total_size: u64,
         content_sha1: [u8; 20],
@@ -273,11 +269,6 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
-    pub struct GetGlobFilesResult {
-        data: SharedPtr<GlobFilesData>,
-        error: UniquePtr<SaplingBackingStoreError>,
-    }
-
     pub struct CheckPermissionResult {
         has_access: bool,
         error: UniquePtr<SaplingBackingStoreError>,
@@ -420,13 +411,6 @@ pub(crate) mod ffi {
         /// daemon's `telemetry:enable-scribe-logging`; call it at startup and
         /// after every config reload.
         pub fn sapling_backingstore_set_scribe_logging_enabled(enabled: bool);
-
-        pub fn sapling_backingstore_get_glob_files(
-            store: &BackingStore,
-            commit_id: &[u8],
-            suffixes: Vec<String>,
-            prefixes: Vec<String>,
-        ) -> GetGlobFilesResult;
 
         pub fn sapling_backingstore_check_permission(
             store: &BackingStore,
@@ -1051,23 +1035,6 @@ pub fn sapling_backingstore_get_cache_stats(store: &BackingStore) -> ffi::GetCac
 pub fn sapling_backingstore_flush(store: &BackingStore) {
     store.flush();
     store.sync();
-}
-
-pub fn sapling_backingstore_get_glob_files(
-    store: &BackingStore,
-    commit_id: &[u8],
-    suffixes: Vec<String>,
-    prefixes: Vec<String>,
-) -> ffi::GetGlobFilesResult {
-    let prefix_opt = match prefixes.len() {
-        0 => None,
-        _ => Some(prefixes),
-    };
-    let res = store.get_glob_files(commit_id, suffixes, prefix_opt);
-    let (data, error) = resolve_result!(res, transform_some: |files: Vec<String>| SharedPtr::new(ffi::GlobFilesData {
-        files
-    }), replace_none: SharedPtr::null());
-    ffi::GetGlobFilesResult { data, error }
 }
 
 pub fn sapling_backingstore_check_permission(

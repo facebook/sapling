@@ -83,7 +83,6 @@ def get_sl_watchman_run_tests_excluded():
 
 def get_sl_edenfs_watchman_run_tests_included():
     included = [
-        "eden_watchman_edenapi_glob_t",
         "eden_watchman_noedenapi_glob_t",
     ]
     return "test_(%s)" % "|".join(included)

@@ -73,7 +73,7 @@ inline constexpr std::string_view kAgenticFingerprintInvocationId =
 // --- Fsck ---
 inline constexpr std::string_view kAttemptedRepair = "attempted_repair";
 
-// --- Glob events (StarGlob, SuffixGlob, ExpensiveGlob) ---
+// --- Glob events (StarGlob, ExpensiveGlob) ---
 inline constexpr std::string_view kGlobRequest = "glob_request";
 inline constexpr std::string_view kIsLocal = "is_local";
 

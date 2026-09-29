@@ -262,18 +262,6 @@ FakeBackingStore::co_getBlobAuxData(
       blobResult.origin};
 }
 
-folly::coro::now_task<BackingStore::GetGlobFilesResult>
-FakeBackingStore::getGlobFiles(
-    const RootId& id,
-    const std::vector<std::string>& globs,
-    const std::vector<std::string>& /*prefixes*/) {
-  // Since unordered map can't take a vec for testing purposes only use the
-  // first entry in the query
-  auto suffixQuery = std::pair<RootId, std::string>(id, globs[0]);
-  auto glob = getStoredGlob(suffixQuery)->get();
-  co_return GetGlobFilesResult{std::move(glob), id};
-}
-
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
   return Blob{IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}}};
 }
@@ -509,20 +497,6 @@ StoredId* FakeBackingStore::putCommit(
   return putCommit(RootId(commitStr.str()), builder);
 }
 
-StoredGlob* FakeBackingStore::putGlob(
-    std::pair<RootId, std::string> suffixQuery,
-    std::vector<std::string> contents) {
-  auto data = data_.wlock();
-  auto storedGlob = std::make_unique<StoredGlob>(std::move(contents));
-  auto ret = data->globs.emplace(suffixQuery, std::move(storedGlob));
-  if (!ret.second) {
-    throw std::domain_error(
-        folly::to<std::string>(
-            "glob results for query ", suffixQuery.second, " already exists"));
-  }
-  return ret.first->second.get();
-}
-
 StoredTree* FakeBackingStore::getStoredTree(ObjectId id) {
   auto data = data_.rlock();
   auto it = data->trees.find(id);
@@ -537,17 +511,6 @@ StoredBlob* FakeBackingStore::getStoredBlob(ObjectId id) {
   auto it = data->blobs.find(id);
   if (it == data->blobs.end()) {
     throw std::domain_error(fmt::format("stored blob {} not found", id));
-  }
-  return it->second.get();
-}
-
-StoredGlob* FakeBackingStore::getStoredGlob(
-    std::pair<RootId, std::string> suffixQuery) {
-  auto data = data_.rlock();
-  auto it = data->globs.find(suffixQuery);
-  if (it == data->globs.end()) {
-    throw std::domain_error(
-        fmt::format("stored glob {} not found", suffixQuery));
   }
   return it->second.get();
 }

@@ -149,14 +149,6 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
     return storedTree->get().getObjectId();
   }
 
-  void putReadyGlob(
-      std::pair<RootId, std::string> suffixQuery,
-      std::vector<std::string> globPtr) {
-    StoredGlob* storedGlob =
-        fakeBackingStore->putGlob(std::move(suffixQuery), std::move(globPtr));
-    storedGlob->setReady();
-  }
-
   CaseSensitivity getOppositeCaseSensitivity() const {
     return GetParam() == CaseSensitivity::Sensitive
         ? CaseSensitivity::Insensitive
@@ -749,28 +741,6 @@ TEST_P(
       objectStore->areBlobsEqual(one, two, context.as<ObjectFetchContext>());
   EXPECT_TRUE(std::move(fut).get(0ms));
   EXPECT_EQ(context->getFetchCount(), 2);
-}
-
-CO_TEST_P(ObjectStoreTest, glob_files_test) {
-  RootId rootId{"00000000000000000000"};
-  auto glob = std::vector<std::string>{"foo.txt", "bar.txt"};
-  putReadyGlob(std::pair<RootId, std::string>(rootId, ".txt"), std::move(glob));
-
-  auto context = makeRefPtr<FetchContext>();
-  auto globs = std::vector<std::string>{".txt"};
-
-  auto result = co_await objectStore->getGlobFiles(
-      rootId,
-      globs,
-      std::vector<std::string>{},
-      context.as<ObjectFetchContext>());
-  EXPECT_EQ(result.globFiles.size(), 2);
-  auto sorted_result = result.globFiles;
-  std::sort(sorted_result.begin(), sorted_result.end());
-  auto expected_result = std::vector<std::string>{"bar.txt", "foo.txt"};
-  for (int i = 0; i < 2; i++) {
-    EXPECT_EQ(sorted_result[i], expected_result[i]);
-  }
 }
 
 TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {

@@ -357,10 +357,6 @@ class SaplingBackingStore final
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
-  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesSingle);
-  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple);
-  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested);
-  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone);
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       sameRequestsDifferentFetchCause);
@@ -669,11 +665,6 @@ class SaplingBackingStore final
       ObjectFetchContext::FetchedSource fetchedSource,
       ObjectFetchContext::FetchResult fetchResult,
       folly::stop_watch<std::chrono::milliseconds> watch);
-
-  folly::coro::now_task<GetGlobFilesResult> getGlobFiles(
-      const RootId& id,
-      const std::vector<std::string>& globs,
-      const std::vector<std::string>& prefixes) override;
 
   ImmediateFuture<bool> checkPermission(const ObjectId& manifestId) override;
   folly::coro::now_task<std::vector<folly::Try<std::vector<EntryAcl>>>>

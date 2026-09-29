@@ -303,15 +303,6 @@ GitBackingStore::co_getBlobAuxData(
       nullptr, ObjectFetchContext::Origin::NotFetched};
 }
 
-folly::coro::now_task<BackingStore::GetGlobFilesResult>
-GitBackingStore::getGlobFiles(
-    const RootId& /* id */,
-    const std::vector<std::string>& /* globs */,
-    const std::vector<std::string>& /* prefixes */) {
-  co_yield folly::coro::co_error(
-      std::runtime_error("getGlobFiles() is not supported on git"));
-}
-
 git_oid GitBackingStore::root2Oid(const RootId& rootId) {
   auto& value = rootId.value();
   CHECK_EQ(40, value.size());

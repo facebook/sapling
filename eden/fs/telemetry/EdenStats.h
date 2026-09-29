@@ -654,9 +654,6 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchBlobAuxDataLocal{"store.sapling.fetch_blob_metadata_local"};
   Counter fetchBlobAuxDataSuccess{"store.sapling.fetch_blob_metadata_success"};
   Counter fetchBlobAuxDataFailure{"store.sapling.fetch_blob_metadata_failure"};
-  Counter fetchGlobFilesSuccess{"store.sapling.fetch_glob_files_success"};
-  Counter fetchGlobFilesFailure{"store.sapling.fetch_glob_files_failure"};
-  Duration fetchGlobFiles{"store.sapling.fetch_glob_files_us"};
   Counter loadProxyHash{"store.sapling.load_proxy_hash"};
 };
 
@@ -682,20 +679,6 @@ struct ThriftStats : StatsGroup<ThriftStats> {
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
   Duration streamSelectedChangesSince{
       "thrift.StreamingEdenService.streamSelectedChangesSince.streaming_time_us"};
-
-  Counter globFilesSaplingRemoteAPISuccess{
-      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success"};
-  Counter globFilesSaplingRemoteAPIFallback{
-      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback"};
-  Counter globFilesLocal{"thrift.EdenServiceHandler.glob_files.local_success"};
-  Duration globFilesSaplingRemoteAPISuccessDuration{
-      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success_duration_us"};
-  Duration globFilesSaplingRemoteAPIFallbackDuration{
-      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback_duration_us"};
-  Duration globFilesLocalDuration{
-      "thrift.EdenServiceHandler.glob_files.local_duration_us"};
-  Duration globFilesLocalOffloadableDuration{
-      "thrift.EdenServiceHandler.glob_files.local_offloadable_duration_us"};
 
   Counter cancelRequestSuccess{
       "thrift.EdenServiceHandler.cancel_request.success"};

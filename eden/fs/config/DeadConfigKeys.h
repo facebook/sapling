@@ -34,6 +34,8 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "experimental:ignore-prefetch-result",
     "experimental:prefetch-optimizations-v2",
     "experimental:skip-checkout-child-overlay-writes",
+    "glob:allowed-suffix-queries",
+    "glob:use-edenapi-suffix-query",
     "nfs:access-rate-limit-count",
     "nfs:access-rate-limit-window-seconds",
     "nfs:gid-access-modes",
