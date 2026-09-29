@@ -296,7 +296,6 @@ impl crate::Subcommand for PrefetchCmd {
                 None,
                 optional_search_root,
                 Some(self.background),
-                None,
                 return_prefetched_files,
                 self.stats,
             )

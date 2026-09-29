@@ -226,8 +226,6 @@ class CheckoutConfig(typing.NamedTuple):
     redirections: Dict[str, "RedirectionType"]
     redirection_targets: Dict[str, str]
     active_prefetch_profiles: List[str]
-    predictive_prefetch_profiles_active: bool
-    predictive_prefetch_num_dirs: int
     enable_sqlite_overlay: bool
     use_write_back_cache: bool
     re_use_case: str
@@ -1517,18 +1515,10 @@ class EdenCheckout:
             "profiles": {
                 "active": checkout_config.active_prefetch_profiles,
             },
-            "predictive-prefetch": {
-                "predictive-prefetch-active": checkout_config.predictive_prefetch_profiles_active,
-            },
             "recas": {
                 "use-case": checkout_config.re_use_case,
             },
         }
-
-        if checkout_config.predictive_prefetch_num_dirs:
-            config_data["predictive-prefetch"]["predictive-prefetch-num-dirs"] = (
-                checkout_config.predictive_prefetch_num_dirs  # pyrefly: ignore [bad-assignment, bad-typed-dict-key]
-            )
 
         util.write_file_atomically(
             self._config_path(), toml.dumps(config_data).encode()
@@ -1647,22 +1637,6 @@ class EdenCheckout:
 
                     prefetch_profiles.append(profile)
 
-        predictive_prefetch_active = False
-        predictive_num_dirs = 0
-        predictive_prefetch_profiles_config = config.get("predictive-prefetch")
-
-        if predictive_prefetch_profiles_config is not None:
-            predictive_prefetch_active = predictive_prefetch_profiles_config.get(
-                "predictive-prefetch-active"
-            )
-            predictive_num_dirs = predictive_prefetch_profiles_config.get(
-                "predictive-prefetch-num-dirs"
-            )
-            # if predictive-prefetch-num-dirs is not set in config.toml, set
-            # predictive_num_dirs to 0 to avoid None != 0 comparisons elsewhere
-            if predictive_num_dirs is None:
-                predictive_num_dirs = 0
-
         enable_sqlite_overlay = repository.get("enable-sqlite-overlay")
         # SqliteOverlay is default on Windows
         if not isinstance(enable_sqlite_overlay, bool):
@@ -1725,9 +1699,6 @@ class EdenCheckout:
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
             active_prefetch_profiles=prefetch_profiles,
-            # pyrefly: ignore [bad-argument-type]
-            predictive_prefetch_profiles_active=predictive_prefetch_active,
-            predictive_prefetch_num_dirs=predictive_num_dirs,
             enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
@@ -2375,8 +2346,6 @@ def create_checkout_config(
         redirections={},
         redirection_targets={},
         active_prefetch_profiles=[],
-        predictive_prefetch_profiles_active=False,
-        predictive_prefetch_num_dirs=0,
         enable_sqlite_overlay=enable_sqlite_overlay,
         use_write_back_cache=False,
         re_use_case=re_use_case or "buck2-default",

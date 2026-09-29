@@ -19,7 +19,6 @@ use thrift_types::edenfs::PrefetchStats;
 use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::glob_files::Glob;
-use crate::glob_files::PredictiveFetchParams;
 use crate::methods::EdenThriftMethod;
 
 #[derive(Clone, Debug)]
@@ -46,7 +45,6 @@ impl EdenFsClient {
         revisions: Option<&[&str]>,
         search_root: Option<S>,
         background: Option<bool>,
-        predictive_glob: Option<PredictiveFetchParams>,
         return_prefetched_files: bool,
         return_stats: bool,
     ) -> Result<PrefetchResult> {
@@ -63,7 +61,6 @@ impl EdenFsClient {
                 .and_then(|sr| bytes_from_path(sr.as_ref().to_path_buf()).ok())
                 .unwrap_or_default(),
             background: background.unwrap_or_default(),
-            predictiveGlob: predictive_glob.map(Into::into),
             returnPrefetchedFiles: return_prefetched_files,
             returnStats: return_stats,
             ..Default::default()

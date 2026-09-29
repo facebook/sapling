@@ -22,7 +22,6 @@ use thrift_types::edenfs::OsDtype;
 use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::methods::EdenThriftMethod;
-use crate::types::OSName;
 use crate::types::SyncBehavior;
 
 pub fn dtype_to_str(dtype: &OsDtype) -> &str {
@@ -81,29 +80,6 @@ impl Serialize for Glob {
     }
 }
 
-pub struct PredictiveFetchParams {
-    pub num_top_directories: Option<i32>,
-    pub user: Option<String>,
-    pub repo: Option<String>,
-    pub os: Option<OSName>,
-    pub start_time: Option<i64>,
-    pub end_time: Option<i64>,
-}
-
-impl From<PredictiveFetchParams> for thrift_types::edenfs::PredictiveFetch {
-    fn from(from: PredictiveFetchParams) -> Self {
-        Self {
-            numTopDirectories: from.num_top_directories,
-            user: from.user,
-            repo: from.repo,
-            os: from.os.map(|os| os.to_string()),
-            startTime: from.start_time,
-            endTime: from.end_time,
-            ..Default::default()
-        }
-    }
-}
-
 impl EdenFsClient {
     async fn glob_files_optional<P: AsRef<Path>, S: AsRef<Path>>(
         &self,
@@ -117,7 +93,6 @@ impl EdenFsClient {
         prefetch_metadata: Option<bool>,
         search_root: Option<S>,
         background: Option<bool>,
-        predictive_glob: Option<PredictiveFetchParams>,
         list_only_files: Option<bool>,
         sync: Option<SyncBehavior>,
     ) -> Result<Glob> {
@@ -138,7 +113,6 @@ impl EdenFsClient {
                 .and_then(|sr| bytes_from_path(sr.as_ref().to_path_buf()).ok())
                 .unwrap_or_default(),
             background: background.unwrap_or_default(),
-            predictiveGlob: predictive_glob.map(Into::into),
             listOnlyFiles: list_only_files.unwrap_or_default(),
             sync: sync.map(Into::into).unwrap_or_default(),
             ..Default::default()
@@ -176,7 +150,6 @@ impl EdenFsClient {
             None,
             Some(search_root),
             Some(background),
-            None,
             Some(list_only_files),
             None,
         )
@@ -201,7 +174,6 @@ impl EdenFsClient {
             None,
             None::<PathBuf>,
             Some(false),
-            None,
             None,
             None,
         )

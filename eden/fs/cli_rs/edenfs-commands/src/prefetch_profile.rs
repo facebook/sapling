@@ -125,17 +125,6 @@ pub enum PrefetchProfileCmd {
         #[clap(help = "Profile to activate.")]
         profile_name: String,
     },
-    #[clap(hide = true)]
-    ActivatePredictive {
-        #[clap(flatten)]
-        options: ActivationOptions,
-        #[clap(
-            default_value = "0",
-            help = "Optionally set the number of top accessed directories to \
-                prefetch, overriding the default."
-        )]
-        num_dirs: u32,
-    },
     #[clap(
         about = "Tell EdenFS to STOP smart prefetching the files specified by \
         the prefetch profile."
@@ -145,11 +134,6 @@ pub enum PrefetchProfileCmd {
         options: ActivationOptions,
         #[clap(help = "Profile to deactivate.")]
         profile_name: String,
-    },
-    #[clap(hide = true)]
-    DeactivatePredictive {
-        #[clap(flatten)]
-        options: ActivationOptions,
     },
     #[clap(
         about = "Prefetch all files for the specified prefetch profiles. \
@@ -172,24 +156,6 @@ pub enum PrefetchProfileCmd {
         profile_names: Vec<String>,
         #[clap(long, help = "Output in json rather than human readable text")]
         json: bool,
-    },
-    #[clap(hide = true)]
-    FetchPredictive {
-        #[clap(flatten)]
-        options: FetchOptions,
-        #[clap(
-            long,
-            default_value = "0",
-            help = "Optionally set the number of top accessed directories to \
-                prefetch, overriding the default."
-        )]
-        num_dirs: u32,
-        #[clap(
-            long,
-            help = "Only run the fetch if activate-predictive has been run. \
-                Uses num_dirs set by activate-predictive, or the default."
-        )]
-        if_active: bool,
     },
 }
 
@@ -306,44 +272,6 @@ impl PrefetchProfileCmd {
         Ok(0)
     }
 
-    async fn activate_predictive(
-        &self,
-        options: &ActivationOptions,
-        num_dirs: u32,
-    ) -> Result<ExitCode> {
-        let instance = get_edenfs_instance();
-        let client_name = instance.client_name(&options.checkout).with_context(|| {
-            anyhow!(
-                "Failed to get client name for checkout {}",
-                options.checkout.display()
-            )
-        })?;
-
-        #[cfg(fbcode_build)]
-        let mut sample = edenfs_telemetry::prefetch_profile::activate_predictive_event(
-            client_name.as_str(),
-            num_dirs,
-        );
-
-        let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(&config_dir);
-
-        let result = checkout_config
-            .and_then(|mut config| config.activate_predictive_profile(config_dir, num_dirs));
-        if let Err(e) = result {
-            #[cfg(fbcode_build)]
-            {
-                sample.fail(&e.to_string());
-                crate::send_edenfs_event(sample);
-            }
-            return Err(anyhow::Error::new(e));
-        }
-        #[cfg(fbcode_build)]
-        crate::send_edenfs_event(sample);
-
-        Ok(0)
-    }
-
     async fn deactivate(
         &self,
         options: &ActivationOptions,
@@ -367,36 +295,6 @@ impl PrefetchProfileCmd {
         let checkout_config = CheckoutConfig::parse_config(&config_dir);
         let result = checkout_config
             .and_then(|mut config| config.deactivate_profile(profile_name, config_dir));
-        if let Err(e) = result {
-            #[cfg(fbcode_build)]
-            {
-                sample.fail(&e.to_string());
-                crate::send_edenfs_event(sample);
-            }
-            return Err(anyhow::Error::new(e));
-        }
-        #[cfg(fbcode_build)]
-        crate::send_edenfs_event(sample);
-        Ok(0)
-    }
-
-    async fn deactivate_predictive(&self, options: &ActivationOptions) -> Result<ExitCode> {
-        let instance = get_edenfs_instance();
-        let client_name = instance.client_name(&options.checkout).with_context(|| {
-            anyhow!(
-                "Failed to get client name for checkout {}",
-                options.checkout.display()
-            )
-        })?;
-
-        #[cfg(fbcode_build)]
-        let mut sample =
-            edenfs_telemetry::prefetch_profile::deactivate_predictive_event(client_name.as_str());
-
-        let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(&config_dir);
-        let result =
-            checkout_config.and_then(|mut config| config.deactivate_predictive_profile(config_dir));
         if let Err(e) = result {
             #[cfg(fbcode_build)]
             {
@@ -480,99 +378,11 @@ impl PrefetchProfileCmd {
                 !options.options.verbose,
                 Some(&options.commits),
                 options.predict_commits,
-                false,
-                0,
             )
             .await?;
 
         match result {
             PrefetchProfilesResult::Prefetched => Ok(0),
-            PrefetchProfilesResult::Skipped(reason) => {
-                eprintln!("{reason}");
-                Ok(0)
-            }
-        }
-    }
-
-    async fn fetch_predictive(
-        &self,
-        options: &FetchOptions,
-        num_dirs: u32,
-        if_active: bool,
-    ) -> Result<ExitCode> {
-        let instance = get_edenfs_instance();
-        let checkout_path = &options.options.checkout;
-        let client_name = instance.client_name(checkout_path).with_context(|| {
-            anyhow!(
-                "Failed to get client name for checkout {}",
-                checkout_path.display()
-            )
-        })?;
-        let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
-            anyhow!(
-                "Failed to parse config located in config_dir: {}",
-                config_dir.display()
-            )
-        })?;
-
-        if if_active && !checkout_config.predictive_prefetch_is_active() {
-            eprintln!(
-                "Predictive prefetch profiles have not been activated and \
-                --if-active was specified. Skipping fetch."
-            );
-            return Ok(0);
-        }
-
-        // If num_dirs is given, use the specified num_dirs. If num_dirs is
-        // not given (args.num_dirs == 0), predictive fetch with default num
-        // dirs unless there is an active num dirs saved in the checkout config
-        let predictive_num_dirs = if num_dirs == 0 && checkout_config.get_predictive_num_dirs() != 0
-        {
-            checkout_config.get_predictive_num_dirs()
-        } else if num_dirs > 0 {
-            num_dirs
-        } else {
-            0
-        };
-
-        let directories_only = options.directories_only;
-
-        let checkout = find_checkout(instance, checkout_path).with_context(|| {
-            anyhow!(
-                "Failed to find checkout with path {}",
-                checkout_path.display()
-            )
-        })?;
-
-        if options.foreground {
-            println!("Starting predictive prefetching in the foreground.")
-        }
-        let result = checkout
-            .prefetch_profiles(
-                instance,
-                &[],
-                !options.foreground,
-                directories_only,
-                !options.options.verbose,
-                Some(&options.commits),
-                options.predict_commits,
-                true,
-                predictive_num_dirs,
-            )
-            .await?;
-
-        match result {
-            PrefetchProfilesResult::Prefetched => {
-                if options.foreground {
-                    println!("Finished predictive prefetching.");
-                } else {
-                    println!(
-                        "Started predictive prefetching in the background. Use 'eden trace hg' to monitor prefetch progress."
-                    );
-                }
-                Ok(0)
-            }
             PrefetchProfilesResult::Skipped(reason) => {
                 eprintln!("{reason}");
                 Ok(0)
@@ -592,24 +402,15 @@ impl Subcommand for PrefetchProfileCmd {
                 options,
                 profile_name,
             } => self.activate(options, profile_name).await,
-            Self::ActivatePredictive { options, num_dirs } => {
-                self.activate_predictive(options, *num_dirs).await
-            }
             Self::Deactivate {
                 options,
                 profile_name,
             } => self.deactivate(options, profile_name).await,
-            Self::DeactivatePredictive { options } => self.deactivate_predictive(options).await,
             Self::Fetch {
                 profile_names,
                 options,
                 json,
             } => self.fetch(profile_names, options, *json).await,
-            Self::FetchPredictive {
-                options,
-                num_dirs,
-                if_active,
-            } => self.fetch_predictive(options, *num_dirs, *if_active).await,
         }
     }
 }

@@ -30,9 +30,6 @@ pub struct PrefetchProfiles {
     #[stack(default, merge = "merge_option")]
     pub prefetching_enabled: Option<bool>,
 
-    #[stack(default, merge = "merge_option")]
-    pub predictive_prefetching_enabled: Option<bool>,
-
     #[stack(merge = "merge_table", default)]
     #[serde(flatten)]
     pub other: toml::value::Table,

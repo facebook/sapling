@@ -45,10 +45,8 @@ use serde::Serializer;
 use serde::ser::SerializeMap;
 use strum::EnumString;
 use strum::VariantNames;
-use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::MountInfo;
 use thrift_types::edenfs::MountState;
-use thrift_types::edenfs::PredictiveFetch;
 use thrift_types::edenfs::PrefetchParams;
 use toml::value::Value;
 use uuid::Uuid;
@@ -291,16 +289,6 @@ where
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[serde(rename_all = "kebab-case")]
-struct PredictivePrefetch {
-    #[serde(default)]
-    predictive_prefetch_active: bool,
-
-    #[serde(default)]
-    predictive_prefetch_num_dirs: u32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
 pub struct CheckoutConfig {
     repository: Repository,
 
@@ -319,9 +307,6 @@ pub struct CheckoutConfig {
     redirection_targets: BTreeMap<PathBuf, PathBuf>,
 
     profiles: Option<PrefetchProfiles>,
-
-    #[serde(rename = "predictive-prefetch", default)]
-    predictive_prefetch: Option<PredictivePrefetch>,
 }
 
 // Initialize it to empty map to ensure backward compatibility
@@ -425,22 +410,6 @@ impl CheckoutConfig {
         }
     }
 
-    pub fn predictive_prefetch_is_active(&self) -> bool {
-        if let Some(config) = &self.predictive_prefetch {
-            config.predictive_prefetch_active
-        } else {
-            false
-        }
-    }
-
-    pub fn get_predictive_num_dirs(&self) -> u32 {
-        if let Some(config) = &self.predictive_prefetch {
-            config.predictive_prefetch_num_dirs
-        } else {
-            0
-        }
-    }
-
     pub fn remove_prefetch_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
@@ -540,35 +509,6 @@ impl CheckoutConfig {
         }
     }
 
-    /// Switch on predictive prefetch profiles (read the config file and write
-    /// it back with predictive_prefetch_profiles_active set to True, set or
-    /// update predictive_prefetch_num_dirs if specified).
-    pub fn activate_predictive_profile(
-        &mut self,
-        config_dir: PathBuf,
-        num_dirs: u32,
-    ) -> Result<()> {
-        if let Some(profiles) = &mut self.predictive_prefetch {
-            if profiles.predictive_prefetch_active
-                && num_dirs == profiles.predictive_prefetch_num_dirs
-            {
-                return Err(EdenFsError::Other(anyhow!(
-                    "Predictive prefetch profiles are already activated \
-                            with {num_dirs} directories configured."
-                )));
-            }
-            profiles.predictive_prefetch_active = true;
-            profiles.predictive_prefetch_num_dirs = num_dirs;
-            self.save_config(config_dir.clone()).with_context(|| {
-                anyhow!(
-                    "failed to save config in the given config_dir: {}",
-                    config_dir.display()
-                )
-            })?;
-        }
-        Ok(())
-    }
-
     /// Remove a profile to the config (read the config file and write it back
     /// with profile added).
     pub fn deactivate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
@@ -579,29 +519,6 @@ impl CheckoutConfig {
                 )));
             }
             profiles.active.retain(|x| *x != *profile);
-            self.save_config(config_dir.clone()).with_context(|| {
-                anyhow!(
-                    "failed to save config in the given config_dir: {}",
-                    config_dir.display()
-                )
-            })?;
-        };
-        Ok(())
-    }
-
-    /// Switch off predictive prefetch profiles (read the config file and write
-    /// it back with predictive_profile_profiles_active set to false. Also
-    /// set predictive_prefetch_num_dirs to 0).
-    pub fn deactivate_predictive_profile(&mut self, config_dir: PathBuf) -> Result<()> {
-        if let Some(profiles) = &mut self.predictive_prefetch {
-            if !profiles.predictive_prefetch_active {
-                return Err(EdenFsError::Other(anyhow!(
-                    "Predictive prefetch profile was not deactivated since it \
-                    wasn't active."
-                )));
-            }
-            profiles.predictive_prefetch_active = false;
-            profiles.predictive_prefetch_num_dirs = 0;
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
                     "failed to save config in the given config_dir: {}",
@@ -928,12 +845,10 @@ impl EdenFsCheckout {
         instance: &EdenFsInstance,
         all_profile_contents: HashSet<String>,
         directories_only: bool,
-        silent: bool,
+        _silent: bool,
         revisions: Option<&Vec<String>>,
         predict_revisions: bool,
         background: bool,
-        predictive: bool,
-        predictive_num_dirs: u32,
     ) -> Result<()> {
         let mut commit_vec = vec![];
         if predict_revisions {
@@ -1018,77 +933,33 @@ impl EdenFsCheckout {
             .context("failed to get mount point as str")?
             .as_bytes()
             .to_vec();
-        if predictive {
-            let num_dirs = if predictive_num_dirs != 0 {
-                predictive_num_dirs
-                    .try_into()
-                    .with_context(|| {
-                        anyhow!("could not convert u32 ({predictive_num_dirs}) to i32")
-                    })
-                    .ok()
-            } else {
-                None
-            };
-            let predictive_params = PredictiveFetch {
-                numTopDirectories: num_dirs,
-                ..Default::default()
-            };
-            let glob_params = GlobParams {
-                mountPoint: mnt_pt,
-                includeDotfiles: false,
-                prefetchFiles: !directories_only,
-                suppressFileList: silent,
-                revisions: commit_vec,
-                background,
-                predictiveGlob: Some(predictive_params),
-                ..Default::default()
-            };
-            client
-                .with_thrift(|thrift| {
-                    (
-                        thrift.predictiveGlobFiles(&glob_params),
-                        EdenThriftMethod::PredictiveGlobFiles,
-                    )
-                })
-                .await
-                .with_context(|| "Failed predictiveGlobFiles() thrift call")?;
-            Ok(())
-        } else {
-            let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
-            let prefetch_params = PrefetchParams {
-                mountPoint: mnt_pt.clone(),
-                globs: profile_set.clone(),
-                directoriesOnly: directories_only,
-                revisions: commit_vec.clone(),
-                background,
-                returnPrefetchedFiles: false,
-                ..Default::default()
-            };
-            let res = client
-                .with_thrift(|thrift| {
-                    (
-                        thrift.prefetchFilesV2(&prefetch_params),
-                        EdenThriftMethod::PrefetchFilesV2,
-                    )
-                })
-                .await;
+        let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
+        let prefetch_params = PrefetchParams {
+            mountPoint: mnt_pt,
+            globs: profile_set,
+            directoriesOnly: directories_only,
+            revisions: commit_vec,
+            background,
+            returnPrefetchedFiles: false,
+            ..Default::default()
+        };
+        let res = client
+            .with_thrift(|thrift| {
+                (
+                    thrift.prefetchFilesV2(&prefetch_params),
+                    EdenThriftMethod::PrefetchFilesV2,
+                )
+            })
+            .await;
 
-            match res {
-                Ok(_) => Ok(()),
-                Err(err) => Err(EdenFsError::Other(err.into())),
-            }
+        match res {
+            Ok(_) => Ok(()),
+            Err(err) => Err(EdenFsError::Other(err.into())),
         }
     }
 
     pub fn should_prefetch_profiles(config: &EdenFsConfig) -> bool {
         config.prefetch_profiles.prefetching_enabled.unwrap_or(true)
-    }
-
-    pub fn should_prefetch_predictive_profiles(config: &EdenFsConfig) -> bool {
-        config
-            .prefetch_profiles
-            .predictive_prefetching_enabled
-            .unwrap_or(true)
     }
 
     pub async fn prefetch_profiles(
@@ -1100,8 +971,6 @@ impl EdenFsCheckout {
         silent: bool,
         revisions: Option<&Vec<String>>,
         predict_revisions: bool,
-        predictive: bool,
-        predictive_num_dirs: u32,
     ) -> Result<PrefetchProfilesResult> {
         let mut profiles_to_fetch = profiles.to_owned();
 
@@ -1109,16 +978,7 @@ impl EdenFsCheckout {
             .get_config()
             .context("unable to load configuration")?;
 
-        if predictive && !EdenFsCheckout::should_prefetch_predictive_profiles(&config) {
-            let reason = "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
-                    This means prefetch-profiles.predictive-prefetching-enabled is not set in \
-                    the EdenFS configs."
-                .to_string();
-
-            return Ok(PrefetchProfilesResult::Skipped(reason));
-        }
-
-        if !EdenFsCheckout::should_prefetch_profiles(&config) && !predictive {
+        if !EdenFsCheckout::should_prefetch_profiles(&config) {
             let reason = "Skipping Prefetch Profiles fetch due to global kill switch. \
                     This means prefetch-profiles.prefetching-enabled is not set in \
                     the EdenFS configs."
@@ -1128,63 +988,57 @@ impl EdenFsCheckout {
 
         let mut profile_contents = HashSet::new();
 
-        if !predictive {
-            // special trees prefetch profile which fetches all of the trees in the repo, kick this
-            // off before activating the rest of the prefetch profiles
-            let tree_profile = "trees";
-            // special trees-mobile prefetch profile which fetches a subset of trees in fbsource, kick this
-            // off only if not fetching the overarching trees profile, and before activating the rest of the prefetch profiles
-            let tree_mobile_profile = "trees-mobile";
+        // special trees prefetch profile which fetches all of the trees in the repo, kick this
+        // off before activating the rest of the prefetch profiles
+        let tree_profile = "trees";
+        // special trees-mobile prefetch profile which fetches a subset of trees in fbsource, kick this
+        // off only if not fetching the overarching trees profile, and before activating the rest of the prefetch profiles
+        let tree_mobile_profile = "trees-mobile";
 
-            let mut trees_profile_set = HashSet::new();
+        let mut trees_profile_set = HashSet::new();
 
-            // Check for trees first, if it exists, then kick off the prefetch request.
-            if profiles_to_fetch.iter().any(|x| x == tree_profile) {
-                profiles_to_fetch.retain(|x| *x != *tree_profile);
-                // also remove the trees-mobile profile if it exists, but don't fetch it because it is a subset of trees
-                profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
+        // Check for trees first, if it exists, then kick off the prefetch request.
+        if profiles_to_fetch.iter().any(|x| x == tree_profile) {
+            profiles_to_fetch.retain(|x| *x != *tree_profile);
+            // also remove the trees-mobile profile if it exists, but don't fetch it because it is a subset of trees
+            profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
 
-                trees_profile_set.insert("**/*".to_owned());
-            } else if profiles_to_fetch.iter().any(|x| x == tree_mobile_profile) {
-                profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
+            trees_profile_set.insert("**/*".to_owned());
+        } else if profiles_to_fetch.iter().any(|x| x == tree_mobile_profile) {
+            profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
 
-                trees_profile_set.insert("arvr/**/*".to_owned());
-                trees_profile_set.insert("fbandroid/**/*".to_owned());
-                trees_profile_set.insert("fbcode/**/*".to_owned());
-                trees_profile_set.insert("fbobjc/**/*".to_owned());
-                trees_profile_set.insert("third-party/**/*".to_owned());
-                trees_profile_set.insert("tools/**/*".to_owned());
-                trees_profile_set.insert("xplat/**/*".to_owned());
-                trees_profile_set.insert("whatsapp/**/*".to_owned());
+            trees_profile_set.insert("arvr/**/*".to_owned());
+            trees_profile_set.insert("fbandroid/**/*".to_owned());
+            trees_profile_set.insert("fbcode/**/*".to_owned());
+            trees_profile_set.insert("fbobjc/**/*".to_owned());
+            trees_profile_set.insert("third-party/**/*".to_owned());
+            trees_profile_set.insert("tools/**/*".to_owned());
+            trees_profile_set.insert("xplat/**/*".to_owned());
+            trees_profile_set.insert("whatsapp/**/*".to_owned());
+        }
+
+        if !trees_profile_set.is_empty() {
+            self.make_prefetch_request(
+                instance,
+                trees_profile_set,
+                true, // only prefetch directories
+                silent,
+                revisions.clone(),
+                predict_revisions,
+                background,
+            )
+            .await
+            .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
+            if profiles_to_fetch.is_empty() {
+                return Ok(PrefetchProfilesResult::Prefetched);
             }
+        }
 
-            if !trees_profile_set.is_empty() {
-                self.make_prefetch_request(
-                    instance,
-                    trees_profile_set,
-                    true, // only prefetch directories
-                    silent,
-                    revisions.clone(),
-                    predict_revisions,
-                    background,
-                    predictive,
-                    predictive_num_dirs,
-                )
-                .await
-                .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-                if profiles_to_fetch.is_empty() {
-                    return Ok(PrefetchProfilesResult::Prefetched);
-                }
-            }
-
-            for profile in profiles_to_fetch {
-                let res = self
-                    .get_contents_for_profile(&profile, silent)
-                    .with_context(|| {
-                        anyhow!("failed to get contents of prefetch profile {profile}")
-                    })?;
-                profile_contents.extend(res);
-            }
+        for profile in profiles_to_fetch {
+            let res = self
+                .get_contents_for_profile(&profile, silent)
+                .with_context(|| anyhow!("failed to get contents of prefetch profile {profile}"))?;
+            profile_contents.extend(res);
         }
         self.make_prefetch_request(
             instance,
@@ -1194,8 +1048,6 @@ impl EdenFsCheckout {
             revisions,
             predict_revisions,
             background,
-            predictive,
-            predictive_num_dirs,
         )
         .await
         .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
@@ -1431,9 +1283,7 @@ mod tests {
 
     [redirections]
 
-    [profiles]
-
-    [predictive-prefetch]"#;
+    [profiles]"#;
 
     /// creates a checkout config and returns the tempdir in which the config is located
     fn create_test_checkout_config() -> Result<TempDir> {
