@@ -10,6 +10,7 @@
 #include <folly/IntrusiveList.h>
 #include <folly/Synchronized.h>
 #include <folly/container/F14Map.h>
+#include <folly/small_vector.h>
 #include <folly/synchronization/DistributedMutex.h>
 #include <list>
 #include <mutex>
@@ -288,8 +289,8 @@ class ObjectCache : public std::enable_shared_from_this<
     // WARNING: leaves index unset. Since the items map and evictionQueue are
     // circular, initialization of index must happen after the CacheItem is
     // constructed.
-    explicit CacheItem(ObjectId id, ObjectPtr b)
-        : id{std::move(id)}, object{std::move(b)} {}
+    explicit CacheItem(ObjectId id, ObjectPtr b, size_t size)
+        : id{std::move(id)}, object{std::move(b)}, size{size} {}
 
     // The folly::SafeIntrusiveListHook needs special handling to be
     // copied/moved, removing the move/copy constructor and assignment to
@@ -301,6 +302,10 @@ class ObjectCache : public std::enable_shared_from_this<
 
     ObjectId id;
     ObjectPtr object;
+    /// getSizeBytes() of the object when it was inserted. Eviction subtracts
+    /// this rather than asking the object again, so the accounting stays
+    /// balanced even if the object's reported size changes.
+    size_t size;
     folly::SafeIntrusiveListHook hook;
 
     /// Incremented on every LikelyNeededAgain or WantInterestHandle.
@@ -332,6 +337,15 @@ class ObjectCache : public std::enable_shared_from_this<
       typename folly::Synchronized<State, folly::DistributedMutex>::LockedPtr;
 
   /**
+   * Objects removed from a shard while its lock is held. Callers declare one
+   * of these before taking the lock so the objects, and whatever their
+   * destructors do, are released only after the lock is dropped. The inline
+   * capacity covers the single eviction the noexcept paths perform, so they
+   * never allocate.
+   */
+  using EvictedObjects = folly::small_vector<ObjectPtr, 2>;
+
+  /**
    * The "core" implementation for the method getInterestHandle().
    *
    * This method is not thread safe in any version of ObjectCache so it expects
@@ -361,10 +375,12 @@ class ObjectCache : public std::enable_shared_from_this<
   insertInterestHandleCore(
       ObjectId id,
       ObjectPtr object,
+      size_t size,
       Interest interest,
       LockedState& state,
       uint64_t cacheItemGeneration,
-      ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle);
+      ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle,
+      EvictedObjects& evicted);
 
   struct PreProcessInterestHandleResult {
     ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle;
@@ -403,14 +419,18 @@ class ObjectCache : public std::enable_shared_from_this<
    *
    * Does not do anything related to InterestHandles
    */
-  std::pair<CacheItem*, bool>
-  insertImpl(ObjectId id, ObjectPtr object, State& state);
+  std::pair<CacheItem*, bool> insertImpl(
+      ObjectId id,
+      ObjectPtr object,
+      size_t size,
+      State& state,
+      EvictedObjects& evicted);
 
   void dropInterestHandle(const ObjectId& id, uint64_t generation) noexcept;
 
-  void evictUntilFits(State& state) noexcept;
-  void evictOne(State& state) noexcept;
-  void evictItem(State&, const CacheItem& item) noexcept;
+  void evictUntilFits(State& state, EvictedObjects& evicted);
+  void evictOne(State& state, EvictedObjects& evicted);
+  void evictItem(State&, CacheItem& item, EvictedObjects& evicted);
 
   /**
    * Get the shard for the given ObjectId.

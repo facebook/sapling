@@ -23,6 +23,10 @@ class CacheObject {
     return size_;
   }
 
+  void setSizeBytes(size_t size) {
+    size_ = size;
+  }
+
   CacheObject(ObjectId id, size_t size) : id_{id}, size_{size} {}
 
  private:
@@ -694,4 +698,38 @@ TEST(ObjectCache, multi_shard_size_limit_enforcement) {
       << "Cache should hold at least 5 objects (worst case: all in one shard)";
   EXPECT_LE(totalSize, 10 * objectSize)
       << "Cache should not exceed size limit (best case: evenly distributed)";
+}
+
+TEST(ObjectCache, evictionSubtractsTheSizeRecordedAtInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          10, 0, makeRefPtr<EdenStats>());
+  auto growingObject = std::make_shared<CacheObject>(id3, 3);
+
+  cache->insertSimple(id3, growingObject);
+  growingObject->setSizeBytes(100);
+  cache->insertSimple(id9, object9);
+
+  EXPECT_FALSE(cache->contains(id3));
+  EXPECT_EQ(9, cache->getTotalSizeBytes());
+}
+
+TEST(ObjectCache, evictedObjectIsDestroyedAfterTheLockIsReleased) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          10, 0, makeRefPtr<EdenStats>());
+  // The deleter locks the cache. It can only run once the eviction has
+  // released the lock; a deleter run under the lock would deadlock here.
+  size_t objectCountSeenByDeleter = 0;
+  cache->insertSimple(
+      id3,
+      std::shared_ptr<const CacheObject>{
+          new CacheObject{id3, 3}, [&](const CacheObject* object) {
+            objectCountSeenByDeleter = cache->getObjectCount();
+            delete object;
+          }});
+
+  cache->insertSimple(id9, object9);
+
+  EXPECT_EQ(1, objectCountSeenByDeleter);
 }

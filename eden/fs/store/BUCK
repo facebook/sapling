@@ -147,6 +147,7 @@ cpp_library(
         "//folly:intrusive_list",
         "//folly:map_util",
         "//folly:range",
+        "//folly:small_vector",
         "//folly:synchronized",
         "//folly/container:evicting_cache_map",
         "//folly/container:f14_hash",
