@@ -87,7 +87,7 @@ use crate::commit_syncers_lib::submodule_repos_with_content_ids;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::set_mapping_change_version;
-use crate::types::ErrorKind;
+use crate::types::CrossRepoSyncError;
 use crate::types::PushrebaseRewriteDates;
 use crate::types::Repo;
 use crate::types::Source;
@@ -399,7 +399,7 @@ where
         let xrepo_sync_disable_all_syncs =
             justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None);
         if xrepo_sync_disable_all_syncs {
-            return Err(ErrorKind::XRepoSyncDisabled.into());
+            return Err(CrossRepoSyncError::XRepoSyncDisabled.into());
         }
 
         let small_repo = self.get_small_repo();
@@ -1014,7 +1014,7 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
                     }
                 };
             } else {
-                return Err(ErrorKind::AmbiguousWorkingCopyEquivalent(
+                return Err(CrossRepoSyncError::AmbiguousWorkingCopyEquivalent(
                     source_cs.get_changeset_id(),
                 )
                 .into());
@@ -1082,8 +1082,8 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
                 pushrebase_hooks.as_slice(),
             )
             .await;
-            let pushrebase_res =
-                pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
+            let pushrebase_res = pushrebase_res
+                .map_err(|e| Error::from(CrossRepoSyncError::PushrebaseFailure(e)))?;
             debug!(
                 "Pushrebase complete: distance: {}, retry_num: {}",
                 pushrebase_res.pushrebase_distance.0, pushrebase_res.retry_num.0

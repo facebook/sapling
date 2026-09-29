@@ -36,7 +36,7 @@ pub use pipeline::find_stage_unode_rename_sources;
 pub use pipeline::resolve_parent_stage_outputs;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum UnodeDerivationError {
     #[error("Invalid bonsai changeset: {0}")]
     InvalidBonsai(String),
 }

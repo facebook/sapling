@@ -47,7 +47,7 @@ use thiserror::Error;
 use tracing::debug;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum FileHistoryError {
     #[error("internal error: file {0} copied from directory {1}")]
     InconsistentCopyInfo(RepoPath, RepoPath),
     #[error("Filenode is missing: {0} {1}")]
@@ -368,7 +368,7 @@ pub fn filenode_to_history_entry(
     let copyfrom = match filenode.copyfrom {
         Some((RepoPath::FilePath(frompath), node)) => Some((frompath, node)),
         Some((frompath, _)) => {
-            return Err(ErrorKind::InconsistentCopyInfo(path.clone(), frompath).into());
+            return Err(FileHistoryError::InconsistentCopyInfo(path.clone(), frompath).into());
         }
         None => None,
     };

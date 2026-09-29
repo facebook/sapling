@@ -40,10 +40,10 @@ use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
 use crate::EquivalentWorkingCopyEntry;
-use crate::ErrorKind;
 use crate::FetchedMappingEntry;
 use crate::SyncedCommitMapping;
 use crate::SyncedCommitMappingEntry;
+use crate::SyncedCommitMappingError;
 use crate::SyncedCommitSourceRepo;
 use crate::WorkingCopyEquivalence;
 use crate::types::get_maybe_stale_many_targets_serially;
@@ -434,7 +434,7 @@ impl SqlSyncedCommitMapping {
                     };
                     let expected_version = Some(expected_version);
                     if (expected_bcs_id != small_bcs_id) || (expected_version != version_name) {
-                        let err = ErrorKind::InconsistentWorkingCopyEntry {
+                        let err = SyncedCommitMappingError::InconsistentWorkingCopyEntry {
                             expected_bcs_id,
                             expected_config_version: expected_version,
                             actual_bcs_id: small_bcs_id,
@@ -484,7 +484,7 @@ impl SqlSyncedCommitMapping {
 
                 if let Some(actual_version_name) = maybe_large_repo_version {
                     if &actual_version_name != version_name {
-                        let err = ErrorKind::InconsistentLargeRepoCommitVersion {
+                        let err = SyncedCommitMappingError::InconsistentLargeRepoCommitVersion {
                             large_repo_id,
                             large_cs_id,
                             expected_version_name: version_name.clone(),

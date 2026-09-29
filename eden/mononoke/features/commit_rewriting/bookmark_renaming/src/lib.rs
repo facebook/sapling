@@ -18,7 +18,7 @@ use mononoke_types::RepositoryId;
 use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
-pub enum ErrorKind {
+pub enum BookmarkRenamingError {
     #[error("Small repo {0} not found")]
     SmallRepoNotFound(RepositoryId),
 }
@@ -51,13 +51,13 @@ fn parse_config(
         common_pushrebase_bookmarks_map: commit_sync_config
             .small_repos
             .get(&small_repo_id)
-            .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?
+            .ok_or(BookmarkRenamingError::SmallRepoNotFound(small_repo_id))?
             .common_pushrebase_bookmarks_map
             .clone(),
         prefix: commit_sync_config
             .small_repos
             .get(&small_repo_id)
-            .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?
+            .ok_or(BookmarkRenamingError::SmallRepoNotFound(small_repo_id))?
             .bookmark_prefix
             .clone(),
     })

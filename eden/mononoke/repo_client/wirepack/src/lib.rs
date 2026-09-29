@@ -24,7 +24,7 @@ use mercurial_types::delta;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum WirepackError {
     #[error("Malformed treemanifest part: {0}")]
     MalformedTreemanifestPart(String),
 }
@@ -89,7 +89,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
         replace_or_fail_if_exists(&mut self.path, path.clone())?;
         if entry_count != 1 {
             let msg = format!("expected exactly one history entry, got: {entry_count}");
-            return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
+            return Err(WirepackError::MalformedTreemanifestPart(msg).into());
         }
         Ok(None)
     }
@@ -104,10 +104,10 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
     fn data_meta(&mut self, path: &RepoPath, entry_count: u32) -> Result<Option<Self::Data>> {
         if Some(path) != self.path.as_ref() {
             let msg = format!("unexpected path: {:?} != {:?}", path, self.path);
-            Err(ErrorKind::MalformedTreemanifestPart(msg).into())
+            Err(WirepackError::MalformedTreemanifestPart(msg).into())
         } else if entry_count != 1 {
             let msg = format!("expected exactly one data entry, got: {entry_count}");
-            Err(ErrorKind::MalformedTreemanifestPart(msg).into())
+            Err(WirepackError::MalformedTreemanifestPart(msg).into())
         } else {
             Ok(None)
         }
@@ -116,7 +116,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
     fn data(&mut self, data_entry: &DataEntry) -> Result<Option<Self::Data>> {
         if data_entry.delta_base != NULL_HASH {
             let msg = format!("unexpected delta base: {:?}", data_entry.delta_base);
-            return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
+            return Err(WirepackError::MalformedTreemanifestPart(msg).into());
         }
 
         let node_key = HgNodeKey {
@@ -139,7 +139,7 @@ fn replace_or_fail_if_exists<T: Debug>(existing: &mut Option<T>, new_value: T) -
     let existing = existing.replace(new_value);
     if existing.is_some() {
         let msg = format!("{existing:?} was already set");
-        Err(ErrorKind::MalformedTreemanifestPart(msg).into())
+        Err(WirepackError::MalformedTreemanifestPart(msg).into())
     } else {
         Ok(())
     }
@@ -148,7 +148,7 @@ fn replace_or_fail_if_exists<T: Debug>(existing: &mut Option<T>, new_value: T) -
 fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> {
     field.take().ok_or_else(|| {
         let msg = format!("{field_name} is not set");
-        ErrorKind::MalformedTreemanifestPart(msg).into()
+        WirepackError::MalformedTreemanifestPart(msg).into()
     })
 }
 

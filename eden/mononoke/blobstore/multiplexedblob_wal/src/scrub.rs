@@ -27,7 +27,7 @@ use metaconfig_types::MultiplexId;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
 use multiplexedblob::SrubWriteOnly;
-use multiplexedblob::base::ErrorKind;
+use multiplexedblob::base::MultiplexedBlobError;
 
 use crate::MultiplexTimeout;
 use crate::Scuba;
@@ -40,7 +40,7 @@ impl WalMultiplexedBlobstore {
         ctx: &CoreContext,
         key: &str,
         write_only: SrubWriteOnly,
-    ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
+    ) -> Result<Option<BlobstoreGetData>, MultiplexedBlobError> {
         let mut scuba = self.scuba.clone();
         scuba.sampled();
 
@@ -140,12 +140,12 @@ impl Blobstore for WalScrubBlobstore {
         let write_only = self.scrub_options.scrub_action_on_missing_write_only;
         match self.inner.scrub_get(ctx, key, write_only).await {
             Ok(value) => Ok(value),
-            Err(ErrorKind::SomeFailedOthersNone {
+            Err(MultiplexedBlobError::SomeFailedOthersNone {
                 main_errors,
                 write_only_errors,
             }) => {
                 if self.inner.blobstores.len() - main_errors.len() < self.inner.quorum.read.get() {
-                    Err(ErrorKind::SomeFailedOthersNone {
+                    Err(MultiplexedBlobError::SomeFailedOthersNone {
                         main_errors,
                         write_only_errors,
                     })
@@ -155,7 +155,7 @@ impl Blobstore for WalScrubBlobstore {
                     Ok(None)
                 }
             }
-            Err(ErrorKind::SomeMissingItem {
+            Err(MultiplexedBlobError::SomeMissingItem {
                 missing_main,
                 missing_write_only,
                 value,

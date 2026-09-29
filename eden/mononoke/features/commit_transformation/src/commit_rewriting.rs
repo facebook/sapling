@@ -307,7 +307,9 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                     let new_paths = mover.multi_move_path(path)?;
                     let copy_from_commit =
                         remapped_parents.get(copy_from_commit).ok_or_else(|| {
-                            Error::from(ErrorKind::MissingRemappedCommit(*copy_from_commit))
+                            Error::from(CommitTransformationError::MissingRemappedCommit(
+                                *copy_from_commit,
+                            ))
                         })?;
 
                     // If the source path doesn't remap, drop this copy info.
@@ -426,15 +428,17 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
 
     // Update hashes
     for commit in cs.parents.iter_mut() {
-        let remapped = remapped_parents
-            .get(commit)
-            .ok_or_else(|| Error::from(ErrorKind::MissingRemappedCommit(*commit)))?;
+        let remapped = remapped_parents.get(commit).ok_or_else(|| {
+            Error::from(CommitTransformationError::MissingRemappedCommit(*commit))
+        })?;
 
         *commit = *remapped;
     }
     if let Some(first_parent) = force_first_parent {
         if !cs.parents.contains(&first_parent) {
-            return Err(Error::from(ErrorKind::MissingForcedParent(first_parent)));
+            return Err(Error::from(CommitTransformationError::MissingForcedParent(
+                first_parent,
+            )));
         }
         let mut new_parents = vec![first_parent];
         new_parents.extend(cs.parents.into_iter().filter(|cs| *cs != first_parent));

@@ -54,7 +54,7 @@ mod commands;
 mod errors;
 mod re_cas_sync;
 
-use crate::errors::ErrorKind::SyncFailed;
+use crate::errors::CasSyncError::SyncFailed;
 use crate::errors::PipelineError;
 use crate::errors::PipelineError::AnonymousError;
 use crate::errors::PipelineError::EntryError;

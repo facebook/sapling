@@ -11,7 +11,7 @@ use bookmarks::BookmarkUpdateLogId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum CasSyncError {
     #[error("sync failed for ids {ids:?}")]
     SyncFailed {
         ids: Vec<BookmarkUpdateLogId>,

@@ -31,7 +31,7 @@ use thiserror::Error;
 const BUFFER_MEMORY_BUDGET: u64 = 16 * 1024 * 1024; // 16MB.
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum FilestoreFetchError {
     #[error("Chunk not found: {0:?}")]
     ChunkNotFound(ContentChunkId),
 }
@@ -220,7 +220,7 @@ pub fn stream_file_bytes<'a, B: KeyedBlobstore + Clone + 'a>(
                             .map_err(move |err| match err {
                                 LoadableError::Error(err) => err,
                                 LoadableError::Missing(_) => {
-                                    ErrorKind::ChunkNotFound(chunk_id).into()
+                                    FilestoreFetchError::ChunkNotFound(chunk_id).into()
                                 }
                             })
                             .map(ContentChunk::into_bytes)?;

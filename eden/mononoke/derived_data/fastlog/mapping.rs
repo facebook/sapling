@@ -46,7 +46,7 @@ pub enum FastlogParent {
 }
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum FastlogDerivationError {
     #[error("invalid Thrift structure '{0}': {1}")]
     InvalidThrift(String, String),
     #[error("Fastlog batch for {0:?} unode not found")]

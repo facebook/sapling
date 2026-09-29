@@ -62,7 +62,7 @@ mod errors {
     use thiserror::Error;
 
     #[derive(Debug, Error)]
-    pub enum ErrorKind {
+    pub enum CacheWarmupError {
         #[error("Bookmark {0} does not exist")]
         BookmarkNotFound(BookmarkKey),
     }
@@ -233,7 +233,7 @@ async fn do_cache_warmup(
             .bookmarks()
             .get(ctx.clone(), &bookmark, freshness)
             .await?
-            .ok_or(errors::ErrorKind::BookmarkNotFound(bookmark))?,
+            .ok_or(errors::CacheWarmupError::BookmarkNotFound(bookmark))?,
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,
     };
 

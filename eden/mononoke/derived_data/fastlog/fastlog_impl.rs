@@ -26,7 +26,7 @@ use mononoke_types::fastlog_batch::ParentOffset;
 use mononoke_types::typed_hash::HistoryManifestDirectoryId;
 use mononoke_types::typed_hash::HistoryManifestFileId;
 
-use crate::ErrorKind;
+use crate::FastlogDerivationError;
 use crate::FastlogParent;
 
 pub(crate) async fn create_new_batch(
@@ -63,7 +63,7 @@ pub(crate) async fn create_new_batch_with_prefix(
                 }
                 None => None,
             };
-            maybe_batch.ok_or_else(|| Error::from(ErrorKind::NotFound(entry)))
+            maybe_batch.ok_or_else(|| Error::from(FastlogDerivationError::NotFound(entry)))
         }
     }))
     .await?;
@@ -80,7 +80,7 @@ pub(crate) async fn create_new_batch_v2(
     let parent_batches = try_join_all(hm_parents.into_iter().map({
         move |entry| async move {
             let maybe_batch = fetch_fastlog_batch_by_hm_id(ctx, blobstore, &entry).await?;
-            maybe_batch.ok_or_else(|| Error::from(ErrorKind::HmNotFound(entry)))
+            maybe_batch.ok_or_else(|| Error::from(FastlogDerivationError::HmNotFound(entry)))
         }
     }))
     .await?;

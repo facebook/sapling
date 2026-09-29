@@ -86,7 +86,7 @@ use crate::sync_commit::unsafe_sync_commit;
 use crate::sync_commit::unsafe_sync_commit_pushrebase;
 use crate::test_utils::TestRepo;
 use crate::test_utils::rebase_root_on_master;
-use crate::types::ErrorKind;
+use crate::types::CrossRepoSyncError;
 use crate::types::PushrebaseRewriteDates;
 use crate::types::Target;
 use crate::validation::verify_working_copy;
@@ -1602,18 +1602,18 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
 
     match res {
         Ok(_) => Err(anyhow!("unexpected success")),
-        Err(err) => match err.downcast_ref::<ErrorKind>() {
+        Err(err) => match err.downcast_ref::<CrossRepoSyncError>() {
             Some(error_kind) => match error_kind {
-                ErrorKind::PushrebaseFailure(error) => match error {
+                CrossRepoSyncError::PushrebaseFailure(error) => match error {
                     PushrebaseError::Error(err) => {
                         check_x_repo_sync_disabled(err);
                         Ok(())
                     }
                     _ => Err(anyhow!("unexpected pushrebase error: {error}")),
                 },
-                _ => Err(anyhow!("unexpected ErrorKind: {error_kind}")),
+                _ => Err(anyhow!("unexpected CrossRepoSyncError: {error_kind}")),
             },
-            None => Err(anyhow!("unexpected error - not ErrorKind")),
+            None => Err(anyhow!("unexpected error - not CrossRepoSyncError")),
         },
     }
 }

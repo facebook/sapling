@@ -109,7 +109,7 @@ pub trait Repo = BonsaiGitMappingRef
     + 'static;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum CommitTransformationError {
     #[error("Remapped commit {0} expected in target repo, but not present")]
     MissingRemappedCommit(ChangesetId),
     #[error(

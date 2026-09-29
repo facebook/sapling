@@ -144,7 +144,7 @@ generic_newtype_with_obvious_impls! { Source }
 generic_newtype_with_obvious_impls! { Target }
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum CrossRepoSyncError {
     #[error("Pushrebase of synced commit failed - check config for overlaps: {0:?}")]
     PushrebaseFailure(PushrebaseError),
     #[error("Remapped commit {0} expected in target repo, but not present")]

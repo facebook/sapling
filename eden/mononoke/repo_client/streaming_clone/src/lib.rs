@@ -36,7 +36,7 @@ pub struct StreamingCloneBuilder {
 }
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum StreamingCloneError {
     #[error("missing blob {0}")]
     MissingStreamingBlob(String),
     #[error("incorrect size {1} (expected {2}) of corrupt blob {0}")]
@@ -164,14 +164,14 @@ fn fetch_blob(
         let data = blobstore.get(&ctx, &key).await?;
 
         match data {
-            None => Err(ErrorKind::MissingStreamingBlob(key).into()),
+            None => Err(StreamingCloneError::MissingStreamingBlob(key).into()),
             Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),
-            Some(data) => {
-                Err(
-                    ErrorKind::CorruptStreamingBlob(key, data.as_bytes().len(), expected_size)
-                        .into(),
-                )
-            }
+            Some(data) => Err(StreamingCloneError::CorruptStreamingBlob(
+                key,
+                data.as_bytes().len(),
+                expected_size,
+            )
+            .into()),
         }
     }
     .boxed()

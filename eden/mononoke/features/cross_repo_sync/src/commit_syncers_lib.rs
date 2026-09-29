@@ -68,7 +68,7 @@ use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::sync_commit::CommitSyncData;
 use crate::sync_commit::sync_commit;
 use crate::sync_config_version_utils::get_mapping_change_version;
-use crate::types::ErrorKind;
+use crate::types::CrossRepoSyncError;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
@@ -87,14 +87,14 @@ pub(crate) async fn remap_parents<'a, R: Repo>(
             .get_commit_sync_outcome_with_hint(ctx, Source(*commit), hint.clone())
             .await?;
         let sync_outcome: Result<_, Error> =
-            maybe_sync_outcome.ok_or_else(|| ErrorKind::ParentNotRemapped(*commit).into());
+            maybe_sync_outcome.ok_or_else(|| CrossRepoSyncError::ParentNotRemapped(*commit).into());
         let sync_outcome = sync_outcome?;
 
         use CommitSyncOutcome::*;
         let remapped_parent = match sync_outcome {
             RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
             NotSyncCandidate(_) => {
-                return Err(ErrorKind::ParentNotSyncCandidate(*commit).into());
+                return Err(CrossRepoSyncError::ParentNotSyncCandidate(*commit).into());
             }
         };
 
@@ -843,7 +843,7 @@ pub async fn update_mapping_with_version<'a, R: Repo>(
     let xrepo_sync_disable_all_syncs =
         justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None);
     if xrepo_sync_disable_all_syncs {
-        return Err(ErrorKind::XRepoSyncDisabled.into());
+        return Err(CrossRepoSyncError::XRepoSyncDisabled.into());
     }
 
     let commit_sync_repos = syncer.repos.clone();

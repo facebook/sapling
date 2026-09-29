@@ -41,7 +41,7 @@ type BlobstoresReturnedNone = HashSet<BlobstoreId>;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
 #[derive(Error, Debug, Clone)]
-pub enum ErrorKind {
+pub enum MultiplexedBlobError {
     #[error("Some blobstores failed, and other returned None: {main_errors:?}")]
     SomeFailedOthersNone {
         main_errors: Arc<BlobstoresReturnedError>,
@@ -72,17 +72,17 @@ fn blobstores_failed_error(
     main_blobstore_ids: impl Iterator<Item = BlobstoreId>,
     main_errors: HashMap<BlobstoreId, Error>,
     write_only_errors: HashMap<BlobstoreId, Error>,
-) -> ErrorKind {
+) -> MultiplexedBlobError {
     let main_errored_ids: HashSet<BlobstoreId> = main_errors.keys().copied().collect();
     let all_main_ids: HashSet<BlobstoreId> = main_blobstore_ids.collect();
     if main_errored_ids == all_main_ids {
         // The write only stores that returned None might not have been fully populated
-        ErrorKind::AllFailed {
+        MultiplexedBlobError::AllFailed {
             main_errors: Arc::new(main_errors),
             write_only_errors: Arc::new(write_only_errors),
         }
     } else {
-        ErrorKind::SomeFailedOthersNone {
+        MultiplexedBlobError::SomeFailedOthersNone {
             main_errors: Arc::new(main_errors),
             write_only_errors: Arc::new(write_only_errors),
         }
@@ -139,7 +139,7 @@ where
 pub fn scrub_parse_results(
     results: impl Iterator<Item = (bool, GetResult)>,
     all_main: impl Iterator<Item = BlobstoreId>,
-) -> Result<Option<BlobstoreGetData>, ErrorKind> {
+) -> Result<Option<BlobstoreGetData>, MultiplexedBlobError> {
     let mut missing_main = HashSet::new();
     let mut missing_write_only = HashSet::new();
     let mut get_data = None;
@@ -191,7 +191,7 @@ pub fn scrub_parse_results(
                 Ok(Some(value))
             } else {
                 // This silently ignores failed blobstores if at least one has a value
-                Err(ErrorKind::SomeMissingItem {
+                Err(MultiplexedBlobError::SomeMissingItem {
                     missing_main: Arc::new(missing_main),
                     missing_write_only: Arc::new(missing_write_only),
                     value,
@@ -203,7 +203,7 @@ pub fn scrub_parse_results(
             let mut all_missing = HashSet::new();
             all_missing.extend(missing_main);
             all_missing.extend(missing_write_only);
-            Err(ErrorKind::ValueMismatch(
+            Err(MultiplexedBlobError::ValueMismatch(
                 Arc::new(answered),
                 Arc::new(all_missing),
             ))

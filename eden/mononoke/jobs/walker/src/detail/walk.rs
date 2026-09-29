@@ -162,7 +162,7 @@ impl OutgoingEdge {
 }
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum WalkerError {
     #[error("Could not step to {1:?} via {2} in repo {0}")]
     NotTraversable(String, OutgoingEdge, String),
 }
@@ -2270,7 +2270,7 @@ where
         }
     }
     .with_context(|| {
-        ErrorKind::NotTraversable(
+        WalkerError::NotTraversable(
             repo.repo_identity().name().to_string(),
             walk_item.clone(),
             format!("{via:?}"),

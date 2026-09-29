@@ -47,7 +47,7 @@ use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::sync_config_version_utils::get_mapping_change_version_from_hg_extra;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::get_version_for_merge;
-use crate::types::ErrorKind;
+use crate::types::CrossRepoSyncError;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
@@ -444,7 +444,7 @@ async fn sync_commit_single_parent_in_memory<'a, R: Repo>(
 
             if let Some(expected_version) = expected_version {
                 if expected_version != version {
-                    return Err(ErrorKind::UnexpectedVersion {
+                    return Err(CrossRepoSyncError::UnexpectedVersion {
                         expected_version,
                         actual_version: version,
                         cs_id: source_cs_id,
@@ -616,7 +616,7 @@ async fn sync_merge_in_memory<'a, R: Repo>(
 
         if let Some(expected_version) = expected_version {
             if version != expected_version {
-                return Err(ErrorKind::UnexpectedVersion {
+                return Err(CrossRepoSyncError::UnexpectedVersion {
                     expected_version,
                     actual_version: version,
                     cs_id: source_cs_id,

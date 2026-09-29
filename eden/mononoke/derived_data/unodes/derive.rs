@@ -53,8 +53,8 @@ use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::ErrorKind;
 use crate::RootUnodeManifestId;
+use crate::UnodeDerivationError;
 
 pub(crate) async fn derive_unode_manifest_stack(
     ctx: &CoreContext,
@@ -460,7 +460,7 @@ async fn create_unode_file(
         // copy information is ignored. It might mean that some bonsai changesets would be
         // considered valid for unode manifests, but invalid for mercurial
         if parents.len() < 2 {
-            return Err(ErrorKind::InvalidBonsai(
+            return Err(UnodeDerivationError::InvalidBonsai(
                 "no change is provided, but file unode has only one parent".to_string(),
             )
             .into());
@@ -487,7 +487,7 @@ async fn create_unode_file(
                 .await?
             }
             _ => {
-                return Err(ErrorKind::InvalidBonsai(
+                return Err(UnodeDerivationError::InvalidBonsai(
                     "no change is provided, but content is different".to_string(),
                 )
                 .into());

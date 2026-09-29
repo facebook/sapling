@@ -24,7 +24,7 @@ use synced_commit_mapping_thrift as thrift;
 use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
-pub enum ErrorKind {
+pub enum SyncedCommitMappingError {
     #[error(
         "tried to insert inconsistent small bcs id {actual_bcs_id:?} version {actual_config_version:?}, while db has {expected_bcs_id:?} version {expected_config_version:?}"
     )]

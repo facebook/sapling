@@ -33,7 +33,7 @@ pub use fastlog_impl::fetch_fastlog_batch_by_unode_id;
 pub use fastlog_impl::fetch_flattened;
 pub use fastlog_impl::hm_entry_to_fastlog_batch_key;
 pub use fastlog_impl::unode_entry_to_fastlog_batch_key;
-pub use mapping::ErrorKind;
+pub use mapping::FastlogDerivationError;
 pub use mapping::FastlogParent;
 pub use mapping::RootFastlog;
 pub use mapping::format_key;

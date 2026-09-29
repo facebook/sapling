@@ -55,7 +55,7 @@ use crate::timed::with_timed_stores;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
 #[derive(Error, Debug, Clone)]
-pub enum ErrorKind {
+pub enum MultiplexedWalError {
     #[error("All blobstores failed: {0:?}")]
     AllFailed(Arc<BlobstoresReturnedError>),
     #[error("Failures on put in underlying single blobstores: {0:?}")]
@@ -361,10 +361,10 @@ impl WalMultiplexedBlobstore {
             let errors = Arc::new(put_errors);
             let result_err = if errors.len() == self.blobstores.len() {
                 // all main writes failed
-                ErrorKind::AllFailed(errors)
+                MultiplexedWalError::AllFailed(errors)
             } else {
                 // some main writes failed
-                ErrorKind::SomePutsFailed(errors)
+                MultiplexedWalError::SomePutsFailed(errors)
             };
             result_err.into()
         })
@@ -437,10 +437,10 @@ impl WalMultiplexedBlobstore {
             let errors = Arc::new(unlink_errors);
             let result_err = if errors.len() == self.blobstores.len() {
                 // all main unlink failed
-                ErrorKind::AllFailed(errors)
+                MultiplexedWalError::AllFailed(errors)
             } else {
                 // some main unlinks failed
-                ErrorKind::SomeUnlinksFailed(errors)
+                MultiplexedWalError::SomeUnlinksFailed(errors)
             };
             result_err.into()
         })
@@ -511,10 +511,10 @@ impl WalMultiplexedBlobstore {
             let errors = Arc::new(get_errors);
             let result_err = if errors.len() == num_blobstores_used {
                 // all main reads failed
-                ErrorKind::AllFailed(errors)
+                MultiplexedWalError::AllFailed(errors)
             } else {
                 // some main reads failed
-                ErrorKind::SomeGetsFailed(errors)
+                MultiplexedWalError::SomeGetsFailed(errors)
             };
             result_err.into()
         });
@@ -612,11 +612,11 @@ impl WalMultiplexedBlobstore {
         let errors = Arc::new(errors);
         if errors.len() == self.blobstores.len() {
             // all main reads failed -> is_present failed
-            return Err(ErrorKind::AllFailed(errors).into());
+            return Err(MultiplexedWalError::AllFailed(errors).into());
         }
 
         Ok(BlobstoreIsPresent::ProbablyNotPresent(
-            ErrorKind::SomeIsPresentsFailed(errors).into(),
+            MultiplexedWalError::SomeIsPresentsFailed(errors).into(),
         ))
     }
 }

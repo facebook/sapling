@@ -38,7 +38,7 @@ use thiserror::Error;
 pub struct Repo(RepoBlobstore);
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum RemoteFilelogError {
     #[error("Corrupt hg filenode returned: {expected} != {actual}")]
     CorruptHgFileNode {
         expected: HgFileNodeId,
@@ -175,7 +175,7 @@ pub async fn create_raw_filenode_blob(
 
     let (meta_bytes, file_bytes) = match kind {
         RemotefilelogBlobKind::Inline(_) => data.await?,
-        kind => return Err(ErrorKind::InvalidKind { kind }.into()),
+        kind => return Err(RemoteFilelogError::InvalidKind { kind }.into()),
     };
 
     // TODO (T30456231): Avoid this copy
@@ -247,7 +247,7 @@ fn prepare_blob_inline_file(
             ));
 
             if actual != node {
-                return Err(ErrorKind::CorruptHgFileNode {
+                return Err(RemoteFilelogError::CorruptHgFileNode {
                     expected: node,
                     actual,
                 }
@@ -277,7 +277,7 @@ fn prepare_blob_lfs_file(
         let key = FetchKey::from(envelope.content_id());
         let metadata = filestore::get_metadata(&blobstore, &ctx, &key)
             .await?
-            .ok_or(ErrorKind::MissingContent(key))?;
+            .ok_or(RemoteFilelogError::MissingContent(key))?;
         let copy_from = File::extract_copied_from(envelope.metadata())?;
         let bytes = File::generate_lfs_file(
             metadata.sha256,

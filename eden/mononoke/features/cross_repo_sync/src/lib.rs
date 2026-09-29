@@ -64,7 +64,7 @@ pub use sync_commit::unsafe_sync_commit;
 pub use sync_commit::unsafe_sync_commit_pushrebase;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 pub use types::ConcreteRepo;
-pub use types::ErrorKind;
+pub use types::CrossRepoSyncError;
 pub use types::Large;
 pub use types::PushrebaseRewriteDates;
 pub use types::Repo;
