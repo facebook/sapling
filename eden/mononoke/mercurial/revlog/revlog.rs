@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use bytes::Bytes;
@@ -28,8 +29,6 @@ pub use mercurial_types::HgParents;
 pub use mercurial_types::bdiff;
 pub use mercurial_types::bdiff::Delta;
 pub use mercurial_types::delta;
-
-use crate::errors::ErrorKind;
 
 // Submodules
 mod lz4;
@@ -115,7 +114,7 @@ impl Revlog {
         let hdr = match parser::header(idx.as_slice()) {
             Ok((_, hdr)) => hdr,
             Err(err) => {
-                return Err(ErrorKind::Revlog(format!("Header parse failed: {err:?}")).into());
+                return Err(anyhow!("Revlog: Header parse failed: {err:?}"));
             }
         };
 
@@ -285,10 +284,9 @@ impl RevlogInner {
                 }
                 Ok(res)
             }
-            Err(err) => Err(ErrorKind::Revlog(format!(
-                "failed to parse entry offset {off}: {err:?}"
-            ))
-            .into()),
+            Err(err) => Err(anyhow!(
+                "Revlog: failed to parse entry offset {off}: {err:?}"
+            )),
         }
     }
 
@@ -329,7 +327,7 @@ impl RevlogInner {
             // cache hit or computed
             self.parse_entry(off)
         } else {
-            Err(ErrorKind::Revlog(format!("rev {idx:?} not found")).into())
+            Err(anyhow!("Revlog: rev {idx:?} not found"))
         }
     }
 
@@ -343,7 +341,7 @@ impl RevlogInner {
     fn get_idx_by_nodeid(&self, nodeid: HgNodeHash) -> Result<RevIdx> {
         match self.nodeidx.get(&nodeid).cloned() {
             Some(idx) => Ok(idx), // cache hit
-            None => Err(ErrorKind::Revlog(format!("nodeid {nodeid} not found")).into()),
+            None => Err(anyhow!("Revlog: nodeid {nodeid} not found")),
         }
     }
 
@@ -392,30 +390,24 @@ impl RevlogInner {
                 Ok(Chunk::Literal(vec![]))
             } else {
                 match parser::literal(chunkdata) {
-                    Ok((rest, _)) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
-                        "Failed to unpack literal: {} remains, {:?}",
-                        rest.len(),
-                        &rest[..16]
-                    ))
-                    .into()),
+                    Ok((rest, _)) if !rest.is_empty() => Err(anyhow!(
+                        "Revlog: Failed to unpack literal: {len} remains, {rest:?}",
+                        len = rest.len(),
+                        rest = &rest[..16]
+                    )),
                     Ok((_, literal)) => Ok(Chunk::Literal(literal)),
-                    Err(err) => {
-                        Err(ErrorKind::Revlog(format!("Failed to unpack literal: {err:?}")).into())
-                    }
+                    Err(err) => Err(anyhow!("Revlog: Failed to unpack literal: {err:?}")),
                 }
             }
         } else {
             match parser::deltachunk(chunkdata) {
-                Ok((rest, _)) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
-                    "Failed to unpack details: {} remains, {:?}",
-                    rest.len(),
-                    &rest[..16]
-                ))
-                .into()),
+                Ok((rest, _)) if !rest.is_empty() => Err(anyhow!(
+                    "Revlog: Failed to unpack details: {len} remains, {rest:?}",
+                    len = rest.len(),
+                    rest = &rest[..16]
+                )),
                 Ok((_, deltas)) => Ok(Chunk::Deltas(deltas)),
-                Err(err) => {
-                    Err(ErrorKind::Revlog(format!("Failed to unpack deltas: {err:?}")).into())
-                }
+                Err(err) => Err(anyhow!("Revlog: Failed to unpack deltas: {err:?}")),
             }
         }
     }
@@ -487,7 +479,7 @@ impl RevlogInner {
                             break v;
                         }
                         _ => {
-                            Err(ErrorKind::Revlog("expected a literal".to_string()))?;
+                            return Err(anyhow!("Revlog: expected a literal"));
                         }
                     }
                 }
@@ -495,9 +487,7 @@ impl RevlogInner {
                     idx = baseidx;
                 }
                 Some(baseidx) => {
-                    Err(ErrorKind::Revlog(format!(
-                        "baserev {baseidx:?} >= idx {idx:?}"
-                    )))?;
+                    return Err(anyhow!("Revlog: baserev {baseidx:?} >= idx {idx:?}"));
                 }
                 None => match chunk {
                     // This is a delta against "-1" revision i.e. empty revision
@@ -505,9 +495,7 @@ impl RevlogInner {
                         break vec![];
                     }
                     _ => {
-                        Err(ErrorKind::Revlog(
-                            "expected a delta against empty string".to_string(),
-                        ))?;
+                        return Err(anyhow!("Revlog: expected a delta against empty string"));
                     }
                 },
             }

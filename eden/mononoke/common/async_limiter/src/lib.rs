@@ -6,7 +6,5 @@
  */
 
 mod async_limiter_;
-mod errors;
 
 pub use async_limiter_::AsyncLimiter;
-pub use errors::ErrorKind;

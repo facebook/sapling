@@ -21,6 +21,7 @@ use std::sync::RwLock;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::format_err;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
@@ -43,7 +44,6 @@ use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::fncache_fsencode;
 use mercurial_types::simple_fsencode;
 
-use crate::errors::ErrorKind;
 pub use crate::manifest::RevlogManifest;
 use crate::revlog::RevIdx;
 use crate::revlog::Revlog;
@@ -121,7 +121,7 @@ impl FromStr for Required {
             "treedirstate" => Ok(TreeDirstate),
             "treestate" => Ok(TreeState),
             "lfs" => Ok(LFS),
-            unk => Err(ErrorKind::UnknownReq(unk.into()).into()),
+            unk => Err(anyhow!("Unknown requirement: {unk}")),
         }
     }
 }
@@ -140,8 +140,7 @@ impl FromStr for StoreRequired {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<StoreRequired> {
-        let unk = s;
-        Err(ErrorKind::UnknownReq(unk.into()).into())
+        Err(anyhow!("Unknown requirement: {s}"))
     }
 }
 

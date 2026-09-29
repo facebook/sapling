@@ -20,7 +20,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:governor",
-        "fbsource//third-party/rust:thiserror",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
 )

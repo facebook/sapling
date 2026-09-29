@@ -55,10 +55,6 @@ use sha1::Sha1;
 use tracing::debug;
 use tracing::info;
 
-use crate::errors::ErrorKind;
-
-mod errors;
-
 const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
 const UNEXPECTED_NONE_ERR_MSG: &str = "unexpected None while calling ancestors_difference_stream";
 
@@ -407,7 +403,7 @@ async fn hg_to_bonsai_stream(
                     .bonsai_hg_mapping()
                     .get_bonsai_from_hg(ctx, node)
                     .await?
-                    .ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node))?;
+                    .ok_or_else(|| anyhow!("Bonsai not found for hg changeset: {node:?}"))?;
 
                 let gen_num = repo
                     .commit_graph()

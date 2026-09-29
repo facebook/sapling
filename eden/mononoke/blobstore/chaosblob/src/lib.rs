@@ -8,6 +8,7 @@
 use std::num::NonZeroU32;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
@@ -16,9 +17,6 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-
-mod errors;
-pub use crate::errors::ErrorKind;
 
 const NEVER_CHAOS_THRESHOLD: f32 = 1.0;
 const ALWAYS_CHAOS_THRESHOLD: f32 = -1.0;
@@ -98,7 +96,9 @@ impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
         let should_error = rand::random::<f32>() > self.sample_threshold_read;
         let get = self.blobstore.get(ctx, key);
         if should_error {
-            Err(ErrorKind::InjectedChaosGet(key.to_owned()).into())
+            Err(anyhow!(
+                "Injected failure in get to ChaosBlobstore for key {key}"
+            ))
         } else {
             get.await
         }
@@ -134,7 +134,9 @@ impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
         let should_error = rand::random::<f32>() > self.sample_threshold_read;
         let is_present = self.blobstore.is_present(ctx, key);
         if should_error {
-            Err(ErrorKind::InjectedChaosIsPresent(key.to_owned()).into())
+            Err(anyhow!(
+                "Injected failure in is_present to ChaosBlobstore for key {key}"
+            ))
         } else {
             is_present.await
         }
@@ -145,7 +147,9 @@ impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
         let should_error = rand::random::<f32>() > self.sample_threshold_read;
         let unlink = self.blobstore.unlink(ctx, key);
         if should_error {
-            Err(ErrorKind::InjectedChaosUnlink(key.to_owned()).into())
+            Err(anyhow!(
+                "Injected failure in unlink to ChaosBlobstore for key {key}"
+            ))
         } else {
             unlink.await
         }
@@ -173,7 +177,9 @@ impl<T: Blobstore> ChaosBlobstore<T> {
             Some(put)
         };
         match put {
-            None => Err(ErrorKind::InjectedChaosPut(key).into()),
+            None => Err(anyhow!(
+                "Injected failure in put to ChaosBlobstore for key {key}"
+            )),
             Some(put) => put.await,
         }
     }

@@ -17,7 +17,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerableWithUnlink;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore::DisabledBlob;
-use blobstore::ErrorKind;
 use blobstore::PutBehaviour;
 use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use cacheblob::CachelibBlobstoreOptions;
@@ -195,7 +194,7 @@ pub async fn make_sql_blobstore<'a>(
             blobstore_options.put_behaviour,
             config_store,
         )
-        .context(ErrorKind::StateOpen),
+        .context("Error while opening state for blob store"),
         Mysql { remote } => {
             let (tier_name, shard_count) = match remote {
                 ShardableRemoteDatabaseConfig::Unsharded(config) => (config.db_address, None),
@@ -346,7 +345,7 @@ async fn make_files_blobstore(
 ) -> Result<Fileblob, Error> {
     if let BlobConfig::Files { path } = blobconfig {
         Fileblob::create(path.join("blobs"), blobstore_options.put_behaviour)
-            .context(ErrorKind::StateOpen)
+            .context("Error while opening state for blob store")
     } else {
         bail!("Not a file blobstore")
     }
@@ -391,7 +390,7 @@ async fn make_physical_blobstore_unlink_ops<'a>(
             S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
                 .watched()
                 .await
-                .context(ErrorKind::StateOpen)
+                .context("Error while opening state for blob store")
                 .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         }
         _ => bail!("Not a physical blobstore"),
@@ -491,7 +490,7 @@ pub fn make_blobstore<'a>(
                 S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
                     .watched()
                     .await
-                    .context(ErrorKind::StateOpen)
+                    .context("Error while opening state for blob store")
                     .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?
             }
 

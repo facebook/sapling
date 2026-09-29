@@ -42,7 +42,6 @@ use textwrap::indent;
 use time_ext::DurationExt;
 use tracing::error;
 
-use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
 use crate::repo_handlers::repo_handler;
 
@@ -134,7 +133,7 @@ pub async fn request_handler(
         .await;
 
     if !is_allowed_to_repo {
-        let err: Error = ErrorKind::AuthorizationFailed.into();
+        let err = anyhow!("Unauthorized access, permission denied");
         scuba.log_with_msg("Authorization failed", format!("{err}"));
         error!("Authorization failed: {}", err);
         log_error_to_client(stderr, "Authorization failed:", &format!("{err}"));

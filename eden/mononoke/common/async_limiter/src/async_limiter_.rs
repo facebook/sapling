@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use anyhow::anyhow;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future;
@@ -18,8 +19,6 @@ use governor::state::direct::DirectStateStore;
 use governor::state::direct::NotKeyed;
 use governor::state::direct::StreamRateLimitExt;
 use mononoke_macros::mononoke;
-
-use crate::ErrorKind;
 
 /// A shared asynchronous rate limiter.
 #[derive(Clone)]
@@ -75,9 +74,10 @@ impl AsyncLimiter {
             // tries to enter the queue once it's polled.
             dispatch
                 .unbounded_send(send)
-                .map_err(|_| ErrorKind::RuntimeShuttingDown)?;
+                .map_err(|_| anyhow!("Runtime is shutting down"))?;
 
-            recv.await.map_err(|_| ErrorKind::RuntimeShuttingDown)?;
+            recv.await
+                .map_err(|_| anyhow!("Runtime is shutting down"))?;
 
             Ok(())
         }

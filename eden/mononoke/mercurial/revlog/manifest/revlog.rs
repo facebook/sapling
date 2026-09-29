@@ -42,7 +42,6 @@ use mercurial_types::blobs::file;
 use mercurial_types::manifest::Type;
 
 use crate::RevlogRepo;
-use crate::errors::ErrorKind;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
@@ -323,10 +322,8 @@ impl RevlogEntry {
     fn new(repo: RevlogRepo, path: NonRootMPath, details: Details) -> Result<Self> {
         let name = (&path).into_iter().next_back().cloned();
         let path = match details.flag() {
-            Type::Tree => RepoPath::dir(path)
-                .with_context(|| ErrorKind::Path("error while creating RepoPath".into()))?,
-            _ => RepoPath::file(path)
-                .with_context(|| ErrorKind::Path("error while creating RepoPath".into()))?,
+            Type::Tree => RepoPath::dir(path).context("Path: error while creating RepoPath")?,
+            _ => RepoPath::file(path).context("Path: error while creating RepoPath")?,
         };
 
         // For revlog we still need to store full path, because full path is used to find revlog

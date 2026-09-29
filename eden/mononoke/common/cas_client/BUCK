@@ -40,7 +40,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/cas_client:cas_client",

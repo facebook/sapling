@@ -79,7 +79,6 @@ use tracing::error;
 use tracing::info;
 use tracing::warn;
 
-use crate::errors::ErrorKind;
 use crate::http_service::MononokeHttpService;
 use crate::request_handler::request_handler;
 use crate::wireproto_sink::WireprotoSink;
@@ -316,7 +315,7 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
         false => {
             let identities = match ssl_socket.ssl().peer_certificate() {
                 Some(cert) => MononokeIdentity::try_from_x509(&cert),
-                None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
+                None => Err(anyhow!("connection does not have a client certificate")),
             }?;
 
             let is_trusted = conn

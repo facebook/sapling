@@ -15,9 +15,9 @@ use ::manifest::find_intersection_of_diffs;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::format_err;
 pub use blobrepo_common::changed_files::compute_changed_files;
-use blobstore::ErrorKind as BlobstoreError;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -306,7 +306,10 @@ impl UploadEntries {
                 let exists = aug_present?.assume_not_found_if_unsure()
                     || hg_present?.assume_not_found_if_unsure();
                 if !exists {
-                    return Err(BlobstoreError::NotFound(mfid.blobstore_key()).into());
+                    return Err(anyhow!(
+                        "Blob {key} not found in blobstore",
+                        key = mfid.blobstore_key()
+                    ));
                 }
             }
             Entry::Leaf(fnid) => {
@@ -318,7 +321,7 @@ impl UploadEntries {
 
                 let key = envelope.content_id().blobstore_key();
                 if !blobstore.is_present(ctx, &key).await?.fail_if_unsure()? {
-                    return Err(BlobstoreError::NotFound(key).into());
+                    return Err(anyhow!("Blob {key} not found in blobstore"));
                 }
             }
         }

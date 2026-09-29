@@ -5,16 +5,14 @@
  * GNU General Public License version 2.
  */
 
-mod errors;
-
 use anyhow::Error;
+use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::BytesMut;
 use cas_client::CasClient;
 use context::CoreContext;
-pub use errors::ErrorKind;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -81,7 +79,11 @@ where
     ) -> Result<MononokeDigest, Error> {
         let meta = filestore::get_metadata(blobstore, ctx, &content_id.to_owned().into())
             .await?
-            .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?;
+            .ok_or_else(|| {
+                anyhow!(
+                    "Failed to fetch metadata or blob for the following Mononoke Content Id: {content_id}"
+                )
+            })?;
         Ok(MononokeDigest(meta.seeded_blake3, meta.total_size))
     }
 
@@ -94,7 +96,11 @@ where
     ) -> Result<UploadOutcome, Error> {
         let stream = filestore::fetch(blobstore.clone(), ctx, &content_id.into())
             .await?
-            .ok_or(ErrorKind::MissingInBlobstore(content_id))?;
+            .ok_or_else(|| {
+                anyhow!(
+                    "The following Mononoke Content Id is unexpectedly missing in the blobstore: {content_id}"
+                )
+            })?;
         if digest.1 <= MAX_BYTES_FOR_INLINE_UPLOAD {
             let bytes_to_upload = stream.try_collect::<BytesMut>().await?;
             self.client

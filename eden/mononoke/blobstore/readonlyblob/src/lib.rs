@@ -6,6 +6,7 @@
  */
 
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
@@ -14,8 +15,6 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-mod errors;
-pub use crate::errors::ErrorKind;
 
 /// A layer over an existing blobstore that prevents writes.
 #[derive(Debug, Clone)]
@@ -56,7 +55,7 @@ impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
     }
 
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        Err(ErrorKind::ReadOnlyPut(key.to_string()).into())
+        Err(anyhow!("Attempt to put to ReadOnlyBlobstore for key {key}"))
     }
 
     async fn put_explicit<'a>(
@@ -66,7 +65,7 @@ impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
         _value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
-        Err(ErrorKind::ReadOnlyPut(key).into())
+        Err(anyhow!("Attempt to put to ReadOnlyBlobstore for key {key}"))
     }
 
     async fn put_with_status<'a>(
@@ -75,7 +74,7 @@ impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
         key: String,
         _value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        Err(ErrorKind::ReadOnlyPut(key).into())
+        Err(anyhow!("Attempt to put to ReadOnlyBlobstore for key {key}"))
     }
 }
 

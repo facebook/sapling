@@ -7,7 +7,6 @@
 
 mod counted_blobstore;
 mod disabled;
-mod errors;
 pub mod macros;
 
 use std::collections::HashSet;
@@ -42,7 +41,6 @@ use trait_set::trait_set;
 
 pub use crate::counted_blobstore::CountedBlobstore;
 pub use crate::disabled::DisabledBlob;
-pub use crate::errors::ErrorKind;
 
 // This module exists to namespace re-exported
 // imports, needed for macro exports.

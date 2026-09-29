@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
-mod errors;
 pub mod manifest;
 pub mod revlog;
 pub mod revlogrepo;
 pub mod stockbookmarks;
 
-pub use crate::errors::*;
 pub use crate::manifest::EntryContent;
 pub use crate::manifest::RevlogEntry;
 pub use crate::revlogrepo::RevlogManifest;

@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 pub use builder::NewFilenodesBuilder;
 use context::CoreContext;
@@ -35,20 +36,7 @@ use mononoke_types::RepositoryId;
 pub use path_hash::PathHash;
 use reader::FilenodesReader;
 pub use sql_timeout_knobs::disable_sql_timeouts;
-use thiserror::Error as DeriveError;
 use writer::FilenodesWriter;
-
-#[derive(Debug, DeriveError)]
-pub enum ErrorKind {
-    #[error("Internal error: failure while fetching file node {0} {1}")]
-    FailFetchFilenode(HgFileNodeId, RepoPath),
-
-    #[error("Internal error: failure while fetching file nodes for {0}")]
-    FailFetchFilenodeRange(RepoPath),
-
-    #[error("Internal error: failure while inserting filenodes")]
-    FailAddFilenodes,
-}
 
 #[derive(Clone)]
 pub struct NewFilenodes {
@@ -68,7 +56,7 @@ impl Filenodes for NewFilenodes {
             .writer
             .insert_filenodes(ctx, self.repo_id, info, false /* replace */)
             .await
-            .with_context(|| ErrorKind::FailAddFilenodes)?;
+            .context("Internal error: failure while inserting filenodes")?;
         Ok(ret)
     }
 
@@ -81,7 +69,7 @@ impl Filenodes for NewFilenodes {
             .writer
             .insert_filenodes(ctx, self.repo_id, info, true /* replace */)
             .await
-            .with_context(|| ErrorKind::FailAddFilenodes)?;
+            .context("Internal error: failure while inserting filenodes")?;
         Ok(ret)
     }
 
@@ -96,7 +84,9 @@ impl Filenodes for NewFilenodes {
             .clone()
             .get_filenode(ctx, self.repo_id, path, filenode_id)
             .await
-            .with_context(|| ErrorKind::FailFetchFilenode(filenode_id, path.clone()))?;
+            .with_context(|| {
+                anyhow!("Internal error: failure while fetching file node {filenode_id} {path}")
+            })?;
         Ok(ret)
     }
 
@@ -111,7 +101,9 @@ impl Filenodes for NewFilenodes {
             .clone()
             .get_all_filenodes_for_path(ctx, self.repo_id, path, limit)
             .await
-            .with_context(|| ErrorKind::FailFetchFilenodeRange(path.clone()))?;
+            .with_context(|| {
+                anyhow!("Internal error: failure while fetching file nodes for {path}")
+            })?;
         Ok(ret)
     }
 
