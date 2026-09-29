@@ -348,6 +348,7 @@ mod tests {
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
+    use restricted_paths::RestrictedPaths;
 
     use super::*;
 
@@ -383,6 +384,9 @@ mod tests {
 
         #[facet]
         repo_identity: RepoIdentity,
+
+        #[facet]
+        restricted_paths: RestrictedPaths,
     }
 
     struct NodeHashGen {

@@ -54,6 +54,7 @@ pub use response::UnbundleInfinitePushResponse;
 pub use response::UnbundlePushRebaseResponse;
 pub use response::UnbundlePushResponse;
 pub use response::UnbundleResponse;
+use restricted_paths::RestrictedPathsArc;
 pub use upload_changesets::upload_changeset;
 
 pub trait Repo = CommitGraphArc
@@ -67,6 +68,7 @@ pub trait Repo = CommitGraphArc
     + RepoBlobstoreArc
     + FilestoreConfigRef
     + RepoIdentityRef
+    + RestrictedPathsArc
     + remotefilelog::RepoLike
     + Clone
     + 'static

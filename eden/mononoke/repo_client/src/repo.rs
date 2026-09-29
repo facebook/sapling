@@ -30,6 +30,7 @@ use repo_event_publisher::RepoEventPublisher;
 use repo_identity::RepoIdentity;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
+use restricted_paths::RestrictedPaths;
 use sql_query_config::SqlQueryConfig;
 
 #[facet::container]
@@ -61,4 +62,5 @@ pub struct RepoClientRepo(
     dyn RepoLock,
     dyn RepoPermissionChecker,
     dyn RepoEventPublisher,
+    RestrictedPaths,
 );
