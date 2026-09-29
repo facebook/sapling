@@ -2343,9 +2343,10 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Number of shards for the tree cache. Higher number means lower lock
-   * contention, but less perfect eviction.
+   * contention, but the byte budget and minimum-items floor are split per
+   * shard, so a tree larger than its shard's slice cannot stay cached.
    */
-  ConfigSetting<uint64_t> treeCacheShards{"treecache:shards", 16, this};
+  ConfigSetting<uint64_t> treeCacheShards{"treecache:shards", 1, this};
 
   /**
    * Whether glob and prefetch requests bypass the in-memory tree cache and
