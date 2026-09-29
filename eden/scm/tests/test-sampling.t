@@ -206,8 +206,7 @@ Counters get logged for native commands:
   ...     for line in lines:
   ...         obj = json.loads(line)
   ...         if obj["category"] == "aaa":
-  ...             for k, v in sorted(obj["data"].items()):
-  ...                 print("  %s=%s" % (k, v))
+  ...             print("  test_counter=%s" % obj["data"]["test_counter"])
     test_counter=1
 
 Metrics can be printed if devel.print-metrics is set:
