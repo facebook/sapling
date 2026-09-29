@@ -12,11 +12,14 @@ import ActorAvatar from './ActorAvatar';
 import CenteredSpinner from './CenteredSpinner';
 import Link from './Link';
 import {PullRequestReviewDecision, PullRequestState} from './generated/graphql';
-import {GitHubGraphQLError} from './github/queryGraphQL';
-import {gitHubUserHomePageDataAtom} from './jotai/atoms';
+import {GitHubGraphQLError, GitHubNetworkError} from './github/queryGraphQL';
+import {
+  gitHubUserHomePageDataAtom,
+  gitHubUserHomePageRefreshTriggerAtom,
+} from './jotai/atoms';
 import {SearchIcon} from '@primer/octicons-react';
 import {Box, Button, Flash, Text, useTheme} from '@primer/react';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import React, {useMemo, useState} from 'react';
 import {notEmpty} from 'shared/utils';
@@ -56,10 +59,32 @@ export default function UserHomePage(): React.ReactElement {
       if (result.error instanceof GitHubGraphQLError && result.error.isRateLimitError) {
         return <RateLimitNotice error={result.error} />;
       }
+      if (result.error instanceof GitHubNetworkError) {
+        return <GitHubConnectionNotice />;
+      }
       throw result.error;
     case 'hasData':
       return <UserHomePageRoot data={result.data} />;
   }
+}
+
+function GitHubConnectionNotice(): React.ReactElement {
+  const refresh = useSetAtom(gitHubUserHomePageRefreshTriggerAtom);
+  return (
+    <Box sx={{maxWidth: 720, margin: '40px auto', padding: '0 24px'}}>
+      <Flash variant="warning">
+        <Text as="h1" sx={{display: 'block', fontSize: 2, fontWeight: 'bold', marginBottom: 2}}>
+          Unable to reach GitHub
+        </Text>
+        <Text as="p" sx={{display: 'block', margin: 0}}>
+          ReviewStack could not load your pull requests. Check your connection and try again.
+        </Text>
+        <Button sx={{marginTop: 3}} onClick={() => refresh(value => value + 1)}>
+          Try again
+        </Button>
+      </Flash>
+    </Box>
+  );
 }
 
 function RateLimitNotice({error}: {error: GitHubGraphQLError}): React.ReactElement {

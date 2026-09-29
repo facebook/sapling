@@ -40,17 +40,58 @@ export class GitHubGraphQLError extends Error {
   }
 }
 
+export class GitHubNetworkError extends Error {
+  constructor(readonly originalError: unknown) {
+    super('ReviewStack could not reach GitHub. Check your connection and try again.');
+    this.name = 'GitHubNetworkError';
+  }
+}
+
+const NETWORK_RETRY_DELAYS_MS = [250, 1000];
+
+async function fetchGraphQL(
+  graphQLEndpoint: string,
+  requestHeaders: Record<string, string>,
+  body: string,
+  retryNetworkErrors: boolean,
+  retryDelays: number[] = NETWORK_RETRY_DELAYS_MS,
+): Promise<Response> {
+  try {
+    return await fetch(graphQLEndpoint, {
+      headers: requestHeaders,
+      method: 'POST',
+      body,
+    });
+  } catch (error) {
+    const [delay, ...remainingDelays] = retryDelays;
+    if (!retryNetworkErrors || delay == null) {
+      throw new GitHubNetworkError(error);
+    }
+    await new Promise(resolve => window.setTimeout(resolve, delay));
+    return fetchGraphQL(
+      graphQLEndpoint,
+      requestHeaders,
+      body,
+      retryNetworkErrors,
+      remainingDelays,
+    );
+  }
+}
+
 export default async function queryGraphQL<TData, TVariables>(
   query: string,
   variables: TVariables,
   requestHeaders: Record<string, string>,
   graphQLEndpoint: string,
 ): Promise<TData> {
-  const response = await fetch(graphQLEndpoint, {
-    headers: requestHeaders,
-    method: 'POST',
-    body: JSON.stringify({query, variables}),
-  });
+  // A rejected fetch has no HTTP response and is usually a transient browser,
+  // DNS, or CORS-path failure. Queries are safe to retry; mutations are not.
+  const response = await fetchGraphQL(
+    graphQLEndpoint,
+    requestHeaders,
+    JSON.stringify({query, variables}),
+    query.trimStart().startsWith('query '),
+  );
 
   if (!response.ok) {
     if (response.status === 401) {
