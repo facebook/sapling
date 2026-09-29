@@ -2325,11 +2325,13 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Number of bytes worth of data to keep in memory.
+   * Number of bytes worth of data to keep in memory. The budget must exceed
+   * the largest tree by a comfortable margin, or a repeated walk of a working
+   * set just larger than the budget misses on every lookup.
    */
   ConfigSetting<size_t> inMemoryTreeCacheSize{
       "treecache:cache-size",
-      40 * 1024 * 1024,
+      128 * 1024 * 1024,
       this};
 
   /**
