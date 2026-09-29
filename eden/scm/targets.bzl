@@ -100,6 +100,8 @@ def _apply_autocargo_dep_overrides(autocargo, dep_kind, overrides):
             {
                 "default-features": False,
                 "features": ["std"],
+                "git": None,
+                "rev": None,
             },
         )
         _set_autocargo_dep_override(
@@ -109,7 +111,7 @@ def _apply_autocargo_dep_overrides(autocargo, dep_kind, overrides):
             {"features": []},
             override_kind = "oss_dependencies_override",
         )
-        _add_extra_buck_dependency(autocargo, dep_kind, "fbsource//third-party/rust/vendor/wezterm-dynamic:0.2")
+        _add_extra_buck_dependency(autocargo, dep_kind, "fbsource//third-party/rust:wezterm-dynamic")
 
 def _set_autocargo_dep_override(autocargo, dep_kind, crate, override, override_kind = "dependencies_override"):
     dep = _set_default(
