@@ -12,6 +12,9 @@ import {useAtomValue} from 'jotai';
 
 export default function PullRequestChangeCount(): React.ReactElement | null {
   const comparisonFiles = useAtomValue(gitHubPullRequestComparisonFilesAtom);
+  if (comparisonFiles.length === 0) {
+    return null;
+  }
   const {additions, deletions} = sumFileLineChanges(comparisonFiles);
 
   return (
