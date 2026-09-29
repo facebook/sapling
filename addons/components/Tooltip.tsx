@@ -391,10 +391,10 @@ function RenderTooltipOnto({
   style.width = 'max-content';
   style.maxWidth = viewportDimensions.width - 2 * pad;
   style.boxSizing = 'border-box';
+  const contentStyle: React.CSSProperties = {overflowY: 'auto'};
   const availableHeight = viewportDimensions.height - (position.top + viewportAdjust.top) - 3 * pad;
   if (availableHeight > 0) {
-    style.maxHeight = availableHeight;
-    style.overflowY = 'auto';
+    contentStyle.maxHeight = Math.max(availableHeight - 2 * pad, 0);
   }
 
   // Use a portal so the tooltip element is rendered into the global list of tooltips,
@@ -419,7 +419,10 @@ function RenderTooltipOnto({
           // we also need to move the arrow the opposite direction so it still lines up.
           style={{transform: `translate(${-viewportAdjust.left}px, ${-viewportAdjust.top}px)`}}
         />
-        {children}
+        {/* Keep the arrow outside the scroll container so its overflow does not create a scrollbar. */}
+        <div className="tooltip-content" style={contentStyle}>
+          {children}
+        </div>
       </div>
     </ViewportOverlay>
   );
