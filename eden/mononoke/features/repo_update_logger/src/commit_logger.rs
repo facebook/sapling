@@ -170,6 +170,8 @@ struct PlainCommitInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pusher_main_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    artillery_trace_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     globalrev: Option<Globalrev>,
     changed_paths: Vec<String>,
 }
@@ -238,6 +240,7 @@ impl PlainCommitInfo {
             pusher_entry_point = Some(cri.entry_point.to_string());
             pusher_main_id = cri.main_id.clone();
         }
+        let artillery_trace_id = artillery_http_ext::current_trace_id();
 
         let changed_paths = changed_paths
             .iter()
@@ -265,6 +268,7 @@ impl PlainCommitInfo {
             pusher_correlator,
             pusher_entry_point,
             pusher_main_id,
+            artillery_trace_id,
             globalrev,
             changed_paths,
         })
@@ -322,6 +326,9 @@ impl Loggable for PlainCommitInfo {
         }
         if let Some(main_id) = &self.pusher_main_id {
             logger.set_client_main_id(main_id.clone());
+        }
+        if let Some(trace_id) = &self.artillery_trace_id {
+            logger.set_artillery_trace_id(trace_id.clone());
         }
         if let Some(globalrev) = &self.globalrev {
             logger.set_globalrev(globalrev.id() as i64);
