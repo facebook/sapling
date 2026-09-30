@@ -61,6 +61,7 @@ rust_library(
         "//eden/mononoke/clients/facebook/diff_service_client:diff_service_client",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/cats:cats",
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
         "//eden/mononoke/common/dedupmap:dedupmap",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",

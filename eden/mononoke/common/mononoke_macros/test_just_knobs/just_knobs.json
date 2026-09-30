@@ -62,6 +62,7 @@
     "scm/mononoke:rendezvous_bonsai_tag_mapping": true,
     "scm/mononoke:scs_restricted_paths_use_mock_api": false,
     "scm/mononoke:restricted_paths_use_schematized_logger": false,
+    "scm/mononoke:scs_log_unverified_forwarded_identities": false,
     "scm/mononoke:enforce_acl_file_protection_on_create": true,
     "scm/mononoke:enable_server_side_path_acls": false,
     "scm/mononoke:megarepo_derive_remotely": false,

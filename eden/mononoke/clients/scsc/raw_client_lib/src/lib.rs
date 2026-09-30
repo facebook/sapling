@@ -45,6 +45,7 @@ pub struct ScsClientBuilder {
     processing_timeout: Option<Duration>,
     cat: Option<String>,
     client_correlator: Option<String>,
+    extra_headers: HashMap<String, String>,
 }
 
 impl ScsClientBuilder {
@@ -58,6 +59,7 @@ impl ScsClientBuilder {
             processing_timeout: None,
             cat: None,
             client_correlator: None,
+            extra_headers: HashMap::new(),
         }
     }
 
@@ -95,6 +97,12 @@ impl ScsClientBuilder {
         self
     }
 
+    /// Test/admin-only hook: extra persistent request headers.
+    pub fn with_extra_headers(mut self, extra_headers: HashMap<String, String>) -> Self {
+        self.extra_headers = extra_headers;
+        self
+    }
+
     pub fn build(self) -> Result<ScsClient, Error> {
         build_from_tier_name(
             self.fb,
@@ -105,6 +113,7 @@ impl ScsClientBuilder {
             self.processing_timeout,
             self.cat,
             self.client_correlator,
+            self.extra_headers,
         )
     }
 }
@@ -125,6 +134,7 @@ fn build_from_tier_name_via_sr(
     processing_timeout: Option<Duration>,
     cat: Option<String>,
     client_correlator: Option<String>,
+    extra_headers: HashMap<String, String>,
 ) -> Result<ScsClient, Error> {
     use source_control_srclients::make_SourceControlService_srclient;
     use srclient::ClientParams;
@@ -133,6 +143,7 @@ fn build_from_tier_name_via_sr(
     let headers: HashMap<String, String> =
         once((String::from(CLIENT_INFO_HEADER), client_info.to_json()?))
             .chain(artillery_trace_headers())
+            .chain(extra_headers)
             .collect();
 
     let client_params = ClientParams::new()
@@ -178,6 +189,7 @@ fn build_from_tier_name_via_sr(
     _processing_timeout: Option<Duration>,
     _cat: Option<String>,
     _client_correlator: Option<String>,
+    _extra_headers: HashMap<String, String>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
         "Connection via ServiceRouter is not supported on this platform"
@@ -194,11 +206,13 @@ fn build_from_tier_name_via_x2p(
     _processing_timeout: Option<Duration>,
     cat: Option<String>,
     client_correlator: Option<String>,
+    extra_headers: HashMap<String, String>,
 ) -> Result<ScsClient, Error> {
     let (client_info, correlator) = new_scs_client_info(client_correlator);
     let headers: HashMap<String, String> =
         once((String::from(CLIENT_INFO_HEADER), client_info.to_json()?))
             .chain(artillery_trace_headers())
+            .chain(extra_headers)
             .collect();
 
     let channel = x2pclient::X2pClientBuilder::from_service_name(fb, tier.as_ref())
@@ -228,6 +242,7 @@ fn build_from_tier_name(
     processing_timeout: Option<Duration>,
     cat: Option<String>,
     client_correlator: Option<String>,
+    extra_headers: HashMap<String, String>,
 ) -> Result<ScsClient, Error> {
     match x2pclient::get_env(fb) {
         x2pclient::Environment::Prod => {
@@ -241,6 +256,7 @@ fn build_from_tier_name(
                     processing_timeout,
                     cat,
                     client_correlator,
+                    extra_headers,
                 )
             } else {
                 build_from_tier_name_via_x2p(
@@ -252,6 +268,7 @@ fn build_from_tier_name(
                     processing_timeout,
                     cat,
                     client_correlator,
+                    extra_headers,
                 )
             }
         }
@@ -264,6 +281,7 @@ fn build_from_tier_name(
             processing_timeout,
             cat,
             client_correlator,
+            extra_headers,
         ),
         other_env => Err(anyhow!("{other_env} not supported")),
     }
@@ -271,17 +289,25 @@ fn build_from_tier_name(
 
 pub struct ScsClientHostBuilder {
     client_correlator: Option<String>,
+    extra_headers: HashMap<String, String>,
 }
 
 impl ScsClientHostBuilder {
     pub fn new() -> Self {
         Self {
             client_correlator: None,
+            extra_headers: HashMap::new(),
         }
     }
 
     pub fn with_client_correlator(mut self, client_correlator: Option<String>) -> Self {
         self.client_correlator = client_correlator;
+        self
+    }
+
+    /// Test/admin-only hook: extra persistent request headers.
+    pub fn with_extra_headers(mut self, extra_headers: HashMap<String, String>) -> Self {
+        self.extra_headers = extra_headers;
         self
     }
 
@@ -307,14 +333,17 @@ impl ScsClientHostBuilder {
         let addr = addrs.next().expect("no address found");
         let (_client_info, correlator) = new_scs_client_info(self.client_correlator);
 
-        let builder = artillery_trace_headers().into_iter().fold(
-            ThriftChannelBuilder::from_sock_addr(fb, addr)?
-                .with_conn_timeout(CONN_TIMEOUT_MS)
-                .with_recv_timeout(RECV_TIMEOUT_MS)
-                .with_secure(true)
-                .with_expected_identities(expected_identities),
-            |b, header| b.with_persistent_header(header),
-        );
+        let builder = artillery_trace_headers()
+            .into_iter()
+            .chain(self.extra_headers)
+            .fold(
+                ThriftChannelBuilder::from_sock_addr(fb, addr)?
+                    .with_conn_timeout(CONN_TIMEOUT_MS)
+                    .with_recv_timeout(RECV_TIMEOUT_MS)
+                    .with_secure(true)
+                    .with_expected_identities(expected_identities),
+                |b, header| b.with_persistent_header(header),
+            );
 
         let client = build_SourceControlService_client(builder)?;
         Ok(ScsClient {

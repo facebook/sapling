@@ -105,6 +105,9 @@ const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+// Header names are fixed by the upstream proxy that forwards its caller's CATs.
+const FORWARDED_UNVERIFIED_CATS_HEADER: &str = "raw_customer_cats";
+const FORWARDED_UNVERIFIED_CATS_VERIFIER_HEADER: &str = "customer_cats_verifier_service_identity";
 const ALWAYS_LOG_HEADER: &str = "always_log";
 const PER_REQUEST_READ_QPS: usize = 4000;
 const PER_REQUEST_WRITE_QPS: usize = 4000;
@@ -213,8 +216,7 @@ impl SourceControlServiceImpl {
         params: &dyn AddScubaParams,
     ) -> Result<(CoreContext, String, Option<String>), scs_errors::ServiceError> {
         let session = self.create_session(req_ctxt).await?;
-        let identities = session.metadata().identities();
-        let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
+        let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, session.metadata())?;
         scuba.add("likely_agentic", session.metadata().likely_an_agent());
         if let Some(client_info) = session.metadata().client_request_info() {
             scuba.add_client_request_info(client_info);
@@ -250,8 +252,9 @@ impl SourceControlServiceImpl {
         req_ctxt: &RequestContext,
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
-        identities: &MononokeIdentitySet,
+        metadata: &Metadata,
     ) -> Result<MononokeScubaSampleBuilder, scs_errors::ServiceError> {
+        let identities = metadata.identities();
         let mut scuba = self.scuba_builder.clone().with_seq("seq");
         scuba.add("type", "thrift");
         scuba.add("method", name);
@@ -323,10 +326,81 @@ impl SourceControlServiceImpl {
                 .collect::<ScubaValue>(),
         );
 
+        if let Some(forwarded) = metadata.unverified_forwarded_identities() {
+            scuba.add(
+                "unverified_forwarded_identities",
+                forwarded
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<ScubaValue>(),
+            );
+        }
+        scuba.add_opt(
+            "forwarded_cats_verifier",
+            metadata.forwarded_cats_verifier(),
+        );
+        if let Some(verifiers) = metadata.forwarded_cats_token_verifiers() {
+            scuba.add(
+                "forwarded_cats_token_verifiers",
+                verifiers
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<ScubaValue>(),
+            );
+        }
+
         Ok(scuba)
     }
 
     async fn create_metadata(
+        &self,
+        req_ctxt: &RequestContext,
+    ) -> Result<Metadata, scs_errors::ServiceError> {
+        let header = |h: &str| req_ctxt.header(h).map_err(scs_errors::invalid_request);
+        let mut metadata = self.create_base_metadata(req_ctxt).await?;
+
+        let client_info: Option<ClientInfo> = header(CLIENT_INFO_HEADER)?
+            .as_ref()
+            .and_then(|ci| serde_json::from_str(ci).ok());
+        metadata.add_client_info(
+            client_info.unwrap_or_else(|| {
+                ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer)
+            }),
+        );
+        if let Some(client_id) = header("client_id")? {
+            metadata.add_upstream_client_id(client_id);
+        }
+
+        // Forwarded caller CATs are parsed without verification and only logged;
+        // they never join `identities`.
+        if justknobs::eval(
+            "scm/mononoke:scs_log_unverified_forwarded_identities",
+            None,
+            None,
+        ) {
+            if let (Some(verifier), Some(raw_cats)) = (
+                header(FORWARDED_UNVERIFIED_CATS_VERIFIER_HEADER)?,
+                header(FORWARDED_UNVERIFIED_CATS_HEADER)?,
+            ) {
+                match cats::unverified_identities_from_serialized_list(&raw_cats) {
+                    Ok((identities, token_verifiers)) => {
+                        metadata.add_unverified_forwarded_identities(
+                            verifier,
+                            identities,
+                            token_verifiers,
+                        );
+                    }
+                    Err(e) => {
+                        debug!("Ignoring unparsable {FORWARDED_UNVERIFIED_CATS_HEADER}: {e:#}")
+                    }
+                }
+            }
+        }
+        Ok(metadata)
+    }
+
+    /// Resolve the request's identities and connection details into a `Metadata`.
+    async fn create_base_metadata(
         &self,
         req_ctxt: &RequestContext,
     ) -> Result<Metadata, scs_errors::ServiceError> {
@@ -354,12 +428,6 @@ impl SourceControlServiceImpl {
             .into_iter()
             .map(MononokeIdentity::from)
             .collect();
-
-        let client_info: Option<ClientInfo> = req_ctxt
-            .header(CLIENT_INFO_HEADER)
-            .map_err(scs_errors::invalid_request)?
-            .as_ref()
-            .and_then(|ci| serde_json::from_str(ci).ok());
 
         if let (
             Some(forwarded_authenticated_identities_thrift),
@@ -410,18 +478,11 @@ impl SourceControlServiceImpl {
                 if let Some(other_cats) = header(FORWARDED_OTHER_CATS_HEADER)? {
                     metadata.add_raw_encoded_cats(other_cats);
                 }
-                let client_info = client_info.unwrap_or_else(|| {
-                    ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer)
-                });
-                metadata.add_client_info(client_info);
-                if let Some(client_id) = header("client_id")? {
-                    metadata.add_upstream_client_id(client_id);
-                }
                 return Ok(metadata);
             }
         }
 
-        let mut metadata = Metadata::new(
+        Ok(Metadata::new(
             None,
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
@@ -438,15 +499,7 @@ impl SourceControlServiceImpl {
                     .map_err(scs_errors::internal_error)?,
             ),
         )
-        .await;
-
-        let client_info = client_info
-            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer));
-        metadata.add_client_info(client_info);
-        if let Some(client_id) = header("client_id")? {
-            metadata.add_upstream_client_id(client_id);
-        }
-        Ok(metadata)
+        .await)
     }
 
     /// Create and configure the session container for a request.

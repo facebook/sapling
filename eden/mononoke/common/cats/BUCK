@@ -8,6 +8,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     test_deps = ([] if rust_oss.is_oss_build() else ["//eden/mononoke/common/mononoke_macros:mononoke_macros"]),
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:http",
         "//common/rust/shed/fbinit:fbinit",
         "//crypto/cat/rust:cryptocat",
@@ -19,8 +20,8 @@ rust_library(
         []
         if rust_oss.is_oss_build()
         else [
-            "fbsource//third-party/rust:anyhow",
             "fbsource//third-party/rust:tracing",
+            "//crypto/cat/if:cat_common_thrift-rust",
             "//eden/scm/lib/cats/constants:cats_constants",
         ]
     ),

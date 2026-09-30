@@ -32,6 +32,11 @@ pub struct Metadata {
     /// If the identities were proxied, this is the true and original
     /// identities from the request.
     original_identities: Option<MononokeIdentitySet>,
+    /// Signer (and, for delegated tokens, certified) identities from CATs a caller
+    /// forwarded on behalf of its own caller. Unverified; never used for authorization.
+    unverified_forwarded_identities: Option<MononokeIdentitySet>,
+    forwarded_cats_verifier: Option<String>,
+    forwarded_cats_token_verifiers: Option<MononokeIdentitySet>,
     client_debug: bool,
     /// "true" if client connects from untrusted environment.
     /// We're going to apply restrictions in this case, like rejecting pushes
@@ -83,6 +88,9 @@ impl Metadata {
             session_id,
             identities,
             original_identities: None,
+            unverified_forwarded_identities: None,
+            forwarded_cats_verifier: None,
+            forwarded_cats_token_verifiers: None,
             client_debug,
             client_untrusted,
             client_ip,
@@ -160,6 +168,18 @@ impl Metadata {
         self
     }
 
+    pub fn add_unverified_forwarded_identities(
+        &mut self,
+        verifier: String,
+        identities: MononokeIdentitySet,
+        token_verifiers: MononokeIdentitySet,
+    ) -> &mut Self {
+        self.forwarded_cats_verifier = Some(verifier);
+        self.unverified_forwarded_identities = Some(identities);
+        self.forwarded_cats_token_verifiers = Some(token_verifiers);
+        self
+    }
+
     pub fn update_client_untrusted(&mut self, client_untrusted: bool) -> &mut Self {
         // Be conservative: if client was already untrusted, don't allow to make
         // it trusted
@@ -181,6 +201,18 @@ impl Metadata {
 
     pub fn original_identities(&self) -> Option<&MononokeIdentitySet> {
         self.original_identities.as_ref()
+    }
+
+    pub fn unverified_forwarded_identities(&self) -> Option<&MononokeIdentitySet> {
+        self.unverified_forwarded_identities.as_ref()
+    }
+
+    pub fn forwarded_cats_verifier(&self) -> Option<&str> {
+        self.forwarded_cats_verifier.as_deref()
+    }
+
+    pub fn forwarded_cats_token_verifiers(&self) -> Option<&MononokeIdentitySet> {
+        self.forwarded_cats_token_verifiers.as_ref()
     }
 
     pub fn raw_encoded_cats(&self) -> &Option<String> {

@@ -212,6 +212,23 @@ impl MononokeScubaSampleBuilder {
                 .collect::<Vec<_>>(),
         );
 
+        if let Some(forwarded) = metadata.unverified_forwarded_identities() {
+            self.inner.add(
+                "unverified_forwarded_identities",
+                forwarded.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
+            );
+        }
+        self.inner.add_opt(
+            "forwarded_cats_verifier",
+            metadata.forwarded_cats_verifier(),
+        );
+        if let Some(verifiers) = metadata.forwarded_cats_token_verifiers() {
+            self.inner.add(
+                "forwarded_cats_token_verifiers",
+                verifiers.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
+            );
+        }
+
         if let Some(client_hostname) = metadata.client_hostname() {
             // "source_hostname" to remain compatible with historical logging
             self.inner

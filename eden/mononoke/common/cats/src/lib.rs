@@ -36,6 +36,15 @@ pub fn try_get_cats_idents(
     catmod::try_get_cats_idents_impl(fb, headers, verifier_identity)
 }
 
+/// Parse a serialized CAT list without verifying any token. Returns the signer
+/// identity of every token (plus the certified identity of delegated tokens)
+/// and the set of verifier identities the tokens declare. Never use for authorization.
+pub fn unverified_identities_from_serialized_list(
+    s: &str,
+) -> anyhow::Result<(MononokeIdentitySet, MononokeIdentitySet)> {
+    catmod::unverified_identities_from_serialized_list_impl(s)
+}
+
 #[cfg(not(fbcode_build))]
 mod catmod {
     use super::*;
@@ -47,11 +56,18 @@ mod catmod {
     ) -> Option<MononokeIdentitySet> {
         None
     }
+
+    pub fn unverified_identities_from_serialized_list_impl(
+        _s: &str,
+    ) -> anyhow::Result<(MononokeIdentitySet, MononokeIdentitySet)> {
+        Ok((MononokeIdentitySet::new(), MononokeIdentitySet::new()))
+    }
 }
 
 #[cfg(fbcode_build)]
 mod catmod {
     use anyhow::Error;
+    use cat_common_thrift::CryptoAuthTokenType;
     use cats_constants::X_AUTH_CATS_HEADER;
     use login_objects_thrift::EnvironmentType;
     use tracing::debug;
@@ -112,6 +128,30 @@ mod catmod {
                 None
             }
         }
+    }
+
+    pub fn unverified_identities_from_serialized_list_impl(
+        s: &str,
+    ) -> anyhow::Result<(MononokeIdentitySet, MononokeIdentitySet)> {
+        let to_identity = |id: cryptocat::Identity| {
+            permission_checker::MononokeIdentity::from_legacy_type_data(id.id_type, id.id_data)
+        };
+        let mut identities = MononokeIdentitySet::new();
+        let mut token_verifiers = MononokeIdentitySet::new();
+        for token in &cryptocat::deserialize_crypto_auth_tokens(s)?.tokens {
+            let data = cryptocat::deserialize_crypto_auth_token_data(
+                &token.serializedCryptoAuthTokenData,
+            )?;
+            // A delegated token also carries the identity it certifies; its secret is never
+            // read. A malformed one fails the whole parse like any other malformed token.
+            if data.cryptoAuthTokenType == Some(CryptoAuthTokenType::DELEGATED_CRYPTO_AUTH_TOKEN) {
+                let info = cryptocat::get_delegated_cat_info(token)?;
+                identities.insert(to_identity(info.certified_identity));
+            }
+            identities.insert(to_identity(data.signerIdentity));
+            token_verifiers.insert(to_identity(data.verifierIdentity));
+        }
+        Ok((identities, token_verifiers))
     }
 
     fn parse_cat_token_list(

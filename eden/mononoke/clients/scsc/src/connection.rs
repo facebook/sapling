@@ -8,6 +8,7 @@
 //! Connection management.
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use std::collections::HashMap;
 use std::net::IpAddr;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use std::sync::Arc;
@@ -36,6 +37,7 @@ use tupperware_api_tupperware_srclients::make_TupperwareReadOnlyService_srclient
 const SCS_PORT_NAME: &str = "thrift";
 const SCSC_ADMIN_ENABLED_ENV: &str = "SCSC_ADMIN_ENABLED";
 const SCSC_CLIENT_CORRELATOR_ENV: &str = "SCSC_CLIENT_CORRELATOR";
+const SCSC_EXTRA_HEADERS_ENV: &str = "SCSC_EXTRA_HEADERS";
 
 #[derive(clap::Args)]
 pub(super) struct ConnectionArgs {
@@ -107,6 +109,19 @@ fn client_correlator_override() -> Option<String> {
     }
 }
 
+/// Test/admin-only hook: comma-separated `name=value` request headers.
+fn extra_headers_override() -> HashMap<String, String> {
+    if std::env::var_os(SCSC_ADMIN_ENABLED_ENV).is_none() {
+        return HashMap::new();
+    }
+    std::env::var(SCSC_EXTRA_HEADERS_ENV)
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|pair| pair.split_once('='))
+        .map(|(name, value)| (name.to_string(), value.to_string()))
+        .collect()
+}
+
 impl ConnectionArgs {
     pub(super) fn host(&self) -> Option<&str> {
         self.host.as_deref()
@@ -151,6 +166,7 @@ impl ConnectionArgs {
             if disable_sr {
                 return ScsClientHostBuilder::new()
                     .with_client_correlator(client_correlator_override())
+                    .with_extra_headers(extra_headers_override())
                     .build_from_host_port(fb, host_str);
             }
         }
@@ -162,6 +178,7 @@ impl ConnectionArgs {
             .with_processing_timeout(self.processing_timeout)
             .with_cat(self.cat.clone())
             .with_client_correlator(client_correlator_override())
+            .with_extra_headers(extra_headers_override())
             .build()
     }
 }
