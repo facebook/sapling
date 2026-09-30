@@ -227,3 +227,164 @@ Mainly used for ISL integration.
   $ sl blame vendor/a
   abort: vendor/a@000000000000: not found in manifest!
   [255]
+
+Helpers for the `goto` tests below. Each test does 4 steps:
+1. `reset_workspace` makes the workspace clean.
+2. The test makes one kind of change.
+3. The test runs `sl goto` with one flag.
+4. `workspace_state` prints everything `goto` can change.
+
+`map_rev_names` replaces each known hash with its variable name, like `A_REV`
+or `REV_AFTER_BUMP_C`. All these variables must be set before you call it. An
+empty one breaks the `sed` command.
+
+  $ map_rev_names() {
+  >   sed -e "s/$A_REV/A_REV/g" -e "s/$A2_REV/A2_REV/g" -e "s/$A_LOCAL_REV/A_LOCAL_REV/g" \
+  >       -e "s/$B_REV/B_REV/g" -e "s/$B2_REV/B2_REV/g" -e "s/$B_LOCAL_REV/B_LOCAL_REV/g" \
+  >       -e "s/$C_REV/C_REV/g" -e "s/$C2_REV/C2_REV/g" -e "s/$C_LOCAL_REV/C_LOCAL_REV/g" \
+  >       -e "s/$REV_AFTER_BUMP_A/REV_AFTER_BUMP_A/g" \
+  >       -e "s/$REV_AFTER_BUMP_B/REV_AFTER_BUMP_B/g" \
+  >       -e "s/$REV_AFTER_BUMP_C/REV_AFTER_BUMP_C/g"
+  > }
+
+`project_heads` prints the HEAD of each project. Under each HEAD it prints the
+project's modified files. It does not print untracked files.
+
+  $ project_heads() {
+  >   for p in vendor/a frameworks/b vendor/a/sub/c; do
+  >     echo "$p: $(git -C $p rev-parse HEAD | map_rev_names)"
+  >     git -C $p status --porcelain --untracked-files=no
+  >   done
+  > }
+
+`read_manifest_revs` reads a manifest from stdin. It prints one `path=REV` pair
+per project, all on one line.
+
+  $ read_manifest_revs() {
+  >   echo $(grep '<project' | sed 's/.*path="([^"]*)" revision="([^"]*)".*/\1=\2/' | map_rev_names)
+  > }
+
+`workspace_state` prints:
+- `sl_workingcopy_parent`: the commit message of `.`.
+- `manifests HEAD`: the branch that HEAD of the manifests repo points to, or
+`detached`. Then the commit.
+- `static.xml index`: the revisions in the Git index of the manifests repo.
+- `static.xml disk`: the revisions in the file on disk. The two differ when
+`goto` moves the index but does not rewrite the file.
+- `manifests:`: `git status` of the manifests repo.
+- The project HEADs, from `project_heads`.
+- `sl status:`: what Sapling says is modified.
+
+  $ workspace_state() {
+  >   echo "sl_workingcopy_parent: $(sl log -r . -T '{desc}')"
+  >   echo "manifests HEAD: $(git -C .repo/manifests symbolic-ref -q HEAD || echo detached) $(git -C .repo/manifests rev-parse HEAD | map_rev_names)"
+  >   echo "static.xml index: $(git -C .repo/manifests show :static/static.xml | read_manifest_revs)"
+  >   echo "static.xml disk: $(read_manifest_revs < .repo/manifests/static/static.xml)"
+  >   git -C .repo/manifests status --porcelain | sed 's/^/manifests: /'
+  >   project_heads
+  >   sl status | sed 's/^/sl status: /'
+  > }
+
+`reset_workspace [REV]` gives a clean checkout of manifest commit REV. REV
+defaults to `$REV_AFTER_BUMP_C`. It uses Git, not `sl goto`, so it works even
+after a `goto` that failed halfway. It:
+- points `refs/heads/main` back at REV. This brings back commits that an
+earlier `goto` orphaned.
+- attaches HEAD of the manifests repo to `main`.
+- resets the manifests index and files.
+- checks out each project at its revision in `static.xml` of REV.
+It does not remove untracked files.
+
+  $ reset_workspace() {
+  >   local rev=${1:-$REV_AFTER_BUMP_C}
+  >   git -C .repo/manifests update-ref refs/heads/main $rev
+  >   git -C .repo/manifests symbolic-ref HEAD refs/heads/main
+  >   git -C .repo/manifests reset -q --hard
+  >   for p in vendor/a frameworks/b vendor/a/sub/c; do
+  >     local r=$(grep "path=\"$p\"" .repo/manifests/static/static.xml | sed 's/.*revision="([^"]*)".*/\1/')
+  >     git -C $p checkout -q -f --detach $r
+  >   done
+  > }
+
+The status tests above left every project at a local commit. `reset_workspace`
+puts each project back at its revision in `static.xml` of `$REV_AFTER_BUMP_C`:
+
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A_LOCAL_REV
+  frameworks/b: B_LOCAL_REV
+  vendor/a/sub/c: C_LOCAL_REV
+  sl status: M frameworks/b
+  sl status: M vendor/a
+  sl status: M vendor/a/sub/c
+  $ reset_workspace
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+
+Below we make three changes:
+- edit the revision of `vendor/a/sub/c` in `static.xml`.
+- check out `vendor/a/sub/c` at that revision.
+- change a file in `frameworks/b` without committing it.
+`workspace_state` shows all three. `reset_workspace` undoes all three. Note that
+Sapling says `vendor/a/sub/c` is modified, even though it matches `static.xml`
+on disk. This is because `sl status` compares with the committed manifest, not
+with the file on disk.
+
+  $ sed -i "s/$C2_REV/$C_REV/" .repo/manifests/static/static.xml
+  $ git -C vendor/a/sub/c checkout -q --detach $C_REV
+  $ echo "uncommitted change" > frameworks/b/README
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+   M README
+  vendor/a/sub/c: C_REV
+  sl status: M vendor/a/sub/c
+  $ reset_workspace
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+
+`reset_workspace` also undoes a `goto`. It moves `.` back. It also brings back
+the manifest commits that `goto` orphaned:
+
+  $ sl goto -q $REV_AFTER_BUMP_A
+  $ sl smartlog -T '{desc}' --all
+  @  bump vendor/a
+  │
+  o  add manifest
+  $ reset_workspace
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+  $ sl smartlog -T '{desc}' --all
+  @  bump vendor/a/sub/c
+  │
+  o  bump frameworks/b
+  │
+  o  bump vendor/a
+  │
+  o  add manifest
