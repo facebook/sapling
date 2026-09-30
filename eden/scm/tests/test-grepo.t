@@ -81,8 +81,11 @@ grepo workspace is the .repo/manifests git history, so commits are made there:
   > }
 
   $ writemanifest $A2_REV $B_REV $C_REV 'bump vendor/a'
+  $ REV_AFTER_BUMP_A=$(cd .repo/manifests && git rev-parse HEAD)
   $ writemanifest $A2_REV $B2_REV $C_REV 'bump frameworks/b'
+  $ REV_AFTER_BUMP_B=$(cd .repo/manifests && git rev-parse HEAD)
   $ writemanifest $A2_REV $B2_REV $C2_REV 'bump vendor/a/sub/c'
+  $ REV_AFTER_BUMP_C=$(cd .repo/manifests && git rev-parse HEAD)
 
 Set up projects with .git symlinks back to .repo/projects/:
 
@@ -142,6 +145,7 @@ modified outer project is reported by status
   $ cd vendor/a
   $ echo "project vendor/a" > README
   $ git add README && git commit -qm 'add README'
+  $ A_LOCAL_REV=$(git rev-parse HEAD)
   $ cd ../..
   $ sl status
   M vendor/a
@@ -161,6 +165,7 @@ Modified nested (overlapping) project is reported by status:
   $ cd vendor/a/sub/c
   $ echo "project vendor/a/sub/c" > README
   $ git add README && git commit -qm 'modify c'
+  $ C_LOCAL_REV=$(git rev-parse HEAD)
   $ cd ../../../..
   $ sl status
   M vendor/a
@@ -181,6 +186,7 @@ Modified non-overlapping project is reported by status:
   $ cd frameworks/b
   $ echo "project frameworks/b" > README
   $ git add README && git commit -qm 'modify b'
+  $ B_LOCAL_REV=$(git rev-parse HEAD)
   $ cd ../..
   $ sl status
   M frameworks/b
