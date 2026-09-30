@@ -67,6 +67,7 @@ fb_xplat_rust_library(
         "fbsource//third-party/rust:num-traits",
         "fbsource//third-party/rust:ordered-float",
         "fbsource//third-party/rust:panic-message",
+        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:unicase",

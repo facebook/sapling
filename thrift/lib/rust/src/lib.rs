@@ -44,6 +44,7 @@ pub mod builtin_types;
 pub mod clap;
 pub mod compact_protocol;
 pub mod context_stack;
+pub mod default_box;
 pub mod deserialize;
 pub mod errors;
 pub mod export;
