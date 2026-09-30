@@ -388,3 +388,147 @@ the manifest commits that `goto` orphaned:
   o  bump vendor/a
   │
   o  add manifest
+
+`goto` tests: clean workspace
+
+Every test below starts clean at `$REV_AFTER_BUMP_C`:
+- The manifests repo has no changes.
+- Each project is at its revision in `static.xml`, with no changes.
+- `sl status` is empty.
+Then it runs `sl goto $REV_AFTER_BUMP_B`. The goto updates the revision of
+only `vendor/a/sub/c`, both in `static.xml` and the checked out submodule
+(`C2_REV` -> `C_REV`).
+
+Nothing is dirty, so every flag should give the same result:
+- `.` is the target.
+- Every project is checked out at its revision in the target's `static.xml`.
+- The manifests index and `static.xml` on disk both match the target. So
+`git status` in the manifests repo is empty.
+- `sl status` is empty.
+- No manifest commit gets orphaned.
+Lines marked `(bad: ...)` show where today's behavior is different.
+
+Each test ends with the args that `sl goto` passes to `hg.updatetotally`:
+- `clean=True` or `updatecheck="noconflict"` uses the Rust checkout.
+- `updatecheck="none"` uses the Python checkout.
+- `updatecheck="abort"` first aborts if Sapling sees uncommitted changes. Then
+it works like `updatecheck="none"`.
+
+Default flags. Expected: the result above.
+(bad: `static.xml` on disk still says `C2_REV`. The manifests index did not
+move either. So the manifests repo shows a staged change.)
+(bad: `main` moved back. The `bump vendor/a/sub/c` commit is orphaned.)
+(bad: it says "0 files updated", but it checked out a project.)
+clean=False, updatecheck="noconflict"
+
+  $ sl goto $REV_AFTER_BUMP_B
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ sl smartlog -T '{desc}' --all
+  @  bump frameworks/b
+  │
+  o  bump vendor/a
+  │
+  o  add manifest
+
+`--check`. Expected: the result above. The manifests index moves to the target.
+The default flags do not do this.
+(bad: `static.xml` on disk still says `C2_REV`. So the manifests repo shows an
+unstaged change.)
+(bad: `main` moved back and "0 files updated", same as the default flags.)
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ sl goto --check $REV_AFTER_BUMP_B
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+
+`--merge`. Expected: the result above. Nothing is dirty, so it works like
+`--check`.
+(bad: same as `--check`)
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ sl goto --merge $REV_AFTER_BUMP_B
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+
+`--clean`. Expected: the result above. Nothing is dirty, so it works like the
+default flags.
+(bad: same as the default flags)
+clean=True
+
+  $ reset_workspace
+  $ sl goto --clean $REV_AFTER_BUMP_B
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+
+Default flags, going to `$REV_AFTER_BUMP_A`. The goto updates the revision of
+two projects, `frameworks/b` and `vendor/a/sub/c`, both in `static.xml` and the
+checked out submodules. Expected: the result above. Both submodules are checked
+out at the new revisions.
+(bad: `static.xml` on disk and the manifests index stay at the source, same as
+above.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ sl goto $REV_AFTER_BUMP_A
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B_REV
+  vendor/a/sub/c: C_REV
+
+Default flags, going forward to the commit that the last `goto` orphaned.
+`goto` still finds it by hash, and it ends in the right state. But that is only
+because `static.xml` on disk and the manifests index never left
+`$REV_AFTER_BUMP_C`.
+clean=False, updatecheck="noconflict"
+
+  $ sl goto $REV_AFTER_BUMP_C
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
