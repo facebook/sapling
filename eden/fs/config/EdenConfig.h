@@ -2983,6 +2983,16 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds(1),
       this};
 
+  /**
+   * Whether to resend a batch whose ScribeD write timed out on the client.
+   * ScribeD may already have accepted the batch, so resending can duplicate
+   * rows, while dropping it can lose them.
+   */
+  ConfigSetting<bool> xplatLoggerRetryTimedOutWrites{
+      "xplat-logger:retry-timed-out-writes",
+      true,
+      this};
+
   // [acl]
   // Path-based ACL settings
 
