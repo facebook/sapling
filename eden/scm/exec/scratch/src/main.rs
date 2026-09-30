@@ -76,8 +76,10 @@ struct Config {
     /// expanded to the user name of the current user.  This allows
     /// definition of a simple placement policy without explicitly
     /// specifying the value for every user.
-    /// If left unspecified, the default value is equivalent to
-    /// `$HOME/.scratch`.
+    /// If left unspecified, the default is `/data/users/<owner>/scratch`
+    /// when that directory exists, otherwise `$HOME/.scratch`, except that
+    /// root acting on another user's repository uses that user's
+    /// `~/.scratch`.
     template: Option<String>,
 
     /// The list of overridden settings
@@ -171,10 +173,17 @@ impl Config {
     /// Look up the template string for a given repo path.
     /// This is taken from a matching `overrides` entry first, if any,
     /// then the global `template` configuration, if any, finally
-    /// falling back to a default value of `$HOME/.scratch`.
+    /// falling back to a default under a home directory.
     /// We use `$HOME` rather than `/tmp` as it less prone to
     /// bad actors mounting a symlink attack.
-    fn template_for_path(&self, path: &Path, owner: &str) -> String {
+    /// `owner_home_for_root` is the repo owner's home directory when root
+    /// is acting on another user's repository, and `None` otherwise.
+    fn template_for_path(
+        &self,
+        path: &Path,
+        owner: &str,
+        owner_home_for_root: Option<&str>,
+    ) -> String {
         // First, let's see if we have an override for this path
         let path_str = path.to_str().expect("path must be UTF-8");
         if let Some(over) = self.overrides.get(path_str) {
@@ -193,6 +202,15 @@ impl Config {
                 if let Ok(meta) = fs::metadata(&local) {
                     if meta.is_dir() {
                         return format!("{local}/scratch");
+                    }
+                }
+                // Root's own home is unreachable for the repo owner, and
+                // EdenFS refuses redirection sources the owner cannot
+                // traverse. Root can create the scratch space in the owner's
+                // home and hand it over; skip homes that do not exist.
+                if let Some(home) = owner_home_for_root {
+                    if fs::metadata(home).is_ok_and(|meta| meta.is_dir()) {
+                        return format!("{home}/.scratch");
                     }
                 }
                 // Otherwise use their home dir
@@ -363,6 +381,23 @@ fn get_file_owner(path: &Path) -> Result<String> {
     Ok(pw.unixname)
 }
 
+/// Returns `repo_owner_home` when root is acting on a repository owned by
+/// another user, typically through sudo.
+#[cfg(unix)]
+fn repo_owner_home_for_root(path: &Path, repo_owner_home: &str) -> Result<Option<String>> {
+    if unsafe { libc::geteuid() } != 0 {
+        return Ok(None);
+    }
+    let meta = fs::metadata(path)
+        .map_err(|e| format_err!("unable to get metadata for {}: {}", path.display(), e))?;
+    Ok((meta.uid() != 0).then(|| repo_owner_home.to_owned()))
+}
+
+#[cfg(windows)]
+fn repo_owner_home_for_root(_path: &Path, _repo_owner_home: &str) -> Result<Option<String>> {
+    Ok(None)
+}
+
 #[cfg(unix)]
 fn set_file_owner(path: &Path, owner: &str) -> Result<()> {
     use std::ffi::CString;
@@ -417,11 +452,12 @@ fn get_file_owner(_path: &Path) -> Result<String> {
 /// the $USER and $HOME placeholder tokens in the configured template.
 fn scratch_root(config: &Config, path: &Path, encoder: &dyn Fn(&str) -> String) -> Result<PathBuf> {
     let repo_owner = get_file_owner(path)?;
-    let template = config.template_for_path(path, &repo_owner);
+    let repo_owner_home = lookup_home_dir_for_user(&repo_owner)?;
+    let owner_home_for_root = repo_owner_home_for_root(path, &repo_owner_home)?;
+    let template = config.template_for_path(path, &repo_owner, owner_home_for_root.as_deref());
 
     let user = get_current_user();
     let home = home_dir();
-    let repo_owner_home = lookup_home_dir_for_user(&repo_owner)?;
 
     let mut root = PathBuf::from(
         template
@@ -560,6 +596,34 @@ fn path_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_template_uses_repo_owner_home_for_root() {
+        let temp_dir = tempfile::tempdir().expect("temporary directory should be created");
+        let repo = temp_dir.path().join("repo");
+        let owner_home = temp_dir.path().join("owner-home");
+        fs::create_dir(&repo).expect("repository directory should be created");
+        fs::create_dir(&owner_home).expect("owner home should be created");
+        let owner_home = owner_home.to_str().expect("owner home should be UTF-8");
+        let missing_home = temp_dir.path().join("missing-home");
+        let missing_home = missing_home.to_str().expect("missing home should be UTF-8");
+        // No `/data/users/<owner>` exists for this name.
+        let owner = "mkscratch-test-owner";
+        let config = Config::default();
+
+        assert_eq!(
+            config.template_for_path(&repo, owner, Some(owner_home)),
+            format!("{owner_home}/.scratch")
+        );
+        assert_eq!(
+            config.template_for_path(&repo, owner, Some(missing_home)),
+            format!("{}/.scratch", home_dir())
+        );
+        assert_eq!(
+            config.template_for_path(&repo, owner, None),
+            format!("{}/.scratch", home_dir())
+        );
+    }
 
     #[test]
     fn no_create_does_not_write_to_existing_scratch_namespace() {
