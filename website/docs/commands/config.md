@@ -4,7 +4,7 @@ sidebar_position: 11
 
 ## config | conf
 <!--
-  @generated SignedSource<<86b8dfadfe5f6ca486fa055cd19bfd22>>
+  @generated SignedSource<<c3071fdf8fd237652fb58a95fc78217e>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -34,7 +34,8 @@ for each config item.
 
 See `sl help config` for more information about config files.
 
-Returns 0 on success, 1 if NAME does not exist.
+Returns 0 on success. When using a plain formatter, 1 is returned if NAME
+does not exist. Otherwise, 0 is returned even if NAME does not exist.
 
 ## arguments
 | shortname | fullname | default | description |

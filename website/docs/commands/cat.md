@@ -4,18 +4,18 @@ sidebar_position: 7
 
 ## cat
 <!--
-  @generated SignedSource<<ae5c33df272def0a9e30fcbf7d936a7b>>
+  @generated SignedSource<<f81e08ef45c335f4fc6ca48f3457e461>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
-**output the current or given revision of files**
+**output file content at a particular revision**
 
-Print the specified files as they were at the given revision. If
+Output the specified files&#x27; content at the specified revision. If
 no revision is given, the parent of the working directory is used.
 
-Output may be to a file, in which case the name of the file is
-given using a format string. The formatting rules as follows:
+Use `--output` to write files or directories to disk using the following
+formatting rules:
 
 `%%`
 literal "%" character
@@ -30,26 +30,47 @@ dirname of file being printed, or '.' if in repository root
 root-relative path name of file being printed
 
 `%H`
-changeset hash (40 hexadecimal digits)
-
-`%R`
-changeset revision number
+commit hash (40 hexadecimal digits)
 
 `%h`
-short-form changeset hash (12 hexadecimal digits)
-
-`%r`
-zero-padded changeset revision number
+short commit hash (12 hexadecimal digits)
 
 `%b`
-basename of the exporting repository
+basename of the repository
 
-Returns 0 on success.
+Examples:
+
+- Recursively export directory foo/bar to disk:
+
+```
+sl cat -r fbc6b8c381 --output "/tmp/export/%p" path:foo/bar
+```
+
+- Output all Rust files' content under foo/bar to stdout:
+
+```
+sl cat -r fbc6b8c381 "glob:foo/bar/**/*.rs"
+```
+
+- Output the content of something/important.txt at bookmark main to /tmp/file:
+
+```
+sl cat -r main --output /tmp/file something/important.txt
+```
+
+To operate without a local repo, specify `-R/--repository` as a Sapling
+Remote API capable URL. The local on-disk cache will still be used to avoid
+remote fetches.
+
+See `sl help patterns` for more information on specifying file patterns.
+
+Returns 0 if there were no errors and at least one file was output.
 
 ## arguments
 | shortname | fullname | default | description |
 | - | - | - | - |
 | `-o`| `--output`| | print output to file with formatted name|
+| | `--tar`| `false`| write files and content to a tar archive|
 | `-r`| `--rev`| | print the given revision|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|

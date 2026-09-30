@@ -4,7 +4,7 @@ sidebar_position: 0
 
 ## absorb | ab
 <!--
-  @generated SignedSource<<34fa88c23169ca5927cb1077afb89311>>
+  @generated SignedSource<<1eef0a96a7a8562b998d8e43f0d16f0e>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -18,8 +18,8 @@ If absorb cannot find an unambiguous commit to amend for a change, that
 change will be left in the working copy, untouched. The unabsorbed
 changes can be observed by `sl status` or `sl diff` afterwards.
 
-Commits outside the revset `::. and not public() and not merge()` will
-not be changed.
+Commits outside the revset
+`. % (public() | merge() | immutable)` will not be changed.
 
 Commits that become empty after applying the changes will be deleted.
 
@@ -35,6 +35,7 @@ Returns 0 if anything was absorbed, 1 if nothing was absorbed.
 | - | - | - | - |
 | `-a`| `--apply-changes`| | apply changes without prompting for confirmation|
 | `-d`| `--date`| | record the specified date as commit date|
+| `-P`| `--immutable`| | consider REV as immutable|
 | `-n`| `--dry-run`| | do not perform actions, just print output|
 | `-T`| `--template`| | display with template|
 | `-I`| `--include`| | include files matching the given patterns|

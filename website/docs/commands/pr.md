@@ -4,7 +4,7 @@ sidebar_position: 26
 
 ## pr
 <!--
-  @generated SignedSource<<fc6158ddf46cd171e3a8b88651836a6e>>
+  @generated SignedSource<<1248fee0d64fc89acc34892d4728afae>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -31,6 +31,7 @@ Returns 0 on success.
 | `-s`| `--stack`| `false`| also include draft ancestors|
 | `-m`| `--message`| | message describing changes to updated commits|
 | `-d`| `--draft`| `false`| mark new pull requests as draft|
+| `-o`| `--open`| `false`| open pull requests in browser after creation|
 ### pull
 
 &#x69;mport a pull request into your working copy

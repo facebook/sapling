@@ -4,18 +4,20 @@ sidebar_position: 47
 
 ## web | isl
 <!--
-  @generated SignedSource<<f1890a42f8738af71f184124d8c6df2e>>
+  @generated SignedSource<<27aade43993ba907260349a49615f9be>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
-**launch Sapling Web GUI on localhost**
+**launch Sapling Web GUI on localhost or a bound address**
 
 Sapling Web is a collection of web-based tools including Interactive Smartlog,
 which is a GUI that facilitates source control operations such as creating,
 reordering, or rebasing commits.
 Running this command launches a web server that makes Sapling Web and
 Interactive Smartlog available in a local web browser.
+With `--bind` (plus `--cert` and `--key`), the server serves HTTPS
+and can be reached from other machines.
 When possible, this command opens a separate OS window,
 either using a webview or a Chrome-like browser with --app.
 
@@ -27,6 +29,13 @@ Launch Sapling Web locally on port 8081:
 $ sl web --port 8081
 Listening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling
 Server logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log
+```
+
+Serve other machines over HTTPS with `--bind` (requires `--cert` and `--key`):
+
+```
+$ sl web --port 8081 --bind all --cert cert.pem --key key.pem
+Listening on https://devbox1234.example.com:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling
 ```
 
 Using the `--json` option to get the current status of Sapling Web:
