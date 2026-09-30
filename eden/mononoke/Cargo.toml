@@ -21,11 +21,13 @@ base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "
 bf-tree = { git = "https://github.com/fbsource/bf-tree", rev = "da3f2364e8f9fe002a85c19de8a879fc2c05f12c" }
 bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c160e6ee1f443aeb7e00528a1dc7fd44" }
 bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c160e6ee1f443aeb7e00528a1dc7fd44" }
+blazesym = { git = "https://github.com/libbpf/blazesym", rev = "5c8bc037935bfdc9884078e0a854d7bc9f393e7e" }
 c2pa = { git = "https://github.com/peekmoar/c2pa-rs", rev = "bc2e763f3333eb7aaa1f169b045c9bbf60b146f7" }
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "b835645da52253df462725516fbd460ef000d496" }
 cxx-build = { git = "https://github.com/facebookexperimental/cxx.git", rev = "b835645da52253df462725516fbd460ef000d496" }
 darwin-libproc = { git = "https://github.com/fbsource/darwin-libproc", rev = "f73ddb1002d51ae74c1b41670fae56bd5896b7a3" }
 gimli = { git = "https://github.com/gimli-rs/gimli.git", rev = "ebad63b48e960270b8d8d0dec74f5b2e54cad13f" }
+gimli034 = { package = "gimli", git = "https://github.com/gimli-rs/gimli.git", rev = "64a7a194fb5fe43d474fd9c101555e5a81b1d36c" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 k = { git = "https://github.com/prnthp-meta/k", rev = "f06b504c563a4763dbf2d47366b868f67d5c9dd2" }
