@@ -79,6 +79,19 @@ pub trait ThriftAdapter {
         Self::to_thrift(value)
     }
 
+    /// Passes a struct field's standard representation to `f` for serialization.
+    ///
+    /// Defaults to calling `to_thrift_field`. Adapters can override this method to
+    /// borrow existing storage instead of materializing an owned `StandardType`.
+    #[inline]
+    fn with_thrift_field<T: ThriftAnnotations, R>(
+        value: &Self::AdaptedType,
+        field_id: i16,
+        f: impl FnOnce(&Self::StandardType) -> R,
+    ) -> R {
+        f(&Self::to_thrift_field::<T>(value, field_id))
+    }
+
     /// Method called when the adapted type is not present in a field during deserialization or is
     /// populated with `..Default::default()`. The value passed here is the default original type
     /// value for the field. This can be used to record that the field was not present inside

@@ -63,6 +63,35 @@ impl ThriftAdapter for FieldCheckerAdapter {
     }
 }
 
+pub struct BorrowedStringAdapter;
+
+impl ThriftAdapter for BorrowedStringAdapter {
+    type StandardType = String;
+    type AdaptedType = ::adapters::CustomString;
+    type Error = std::convert::Infallible;
+
+    fn from_thrift(value: Self::StandardType) -> Result<Self::AdaptedType, Self::Error> {
+        Ok(::adapters::CustomString(value))
+    }
+
+    fn to_thrift(_value: &Self::AdaptedType) -> Self::StandardType {
+        panic!("borrowed field serialization must not call to_thrift")
+    }
+
+    fn with_thrift_field<T: ThriftAnnotations, R>(
+        value: &Self::AdaptedType,
+        field_id: i16,
+        f: impl FnOnce(&Self::StandardType) -> R,
+    ) -> R {
+        assert!(matches!(field_id, 1 | 2));
+        assert_eq!(
+            std::any::TypeId::of::<BorrowedFields>(),
+            std::any::TypeId::of::<T>()
+        );
+        f(&value.0)
+    }
+}
+
 pub struct IOBufIdentityAdapter {}
 
 impl ThriftAdapter for IOBufIdentityAdapter {

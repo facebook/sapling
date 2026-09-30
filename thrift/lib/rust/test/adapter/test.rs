@@ -24,6 +24,7 @@ use thrift_test::AdaptedListNewType;
 use thrift_test::Asset;
 use thrift_test::AssetType;
 use thrift_test::Bar;
+use thrift_test::BorrowedFields;
 use thrift_test::Foo;
 use thrift_test::TransitiveStructWrapper;
 use thrift_test::WrappedAdaptedBytes;
@@ -304,6 +305,28 @@ fn test_foo_ser() {
         .replace(['\n', ' '], ""),
         std::string::String::from_utf8(simplejson_protocol::serialize(foo).into()).unwrap()
     );
+}
+
+#[test]
+fn test_borrowed_field_serialization() {
+    macro_rules! check_protocol {
+        ($protocol:ident, $expected:expr) => {
+            let bytes = fbthrift::$protocol::serialize(&$expected);
+            let actual: BorrowedFields = fbthrift::$protocol::deserialize(bytes).unwrap();
+            assert_eq!(actual, $expected);
+        };
+    }
+
+    for optional_value in [None, Some(CustomString("optional".to_owned()))] {
+        let expected = BorrowedFields {
+            required_value: CustomString("required".to_owned()),
+            optional_value,
+            ..Default::default()
+        };
+        check_protocol!(binary_protocol, expected);
+        check_protocol!(compact_protocol, expected);
+        check_protocol!(simplejson_protocol, expected);
+    }
 }
 
 #[test]

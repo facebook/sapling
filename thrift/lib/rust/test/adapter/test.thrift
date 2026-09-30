@@ -142,6 +142,13 @@ struct Foo {
   > map_with_adapted_wrapped_key_val = {"marco": "polo"};
 }
 
+struct BorrowedFields {
+  @rust.Adapter{name = "crate::types::BorrowedStringAdapter"}
+  1: string required_value;
+  @rust.Adapter{name = "crate::types::BorrowedStringAdapter"}
+  2: optional string optional_value;
+}
+
 union Bar {
   @rust.Adapter{name = "::adapters::ListAdapter"}
   1: list<string> list_val;
