@@ -31,6 +31,8 @@ import type {
   LabelFragment,
   MarkPullRequestReadyForReviewInput,
   MarkPullRequestReadyForReviewMutationData,
+  MergePullRequestInput,
+  MergePullRequestMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
   RemoveReactionInput,
@@ -99,6 +101,10 @@ export default class RejectingGitHubClient implements GitHubClient {
     return Promise.reject('Method not implemented.');
   }
 
+  getFreshStackPullRequests(_prs: number[]): Promise<StackPullRequestFragment[]> {
+    return Promise.reject('Method not implemented.');
+  }
+
   convertPullRequestToDraft(
     _input: ConvertPullRequestToDraftInput,
   ): Promise<ConvertPullRequestToDraftMutationData> {
@@ -108,6 +114,10 @@ export default class RejectingGitHubClient implements GitHubClient {
   markPullRequestReadyForReview(
     _input: MarkPullRequestReadyForReviewInput,
   ): Promise<MarkPullRequestReadyForReviewMutationData> {
+    return Promise.reject('Method not implemented.');
+  }
+
+  mergePullRequest(_input: MergePullRequestInput): Promise<MergePullRequestMutationData> {
     return Promise.reject('Method not implemented.');
   }
 

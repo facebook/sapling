@@ -43,6 +43,9 @@ import type {
   MarkPullRequestReadyForReviewInput,
   MarkPullRequestReadyForReviewMutationData,
   MarkPullRequestReadyForReviewMutationVariables,
+  MergePullRequestInput,
+  MergePullRequestMutationData,
+  MergePullRequestMutationVariables,
   PullRequestQueryData,
   PullRequestQueryVariables,
   PullsQueryData,
@@ -101,6 +104,7 @@ import {
   DeleteIssueCommentMutation,
   DeletePullRequestReviewCommentMutation,
   MarkPullRequestReadyForReviewMutation,
+  MergePullRequestMutation,
   PullRequestQuery,
   PullsQuery,
   RemoveLabelsFromLabelableMutation,
@@ -503,6 +507,10 @@ export default class GraphQLGitHubClient implements GitHubClient {
     return data.map(result => result?.repository?.pullRequest).filter(notEmpty);
   }
 
+  getFreshStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]> {
+    return this.getStackPullRequests(prs);
+  }
+
   convertPullRequestToDraft(
     input: ConvertPullRequestToDraftInput,
   ): Promise<ConvertPullRequestToDraftMutationData> {
@@ -519,6 +527,13 @@ export default class GraphQLGitHubClient implements GitHubClient {
       MarkPullRequestReadyForReviewMutationData,
       MarkPullRequestReadyForReviewMutationVariables
     >(MarkPullRequestReadyForReviewMutation, {input});
+  }
+
+  mergePullRequest(input: MergePullRequestInput): Promise<MergePullRequestMutationData> {
+    return this.query<MergePullRequestMutationData, MergePullRequestMutationVariables>(
+      MergePullRequestMutation,
+      {input},
+    );
   }
 
   addComment(id: ID, body: string): Promise<AddCommentMutationData> {

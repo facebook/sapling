@@ -32,6 +32,8 @@ import type {
   LabelFragment,
   MarkPullRequestReadyForReviewInput,
   MarkPullRequestReadyForReviewMutationData,
+  MergePullRequestInput,
+  MergePullRequestMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
   RemoveReactionInput,
@@ -104,6 +106,10 @@ export default class TestGitHubClient implements GitHubClient {
     return Promise.resolve([]);
   }
 
+  getFreshStackPullRequests(_prs: number[]): Promise<StackPullRequestFragment[]> {
+    return Promise.resolve([]);
+  }
+
   convertPullRequestToDraft(
     _input: ConvertPullRequestToDraftInput,
   ): Promise<ConvertPullRequestToDraftMutationData> {
@@ -113,6 +119,10 @@ export default class TestGitHubClient implements GitHubClient {
   markPullRequestReadyForReview(
     _input: MarkPullRequestReadyForReviewInput,
   ): Promise<MarkPullRequestReadyForReviewMutationData> {
+    return Promise.resolve({});
+  }
+
+  mergePullRequest(_input: MergePullRequestInput): Promise<MergePullRequestMutationData> {
     return Promise.resolve({});
   }
 

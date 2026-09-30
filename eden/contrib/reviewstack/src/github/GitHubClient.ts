@@ -30,6 +30,8 @@ import type {
   LabelFragment,
   MarkPullRequestReadyForReviewInput,
   MarkPullRequestReadyForReviewMutationData,
+  MergePullRequestInput,
+  MergePullRequestMutationData,
   RemoveLabelsFromLabelableInput,
   RemoveLabelsFromLabelableMutationData,
   RemoveReactionInput,
@@ -74,6 +76,7 @@ export default interface GitHubClient {
   getRepoAssignableUsers(query: string | null): Promise<UserFragment[]>;
   getRepoLabels(query: string | null): Promise<LabelFragment[]>;
   getStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]>;
+  getFreshStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]>;
 
   convertPullRequestToDraft(
     input: ConvertPullRequestToDraftInput,
@@ -82,6 +85,8 @@ export default interface GitHubClient {
   markPullRequestReadyForReview(
     input: MarkPullRequestReadyForReviewInput,
   ): Promise<MarkPullRequestReadyForReviewMutationData>;
+
+  mergePullRequest(input: MergePullRequestInput): Promise<MergePullRequestMutationData>;
 
   /**
    * Add a comment to an issue or pull request:

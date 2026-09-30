@@ -6,7 +6,7 @@
  */
 
 import GraphQLGitHubClient, {treesFromRecursiveResponse} from './GraphQLGitHubClient';
-import {DiffSide, ReactionContent} from '../generated/graphql';
+import {DiffSide, PullRequestMergeMethod, ReactionContent} from '../generated/graphql';
 
 describe('recursive Git tree prefetch', () => {
   test('builds directly addressable trees while preserving sorted entries', () => {
@@ -223,6 +223,38 @@ describe('GraphQLGitHubClient comment mutations', () => {
   });
 });
 
+describe('GraphQLGitHubClient pull request mutations', () => {
+  test('sends a guarded squash merge', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({data: {mergePullRequest: {pullRequest: {merged: true}}}}),
+    } as Response);
+    const client = new GraphQLGitHubClient('github.com', 'owner', 'repo', 'token');
+
+    await client.mergePullRequest({
+      expectedHeadOid: 'head-oid',
+      mergeMethod: PullRequestMergeMethod.Squash,
+      pullRequestId: 'pull-request-id',
+    });
+
+    const request = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(request).toEqual(
+      expect.objectContaining({
+        query: expect.stringContaining('mutation MergePullRequestMutation'),
+        variables: {
+          input: {
+            expectedHeadOid: 'head-oid',
+            mergeMethod: 'SQUASH',
+            pullRequestId: 'pull-request-id',
+          },
+        },
+      }),
+    );
+
+    fetchMock.mockRestore();
+  });
+});
+
 describe('GraphQLGitHubClient pull request state mutations', () => {
   test('converts a pull request between draft and ready states', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -254,9 +286,14 @@ describe('GraphQLGitHubClient stack fragments', () => {
   test('skips pull requests that no longer exist', async () => {
     const pullRequest = {
       __typename: 'PullRequest' as const,
+      id: 'pull-request-id',
+      baseRefName: 'main',
       comments: {totalCount: 0},
       headRefOid: 'head',
       isDraft: false,
+      mergeable: 'MERGEABLE',
+      mergeStateStatus: 'CLEAN',
+      viewerCanUpdate: true,
       number: 6,
       reviewDecision: null,
       state: 'OPEN',
