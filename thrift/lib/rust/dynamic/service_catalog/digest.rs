@@ -82,6 +82,9 @@ impl ServiceCatalogDigest for ServiceDefinition {
     fn hash_into(&self, h: &mut Hasher) {
         h.hash(&Functions(&self.functions));
         h.hash(&self.base_service);
+        if !self.performed_interactions.is_empty() {
+            h.hash(&self.performed_interactions);
+        }
         h.hash(&self.annotations);
     }
 }
@@ -255,6 +258,9 @@ impl ServiceCatalogDigest for DescriptorServiceDefinition<'_> {
     fn hash_into(&self, h: &mut Hasher) {
         h.hash(&Functions(&self.0.functions));
         h.hash(&false);
+        if !self.0.performed_interactions.is_empty() {
+            h.hash(&self.0.performed_interactions);
+        }
         h.hash(&self.0.annotations);
     }
 }

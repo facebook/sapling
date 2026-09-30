@@ -90,6 +90,9 @@ impl ServiceCatalogDigest for SerializableServiceDefinition {
     fn hash_into(&self, h: &mut Hasher) {
         h.hash(self.functions.as_slice());
         h.hash(&self.baseService);
+        if !self.performedInteractions.is_empty() {
+            h.hash(&self.performedInteractions);
+        }
         h.hash(&self.annotations);
     }
 }

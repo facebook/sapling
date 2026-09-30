@@ -15,6 +15,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use record::SerializableRecord;
 use service_catalog::FunctionQualifier;
@@ -27,6 +28,7 @@ use service_catalog::SerializableStreamingResponse;
 use service_catalog_digest::SERVICE_CATALOG_DIGEST_VERSION;
 use service_catalog_digest::ServiceCatalogDigest;
 use service_catalog_digest_expected_values::DIGEST_CALCULATOR;
+use service_catalog_digest_expected_values::DIGEST_PERFORMED_INTERACTION;
 use service_catalog_digest_expected_values::DIGEST_RICH_DESCRIPTOR;
 use service_catalog_digest_expected_values::DIGEST_RICH_DESCRIPTOR_STRUCTURAL;
 use type_id::TypeId;
@@ -263,6 +265,32 @@ fn rich_descriptor() -> ServiceDescriptor {
     descriptor
 }
 
+fn performed_interaction_descriptor() -> ServiceDescriptor {
+    let mut descriptor = ServiceDescriptor::new(
+        "facebook.com/thrift/service_catalog_digest_test/SessionService",
+        TypeUniverse::Inline(empty_type_system()),
+    );
+    descriptor.functions = vec![Function {
+        name: "openSession".to_owned(),
+        created_interaction_uri: Some(
+            "facebook.com/thrift/service_catalog_digest_test/Session".to_owned(),
+        ),
+        ..Default::default()
+    }];
+    descriptor.performed_interactions =
+        BTreeSet::from(["facebook.com/thrift/service_catalog_digest_test/Session".to_owned()]);
+    descriptor.interactions = vec![Interaction {
+        uri: "facebook.com/thrift/service_catalog_digest_test/Session".to_owned(),
+        functions: vec![Function {
+            name: "get".to_owned(),
+            response_type: Some(TypeId::i32Type(Default::default())),
+            ..Default::default()
+        }],
+        annotations: AnnotationsMap::new(),
+    }];
+    descriptor
+}
+
 fn rich_annotations() -> AnnotationsMap {
     BTreeMap::from([(
         "facebook.com/thrift/service_catalog_digest_test/RichAnnotation".to_owned(),
@@ -321,6 +349,7 @@ fn to_serializable(descriptor: &ServiceDescriptor) -> SerializableServiceCatalog
                     .map(to_serializable_function)
                     .collect(),
                 baseService: None,
+                performedInteractions: descriptor.performed_interactions.clone(),
                 annotations: descriptor.annotations.clone(),
                 ..Default::default()
             },
@@ -476,6 +505,30 @@ fn version_constant_exists() {
 }
 
 #[test]
+fn interaction_constructor_differs_from_factory() {
+    let session = Interaction {
+        uri: "facebook.com/thrift/service_catalog_digest_test/CalculatorSession".to_owned(),
+        ..Default::default()
+    };
+    let mut constructor = calculator_descriptor();
+    constructor.performed_interactions = BTreeSet::from([session.uri.clone()]);
+    constructor.interactions = vec![session.clone()];
+    let mut factory = calculator_descriptor();
+    factory.functions.push(Function {
+        name: "createCalculatorSession".to_owned(),
+        created_interaction_uri: Some(session.uri.clone()),
+        ..Default::default()
+    });
+    factory.interactions = vec![session];
+
+    assert_ne!(
+        constructor.digest(),
+        factory.digest(),
+        "a `performs` constructor is not an RPC and must not hash like a factory function",
+    );
+}
+
+#[test]
 fn golden_calculator_digest_matches_cpp() {
     let descriptor = calculator_descriptor();
     let catalog = to_serializable(&descriptor);
@@ -494,6 +547,18 @@ fn golden_rich_descriptor_digest_matches_cpp() {
 
     assert_eq!(hex_digest(&descriptor), DIGEST_RICH_DESCRIPTOR);
     assert_eq!(hex_digest(&catalog), DIGEST_RICH_DESCRIPTOR);
+}
+
+#[test]
+fn golden_performed_interaction_digest_matches_cpp() {
+    let descriptor = performed_interaction_descriptor();
+    let catalog = to_serializable(&descriptor);
+    let mut out_of_band = catalog.clone();
+    out_of_band.types = None;
+
+    assert_eq!(hex_digest(&descriptor), DIGEST_PERFORMED_INTERACTION);
+    assert_eq!(hex_digest(&catalog), DIGEST_PERFORMED_INTERACTION);
+    assert_eq!(hex_digest(&out_of_band), DIGEST_PERFORMED_INTERACTION);
 }
 
 #[test]

@@ -22,6 +22,8 @@
 //! The serialized implementations cover generated `service_catalog-rust` types.
 //! Runtime service catalog nodes live in `thrift_service_catalog`.
 
+use std::collections::BTreeSet;
+
 pub use type_system_digest::Digest;
 pub use type_system_digest::DigestMode;
 
@@ -145,6 +147,15 @@ impl<T: ServiceCatalogDigest> ServiceCatalogDigest for Option<T> {
         h.hash(&self.is_some());
         if let Some(value) = self {
             h.hash(value);
+        }
+    }
+}
+
+impl ServiceCatalogDigest for BTreeSet<String> {
+    fn hash_into(&self, h: &mut Hasher) {
+        h.hash(&(self.len() as u32));
+        for value in self {
+            h.hash(value.as_str());
         }
     }
 }

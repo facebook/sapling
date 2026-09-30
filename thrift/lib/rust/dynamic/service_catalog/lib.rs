@@ -20,6 +20,7 @@
 //! `service_catalog.thrift` and keep annotation payloads in serialized form.
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 mod digest;
 
@@ -81,6 +82,9 @@ pub struct ServiceDescriptor {
     pub service_uri: String,
     pub type_universe: TypeUniverse,
     pub functions: Vec<Function>,
+    /// URIs of the interactions this service constructs with `performs`. Their
+    /// constructors are not RPCs, so they are not part of `functions`.
+    pub performed_interactions: BTreeSet<String>,
     pub interactions: Vec<Interaction>,
     pub annotations: AnnotationsMap,
 }
@@ -91,6 +95,7 @@ impl ServiceDescriptor {
             service_uri: service_uri.into(),
             type_universe,
             functions: Vec::new(),
+            performed_interactions: BTreeSet::new(),
             interactions: Vec::new(),
             annotations: AnnotationsMap::new(),
         }
@@ -107,6 +112,8 @@ pub enum RpcInterfaceDefinition {
 pub struct ServiceDefinition {
     pub functions: Vec<Function>,
     pub base_service: Option<String>,
+    /// URIs of the interactions this service constructs with `performs`.
+    pub performed_interactions: BTreeSet<String>,
     pub annotations: AnnotationsMap,
 }
 
