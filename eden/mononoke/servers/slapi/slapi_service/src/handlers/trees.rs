@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
+use cloned::cloned;
 use context::PerfCounterType;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
@@ -36,6 +40,7 @@ use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
 use futures::stream;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -104,6 +109,8 @@ const LARGE_TREE_METADATA_LIMIT: usize = 25000;
 
 const ROUTE_ORIGINAL_TO_AUGMENTED_HG_MANIFEST: &str =
     "scm/mononoke:route_original_to_augmented_hg_manifest";
+const BUILD_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD: &str =
+    "scm/mononoke:build_augmented_manifests_at_tree_upload";
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct TreeParams {
@@ -496,6 +503,29 @@ async fn store_tree<R: MononokeRepo>(
     ))
 }
 
+/// Build augmented manifests for the trees one request stored.
+///
+/// Nothing here is persisted, so a build failure must not fail an upload that
+/// otherwise succeeded.
+async fn build_and_record_augmented_manifests<R: MononokeRepo>(
+    repo: &HgRepoContext<R>,
+    trees: Vec<HgManifestEnvelope>,
+) {
+    if let Err(err) = repo
+        .build_augmented_manifests_for_uploaded_trees(trees)
+        .await
+    {
+        repo.ctx()
+            .scuba()
+            .clone()
+            .add("repo", repo.repo().repo_identity().name())
+            .log_with_msg(
+                "Failed to build augmented Hg manifests at tree upload",
+                Some(format!("{err:#}")),
+            );
+    }
+}
+
 /// Upload list of trees requested by the client (batch request).
 pub struct UploadTreesHandler;
 
@@ -513,14 +543,50 @@ impl SaplingRemoteApiHandler for UploadTreesHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        let tokens = request
-            .batch
-            .into_iter()
-            .map(move |item| store_tree(repo.clone(), item));
+        let build_augmented_manifests = justknobs::eval(
+            BUILD_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD,
+            repo.ctx()
+                .metadata()
+                .client_request_info()
+                .map(|c| c.correlator.as_str()),
+            Some(repo.repo().repo_identity().name()),
+        );
 
-        Ok(stream::iter(tokens)
-            .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST)
-            .map_ok(|(token, _tree)| token)
+        let stored = stream::iter(request.batch.into_iter().map({
+            cloned!(repo);
+            move |item| store_tree(repo.clone(), item)
+        }))
+        .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST);
+
+        if !build_augmented_manifests {
+            return Ok(stored.map_ok(|(token, _tree)| token).boxed());
+        }
+
+        // The build orders the batch by containment, so it runs once every
+        // tree has stored, after the last token has gone back.
+        let trees = Arc::new(Mutex::new(Vec::new()));
+        let tokens = stored.map_ok({
+            cloned!(trees);
+            move |(token, tree)| {
+                trees
+                    .lock()
+                    .expect("should not be poisoned, nothing panics while holding it")
+                    .push(tree);
+                token
+            }
+        });
+        let build = async move {
+            let trees = std::mem::take(
+                &mut *trees
+                    .lock()
+                    .expect("should not be poisoned, nothing panics while holding it"),
+            );
+            build_and_record_augmented_manifests(&repo, trees).await;
+            None
+        };
+
+        Ok(tokens
+            .chain(stream::once(build).filter_map(future::ready))
             .boxed())
     }
 }

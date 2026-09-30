@@ -157,6 +157,13 @@ Same upload, same endpoints, nothing derived. The knob is what removed the work.
   $ wait_for_upload "$BEFORE"
   $ derivations_since "$BEFORE"
 
+The tree-upload build pass ran and did not fail. A failed build is best-effort
+and writes nothing, so without this line the envelope probe below would record
+the same absence whether or not the build's writes were contained.
+  $ tail -n +$((BEFORE + 1)) "$SCUBA" \
+  >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
+  >            | .normal.msg'
+
   $ CS2=$(sl log -r . -T '{node}')
   $ ROOT_MFID_2=$(sl log -r . -T '{manifest}')
   $ cd $TESTTMP
@@ -224,3 +231,28 @@ is faithful.
   has_acl=None
   parents_present=False
   children=0
+
+Scenario 3 -- a failed build must leave the upload alone. Only a root-level file
+changes, so the root tree is uploaded on its own and its unchanged `dir` child is
+not in the batch. Scenario 2 derived nothing, so that child has an augmented
+envelope only if tree upload stored the one it built there. Without it the build
+fails, and the upload must not notice: the tree and the changeset still upload,
+and the failure is only logged.
+  $ cd "$TESTTMP/client1"
+  $ BEFORE=$(scuba_rows)
+  $ echo three > rootfile
+  $ sl commit -qAm "third commit, root file only"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ tail -n +$((BEFORE + 1)) "$SCUBA" \
+  >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
+  >            | .normal.msg' \
+  >   | sed -E 's/[0-9a-f]{40}/HASH/g'
+  building the augmented manifest for uploaded tree HASH: tree HASH contains dir (HASH), which is not derived yet
