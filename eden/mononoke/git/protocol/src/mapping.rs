@@ -103,9 +103,10 @@ pub(crate) async fn git_shas_to_bonsais(
         .with_context(|| format!("Failed to fetch bonsai_git_mapping for repo {repo_name}"))?;
     // Filter out the git shas for which we don't have an entry in the bonsai_git_mapping table
     // These are likely annotated tags which need to be resolved separately
+    let mapped_shas: FxHashSet<GitSha1> = entries.iter().map(|entry| entry.git_sha1).collect();
     let tag_shas = shas
         .into_iter()
-        .filter(|&sha| !entries.iter().any(|entry| entry.git_sha1 == sha))
+        .filter(|sha| !mapped_shas.contains(sha))
         .collect::<Vec<_>>();
     tracing::info!(
         repo = %repo_name,
