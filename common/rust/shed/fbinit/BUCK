@@ -34,9 +34,13 @@ rust_library(
     doc_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
     ],
-    named_deps = {
-        "real_fbinit": "//common/rust/fbinit:fbinit",
-    },
+    named_deps = (
+        {}
+        if rust_oss.is_oss_build()
+        else {
+            "real_fbinit": "//common/rust/fbinit:fbinit",
+        }
+    ),
     tests = [
         ":fbinit_test",
     ],
