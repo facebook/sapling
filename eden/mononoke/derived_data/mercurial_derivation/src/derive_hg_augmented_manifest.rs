@@ -2261,17 +2261,39 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
     let files = &uploaded.content().files;
     let content_metadata_cache = HashMap::new();
 
+    // An uploaded manifest lists every file in the directory, not just the
+    // changed ones, so without this a one-file change to a wide directory pays
+    // two blob reads for each of the files that did not change.
+    let reusable = parent_file_leaves(ctx, blobstore, uploaded.p1()).await?;
+
+    let mut subentries = TrieMap::default();
+    let mut to_build: Vec<(MPathElement, FileType, HgFileNodeId)> = Vec::new();
+    for (name, entry) in files.iter() {
+        let Entry::Leaf((file_type, filenode_id)) = entry else {
+            continue;
+        };
+        validate_augmented_manifest_element(name.as_ref())?;
+        // Agreement with the uploaded bytes is what makes this safe, not trust
+        // in `p1`: a leaf is a pure function of its filenode and file type, so
+        // an entry matching both is the one this would have built. A wrong
+        // parent can only cost a miss.
+        match reusable.get(name) {
+            Some(leaf)
+                if leaf.filenode == filenode_id.into_nodehash() && leaf.file_type == *file_type =>
+            {
+                subentries.insert(
+                    name.clone(),
+                    Either::Left(HgAugmentedManifestEntry::FileNode(leaf.clone())),
+                );
+            }
+            _ => to_build.push((name.clone(), *file_type, *filenode_id)),
+        }
+    }
+
     // The leaf futures are materialised before the stream: a closure that
     // borrows `ctx` and `blobstore` inlined into `stream::iter` cannot be
     // inferred as higher-ranked, and callers then fail to prove `Send`.
-    let leaf_inputs: Vec<(MPathElement, FileType, HgFileNodeId)> = files
-        .iter()
-        .filter_map(|(name, entry)| match entry {
-            Entry::Leaf((file_type, filenode_id)) => Some((name.clone(), *file_type, *filenode_id)),
-            Entry::Tree(_) => None,
-        })
-        .collect();
-    let leaf_futures: Vec<_> = leaf_inputs
+    let leaf_futures: Vec<_> = to_build
         .into_iter()
         .map(|(name, file_type, filenode_id)| {
             let content_metadata_cache = &content_metadata_cache;
@@ -2293,9 +2315,7 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let mut subentries = TrieMap::default();
     for (name, entry) in leaves {
-        validate_augmented_manifest_element(name.as_ref())?;
         subentries.insert(name, Either::Left(entry));
     }
     for (name, entry) in files.iter() {
@@ -2345,6 +2365,43 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
         augmented_manifest_size,
         acl_manifest_directory_id: acl_overlay,
     })
+}
+
+/// This directory's file leaves in the parent commit, to reuse for the files
+/// that did not change.
+///
+/// No parent, or a parent that was never derived, is not an error: every leaf
+/// is then built from scratch, which is what this path did before.
+async fn parent_file_leaves(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    p1: Option<HgNodeHash>,
+) -> Result<HashMap<MPathElement, HgAugmentedFileLeafNode>> {
+    let Some(p1) = p1 else {
+        return Ok(HashMap::new());
+    };
+    let Some(envelope) =
+        HgAugmentedManifestEnvelope::load(ctx, blobstore, HgAugmentedManifestId::new(p1)).await?
+    else {
+        return Ok(HashMap::new());
+    };
+    // One pass over the parent's map, rather than a lookup per file: the
+    // directory is being rebuilt precisely because most of it is unchanged, so
+    // nearly every entry is wanted.
+    envelope
+        .augmented_manifest
+        .subentries
+        .into_entries(ctx, blobstore)
+        .try_filter_map(|(name, entry)| async move {
+            match entry {
+                HgAugmentedManifestEntry::FileNode(leaf) => {
+                    Ok(Some((MPathElement::from_smallvec(name)?, leaf)))
+                }
+                HgAugmentedManifestEntry::DirectoryNode(_) => Ok(None),
+            }
+        })
+        .try_collect()
+        .await
 }
 
 #[cfg(test)]

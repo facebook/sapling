@@ -5564,16 +5564,15 @@ async fn test_upload_path_matches_derivation_above_the_shard_weight_limit(
     Ok(())
 }
 
-/// What it tests: a directory whose own files are all unchanged is still built
-/// by reading a file blob for every one of them.
+/// What it tests: a directory whose own files are all unchanged is built
+/// without reading a single file blob.
 ///
 /// Why it matters: an uploaded manifest lists every file in the directory, not
-/// just the changed ones, so this is one filenode load plus one
-/// content-metadata lookup per file for a change that touched none of them. On
-/// a directory of a thousand files that is a thousand reads where canonical
-/// derivation does none. Pinned here so the fix has something to flip.
+/// just the changed ones, so rebuilding each leaf cost one filenode load plus
+/// one content-metadata lookup per file however little changed. Denying every
+/// file read is what keeps that from coming back.
 #[mononoke::fbinit_test]
-async fn test_upload_path_rebuilds_unchanged_file_leaves(fb: FacebookInit) -> Result<()> {
+async fn test_upload_path_reuses_unchanged_file_leaves(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
@@ -5585,8 +5584,8 @@ async fn test_upload_path_rebuilds_unchanged_file_leaves(fb: FacebookInit) -> Re
         .add_files(files)
         .commit()
         .await?;
-    // Only the subdirectory changes, so every file wide/ lists is unchanged
-    // and none of them need rebuilding.
+    // Only the subdirectory changes, so every file wide/ lists is unchanged and
+    // can only come from the parent's envelope.
     let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
         .add_file("wide/sub/x", "two")
         .commit()
@@ -5620,21 +5619,14 @@ async fn test_upload_path_rebuilds_unchanged_file_leaves(fb: FacebookInit) -> Re
     );
     let wide = tree_id_at_path(&ctx, &repo, child_manifest, "wide").await?;
     let envelope = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), wide).await?;
-    // FIXME: every leaf is rebuilt from the file blobs, so denying them is
-    // enough to stop the build. Reusing the parent's entry for a file whose
-    // filenode is unchanged should make this succeed with no file read at all.
-    let err = build_augmented_manifest_for_uploaded_tree(
+    build_augmented_manifest_for_uploaded_tree(
         &ctx,
         &no_file_reads,
         restricted_paths_config,
         &envelope,
     )
     .await
-    .expect_err("every leaf is rebuilt today, so a denied file read stops the build");
-    assert!(
-        format!("{err:#}").contains("hgfilenode.sha1."),
-        "the build must stop on a denied file read, not on something else: {err:#}",
-    );
+    .context("wide/ must build from the parent's leaves without reading any file blob")?;
 
     Ok(())
 }
