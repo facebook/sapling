@@ -1266,3 +1266,242 @@ clean=True
   vendor/a: A2_REV
   frameworks/b: B2_REV
   vendor/a/sub/c: C_REV
+
+`goto` tests: dirty manifest and dirty project
+
+Every test starts clean at `$REV_AFTER_BUMP_C` and makes three changes to one
+project:
+- check out the project at its local revision (`*_LOCAL_REV`).
+- edit the revision of the project in `static.xml` on disk to match.
+- change a file in the project without committing it.
+Then it runs `sl goto $REV_AFTER_BUMP_B`. The goto updates the revision of only
+`vendor/a/sub/c`, both in `static.xml` and the checked out submodule.
+The dirty project is one of:
+- `vendor/a/sub/c`. The goto updates the revision of this project.
+- `frameworks/b`. The goto keeps the revision of this project.
+
+Expected (the dirty project and dirty manifest rules combined):
+- Default flags and `--merge`: if the goto keeps the project's revision, keep
+all three changes. If the goto updates it, refuse before changing anything.
+- `--check`: refuse before changing anything.
+- `--clean`: throw away all three changes and check out the target.
+The problems from the clean tests show up here too. We do not mark them again.
+
+Dirty project `vendor/a/sub/c`. The goto updates the revision of this project.
+
+Default flags. Expected: refuse before changing anything.
+(bad: goto does not refuse. Git refuses halfway. By then `.` and `main` have
+already moved to `$REV_AFTER_BUMP_B`. `vendor/a/sub/c` stays at
+`C_LOCAL_REV`.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ git -C vendor/a/sub/c checkout -q --detach $C_LOCAL_REV
+  $ sed -i "s/$C2_REV/$C_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > vendor/a/sub/c/README
+  $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
+  manifests: MM static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_LOCAL_REV
+   M README
+  sl status: M vendor/a/sub/c
+
+`--check`. Expected: refuse before changing anything.
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ git -C vendor/a/sub/c checkout -q --detach $C_LOCAL_REV
+  $ sed -i "s/$C2_REV/$C_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > vendor/a/sub/c/README
+  $ sl goto --check $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: uncommitted changes
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_LOCAL_REV
+   M README
+  sl status: M vendor/a/sub/c
+
+`--merge`. Expected: refuse before changing anything.
+(bad: it fails halfway, same as the default flags.)
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ git -C vendor/a/sub/c checkout -q --detach $C_LOCAL_REV
+  $ sed -i "s/$C2_REV/$C_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > vendor/a/sub/c/README
+  $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_LOCAL_REV
+   M README
+  sl status: M vendor/a/sub/c
+
+`--clean`. Expected: throw away all three changes and check out `C_REV`.
+(bad: the file change is thrown away and `vendor/a/sub/c` is checked out at
+`C_REV`. But the `static.xml` edit stays. `static.xml` on disk still says
+`C_LOCAL_REV`.)
+clean=True
+
+  $ reset_workspace
+  $ git -C vendor/a/sub/c checkout -q --detach $C_LOCAL_REV
+  $ sed -i "s/$C2_REV/$C_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > vendor/a/sub/c/README
+  $ sl goto --clean $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
+  manifests: MM static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+
+Dirty project `frameworks/b`. The goto keeps the revision of this project.
+
+Default flags. Expected: keep all three changes.
+(bad: goto tries to reset `frameworks/b` to `B2_REV`. Git refuses halfway,
+because of the file change. By then `.` and `main` have already moved.
+`vendor/a/sub/c` stays at `C2_REV`, so Sapling now shows it as modified too.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ git -C frameworks/b checkout -q --detach $B_LOCAL_REV
+  $ sed -i "s/$B2_REV/$B_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B2_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
+  manifests: MM static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B_LOCAL_REV
+   M README
+  vendor/a/sub/c: C2_REV
+  sl status: M frameworks/b
+  sl status: M vendor/a/sub/c
+
+`--check`. Expected: refuse before changing anything.
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ git -C frameworks/b checkout -q --detach $B_LOCAL_REV
+  $ sed -i "s/$B2_REV/$B_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl goto --check $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: uncommitted changes
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B_LOCAL_REV
+   M README
+  vendor/a/sub/c: C2_REV
+  sl status: M frameworks/b
+
+`--merge`. Expected: keep all three changes.
+(bad: it fails halfway, same as the default flags.)
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ git -C frameworks/b checkout -q --detach $B_LOCAL_REV
+  $ sed -i "s/$B2_REV/$B_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B2_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B_LOCAL_REV
+   M README
+  vendor/a/sub/c: C2_REV
+  sl status: M frameworks/b
+  sl status: M vendor/a/sub/c
+
+`--clean`. Expected: throw away all three changes and reset `frameworks/b` to
+`B2_REV`.
+(bad: the file change is thrown away and `frameworks/b` is reset to `B2_REV`.
+But the `static.xml` edit stays. `static.xml` on disk still says
+`B_LOCAL_REV`.)
+clean=True
+
+  $ reset_workspace
+  $ git -C frameworks/b checkout -q --detach $B_LOCAL_REV
+  $ sed -i "s/$B2_REV/$B_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl goto --clean $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
+  manifests: MM static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
