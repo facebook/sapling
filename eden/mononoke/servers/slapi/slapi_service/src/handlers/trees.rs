@@ -62,11 +62,13 @@ use mercurial_types::HgNodeHash;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api::errors::MononokeError;
+use mononoke_api_hg::DirectoryAcl;
 use mononoke_api_hg::HgAugmentedTreeRestrictionContext;
 use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
+use mononoke_api_hg::UploadTreeAugmented;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use permission_checker::MononokeIdentitySetExt;
@@ -99,6 +101,10 @@ define_stats! {
     prefix = "mononoke.trees";
     manifests_served: timeseries(Rate, Sum),
     trees_batch_keys_requested: timeseries(Rate, Sum),
+    upload_augmented_manifests_attempted: timeseries(Rate, Sum),
+    upload_augmented_manifests_built: timeseries(Rate, Sum),
+    upload_augmented_manifests_skipped_no_acl_work: timeseries(Rate, Sum),
+    upload_augmented_manifests_failed: timeseries(Rate, Sum),
 }
 
 // The size is optimized for the batching settings in EdenFs.
@@ -503,6 +509,19 @@ async fn store_tree<R: MononokeRepo>(
     ))
 }
 
+/// Bump the counters for one batch of augmented-manifest builds.
+///
+/// A batch builds completely or fails, so the only thing that varies per tree
+/// is whether it provably had no ACL work to do.
+fn record_augmented_manifest_outcomes(built: &[UploadTreeAugmented]) {
+    STATS::upload_augmented_manifests_built.add_value(built.len() as i64);
+    let no_acl_work = built
+        .iter()
+        .filter(|tree| matches!(tree.acl, DirectoryAcl::NotNeeded))
+        .count();
+    STATS::upload_augmented_manifests_skipped_no_acl_work.add_value(no_acl_work as i64);
+}
+
 /// Build augmented manifests for the trees one request stored.
 ///
 /// Nothing here is persisted, so a build failure must not fail an upload that
@@ -511,18 +530,23 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     repo: &HgRepoContext<R>,
     trees: Vec<HgManifestEnvelope>,
 ) {
-    if let Err(err) = repo
+    STATS::upload_augmented_manifests_attempted.add_value(trees.len() as i64);
+    match repo
         .build_augmented_manifests_for_uploaded_trees(trees)
         .await
     {
-        repo.ctx()
-            .scuba()
-            .clone()
-            .add("repo", repo.repo().repo_identity().name())
-            .log_with_msg(
-                "Failed to build augmented Hg manifests at tree upload",
-                Some(format!("{err:#}")),
-            );
+        Ok(built) => record_augmented_manifest_outcomes(&built),
+        Err(err) => {
+            STATS::upload_augmented_manifests_failed.add_value(1);
+            repo.ctx()
+                .scuba()
+                .clone()
+                .add("repo", repo.repo().repo_identity().name())
+                .log_with_msg(
+                    "Failed to build augmented Hg manifests at tree upload",
+                    Some(format!("{err:#}")),
+                );
+        }
     }
 }
 
