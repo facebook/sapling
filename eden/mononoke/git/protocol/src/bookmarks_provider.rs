@@ -37,9 +37,8 @@ pub(crate) async fn bookmarks(
         .await?
         .into_iter()
         .filter_map(|(bookmark, (cs_id, _))| {
-            let refs = requested_refs.clone();
             let name = bookmark.name().to_string();
-            match refs {
+            match requested_refs {
                 RequestedRefs::Included(refs) if refs.contains(&name) => Some((bookmark, cs_id)),
                 RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
                     let ref_name = format!("{REF_PREFIX}{name}");
