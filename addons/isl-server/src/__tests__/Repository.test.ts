@@ -175,6 +175,40 @@ describe('Repository', () => {
       });
     });
 
+    it('prefers the upstream repo over the fork it was cloned from', async () => {
+      setConfigOverrideForTests(
+        [
+          ['paths.default', 'https://github.com/myUsername/myRepo.git'],
+          ['paths.upstream', 'https://github.com/upstreamOrg/myRepo.git'],
+        ],
+        false,
+      );
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      expect(info.codeReviewSystem).toEqual({
+        type: 'github',
+        owner: 'upstreamOrg',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+
+    it('falls back to the default path when upstream is not a github repo', async () => {
+      setConfigOverrideForTests(
+        [
+          ['paths.default', 'https://github.com/myUsername/myRepo.git'],
+          ['paths.upstream', 'https://gitlab.myCompany.com/myUsername/myRepo.git'],
+        ],
+        false,
+      );
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      expect(info.codeReviewSystem).toEqual({
+        type: 'github',
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+
     it('handles non-github-enterprise unknown code review providers', async () => {
       setPathsDefault('https://gitlab.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;

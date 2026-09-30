@@ -536,6 +536,7 @@ export class Repository {
       // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
       getConfigs(ctx, [
         'paths.default',
+        'paths.upstream',
         'github.pull_request_domain',
         'github.preferred_submit_command',
         'phrevset.callsign',
@@ -583,11 +584,26 @@ export class Repository {
     } else if (pathsDefault === '') {
       codeReviewSystem = {type: 'none'};
     } else {
-      const repoInfo = extractRepoInfoFromUrl(pathsDefault);
-      if (
-        repoInfo != null &&
-        (repoInfo.hostname === 'github.com' || (await isGithubEnterprise(repoInfo.hostname)))
-      ) {
+      // A fork pushes to itself but its pull requests belong upstream, which is already how the CLI
+      // behaves: `try_find_upstream` in the github extension resolves a bare pull request number
+      // against `paths.upstream` before `paths.default`.
+      const candidates = [configs.get('paths.upstream') ?? '', pathsDefault]
+        .map(url => extractRepoInfoFromUrl(url))
+        .filter(info => info != null);
+      // A fork and its upstream share a host, so resolve each host once rather than per candidate:
+      // `isGithubEnterprise` shells out to `gh`.
+      const hostnames = [...new Set(candidates.map(info => info.hostname))];
+      const githubHostnames = new Set(
+        (
+          await Promise.all(
+            hostnames.map(async hostname =>
+              hostname === 'github.com' || (await isGithubEnterprise(hostname)) ? hostname : null,
+            ),
+          )
+        ).filter(hostname => hostname != null),
+      );
+      const repoInfo = candidates.find(info => githubHostnames.has(info.hostname));
+      if (repoInfo != null) {
         const {owner, repo, hostname} = repoInfo;
         codeReviewSystem = {
           type: 'github',
