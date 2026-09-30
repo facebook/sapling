@@ -51,6 +51,7 @@ use manifest::Manifest;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::MononokeRepo;
@@ -474,27 +475,25 @@ async fn fetch_child_file_metadata<R: MononokeRepo>(
     ))
 }
 
-/// Store the content of a single tree
+/// Store the content of a single tree, returning its token and its envelope.
 async fn store_tree<R: MononokeRepo>(
     repo: HgRepoContext<R>,
     item: UploadTreeRequest,
-) -> Result<UploadTreeResponse, Error> {
+) -> Result<(UploadTreeResponse, HgManifestEnvelope), Error> {
     let upload_node_id = HgNodeHash::from(item.entry.node_id);
-    let contents = item.entry.data;
+    let contents = Bytes::from(item.entry.data);
     let p1 = item.entry.parents.p1().cloned().map(HgNodeHash::from);
     let p2 = item.entry.parents.p2().cloned().map(HgNodeHash::from);
     let computed_node_id = item.entry.computed_node_id.map(HgNodeHash::from);
-    repo.store_tree(
-        upload_node_id,
-        p1,
-        p2,
-        Bytes::from(contents),
-        computed_node_id,
-    )
-    .await?;
-    Ok(UploadTreeResponse {
-        token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id), None),
-    })
+    let envelope = repo
+        .store_tree(upload_node_id, p1, p2, contents, computed_node_id)
+        .await?;
+    Ok((
+        UploadTreeResponse {
+            token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id), None),
+        },
+        envelope,
+    ))
 }
 
 /// Upload list of trees requested by the client (batch request).
@@ -521,6 +520,7 @@ impl SaplingRemoteApiHandler for UploadTreesHandler {
 
         Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST)
+            .map_ok(|(token, _tree)| token)
             .boxed())
     }
 }
