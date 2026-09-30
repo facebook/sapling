@@ -137,6 +137,8 @@ EventBase-confined futures without a `Send` bound.
 
 For reusable EventBase-local endpoint state, call `CallbackContext::local_pipeline_context()` and drop the returned
 `LocalPipelineContext` from the endpoint's `handler_removed` callback.
+To close the pipeline from the endpoint itself, consume the handle with `LocalPipelineContext::close()`
+— it takes `self`, so teardown's `handler_removed` has no handle left to drop.
 
 ## Futures are polled where they live
 
