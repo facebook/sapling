@@ -69,6 +69,7 @@ use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use mononoke_api_hg::UploadTreeAugmented;
+use mononoke_api_hg::UploadTreeBuildError;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use permission_checker::MononokeIdentitySetExt;
@@ -105,6 +106,7 @@ define_stats! {
     upload_augmented_manifests_built: timeseries(Rate, Sum),
     upload_augmented_manifests_skipped_no_acl_work: timeseries(Rate, Sum),
     upload_augmented_manifests_failed: timeseries(Rate, Sum),
+    upload_augmented_manifests_failed_missing_child: timeseries(Rate, Sum),
 }
 
 // The size is optimized for the batching settings in EdenFs.
@@ -509,6 +511,17 @@ async fn store_tree<R: MononokeRepo>(
     ))
 }
 
+/// A batch the client built wrong: a parent uploaded before a child it
+/// contains. Counted apart from genuine server failures.
+fn is_client_fault(err: &Error) -> bool {
+    err.chain().any(|cause| {
+        matches!(
+            cause.downcast_ref::<UploadTreeBuildError>(),
+            Some(UploadTreeBuildError::MissingChild { .. })
+        )
+    })
+}
+
 /// Bump the counters for one batch of augmented-manifest builds.
 ///
 /// A batch builds completely or fails, so the only thing that varies per tree
@@ -529,7 +542,12 @@ fn record_augmented_manifest_outcomes(built: &[UploadTreeAugmented]) {
 async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     repo: &HgRepoContext<R>,
     trees: Vec<HgManifestEnvelope>,
+    batch_len: usize,
 ) {
+    // A store that failed drops its tree here, so a parent still in the batch
+    // can look like it is missing a child the client did send. Only a complete
+    // batch can tell the client's mistake from our own.
+    let complete_batch = trees.len() == batch_len;
     STATS::upload_augmented_manifests_attempted.add_value(trees.len() as i64);
     match repo
         .build_augmented_manifests_for_uploaded_trees(trees)
@@ -537,11 +555,18 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     {
         Ok(built) => record_augmented_manifest_outcomes(&built),
         Err(err) => {
-            STATS::upload_augmented_manifests_failed.add_value(1);
+            let failure_kind = if complete_batch && is_client_fault(&err) {
+                STATS::upload_augmented_manifests_failed_missing_child.add_value(1);
+                "missing_child"
+            } else {
+                STATS::upload_augmented_manifests_failed.add_value(1);
+                "server"
+            };
             repo.ctx()
                 .scuba()
                 .clone()
                 .add("repo", repo.repo().repo_identity().name())
+                .add("failure_kind", failure_kind)
                 .log_with_msg(
                     "Failed to build augmented Hg manifests at tree upload",
                     Some(format!("{err:#}")),
@@ -576,6 +601,7 @@ impl SaplingRemoteApiHandler for UploadTreesHandler {
             Some(repo.repo().repo_identity().name()),
         );
 
+        let batch_len = request.batch.len();
         let stored = stream::iter(request.batch.into_iter().map({
             cloned!(repo);
             move |item| store_tree(repo.clone(), item)
@@ -605,7 +631,7 @@ impl SaplingRemoteApiHandler for UploadTreesHandler {
                     .lock()
                     .expect("should not be poisoned, nothing panics while holding it"),
             );
-            build_and_record_augmented_manifests(&repo, trees).await;
+            build_and_record_augmented_manifests(&repo, trees, batch_len).await;
             None
         };
 

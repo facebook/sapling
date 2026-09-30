@@ -253,6 +253,6 @@ and the failure is only logged.
   $ wait_for_upload "$BEFORE"
   $ tail -n +$((BEFORE + 1)) "$SCUBA" \
   >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
-  >            | .normal.msg' \
+  >            | "\(.normal.failure_kind): \(.normal.msg)"' \
   >   | sed -E 's/[0-9a-f]{40}/HASH/g'
-  building the augmented manifest for uploaded tree HASH: tree HASH contains dir (HASH), which is not derived yet
+  missing_child: building the augmented manifest for uploaded tree HASH: tree HASH contains dir (HASH), which is neither built in this batch nor already derived

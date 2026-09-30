@@ -42,6 +42,7 @@ use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_derivation::upload_augmented_manifest::BuiltTree;
+use mercurial_derivation::upload_augmented_manifest::UploadTreeBuildError;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifest_for_uploaded_tree;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
 use mercurial_types::HgAugmentedManifestEntry;
@@ -5714,12 +5715,29 @@ async fn test_upload_path_fails_when_a_child_is_not_derived(fb: FacebookInit) ->
             // `src` is built without building `src/deep` first, so the child's
             // new augmented manifest does not exist.
             let src = tree_id_at_path(&ctx, &repo, child_manifest, "src").await?;
+            let deep = tree_id_at_path(&ctx, &repo, child_manifest, "src/deep").await?;
             let err = build_one_uploaded_tree(&ctx, &repo, &overlay, src)
                 .await
                 .expect_err("a tree whose child is not derived must fail, not build");
+            let message = format!("{err:#}");
             assert!(
-                format!("{err:#}").contains("is not derived yet"),
-                "the error should name the missing input, got: {err:#}"
+                message.contains("deep") && message.contains("already derived"),
+                "the error should name the missing input and why, got: {message}"
+            );
+            // The handler's counter split downcasts to this variant, so a
+            // matching message alone is not enough.
+            let typed = err
+                .chain()
+                .find_map(|cause| cause.downcast_ref::<UploadTreeBuildError>());
+            assert!(
+                matches!(
+                    typed,
+                    Some(UploadTreeBuildError::MissingChild { tree, name, child })
+                        if *tree == src.into_nodehash()
+                            && name.as_ref() == b"deep"
+                            && *child == deep.into_nodehash()
+                ),
+                "the error should be MissingChild for src/deep, got: {typed:?}"
             );
 
             let key = HgAugmentedManifestId::new(src.into_nodehash()).blobstore_key();
@@ -5730,7 +5748,6 @@ async fn test_upload_path_fails_when_a_child_is_not_derived(fb: FacebookInit) ->
 
             // Building the child first is all it takes for the same call to
             // succeed.
-            let deep = tree_id_at_path(&ctx, &repo, child_manifest, "src/deep").await?;
             build_one_uploaded_tree(&ctx, &repo, &overlay, deep).await?;
             build_one_uploaded_tree(&ctx, &repo, &overlay, src).await?;
 

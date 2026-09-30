@@ -16,7 +16,6 @@ use acl_manifest::DirectoryAclInputs;
 use acl_manifest::acl_node_for_directory;
 use anyhow::Context;
 use anyhow::Result;
-use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use context::CoreContext;
@@ -33,10 +32,28 @@ use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mononoke_types::MPathElement;
 use mononoke_types::acl_manifest::AclManifestDirectoryEntry;
 use restricted_paths_common::RestrictedPathsConfigBased;
+use thiserror::Error;
 
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_for_uploaded_tree;
 
 const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
+
+/// Why an uploaded batch could not be built.
+#[derive(Debug, Error)]
+pub enum UploadTreeBuildError {
+    /// The client's fault: a parent uploaded before a child it contains.
+    ///
+    /// Phrased for both callers: an out-of-batch child with no stored envelope,
+    /// and an in-batch child the ordering could not put first.
+    #[error(
+        "tree {tree} contains {name} ({child}), which is neither built in this batch nor already derived"
+    )]
+    MissingChild {
+        tree: HgNodeHash,
+        name: MPathElement,
+        child: HgNodeHash,
+    },
+}
 
 /// What the ACL manifest pass made of one directory.
 #[derive(Debug, Clone)]
@@ -363,7 +380,11 @@ async fn load_children(
             // Only reachable if the batch is not a DAG, since bottom-up
             // ordering otherwise puts every in-batch child before its parent.
             let sibling = sources.siblings.get(node_id).ok_or_else(|| {
-                anyhow!("tree {tree} contains {name} ({node_id}), which is not derived yet")
+                UploadTreeBuildError::MissingChild {
+                    tree,
+                    name: name.clone(),
+                    child: *node_id,
+                }
             })?;
             anyhow::Ok((
                 name.clone(),
@@ -389,8 +410,10 @@ async fn load_children(
                 HgAugmentedManifestId::new(*node_id),
             )
             .await?
-            .ok_or_else(|| {
-                anyhow!("tree {tree} contains {name} ({node_id}), which is not derived yet")
+            .ok_or_else(|| UploadTreeBuildError::MissingChild {
+                tree,
+                name: name.clone(),
+                child: *node_id,
             })?;
             let acl = envelope.augmented_manifest.acl_manifest_directory_id;
             anyhow::Ok((
