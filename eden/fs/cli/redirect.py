@@ -691,22 +691,13 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
         for repo_path, redir_type in load_redirection_profile(
             repo_redirection_config_file_name
         ).items():
-            redirs[repo_path] = Redirection(
-                Path(repo_path), redir_type, None, REPO_SOURCE
-            )
+            path = Path(repo_path)
+            redirs[str(path)] = Redirection(path, redir_type, None, REPO_SOURCE)
 
     # User-specific things have the highest precedence
     for repo_path, redir_type in config.redirections.items():
-        redirs[repo_path] = Redirection(
-            Path(repo_path), redir_type, None, USER_REDIRECTION_SOURCE
-        )
-
-    if sys.platform == "win32":
-        # Convert path separator to backslash on Windows
-        normalized_redirs = {}
-        for repo_path, redirection in redirs.items():
-            normalized_redirs[repo_path.replace("/", "\\")] = redirection
-        return normalized_redirs
+        path = Path(repo_path)
+        redirs[str(path)] = Redirection(path, redir_type, None, USER_REDIRECTION_SOURCE)
 
     return redirs
 

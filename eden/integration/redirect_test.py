@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from eden.fs.cli.redirect import is_bind_mount
 from eden.fs.cli.util import mkscratch_bin
 from eden.fs.service.eden.thrift_types import (
     ListRedirectionsRequest,
@@ -61,6 +62,22 @@ via-profile = "bind"
 """,
         )
         self.repo.commit("Initial commit.")
+
+    def test_doctor_preserves_dot_prefixed_mounted_bind(self) -> None:
+        if sys.platform != "linux":
+            self.skipTest("Linux bind mount behavior")
+        redirection = Path(self.mount, "via-profile")
+        self.assertTrue(is_bind_mount(redirection))
+        contents = redirection / "contents"
+        contents.write_text("preserve me\n")
+        Path(self.mount, ".eden-redirections").write_text(
+            '[redirections]\n"./via-profile" = "bind"\n'
+        )
+
+        self.eden.run_cmd("doctor", "--current-edenfs-only", "--fast")
+
+        self.assertTrue(is_bind_mount(redirection))
+        self.assertEqual("preserve me\n", contents.read_text())
 
     def test_list_no_legacy_bind_mounts(self) -> None:
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)

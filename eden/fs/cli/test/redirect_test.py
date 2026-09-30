@@ -15,6 +15,7 @@ from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.redirect import (
     check_redirection,
     determine_bind_redirection_type,
+    get_configured_redirections,
     get_effective_redirections,
     is_valid_symlink,
     RedirectionState,
@@ -26,6 +27,25 @@ from ..redirect import Redirection, RepoPathDisposition
 
 
 class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
+    def test_normalized_redirections_preserve_user_precedence(self) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("checkout")
+        for repo_path, user_path in (("./one", "one"), ("one", "./one")):
+            with self.subTest(repo_path=repo_path, user_path=user_path):
+                (checkout.path / ".eden-redirections").write_text(
+                    f'[redirections]\n"{repo_path}" = "bind"\n'
+                )
+                checkout.save_config(
+                    checkout.get_config()._replace(
+                        redirections={user_path: RedirectionType.SYMLINK}
+                    )
+                )
+
+                redirs = get_configured_redirections(checkout)
+
+                self.assertEqual(["one"], list(redirs))
+                self.assertEqual(RedirectionType.SYMLINK, redirs["one"].type)
+
     def test_symlink_target_comparison_resolves_parent_symlinks(self) -> None:
         temp_dir = Path(self.make_temporary_directory())
         target_root = temp_dir / "target-root"
