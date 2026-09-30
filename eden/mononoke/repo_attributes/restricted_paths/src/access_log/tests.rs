@@ -16,6 +16,7 @@ use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use metaconfig_types::AclManifestMode;
+use metadata::ClientPathAclCompatibility;
 use metadata::Metadata;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
@@ -87,6 +88,20 @@ impl<T: SourceRestrictionCheck> ShadowComparisonFieldFixture<T> {
     /// User-Agent, which `log_access_to_scuba` records as `http_user_agent`.
     fn with_user_agent(self, user_agent: &str) -> Self {
         let ctx = ctx_with_user_agent(self.fb, user_agent);
+        Self { ctx, ..self }
+    }
+
+    fn with_client_path_acl_compatibility(
+        self,
+        client_path_acl_compatibility: ClientPathAclCompatibility,
+    ) -> Self {
+        let metadata = Metadata::default();
+        let mut metadata = metadata;
+        metadata.add_client_path_acl_compatibility(client_path_acl_compatibility);
+        let session = SessionContainer::builder(self.fb)
+            .metadata(Arc::new(metadata))
+            .build();
+        let ctx = session.new_context(MononokeScubaSampleBuilder::with_discard());
         Self { ctx, ..self }
     }
 
@@ -613,6 +628,58 @@ async fn test_missing_user_agent_is_not_logged(fb: FacebookInit) -> Result<()> {
         None,
         "row should omit http_user_agent when no User-Agent is present"
     );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_default_client_path_acl_compatibility_is_logged(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        restricted_path_result(false, false, "config_acl", "config/restricted")?,
+        Some(restricted_path_result(
+            true,
+            true,
+            "acl_manifest_acl",
+            "acl_manifest/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1);
+    assert_eq!(
+        sample_field(&samples[0], "client_path_acl_compatibility"),
+        Some("absent".to_string()),
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_non_default_client_path_acl_compatibility_is_logged(fb: FacebookInit) -> Result<()> {
+    for (state, expected) in [
+        (ClientPathAclCompatibility::ReadyV1, "ready_v1"),
+        (ClientPathAclCompatibility::Malformed, "malformed"),
+    ] {
+        let samples = ShadowComparisonFieldFixture::new(
+            fb,
+            restricted_path_result(false, false, "config_acl", "config/restricted")?,
+            Some(restricted_path_result(
+                true,
+                true,
+                "acl_manifest_acl",
+                "acl_manifest/restricted",
+            )?),
+            full_path_access_data()?,
+        )?
+        .with_client_path_acl_compatibility(state)
+        .log_with(log_source_results_to_scuba)?;
+
+        assert_eq!(samples.len(), 1);
+        assert_eq!(
+            sample_field(&samples[0], "client_path_acl_compatibility"),
+            Some(expected.to_string()),
+        );
+    }
     Ok(())
 }
 

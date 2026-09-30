@@ -25,6 +25,24 @@ use session_id::SessionId;
 use session_id::generate_session_id;
 use tokio::time::timeout;
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum ClientPathAclCompatibility {
+    #[default]
+    Absent,
+    ReadyV1,
+    Malformed,
+}
+
+impl ClientPathAclCompatibility {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Absent => "absent",
+            Self::ReadyV1 => "ready_v1",
+            Self::Malformed => "malformed",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Metadata {
     session_id: SessionId,
@@ -52,6 +70,7 @@ pub struct Metadata {
     fetch_from_cas_attempted: bool,
     upstream_client_id: Option<String>,
     user_agent: Option<String>,
+    client_path_acl_compatibility: ClientPathAclCompatibility,
 }
 
 impl Metadata {
@@ -103,6 +122,7 @@ impl Metadata {
             fetch_from_cas_attempted: false,
             upstream_client_id: None,
             user_agent: None,
+            client_path_acl_compatibility: ClientPathAclCompatibility::Absent,
         }
     }
 
@@ -424,6 +444,18 @@ impl Metadata {
 
     pub fn user_agent(&self) -> Option<&str> {
         self.user_agent.as_deref()
+    }
+
+    pub fn add_client_path_acl_compatibility(
+        &mut self,
+        client_path_acl_compatibility: ClientPathAclCompatibility,
+    ) -> &mut Self {
+        self.client_path_acl_compatibility = client_path_acl_compatibility;
+        self
+    }
+
+    pub fn client_path_acl_compatibility(&self) -> ClientPathAclCompatibility {
+        self.client_path_acl_compatibility
     }
 
     pub fn machine_tier(&self) -> Option<&str> {

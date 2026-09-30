@@ -846,6 +846,12 @@ mod schematized_logger {
         let metadata =
             CommonMetadata::from_metadata(ctx.metadata(), ctx.scuba().observability_context());
         apply_metadata(&mut logger, &metadata);
+        logger.set_client_path_acl_compatibility(
+            ctx.metadata()
+                .client_path_acl_compatibility()
+                .as_str()
+                .to_owned(),
+        );
 
         // Set core access fields
         logger.set_repo_id(repo_id.id() as i64);
@@ -1106,6 +1112,10 @@ fn log_access_to_scuba(
     mut scuba: MononokeScubaSampleBuilder,
 ) -> Result<()> {
     scuba.add_metadata(ctx.metadata());
+    scuba.add(
+        "client_path_acl_compatibility",
+        ctx.metadata().client_path_acl_compatibility().as_str(),
+    );
 
     if let Some(user_agent) = ctx.metadata().user_agent() {
         scuba.add("http_user_agent", user_agent);

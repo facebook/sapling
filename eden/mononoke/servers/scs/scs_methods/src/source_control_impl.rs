@@ -57,6 +57,7 @@ use login_objects_thrift::EnvironmentType;
 use megarepo_api::MegarepoApi;
 use memory::MemoryStats;
 use metaconfig_types::CommonConfig;
+use metadata::ClientPathAclCompatibility;
 use metadata::Metadata;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
@@ -109,6 +110,7 @@ const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
 const FORWARDED_UNVERIFIED_CATS_HEADER: &str = "raw_customer_cats";
 const FORWARDED_UNVERIFIED_CATS_VERIFIER_HEADER: &str = "customer_cats_verifier_service_identity";
 const ALWAYS_LOG_HEADER: &str = "always_log";
+const SCS_PATH_ACL_COMPATIBLE_HEADER: &str = "scs_path_acl_compatible";
 const PER_REQUEST_READ_QPS: usize = 4000;
 const PER_REQUEST_WRITE_QPS: usize = 4000;
 
@@ -138,7 +140,21 @@ define_stats! {
 
     total_method_requests:  dynamic_timeseries("method.{}.total_method_requests", (method: String); Rate, Sum),
     total_method_internal_failure:  dynamic_timeseries("method.{}.total_method_internal_failure", (method: String); Rate, Sum),
+    malformed_path_acl_compatibility_header: timeseries(Rate, Sum),
 
+}
+
+fn classify_client_path_acl_compatibility(
+    header: anyhow::Result<Option<Vec<u8>>>,
+) -> ClientPathAclCompatibility {
+    match header {
+        Ok(None) => ClientPathAclCompatibility::Absent,
+        Ok(Some(value)) if value == b"1" => ClientPathAclCompatibility::ReadyV1,
+        Ok(Some(_)) | Err(_) => {
+            STATS::malformed_path_acl_compatibility_header.add_value(1);
+            ClientPathAclCompatibility::Malformed
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -325,6 +341,10 @@ impl SourceControlServiceImpl {
                 .map(|id| id.to_typed_string())
                 .collect::<ScubaValue>(),
         );
+        scuba.add(
+            "client_path_acl_compatibility",
+            metadata.client_path_acl_compatibility().as_str(),
+        );
 
         if let Some(forwarded) = metadata.unverified_forwarded_identities() {
             scuba.add(
@@ -358,6 +378,9 @@ impl SourceControlServiceImpl {
     ) -> Result<Metadata, scs_errors::ServiceError> {
         let header = |h: &str| req_ctxt.header(h).map_err(scs_errors::invalid_request);
         let mut metadata = self.create_base_metadata(req_ctxt).await?;
+        metadata.add_client_path_acl_compatibility(classify_client_path_acl_compatibility(
+            req_ctxt.header_as_bytes(SCS_PATH_ACL_COMPATIBLE_HEADER),
+        ));
 
         let client_info: Option<ClientInfo> = header(CLIENT_INFO_HEADER)?
             .as_ref()
@@ -1980,6 +2003,39 @@ mod tests {
     use mononoke_macros::mononoke;
 
     use super::*;
+
+    #[mononoke::test]
+    fn test_classify_client_path_acl_compatibility() {
+        assert_eq!(
+            classify_client_path_acl_compatibility(Ok(None)),
+            ClientPathAclCompatibility::Absent,
+        );
+        assert_eq!(
+            classify_client_path_acl_compatibility(Ok(Some(b"1".to_vec()))),
+            ClientPathAclCompatibility::ReadyV1,
+        );
+
+        for malformed in [
+            Vec::new(),
+            b"0".to_vec(),
+            b"true".to_vec(),
+            b" 1".to_vec(),
+            b"1 ".to_vec(),
+            b"1,1".to_vec(),
+            vec![0xff],
+            vec![b'1'; 1024],
+        ] {
+            assert_eq!(
+                classify_client_path_acl_compatibility(Ok(Some(malformed))),
+                ClientPathAclCompatibility::Malformed,
+            );
+        }
+
+        assert_eq!(
+            classify_client_path_acl_compatibility(Err(anyhow::anyhow!("header read failed"))),
+            ClientPathAclCompatibility::Malformed,
+        );
+    }
 
     /// The compile-time-const KCB request-primary identity types used by the
     /// tests below (also the fail-secure fallback set).
