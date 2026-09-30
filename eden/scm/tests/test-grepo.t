@@ -1505,3 +1505,340 @@ clean=True
   vendor/a: A2_REV
   frameworks/b: B2_REV
   vendor/a/sub/c: C_REV
+
+`goto` tests: untracked files
+
+Every test starts clean at `$REV_AFTER_BUMP_C` and adds one untracked file.
+Then it runs `sl goto`. `sl status` does not show untracked files in projects
+or in the manifests repo. `reset_workspace` does not remove them. So each test
+removes its file at the end.
+
+Expected: the same rules as for untracked files in Sapling's own tree.
+- If the target has no file at the untracked path: every flag keeps the file.
+- If the target adds a file at that path: the default flags, `--check` and
+`--merge` refuse before changing anything. `--clean` replaces the file with the
+target's file.
+The problems from the clean tests show up here too. We do not mark them again.
+
+Untracked file in `vendor/a/sub/c`. The goto updates the revision of this
+project. The target has no file at the untracked path.
+
+Default flags. Expected: keep the file.
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/untracked
+  $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? untracked
+  $ cat vendor/a/sub/c/untracked
+  untracked
+  $ rm vendor/a/sub/c/untracked
+
+`--check`. Expected: keep the file.
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/untracked
+  $ sl goto --check $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? untracked
+  $ cat vendor/a/sub/c/untracked
+  untracked
+  $ rm vendor/a/sub/c/untracked
+
+`--merge`. Expected: keep the file.
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/untracked
+  $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? untracked
+  $ cat vendor/a/sub/c/untracked
+  untracked
+  $ rm vendor/a/sub/c/untracked
+
+`--clean`. Expected: keep the file.
+clean=True
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/untracked
+  $ sl goto --clean $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? untracked
+  $ cat vendor/a/sub/c/untracked
+  untracked
+  $ rm vendor/a/sub/c/untracked
+
+Untracked file in the manifests repo.
+
+Default flags. Expected: keep the file.
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ echo "untracked" > .repo/manifests/untracked
+  $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  manifests: ?? untracked
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ cat .repo/manifests/untracked
+  untracked
+  $ rm .repo/manifests/untracked
+
+`--check`. Expected: keep the file.
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ echo "untracked" > .repo/manifests/untracked
+  $ sl goto --check $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  manifests: ?? untracked
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ cat .repo/manifests/untracked
+  untracked
+  $ rm .repo/manifests/untracked
+
+`--merge`. Expected: keep the file.
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ echo "untracked" > .repo/manifests/untracked
+  $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  manifests: ?? untracked
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ cat .repo/manifests/untracked
+  untracked
+  $ rm .repo/manifests/untracked
+
+`--clean`. Expected: keep the file.
+clean=True
+
+  $ reset_workspace
+  $ echo "untracked" > .repo/manifests/untracked
+  $ sl goto --clean $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  manifests: ?? untracked
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+  $ cat .repo/manifests/untracked
+  untracked
+  $ rm .repo/manifests/untracked
+
+Untracked file in `vendor/a/sub/c` at a path the target adds.
+
+No revision above adds a path. So the setup below makes two new commits:
+- `C3_REV` in project `c`. It adds the file `added` on top of `C2_REV`.
+- `$REV_AFTER_ADD_C` in the manifests repo, on top of `$REV_AFTER_BUMP_C`. Its
+`static.xml` sets `vendor/a/sub/c` to `C3_REV`.
+`reset_workspace` moves `refs/heads/main` back. The `add-c` branch keeps
+`$REV_AFTER_ADD_C` visible to Sapling after that. `map_rev_names` does not know
+the two new hashes. So the tests rename them with an extra `sed`.
+
+  $ echo "added content" > $TESTTMP/project-c/added
+  $ git -C $TESTTMP/project-c add added
+  $ git -C $TESTTMP/project-c commit -qm 'add file to c'
+  $ C3_REV=$(git -C $TESTTMP/project-c rev-parse HEAD)
+  $ git -C vendor/a/sub/c fetch -q origin
+  $ reset_workspace
+  $ sed -i "s/$C2_REV/$C3_REV/" .repo/manifests/static/static.xml
+  $ git -C .repo/manifests commit -qam 'add file to vendor/a/sub/c'
+  $ REV_AFTER_ADD_C=$(git -C .repo/manifests rev-parse HEAD)
+  $ git -C .repo/manifests branch add-c
+
+Default flags. Expected: refuse before changing anything.
+(bad: goto does not refuse. Git refuses halfway. By then `.` and `main` have
+already moved to `$REV_AFTER_ADD_C`. `vendor/a/sub/c` stays at `C2_REV`.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/added
+  $ sl goto $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C3_REV
+      error: The following untracked working tree files would be overwritten by checkout:
+      	added
+      Please move or remove them before you switch branches.
+      Aborting
+  $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  sl_workingcopy_parent: add file to vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+  sl status: M vendor/a/sub/c
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? added
+  $ cat vendor/a/sub/c/added
+  untracked
+  $ rm vendor/a/sub/c/added
+
+`--check`. Expected: refuse before changing anything.
+(bad: `sl status` does not show the file. So the check passes. Then it fails
+halfway, same as the default flags.)
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/added
+  $ sl goto --check $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C3_REV
+      error: The following untracked working tree files would be overwritten by checkout:
+      	added
+      Please move or remove them before you switch branches.
+      Aborting
+  $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  sl_workingcopy_parent: add file to vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+  sl status: M vendor/a/sub/c
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? added
+  $ cat vendor/a/sub/c/added
+  untracked
+  $ rm vendor/a/sub/c/added
+
+`--merge`. Expected: refuse before changing anything.
+(bad: it fails halfway, same as the default flags.)
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/added
+  $ sl goto --merge $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C3_REV
+      error: The following untracked working tree files would be overwritten by checkout:
+      	added
+      Please move or remove them before you switch branches.
+      Aborting
+  $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  sl_workingcopy_parent: add file to vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+  sl status: M vendor/a/sub/c
+  $ git -C vendor/a/sub/c status --porcelain
+  ?? added
+  $ cat vendor/a/sub/c/added
+  untracked
+  $ rm vendor/a/sub/c/added
+
+`--clean`. Expected: replace the file with the target's `added`. Check out
+`vendor/a/sub/c` at `C3_REV`.
+clean=True
+
+  $ reset_workspace
+  $ echo "untracked" > vendor/a/sub/c/added
+  $ sl goto --clean $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
+  sl_workingcopy_parent: add file to vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C3_REV
+  $ git -C vendor/a/sub/c status --porcelain
+  $ cat vendor/a/sub/c/added
+  added content
