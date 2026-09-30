@@ -7,6 +7,9 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
+    test_deps = [
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     # Not a public library.
     # Use fbcode/scm/scmquery/client/src/lib.rs instead
     visibility = [

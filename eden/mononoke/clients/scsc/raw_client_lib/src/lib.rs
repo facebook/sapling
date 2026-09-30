@@ -30,6 +30,7 @@ use source_control_clients::SourceControlService;
 use source_control_x2pclients::build_SourceControlService_client;
 
 pub const SCS_DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
+const SCS_PATH_ACL_COMPATIBLE_HEADER: &str = "scs_path_acl_compatible";
 
 #[cfg(not(target_os = "windows"))]
 const CONN_TIMEOUT_MS: u32 = 5000;
@@ -100,6 +101,13 @@ impl ScsClientBuilder {
     /// Test/admin-only hook: extra persistent request headers.
     pub fn with_extra_headers(mut self, extra_headers: HashMap<String, String>) -> Self {
         self.extra_headers = extra_headers;
+        self
+    }
+
+    /// Mark every request made by this client as compatible with path ACL enforcement.
+    pub fn with_path_acl_compatible(mut self) -> Self {
+        self.extra_headers
+            .insert(SCS_PATH_ACL_COMPATIBLE_HEADER.to_owned(), "1".to_owned());
         self
     }
 
@@ -311,6 +319,13 @@ impl ScsClientHostBuilder {
         self
     }
 
+    /// Mark every request made by this client as compatible with path ACL enforcement.
+    pub fn with_path_acl_compatible(mut self) -> Self {
+        self.extra_headers
+            .insert(SCS_PATH_ACL_COMPATIBLE_HEADER.to_owned(), "1".to_owned());
+        self
+    }
+
     /// Build a scsclient from a `host:port` string.
     #[cfg(not(target_os = "windows"))]
     pub fn build_from_host_port(
@@ -434,4 +449,30 @@ fn new_scs_client_info(client_correlator: Option<String>) -> (ClientInfo, String
     let client_info = ClientInfo::new_with_client_request_info(request_info);
 
     (client_info, correlator)
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn path_acl_compatibility_header_is_opt_in() {
+        let builder = ScsClientHostBuilder::new();
+        assert!(
+            !builder
+                .extra_headers
+                .contains_key(SCS_PATH_ACL_COMPATIBLE_HEADER)
+        );
+
+        let builder = builder.with_path_acl_compatible();
+        assert_eq!(
+            builder
+                .extra_headers
+                .get(SCS_PATH_ACL_COMPATIBLE_HEADER)
+                .map(String::as_str),
+            Some("1"),
+        );
+    }
 }
