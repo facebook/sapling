@@ -16,9 +16,13 @@ query PullRequestQuery(
       titleHTML
       body
       bodyHTML
+      baseRefName
       baseRefOid
+      headRefOid
       state
       isDraft
+      mergeable
+      mergeStateStatus
       reviewDecision
       viewerCanUpdate
       viewerDidAuthor

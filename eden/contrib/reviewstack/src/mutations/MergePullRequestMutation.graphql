@@ -1,0 +1,10 @@
+mutation MergePullRequestMutation($input: MergePullRequestInput!) {
+  mergePullRequest(input: $input) {
+    pullRequest {
+      id
+      number
+      merged
+      state
+    }
+  }
+}

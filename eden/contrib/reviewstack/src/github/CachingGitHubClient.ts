@@ -31,6 +31,10 @@ import type {
   LabelFragment,
   MarkPullRequestReadyForReviewInput,
   MarkPullRequestReadyForReviewMutationData,
+  MergePullRequestInput,
+  MergePullRequestMutationData,
+  MergeStateStatus,
+  MergeableState,
   PullRequestReviewDecision,
   PullRequestReviewState,
   PullRequestState,
@@ -86,11 +90,16 @@ interface NormalizedCommit extends GitObject {
 type NormalizedStackPullRequestFragment = {
   owner: string;
   name: string;
+  id: ID;
   number: number;
   title: string;
   updatedAt: string;
+  baseRefName: string;
   state: PullRequestState;
   isDraft: boolean;
+  mergeable: MergeableState;
+  mergeStateStatus: MergeStateStatus;
+  viewerCanUpdate: boolean;
   reviewDecision: PullRequestReviewDecision | null | undefined;
   latestReviewStates: PullRequestReviewState[];
   headRefOid: GitObjectID;
@@ -185,6 +194,14 @@ class OpenTransaction<S extends Store, O = StoreTypes[S]> {
   put(obj: O): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = this.store.put(obj);
+      request.onsuccess = _event => resolve();
+      request.onerror = reject;
+    });
+  }
+
+  delete(key: IDBValidKey): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = this.store.delete(key);
       request.onsuccess = _event => resolve();
       request.onerror = reject;
     });
@@ -404,6 +421,11 @@ export default class CachingGitHubClient implements GitHubClient {
     return cachedFragments.filter(notEmpty);
   }
 
+  /** Bypass display caching before a destructive stack operation. */
+  getFreshStackPullRequests(prs: number[]): Promise<StackPullRequestFragment[]> {
+    return this.client.getFreshStackPullRequests(prs);
+  }
+
   convertPullRequestToDraft(
     input: ConvertPullRequestToDraftInput,
   ): Promise<ConvertPullRequestToDraftMutationData> {
@@ -414,6 +436,18 @@ export default class CachingGitHubClient implements GitHubClient {
     input: MarkPullRequestReadyForReviewInput,
   ): Promise<MarkPullRequestReadyForReviewMutationData> {
     return this.client.markPullRequestReadyForReview(input);
+  }
+
+  async mergePullRequest(input: MergePullRequestInput): Promise<MergePullRequestMutationData> {
+    const result = await this.client.mergePullRequest(input);
+    const pullRequest = result.mergePullRequest?.pullRequest;
+    if (pullRequest != null) {
+      const {owner, name} = this.getOwnerAndName();
+      const tx = new OpenTransaction(this.db, PR_FRAGMENT_STORE_NAME);
+      await tx.delete([owner, name, pullRequest.number]);
+      await tx.commit();
+    }
+    return result;
   }
 
   addComment(id: ID, body: string): Promise<AddCommentMutationData> {
@@ -605,10 +639,15 @@ export default class CachingGitHubClient implements GitHubClient {
             }
 
             const {
+              id,
               title,
               updatedAt,
+              baseRefName,
               state,
               isDraft,
+              mergeable,
+              mergeStateStatus,
+              viewerCanUpdate,
               reviewDecision,
               latestReviewStates,
               headRefOid,
@@ -620,6 +659,11 @@ export default class CachingGitHubClient implements GitHubClient {
             // review metadata.
             if (
               typeof isDraft !== 'boolean' ||
+              typeof id !== 'string' ||
+              typeof baseRefName !== 'string' ||
+              typeof mergeable !== 'string' ||
+              typeof mergeStateStatus !== 'string' ||
+              typeof viewerCanUpdate !== 'boolean' ||
               !Array.isArray(latestReviewStates) ||
               !isFreshStackPullRequestCacheEntry(cachedAt)
             ) {
@@ -628,11 +672,16 @@ export default class CachingGitHubClient implements GitHubClient {
             }
             resolve({
               __typename: 'PullRequest',
+              id,
               number: pr,
               title,
               updatedAt,
+              baseRefName,
               state,
               isDraft,
+              mergeable: mergeable as MergeableState,
+              mergeStateStatus: mergeStateStatus as MergeStateStatus,
+              viewerCanUpdate,
               reviewDecision,
               latestReviews: {nodes: latestReviewStates.map(state => ({state}))},
               headRefOid,
@@ -790,16 +839,34 @@ function normalizePullRequestFragment(
   name: string,
   fragment: StackPullRequestFragment,
 ): NormalizedStackPullRequestFragment {
-  const {number, title, updatedAt, state, isDraft, reviewDecision, latestReviews, headRefOid} =
-    fragment;
-  return {
-    owner,
-    name,
+  const {
+    id,
     number,
     title,
     updatedAt,
+    baseRefName,
     state,
     isDraft,
+    mergeable,
+    mergeStateStatus,
+    viewerCanUpdate,
+    reviewDecision,
+    latestReviews,
+    headRefOid,
+  } = fragment;
+  return {
+    owner,
+    name,
+    id,
+    number,
+    title,
+    updatedAt,
+    baseRefName,
+    state,
+    isDraft,
+    mergeable,
+    mergeStateStatus,
+    viewerCanUpdate,
     reviewDecision,
     latestReviewStates: (latestReviews?.nodes ?? [])
       .map(review => review?.state)

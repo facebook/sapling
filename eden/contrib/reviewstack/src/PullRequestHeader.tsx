@@ -6,6 +6,7 @@
  */
 
 import PullRequestDraftStateMenu from './PullRequestDraftStateMenu';
+import PullRequestMergeButton from './PullRequestMergeButton';
 import PullRequestStack from './PullRequestStack';
 import PullRequestVersions from './PullRequestVersions';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
@@ -59,6 +60,7 @@ export default function PullRequestHeader({height}: Props): React.ReactElement |
           viewerCanUpdate={viewerCanUpdate}
         />
         <PullRequestStack />
+        <PullRequestMergeButton pullRequest={pullRequest} />
         {/*
           Our goal here is to minimize re-rendering when the user selects a
           different value from <PullRequestStack>, so we apply <Suspense> in a

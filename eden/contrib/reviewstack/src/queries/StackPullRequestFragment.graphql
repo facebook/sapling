@@ -1,11 +1,16 @@
 # Note that if this fragment changes, CachingGitHubClient must be updated
 # to ensure the new fields are serialized/deserialized correctly.
 fragment StackPullRequestFragment on PullRequest {
+  id
   number
   title
   updatedAt
+  baseRefName
   state
   isDraft
+  mergeable
+  mergeStateStatus
+  viewerCanUpdate
   reviewDecision
   latestReviews(first: 100) {
     nodes {
