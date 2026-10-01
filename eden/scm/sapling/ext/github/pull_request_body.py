@@ -13,7 +13,9 @@ from .gh_submit import Repository
 
 _HORIZONTAL_RULE = "---"
 _SAPLING_FOOTER_MARKER = "[//]: # (BEGIN SAPLING FOOTER)"
-DEFAULT_REVIEW_URL_TEMPLATE = "https://reviewstack.dev/{owner}/{repo}/pull/{number}"
+DEFAULT_REVIEW_URL_TEMPLATE = (
+    "https://review.aioniclabs.dev/{owner}/{repo}/pull/{number}"
+)
 DEFAULT_REVIEW_TOOL_NAME = "ReviewStack"
 
 
@@ -41,7 +43,7 @@ def create_pull_request_title_and_body(
     ... )
     >>> print(title)
     The original commit message.
-    >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
+    >>> reviewstack_url = "https://review.aioniclabs.dev/facebook/sapling/pull/42"
     >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
     Second line of message.
     <BLANKLINE>
@@ -219,7 +221,7 @@ def _format_review_url(
 
     >>> _format_review_url(DEFAULT_REVIEW_URL_TEMPLATE,
     ...     owner="facebook", repo="sapling", number=42, hostname="github.com")
-    'https://reviewstack.dev/facebook/sapling/pull/42'
+    'https://review.aioniclabs.dev/facebook/sapling/pull/42'
     >>> _format_review_url("https://{hostname}/{owner}/{repo}/reviews/{number}",
     ...     owner="facebook", repo="sapling", number=42, hostname="github.example.com")
     'https://github.example.com/facebook/sapling/reviews/42'
@@ -243,7 +245,7 @@ _StackEntry = Tuple[bool, int]
 def parse_stack_information(body: str) -> List[_StackEntry]:
     r"""
     With sapling stack footer marker:
-    >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
+    >>> reviewstack_url = "https://review.aioniclabs.dev/facebook/sapling/pull/42"
     >>> body = (
     ...     'The original commit message.\n' +
     ...     'Second line of message.\n' +
@@ -259,7 +261,7 @@ def parse_stack_information(body: str) -> List[_StackEntry]:
     [(False, 1), (False, 2), (True, 42), (False, 4)]
 
     Without sapling stack footer marker (legacy):
-    >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
+    >>> reviewstack_url = "https://review.aioniclabs.dev/facebook/sapling/pull/42"
     >>> body = (
     ...     'The original commit message.\n' +
     ...     'Second line of message.\n' +
