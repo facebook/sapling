@@ -11,6 +11,9 @@
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <fmt/format.h>
 #include <folly/Exception.h>
 #include <folly/Expected.h>
 #include <folly/FileUtil.h>
@@ -45,7 +48,6 @@
 #include "eden/fs/inodes/fscatalog/InodePath.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TestOps.h"
-#include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/test/CapturingXplatLogger.h"
@@ -1500,14 +1502,21 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
   return {std::move(errorLogger), std::move(overlay), store, std::move(stats)};
 }
 
+/// Return the temporary base-file path used when saving an overlay directory.
+boost::filesystem::path overlayDirTempFilePath(
+    const boost::filesystem::path& root,
+    InodeNumber inode) {
+  return root / "sharded_tmp" / fmt::format("{:02x}", inode.get() % 256) /
+      std::to_string(inode.get());
+}
+
 } // namespace
 
 TEST(OverlayWalLifecycleTest, writeFailureKeepsErrorLoggerAlive) {
   folly::test::TemporaryDirectory tmp("eden_wal_write_failure");
   auto bundle = makeWalLifecycleOverlay(canonicalPath(tmp.path().string()));
   const auto parent = bundle.overlay->allocateInodeNumber();
-  const auto blocker = tmp.path() / "sharded_tmp" /
-      fmt::format("{:02x}", parent.get() % 256) / std::to_string(parent.get());
+  const auto blocker = overlayDirTempFilePath(tmp.path(), parent);
   ASSERT_TRUE(boost::filesystem::create_directory(blocker));
   DirContents content(kPathMapDefaultCaseSensitive);
   EXPECT_THROW(
@@ -2517,6 +2526,52 @@ TEST(WalRenameTest, fallbackOnMissingDstEntry) {
   EXPECT_FALSE(bundle.store->hasWal(dstParent));
 
   bundle.overlay->close();
+}
+
+TEST(WalRenameTest, destinationCompactionWriteFailurePreservesSource) {
+  folly::test::TemporaryDirectory tmp("eden_wal_rename_compaction_failure");
+  const auto dir = canonicalPath(tmp.path().string());
+  auto bundle = makeWalLifecycleOverlay(dir);
+  const auto src = bundle.overlay->allocateInodeNumber();
+  const auto dst = bundle.overlay->allocateInodeNumber();
+  const auto child = bundle.overlay->allocateInodeNumber();
+  const ObjectId id{std::string(20, '\x42')};
+  DirContents srcContent(kPathMapDefaultCaseSensitive);
+  srcContent.emplace("source"_pc, S_IFREG | 0644, child, id);
+  bundle.overlay->saveOverlayDir(src, srcContent);
+  DirContents dstContent(kPathMapDefaultCaseSensitive);
+  bundle.overlay->saveOverlayDir(dst, dstContent);
+  dstContent.emplace("target"_pc, S_IFREG | 0644, child, id);
+
+  // A directory at the temporary file path makes only the destination's
+  // compaction write fail, even when the test runs with elevated privileges.
+  const auto blocker = overlayDirTempFilePath(tmp.path(), dst);
+  ASSERT_TRUE(boost::filesystem::create_directory(blocker));
+  OverlayTestHelper::setWalCompactionRng(*bundle.overlay, [] { return 0u; });
+  srcContent.erase("source"_pc);
+  EXPECT_THROW(
+      bundle.overlay->renameChild(
+          src, dst, "source"_pc, "target"_pc, srcContent, dstContent),
+      std::system_error);
+  EXPECT_TRUE(bundle.store->hasWal(dst));
+  EXPECT_FALSE(bundle.store->hasWal(src));
+  bundle.overlay->close();
+  ASSERT_TRUE(boost::filesystem::remove(blocker));
+
+  auto reopened = makeWalLifecycleOverlay(dir);
+  const auto loadedSrc = reopened.overlay->loadOverlayDir(src);
+  const auto loadedDst = reopened.overlay->loadOverlayDir(dst);
+  ASSERT_EQ(1u, loadedSrc.size());
+  ASSERT_EQ(1u, loadedDst.size());
+  const auto source = loadedSrc.find("source"_pc);
+  ASSERT_NE(loadedSrc.end(), source);
+  EXPECT_EQ(child, source->second.getInodeNumber());
+  EXPECT_EQ(id, source->second.getObjectId());
+  const auto target = loadedDst.find("target"_pc);
+  ASSERT_NE(loadedDst.end(), target);
+  EXPECT_EQ(child, target->second.getInodeNumber());
+  EXPECT_EQ(id, target->second.getObjectId());
+  reopened.overlay->close();
 }
 
 TEST(WalRenameTest, fallsBackWhenWalDisabled) {

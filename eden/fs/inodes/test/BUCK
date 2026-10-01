@@ -455,6 +455,8 @@ cpp_unittest(
     network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
+        "fbsource//third-party/boost:boost_filesystem",
+        "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
         ":overlay_test_util",
         "//eden/common/testharness:temp_file",
@@ -465,7 +467,6 @@ cpp_unittest(
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:testutil",
-        "//eden/fs/service:pretty_printers",
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry/test:capturing_xplat_logger",
