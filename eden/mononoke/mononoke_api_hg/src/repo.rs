@@ -69,6 +69,7 @@ use phases::PhasesRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
+use repo_identity::RepoIdentityRef;
 use repo_update_logger::CommitInfo;
 use repo_update_logger::log_new_commits;
 use restricted_paths::RestrictedPathsArc;
@@ -77,6 +78,10 @@ use unbundle::upload_changeset;
 
 use super::HgFileContext;
 use super::HgTreeContext;
+
+/// Lets the envelopes built at tree upload reach the blobstore.
+const STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD: &str =
+    "scm/mononoke:store_augmented_manifests_at_tree_upload";
 
 #[derive(Clone)]
 pub struct HgRepoContext<R> {
@@ -399,16 +404,31 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// A tree whose child is neither in the batch nor already derived is an
     /// error: the batch builds completely or not at all.
     ///
-    /// Every put lands in a `MemWritesBlobstore` overlay that dies with this
-    /// call, so the counters are produced with nothing persisted.
+    /// Until `scm/mononoke:store_augmented_manifests_at_tree_upload` is on for
+    /// the repo, every put lands in a `MemWritesBlobstore` overlay that dies
+    /// with this call.
+    ///
+    /// Once it is on the writes are permanent: the key is the hg manifest id
+    /// alone and the put is if-absent, so a wrong envelope cannot be corrected
+    /// later. Turning the knob off stops new writes, it does not repair old
+    /// ones.
     pub async fn build_augmented_manifests_for_uploaded_trees(
         &self,
         trees: Vec<HgManifestEnvelope>,
     ) -> Result<Vec<UploadTreeAugmented>, Error> {
-        let repo_blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
-            self.repo().repo_blobstore().clone(),
-            |inner| Arc::new(MemWritesBlobstore::new(inner)),
+        let store = justknobs::eval(
+            STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD,
+            None,
+            Some(self.repo().repo_identity().name()),
         );
+        let repo_blobstore = if store {
+            self.repo().repo_blobstore().clone()
+        } else {
+            RepoBlobstore::new_with_wrapped_inner_blobstore(
+                self.repo().repo_blobstore().clone(),
+                |inner| Arc::new(MemWritesBlobstore::new(inner)),
+            )
+        };
         let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo_blobstore);
         let restricted_paths = self.repo().restricted_paths_arc();
         build_augmented_manifests_for_uploaded_trees(

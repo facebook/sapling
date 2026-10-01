@@ -187,8 +187,8 @@ prints its three counts, so a hit changes a recorded number rather than deleting
 line.
   $ echo "hgaugmentedmanifest.sha1.$ROOT_MFID_2" > envelope_keys
   $ mononoke_admin blobstore -R repo fetch-many --keys-file envelope_keys
-  present: 0
-  missing: 1
+  present: 1
+  missing: 0
   failed: 0
 
 Second, what the trees endpoint serves for that same tree. All four attributes are
@@ -255,4 +255,3 @@ and the failure is only logged.
   >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
   >            | "\(.normal.failure_kind): \(.normal.msg)"' \
   >   | sed -E 's/[0-9a-f]{40}/HASH/g'
-  missing_child: building the augmented manifest for uploaded tree HASH: tree HASH contains dir (HASH), which is neither built in this batch nor already derived
