@@ -577,3 +577,16 @@ TEST_F(SaplingImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
         request->getRequest<SaplingImportRequest::BlobImport>()->id, expBlob);
   }
 }
+
+TEST_F(SaplingImportRequestQueueTest, zeroBatchSize) {
+  auto queue = SaplingImportRequestQueue{edenConfig};
+  rawEdenConfig->importBatchSize.setValue(
+      0, ConfigSourceType::CommandLine, true);
+
+  auto [id, request] =
+      makeBlobImportRequest(ImportPriority(ImportPriority::Class::Normal, 1));
+  queue.enqueueBlob(std::move(request));
+
+  auto batch = queue.dequeue();
+  EXPECT_TRUE(batch.empty());
+}
