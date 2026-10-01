@@ -1460,6 +1460,8 @@ namespace {
 // Initialize a fully-functional Overlay with WAL enabled and return the
 // underlying FsFileContentStore so tests can poke the WAL directly.
 struct WalLifecycleOverlay {
+  // Overlay borrows this logger, so it must outlive the overlay.
+  std::unique_ptr<ErrorLogger> errorLogger;
   std::shared_ptr<Overlay> overlay;
   FsFileContentStore* store{nullptr};
   EdenStatsPtr stats;
@@ -1478,14 +1480,14 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
       walMinCompactionThreshold, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
   auto stats = makeRefPtr<EdenStats>();
-  auto noopErrorLogger = makeTestErrorLogger();
+  auto errorLogger = std::make_unique<ErrorLogger>(makeTestErrorLogger());
   auto overlay = Overlay::create(
       dir,
       caseSensitive,
       kInodeCatalogType,
       kInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
-      /*errorLogger=*/noopErrorLogger,
+      /*errorLogger=*/*errorLogger,
       stats.copy(),
       *rawConfig);
   overlay->initialize(reloadable).get();
@@ -1495,10 +1497,23 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
   OverlayTestHelper::setWalCompactionRng(*overlay, [] { return 1u; });
   auto* store =
       dynamic_cast<FsFileContentStore*>(overlay->getRawFileContentStore());
-  return {std::move(overlay), store, std::move(stats)};
+  return {std::move(errorLogger), std::move(overlay), store, std::move(stats)};
 }
 
 } // namespace
+
+TEST(OverlayWalLifecycleTest, writeFailureKeepsErrorLoggerAlive) {
+  folly::test::TemporaryDirectory tmp("eden_wal_write_failure");
+  auto bundle = makeWalLifecycleOverlay(canonicalPath(tmp.path().string()));
+  const auto parent = bundle.overlay->allocateInodeNumber();
+  const auto blocker = tmp.path() / "sharded_tmp" /
+      fmt::format("{:02x}", parent.get() % 256) / std::to_string(parent.get());
+  ASSERT_TRUE(boost::filesystem::create_directory(blocker));
+  DirContents content(kPathMapDefaultCaseSensitive);
+  EXPECT_THROW(
+      bundle.overlay->saveOverlayDir(parent, content), std::system_error);
+  bundle.overlay->close();
+}
 
 TEST(OverlayWalLifecycleTest, saveOverlayDirRemovesExistingWal) {
   folly::test::TemporaryDirectory tmp("eden_wal_lifecycle");
