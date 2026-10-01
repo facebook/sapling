@@ -13,9 +13,9 @@ import shutil
 import tempfile
 from os import path
 
-from sapling import error, extensions, registrar, scmutil
+from sapling import error, extensions, merge as mergemod, registrar, scmutil
 from sapling.i18n import _
-from sapling.node import hex
+from sapling.node import hex, nullid
 
 from .commitcloud import upload as ccupload, util as ccutil
 
@@ -73,6 +73,11 @@ def crdump(ui, repo, *revs, **opts):
               "node": hash,
               "differential_revision": xxxx
             },
+            "p2": {               (merge commits only)
+              "node": hash,
+              "differential_revision": xxxx
+            },
+            "noconflict_merge": true,   (merges created with 'merge --noconflict')
             "public_base": {
               "node": public base commit hash,
               "svnrev": svn revision of public base (if hgsvn repo),
@@ -157,6 +162,12 @@ def crdump(ui, repo, *revs, **opts):
             if not ctx.p1().ispublic():
                 # we need this only if parent is in the same draft stack
                 rdata["p1"]["differential_revision"] = phabricatorrevision(ctx.p1())
+            if ctx.p2().node() != nullid:
+                rdata["p2"] = {"node": ctx.p2().hex()}
+                if not ctx.p2().ispublic():
+                    rdata["p2"]["differential_revision"] = phabricatorrevision(ctx.p2())
+                if mergemod.is_noconflict_merge(ctx):
+                    rdata["noconflict_merge"] = True
 
             rdata["branch"] = ""
 

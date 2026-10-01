@@ -545,4 +545,38 @@ Test use globalrev instead of svnrev
   $ sl debugcrdump --config "extensions.globalrevs=" -r '.' \
   > | jq '.commits[].public_base.svnrev'
   "100098765"
+
+Merge commits report both parents, and whether the merge is conflict-free
+  $ sl -q update '.^'
+  $ echo >> M1
+  $ sl commit -Aqm "merge side"
+  $ sl -q update 'children(.^) - .'
+  $ sl merge -q --noconflict -m merge 'desc("merge side")'
+  $ sl debugcrdump -r . | jq '.commits[0] | {p1, p2, noconflict_merge}'
+  {
+    "p1": {
+      "differential_revision": "",
+      "node": "66788b8a995ebdce7b08de95acbc0a901dd3f470"
+    },
+    "p2": {
+      "differential_revision": "",
+      "node": "73cb534362f753c57cc2caccaf8da317e1fb7dc2"
+    },
+    "noconflict_merge": true
+  }
+
+A plain merge reports its second parent too, but carries no mark
+  $ sl -q update 'desc("merge side")'
+  $ echo >> P1
+  $ sl commit -Aqm "plain side"
+  $ sl -q update 'desc("merge side")'
+  $ echo >> P2
+  $ sl commit -Aqm "plain other"
+  $ sl merge -q 'desc("plain side")'
+  $ sl commit -m "plain merge"
+  $ sl debugcrdump -r . | jq --arg p2 "$(sl log -r .^2 -T '{node}')" '.commits[0] | {p2: (.p2.node == $p2), noconflict_merge}'
+  {
+    "p2": true,
+    "noconflict_merge": null
+  }
 #endif
