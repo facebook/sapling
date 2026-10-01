@@ -24,10 +24,12 @@
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <cerrno>
 #include <csignal>
 #include <cstdlib>
 #include <optional>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <tuple>
 
@@ -2260,6 +2262,158 @@ TEST_P(
 
 TEST_P(OverlayWalObjectIdTest, caseOnlyRenamePreservesObjectIdAcrossRestart) {
   runMutation(Mutation::RenameCaseOnly);
+}
+
+namespace {
+
+/// Preserve the real catalog's I/O while injecting a WAL cleanup failure.
+class FailingWalRemovalCatalog : public FsInodeCatalog {
+ public:
+  FailingWalRemovalCatalog(FsFileContentStore* store, InodeNumber failedParent)
+      : FsInodeCatalog{store}, failedParent_{failedParent} {}
+
+  void removeWal(InodeNumber parent) override {
+    if (parent == failedParent_) {
+      ++failedRemovals_;
+      throw std::system_error{EIO, std::generic_category()};
+    }
+    FsInodeCatalog::removeWal(parent);
+  }
+
+  /// Both Overlay call sites swallow removeWal errors, so the injected
+  /// failure is otherwise invisible to the test.
+  size_t failedRemovals() const {
+    return failedRemovals_;
+  }
+
+ private:
+  const InodeNumber failedParent_;
+  size_t failedRemovals_{0};
+};
+
+} // namespace
+
+/// Checks that a rename survives a restart when the destination's WAL cannot
+/// be removed after compaction rewrites its base file, leaving a stale WAL to
+/// be re-merged on load.
+class OverlayWalCleanupFailureTest
+    : public ::testing::TestWithParam<std::tuple<WalOpType, bool>> {
+ protected:
+  void verifyRename() {
+    const auto [priorOp, crossDirectory] = GetParam();
+    const auto dir = canonicalPath(tmp_.path().string());
+    auto bundle = makeWalLifecycleOverlay(dir);
+    ASSERT_NE(nullptr, bundle.store);
+    const auto src = bundle.overlay->allocateInodeNumber();
+    const auto dst =
+        crossDirectory ? bundle.overlay->allocateInodeNumber() : src;
+    const auto child = bundle.overlay->allocateInodeNumber();
+    const ObjectId id{std::string(20, '\x85')};
+    DirContents srcContent(CaseSensitivity::Sensitive);
+    DirContents separateDstContent(CaseSensitivity::Sensitive);
+    auto& dstContent = crossDirectory ? separateDstContent : srcContent;
+    srcContent.emplace("source"_pc, S_IFREG | 0644, child, id);
+    bundle.overlay->saveOverlayDir(src, srcContent);
+    if (crossDirectory) {
+      bundle.overlay->saveOverlayDir(dst, dstContent);
+    }
+
+    const auto priorChild = bundle.overlay->allocateInodeNumber();
+    const ObjectId priorId{std::string(20, '\x42')};
+    auto [priorIt, priorInserted] =
+        dstContent.emplace("target"_pc, S_IFREG | 0600, priorChild, priorId);
+    ASSERT_TRUE(priorInserted);
+    if (priorOp == WalOpType::MATERIALIZE) {
+      bundle.overlay->saveOverlayDir(dst, dstContent);
+    } else {
+      bundle.overlay->addChild(dst, *priorIt, dstContent);
+    }
+    if (priorOp == WalOpType::REMOVE) {
+      dstContent.erase("target"_pc);
+      bundle.overlay->removeChild(dst, "target"_pc, dstContent);
+    } else if (priorOp == WalOpType::MATERIALIZE) {
+      priorIt->second.setMaterialized();
+      bundle.overlay->materializeChild(dst, "target"_pc, dstContent);
+    }
+    const auto sentinel = bundle.overlay->allocateInodeNumber();
+    auto [sentinelIt, sentinelInserted] =
+        dstContent.emplace("sentinel"_pc, S_IFREG | 0644, sentinel);
+    ASSERT_TRUE(sentinelInserted);
+    bundle.overlay->addChild(dst, *sentinelIt, dstContent);
+    ASSERT_TRUE(bundle.store->hasWal(dst));
+
+    auto failingCatalog =
+        std::make_unique<FailingWalRemovalCatalog>(bundle.store, dst);
+    auto* const failingCatalogPtr = failingCatalog.get();
+    OverlayTestHelper::setInodeCatalog(
+        *bundle.overlay, std::move(failingCatalog));
+    // removeWal is only reached through compaction, which
+    // makeWalLifecycleOverlay disables by default. Force every append to
+    // compact so the rename rewrites the base file and then fails to clear the
+    // WAL.
+    OverlayTestHelper::setWalCompactionRng(*bundle.overlay, [] { return 0u; });
+    srcContent.erase("source"_pc);
+    dstContent.erase("target"_pc);
+    dstContent.emplace("target"_pc, S_IFREG | 0644, child, id);
+    bundle.overlay->renameChild(
+        src, dst, "source"_pc, "target"_pc, srcContent, dstContent);
+    EXPECT_GE(failingCatalogPtr->failedRemovals(), 1u);
+    EXPECT_TRUE(bundle.store->hasWal(dst));
+    bundle.overlay->close();
+
+    auto reopened = makeWalLifecycleOverlay(dir);
+    const auto loadedSrc = reopened.overlay->loadOverlayDir(src);
+    const auto loadedDst = reopened.overlay->loadOverlayDir(dst);
+    const auto preservesChild = [&](const DirContents& content,
+                                    PathComponentPiece name) {
+      const auto it = content.find(name);
+      return it != content.end() && it->second.getInodeNumber() == child &&
+          !it->second.isMaterialized() && it->second.getObjectId() == id;
+    };
+    EXPECT_TRUE(preservesChild(loadedDst, "target"_pc));
+    EXPECT_EQ(loadedSrc.end(), loadedSrc.find("source"_pc));
+    const auto loadedSentinel = loadedDst.find("sentinel"_pc);
+    ASSERT_NE(loadedDst.end(), loadedSentinel);
+    EXPECT_EQ(sentinel, loadedSentinel->second.getInodeNumber());
+    reopened.overlay->close();
+  }
+
+ private:
+  folly::test::TemporaryDirectory tmp_{"eden_wal_cleanup_failure"};
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    ConflictingWal,
+    OverlayWalCleanupFailureTest,
+    ::testing::Combine(
+        ::testing::Values(
+            WalOpType::ADD,
+            WalOpType::REMOVE,
+            WalOpType::MATERIALIZE),
+        ::testing::Bool()),
+    [](const ::testing::TestParamInfo<OverlayWalCleanupFailureTest::ParamType>&
+           info) {
+      std::string name;
+      switch (std::get<0>(info.param)) {
+        case WalOpType::ADD:
+          name = "Add";
+          break;
+        case WalOpType::REMOVE:
+          name = "Remove";
+          break;
+        case WalOpType::MATERIALIZE:
+          name = "Materialize";
+          break;
+        default:
+          name = "Unknown";
+          break;
+      }
+      return name +
+          (std::get<1>(info.param) ? "CrossDirectory" : "SameDirectory");
+    });
+
+TEST_P(OverlayWalCleanupFailureTest, renamePreservesChildWhenWalCleanupFails) {
+  verifyRename();
 }
 
 TEST(WalRenameTest, caseInsensitiveCaseOnlyRenameAppendsReplacementAdd) {

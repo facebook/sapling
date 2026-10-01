@@ -13,6 +13,7 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/DirEntry.h"
+#include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
@@ -47,11 +48,18 @@ inline ErrorLogger makeTestErrorLogger() {
   return ErrorLogger{};
 }
 
-// Friend of Overlay so tests can drive the private WAL compaction path
-// directly and inject a deterministic RNG (the production default uses
-// folly::Random::rand32()).
+// Friend of Overlay so tests can reach private overlay state: drive the WAL
+// compaction path directly, inject a deterministic RNG (the production default
+// uses folly::Random::rand32()), and substitute the inode catalog.
 class OverlayTestHelper {
  public:
+  /// Replace the catalog of a quiescent test overlay without closing its store.
+  static void setInodeCatalog(
+      Overlay& overlay,
+      std::unique_ptr<InodeCatalog> catalog) {
+    overlay.inodeCatalog_ = std::move(catalog);
+  }
+
   static void maybeCompactWal(
       Overlay& overlay,
       InodeNumber parent,

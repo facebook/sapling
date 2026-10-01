@@ -437,6 +437,7 @@ cpp_library(
     headers = ["OverlayTestUtil.h"],
     exported_deps = [
         "//eden/common/utils:path",
+        "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:error_logger",
