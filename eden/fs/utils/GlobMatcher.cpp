@@ -66,6 +66,11 @@ enum : uint8_t {
   GLOB_CHAR_CLASS_RANGE = '\x01',
   // GLOB_QMARK matches any single character except for '/'
   GLOB_QMARK = '?',
+  // GLOB_NO_LEADING_DOT matches nothing itself; it fails the match if the
+  // next text character is '.'. It precedes GLOB_QMARK and the character
+  // class opcodes at the start of a path component when
+  // GlobOptions::IGNORE_DOTFILES is set.
+  GLOB_NO_LEADING_DOT = '.',
   // GLOB_ENDS_WITH matches a literal section at the end of the string.
   // We optimize GLOB_STAR+GLOB_LITERAL at the end of the pattern into
   // GLOB_ENDS_WITH, so it is composed of the bool byte from GLOB_STAR followed
@@ -341,6 +346,9 @@ Expected<GlobMatcher, string> GlobMatcher::create(
       continue;
     } else if (c == '?') {
       // Match any single character except for a slash
+      if (!includeDotfiles && (idx == 0 || glob[idx - 1] == '/')) {
+        addOpcode(GLOB_NO_LEADING_DOT);
+      }
       addOpcode(GLOB_QMARK);
     } else if (c == '*') {
       if (idx + 1 < glob.size() && glob[idx + 1] == '*') {
@@ -384,6 +392,9 @@ Expected<GlobMatcher, string> GlobMatcher::create(
       }
     } else if (c == '[') {
       // Translate a bracket expression
+      if (!includeDotfiles && (idx == 0 || glob[idx - 1] == '/')) {
+        addOpcode(GLOB_NO_LEADING_DOT);
+      }
       prevOpcodeIdx = curOpcodeIdx;
       curOpcodeIdx = result.size();
       auto newIdx = parseBracketExpr(glob, idx, caseSensitive, &result);
@@ -899,11 +910,18 @@ bool GlobMatcher::tryMatchAt(
         return true;
       }
 
-      // By construction, we know that GLOB_STAR_STAR_END is preceded by a
-      // slash, so we can start from the previous character and scan the
-      // remaining text for "/." If we find one, then this is not a match.
-      auto searchIndex = textIdx == 0 ? 0 : textIdx - 1;
-      return text.find("/.", searchIndex) == std::string_view::npos;
+      // GLOB_STAR_STAR_END is preceded by a slash in the pattern, so we can
+      // start from the previous character and scan the remaining text for
+      // "/." If we find one, then this is not a match. When a leading "**/"
+      // matched nothing the text position is still 0, and the first path
+      // component has no preceding slash, so check its first character too.
+      if (textIdx == 0) {
+        if (!text.empty() && text[0] == '.') {
+          return false;
+        }
+        return text.find("/.") == std::string_view::npos;
+      }
+      return text.find("/.", textIdx - 1) == std::string_view::npos;
     } else if (pattern_[patternIdx] == GLOB_STAR_STAR_SLASH) {
       ++patternIdx;
       auto pathComponentInMatchCannotStartWithDot =
@@ -939,6 +957,11 @@ bool GlobMatcher::tryMatchAt(
         }
 
         ++textIdx;
+      }
+    } else if (pattern_[patternIdx] == GLOB_NO_LEADING_DOT) {
+      ++patternIdx;
+      if (textIdx < text.size() && text[textIdx] == '.') {
+        return false;
       }
     } else {
       // The other glob special patterns all match exactly one character.

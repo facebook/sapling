@@ -331,27 +331,27 @@ TEST(Glob, testIgnoreDotfiles) {
   // text.
   EXPECT_IGNORE_DOTFILES_MATCH("foo", "**/**");
   EXPECT_IGNORE_DOTFILES_MATCH("foo/bar", "**/**");
-  EXPECT_IGNORE_DOTFILES_MATCH(".foo", "**/**");
-  EXPECT_IGNORE_DOTFILES_MATCH(".foo/bar", "**/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".foo", "**/**");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".foo/bar", "**/**");
   EXPECT_IGNORE_DOTFILES_NOMATCH("foo/.bar", "**/**");
   EXPECT_MATCH(".foo", "**/**");
 
   // Test '?' at the start of a path component.
   EXPECT_IGNORE_DOTFILES_MATCH("xfoo", "?foo");
-  EXPECT_IGNORE_DOTFILES_MATCH(".foo", "?foo");
-  EXPECT_IGNORE_DOTFILES_MATCH(".a", "??");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".foo", "?foo");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".a", "??");
   EXPECT_IGNORE_DOTFILES_MATCH("a.b", "a?b");
   EXPECT_IGNORE_DOTFILES_MATCH("dir/xfoo", "dir/?foo");
-  EXPECT_IGNORE_DOTFILES_MATCH("dir/.foo", "dir/?foo");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("dir/.foo", "dir/?foo");
   EXPECT_MATCH(".foo", "?foo");
 
   // Test bracket expressions at the start of a path component.
   EXPECT_IGNORE_DOTFILES_MATCH("xa", "[!b]a");
-  EXPECT_IGNORE_DOTFILES_MATCH(".a", "[!b]a");
-  EXPECT_IGNORE_DOTFILES_MATCH(".a", "[.]a");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".a", "[!b]a");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".a", "[.]a");
   EXPECT_IGNORE_DOTFILES_MATCH("a.", "a[.]");
   EXPECT_IGNORE_DOTFILES_MATCH("dir/xa", "dir/[a-z]a");
-  EXPECT_IGNORE_DOTFILES_MATCH("dir/.a", "dir/[.]a");
+  EXPECT_IGNORE_DOTFILES_NOMATCH("dir/.a", "dir/[.]a");
   EXPECT_MATCH(".a", "[.]a");
 
   EXPECT_IGNORE_DOTFILES_MATCH(".foo/bar", ".foo/*");
@@ -364,9 +364,9 @@ TEST(Glob, testIgnoreDotfiles) {
   EXPECT_IGNORE_DOTFILES_MATCH(".foo/sub/bar", ".foo/**/bar");
   EXPECT_IGNORE_DOTFILES_NOMATCH(".foo/.sub/bar", ".foo/**/bar");
   EXPECT_IGNORE_DOTFILES_MATCH(".foo/bar", ".foo/?ar");
-  EXPECT_IGNORE_DOTFILES_MATCH(".foo/.ar", ".foo/?ar");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".foo/.ar", ".foo/?ar");
   EXPECT_IGNORE_DOTFILES_MATCH(".foo/bar", ".foo/[a-z]ar");
-  EXPECT_IGNORE_DOTFILES_MATCH(".foo/.ar", ".foo/[.]ar");
+  EXPECT_IGNORE_DOTFILES_NOMATCH(".foo/.ar", ".foo/[.]ar");
   EXPECT_IGNORE_DOTFILES_MATCH(".foo/bar", ".*/bar");
   EXPECT_IGNORE_DOTFILES_NOMATCH(".foo/bar", "*/bar");
   EXPECT_MATCH(".foo/.bar", ".foo/*");
