@@ -60,11 +60,26 @@ The upload succeeded and does not need to be retried.
   >     assert not repo.svfs.exists("bookmarks.pending")
   >     assert "pending" in repo._bookmarks
   >     ui.write("pending\n")
+  > 
+  > @command("debuglockfreewithdirtydirstate", [], "FILE")
+  > def lockfreewithdirtydirstate(ui, repo, file):
+  >     repo.dirstate.needcheck(file)
+  >     with repo.transaction("lockfree", lockfree=True):
+  >         pass
   > EOF
 
   $ newrepo hooks
   $ touch A
   $ sl commit -Aqm A
+
+Lock-free transactions do not expose preexisting dirstate cache changes to an
+external hook.
+
+  $ cat > $TESTTMP/checknodirstatepending.sh <<'EOF'
+  > test -z "$HG_PENDING"
+  > test ! -e .sl/dirstate.pending
+  > EOF
+  $ sl --config hooks.pretxnclose="sh $TESTTMP/checknodirstatepending.sh" --config extensions.ext=$TESTTMP/ext.py debuglockfreewithdirtydirstate A
 
 Lock-free hooks read generated bookmarks from the pending metalog without a
 legacy bookmarks.pending file.

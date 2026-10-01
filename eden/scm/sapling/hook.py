@@ -157,7 +157,11 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     # make in-memory changes visible to external process
     if repo is not None:
         tr = repo.currenttransaction()
-        repo.dirstate.write(tr)
+        # Lock-free transactions do not modify working copy state. In
+        # particular, do not turn incidental dirstate cache changes into a
+        # file generator that requires the working copy lock.
+        if not tr or not tr.lockfree:
+            repo.dirstate.write(tr)
         if tr and tr.writepending(env=env):
             env["HG_PENDING"] = repo.root
             env["HG_SHAREDPENDING"] = repo.sharedroot
