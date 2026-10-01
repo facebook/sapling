@@ -209,12 +209,23 @@ make the recorded values move for a reason unrelated to the route.
   > ]
   > EOF
 
-Routing is off, so this is the original manifest served the way it is served
-today. `manifest_blob_sha1` is the one value that must survive routing being
-turned on: the augmented path stores no copy of these bytes, it rebuilds them by
-re-serialising the augmented subentries back into legacy manifest lines, so that
-hash holding still while the rest of the block moves is what shows the round trip
-is faithful.
+Route to augmented, which is the end state and what all of this is for. It has
+been off for the whole file until now because the earlier scenarios deliberately
+leave manifests with no envelope, and a routed request for one of those fails
+closed rather than falling back. On-demand derivation stays off even though
+production runs it at 100%: it is the serve-time backstop, and leaving it off is
+what makes a hit here mean the upload path alone sufficed.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:route_original_to_augmented_hg_manifest": true}}
+  > EOF
+  $ force_update_configerator
+
+`manifest_blob_sha1` is the value that had to survive the switch, and it did: the
+augmented path stores no copy of these bytes, it rebuilds them by re-serialising
+the augmented subentries back into legacy manifest lines, so that hash holding
+still while everything below it moves is what shows the round trip is faithful. A
+bare "the request succeeded" would still pass if the reconstruction dropped a flag
+or reordered an entry.
   $ hg debugapi mono:repo -e trees -f tree_keys -f tree_attrs --sort > "$TESTTMP/served.out" 2>&1
   $ python3 -c "
   > import hashlib
@@ -227,10 +238,14 @@ is faithful.
   > print('children=%s' % len(e.get('children') or []))
   > "
   manifest_blob_sha1=a06e8b2b61feaa5b804299db3dd2f707ff6bd8ae
-  tree_aux_data=False
-  has_acl=None
-  parents_present=False
-  children=0
+  tree_aux_data=True
+  has_acl=False
+  parents_present=True
+  children=2
+
+The other four moved because routing sets `populate_all_metadata`, so a routed
+response carries the aux data, the parents and the children whether or not the
+client asked for them.
 
 Scenario 3 -- a failed build must leave the upload alone. Only a root-level file
 changes, so the root tree is uploaded on its own and its unchanged `dir` child is
