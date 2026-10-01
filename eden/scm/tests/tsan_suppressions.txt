@@ -11,7 +11,7 @@ thread:tokio::runtime::blocking::pool
 #
 # Same class of false positive is already suppressed in other Rust TSan suites:
 # fbcode/cathode/tools/cli/tsan_suppressions.txt
-# fbcode/polyglot_toolkit/glue/test/tsan_suppressions.txt
+# fbcode/polyglot_toolkit/glue/tests/tsan_suppressions.txt
 # fbcode/thatch/data_plane/e2e/tsan_suppressions.txt
 
 race:scheduled_io
