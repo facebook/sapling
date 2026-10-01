@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/utils/GlobResult.h"
 
+#include <algorithm>
 #include <atomic>
 #include <utility>
 
@@ -128,6 +129,12 @@ class GlobNodeTest : public ::testing::TestWithParam<
     return doGlob(pattern, false, commitId);
   }
 
+  void addDotDirectory() {
+    mount_.mkdir(".hidden");
+    mount_.addFile(".hidden/regular.txt", "regular");
+    mount_.addFile(".hidden/.dot", "dot");
+  }
+
   bool shouldPrefetch() const {
     return GetParam().second;
   }
@@ -208,6 +215,84 @@ TEST_P(GlobNodeTest, starStarRootExcludeDot) {
   auto matches = doGlobExcludeDotFiles("**/root", kZeroRootId);
 
   std::vector<GlobResult> expect;
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, starStarStarStarExcludeDot) {
+  addDotDirectory();
+  auto matches = doGlobExcludeDotFiles("**/**", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult(".eden"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult(".hidden"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult(".hidden/regular.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult(".watchmanconfig"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
+  };
+  std::erase_if(matches, [](const GlobResult& result) {
+    return result.name.asString().starts_with(".eden/");
+  });
+  std::sort(matches.begin(), matches.end());
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, qmarkExcludeDot) {
+  auto matches = doGlobExcludeDotFiles("?watchmanconfig", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult(".watchmanconfig"_relpath, dtype_t::Regular, kZeroRootId)};
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, dotDirectoryStarExcludeDot) {
+  addDotDirectory();
+  auto matches = doGlobExcludeDotFiles(".hidden/*", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult(".hidden/regular.txt"_relpath, dtype_t::Regular, kZeroRootId)};
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, dotDirectoryStarStarExcludeDot) {
+  addDotDirectory();
+  auto matches = doGlobExcludeDotFiles(".hidden/**", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult(".hidden/regular.txt"_relpath, dtype_t::Regular, kZeroRootId)};
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, dotDirectoryQmarkExcludeDot) {
+  addDotDirectory();
+  auto matches = doGlobExcludeDotFiles(".hidden/?dot", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult(".hidden/.dot"_relpath, dtype_t::Regular, kZeroRootId)};
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, dotDirectoryRecursiveTxtExcludeDot) {
+  addDotDirectory();
+  auto matches = doGlobExcludeDotFiles("**/*.txt", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
+  };
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, dotDirectoryStarIncludeDot) {
+  addDotDirectory();
+  auto matches = doGlobIncludeDotFiles(".hidden/*", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult(".hidden/.dot"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult(".hidden/regular.txt"_relpath, dtype_t::Regular, kZeroRootId),
+  };
   EXPECT_EQ(expect, matches);
 }
 
