@@ -3615,6 +3615,39 @@ TEST_P(CheckoutTest, ignoredSymlinkReplacedByDirectoryInDestination) {
 }
 #endif
 
+TEST_P(CheckoutTest, directoryReplacedByFileAndRemovedByCheckout) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("readme.txt", "readme\n");
+  builder1.setFile("d/x.txt", "x\n");
+  TestMount mount{RootId{"1"}, builder1};
+  applyParam(mount);
+  auto builder2 = FakeTreeBuilder();
+  builder2.setFile("readme.txt", "readme\n");
+  builder2.finalize(mount.getBackingStore(), true);
+  mount.getBackingStore()->putCommit("2", builder2)->setReady();
+
+  mount.deleteFile("d/x.txt");
+  mount.rmdir("d");
+  mount.addFile("d", "local file\n");
+
+  auto executor = mount.getServerExecutor().get();
+  auto result = mount.getEdenMount()
+                    ->checkout(
+                        mount.getRootInode(),
+                        RootId{"2"},
+                        ObjectFetchContext::getNullContext(),
+                        __func__,
+                        CheckoutMode::NORMAL)
+                    .semi()
+                    .via(executor)
+                    .getVia(executor);
+  EXPECT_THAT(
+      result.conflicts,
+      UnorderedElementsAre(makeConflict(
+          ConflictType::MODIFIED_MODIFIED, "d", "", Dtype::REGULAR)));
+  EXPECT_EQ("local file\n", mount.readFile("d"));
+}
+
 } // namespace
 
 // TODO:
