@@ -253,6 +253,75 @@ TEST_F(RenameCaseVariantTest, replaceTakesRequestedSpelling) {
   EXPECT_EQ("new\n", mount_->readFile("B"));
 }
 
+TEST_F(RenameCaseVariantTest, caseOnlyFileRename) {
+  auto file = mount_->getFileInode("b");
+  auto future = root_
+                    ->rename(
+                        "b"_pc,
+                        root_,
+                        "B"_pc,
+                        InvalidationRequired::No,
+                        ObjectFetchContext::getNullContext())
+                    .semi()
+                    .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
+  std::move(future).get(0ms);
+
+  using Names = std::vector<std::string>;
+  EXPECT_EQ(RelativePath{"b"}, file->getPath().value());
+  EXPECT_EQ((Names{"b", "src"}), rootNames());
+  EXPECT_EQ((Names{"b", "src"}), rootOverlayNames());
+
+  file.reset();
+  root_.reset();
+  mount_->remount();
+  root_ = mount_->getEdenMount()->getRootInode();
+  EXPECT_EQ((Names{"b", "src"}), rootNames());
+  EXPECT_EQ("old\n", mount_->readFile("B"));
+}
+
+TEST_F(RenameCaseVariantTest, caseOnlyDirectoryRename) {
+  auto dir = mount_->getTreeInode("src");
+  auto future = root_
+                    ->rename(
+                        "src"_pc,
+                        root_,
+                        "SRC"_pc,
+                        InvalidationRequired::No,
+                        ObjectFetchContext::getNullContext())
+                    .semi()
+                    .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
+  std::move(future).get(0ms);
+
+  using Names = std::vector<std::string>;
+  EXPECT_EQ(RelativePath{"src"}, dir->getPath().value());
+  EXPECT_EQ((Names{"b", "src"}), rootNames());
+  EXPECT_EQ((Names{"b", "src"}), rootOverlayNames());
+  EXPECT_EQ(
+      RelativePath{"src/file.txt"},
+      mount_->getFileInode("SRC/file.txt")->getPath().value());
+}
+
+TEST_F(RenameCaseVariantTest, renameToSameSpellingIsANoOp) {
+  auto file = mount_->getFileInode("b");
+  auto future = root_
+                    ->rename(
+                        "b"_pc,
+                        root_,
+                        "b"_pc,
+                        InvalidationRequired::No,
+                        ObjectFetchContext::getNullContext())
+                    .semi()
+                    .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
+  std::move(future).get(0ms);
+
+  using Names = std::vector<std::string>;
+  EXPECT_EQ(RelativePath{"b"}, file->getPath().value());
+  EXPECT_EQ((Names{"b", "src"}), rootNames());
+}
+
 // Renaming a directory over an empty directory that another thread still
 // holds a reference to. The rename unlinks the destination while it holds
 // the destination's contents lock, and an unlinked inode is destroyed by
