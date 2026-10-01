@@ -4082,6 +4082,15 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
 
         changes = len(filestoamend) > 0
         if changes:
+            if mergemod.is_noconflict_merge(old):
+                raise error.Abort(
+                    _(
+                        "cannot amend conflict-free merge %s: it must stay the "
+                        "automatic merge of its parents"
+                    )
+                    % old,
+                    hint=_("commit the change on top of it instead"),
+                )
             # Recompute copies (avoid recording a -> b -> a)
             copied = copies.pathcopies(base, wctx, matcher)
             if old.p2:

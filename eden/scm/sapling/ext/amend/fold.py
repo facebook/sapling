@@ -19,6 +19,7 @@ from sapling import (
     error,
     hg,
     identity,
+    merge as mergemod,
     node,
     phases,
     registrar,
@@ -182,6 +183,12 @@ def fold(ui, repo, *revs, **opts):
 
 
 def _foldcheck(repo, revs):
+    for rev in repo.revs("%ld & merge()", revs):
+        if mergemod.is_noconflict_merge(repo[rev]):
+            raise error.Abort(
+                _("cannot fold conflict-free merge %s") % repo[rev],
+                hint=_("it must stay the automatic merge of its parents"),
+            )
     roots = repo.revs("roots(%ld)", revs)
     if len(roots) > 1:
         raise error.Abort(_("cannot fold non-linear revisions (multiple roots given)"))

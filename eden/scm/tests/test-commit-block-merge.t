@@ -28,7 +28,7 @@ sl merge is blocked by ui.allowmerge=false
 
   $ sl merge 'desc(branch1)'
   abort: merging is not supported for this repository
-  (use rebase instead)
+  (use rebase, or 'sl merge --noconflict' for a conflict-free merge)
   [255]
 
 Simulate an interrupted rebase leaving merge state (set p2 directly via debugsetparents)

@@ -4250,8 +4250,30 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         ),
         ("r", "rev", "", _("revision to merge"), _("REV")),
         ("P", "preview", None, _("review revisions to merge (no merge is performed)")),
+        (
+            "",
+            "noconflict",
+            None,
+            _(
+                "commit a conflict-free merge directly, or abort without "
+                "touching the working copy if the merge would have conflicts "
+                "(EXPERIMENTAL)"
+            ),
+        ),
+        (
+            "",
+            "parent",
+            [],
+            _(
+                "parent of the conflict-free merge, given twice; the working "
+                "copy is not involved (with --noconflict, EXPERIMENTAL)"
+            ),
+            _("REV"),
+        ),
     ]
-    + mergetoolopts,
+    + mergetoolopts
+    + commitopts
+    + commitopts2,
     _("[OPTION].. [REV]"),
     legacyaliases=["mer", "merg"],
 )
@@ -4281,35 +4303,73 @@ def merge(ui, repo, node=None, **opts):
     will check out a clean copy of the original merge parent, losing
     all changes.
 
+    With ``--noconflict`` the merge is only performed if no file needs manual
+    resolution. It is then committed right away (use ``-m`` for the message)
+    and the working copy is moved to the new commit; the commit is marked as
+    conflict-free and cannot be amended. Otherwise the command aborts, listing
+    the conflicting files, and leaves the working copy untouched. Both commits
+    must be draft.
+
+    ``--parent REV --parent REV`` names both parents of a conflict-free merge
+    in order, instead of merging into the working copy parent. The working
+    copy is not involved: it may be dirty and it stays where it is. The new
+    commit is only printed.
+
     .. container:: verbose
 
-      The merge command can be entirely disabled by setting the
-      ``ui.allowmerge`` configuration setting to false.
+      Regular merges can be disabled by setting ``ui.allowmerge`` to false.
+      Conflict-free merges are controlled by ``experimental.noconflict-merge``,
+      which is enabled by default.
 
     Returns 0 on success, 1 if there are unresolved files.
     """
-    if not ui.configbool("ui", "allowmerge", default=True):
+    parents = opts.get("parent")
+    if parents:
+        if not opts.get("noconflict"):
+            raise error.Abort(_("--parent requires --noconflict"))
+        if node or opts.get("rev"):
+            raise error.Abort(_("--parent cannot be combined with REV or --rev"))
+        if len(parents) != 2:
+            raise error.Abort(_("--parent must be given exactly twice"))
+    if not opts.get("noconflict"):
+        for opt in ("message", "logfile", "date", "user"):
+            if opts.get(opt):
+                raise error.Abort(_("--%s requires --noconflict") % opt)
+    # Conflict-free merges only record that two draft commits can be merged
+    # automatically and are meant for stacks, so they are allowed where merges
+    # otherwise are not.
+    if not ui.configbool("ui", "allowmerge", default=True) and not opts.get(
+        "noconflict"
+    ):
         raise error.Abort(
             _("merging is not supported for this repository"),
-            hint=_("use rebase instead"),
+            hint=_(
+                "use rebase, or '@prog@ merge --noconflict' for a conflict-free merge"
+            ),
         )
     if opts.get("rev") and node:
         raise error.Abort(_("please specify just one revision"))
     if not node:
         node = opts.get("rev")
 
-    if node:
-        node = scmutil.revsingle(repo, node).node()
-
-    if not node:
-        node = repo[destutil.destmerge(repo)].node()
+    if parents:
+        p1node, node = (scmutil.revsingle(repo, p).node() for p in parents)
+    else:
+        p1node = repo["."].node()
+        if node:
+            node = scmutil.revsingle(repo, node).node()
+        if not node:
+            node = repo[destutil.destmerge(repo)].node()
 
     max_distance = ui.configint("merge", "max-distance")
     if max_distance:
         # merge distance is computed as the number of commit between the common ancestors and the merge
         distance = repo.dageval(
             lambda: len(
-                range(children(gcaall(dot() + lookup(node))), dot() + lookup(node))
+                range(
+                    children(gcaall(lookup(p1node) + lookup(node))),
+                    lookup(p1node) + lookup(node),
+                )
             )
         )
         if distance > max_distance:
@@ -4320,9 +4380,7 @@ def merge(ui, repo, node=None, **opts):
 
     if opts.get("preview"):
         # find nodes that are ancestors of p2 but not of p1
-        p1 = repo.lookup(".")
-        p2 = repo.lookup(node)
-        nodes = repo.changelog.findmissing(common=[p1], heads=[p2])
+        nodes = repo.changelog.findmissing(common=[p1node], heads=[node])
 
         displayer = cmdutil.show_changeset(ui, repo, opts)
         for node in nodes:
@@ -4334,7 +4392,58 @@ def merge(ui, repo, node=None, **opts):
     with ui.configoverride({("ui", "forcemerge"): opts.get("tool", "")}, "merge"):
         force = opts.get("force")
         labels = ["working copy", "merge rev"]
-        return hg.merge(repo, node, force=force, labels=labels)
+        if not opts.get("noconflict"):
+            return hg.merge(repo, node, force=force, labels=labels)
+        return _noconflictmerge(
+            ui, repo, repo[p1node], repo[node], labels, opts, update=not parents
+        )
+
+
+def _noconflictmerge(ui, repo, p1, p2, labels, opts, update):
+    """Merge `p2` into `p1` in memory and commit the result as a conflict-free
+    merge. With `update` the working copy, which must be clean, is moved to
+    the new commit; otherwise it is left alone."""
+    if not ui.configbool("experimental", "noconflict-merge", default=True):
+        raise error.Abort(
+            _("conflict-free merges are disabled by experimental.noconflict-merge"),
+            hint=_("set experimental.noconflict-merge=true to enable them"),
+        )
+    with repo.wlock(), repo.lock():
+        if update:
+            cmdutil.bailifchanged(repo)
+        if p1 == p2:
+            raise error.Abort(
+                _("cannot create a conflict-free merge of %s with itself") % p1
+            )
+        for ctx in (p1, p2):
+            if ctx.ispublic():
+                raise error.Abort(
+                    _("cannot create a conflict-free merge with public commit %s")
+                    % ctx,
+                    hint=_(
+                        "both parents must be draft; rebase onto the public "
+                        "commit instead"
+                    ),
+                )
+        wctx = mergemod.check_noconflict_merge(
+            repo, p2.node(), force=opts.get("force"), labels=labels, basectx=p1
+        )
+        message = cmdutil.logmessage(repo, opts) or _("Merge %s") % (
+            p2.description().split("\n", 1)[0] or p2
+        )
+        with repo.transaction("merge"):
+            memctx = wctx.tomemctx(
+                message,
+                parents=(p1, p2),
+                date=opts.get("date") or None,
+                user=opts.get("user") or None,
+                extra={mergemod.NOCONFLICT_MERGE_EXTRA: "1"},
+            )
+            newnode = repo.commitctx(memctx)
+        if update:
+            hg.updaterepo(repo, newnode, False)
+    ui.status(_("created conflict-free merge %s\n") % repo[newnode])
+    return 0
 
 
 @command(

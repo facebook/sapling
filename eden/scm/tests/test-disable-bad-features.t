@@ -23,7 +23,7 @@
   $ setconfig 'ui.allowmerge=False'
   $ sl merge
   abort: merging is not supported for this repository
-  (use rebase instead)
+  (use rebase, or 'sl merge --noconflict' for a conflict-free merge)
   [255]
 
 # Test disabling the `sl branch` commands:

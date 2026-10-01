@@ -2435,6 +2435,65 @@ def merge(
     )
 
 
+# Commit extra set on merge commits created by 'merge --noconflict'. Such a
+# commit has no content of its own: it only records that its parents combine
+# without conflicts, so tools can treat it as bookkeeping.
+NOCONFLICT_MERGE_EXTRA = "noconflict_merge"
+
+
+def merge_in_memory(repo, node, force=False, labels=None, basectx=None):
+    """Merge `node` into `basectx` (default: the working copy parent) in
+    memory and return the resulting overlay context. Raises
+    InMemoryMergeConflictsError, with the first affected paths, if the merge
+    cannot be completed automatically. The working copy is not touched
+    either way.
+    """
+    from . import context
+
+    wctx = context.overlayworkingctx(repo)
+    wctx.setbase(basectx if basectx is not None else repo["."])
+    # Callers report progress themselves; this merge is silent.
+    repo.ui.pushbuffer(error=True)
+    try:
+        stats = merge(repo, node, force=force, labels=labels, wc=wctx)
+    finally:
+        repo.ui.popbuffer()
+    if stats[3] > 0:
+        # Conflicts normally surface from the file merge itself with their
+        # paths; this only guards against a merge that reported unresolved
+        # files without raising.
+        raise error.InMemoryMergeConflictsError(
+            _("%d unresolved files") % stats[3],
+            type=error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+            paths=[],
+        )
+    return wctx
+
+
+def check_noconflict_merge(repo, node, force=False, labels=None, basectx=None):
+    """Merge `node` into `basectx` (default: the working copy parent) in
+    memory and return the result, or abort with the first affected paths."""
+    try:
+        return merge_in_memory(repo, node, force=force, labels=labels, basectx=basectx)
+    except error.InMemoryMergeConflictsError as e:
+        paths = sorted(set(e.paths))
+        if paths:
+            msg = _("merge of %s stopped at conflicts in:\n %s") % (
+                repo[node],
+                "\n ".join(paths),
+            )
+        else:
+            msg = _("merge of %s would have conflicts: %s") % (repo[node], e)
+        raise error.Abort(
+            msg,
+            hint=_("run '@prog@ merge' without --noconflict to resolve them by hand"),
+        )
+
+
+def is_noconflict_merge(ctx):
+    return len(ctx.parents()) == 2 and ctx.extra().get(NOCONFLICT_MERGE_EXTRA) == "1"
+
+
 @perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
 def _update(
