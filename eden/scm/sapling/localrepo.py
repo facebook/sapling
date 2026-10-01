@@ -1925,6 +1925,7 @@ class localrepository:
                     repo.dirstate.restorebackup(None, "journal.dirstate")
 
                 repo.invalidate(clearfilecache=True)
+                repo.invalidatemetalog()
 
         tr = transaction.transaction(
             rp,
@@ -2294,6 +2295,10 @@ class localrepository:
     def invalidatemetalog(self):
         """Invalidates the metalog. Discard pending changes."""
         self.svfs.invalidatemetalog()
+        # The bookmark store is changed in place while a transaction runs and
+        # only written to the metalog when it closes, so after a rollback its
+        # metalog cache key still matches and it has to be dropped explicitly.
+        self.__dict__.pop("_bookmarks", None)
 
     def invalidateall(self):
         """Fully invalidates both store and non-store parts, causing the

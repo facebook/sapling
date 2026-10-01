@@ -45,6 +45,8 @@ Confirm it fails when rebasing a change that conflicts:
   M b
   $ cat b
   local change
+  $ sl log -r . -T '{activebookmark}\n'
+  c
 
 Confirm rebase without a merge behaves the same:
   $ sl rebase -r tip -d .~1 --noconflict
@@ -56,6 +58,7 @@ Confirm the flag fails without IMM:
   $ setconfig rebase.experimental.inmemory=False
   $ sl up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark c)
   $ sl st
   $ sl rebase -r tip -d . --noconflict
   abort: --noconflict requires in-memory merge

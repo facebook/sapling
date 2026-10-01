@@ -273,6 +273,12 @@ class rebaseruntime:
 
     def storestatus(self, tr=None):
         """Store the current status to allow recovery"""
+        # An in-memory rebase runs in one transaction that is rolled back
+        # when it fails, so there is never anything to continue or abort.
+        # A state file would only make later commands refuse with "rebase
+        # in progress".
+        if self.inmemory:
+            return
         if tr:
             tr.addfilegenerator(
                 "rebasestate", ("rebasestate",), self._writestatus, location="local"
@@ -1577,22 +1583,29 @@ def _origrebase(ui, repo, rbsrt, **opts):
         # If `rebase.singletransaction` is enabled, wrap the entire operation in
         # one transaction here. Otherwise, transactions are obtained when
         # committing each node, which is slower but allows partial success.
-        with util.acceptintervention(tr):
-            # Same logic for the dirstate guard, except we don't create one when
-            # rebasing in-memory (it's not needed).
-            if singletr and not rbsrt.inmemory:
-                dsguard = dirstateguard.dirstateguard(repo, "rebase")
-            with util.acceptintervention(dsguard):
-                try:
-                    rbsrt._performrebase(tr)
-                except error.AbortMergeToolError:
-                    # Above we run all in-memory rebases in single transaction mode.
-                    # Emulate multi-transaction mode by committing transaction on
-                    # --noconflict error (this saves commits that were rebased before we
-                    # hit a conflict).
-                    if not singletr:
-                        tr.close()
-                    raise
+        try:
+            with util.acceptintervention(tr):
+                # Same logic for the dirstate guard, except we don't create one when
+                # rebasing in-memory (it's not needed).
+                if singletr and not rbsrt.inmemory:
+                    dsguard = dirstateguard.dirstateguard(repo, "rebase")
+                with util.acceptintervention(dsguard):
+                    try:
+                        rbsrt._performrebase(tr)
+                    except error.AbortMergeToolError:
+                        # Above we run all in-memory rebases in single transaction mode.
+                        # Emulate multi-transaction mode by committing transaction on
+                        # --noconflict error (this saves commits that were rebased before we
+                        # hit a conflict).
+                        if not singletr:
+                            tr.close()
+                        raise
+        except BaseException:
+            # bookmarks.current is written outside the rebase transaction, so
+            # the rollback does not restore the active bookmark.
+            if rbsrt.inmemory and rbsrt.activebookmark in repo._bookmarks:
+                bookmarks.activate(repo, rbsrt.activebookmark)
+            raise
 
         rbsrt._finishrebase()
 
