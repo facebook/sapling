@@ -28,16 +28,20 @@ use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifest;
 use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifestEntry;
 use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifestFile;
+use mononoke_types::history_manifest::HistoryManifestEntry;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
 use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use mononoke_types::typed_hash::AclManifestId;
+use mononoke_types::typed_hash::HistoryManifestDirectoryId;
+use mononoke_types::typed_hash::HistoryManifestFileId;
 use smallvec::SmallVec;
 
 use crate::types::Entry;
 use crate::types::Weight;
+use crate::types::history_manifest_to_mf_entry;
 
 #[async_trait]
 pub trait TrieMapOps<Store, Value>: Sized {
@@ -331,6 +335,53 @@ impl<Store: KeyedBlobstore>
     }
 
     fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: KeyedBlobstore>
+    TrieMapOps<Store, Entry<HistoryManifestDirectoryId, HistoryManifestFileId>>
+    for LoadableShardedMapV2Node<HistoryManifestEntry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<HistoryManifestDirectoryId, HistoryManifestFileId>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.and_then(history_manifest_to_mf_entry), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(
+                SmallVec<[u8; 24]>,
+                Entry<HistoryManifestDirectoryId, HistoryManifestFileId>,
+            )>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .try_filter_map(|(key, entry)| async move {
+                Ok(history_manifest_to_mf_entry(entry).map(|entry| (key, entry)))
+            })
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        // A nonempty shard may contain only deleted entries. Checking that
+        // requires loading it, so only prune shards known to be empty here.
         self.size() == 0
     }
 }

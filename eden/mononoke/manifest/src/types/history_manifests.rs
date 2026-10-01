@@ -118,10 +118,15 @@ impl<Store: KeyedBlobstore> Manifest<Store> for HistoryManifestDirectory {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    use blobstore::Storable;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
+    use mononoke_types::MPath;
     use mononoke_types::NonRootMPath;
     use mononoke_types::blob::BlobstoreValue;
     use mononoke_types::history_manifest::HistoryManifestDeletedNode;
@@ -135,6 +140,10 @@ mod tests {
     use mononoke_types_mocks::contentid::TWOS_CTID;
 
     use super::*;
+    use crate::Diff;
+    use crate::TrieMapOps;
+    use crate::comparison::diff_manifest_node;
+    use crate::find_intersection_of_diffs;
 
     fn make_file_entry(discriminant: u8) -> (HistoryManifestFileId, HistoryManifestEntry) {
         let path_hash = NonRootMPath::new(format!("path_{discriminant}"))
@@ -200,6 +209,148 @@ mod tests {
             subentries,
             linknode: ONES_CSID,
         })
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_trie_filters_deleted_nodes(fb: FacebookInit) -> Result<()> {
+        let blobstore = KeyedMemblob::default();
+        let ctx = CoreContext::test_mock(fb);
+        let (fid, file) = make_file_entry(0);
+        let (did, dir) = make_dir_entry();
+        let (_, deleted) = make_deleted_entry(0);
+
+        for (entries, expected) in [
+            (
+                vec![
+                    ("a", deleted.clone()),
+                    ("ab", file),
+                    ("b", dir),
+                    ("c", deleted.clone()),
+                ],
+                BTreeMap::from([
+                    (b"ab".to_vec(), Entry::Leaf(fid)),
+                    (b"b".to_vec(), Entry::Tree(did)),
+                ]),
+            ),
+            (
+                vec![("a", deleted.clone()), ("ab", deleted)],
+                BTreeMap::new(),
+            ),
+            (vec![], BTreeMap::new()),
+        ] {
+            let trie = make_directory(&ctx, &blobstore, entries)
+                .await?
+                .into_trie_map(&ctx, &blobstore)
+                .await?;
+            for trie in [trie.clone(), trie.stored(&ctx, &blobstore).await?] {
+                let streamed: BTreeMap<_, _> =
+                    TrieMapOps::into_stream(trie.clone(), &ctx, &blobstore)
+                        .await?
+                        .map_ok(|(key, entry)| (key.to_vec(), entry))
+                        .try_collect()
+                        .await?;
+                assert_eq!(streamed, expected);
+
+                let mut pending = vec![(Vec::new(), trie)];
+                let mut expanded = BTreeMap::new();
+                while let Some((prefix, node)) = pending.pop() {
+                    let (value, children) = TrieMapOps::expand(node, &ctx, &blobstore).await?;
+                    if let Some(value) = value {
+                        expanded.insert(prefix.clone(), value);
+                    }
+                    pending.extend(children.into_iter().map(|(byte, child)| {
+                        let mut key = prefix.clone();
+                        key.push(byte);
+                        (key, child)
+                    }));
+                }
+                assert_eq!(expanded, expected);
+            }
+        }
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_trie_diff_filters_deleted_nodes(fb: FacebookInit) -> Result<()> {
+        let blobstore = KeyedMemblob::default();
+        let ctx = CoreContext::test_mock(fb);
+        let (old_file_id, old_file) = make_file_entry(0);
+        let (new_file_id, new_file) = make_file_entry(1);
+        let (_, old_deleted) = make_deleted_entry(0);
+        let (_, new_deleted) = make_deleted_entry(1);
+        let (_, dir) = make_dir_entry();
+        let old = make_directory(
+            &ctx,
+            &blobstore,
+            vec![
+                ("changed", old_file.clone()),
+                ("deleted", old_file.clone()),
+                ("dir", dir.clone()),
+                ("revived", old_deleted.clone()),
+                ("same", old_file.clone()),
+                ("tombstone", old_deleted),
+            ],
+        )
+        .await?
+        .into_blob()
+        .store(&ctx, &blobstore)
+        .await?;
+        let new = make_directory(
+            &ctx,
+            &blobstore,
+            vec![
+                ("changed", new_file.clone()),
+                ("deleted", new_deleted.clone()),
+                ("dir", dir),
+                ("revived", new_file),
+                ("same", old_file),
+                ("tombstone", new_deleted),
+            ],
+        )
+        .await?
+        .into_blob()
+        .store(&ctx, &blobstore)
+        .await?;
+
+        let (mut diffs, recurse) = diff_manifest_node(
+            &ctx,
+            &blobstore,
+            &blobstore,
+            Diff::Changed(MPath::ROOT, old, new),
+            Default::default(),
+            |_| true,
+        )
+        .await?;
+        assert!(recurse.is_empty());
+        diffs.sort_by(|left, right| left.path().cmp(right.path()));
+        assert_eq!(
+            diffs,
+            vec![
+                Diff::Changed(MPath::ROOT, Entry::Tree(old), Entry::Tree(new)),
+                Diff::Changed(
+                    MPath::new("changed")?,
+                    Entry::Leaf(old_file_id),
+                    Entry::Leaf(new_file_id),
+                ),
+                Diff::Removed(MPath::new("deleted")?, Entry::Leaf(old_file_id)),
+                Diff::Added(MPath::new("revived")?, Entry::Leaf(new_file_id)),
+            ],
+        );
+
+        let mut intersection: Vec<_> =
+            find_intersection_of_diffs(ctx, Arc::new(blobstore), new, vec![old])
+                .try_collect()
+                .await?;
+        intersection.sort_by(|(left, _), (right, _)| left.cmp(right));
+        assert_eq!(
+            intersection,
+            vec![
+                (MPath::ROOT, Entry::Tree(new)),
+                (MPath::new("changed")?, Entry::Leaf(new_file_id)),
+                (MPath::new("revived")?, Entry::Leaf(new_file_id)),
+            ],
+        );
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

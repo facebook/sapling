@@ -27,6 +27,7 @@ pub(crate) use self::ccsm::convert_ccsm_to_weighted;
 pub(crate) use self::content_manifests::convert_content_manifest;
 pub(crate) use self::content_manifests::convert_content_manifest_weighted;
 pub(crate) use self::dbcm::dbcm_to_mf_entry;
+pub(crate) use self::history_manifests::history_manifest_to_mf_entry;
 pub(crate) use self::skeleton_manifests::convert_skeleton_manifest_v2_to_weighted;
 pub(crate) use self::skeleton_manifests::skeleton_manifest_v2_to_mf_entry;
 pub(crate) use self::test_manifests::convert_test_sharded_manifest;
