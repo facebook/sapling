@@ -2444,7 +2444,8 @@ class StartCmd(Subcmd):
         parser.add_argument(
             "--if-necessary",
             action="store_true",
-            help="Only start edenfs daemon if there are EdenFS checkouts configured.",
+            help="Only start edenfs daemon if there are EdenFS checkouts configured. "
+            "Implies --if-not-running.",
         )
         parser.add_argument(
             "--if-not-running",
@@ -2558,7 +2559,10 @@ class StartCmd(Subcmd):
                 msg = f"EdenFS is already starting (pid {health_info.pid})"
 
             if msg:
-                if args.if_not_running:
+                # --if-necessary means "start only if this host needs EdenFS", so a
+                # daemon that is already up satisfies the request. Callers reach for
+                # it expecting that and are surprised by a nonzero exit.
+                if args.if_not_running or args.if_necessary:
                     print(msg)
                     return 0
                 raise subcmd_mod.CmdError(msg)

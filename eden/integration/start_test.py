@@ -26,10 +26,19 @@ from .lib.service_test_case import service_test, ServiceTestCaseBase
 @testcase.eden_test(run_io_uring=True)
 class StartTest(testcase.EdenTestCase):
     def test_start_if_necessary(self) -> None:
-        # Confirm there are no checkouts configured, then stop edenfs
+        # Confirm there are no checkouts configured
         checkouts = self.eden.list_cmd_simple()
         self.assertEqual({}, checkouts)
         self.assertTrue(self.eden.is_healthy())
+
+        # No checkouts and edenfs already running. The no-checkouts case is
+        # answered before the health check, so the message names that rather
+        # than the running daemon, and the daemon is left alone.
+        output = self.eden.run_cmd("start", "--if-necessary")
+        self.assertEqual("No EdenFS mount points configured.\n", output)
+        self.assertTrue(self.eden.is_healthy())
+
+        # Stop edenfs
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
 
@@ -52,6 +61,12 @@ class StartTest(testcase.EdenTestCase):
 
         checkouts = self.eden.list_cmd_simple()
         self.assertEqual({checkout_dir: "RUNNING"}, checkouts)
+
+        # A checkout exists and edenfs is already serving it, so
+        # `eden start --if-necessary` has nothing left to do and should succeed.
+        output = self.eden.run_cmd("start", "--if-necessary", *self.edenfsctl_args())
+        self.assertRegex(output, r"EdenFS is already running \(pid [0-9]+\)\n")
+        self.assertTrue(self.eden.is_healthy())
 
         # Stop edenfs
         self.eden.shutdown()
