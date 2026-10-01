@@ -556,7 +556,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                 .into_iter()
                 .flat_map(|s| s.slice.segments),
         )
-        .map(move |segment| {
+        .then(move |segment| {
             cloned!(graph, ctx);
             async move {
                 Ok(graph
@@ -566,13 +566,6 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     .await)
             }
         })
-        // `range_stream` performs real storage I/O (commit graph edge
-        // fetches) per segment. The output must stay topologically
-        // ordered (see doc comment above), so use `buffered` rather than
-        // `buffer_unordered` to fetch segments concurrently while
-        // preserving order. 100 matches the concurrency already used for
-        // the sibling gap-parent lookup in derive.rs.
-        .buffered(100)
         .boxed();
         Ok((slices, external_parents))
     }
