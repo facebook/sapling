@@ -653,7 +653,10 @@ std::optional<bool> CheckoutAction::checkSyncConflict() {
     auto treeInode = inode_.asTreePtrOrNull();
     if (!treeInode) {
       // This was a directory, but has been replaced with a file on disk
-      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
+      ctx_->addConflict(
+          newScmEntry_ ? ConflictType::MODIFIED_MODIFIED
+                       : ConflictType::MODIFIED_REMOVED,
+          inode_.get());
       return true;
     }
 

@@ -5346,7 +5346,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
         break;
       case ObjectComparison::Different:
         // We know the objects are different, so report a conflict.
-        conflictType = ConflictType::MODIFIED_MODIFIED;
+        conflictType = newScmEntry ? ConflictType::MODIFIED_MODIFIED
+                                   : ConflictType::MODIFIED_REMOVED;
         break;
     }
   }

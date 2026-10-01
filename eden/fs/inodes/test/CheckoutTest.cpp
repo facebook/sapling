@@ -3615,7 +3615,7 @@ TEST_P(CheckoutTest, ignoredSymlinkReplacedByDirectoryInDestination) {
 }
 #endif
 
-TEST_P(CheckoutTest, directoryReplacedByFileAndRemovedByCheckout) {
+TEST_P(CheckoutTest, directoryReplacedByFileAndRemovedIsModifiedRemoved) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("readme.txt", "readme\n");
   builder1.setFile("d/x.txt", "x\n");
@@ -3644,7 +3644,7 @@ TEST_P(CheckoutTest, directoryReplacedByFileAndRemovedByCheckout) {
   EXPECT_THAT(
       result.conflicts,
       UnorderedElementsAre(makeConflict(
-          ConflictType::MODIFIED_MODIFIED, "d", "", Dtype::REGULAR)));
+          ConflictType::MODIFIED_REMOVED, "d", "", Dtype::REGULAR)));
   EXPECT_EQ("local file\n", mount.readFile("d"));
 }
 
