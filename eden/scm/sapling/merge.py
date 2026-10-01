@@ -2441,16 +2441,17 @@ def merge(
 NOCONFLICT_MERGE_EXTRA = "noconflict_merge"
 
 
-def merge_in_memory(repo, node, force=False, labels=None, basectx=None):
+def merge_in_memory(repo, node, force=False, labels=None, basectx=None, wctx=None):
     """Merge `node` into `basectx` (default: the working copy parent) in
-    memory and return the resulting overlay context. Raises
-    InMemoryMergeConflictsError, with the first affected paths, if the merge
-    cannot be completed automatically. The working copy is not touched
-    either way.
+    memory and return the resulting overlay context (`wctx` if given).
+    Raises InMemoryMergeConflictsError, with the first affected paths, if
+    the merge cannot be completed automatically. The working copy is not
+    touched either way.
     """
     from . import context
 
-    wctx = context.overlayworkingctx(repo)
+    if wctx is None:
+        wctx = context.overlayworkingctx(repo)
     wctx.setbase(basectx if basectx is not None else repo["."])
     # Callers report progress themselves; this merge is silent.
     repo.ui.pushbuffer(error=True)
@@ -2492,6 +2493,28 @@ def check_noconflict_merge(repo, node, force=False, labels=None, basectx=None):
 
 def is_noconflict_merge(ctx):
     return len(ctx.parents()) == 2 and ctx.extra().get(NOCONFLICT_MERGE_EXTRA) == "1"
+
+
+def landed_successor(repo, ctx):
+    """The public commit an obsolete `ctx` was rewritten into, or None.
+
+    A commit counts as landed when all terminal successors are public and
+    the mutation history is present locally.
+    """
+    from . import mutation
+
+    if not ctx.obsolete() or not mutation.enabled(repo):
+        return None
+    nodemap = repo.changelog.nodemap
+    succs = [n for n in mutation.allsuccessors(repo, [ctx.node()]) if n != ctx.node()]
+    if any(n not in nodemap for n in succs):
+        return None
+    terminal = [
+        n for n in succs if repo[n].ispublic() or not mutation.lookupsuccessors(repo, n)
+    ]
+    if not terminal or not all(repo[n].ispublic() for n in terminal):
+        return None
+    return terminal[0]
 
 
 @perftrace.tracefunc("Update")

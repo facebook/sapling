@@ -6,7 +6,9 @@
 # revsets.py - revset definitions
 
 
-from sapling import mutation, phases, registrar, revset, smartset
+from collections import deque
+
+from sapling import merge as mergemod, mutation, phases, registrar, revset, smartset
 from sapling.node import nullrev
 
 
@@ -28,14 +30,33 @@ def _destrestack(repo, subset, x):
     if not src or src in obsoleted:
         return smartset.baseset(repo=repo)
 
-    # Find the obsoleted "base" by checking source's parent recursively
-    base = src
-    while base not in obsoleted:
-        base = getparents(base)[0]
-        # When encountering a public revision which cannot be obsoleted, stop
-        # the search early and return no destination. Do the same for nullrev.
-        if getphase(repo, base) == phases.public or base == nullrev:
-            return smartset.baseset(repo=repo)
+    # Find the nearest obsoleted "base" among source's ancestors. Merge
+    # commits are followed through all their parents, since the amended
+    # commit may be behind the second parent. Public revisions cannot be
+    # obsoleted, so the search does not go past them.
+    base = None
+    queue = deque([src])
+    seen = {src}
+    while queue and base is None:
+        cur = queue.popleft()
+        noconflictmerge = mergemod.is_noconflict_merge(unfi[cur])
+        for parent in getparents(cur):
+            if parent == nullrev or parent in seen:
+                continue
+            if parent in obsoleted:
+                # A landed side of a conflict-free merge stays in place until
+                # the stack is rebased past the landed commit; it does not
+                # make the merge unstable.
+                if noconflictmerge and mergemod.landed_successor(unfi, unfi[parent]):
+                    seen.add(parent)
+                    continue
+                base = parent
+                break
+            if getphase(repo, parent) != phases.public:
+                seen.add(parent)
+                queue.append(parent)
+    if base is None:
+        return smartset.baseset(repo=repo)
 
     # Find successors for given base
     # NOTE: Ideally we can use obsutil.successorssets to detect divergence

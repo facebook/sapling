@@ -6,7 +6,7 @@
 # restack.py - rebase to make a stack connected again
 
 
-from sapling import commands
+from sapling import commands, merge as mergemod, scmutil
 from sapling.ext import rebase
 from sapling.i18n import _
 
@@ -42,6 +42,7 @@ def restack(ui, repo, **rebaseopts):
 
         rebaseopts["dest"] = ["_destrestack(SRC)"]
 
+        _notelandedmergesides(ui, repo, rebaseopts["rev"])
         rebase.rebase(ui, repo, **rebaseopts)
 
         # Ensure that we always end up on the latest version of the
@@ -53,3 +54,25 @@ def restack(ui, repo, **rebaseopts):
         successor = repo.revs("successors(.) - .").last()
         if successor is not None:
             commands.update(ui, repo, rev=repo[successor].hex())
+
+
+def _notelandedmergesides(ui, repo, revs):
+    """Explain why a conflict-free merge with a landed side is left alone."""
+    revs = scmutil.revrange(repo, revs)
+    for ctx in repo.set("%ld & merge()", revs):
+        if not mergemod.is_noconflict_merge(ctx) or repo.revs(
+            "_destrestack(%d)", ctx.rev()
+        ):
+            continue
+        for parent in ctx.parents():
+            landed = mergemod.landed_successor(repo, parent)
+            if landed is not None:
+                ui.status(
+                    _(
+                        "note: not restacking conflict-free merge %s, its parent %s landed as %s\n"
+                    )
+                    % (ctx, parent, repo[landed])
+                )
+                ui.status(
+                    _("(rebase the stack past the landed commit to drop the merge)\n")
+                )

@@ -539,6 +539,13 @@ class rebaseruntime:
         # Calculate self.obsoletenotrebased
         obsrevs = _filterobsoleterevs(self.repo, self.state)
         self._handleskippingobsolete(obsrevs, self.destmap)
+        # A landed side of a conflict-free merge is not rewritten: the merge
+        # keeps combining it until the stack is rebased past the landed
+        # commit, which drops it. Rewriting it here would only make a
+        # divergent copy of a public commit.
+        for rev in self._noconflictlandedsides(obsrevs):
+            del self.state[rev]
+            del self.destmap[rev]
         if not self.keepf and not self.contf:
             # Rebase has its own obsolete skipping and divergence handling; only
             # run the shared precheck on revisions this operation will rewrite.
@@ -644,6 +651,7 @@ class rebaseruntime:
                     if (
                         repo.ui.configbool("nativecheckout", "rebaseonenative")
                         and not self.collapsef
+                        and not mergemod.is_noconflict_merge(ctx)
                     ):
                         self._performrebaseonenative(rev, ctx, desc, dest)
                     else:
@@ -831,8 +839,35 @@ class rebaseruntime:
         if self.collapsef:
             storecollapsemsg(repo, self.collapsemsg)
 
+        noconflictmerge = p2 != nullrev and mergemod.is_noconflict_merge(ctx)
+        if noconflictmerge:
+            # A merge of stale parents means nothing, so also follow parents
+            # that were rewritten outside of this rebase (e.g. both parents
+            # amended before restacking).
+            p1, p2 = (self._noconflictparent(p) for p in (p1, p2))
+            p1node, p2node = repo[p1].node(), repo[p2].node()
+            if p1 == p2 or repo.changelog.isancestor(p1node, p2node):
+                p1, p2 = p2, nullrev
+            elif repo.changelog.isancestor(p2node, p1node):
+                p2 = nullrev
+        if p2 == nullrev and mergemod.is_noconflict_merge(ctx):
+            # One parent is now an ancestor of the other, typically because
+            # one of them landed and the stack moved past it. There is nothing
+            # left to merge, so the merge is dropped instead of replayed.
+            if not self.collapsef:
+                ui.status(
+                    _(
+                        "note: dropping conflict-free merge %s: one parent is now an ancestor of the other\n"
+                    )
+                    % desc
+                )
+                self.skipped.add(rev)
+            self.state[rev] = p1
+            return
         if self.contf and len(repo.working_parent_nodes()) == 2:
             repo.ui.debug("resuming interrupted rebase\n")
+        elif noconflictmerge:
+            self._noconflictremerge(ctx, p1, p2)
         else:
             with ui.configoverride(
                 {("ui", "forcemerge"): opts.get("tool", "")}, "rebase"
@@ -882,6 +917,7 @@ class rebaseruntime:
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
                     date=self.date,
+                    noconflictmerge=noconflictmerge,
                 )
                 mergemod.mergestate.clean(repo)
             else:
@@ -894,6 +930,7 @@ class rebaseruntime:
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
                     date=self.date,
+                    noconflictmerge=noconflictmerge,
                 )
 
             if newnode is None:
@@ -924,6 +961,145 @@ class rebaseruntime:
                 self.skipped.add(rev)
             self.state[rev] = p1
             ui.debug("next revision set to %s\n" % p1)
+
+    def _noconflictparent(self, rev):
+        """The unique visible draft successor of an obsolete rev, if there is
+        one. A landed rev stands in for itself: merging its public successor
+        in would pull that commit and everything below it into the stack."""
+        if rev in self.state or not self.repo[rev].obsolete():
+            return rev
+        succs = list(
+            self.repo.revs("heads(successors(%d) - obsolete() - public())", rev)
+        )
+        if len(succs) > 1:
+            self._noconflictabort(
+                _(
+                    "cannot rebase conflict-free merge: parent %s has multiple "
+                    "draft successors: %s"
+                )
+                % (self.repo[rev], ", ".join(str(self.repo[s]) for s in succs)),
+                _("resolve the divergent versions of that parent before restacking"),
+            )
+        return succs[0] if succs else rev
+
+    def _noconflictlandedsides(self, obsrevs):
+        """The revs in `obsrevs` that landed and whose only children in the
+        rebase are conflict-free merges."""
+        repo = self.repo
+        result = []
+        for rev in obsrevs:
+            if rev in self.obsoletenotrebased or (
+                rev in self.obsoletewithoutsuccessorindestination
+            ):
+                continue
+            if mergemod.landed_successor(repo, repo[rev]) is None:
+                continue
+            children = list(repo.revs("children(%d) & %ld", rev, list(self.state)))
+            if children and all(
+                mergemod.is_noconflict_merge(repo[c]) for c in children
+            ):
+                result.append(rev)
+        return result
+
+    def _noconflictremerge(self, ctx, p1, p2):
+        """Rebase a conflict-free merge commit by merging its new parents
+        again. The commit is the automatic merge of its parents, so replaying
+        its diff against one parent (what rebasenode does) is not what it
+        means; and if the parents no longer merge cleanly the rebase must
+        stop rather than leave a conflicted merge behind.
+        """
+        repo, ui = self.repo, self.ui
+        # A parent only becomes public here when one side was moved onto a
+        # public commit while the other stayed behind. Merging the public
+        # commit in would pull it and everything below it into the stack.
+        for parent, other in ((p1, p2), (p2, p1)):
+            if repo[parent].ispublic():
+                self._noconflictabort(
+                    _("cannot rebase conflict-free merge %s: %s is public")
+                    % (ctx, repo[parent]),
+                    _(
+                        "rebase the whole stack instead, e.g. '@prog@ rebase -s %s -d %s'"
+                    )
+                    % (repo[other], repo[parent]),
+                )
+        labels = ["dest", "source"]
+        try:
+            # In memory this is the whole rebase of the commit; on disk it is
+            # a check that runs before the working copy is touched, so a
+            # conflict never leaves a half-done merge behind.
+            mergemod.merge_in_memory(
+                repo,
+                repo[p2].node(),
+                force=True,
+                labels=labels,
+                basectx=repo[p1],
+                wctx=self.wctx if self.wctx.isinmemory() else None,
+            )
+        except error.InMemoryMergeConflictsError as e:
+            paths = sorted(set(e.paths))
+            pathstr = ", ".join(i18n.limititems(paths, maxitems=3)) or str(e)
+            if self.opts.get("noconflict"):
+                # Reported like any other conflict under --noconflict (amend's
+                # automatic restack relies on the message config), and the
+                # rebase is rolled back.
+                msg = ui.config(
+                    "rebase",
+                    "noconflictmsg",
+                    _("%s (in %s) and --noconflict passed; exiting"),
+                )
+                kindstr = _("merging the parents of %s again would conflict") % ctx
+                raise error.AbortMergeToolError(msg % (kindstr, pathstr))
+            self._noconflictabort(
+                _(
+                    "cannot rebase conflict-free merge %s: merging %s and %s "
+                    "would have conflicts in %d file(s):\n %s"
+                )
+                % (ctx, repo[p1], repo[p2], len(paths), "\n ".join(paths)),
+                _(
+                    "amend one of the parents so they merge cleanly, then run "
+                    "'@prog@ rebase --restack'"
+                ),
+            )
+        if not self.wctx.isinmemory():
+            if repo["."].rev() != p1:
+                mergemod.goto(repo, p1, force=True)
+                repo.dirstate.write(repo.currenttransaction())
+            stats = mergemod.merge(repo, p2, force=True, labels=labels)
+            if stats[3] > 0:
+                # The in-memory merge above succeeded, so this is not expected.
+                self._noconflictabort(
+                    _("cannot rebase conflict-free merge %s: %d unresolved files")
+                    % (ctx, stats[3]),
+                    _("run '@prog@ goto --clean .' to discard the partial merge"),
+                )
+
+    def _noconflictabort(self, msg, hint):
+        """Abort rebasing a conflict-free merge. An in-memory rebase is
+        rolled back with its transaction. On disk the commits rebased so far
+        are kept, as after 'rebase --quit', so that a restack picks up from
+        them once a parent is fixed."""
+        if not self.wctx.isinmemory():
+            repo = self.repo
+            if repo.currenttransaction() is None and any(
+                v > 0 for v in self.state.values()
+            ):
+                # Finish the run for the commits already rewritten: move
+                # their bookmarks and hide their predecessors. The rest of
+                # the stack then sits on obsolete parents, which is exactly
+                # what a restack picks up.
+                clearrebased(
+                    self.ui,
+                    repo,
+                    None,
+                    self.destmap,
+                    self.state,
+                    self.skipped,
+                    keepf=self.keepf,
+                )
+                hint = _("the commits rebased so far are kept; %s") % hint
+            clearstatus(repo)
+            clearcollapsemsg(repo)
+        raise error.Abort(msg, hint=hint)
 
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
@@ -1850,6 +2026,7 @@ def concludememorynode(
     extrafn=None,
     date=None,
     preds=None,
+    noconflictmerge=False,
 ):
     """Commit the memory changes with parents p1 and p2. Reuse commit info from
     rev but also store useful information in extra.
@@ -1859,6 +2036,8 @@ def concludememorynode(
         commitmsg = ctx.description()
     extra = {"rebase_source": ctx.hex()}
     extra.update(subtreeutil.get_subtree_metadata(ctx.extra()))
+    if noconflictmerge:
+        extra[mergemod.NOCONFLICT_MERGE_EXTRA] = "1"
     mutinfo = None
     if not keepf:
         mutop = "rebase"
@@ -1911,6 +2090,7 @@ def concludenode(
     extrafn=None,
     date=None,
     preds=None,
+    noconflictmerge=False,
 ):
     """Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
@@ -1925,6 +2105,8 @@ def concludenode(
             commitmsg = ctx.description()
         extra = {"rebase_source": ctx.hex()}
         extra.update(subtreeutil.get_subtree_metadata(ctx.extra()))
+        if noconflictmerge:
+            extra[mergemod.NOCONFLICT_MERGE_EXTRA] = "1"
         mutinfo = None
         if not keepf:
             mutop = "rebase"
@@ -2193,6 +2375,7 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         #
         # The loop tries to be not rely on the fact that a Mercurial node has
         # at most 2 parents.
+        noconflictmerge = mergemod.is_noconflict_merge(repo[rev])
         for i, p in enumerate(oldps):
             np = p  # new parent
             if any(isancestor(x, dests[i]) for x in successorrevs(repo, p)):
@@ -2234,8 +2417,10 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
 
         # "rebasenode" updates to new p1, and the old p1 will be used as merge
         # base. If only p2 changes, merging using unchanged p1 as merge base is
-        # suboptimal. Therefore swap parents to make the merge sane.
-        if newps[1] != nullrev and oldps[0] == newps[0]:
+        # suboptimal. Therefore swap parents to make the merge sane. A
+        # conflict-free merge is merged again from scratch instead and keeps
+        # its parent order.
+        if newps[1] != nullrev and oldps[0] == newps[0] and not noconflictmerge:
             assert len(newps) == 2 and len(oldps) == 2
             newps.reverse()
             bases.reverse()
@@ -2247,10 +2432,19 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         #    /|    # None of A and B will be changed to D and rebase fails.
         #   A B D
         if set(newps) == set(oldps) and dest not in newps:
-            raise error.Abort(
-                _("cannot rebase %s without moving at least one of its parents")
-                % (repo[rev])
-            )
+            if noconflictmerge:
+                # A conflict-free merge has no content of its own, so it can
+                # also move backwards: a destination that is an ancestor of
+                # exactly one parent replaces that parent. An ancestor of
+                # both could mean either and stays an error.
+                below = [i for i, p in enumerate(oldps) if isancestor(dest, p)]
+                if len(below) == 1:
+                    newps[below[0]] = dest
+            if set(newps) == set(oldps) and dest not in newps:
+                raise error.Abort(
+                    _("cannot rebase %s without moving at least one of its parents")
+                    % (repo[rev])
+                )
 
     # Source should not be ancestor of dest. The check here guarantees it's
     # impossible. With multi-dest, the initial check does not cover complex
@@ -2279,7 +2473,12 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     # But our merge base candidates (D and E in above case) could still be
     # better than the default (ancestor(F, Z) == null). Therefore still
     # pick one (so choose p1 above).
-    if sum(1 for b in bases if b != nullrev) > 1:
+    # A conflict-free merge is merged again from its parents or dropped when
+    # they end up on one line; its diff is never replayed, so the merge base
+    # does not matter.
+    if not mergemod.is_noconflict_merge(repo[rev]) and (
+        sum(1 for b in bases if b != nullrev) > 1
+    ):
         unwanted = [None, None]  # unwanted[i]: unwanted revs if choose bases[i]
         for i, base in enumerate(bases):
             if base == nullrev:
