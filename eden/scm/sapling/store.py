@@ -344,7 +344,7 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
         self._rsrepo.invalidatemetalog()
         return self.__dict__.pop("metalog", None)
 
-    def metaopen(self, path, mode="r"):
+    def metaopen(self, path, mode="r", mirror=True):
         assert path in self.metapaths
         # Return a virtual file that is backed by self.metalog
         if mode in {"r", "rb"}:
@@ -355,8 +355,9 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
                 self.metalog.set(path, content)
                 # Also write to disk for compatibility (ex. shell completion
                 # script might read them).
-                legacypath = self.join(path)
-                util.replacefile(legacypath, content)
+                if mirror:
+                    legacypath = self.join(path)
+                    util.replacefile(legacypath, content)
 
             return writablestream(write)
         else:

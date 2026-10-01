@@ -142,15 +142,11 @@ test sharing bookmarks
    * bm1                       c2e0ac586386
      bm3                       c2e0ac586386
 
-check whether HG_PENDING makes pending changes only in related
-repositories visible to an external hook.
+Check whether pending changes are visible only in related repositories from an
+external hook.
 
-In "sl share" case, another transaction can't run in other
-repositories sharing same source repository, because starting
-transaction requires locking store of source repository.
-
-Therefore, this test scenario ignores checking visibility of
-.sl/bookmarks.pending in repo2, which shares repo1 without bookmarks.
+repo1 and repo3 share bookmark state, so both should read the pending metalog
+root. repo2 has independent bookmark state and should not see the change.
 
   $ cat > $TESTTMP/checkbookmarks.sh <<EOF
   > echo "@repo1"
@@ -173,11 +169,9 @@ Therefore, this test scenario ignores checking visibility of
   @repo3
      bm1                       c2e0ac586386
    * bm3                       c2e0ac586386
-  transaction abort!
-  rollback completed
+     bmX                       c2e0ac586386
   abort: pretxnclose hook exited with status 1
   [255]
-XXX: bmX should show up for repo3.
   $ sl book bm1
 
 In the unshared case, a bookmark being added in repo2 is not visible in repo1.
@@ -193,8 +187,6 @@ In the unshared case, a bookmark being added in repo2 is not visible in repo1.
   @repo3
      bm1                       c2e0ac586386
    * bm3                       c2e0ac586386
-  transaction abort!
-  rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
   $ sl book bm2
@@ -214,8 +206,6 @@ because HG_SHAREDPENDING refers to repo1.
      bm1                       c2e0ac586386
      bm3                       c2e0ac586386
    * bmX                       c2e0ac586386
-  transaction abort!
-  rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
   $ sl book bm3

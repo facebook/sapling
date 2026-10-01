@@ -19,22 +19,56 @@
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ sl cloud join -q
 
-An external transaction hook is incompatible with lock-free cloud sync.
+An external transaction hook works with lock-free cloud sync.
 
   $ touch draft
   $ sl commit -Aqm draft
   $ sl --config hooks.txnclose.repro=true cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   ...
-  Traceback (most recent call last):
-  ...
-  sapling.error.ProgrammingError: unsupported in lockfree transaction
-  [1]
+  commitcloud: commits synchronized
+  finished in * (glob)
 
-The upload succeeded even though the command failed while preparing the hook.
+The upload succeeded and does not need to be retried.
 
   $ sl cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
+
+  $ cd $TESTTMP
+  $ eagerepo
+
+  $ cat > $TESTTMP/ext.py <<'EOF'
+  > import os
+  > 
+  > from sapling import registrar
+  > 
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > 
+  > @command("debuglockfreebookmark", [], "BOOKMARK")
+  > def lockfreebookmark(ui, repo, bookmark):
+  >     with repo.transaction("lockfree", lockfree=True) as tx:
+  >         repo._bookmarks.applychanges(repo, tx, [(bookmark, repo["."].node())])
+  > 
+  > @command("debugcheckpendingbookmark", [], "")
+  > def checkpendingbookmark(ui, repo):
+  >     assert os.environ.get("HG_PENDING_METALOG")
+  >     assert not os.environ.get("HG_PENDING")
+  >     assert not repo.svfs.exists("bookmarks.pending")
+  >     assert "pending" in repo._bookmarks
+  >     ui.write("pending\n")
+  > EOF
+
+  $ newrepo hooks
+  $ touch A
+  $ sl commit -Aqm A
+
+Lock-free hooks read generated bookmarks from the pending metalog without a
+legacy bookmarks.pending file.
+
+  $ setconfig extensions.ext=$TESTTMP/ext.py
+  $ sl --config hooks.pretxnclose="sl debugcheckpendingbookmark" debuglockfreebookmark pending
+  pending
