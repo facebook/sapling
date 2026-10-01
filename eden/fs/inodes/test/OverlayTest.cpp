@@ -24,11 +24,16 @@
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <csignal>
+#include <cstdlib>
+#include <optional>
 #include <string_view>
 #include <thread>
+#include <tuple>
 
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/SpawnedProcess.h"
+#include "eden/common/utils/test/ScopedEnvVar.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMetadata.h"
@@ -1461,9 +1466,12 @@ struct WalLifecycleOverlay {
 WalLifecycleOverlay makeWalLifecycleOverlay(
     const AbsolutePath& dir,
     CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive,
-    uint64_t walMinCompactionThreshold = 0) {
+    uint64_t walMinCompactionThreshold = 0,
+    bool cacheWalFiles = true) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+  rawConfig->experimentalOverlayCacheWalFiles.setValue(
+      cacheWalFiles, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayWalMinCompactionThreshold.setValue(
       walMinCompactionThreshold, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
@@ -2078,6 +2086,180 @@ TEST(WalRenameTest, sameDirRenameAppendsBothEntries) {
   EXPECT_TRUE(bundle.store->hasWal(parent));
 
   bundle.overlay->close();
+}
+
+/// Checks variable-length object IDs through WAL-backed directory mutations.
+class OverlayWalObjectIdTest
+    : public ::testing::TestWithParam<std::tuple<size_t, bool>> {
+ protected:
+  enum class Mutation {
+    Add,
+    RenameWithinDirectory,
+    RenameAcrossDirectories,
+    RenameOverExistingEntry,
+    RenameCaseOnly,
+  };
+
+  void verifyMutation(Mutation mutation, const AbsolutePath& dir) {
+    const auto [idSize, cacheWalFiles] = GetParam();
+    const bool crossDirectory = mutation == Mutation::RenameAcrossDirectories;
+    const bool caseOnly = mutation == Mutation::RenameCaseOnly;
+    const auto caseSensitivity =
+        caseOnly ? CaseSensitivity::Insensitive : CaseSensitivity::Sensitive;
+    const auto srcName = "source"_pc;
+    const auto dstName = caseOnly ? "SOURCE"_pc : "target"_pc;
+    constexpr auto kMode = S_IFREG | 0640;
+    constexpr auto kAclState = AclRootState::RestrictedAclRoot;
+    std::string idBytes(idSize, '\x85');
+    idBytes[idSize / 2] = '\0';
+    const ObjectId id{folly::ByteRange{folly::StringPiece{idBytes}}};
+
+    auto bundle =
+        makeWalLifecycleOverlay(dir, caseSensitivity, 0, cacheWalFiles);
+    ASSERT_NE(nullptr, bundle.store);
+    const auto src = bundle.overlay->allocateInodeNumber();
+    const auto dst =
+        crossDirectory ? bundle.overlay->allocateInodeNumber() : src;
+    const auto child = bundle.overlay->allocateInodeNumber();
+    DirContents srcContent(caseSensitivity);
+    DirContents separateDstContent(caseSensitivity);
+    auto& dstContent = crossDirectory ? separateDstContent : srcContent;
+    if (mutation != Mutation::Add) {
+      srcContent.emplace(srcName, kMode, child, id, kAclState);
+    }
+    bundle.overlay->saveOverlayDir(src, srcContent);
+    if (crossDirectory) {
+      bundle.overlay->saveOverlayDir(dst, dstContent);
+    }
+
+    // Exercise a nonempty WAL, including a conflicting destination record.
+    if (!caseOnly) {
+      const auto replaced = bundle.overlay->allocateInodeNumber();
+      auto [it, inserted] =
+          dstContent.emplace(dstName, S_IFREG | 0600, replaced);
+      ASSERT_TRUE(inserted);
+      bundle.overlay->addChild(dst, *it, dstContent);
+      if (mutation != Mutation::RenameOverExistingEntry) {
+        dstContent.erase(dstName);
+        bundle.overlay->removeChild(dst, dstName, dstContent);
+      }
+    }
+    const auto sentinel = bundle.overlay->allocateInodeNumber();
+    auto [sentinelIt, inserted] =
+        dstContent.emplace("sentinel"_pc, S_IFREG | 0644, sentinel);
+    ASSERT_TRUE(inserted);
+    bundle.overlay->addChild(dst, *sentinelIt, dstContent);
+    ASSERT_TRUE(bundle.store->hasWal(dst));
+
+    if (mutation != Mutation::Add) {
+      srcContent.erase(srcName);
+    }
+    dstContent.erase(dstName);
+    auto [childIt, childInserted] =
+        dstContent.emplace(dstName, kMode, child, id, kAclState);
+    ASSERT_TRUE(childInserted);
+    if (mutation == Mutation::Add) {
+      bundle.overlay->addChild(dst, *childIt, dstContent);
+    } else {
+      bundle.overlay->renameChild(
+          src, dst, srcName, dstName, srcContent, dstContent);
+    }
+    if (idSize == 255) {
+      EXPECT_TRUE(bundle.store->hasWal(dst));
+    }
+
+    const auto later = bundle.overlay->allocateInodeNumber();
+    auto [laterIt, laterInserted] =
+        dstContent.emplace("later"_pc, S_IFREG | 0644, later);
+    ASSERT_TRUE(laterInserted);
+    bundle.overlay->addChild(dst, *laterIt, dstContent);
+    bundle.overlay->close();
+
+    auto reopened =
+        makeWalLifecycleOverlay(dir, caseSensitivity, 0, cacheWalFiles);
+    auto loaded = reopened.overlay->loadOverlayDir(dst);
+    ASSERT_EQ(3u, loaded.size());
+    auto loadedChild = loaded.find(dstName);
+    ASSERT_NE(loaded.end(), loadedChild);
+    EXPECT_EQ(dstName.view(), loadedChild->first.view());
+    EXPECT_EQ(child, loadedChild->second.getInodeNumber());
+    ASSERT_FALSE(loadedChild->second.isMaterialized());
+    EXPECT_EQ(id, loadedChild->second.getObjectId());
+    EXPECT_EQ(kMode, loadedChild->second.getInitialMode());
+    EXPECT_EQ(kAclState, loadedChild->second.aclRootState());
+    EXPECT_EQ(sentinel, loaded.at("sentinel"_pc).getInodeNumber());
+    EXPECT_EQ(later, loaded.at("later"_pc).getInodeNumber());
+    if (crossDirectory) {
+      EXPECT_TRUE(reopened.overlay->loadOverlayDir(src).empty());
+    } else if (!caseOnly) {
+      EXPECT_EQ(loaded.end(), loaded.find(srcName));
+    }
+    reopened.overlay->close();
+  }
+
+  void runMutation(Mutation mutation) {
+    constexpr char kDirectoryEnv[] = "EDEN_TEST_WAL_OBJECT_ID_DIRECTORY";
+    std::optional<folly::test::TemporaryDirectory> tmp;
+    ScopedEnvVar directoryEnv{folly::StringPiece{kDirectoryEnv}};
+    // Re-executed death-test children borrow the parent's directory so the
+    // parent still removes it when the child aborts without running
+    // destructors.
+    if (std::getenv(kDirectoryEnv) == nullptr) {
+      tmp.emplace("eden_wal_object_id");
+      directoryEnv.set(tmp->path().string());
+    }
+    const auto dir = canonicalPath(std::getenv(kDirectoryEnv));
+    if (std::get<0>(GetParam()) == 255) {
+      verifyMutation(mutation, dir);
+      return;
+    }
+    GTEST_FLAG_SET(death_test_style, "threadsafe");
+    // FIXME: Valid object IDs must survive and satisfy verifyMutation().
+    // Remove this death expectation when oversized ADDs can be persisted.
+    ASSERT_EXIT(
+        {
+          verifyMutation(mutation, dir);
+          std::_Exit(::testing::Test::HasFailure() ? 1 : 0);
+        },
+        ::testing::KilledBySignal(SIGABRT),
+        "(256|262) vs. 255");
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    ObjectIdBoundaries,
+    OverlayWalObjectIdTest,
+    ::testing::Combine(::testing::Values(255u, 256u, 262u), ::testing::Bool()),
+    [](const ::testing::TestParamInfo<OverlayWalObjectIdTest::ParamType>&
+           info) {
+      return "Bytes" + std::to_string(std::get<0>(info.param)) +
+          (std::get<1>(info.param) ? "Cached" : "Uncached");
+    });
+
+TEST_P(OverlayWalObjectIdTest, addPreservesObjectIdAcrossRestart) {
+  runMutation(Mutation::Add);
+}
+
+TEST_P(
+    OverlayWalObjectIdTest,
+    sameDirectoryRenamePreservesObjectIdAcrossRestart) {
+  runMutation(Mutation::RenameWithinDirectory);
+}
+
+TEST_P(
+    OverlayWalObjectIdTest,
+    crossDirectoryRenamePreservesObjectIdAcrossRestart) {
+  runMutation(Mutation::RenameAcrossDirectories);
+}
+
+TEST_P(
+    OverlayWalObjectIdTest,
+    renameOverExistingEntryPreservesObjectIdAcrossRestart) {
+  runMutation(Mutation::RenameOverExistingEntry);
+}
+
+TEST_P(OverlayWalObjectIdTest, caseOnlyRenamePreservesObjectIdAcrossRestart) {
+  runMutation(Mutation::RenameCaseOnly);
 }
 
 TEST(WalRenameTest, caseInsensitiveCaseOnlyRenameAppendsReplacementAdd) {
