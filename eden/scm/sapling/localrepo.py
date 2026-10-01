@@ -1911,12 +1911,15 @@ class localrepository:
                 # In __del__, the repo is no longer valid.
                 return
             if success:
-                # this should be explicitly invoked here, because
-                # in-memory changes aren't written out at closing
-                # transaction, if tr.addfilegenerator (via
-                # dirstate.write or so) isn't invoked while
-                # transaction running
-                repo.dirstate.write(None)
+                # Lock-free transactions do not modify dirstate and might not
+                # hold the working copy lock required to write it.
+                if not tr.lockfree:
+                    # this should be explicitly invoked here, because
+                    # in-memory changes aren't written out at closing
+                    # transaction, if tr.addfilegenerator (via
+                    # dirstate.write or so) isn't invoked while
+                    # transaction running
+                    repo.dirstate.write(None)
                 repo._txnreleased = True
             else:
                 # discard all changes (including ones already written

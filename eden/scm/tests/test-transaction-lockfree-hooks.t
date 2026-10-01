@@ -64,6 +64,7 @@ The upload succeeded and does not need to be retried.
   > @command("debuglockfreewithdirtydirstate", [], "FILE")
   > def lockfreewithdirtydirstate(ui, repo, file):
   >     repo.dirstate.needcheck(file)
+  >     repo.dirstate.setclock("lockfree-test")
   >     with repo.transaction("lockfree", lockfree=True):
   >         pass
   > EOF
@@ -79,7 +80,9 @@ external hook.
   > test -z "$HG_PENDING"
   > test ! -e .sl/dirstate.pending
   > EOF
+  $ cp .sl/dirstate $TESTTMP/dirstate-before-lockfree
   $ sl --config hooks.pretxnclose="sh $TESTTMP/checknodirstatepending.sh" --config extensions.ext=$TESTTMP/ext.py debuglockfreewithdirtydirstate A
+  $ cmp .sl/dirstate $TESTTMP/dirstate-before-lockfree
 
 Lock-free hooks read generated bookmarks from the pending metalog without a
 legacy bookmarks.pending file.
