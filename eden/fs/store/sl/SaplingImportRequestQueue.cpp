@@ -271,7 +271,7 @@ SaplingImportRequestQueue::dequeue() {
     }
   }
 
-  count = std::min(count, queue->size());
+  count = std::min(std::max<size_t>(count, 1), queue->size());
   std::vector<std::shared_ptr<SaplingImportRequest>> result;
   result.reserve(count);
   for (size_t i = 0; i < count; i++) {
