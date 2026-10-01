@@ -6816,6 +6816,12 @@ size_t TreeInode::unloadChildrenNow() {
 
 void TreeInode::recheckHiddenRestrictedDescendants(
     const ObjectFetchContextPtr& context) {
+  // A restricted directory has no readable contents and no loaded children:
+  // there is nothing to walk below it, and it is itself rechecked by its
+  // parent through the hidden list. Reading its contents would throw EACCES.
+  if (isRestricted()) {
+    return;
+  }
   // What goes stale here is the kernel's cached listing of this directory, so
   // a directory the kernel does not hold has nothing to refresh and does not
   // justify a check_permission call. The filter is on the parent: a hidden
