@@ -314,6 +314,69 @@ fn prod_mapping_test_knobs() -> JustKnobsInMemory {
     )]))
 }
 
+#[mononoke::fbinit_test]
+async fn test_unchanged_stage_leaf_preserves_canonical_attribution(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    borrowed!(ctx, repo);
+    let parent = CreateCommitContext::new_root(ctx, repo)
+        .add_file("s", "original line\n")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(ctx, repo, vec![parent])
+        .add_file("outside", "unrelated change")
+        .commit()
+        .await?;
+    let manager = repo.repo_derived_data().manager();
+    let derivation_ctx = manager.derivation_context(None);
+    let stage_path = MPath::new("s")?;
+    let payload = DerivationStagePayload::Manifest(ManifestStagePayload {
+        path: stage_path.clone(),
+        deps: vec![],
+    });
+
+    with_just_knobs_async(
+        namespaced_test_knobs(),
+        async {
+            manager
+                .derive::<RootBlameV2>(ctx, parent, None, DerivationPriority::LOW)
+                .await?;
+            let file_unode = file_unode_of(ctx, repo, parent, "s").await?;
+            let before = load_blame_with_prefix(ctx, &repo.repo_blobstore, file_unode, "")
+                .await?
+                .expect("canonical parent blame should exist");
+
+            // Only the child gets a stage mapping. The manager resolves the
+            // parent's canonical unode and correctly reuses its unchanged leaf.
+            manager
+                .derive_stage_batch::<RootUnodeManifestId>(ctx, vec![child], &payload)
+                .await?;
+            let outputs = RootUnodeManifestId::fetch_stage_outputs(
+                ctx,
+                &derivation_ctx,
+                &StageId::Manifest(stage_path),
+                vec![parent, child],
+            )
+            .await?;
+            assert_eq!(outputs, HashMap::from([(child, Some(Entry::Leaf(file_unode)))]));
+
+            manager
+                .derive_stage_batch::<RootBlameV2>(ctx, vec![child], &payload)
+                .await?;
+            let after = load_blame_with_prefix(ctx, &repo.repo_blobstore, file_unode, "pipeline.")
+                .await?
+                .unwrap_or_else(|| before.clone());
+            assert_eq!(
+                before, after,
+                "commit {child} changed only outside; blame must still attribute the line to {parent}",
+            );
+            anyhow::Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
 /// Derive and store the namespaced unode + blame outputs for a single stage
 /// (any `stage_path`, root or non-root) across a linear chain, threading each
 /// commit's parent stage outputs through unode derivation.

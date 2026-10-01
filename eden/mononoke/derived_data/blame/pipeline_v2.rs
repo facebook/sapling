@@ -162,8 +162,8 @@ impl PipelineDerivable for RootBlameV2 {
                 anyhow!("missing unode stage output for {csid} at stage {stage_path}")
             })?;
 
-            // Resolve each parent's stage-S output once; reused by the tree-arm
-            // diff base and by the stage-scoped rename resolver below.
+            // Resolve each parent's stage-S output once, including canonical
+            // fallback, for leaf reuse, the tree diff, and rename resolution.
             let parent_stage_outputs = resolve_parent_stage_outputs(
                 ctx,
                 derivation,
@@ -199,12 +199,9 @@ impl PipelineDerivable for RootBlameV2 {
                     // Skip only if an identical leaf already exists in a parent
                     // (mirrors `find_intersection_of_diffs`).
                     let entry = Entry::Leaf(file_unode_id);
-                    let reused = bonsai.parents().any(|parent_csid| {
-                        matches!(
-                            unode_outputs.get(&parent_csid),
-                            Some(Some(parent_entry)) if *parent_entry == entry
-                        )
-                    });
+                    let reused = parent_stage_outputs
+                        .values()
+                        .any(|parent_entry| *parent_entry == Some(entry));
                     if !reused {
                         let abs_path: NonRootMPath = stage_path
                             .clone()

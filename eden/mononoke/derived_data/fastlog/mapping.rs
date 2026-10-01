@@ -190,6 +190,10 @@ mod tests {
     use commit_graph::CommitGraphWriter;
     use context::CoreContext;
     use derivation_queue_thrift::DerivationPriority;
+    use derived_data_manager::DerivationStagePayload;
+    use derived_data_manager::ManifestStagePayload;
+    use derived_data_manager::PipelineDerivable;
+    use derived_data_manager::StageId;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -202,6 +206,10 @@ mod tests {
     use fixtures::create_bonsai_changeset_with_author;
     use fixtures::create_bonsai_changeset_with_files;
     use fixtures::store_files;
+    use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_derivation::DeriveHgChangeset;
@@ -212,6 +220,7 @@ mod tests {
     use mononoke_types::fastlog_batch::MAX_BATCHES;
     use mononoke_types::fastlog_batch::MAX_LATEST_LEN;
     use mononoke_types::fastlog_batch::max_entries_in_fastlog_batch;
+    use mononoke_types::path::MPath;
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
@@ -219,9 +228,11 @@ mod tests {
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
+    use tests_utils::CreateCommitContext;
 
     use super::*;
     use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
+    use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id_with_prefix;
     use crate::fastlog_impl::fetch_flattened;
 
     #[derive(Clone)]
@@ -243,6 +254,87 @@ mod tests {
         commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         repo_identity: RepoIdentity,
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unchanged_stage_leaf_preserves_canonical_attribution(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let repo: TestRepo = Linear::get_repo(fb).await;
+        let ctx = &CoreContext::test_mock(fb);
+        let parent = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("s", "original line\n")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(ctx, &repo, vec![parent])
+            .add_file("outside", "unrelated change")
+            .commit()
+            .await?;
+        let manager = repo.repo_derived_data().manager();
+        let derivation_ctx = manager.derivation_context(None);
+        let stage_path = MPath::new("s")?;
+        let payload = DerivationStagePayload::Manifest(ManifestStagePayload {
+            path: stage_path.clone(),
+            deps: vec![],
+        });
+        let knobs = JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
+            KnobVal::Bool(false),
+        )]));
+
+        with_just_knobs_async(
+            knobs,
+            async {
+                manager
+                    .derive::<RootFastlog>(ctx, parent, None, DerivationPriority::LOW)
+                    .await?;
+                let root = manager
+                    .derive::<RootUnodeManifestId>(ctx, parent, None, DerivationPriority::LOW)
+                    .await?;
+                let entry = root
+                    .manifest_unode_id()
+                    .find_entry(ctx.clone(), repo.repo_blobstore.clone(), stage_path.clone())
+                    .await?
+                    .expect("the stage path should exist");
+                assert!(matches!(entry, Entry::Leaf(_)));
+                let before = fetch_list(ctx, &repo, entry).await;
+                assert_eq!(before, vec![(parent, vec![])]);
+
+                manager
+                    .derive_stage_batch::<RootUnodeManifestId>(ctx, vec![child], &payload)
+                    .await?;
+                let outputs = RootUnodeManifestId::fetch_stage_outputs(
+                    ctx,
+                    &derivation_ctx,
+                    &StageId::Manifest(stage_path),
+                    vec![parent, child],
+                )
+                .await?;
+                assert_eq!(outputs, HashMap::from([(child, Some(entry))]));
+
+                manager
+                    .derive_stage_batch::<RootFastlog>(ctx, vec![child], &payload)
+                    .await?;
+                let after = match fetch_fastlog_batch_by_unode_id_with_prefix(
+                    ctx,
+                    &repo.repo_blobstore,
+                    &entry,
+                    "pipeline.",
+                )
+                .await?
+                {
+                    Some(batch) => fetch_flattened(&batch, ctx, &repo.repo_blobstore).await?,
+                    None => before.clone(),
+                };
+                assert_eq!(
+                    before, after,
+                    "commit {child} changed only outside; file history must still point to {parent}",
+                );
+                anyhow::Ok(())
+            }
+            .boxed(),
+        )
+        .await
     }
 
     #[mononoke::fbinit_test]

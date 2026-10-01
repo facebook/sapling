@@ -145,21 +145,32 @@ impl PipelineDerivable for RootFastlog {
             let own_output = *unode_outputs.get(&csid).ok_or_else(|| {
                 anyhow!("missing unode stage output for {csid} at stage {stage_path}")
             })?;
+            let Some(own_output) = own_output else {
+                // No entry at this stage for this changeset: nothing to derive.
+                results.insert(csid, ());
+                continue;
+            };
+            // Resolve canonical-only parents for both leaf reuse and tree diffs.
+            let parent_stage_outputs = resolve_parent_stage_outputs(
+                ctx,
+                derivation,
+                stage_path,
+                bonsai.parents(),
+                &unode_outputs,
+            )
+            .await?;
             let subtree = match own_output {
-                Some(Entry::Tree(subtree)) => subtree,
-                Some(Entry::Leaf(file_unode_id)) => {
+                Entry::Tree(subtree) => subtree,
+                Entry::Leaf(file_unode_id) => {
                     // The stage root itself is a file (e.g. a directory replaced
                     // by a file). Canonical fastlog records a batch for that leaf
                     // unode, but the parent stage prunes path S, so this child
                     // stage owns it. Mirror `find_intersection_of_diffs`: skip
                     // only if an identical leaf already exists in a parent.
                     let entry = Entry::Leaf(file_unode_id);
-                    let reused = bonsai.parents().any(|parent_csid| {
-                        matches!(
-                            unode_outputs.get(&parent_csid),
-                            Some(Some(parent_entry)) if *parent_entry == entry
-                        )
-                    });
+                    let reused = parent_stage_outputs
+                        .values()
+                        .any(|parent_entry| *parent_entry == Some(entry));
                     if !reused {
                         let blobstore = derivation.blobstore();
                         let parents = fetch_unode_parents(ctx, blobstore, entry).await?;
@@ -183,22 +194,9 @@ impl PipelineDerivable for RootFastlog {
                     results.insert(csid, ());
                     continue;
                 }
-                None => {
-                    // No entry at this stage for this changeset: nothing to derive.
-                    results.insert(csid, ());
-                    continue;
-                }
             };
 
-            let parent_subtrees = resolve_parent_stage_outputs(
-                ctx,
-                derivation,
-                stage_path,
-                bonsai.parents(),
-                &unode_outputs,
-            )
-            .await?;
-            let parent_subtree_ids: Vec<ManifestUnodeId> = parent_subtrees
+            let parent_subtree_ids: Vec<ManifestUnodeId> = parent_stage_outputs
                 .values()
                 .filter_map(|e| (*e).and_then(Entry::into_tree))
                 .collect();
