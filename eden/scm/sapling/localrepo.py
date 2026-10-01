@@ -2005,7 +2005,12 @@ class localrepository:
 
                 repo.hook("txnclose", throw=False, txnname=desc, **hookargs)
 
-            reporef()._afterlock(hookfunc)
+            if tr2.lockfree:
+                # There is no lock to defer the hook through. Run it after the
+                # transaction has committed its final metalog root instead.
+                tr2.addpostclose("txnclose-hook", lambda _tr: hookfunc())
+            else:
+                reporef()._afterlock(hookfunc)
 
         tr.addfinalize("txnclose-hook", txnclosehook)
         tr.addpostclose("warms-cache", self._buildcacheupdater(tr))

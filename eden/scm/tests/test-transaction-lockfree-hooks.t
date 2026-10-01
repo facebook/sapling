@@ -87,3 +87,14 @@ legacy bookmarks.pending file.
   $ setconfig extensions.ext=$TESTTMP/ext.py
   $ sl --config hooks.pretxnclose="sl debugcheckpendingbookmark" debuglockfreebookmark pending
   pending
+
+A lock-free txnclose hook runs after the final metalog root is committed.
+
+  $ cat > $TESTTMP/checkclosedbookmark.sh <<'EOF'
+  > test -z "$HG_PENDING_METALOG"
+  > sl bookmarks -T '{bookmark}\n' > $TESTTMP/closed-bookmarks
+  > EOF
+  $ sl --config hooks.txnclose="sh $TESTTMP/checkclosedbookmark.sh" --config extensions.ext=$TESTTMP/ext.py debuglockfreebookmark closed
+  $ cat $TESTTMP/closed-bookmarks
+  closed
+  pending
