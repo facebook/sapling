@@ -57,6 +57,7 @@ class JournalDelta {
 
   /** The ID of this Delta in the Journal */
   JournalDelta::SequenceNumber sequenceID;
+  JournalDelta::SequenceNumber earliestSequenceID;
   /** The time at which the change was recorded. */
   std::chrono::steady_clock::time_point time;
 };

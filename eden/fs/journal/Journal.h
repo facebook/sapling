@@ -265,9 +265,9 @@ class Journal {
 
     JournalDelta::SequenceNumber getFrontSequenceID() const {
       if (isFileChangeInFront()) {
-        return fileChangeDeltas.front().sequenceID;
+        return fileChangeDeltas.front().earliestSequenceID;
       } else {
-        return rootUpdateDeltas.front().sequenceID;
+        return rootUpdateDeltas.front().earliestSequenceID;
       }
     }
 

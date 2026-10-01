@@ -188,6 +188,7 @@ bool Journal::compact(FileChangeJournalDelta& delta, DeltaState& deltaState) {
     deltaState.stats->latestTimestamp = delta.time;
     deltaState.deltaMemoryUsage -= back->estimateMemoryUsage();
     deltaState.deltaMemoryUsage += delta.estimateMemoryUsage();
+    delta.earliestSequenceID = back->earliestSequenceID;
     *back = std::move(delta);
     return true;
   }
@@ -203,6 +204,7 @@ bool Journal::compact(
 template <typename T>
 bool Journal::addDeltaBeforeNotifying(T&& delta, DeltaState& deltaState) {
   delta.sequenceID = deltaState.nextSequence++;
+  delta.earliestSequenceID = delta.sequenceID;
   delta.time = std::chrono::steady_clock::now();
 
   truncateIfNecessary(deltaState);
