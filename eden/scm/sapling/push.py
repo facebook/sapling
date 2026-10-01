@@ -7,9 +7,9 @@ from collections import defaultdict
 from enum import Enum
 from typing import Dict, List, Optional
 
-from . import edenapi_upload, error, hg, mutation, scmutil
+from . import edenapi_upload, error, hg, merge as mergemod, mutation, scmutil
 from .bookmarks import readremotenames, saveremotenames
-from .i18n import _, _n, _x
+from .i18n import _, _n, _x, limititems
 from .node import bin, hex, nullhex, short
 
 MUTATION_KEYS = {"mutpred", "mutuser", "mutdate", "mutop", "mutsplit"}
@@ -136,11 +136,43 @@ def get_draft_nodes(repo, dest, head_node, remote_bookmark, curr_bookmark_val):
             visible=False,
         )
     draft_nodes = repo.dageval(lambda: only([head_node], public()))
+    # Must come before the generic merge check below: that one makes the
+    # caller fall back to the bundle path instead of aborting.
+    check_no_noconflict_merges(repo, draft_nodes)
     if repo.dageval(lambda: merges(draft_nodes)):
         raise error.UnsupportedEdenApiPush(
             _("merge commit is not supported by EdenApi push yet")
         )
     return draft_nodes
+
+
+def check_no_noconflict_merges(repo, nodes):
+    """Abort if `nodes` contains a merge created by 'merge --noconflict'.
+    Such a commit only records that its parents can be merged automatically
+    and must be linearized before publication. Commit Cloud backup uses a separate upload
+    path and preserves it. The check can be turned off with
+    push.reject-noconflict-merges=false."""
+    if not repo.ui.configbool("push", "reject-noconflict-merges", True):
+        return
+    merges = [
+        ctx
+        for ctx in repo.set("%ln & merge()", list(nodes))
+        if mergemod.is_noconflict_merge(ctx)
+    ]
+    if merges:
+        lines = limititems(["%s %s" % (ctx, ctx.shortdescription()) for ctx in merges])
+        raise error.Abort(
+            _n(
+                "cannot push conflict-free merge:\n  %s",
+                "cannot push conflict-free merges:\n  %s",
+                len(merges),
+            )
+            % "\n  ".join(lines),
+            hint=_(
+                "such a merge only records that its parents can be merged "
+                "automatically; push or land the parents and descendants instead"
+            ),
+        )
 
 
 def upload_draft_nodes(repo, draft_nodes):

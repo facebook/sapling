@@ -747,6 +747,9 @@ def _pushcheckoutgoing(pushop):
         scmutil.nochangesfound(unfi.ui, unfi, outgoing.excluded)
         return False
     # something to push
+    from . import push as pushmod
+
+    pushmod.check_no_noconflict_merges(unfi, outgoing.missing)
     if not pushop.force:
         mso = _("push includes obsolete changeset: %s!")
         # XXX: unstable (descendant of obsolete()) is not checked here

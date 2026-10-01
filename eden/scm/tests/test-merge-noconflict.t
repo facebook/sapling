@@ -2,6 +2,7 @@
 
   $ eagerepo
   $ enable amend rebase
+  $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ newclientrepo
 
 A conflict-free merge of two commits touching different regions of a file is
@@ -112,6 +113,13 @@ edited
   $ sl goto -q '.^'
   $ sl uncommit
   abort: cannot uncommit merge changeset
+  [255]
+
+It cannot be pushed
+  $ sl push -r . --to scratch/test --create
+  abort: cannot push conflict-free merge:
+    * b and c, renamed twice (glob)
+  (such a merge only records that its parents can be merged automatically; push or land the parents and descendants instead)
   [255]
 
 A plain merge is not marked
