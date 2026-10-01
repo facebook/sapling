@@ -19,7 +19,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_watchdog::WatchdogExt;
-use mononoke_macros::mononoke;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
@@ -356,27 +355,6 @@ pub(crate) fn classify_child<T, Leaf>(
     }
 }
 
-/// Apply a [`classify_child`] result: output the leaf diff, and queue the subtree
-/// diff (carrying `replacements`) subject to the pruner.
-fn push_child<TreeId, Leaf, Pruner, Replacements>(
-    (output, recurse): (Option<Diff<Entry<TreeId, Leaf>>>, Option<Diff<TreeId>>),
-    outs: &mut Vec<Diff<Entry<TreeId, Leaf>>>,
-    recurse_work: &mut Vec<(Diff<TreeId>, Replacements)>,
-    replacements: Replacements,
-    recurse_pruner: &Pruner,
-) where
-    Pruner: Fn(&Diff<TreeId>) -> bool,
-{
-    if let Some(output) = output {
-        outs.push(output);
-    }
-    if let Some(work) = recurse {
-        if recurse_pruner(&work) {
-            recurse_work.push((work, replacements));
-        }
-    }
-}
-
 /// Compare the children of two directory tries, returning only the children that
 /// differ as `(element, old_entry, new_entry)` tuples (`None` on a side means the
 /// child is absent there). Identical sub-shards are pruned by their
@@ -473,9 +451,8 @@ where
 /// the old side as the comparison descends, returning the child `Diff`s plus the
 /// subtree work to recurse into.
 ///
-/// The sharding-aware counterpart of [`diff_manifest_node_by_listing`]: identical
-/// sub-shards are pruned by their content-addressed id without being loaded, and a
-/// replacement only disables that pruning along the byte path leading to it.
+/// Identical sub-shards are pruned by ID without being loaded. A replacement
+/// only disables that pruning along the byte path leading to it.
 pub(crate) async fn diff_manifest_node<TreeId, Leaf, Store, Pruner>(
     ctx: &CoreContext,
     old_store: &Store,
@@ -505,39 +482,20 @@ where
         Diff::Added(path, new_id) => (path, None, Some(new_id)),
         Diff::Removed(path, old_id) => (path, Some(old_id), None),
     };
-    let (old_mf, new_mf) = future::try_join(
-        async {
-            match old_id {
-                Some(old_id) => anyhow::Ok(Some(old_id.load(ctx, old_store).watched().await?)),
-                None => anyhow::Ok(None),
-            }
-        },
-        async {
-            match new_id {
-                Some(new_id) => anyhow::Ok(Some(new_id.load(ctx, new_store).watched().await?)),
-                None => anyhow::Ok(None),
-            }
-        },
-    )
-    .await?;
-
+    let load_trie = async |id: Option<&TreeId>, store: &Store| match id {
+        Some(id) => Ok(Some(
+            id.load(ctx, store)
+                .watched()
+                .await?
+                .into_trie_map(ctx, store)
+                .await?,
+        )),
+        None => anyhow::Ok(None),
+    };
+    let (old_trie, new_trie) =
+        future::try_join(load_trie(old_id, old_store), load_trie(new_id, new_store)).await?;
     let mut outs = Vec::new();
     let mut recurse = Vec::new();
-    let (old_trie, new_trie) = future::try_join(
-        async {
-            match old_mf {
-                Some(old_mf) => anyhow::Ok(Some(old_mf.into_trie_map(ctx, old_store).await?)),
-                None => anyhow::Ok(None),
-            }
-        },
-        async {
-            match new_mf {
-                Some(new_mf) => anyhow::Ok(Some(new_mf.into_trie_map(ctx, new_store).await?)),
-                None => anyhow::Ok(None),
-            }
-        },
-    )
-    .await?;
 
     for (name, old, new) in diff_trie_children(
         ctx,
@@ -555,13 +513,13 @@ where
             .cloned()
             .unwrap_or_default()
             .subentries;
-        push_child(
-            classify_child(child_path, old, new),
-            &mut outs,
-            &mut recurse,
-            child_replacements,
-            &recurse_pruner,
-        );
+        let (output, work) = classify_child(child_path, old, new);
+        outs.extend(output);
+        if let Some(work) = work
+            && recurse_pruner(&work)
+        {
+            recurse.push((work, child_replacements));
+        }
     }
     outs.push(match work {
         Diff::Changed(path, old_id, new_id) => {
@@ -573,148 +531,10 @@ where
     Ok((outs, recurse))
 }
 
-/// Diff a single node by listing both sides and substituting old-side entries
-/// with any `replacements`, returning the child `Diff`s plus the subtree work to
-/// recurse into (with the pruner already applied, and the replacements that
-/// apply within each subtree).
-///
-/// This is the list-based per-node core used by
-/// [`crate::ManifestOps::filtered_diff_slow`], which stays generic over manifest
-/// types without `TrieMapOps` (e.g. history manifests), so it must not depend on
-/// `TrieMapOps`. `work` is the node to expand: `Changed` compares both sides,
-/// `Added`/`Removed` enumerate one side (a replacement injects the opposite
-/// side).
-pub(crate) async fn diff_manifest_node_by_listing<TreeId, Leaf, Store, Pruner>(
-    ctx: &CoreContext,
-    old_store: &Store,
-    new_store: &Store,
-    work: Diff<TreeId>,
-    replacements: PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
-    recurse_pruner: Pruner,
-) -> Result<(
-    Vec<Diff<Entry<TreeId, Leaf>>>,
-    Vec<(
-        Diff<TreeId>,
-        PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
-    )>,
-)>
-where
-    Store: Clone + Send + Sync + 'static,
-    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
-    <TreeId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    Leaf: Clone + Send + Eq + Unpin + 'static,
-    // Owned (not `&Pruner`) so the future stays `Send` without requiring
-    // `Pruner: Sync` -- `RecursePruner` on the diff APIs is only `Send`.
-    Pruner: Fn(&Diff<TreeId>) -> bool + Send,
-{
-    let mut outs: Vec<Diff<Entry<TreeId, Leaf>>> = Vec::new();
-    let mut recurse: Vec<(
-        Diff<TreeId>,
-        PrefixTree<PathTree<Option<Entry<TreeId, Leaf>>>>,
-    )> = Vec::new();
-    match work {
-        Diff::Changed(path, left, right) => {
-            let l = mononoke::spawn_task({
-                cloned!(ctx, left, old_store);
-                async move { left.load(&ctx, &old_store).watched().await }
-            });
-            let r = mononoke::spawn_task({
-                cloned!(ctx, right, new_store);
-                async move { right.load(&ctx, &new_store).watched().await }
-            });
-            let (left_mf, right_mf) = future::try_join(l, r).await?;
-            let (left_mf, right_mf) = (left_mf?, right_mf?);
-
-            let mut stream = left_mf.list(ctx, old_store).await?;
-            while let Some((name, left)) = stream.try_next().await? {
-                tokio::task::consume_budget().await;
-                let child_path = path.join(&name);
-                let PathTree {
-                    value: replacement,
-                    subentries: child_replacements,
-                } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
-                let left = replacement.unwrap_or(left);
-                let right = right_mf.lookup(ctx, new_store, &name).await?;
-                if right.as_ref() != Some(&left) {
-                    push_child(
-                        classify_child(child_path, Some(left), right),
-                        &mut outs,
-                        &mut recurse,
-                        child_replacements,
-                        &recurse_pruner,
-                    );
-                }
-            }
-
-            let mut stream = right_mf.list(ctx, new_store).await?;
-            while let Some((name, right)) = stream.try_next().await? {
-                tokio::task::consume_budget().await;
-                if left_mf.lookup(ctx, old_store, &name).await?.is_none() {
-                    let child_path = path.join(&name);
-                    let PathTree {
-                        value: replacement,
-                        subentries: child_replacements,
-                    } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
-                    push_child(
-                        classify_child(child_path, replacement, Some(right)),
-                        &mut outs,
-                        &mut recurse,
-                        child_replacements,
-                        &recurse_pruner,
-                    );
-                }
-            }
-            outs.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
-        }
-        Diff::Added(path, tree) => {
-            let manifest = tree.load(ctx, new_store).await?;
-            let mut stream = manifest.list(ctx, new_store).await?;
-            while let Some((name, right)) = stream.try_next().await? {
-                tokio::task::consume_budget().await;
-                let child_path = path.join(&name);
-                let PathTree {
-                    value: replacement,
-                    subentries: child_replacements,
-                } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
-                push_child(
-                    classify_child(child_path, replacement, Some(right)),
-                    &mut outs,
-                    &mut recurse,
-                    child_replacements,
-                    &recurse_pruner,
-                );
-            }
-            outs.push(Diff::Added(path, Entry::Tree(tree)));
-        }
-        Diff::Removed(path, tree) => {
-            let manifest = tree.load(ctx, old_store).await?;
-            let mut stream = manifest.list(ctx, old_store).await?;
-            while let Some((name, entry)) = stream.try_next().await? {
-                tokio::task::consume_budget().await;
-                let child_path = path.join(&name);
-                let PathTree {
-                    value: replacement,
-                    subentries: child_replacements,
-                } = replacements.get(name.as_ref()).cloned().unwrap_or_default();
-                let entry = replacement.unwrap_or(entry);
-                push_child(
-                    classify_child(child_path, Some(entry), None),
-                    &mut outs,
-                    &mut recurse,
-                    child_replacements,
-                    &recurse_pruner,
-                );
-            }
-            outs.push(Diff::Removed(path, Entry::Tree(tree)));
-        }
-    }
-    Ok((outs, recurse))
-}
-
 /// Sharding-aware ordered child diff for a single directory level: the children
 /// that differ between `old_id` and `new_id`, sorted by element name, as weighted
-/// entries (matching `OrderedManifest::list_weighted`'s shape).
+/// entries (matching `OrderedManifest::list_weighted`'s shape). Either directory
+/// may be absent when its subtree is added or removed.
 ///
 /// Drives [`diff_trie_children`] with the weighted view of each directory, so the
 /// rollup weights come out of the comparison itself. Identical sub-shards are
@@ -722,9 +542,9 @@ where
 pub(crate) async fn diff_weighted_children<TreeId, Leaf, Store>(
     ctx: &CoreContext,
     old_store: &Store,
-    old_id: &TreeId,
+    old_id: Option<&TreeId>,
     new_store: &Store,
-    new_id: &TreeId,
+    new_id: Option<&TreeId>,
     replacements: PrefixTree<PathTree<Option<Entry<(Weight, TreeId), Leaf>>>>,
 ) -> Result<
     Vec<(
@@ -742,23 +562,19 @@ where
     <<TreeId as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
         TrieMapOps<Store, Entry<(Weight, TreeId), Leaf>> + Eq + 'static,
 {
-    let (old_mf, new_mf) =
-        future::try_join(old_id.load(ctx, old_store), new_id.load(ctx, new_store)).await?;
-    let (old_trie, new_trie) = future::try_join(
-        old_mf.into_weighted_trie_map(ctx, old_store),
-        new_mf.into_weighted_trie_map(ctx, new_store),
-    )
-    .await?;
-
-    let mut differing = diff_trie_children(
-        ctx,
-        new_store,
-        Some(new_trie),
-        old_store,
-        Some(old_trie),
-        replacements,
-    )
-    .await?;
+    let load_trie = async |id: Option<&TreeId>, store: &Store| match id {
+        Some(id) => Ok(Some(
+            id.load(ctx, store)
+                .await?
+                .into_weighted_trie_map(ctx, store)
+                .await?,
+        )),
+        None => anyhow::Ok(None),
+    };
+    let (old_trie, new_trie) =
+        future::try_join(load_trie(old_id, old_store), load_trie(new_id, new_store)).await?;
+    let mut differing =
+        diff_trie_children(ctx, new_store, new_trie, old_store, old_trie, replacements).await?;
     // The ordered scheduler consumes children in element order.
     differing.sort_by(|(a, ..), (b, ..)| a.cmp(b));
     Ok(differing)

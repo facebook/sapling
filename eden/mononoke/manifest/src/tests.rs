@@ -40,6 +40,7 @@ pub(crate) use crate::PathOrPrefix;
 pub(crate) use crate::TreeInfo;
 pub(crate) use crate::derive_manifest_with_known_entries;
 pub(crate) use crate::find_intersection_of_diffs;
+use crate::find_intersection_of_diffs_and_parents_pruned;
 pub(crate) use crate::flatten_subentries;
 
 pub mod test_manifest;
@@ -1090,6 +1091,88 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
 }
 
 #[mononoke::fbinit_test]
+async fn test_diff_ordered_one_sided_replacements(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let old_store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let new_store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let old = derive_test_manifest(
+        &ctx,
+        &old_store,
+        vec![],
+        btreemap! {
+            "removed/original" => Some("original"),
+            "removed/unchanged" => Some("unchanged"),
+        },
+    )
+    .await?
+    .expect("expect non empty manifest");
+    let new = derive_test_manifest(
+        &ctx,
+        &new_store,
+        vec![],
+        btreemap! {
+            "added/new" => Some("new"),
+            "added/same" => Some("same"),
+        },
+    )
+    .await?
+    .expect("expect non empty manifest");
+    let replacement = Entry::Leaf((
+        FileType::Regular,
+        TestLeaf::new("replacement").store(&ctx, &old_store).await?,
+    ));
+    let same = Entry::Leaf((
+        FileType::Regular,
+        TestLeaf::new("same").store(&ctx, &old_store).await?,
+    ));
+
+    let diffs: Vec<_> = old
+        .filtered_diff_ordered(
+            ctx,
+            old_store,
+            new,
+            new_store,
+            None,
+            Some,
+            |_| true,
+            HashMap::from([
+                (MPath::new("added/injected")?, replacement.clone()),
+                (MPath::new("added/same")?, same),
+                (MPath::new("removed/injected")?, replacement.clone()),
+                (MPath::new("removed/original")?, replacement.clone()),
+            ]),
+        )
+        .try_collect()
+        .await?;
+
+    assert_eq!(
+        diffs
+            .iter()
+            .cloned()
+            .map(describe_diff_item)
+            .collect::<Vec<_>>(),
+        vec![
+            "C (none)/",
+            "A added/",
+            "R added/injected",
+            "A added/new",
+            "R removed/",
+            "R removed/injected",
+            "R removed/original",
+            "R removed/unchanged",
+        ]
+    );
+    assert_eq!(
+        diffs[6],
+        Diff::Removed(
+            MPath::new("removed/original")?,
+            replacement.map_tree(|(_, tree)| tree),
+        )
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
 async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
     let ctx = CoreContext::test_mock(fb);
@@ -1188,6 +1271,165 @@ async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
         ])?,
     );
 
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_diff_replacements_in_added_and_removed_subtrees(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    let old = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![],
+        btreemap! { "anchor" => Some("same"), "removed/original" => Some("old") },
+    )
+    .await?
+    .unwrap();
+    let new = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![],
+        btreemap! { "anchor" => Some("same"), "added/original" => Some("new") },
+    )
+    .await?
+    .unwrap();
+    let replacement = new
+        .find_entry(
+            ctx.clone(),
+            blobstore.clone(),
+            MPath::new("added/original")?,
+        )
+        .await?
+        .unwrap();
+    let replacements: HashMap<_, _> = [
+        "added/original",
+        "added/injected",
+        "removed/original",
+        "removed/injected",
+    ]
+    .into_iter()
+    .map(|path| Ok((MPath::new(path)?, replacement)))
+    .collect::<Result<_>>()?;
+    let expected = vec![
+        "C (none)/",
+        "A added/",
+        "R added/injected",
+        "R removed/",
+        "R removed/injected",
+        "R removed/original",
+    ];
+
+    let unordered: Vec<_> = old
+        .filtered_diff(
+            ctx.clone(),
+            blobstore.clone(),
+            new,
+            blobstore.clone(),
+            Some,
+            |_| true,
+            replacements.clone(),
+        )
+        .try_collect()
+        .await?;
+    for path in ["added/injected", "removed/injected", "removed/original"] {
+        assert!(unordered.contains(&Diff::Removed(MPath::new(path)?, replacement)));
+    }
+    let mut unordered: Vec<_> = unordered.into_iter().map(describe_diff_item).collect();
+    unordered.sort();
+    let mut sorted_expected = expected.clone();
+    sorted_expected.sort();
+    assert_eq!(unordered, sorted_expected);
+
+    for (after, expected) in [
+        (None, expected.as_slice()),
+        (Some(MPath::new("added")?), &expected[2..]),
+        (Some(MPath::new("removed/injected")?), &expected[5..]),
+    ] {
+        let ordered: Vec<_> = old
+            .filtered_diff_ordered(
+                ctx.clone(),
+                blobstore.clone(),
+                new,
+                blobstore.clone(),
+                after,
+                Some,
+                |_| true,
+                replacements
+                    .iter()
+                    .map(|(path, entry)| (path.clone(), entry.map_tree(|id| (10, id))))
+                    .collect(),
+            )
+            .map_ok(describe_diff_item)
+            .try_collect()
+            .await?;
+        assert_eq!(ordered, expected);
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_diff_intersection_parent_entries_and_pruning(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    let old = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![],
+        btreemap! {
+            "changed" => Some("old"),
+            "deleted/child" => Some("old"),
+            "dir_to_file/child" => Some("old"),
+            "file_to_dir" => Some("old"),
+            "pruned/child" => Some("old"),
+        },
+    )
+    .await?
+    .unwrap();
+    let new = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![],
+        btreemap! {
+            "added" => Some("new"),
+            "changed" => Some("new"),
+            "dir_to_file" => Some("new"),
+            "file_to_dir/child" => Some("new"),
+            "pruned/child" => Some("new"),
+        },
+    )
+    .await?
+    .unwrap();
+    let pruned = MPath::new("pruned")?;
+    let entries: BTreeMap<_, _> = find_intersection_of_diffs_and_parents_pruned(
+        ctx.clone(),
+        blobstore.clone(),
+        new,
+        vec![old],
+        move |diff| diff.path() != &pruned,
+    )
+    .map_ok(|(path, entry, parents)| (path, (entry, parents)))
+    .try_collect()
+    .await?;
+    assert_eq!(
+        entries.keys().cloned().collect::<Vec<_>>(),
+        make_paths(&[
+            "/",
+            "added",
+            "changed",
+            "dir_to_file",
+            "file_to_dir",
+            "file_to_dir/child"
+        ])?,
+    );
+    assert_eq!(entries[&MPath::ROOT].1, vec![Entry::Tree(old)]);
+    assert_eq!(
+        entries[&MPath::new("changed")?].1,
+        vec![lookup_entry(&ctx, &blobstore, old, "changed").await?],
+    );
+    for path in ["added", "dir_to_file", "file_to_dir", "file_to_dir/child"] {
+        assert!(entries[&MPath::new(path)?].1.is_empty());
+    }
     Ok(())
 }
 

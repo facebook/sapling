@@ -5,18 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::iter::Peekable;
 
 use anyhow::Error;
 use anyhow::anyhow;
 use borrowed::borrowed;
 use bounded_traversal::OrderedTraversal;
-use cloned::cloned;
 use context::CoreContext;
-use futures::future;
 use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::stream;
@@ -24,7 +19,6 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_watchdog::WatchdogExt;
-use mononoke_macros::mononoke;
 use mononoke_types::MPathElement;
 use mononoke_types::path::MPath;
 use nonzero_ext::nonzero;
@@ -285,10 +279,6 @@ where
     >
     where
         <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Sync,
-        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<
-                Store,
-                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
-            > + Eq,
         <<Self as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
             TrieMapOps<
                     Store,
@@ -339,10 +329,6 @@ where
         RecursePruner: Fn(&Diff<Self>) -> bool + Send + Sync + 'static,
         Out: Send + Unpin + 'static,
         <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Sync,
-        <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<
-                Store,
-                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
-            > + Eq,
         <<Self as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
             TrieMapOps<
                     Store,
@@ -387,17 +373,7 @@ where
         // determining what can be scheduled.
         let queue_max = nonzero!(2560usize);
 
-        let after = match after {
-            None => {
-                // If `after` is `None`, then we include everything.
-                After::All
-            }
-            Some(mpath_opt) => {
-                // If `after` is `Some(None)`, then we include everything
-                // after the root (i.e. not the root itself).
-                After::new(&mpath_opt)
-            }
-        };
+        let after = After::from(after);
 
         let init = Some((
             queue_max.get(),
@@ -407,15 +383,6 @@ where
                 child_replacements,
             ),
         ));
-
-        // Gate the sharding-aware fast path behind a JustKnob so it can be rolled
-        // out gradually and reverted instantly. Defaults to off, keeping the
-        // legacy listing behaviour until the fast path is deliberately enabled.
-        let use_fast = justknobs::eval(
-            "scm/mononoke:enable_sharding_aware_manifest_diff",
-            None,
-            None,
-        );
 
         (async_stream::stream! {
             borrowed!(ctx, store, other_store, output_filter, recurse_pruner);
@@ -462,71 +429,20 @@ where
                             Diff::Removed(path, tree) => (path, Some(tree), None),
                         };
 
-                        let entries = match (use_fast, &left, &right) {
-                            (true, Some(left), Some(right)) => {
-                                diff_weighted_children(ctx, store, left, other_store, right, replacements.clone())
-                                    .watched()
-                                    .await?
-                            }
-                            _ => {
-                                let l = mononoke::spawn_task({
-                                    cloned!(ctx, left, store);
-                                    async move {
-                                        match left {
-                                            Some(left) => anyhow::Ok(Some(left.load(&ctx, &store).watched().await?)),
-                                            None => Ok(None),
-                                        }
-                                    }
-                                });
-                                let r = mononoke::spawn_task({
-                                    cloned!(ctx, right, other_store);
-                                    async move {
-                                        match right {
-                                            Some(right) => anyhow::Ok(Some(right.load(&ctx, &other_store).watched().await?)),
-                                            None => Ok(None),
-                                        }
-                                    }
-                                });
-                                let (left_mf, right_mf) = future::try_join(l, r).watched().await?;
-                                let (left_mf, right_mf) = (left_mf?, right_mf?);
-                                let mut left_entries = Vec::new();
-                                if let Some(left_mf) = left_mf {
-                                    let mut stream = left_mf.list_weighted(ctx, store).watched().await?;
-                                    while let Some(entry) = stream.try_next().watched().await? {
-                                        tokio::task::consume_budget().await;
-                                        left_entries.push(entry);
-                                    }
-                                }
-                                let mut right_entries = Vec::new();
-                                if let Some(right_mf) = right_mf {
-                                    let mut stream = right_mf.list_weighted(ctx, other_store).watched().await?;
-                                    while let Some(entry) = stream.try_next().watched().await? {
-                                        tokio::task::consume_budget().await;
-                                        right_entries.push(entry);
-                                    }
-                                }
-                                let mut entries: BTreeMap<_, _> = EntryDiffIterator::new(
-                                    left_entries.into_iter(),
-                                    right_entries.into_iter(),
-                                )
-                                .map(|(name, left, right)| (name, (left, right)))
-                                .collect();
-                                for (name, subtree) in replacements.clone() {
-                                    if let Some(replacement) = subtree.value {
-                                        let name = MPathElement::from_smallvec(name)?;
-                                        entries.entry(name).or_default().0 = Some(replacement);
-                                    }
-                                }
-                                entries
-                                    .into_iter()
-                                    .map(|(name, (left, right))| (name, left, right))
-                                    .collect::<Vec<_>>()
-                            }
-                        };
+                        let entries = diff_weighted_children(
+                            ctx,
+                            store,
+                            left.as_ref(),
+                            other_store,
+                            right.as_ref(),
+                            replacements.clone(),
+                        )
+                        .watched()
+                        .await?;
 
                         for (name, left, right) in entries {
                             tokio::task::consume_budget().await;
-                            if after.skip(&name) || left == right {
+                            if after.skip(&name) {
                                 continue;
                             }
                             let (child_output, child_recurse) =
@@ -594,63 +510,6 @@ fn strip_entry_weight<TreeId, Leaf>(
         Diff::Added(path, entry) => Diff::Added(path, strip(entry)),
         Diff::Removed(path, entry) => Diff::Removed(path, strip(entry)),
         Diff::Changed(path, left, right) => Diff::Changed(path, strip(left), strip(right)),
-    }
-}
-
-struct EntryDiffIterator<I>
-where
-    I: Iterator,
-{
-    left: Peekable<I>,
-    right: Peekable<I>,
-}
-
-impl<I> EntryDiffIterator<I>
-where
-    I: Iterator,
-{
-    fn new(left: I, right: I) -> Self {
-        Self {
-            left: left.peekable(),
-            right: right.peekable(),
-        }
-    }
-}
-
-impl<I, Name, Value> Iterator for EntryDiffIterator<I>
-where
-    I: Iterator<Item = (Name, Value)>,
-    Name: Ord,
-{
-    type Item = (Name, Option<Value>, Option<Value>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match (self.left.peek(), self.right.peek()) {
-            (Some((left_name, _)), Some((right_name, _))) => match left_name.cmp(right_name) {
-                Ordering::Less => {
-                    let (name, left) = self.left.next().unwrap();
-                    Some((name, Some(left), None))
-                }
-                Ordering::Equal => {
-                    let (name, left) = self.left.next().unwrap();
-                    let (_, right) = self.right.next().unwrap();
-                    Some((name, Some(left), Some(right)))
-                }
-                Ordering::Greater => {
-                    let (name, right) = self.right.next().unwrap();
-                    Some((name, None, Some(right)))
-                }
-            },
-            (Some(_), None) => {
-                let (name, left) = self.left.next().unwrap();
-                Some((name, Some(left), None))
-            }
-            (None, Some(_)) => {
-                let (name, right) = self.right.next().unwrap();
-                Some((name, None, Some(right)))
-            }
-            (None, None) => None,
-        }
     }
 }
 

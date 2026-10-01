@@ -33,7 +33,6 @@ use crate::PathTree;
 use crate::StoreLoadable;
 use crate::TrieMapOps;
 use crate::comparison::diff_manifest_node;
-use crate::comparison::diff_manifest_node_by_listing;
 use crate::select::select_path_tree;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,14 +43,6 @@ pub enum Diff<Entry> {
 }
 
 impl<Entry> Diff<Entry> {
-    pub fn replace_left(self, new_entry: Entry) -> Diff<Entry> {
-        match self {
-            Diff::Added(path, entry) => Diff::Changed(path, new_entry, entry),
-            Diff::Removed(path, _) => Diff::Removed(path, new_entry),
-            Diff::Changed(path, _, entry) => Diff::Changed(path, new_entry, entry),
-        }
-    }
-
     pub fn path(&self) -> &MPath {
         match self {
             Diff::Added(path, _) => path,
@@ -347,20 +338,9 @@ where
     /// every diff entry and returns Option<Out>, so it acts similar to filter_map() function
     /// recurse_pruner is a function that allows us to skip iterating over some subtrees
     ///
-    /// When the `scm/mononoke:enable_sharding_aware_manifest_diff` JustKnob is
-    /// enabled, this is sharding-aware via [`diff_manifests`]: replacement-free
-    /// subtrees prune identical sub-shards by their content-addressed id without
-    /// loading them -- this is what keeps sharded-manifest (e.g. content_manifest)
-    /// diffs cheap; see the `derived_data_use_content_manifests` SEV. Subtrees
-    /// that carry a manifest replacement are diffed by listing, so a large
-    /// directory off the replacement paths is still pruned.
-    ///
-    /// The JustKnob gates a behavioural change: the sharding-aware path yields
-    /// the (unordered) diff entries in a different order than the legacy
-    /// [`ManifestOps::filtered_diff_slow`] path. It defaults to off so the
-    /// ordering is unchanged until the fast path is deliberately rolled out; flip
-    /// it off again to instantly revert if a client turns out to depend on the
-    /// legacy order.
+    /// Identical sub-shards are pruned by their content-addressed IDs without
+    /// loading them. Manifest replacements only disable pruning along the trie
+    /// paths leading to those replacements. Results are unordered.
     fn filtered_diff<FilterMap, Out, RecursePruner>(
         &self,
         ctx: CoreContext,
@@ -389,99 +369,6 @@ where
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
             > + Eq,
     {
-        if justknobs::eval(
-            "scm/mononoke:enable_sharding_aware_manifest_diff",
-            None,
-            None,
-        ) {
-            let PathTree {
-                value: replacement,
-                subentries: child_replacements,
-            } = PathTree::from_iter(
-                manifest_replacements
-                    .into_iter()
-                    .map(|(path, entry)| (path, Some(entry))),
-            );
-            let this = match replacement {
-                None => self.clone(),
-                Some(Entry::Tree(replacement)) => replacement,
-                Some(Entry::Leaf(_)) => {
-                    return stream::once(async move {
-                        Err(anyhow!(
-                            "Manifest replacement at root which resolves to a leaf"
-                        ))
-                    })
-                    .boxed();
-                }
-            };
-
-            if this == other {
-                return stream::empty().boxed();
-            }
-
-            let init = Some((Diff::Changed(MPath::ROOT, this, other), child_replacements));
-
-            bounded_traversal::bounded_traversal_stream(256, init, move |(work, replacements)| {
-                cloned!(ctx, output_filter, recurse_pruner, store, other_store);
-                async move {
-                    let (outs, recurse) = diff_manifest_node(
-                        &ctx,
-                        &store,
-                        &other_store,
-                        work,
-                        replacements,
-                        recurse_pruner,
-                    )
-                    .await?;
-                    let outs: Vec<Out> = outs.into_iter().filter_map(&output_filter).collect();
-                    anyhow::Ok((outs, recurse))
-                }
-                .boxed()
-            })
-            .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
-            .try_flatten()
-            .boxed()
-        } else {
-            self.filtered_diff_slow(
-                ctx,
-                store,
-                other,
-                other_store,
-                output_filter,
-                recurse_pruner,
-                manifest_replacements,
-            )
-        }
-    }
-
-    /// The non-sharding-aware diff implementation, used by
-    /// `find_intersection_of_diffs*`, which stays generic over manifest types
-    /// that lack `TrieMapOps` (e.g. history manifests). It also supports manifest
-    /// replacements. Prefer [`ManifestOps::filtered_diff`], which is
-    /// sharding-aware.
-    fn filtered_diff_slow<FilterMap, Out, RecursePruner>(
-        &self,
-        ctx: CoreContext,
-        store: Store,
-        other: Self,
-        other_store: Store,
-        output_filter: FilterMap,
-        recurse_pruner: RecursePruner,
-        manifest_replacements: HashMap<
-            MPath,
-            Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
-        >,
-    ) -> BoxStream<'static, Result<Out, Error>>
-    where
-        FilterMap: Fn(
-                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
-            ) -> Option<Out>
-            + Clone
-            + Send
-            + 'static,
-        RecursePruner: Fn(&Diff<Self>) -> bool + Clone + Send + 'static,
-        Out: Send + 'static,
-    {
         let PathTree {
             value: replacement,
             subentries: child_replacements,
@@ -507,29 +394,25 @@ where
             return stream::empty().boxed();
         }
 
-        let input = Diff::Changed(MPath::ROOT, this, other);
+        let init = Some((Diff::Changed(MPath::ROOT, this, other), child_replacements));
 
-        bounded_traversal::bounded_traversal_stream(
-            256,
-            Some((input, child_replacements)),
-            move |(input, replacements)| {
-                cloned!(ctx, output_filter, recurse_pruner, store, other_store);
-                async move {
-                    let (outs, recurse) = diff_manifest_node_by_listing(
-                        &ctx,
-                        &store,
-                        &other_store,
-                        input,
-                        replacements,
-                        recurse_pruner,
-                    )
-                    .await?;
-                    let outs: Vec<Out> = outs.into_iter().filter_map(&output_filter).collect();
-                    anyhow::Ok((outs, recurse))
-                }
-                .boxed()
-            },
-        )
+        bounded_traversal::bounded_traversal_stream(256, init, move |(work, replacements)| {
+            cloned!(ctx, output_filter, recurse_pruner, store, other_store);
+            async move {
+                let (outs, recurse) = diff_manifest_node(
+                    &ctx,
+                    &store,
+                    &other_store,
+                    work,
+                    replacements,
+                    recurse_pruner,
+                )
+                .await?;
+                let outs: Vec<Out> = outs.into_iter().filter_map(&output_filter).collect();
+                anyhow::Ok((outs, recurse))
+            }
+            .boxed()
+        })
         .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
         .try_flatten()
         .boxed()
@@ -553,7 +436,9 @@ where
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    Leaf: Clone + Send + Eq + Unpin + 'static,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
 {
     find_intersection_of_diffs_and_parents(ctx, store, mf_id, diff_against)
         .map_ok(|(path, entry, _)| (path, entry))
@@ -575,7 +460,9 @@ where
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    Leaf: Clone + Send + Eq + Unpin + 'static,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
     RecursePruner: Fn(&Diff<TreeId>) -> bool + Clone + Send + Sync + 'static,
 {
     find_intersection_of_diffs_and_parents_pruned(ctx, store, mf_id, diff_against, recurse_pruner)
@@ -595,7 +482,9 @@ where
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    Leaf: Clone + Send + Eq + Unpin + 'static,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
 {
     find_intersection_of_diffs_and_parents_pruned(ctx, store, mf_id, diff_against, |_| true)
 }
@@ -614,36 +503,36 @@ where
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
-    Leaf: Clone + Send + Eq + Unpin + 'static,
+    Leaf: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Eq,
     RecursePruner: Fn(&Diff<TreeId>) -> bool + Clone + Send + Sync + 'static,
 {
     match diff_against.first().cloned() {
         Some(parent) => async move {
             mononoke::spawn_task(async move {
-                let mut new_entries = Vec::new();
-                let mut parent_diff = parent.filtered_diff_slow(
-                    ctx.clone(),
-                    store.clone(),
-                    mf_id,
-                    store.clone(),
-                    Some,
-                    recurse_pruner,
-                    Default::default(),
-                );
-                while let Some(diff_entry) = parent_diff.try_next().await? {
-                    match diff_entry {
-                        Diff::Added(path, entry) => new_entries.push((path, entry, vec![])),
-                        Diff::Removed(..) => continue,
-                        Diff::Changed(path, parent_entry, entry) => {
-                            new_entries.push((path, entry, vec![parent_entry]))
-                        }
-                    }
-                }
+                let new_entries: Vec<_> = parent
+                    .filtered_diff(
+                        ctx.clone(),
+                        store.clone(),
+                        mf_id,
+                        store.clone(),
+                        |diff| match diff {
+                            Diff::Added(path, entry) => Some((path, entry, vec![])),
+                            Diff::Changed(path, parent_entry, entry) => {
+                                Some((path, entry, vec![parent_entry]))
+                            }
+                            Diff::Removed(..) => None,
+                        },
+                        move |diff| !matches!(diff, Diff::Removed(..)) && recurse_pruner(diff),
+                        Default::default(),
+                    )
+                    .try_collect()
+                    .await?;
 
                 let paths: Vec<_> = new_entries
-                    .clone()
-                    .into_iter()
-                    .map(|(path, _, _)| path)
+                    .iter()
+                    .map(|(path, _, _)| path.clone())
                     .collect();
 
                 let futs = diff_against.into_iter().skip(1).map(move |p| {

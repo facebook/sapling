@@ -5,63 +5,21 @@
  * GNU General Public License version 2.
  */
 
-//! Repro/benchmark for the `derived_data_use_content_manifests` diff cost.
+//! Benchmark manifest diffs and path lookups over fsnodes and content manifests.
 //!
-//! It builds a repo with one very large flat directory plus a set of medium
-//! subdirectories, then runs the manifest operations that back `commit_compare`
-//! and `metadata_diff` over BOTH fsnodes and content_manifests, through the same
-//! generic entry points the SCS server and diff_service use
-//! (`ManifestOps::filtered_diff`, `ManifestOrderedOps::filtered_diff_ordered`
-//! and `ManifestOps::find_entry`).
+//! Builds a repo with one large flat directory and several medium directories,
+//! then measures result counts, blobstore reads, bytes, and wall-clock time.
+//! Scenarios cover small edits, subtree replacements, additions/removals,
+//! pagination, and individual versus batched path lookups.
 //!
-//! The blobstore is wrapped in a counting layer so we report, for each run:
-//!   - number of result entries,
-//!   - number of blobstore `get`s,
-//!   - total bytes deserialized,
-//!   - wall-clock time.
-//!
-//! The number that matters is `get`s. An fsnode directory is a single flat blob
-//! whatever its size, so `list` and `lookup` are in-memory once the directory is
-//! loaded. A content_manifest directory is a `ShardedMapV2` byte-trie with
-//! `WEIGHT_LIMIT = 625`, so a directory of N entries is spread over ~N/625
-//! separate blobs: `list` walks all of them and `lookup` costs a trie descent.
-//! Content manifests read far fewer BYTES but far more BLOBS, and the blobs are
-//! serialized by trie depth -- which is what turns into latency in production.
-//!
-//! `scm/mononoke:enable_sharding_aware_manifest_diff` (the fix for the
-//! `derived_data_use_content_manifests` SEV) makes a *changed* directory prune
-//! identical sub-shards by id without loading them. Every scenario below is run
-//! with the knob both on and off, so the output shows which cases the fix
-//! actually covers. The ones it does not cover are:
-//!
-//!   * `replacement-in-big` -- a `manifest_replacements` entry (what
-//!     `commit_compare --compare-with-subtree-copy-sources` builds from a
-//!     subtree copy) disables the fast path for the directory that holds it and
-//!     every ancestor, falling back to `diff_manifest_node_by_listing`: a full
-//!     `list` of both sides plus a `lookup` per entry, awaited in a serial loop.
-//!     `replacement-in-small` is the control -- it shows the blast radius is
-//!     exactly the directory holding the replacement.
-//!
-//!   * `added-subtree` / `removed-subtree` -- the fast path only applies to
-//!     `Diff::Changed`; added and removed trees are always enumerated by
-//!     listing. `added-subtree-limited` shows that stopping after `limit`
-//!     entries does not help, because a directory is fully enumerated inside a
-//!     single traversal step before anything is yielded.
-//!
-//!   * `metadata-lookup-*` -- `metadata_diff` resolves each path independently
-//!     via `find_entry`, which does a `Manifest::lookup` per path component. On
-//!     fsnodes that is an in-memory binary search; on content manifests it is a
-//!     sharded-map trie descent. This path never sees the diff fast path at all.
+//! Diff operations prune identical content-manifest sub-shards without loading
+//! them. Added and removed entries still need enumeration, while path lookups
+//! perform their own trie descents.
 //!
 //! Run with optional positional args:
 //!   <total_files> <modify_count> <wide_dirs> <wide_files> <limit>
 //!   buck2 run //eden/mononoke/benchmarks/derived_data:benchmark_manifest_diff
 //!   buck2 run //eden/mononoke/benchmarks/derived_data:benchmark_manifest_diff -- 200000 5
-//!
-//! At the default 100k `total_files` the `replacement-in-big` scenario does
-//! ~200k sharded-map lookups awaited one at a time, so it takes minutes on the
-//! content_manifest side -- that IS the finding, but drop `total_files` to
-//! ~10000 for a quick run.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -94,9 +52,6 @@ use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures_stats::TimedFutureExt;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::with_just_knobs;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestOps;
@@ -121,8 +76,6 @@ use tests_utils::CreateCommitContext;
 /// Matches the fan-out `metadata_diff` callers use when resolving a batch of
 /// paths, so the per-path scenario is not artificially serialized.
 const LOOKUP_CONCURRENCY: usize = 100;
-
-const FAST_PATH_KNOB: &str = "scm/mononoke:enable_sharding_aware_manifest_diff";
 
 /// The big flat directory that makes the sharding visible.
 const BIG_DIR: &str = "large_directory";
@@ -300,14 +253,11 @@ async fn measure(
 /// What the scenario compares, in terms of the fixture's commits.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
-    /// A handful of files changed inside the big directory. The case the
-    /// sharding-aware fast path was written for.
+    /// A handful of files changed inside the big directory.
     ChangedSmall,
-    /// Same diff, plus a manifest replacement inside the big directory, which
-    /// takes that directory off the fast path.
+    /// Same diff, plus a manifest replacement inside the big directory.
     ReplacementInBig,
-    /// Same diff, but the replacement sits in a medium directory instead --
-    /// the big directory keeps the fast path.
+    /// Same diff, but the replacement sits in a medium directory instead.
     ReplacementInSmall,
     /// The big directory appears wholesale.
     AddedSubtree,
@@ -320,18 +270,6 @@ enum Kind {
     MetadataLookupPerPath,
     /// The same resolution, batched into a single `find_entries` walk.
     MetadataLookupBatched,
-}
-
-impl Kind {
-    /// Path-lookup scenarios never reach the diff code, so the fast-path knob
-    /// is irrelevant to them and running both settings would just duplicate
-    /// rows.
-    fn is_diff(&self) -> bool {
-        !matches!(
-            self,
-            Kind::MetadataLookupPerPath | Kind::MetadataLookupBatched
-        )
-    }
 }
 
 struct Scenario {
@@ -428,18 +366,12 @@ impl TreeWeight for ContentManifestId {
 }
 
 /// Run one scenario against one manifest backend.
-///
-/// The fast-path knob is pinned around the *construction* of the diff stream
-/// only: both `filtered_diff` and `filtered_diff_ordered` read it eagerly and
-/// then return a lazy stream, so this is the whole window in which it matters,
-/// and it keeps the thread-local override off every other knob read.
 async fn run_scenario<Id>(
     ctx: &CoreContext,
     store: &Store,
     roots: &Roots<Id>,
     lookup_paths: &[MPath],
     scenario: &Scenario,
-    fast_path: bool,
     counters: &Counters,
 ) -> Result<Measurement>
 where
@@ -538,11 +470,6 @@ where
         }
     };
 
-    let knobs = JustKnobsInMemory::new(HashMap::from([(
-        FAST_PATH_KNOB.to_string(),
-        KnobVal::Bool(fast_path),
-    )]));
-
     let stream: BoxStream<'static, Result<()>> = if scenario.ordered {
         let mut replacements = HashMap::new();
         if let Some((at, entry)) = replacement {
@@ -555,34 +482,30 @@ where
             };
             replacements.insert(at, entry);
         }
-        with_just_knobs(knobs, || {
-            old.filtered_diff_ordered(
-                ctx.clone(),
-                store.clone(),
-                new.clone(),
-                store.clone(),
-                None,
-                |_| Some(()),
-                |_| true,
-                replacements,
-            )
-        })
+        old.filtered_diff_ordered(
+            ctx.clone(),
+            store.clone(),
+            new.clone(),
+            store.clone(),
+            None,
+            |_| Some(()),
+            |_| true,
+            replacements,
+        )
     } else {
         let mut replacements = HashMap::new();
         if let Some((at, entry)) = replacement {
             replacements.insert(at, entry);
         }
-        with_just_knobs(knobs, || {
-            old.filtered_diff(
-                ctx.clone(),
-                store.clone(),
-                new.clone(),
-                store.clone(),
-                |_| Some(()),
-                |_| true,
-                replacements,
-            )
-        })
+        old.filtered_diff(
+            ctx.clone(),
+            store.clone(),
+            new.clone(),
+            store.clone(),
+            |_| Some(()),
+            |_| true,
+            replacements,
+        )
     };
 
     measure(counters, scenario.limit, stream).await
@@ -590,26 +513,13 @@ where
 
 fn print_header() {
     println!(
-        "\n{:<32} {:<10} {:<5} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} time",
-        "scenario",
-        "ordering",
-        "fast",
-        "backend",
-        "entries",
-        "blob_gets",
-        "bytes",
-        "max_poll",
-        "polls"
+        "\n{:<32} {:<10} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} time",
+        "scenario", "ordering", "backend", "entries", "blob_gets", "bytes", "max_poll", "polls"
     );
     println!("{}", "-".repeat(140));
 }
 
-fn print_pair(
-    scenario: &Scenario,
-    fast: Option<bool>,
-    fsnode: &Measurement,
-    content: &Measurement,
-) {
+fn print_pair(scenario: &Scenario, fsnode: &Measurement, content: &Measurement) {
     let ordering = if scenario.ordered {
         "ordered"
     } else {
@@ -619,16 +529,10 @@ fn print_pair(
         Some(limit) => format!("{} (take {limit})", scenario.name),
         None => scenario.name.to_string(),
     };
-    let fast = match fast {
-        Some(true) => "on",
-        Some(false) => "off",
-        None => "n/a",
-    };
     println!(
-        "{:<32} {:<10} {:<5} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}",
+        "{:<32} {:<10} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}",
         name,
         ordering,
-        fast,
         "fsnode",
         fsnode.entries,
         fsnode.gets,
@@ -643,8 +547,7 @@ fn print_pair(
         format!("{:.1}x", content.gets as f64 / fsnode.gets as f64)
     };
     println!(
-        "{:<32} {:<10} {:<5} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}   ({ratio} gets)",
-        "",
+        "{:<32} {:<10} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}   ({ratio} gets)",
         "",
         "",
         "content",
@@ -876,37 +779,25 @@ async fn main(fb: FacebookInit) -> Result<()> {
 
     print_header();
     for scenario in scenarios(limit) {
-        // `fast` is the `enable_sharding_aware_manifest_diff` setting; the
-        // path-lookup scenarios don't read it.
-        let settings: Vec<Option<bool>> = if scenario.kind.is_diff() {
-            vec![Some(true), Some(false)]
-        } else {
-            vec![None]
-        };
-        for fast in settings {
-            let fast_path = fast.unwrap_or(true);
-            let fsnode = run_scenario(
-                &ctx,
-                &store,
-                &fsnode_roots,
-                &fixture.changed_paths,
-                &scenario,
-                fast_path,
-                &counters,
-            )
-            .await?;
-            let content = run_scenario(
-                &ctx,
-                &store,
-                &content_roots,
-                &fixture.changed_paths,
-                &scenario,
-                fast_path,
-                &counters,
-            )
-            .await?;
-            print_pair(&scenario, fast, &fsnode, &content);
-        }
+        let fsnode = run_scenario(
+            &ctx,
+            &store,
+            &fsnode_roots,
+            &fixture.changed_paths,
+            &scenario,
+            &counters,
+        )
+        .await?;
+        let content = run_scenario(
+            &ctx,
+            &store,
+            &content_roots,
+            &fixture.changed_paths,
+            &scenario,
+            &counters,
+        )
+        .await?;
+        print_pair(&scenario, &fsnode, &content);
     }
 
     Ok(())
