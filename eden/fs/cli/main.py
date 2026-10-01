@@ -227,10 +227,12 @@ try:
     EX_OK: int = os.EX_OK
     EX_SOFTWARE: int = os.EX_SOFTWARE
     EX_OSFILE: int = os.EX_OSFILE
+    EX_UNAVAILABLE: int = os.EX_UNAVAILABLE
 except AttributeError:  # On a non-unix system
     EX_OK: int = 0
     EX_SOFTWARE: int = 70
     EX_OSFILE: int = 72
+    EX_UNAVAILABLE: int = 69
 
 # The Rust CLI depends on this value staying constant. Instead of fetching it
 # from the os library, let's just define it here.
@@ -3726,7 +3728,7 @@ async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) 
         return EX_SOFTWARE
     except daemon_util.DaemonBinaryNotFound as ex:
         print(f"error: {ex}", file=sys.stderr)
-        return EX_SOFTWARE
+        return EX_UNAVAILABLE
     except config_mod.UsageError as ex:
         print(f"error: {ex}", file=sys.stderr)
         return EX_USAGE
