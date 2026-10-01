@@ -122,7 +122,8 @@ bool isOldEdenMount(const std::string& mountPoint) {
   } else {
     for (int i = 0; i < count; i++) {
       if (std::string(buf[i].f_mntonname) == mountPoint &&
-          is_edenfs_fs_type(buf[i].f_fstypename)) {
+          (is_edenfs_fs_type(buf[i].f_fstypename) ||
+           is_edenfs_nfs_mount(buf[i].f_fstypename, buf[i].f_mntfromname))) {
         return true;
       }
     }

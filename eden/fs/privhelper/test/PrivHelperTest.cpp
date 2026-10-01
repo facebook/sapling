@@ -12,6 +12,7 @@
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/ScopeGuard.h>
+#include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
@@ -756,6 +757,21 @@ TEST(
     EXPECT_EQ(EINVAL, ex.code().value());
   }
   EXPECT_EQ(sizeof(kTrailingMarker), cursor.totalLength());
+}
+
+TEST(PrivHelperNfsMount, onlyUnixSocketTransportsNeedFstypeOverride) {
+  NFSMountOptions options;
+  options.mountdAddr = folly::SocketAddress::makeFromPath("/tmp/mountd.sock");
+  options.nfsdAddr = folly::SocketAddress::makeFromPath("/tmp/nfsd.sock");
+  EXPECT_TRUE(needsFstypeOverride(options));
+
+  options.mountdAddr = folly::SocketAddress{"127.0.0.1", 1};
+  options.nfsdAddr = folly::SocketAddress{"127.0.0.1", 2049};
+  EXPECT_FALSE(needsFstypeOverride(options));
+
+  options.mountdAddr = folly::SocketAddress{"::1", 1};
+  options.nfsdAddr = folly::SocketAddress{"::1", 2049};
+  EXPECT_FALSE(needsFstypeOverride(options));
 }
 
 class RawPrivHelperClient : private UnixSocket::ReceiveCallback {

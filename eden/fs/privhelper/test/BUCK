@@ -38,6 +38,7 @@ cpp_unittest(
         "//folly:exception",
         "//folly:file",
         "//folly:file_util",
+        "//folly:network_address",
         "//folly:portability",
         "//folly:range",
         "//folly:scope_guard",

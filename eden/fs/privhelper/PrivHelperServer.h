@@ -71,6 +71,16 @@ struct FileAccessMonitorProcess {
  */
 void detachFromParentProcessGroup();
 
+/**
+ * Whether an NFS mount with these options needs the macOS f_fstypename
+ * override ("edenfs:") applied after mounting.
+ *
+ * EdenFS NFS mounts are identified by their "edenfs:" mount source (see
+ * is_edenfs_nfs_mount()). macOS replaces f_mntfromname for Unix-domain socket
+ * transports, so only those mounts need the override.
+ */
+bool needsFstypeOverride(const NFSMountOptions& options);
+
 /*
  * PrivHelperServer runs the main loop for the privhelper server process.
  *
