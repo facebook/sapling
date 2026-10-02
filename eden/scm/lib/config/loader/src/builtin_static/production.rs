@@ -138,6 +138,7 @@ debugnetwork=
 dialect=
 directaccess=
 dirsync=
+drop=
 errorredirect=!
 fastpartialmatch=
 fbhistedit=
