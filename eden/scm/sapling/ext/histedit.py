@@ -45,6 +45,7 @@ file open in your editor::
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
  #  r, roll = like fold, but discard this commit's description and date
+ #  i, into = like fold, but keep only this commit's description
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #  b, base = checkout changeset and apply further changesets from there
@@ -68,6 +69,7 @@ would reorganize the file to look like this::
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
  #  r, roll = like fold, but discard this commit's description and date
+ #  i, into = like fold, but keep only this commit's description
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #  b, base = checkout changeset and apply further changesets from there
@@ -186,6 +188,7 @@ present it to you for final fixes before you close the editor:
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
  #  r, roll = like fold, but discard this commit's description and date
+ #  i, into = like fold, but keep only this commit's description
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
  #  b, base = checkout changeset and apply further changesets from there
@@ -839,14 +842,6 @@ class fold(histeditaction):
         """
         return False
 
-    def mergedescs(self):
-        """Returns true if the rule should merge messages of multiple changes.
-
-        This exists mainly so that 'rollup' rules can be a subclass of
-        'fold'.
-        """
-        return True
-
     def firstdate(self):
         """Returns true if the rule should preserve the date of the first
         change.
@@ -855,6 +850,22 @@ class fold(histeditaction):
         'fold'.
         """
         return False
+
+    def foldmessage(self, ctx, oldctx, newnodes):
+        """Returns the message for the combined commit, before any editing.
+
+        ctx is the commit being folded into, oldctx the commit being folded
+        in, and newnodes any commits created between them.
+        """
+        repo = self.repo
+        return (
+            "\n***\n".join(
+                [ctx.description()]
+                + [repo[r].description() for r in newnodes]
+                + [oldctx.description()]
+            )
+            + "\n"
+        )
 
     def finishfold(self):
         repo = self.repo
@@ -869,19 +880,7 @@ class fold(histeditaction):
         ### prepare new commit data
         commitopts = {}
         commitopts["user"] = ctx.user()
-        # commit message
-        if not self.mergedescs():
-            newmessage = ctx.description()
-        else:
-            newmessage = (
-                "\n***\n".join(
-                    [ctx.description()]
-                    + [repo[r].description() for r in newnodes]
-                    + [oldctx.description()]
-                )
-                + "\n"
-            )
-        commitopts["message"] = newmessage
+        commitopts["message"] = self.foldmessage(ctx, oldctx, newnodes)
         # date
         if self.firstdate():
             commitopts["date"] = ctx.date()
@@ -961,10 +960,19 @@ class _multifold(fold):
         return True
 
 
+@action(["into", "i"], _("like fold, but keep only this commit's description"))
+class foldinto(fold):
+    def foldmessage(self, ctx, oldctx, newnodes):
+        return oldctx.description()
+
+    def skipprompt(self):
+        return True
+
+
 @action(["roll", "r"], _("like fold, but discard this commit's description and date"))
 class rollup(fold):
-    def mergedescs(self):
-        return False
+    def foldmessage(self, ctx, oldctx, newnodes):
+        return ctx.description()
 
     def skipprompt(self):
         return True
@@ -1576,7 +1584,7 @@ def verifyactions(actions, state, ctxs):
     seen = set()
     prev = None
 
-    if actions and actions[0].verb in ["roll", "fold"]:
+    if actions and isinstance(actions[0], fold):
         raise error.ParseError(
             _('first changeset cannot use verb "%s"') % actions[0].verb
         )

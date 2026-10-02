@@ -80,6 +80,7 @@
   #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
+  #  i, into = like fold, but keep only this commit's description
   #  r, roll = like fold, but discard this commit's description and date
   #
   $ sl histedit 'max(desc(b))' --commands - --verbose << EOF | grep histedit
@@ -136,6 +137,7 @@
   #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
+  #  i, into = like fold, but keep only this commit's description
   #  r, roll = like fold, but discard this commit's description and date
   #
   $ sl histedit 'max(desc(c))' --commands - --verbose << EOF | grep histedit

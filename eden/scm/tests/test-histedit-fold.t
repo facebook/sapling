@@ -673,3 +673,60 @@ Set a bogus mergedriver as a tripwire to make sure we don't invoke merge driver.
   $ sl files -r .
   create
   file2
+
+'into' is like fold, but keeps only the message of the commit being folded in
+(and, like fold, its date), without an editor. 'roll' keeps only the earlier
+message, so each keeps exactly one of the original messages:
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > E
+  > |
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ sl goto -q $E
+  $ sl histedit $B --commands - <<EOF
+  > pick $B
+  > into $C
+  > pick $D
+  > roll $E
+  > EOF
+  $ sl log -r 'all()' -T '{desc} {files}\n'
+  A A
+  C B C
+  D D E
+
+In a run of combines, 'into' replaces the message and 'roll' leaves it alone:
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ sl goto -q $D
+  $ sl histedit $B --commands - <<EOF
+  > pick $B
+  > i $C
+  > r $D
+  > EOF
+  $ sl log -r . -T '{desc} {files}\n'
+  C B C D
+
+Like fold and roll, 'into' needs an earlier commit in the plan:
+
+  $ sl histedit 'desc(A)' --commands - <<EOF
+  > into $A
+  > EOF
+  sl: parse error: first changeset cannot use verb "into"
+  [255]
