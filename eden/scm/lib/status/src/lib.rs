@@ -224,6 +224,7 @@ pub fn needs_morestatus_extension(hg_dir: &Path, parent_count: usize) -> bool {
 
     for path in [
         PathBuf::from("bisect.state"),
+        PathBuf::from("dropstate"),
         PathBuf::from("graftstate"),
         PathBuf::from("histedit-state"),
         PathBuf::from("merge/state2"),

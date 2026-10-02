@@ -57,6 +57,15 @@ CONFLICTSTATES = [
             "to_abort": "graft --abort",
         },
     ],
+    # An interrupted drop also leaves a rebase in progress, so check it first.
+    [
+        "dropstate",
+        {
+            "cmd": "drop",
+            "to_continue": "drop --continue",
+            "to_abort": "drop --abort",
+        },
+    ],
     [
         "rebasestate",
         {

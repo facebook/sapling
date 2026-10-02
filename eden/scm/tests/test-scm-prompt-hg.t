@@ -231,3 +231,24 @@ Empty marker file produces no suffix
   $ cmd
   (4c449fd971|remote/remote9...)
   $ unset SCM_PROMPT_SHOW_WORKTREE
+
+Test drop
+  $ newclientrepo droprepo
+  $ drawdag <<'EOS'
+  > C  # C/f = 3\n
+  > |
+  > B  # B/f = 2\n
+  > |
+  > A  # A/f = 1\n
+  > EOS
+  $ cmd sl drop -r $B --config extensions.drop= --config extensions.rebase=
+  dropping changeset d24cfa: B
+  rebasing 11b100dbbeb1 "C"
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl drop --continue)
+  (ac36a1f943|DROP)
+  $ cmd sl drop --abort --config extensions.drop= --config extensions.rebase=
+  rebase aborted
+  drop aborted
+  (0000000000)

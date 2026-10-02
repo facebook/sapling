@@ -170,6 +170,17 @@ pub static STATES: &[State] = &[
         abort_lossy: false,
     },
     State {
+        // Interrupted "drop" due to conflicts. A rebase is usually also in
+        // progress, so this must come before the "rebase" state.
+        command: "drop",
+        description: "drop in progress",
+        state_file: "dropstate",
+        allows: &[],
+        proceed: "drop --continue",
+        abort: "drop --abort",
+        abort_lossy: false,
+    },
+    State {
         // Interrupted "rebase" due to conflicts.
         command: "rebase",
         description: "rebase in progress",
@@ -278,6 +289,26 @@ mod test {
             "goto --merge in progress
 (use 'sl goto --continue' to continue or
      'sl goto --clean' to abort - WARNING: will destroy uncommitted changes)"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_drop_state_takes_precedence_over_rebase() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+
+        std::fs::File::create(tmp.path().join("rebasestate"))?;
+        std::fs::File::create(tmp.path().join("dropstate"))?;
+
+        let err = try_operation(tmp.path(), Operation::Other).unwrap_err();
+        let err: Conflict = err.downcast().unwrap();
+        assert_eq!(
+            format!("{err}"),
+            "drop in progress
+(use 'sl drop --continue' to continue or
+     'sl drop --abort' to abort)",
+            "an interrupted drop leaves a rebase in progress too, but the drop should be reported"
         );
 
         Ok(())

@@ -102,6 +102,8 @@ _hg_prompt() {
     extra="|HISTEDIT"
   elif [[ -f "$hg/graftstate" ]]; then
     extra="|GRAFT"
+  elif [[ -f "$hg/dropstate" ]]; then
+    extra="|DROP"
   elif [[ -f "$hg/unshelverebasestate" ]]; then
     extra="|UNSHELVE"
   elif [[ -f "$hg/rebasestate" ]]; then

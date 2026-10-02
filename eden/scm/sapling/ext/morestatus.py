@@ -196,6 +196,8 @@ STATES = (
     ("bisect", fileexistspredicate("bisect.state"), bisectmsg),
     ("graft", wc.commandstate.get_state("graft", "graftstate")),
     ("unshelve", wc.commandstate.get_state("unshelve", "shelvedstate")),
+    # An interrupted drop also leaves a rebase in progress.
+    ("drop", wc.commandstate.get_state("drop", "dropstate")),
     ("rebase", fileexistspredicate("rebasestate"), rebasemsg),
     # 'update --merge'. Unlike the 'update' state below, this can be
     # continued.

@@ -50,7 +50,7 @@ from collections import defaultdict
 
 from sapling import cmdutil, error, extensions, hg, registrar, revsetlang, scmutil
 from sapling.i18n import _
-from sapling.node import short
+from sapling.node import bin, hex, short
 
 
 cmdtable = {}
@@ -58,12 +58,45 @@ command = registrar.command(cmdtable)
 
 testedwith = "ships-with-fb-ext"
 
+# Records the changesets being dropped while a drop is interrupted, so that
+# `drop --continue` can finish the drop after the rebase is resolved.
+_STATEFILE = "dropstate"
+
+
+def uisetup(ui) -> None:
+    entry = (_STATEFILE, "@prog@ drop --continue")
+    if entry not in cmdutil.afterresolvedstates:
+        # An interrupted drop also leaves a rebase in progress, so this must be
+        # checked before the rebase entry.
+        cmdutil.afterresolvedstates.insert(0, entry)
+
 
 def _rebasemod():
     try:
         return extensions.find("rebase")
     except KeyError:
         raise error.Abort(_("the drop command requires the rebase extension"))
+
+
+def _writestate(repo, nodes) -> None:
+    with repo.localvfs(_STATEFILE, "wb", atomictemp=True) as f:
+        f.write("".join("%s\n" % hex(n) for n in nodes).encode())
+
+
+def _readstate(repo):
+    if not repo.localvfs.exists(_STATEFILE):
+        raise error.Abort(_("no drop in progress"))
+    return [bin(line) for line in repo.localvfs.read(_STATEFILE).decode().split()]
+
+
+def _clearstate(repo) -> None:
+    repo.localvfs.tryunlink(_STATEFILE)
+
+
+def _conflict():
+    return error.InterventionRequired(
+        _("unresolved conflicts (see @prog@ resolve, then @prog@ drop --continue)")
+    )
 
 
 def _showrevs(ui, repo, nodes) -> None:
@@ -91,8 +124,10 @@ def _latest(repo, node):
     [
         ("r", "rev", [], _("revisions to drop")),
         ("t", "tool", "", _("specify merge tool for rebasing descendants")),
+        ("", "continue", False, _("continue an interrupted drop")),
+        ("", "abort", False, _("abort an interrupted drop")),
     ],
-    _("@prog@ drop -r REV..."),
+    _("@prog@ drop [OPTION]... -r REV..."),
 )
 def drop(ui, repo, *pats, **opts) -> None:
     """drop changesets from stack
@@ -104,8 +139,9 @@ def drop(ui, repo, *pats, **opts) -> None:
     dropped.
 
     If a conflict occurs while rebasing descendants, resolve it and run
-    :prog:`rebase --continue`, then re-run the :prog:`drop` command
-    to hide the dropped changesets.
+    :prog:`drop --continue`, or run :prog:`drop --abort` to stop the drop.
+    Aborting undoes the rebase of the descendants and leaves the
+    changesets to drop in place.
     """
     if pats:
         raise error.Abort(
@@ -113,6 +149,28 @@ def drop(ui, repo, *pats, **opts) -> None:
             hint=_("use '@prog@ drop -r %s'") % " -r ".join(pats),
         )
     rebasemod = _rebasemod()
+    tool = opts.get("tool")
+
+    if opts.get("continue") or opts.get("abort"):
+        if opts.get("continue") and opts.get("abort"):
+            raise error.Abort(_("cannot use both --continue and --abort"))
+        if opts.get("rev"):
+            raise error.Abort(_("cannot specify revisions with --continue or --abort"))
+        with repo.wlock(), repo.lock():
+            dropnodes = _readstate(repo)
+            if opts.get("abort"):
+                if repo.localvfs.exists("rebasestate"):
+                    rebasemod.rebase(ui, repo, abort=True)
+                _clearstate(repo)
+                ui.status(_("drop aborted\n"))
+                return
+            if repo.localvfs.exists("rebasestate"):
+                try:
+                    rebasemod.rebase(ui, repo, tool=tool, **{"continue": True})
+                except error.InterventionRequired:
+                    raise _conflict()
+            _finishdrop(ui, repo, rebasemod, dropnodes, tool)
+        return
 
     cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
@@ -122,7 +180,6 @@ def drop(ui, repo, *pats, **opts) -> None:
         raise error.Abort(_("no revision to drop was provided"))
 
     dropnodes = list(repo.nodes("sort(%ld)", revs))
-    dropset = set(dropnodes)
     for node in dropnodes:
         ctx = repo[node]
         if ctx.ispublic():
@@ -133,63 +190,71 @@ def drop(ui, repo, *pats, **opts) -> None:
         if not parents:
             raise error.Abort(_("root changeset cannot be dropped: %s") % ctx)
 
+    _showrevs(ui, repo, dropnodes)
+
+    with repo.wlock(), repo.lock():
+        _finishdrop(ui, repo, rebasemod, dropnodes, tool)
+
+
+def _finishdrop(ui, repo, rebasemod, dropnodes, tool) -> None:
+    """rebase the descendants of dropnodes that still need it, then hide
+    dropnodes"""
+    dropset = set(dropnodes)
+
     def keptancestor(node):
         """nearest first-parent ancestor of node that is not being dropped"""
         while node in dropset:
             node = repo.changelog.parents(node)[0]
         return node
 
-    _showrevs(ui, repo, dropnodes)
-
-    with repo.wlock(), repo.lock():
-        descendants = list(repo.nodes("(%ln::) - %ln", dropnodes, dropnodes))
-        # Skip obsolete descendants with nothing live on top of them, such as
-        # commits already rebased by a drop that stopped on a conflict.
-        rebasenodes = list(
-            repo.nodes(
-                "sort(%ln - (obsolete() - ::(%ln - obsolete())))",
-                descendants,
-                descendants,
-            )
+    descendants = list(repo.nodes("(%ln::) - %ln", dropnodes, dropnodes))
+    # Skip obsolete descendants with nothing live on top of them, such as
+    # commits already rebased before the drop was interrupted.
+    rebasenodes = list(
+        repo.nodes(
+            "sort(%ln - (obsolete() - ::(%ln - obsolete())))",
+            descendants,
+            descendants,
         )
-        if rebasenodes:
-            # Each child of a dropped changeset moves to the nearest kept
-            # ancestor. Other descendants share their parent's destination,
-            # so dropping a single changeset is a single-destination rebase;
-            # rebase adjusts destinations that are themselves being rebased.
-            destof = {}
-            for node in rebasenodes:
-                p1 = repo.changelog.parents(node)[0]
-                destof[node] = destof.get(p1) or keptancestor(p1)
-            bydest = defaultdict(list)
-            for node, dest in destof.items():
-                bydest[dest].append(node)
-            dests = list(bydest)
-            try:
-                rebasemod.rebase(
-                    ui,
-                    repo,
-                    rev=[revsetlang.formatspec("%ln", bydest[d]) for d in dests],
-                    dest=[revsetlang.formatspec("%n", d) for d in dests],
-                    tool=opts.get("tool"),
-                )
-            except error.InterventionRequired:
-                ui.warn(
-                    _(
-                        "conflict occurred during drop: "
-                        "please fix it by running "
-                        "'@prog@ rebase --continue', "
-                        "and then re-run '@prog@ drop %s'\n"
-                    )
-                    % " ".join("-r %s" % short(n) for n in dropnodes)
-                )
-                raise
+    )
+    if rebasenodes:
+        # Each child of a dropped changeset moves to the nearest kept
+        # ancestor. Other descendants share their parent's destination,
+        # so dropping a single changeset is a single-destination rebase;
+        # rebase adjusts destinations that are themselves being rebased.
+        destof = {}
+        for node in rebasenodes:
+            p1 = repo.changelog.parents(node)[0]
+            destof[node] = destof.get(p1) or keptancestor(p1)
+        bydest = defaultdict(list)
+        for node, dest in destof.items():
+            bydest[dest].append(node)
+        dests = list(bydest)
 
-        moves = {n: _latest(repo, keptancestor(n)) for n in dropnodes}
-        wcp = repo["."].node()
-        if wcp in dropset:
-            hg.update(repo, moves[wcp], False)
-            ui.status(
-                _("working directory now at %s\n") % ui.label(short(moves[wcp]), "node")
+        # A new rebase refuses to start while an unfinished drop is recorded.
+        _clearstate(repo)
+        try:
+            rebasemod.rebase(
+                ui,
+                repo,
+                rev=[revsetlang.formatspec("%ln", bydest[d]) for d in dests],
+                dest=[revsetlang.formatspec("%n", d) for d in dests],
+                tool=tool,
             )
-        scmutil.cleanupnodes(repo, dropnodes, "drop", moves=moves)
+        except error.InterventionRequired:
+            _writestate(repo, dropnodes)
+            raise _conflict()
+        except BaseException:
+            if repo.localvfs.exists("rebasestate"):
+                _writestate(repo, dropnodes)
+            raise
+
+    moves = {n: _latest(repo, keptancestor(n)) for n in dropnodes}
+    wcp = repo["."].node()
+    if wcp in dropset:
+        hg.update(repo, moves[wcp], False)
+        ui.status(
+            _("working directory now at %s\n") % ui.label(short(moves[wcp]), "node")
+        )
+    scmutil.cleanupnodes(repo, dropnodes, "drop", moves=moves)
+    _clearstate(repo)

@@ -1,6 +1,8 @@
 
   $ eagerepo
   $ enable rebase drop
+  $ enable morestatus
+  $ setconfig morestatus.show=true
 
 No revision provided:
   $ newclientrepo
@@ -153,7 +155,94 @@ Dropping the working copy parent moves the working copy:
   │
   @  426bada5c675 'A'
 
-Conflicts while rebasing descendants stop the drop:
+Conflicts while rebasing descendants interrupt the drop:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > E  # E/f = 5\n
+  > |
+  > D  # D/f = 4\n
+  > |
+  > C  # C/f = 3\n
+  > |
+  > B  # B/f = 2\n
+  > |
+  > A  # A/f = 1\n
+  > EOS
+  $ sl drop -r $B -r $D
+  dropping changeset d24cfa: B
+  dropping changeset 8d45fb: D
+  rebasing 11b100dbbeb1 "C"
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl drop --continue)
+  [1]
+
+The interrupted drop is reported by status, blocks other commands, and is
+what ISL is told to continue or abort:
+  $ sl status
+  M C
+  M f
+  ? f.orig
+  
+  # The repository is in an unfinished *drop* state.
+  # Unresolved merge conflicts (1):
+  # 
+  #     f
+  # 
+  # To mark files as resolved:  sl resolve --mark FILE
+  # To continue:                sl drop --continue
+  # To abort:                   sl drop --abort
+  $ sl goto -q $A
+  abort: drop in progress
+  (use 'sl drop --continue' to continue or
+       'sl drop --abort' to abort)
+  [255]
+  $ sl resolve --tool internal:dumpjson --all | pp | head -8
+  [
+    {
+      "command": "drop",
+      "command_details": {
+        "cmd": "drop",
+        "to_abort": "drop --abort",
+        "to_continue": "drop --continue"
+      },
+
+Resolving the conflict and continuing resumes the drop, stopping again at the
+next conflict, and `sl continue` continues the drop too:
+  $ sl resolve --tool internal:other --all
+  (no more unresolved files)
+  continue: sl drop --continue
+  $ sl drop --continue
+  rebasing 11b100dbbeb1 "C"
+  rebasing cb77bf3d5069 "E"
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl drop --continue)
+  [1]
+  $ sl resolve --tool internal:other --all
+  (no more unresolved files)
+  continue: sl drop --continue
+  $ sl continue
+  already rebased 11b100dbbeb1 "C" as b7f0d49ae613
+  rebasing cb77bf3d5069 "E"
+  $ tglog
+  o  8b9def33bb63 'E'
+  │
+  o  b7f0d49ae613 'C'
+  │
+  o  ac36a1f9437e 'A'
+  $ sl status
+  ? f.orig
+
+There is nothing left to continue or abort:
+  $ sl drop --continue
+  abort: no drop in progress
+  [255]
+  $ sl drop --abort
+  abort: no drop in progress
+  [255]
+
+Aborting an interrupted drop restores the stack and the working copy:
   $ newclientrepo
   $ drawdag <<'EOS'
   > D
@@ -164,31 +253,150 @@ Conflicts while rebasing descendants stop the drop:
   > |
   > A  # A/f = 1\n
   > EOS
-  $ sl drop -r $B
+  $ sl goto -q $D
+  $ sl drop -r $B -r $D
   dropping changeset d24cfa: B
+  dropping changeset 7abc7f: D
   rebasing 11b100dbbeb1 "C"
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
-  conflict occurred during drop: please fix it by running 'sl rebase --continue', and then re-run 'sl drop -r d24cfa11bac1'
-  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  unresolved conflicts (see sl resolve, then sl drop --continue)
   [1]
-
-After resolving the conflict and continuing the rebase, re-running the drop
-hides the dropped changeset:
-  $ sl resolve --tool internal:other --all
-  (no more unresolved files)
-  continue: sl rebase --continue
-  $ sl rebase --continue
-  rebasing 11b100dbbeb1 "C"
-  rebasing 7abc7f013e72 "D"
-  $ sl drop -r $B
-  dropping changeset d24cfa: B
+  $ sl drop --continue -r $B
+  abort: cannot specify revisions with --continue or --abort
+  [255]
+  $ sl drop --abort
+  rebase aborted
+  drop aborted
   $ tglog
-  o  794127ad5e0d 'D'
+  @  7abc7f013e72 'D'
   │
-  o  b7f0d49ae613 'C'
+  o  11b100dbbeb1 'C'
+  │
+  o  d24cfa11bac1 'B'
   │
   o  ac36a1f9437e 'A'
+  $ sl status
+  ? f.orig
+
+Continuing the rebase directly still leaves the drop to finish:
+  $ sl drop -r $B -r $D
+  dropping changeset d24cfa: B
+  dropping changeset 7abc7f: D
+  rebasing 11b100dbbeb1 "C"
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl drop --continue)
+  [1]
+  $ sl resolve --tool internal:other --all
+  (no more unresolved files)
+  continue: sl drop --continue
+  $ sl rebase --continue
+  rebasing 11b100dbbeb1 "C"
+  $ sl status
+  ? f.orig
+  
+  # The repository is in an unfinished *drop* state.
+  # To continue:                sl drop --continue
+  # To abort:                   sl drop --abort
+  $ sl drop --continue
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  working directory now at b7f0d49ae613
+  $ tglog
+  @  b7f0d49ae613 'C'
+  │
+  o  ac36a1f9437e 'A'
+
+Dropping from two stacks rebases both in a single rebase, so aborting after a
+conflict in the second stack also undoes the clean rebase of the first. This
+holds with and without in-memory rebase (which production uses):
+  $ twostacks() {
+  >   newclientrepo
+  >   drawdag <<'EOS'
+  > X3 Y3  # Y3/g = 3\n
+  > |  |
+  > X2 Y2  # Y2/g = 2\n
+  > |  |
+  > X1 Y1  # Y1/g = 1\n
+  >  \ |
+  >    A
+  > EOS
+  >   sl goto -q $Y3
+  > }
+  $ twostacks
+  $ sl drop -r $X2 -r $Y2
+  dropping changeset 3e920a: X2
+  dropping changeset 9a761e: Y2
+  rebasing 0e071e9f07f3 "X3"
+  rebasing f5d6da64e2a3 "Y3"
+  merging g
+  warning: 1 conflicts while merging g! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl drop --continue)
+  [1]
+  $ sl log -G -T '{desc}\n'
+  o  X3
+  │
+  │ @  Y3
+  │ │
+  │ o  Y2
+  │ │
+  │ │ x  X3
+  │ │ │
+  │ @ │  Y1
+  │ │ │
+  │ │ o  X2
+  ├───╯
+  o │  X1
+    │
+    o  A
+  $ sl drop --abort
+  rebase aborted
+  drop aborted
+  $ sl log -G -T '{desc}\n'
+  @  Y3
+  │
+  o  Y2
+  │
+  │ o  X3
+  │ │
+  o │  Y1
+  │ │
+  │ o  X2
+  │ │
+  │ o  X1
+  │
+  o  A
+
+  $ twostacks
+  $ sl drop -r $X2 -r $Y2 --config rebase.experimental.inmemory=true
+  dropping changeset 3e920a: X2
+  dropping changeset 9a761e: Y2
+  rebasing 0e071e9f07f3 "X3"
+  rebasing f5d6da64e2a3 "Y3"
+  merging g
+  hit merge conflicts (in g); switching to on-disk merge
+  rebasing f5d6da64e2a3 "Y3"
+  merging g
+  warning: 1 conflicts while merging g! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl drop --continue)
+  [1]
+  $ sl drop --abort
+  rebase aborted
+  drop aborted
+  $ sl log -G -T '{desc}\n'
+  @  Y3
+  │
+  o  Y2
+  │
+  │ o  X3
+  │ │
+  o │  Y1
+  │ │
+  │ o  X2
+  │ │
+  │ o  X1
+  │
+  o  A
 
 A merge tool can be given with --tool:
   $ newclientrepo
