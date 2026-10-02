@@ -232,7 +232,7 @@ if sys.platform == "win32":
                         pass
                     except Exception as e:
                         print(f"Failed to kill process {entry[0]} {entry[1]}: {e}")
-                        frs.failed_to_kill.append(entry[0])
+                        frs.unkillable_processes.append(entry[0])
                         frs.exception_raised = e
                         all_ok = False
             else:

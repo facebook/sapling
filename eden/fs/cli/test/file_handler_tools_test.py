@@ -80,9 +80,9 @@ class WinFileHandlerReleaserTest(unittest.TestCase):
         releaser = self.module.WinFileHandlerReleaser(instance)
 
         with redirect_stdout(io.StringIO()):
-            with self.assertRaises(AttributeError):
-                releaser.try_release(Path("C:/open/fbsource"))
+            released = releaser.try_release(Path("C:/open/fbsource"))
 
-        self.assertEqual(self.killed, [])
-        self.assertEqual(self.logged[-1]["unkillable_processes"], [])
+        self.assertFalse(released)
+        self.assertEqual(self.killed, [30000, 19044])
+        self.assertEqual(self.logged[-1]["unkillable_processes"], ["Hubbub.exe"])
         self.assertFalse(self.logged[-1]["success"])
