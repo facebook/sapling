@@ -54,36 +54,24 @@ TEST(ImportPriorityTest, minimum_value_cannot_be_deprioritized) {
   EXPECT_EQ(minimum, minimum.adjusted(-1));
 }
 
-TEST(ImportPriorityTest, large_positive_adjustment) {
+TEST(ImportPriorityTest, large_positive_adjustment_saturates_within_class) {
   auto low = ImportPriority{ImportPriority::Class::Low};
   auto largestOffset = low.adjusted((int64_t{1} << 60) - 1);
   EXPECT_EQ(ImportPriority::Class::Low, largestOffset.getClass());
 
-#ifdef NDEBUG
   auto beyondOffsetRange = low.adjusted(int64_t{1} << 60);
-  EXPECT_EQ(7, static_cast<int>(beyondOffsetRange.getClass()));
-  EXPECT_EQ("Unlabeled", beyondOffsetRange.className());
-  EXPECT_GT(beyondOffsetRange, largestOffset);
+  EXPECT_EQ(ImportPriority::Class::Low, beyondOffsetRange.getClass());
+  EXPECT_EQ(largestOffset, beyondOffsetRange);
 
   auto maxAdjustment = low.adjusted(std::numeric_limits<int64_t>::max());
-  EXPECT_EQ(14, static_cast<int>(maxAdjustment.getClass()));
-  EXPECT_GT(maxAdjustment, ImportPriority{ImportPriority::Class::High});
+  EXPECT_EQ(ImportPriority::Class::Low, maxAdjustment.getClass());
+  EXPECT_EQ(largestOffset, maxAdjustment);
+  EXPECT_LT(maxAdjustment, ImportPriority{ImportPriority::Class::Normal});
 
   auto constructed =
       ImportPriority(ImportPriority::Class::Normal, int64_t{1} << 60);
-  EXPECT_EQ(9, static_cast<int>(constructed.getClass()));
+  EXPECT_EQ(ImportPriority::Class::Normal, constructed.getClass());
   EXPECT_LT(constructed, ImportPriority{ImportPriority::Class::High});
-#else
-  EXPECT_DEATH(
-      (void)low.adjusted(int64_t{1} << 60),
-      "Adjusted offset must not overflow into class bits");
-  EXPECT_DEATH(
-      (void)low.adjusted(std::numeric_limits<int64_t>::max()),
-      "Adjusted offset must not overflow into class bits");
-  EXPECT_DEATH(
-      (void)ImportPriority(ImportPriority::Class::Normal, int64_t{1} << 60),
-      "Adjusted offset must not overflow into class bits");
-#endif
 }
 
 } // namespace

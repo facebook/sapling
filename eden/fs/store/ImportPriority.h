@@ -124,7 +124,8 @@ class ImportPriority {
     uint64_t offset = initialOffset;
     if (adjustment > 0) {
       uint64_t positiveOffset = static_cast<uint64_t>(adjustment);
-      if (offset > kMaximumOffset - positiveOffset) {
+      if (positiveOffset > kMaximumOffset ||
+          offset > kMaximumOffset - positiveOffset) {
         offset = kMaximumOffset;
       } else {
         offset += positiveOffset;
