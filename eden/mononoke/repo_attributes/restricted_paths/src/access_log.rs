@@ -938,6 +938,16 @@ mod schematized_logger {
     fn apply_metadata(logger: &mut MononokeRestrictedPathsAccessLogger, data: &CommonMetadata) {
         logger.set_session_uuid(data.session_uuid.clone());
         logger.set_client_identities(data.client_identities.clone());
+        if !data.unverified_forwarded_identities.is_empty() {
+            logger
+                .set_unverified_forwarded_identities(data.unverified_forwarded_identities.clone());
+        }
+        if let Some(ref verifier) = data.forwarded_cats_verifier {
+            logger.set_forwarded_cats_verifier(verifier.clone());
+        }
+        if !data.forwarded_cats_token_verifiers.is_empty() {
+            logger.set_forwarded_cats_token_verifiers(data.forwarded_cats_token_verifiers.clone());
+        }
 
         if let Some(ref hostname) = data.source_hostname {
             logger.set_source_hostname(hostname.clone());
