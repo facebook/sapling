@@ -652,14 +652,14 @@ where
         }
         items.append_to(&mut self.pending_work);
         if self.pending_work.len() >= self.work_chunk_items {
-            self.flush_work(true)
+            self.flush_work()
         } else {
             !self.is_canceled()
         }
     }
 
     fn submit_input_error(&mut self, err: E) -> bool {
-        if self.is_canceled() || !self.flush_work(true) {
+        if self.is_canceled() || !self.flush_work() {
             return false;
         }
         self.backend.submit_error(err)
@@ -684,7 +684,7 @@ where
     /// result-level errors where the consumer decides whether to keep draining or stop early.
     /// Returns `false` if buffered results or the error could not be published.
     pub fn send_error(&mut self, err: E) -> bool {
-        if self.is_canceled() || !self.flush_results(true) {
+        if self.is_canceled() || !self.flush_results() {
             return false;
         }
         self.backend.send_error(err)
@@ -696,10 +696,10 @@ where
     }
 
     fn finish(&mut self) -> bool {
-        self.flush_results(false) && self.flush_work(false)
+        self.flush_results() && self.flush_work()
     }
 
-    fn flush_work(&mut self, retain_buffer: bool) -> bool {
+    fn flush_work(&mut self) -> bool {
         if self.pending_work.is_empty() {
             return true;
         }
@@ -708,11 +708,7 @@ where
             return false;
         }
 
-        let work = if retain_buffer && self.backend.retain_scope_buffers() {
-            std::mem::take(&mut self.pending_work)
-        } else {
-            std::mem::take(&mut self.pending_work)
-        };
+        let work = std::mem::take(&mut self.pending_work);
 
         self.backend.submit_work(work)
     }
@@ -721,10 +717,10 @@ where
         if self.result_buffer.len() < self.result_batch_items {
             return !self.is_canceled();
         }
-        self.flush_results(true)
+        self.flush_results()
     }
 
-    fn flush_results(&mut self, retain_buffer: bool) -> bool {
+    fn flush_results(&mut self) -> bool {
         if self.result_buffer.is_empty() {
             return true;
         }
@@ -733,11 +729,7 @@ where
             return false;
         }
 
-        let results = if retain_buffer && self.backend.retain_scope_buffers() {
-            std::mem::take(&mut self.result_buffer)
-        } else {
-            std::mem::take(&mut self.result_buffer)
-        };
+        let results = std::mem::take(&mut self.result_buffer);
 
         self.backend.send_result_batch(results)
     }
@@ -909,7 +901,6 @@ trait ScopeBackend<W, Out, E> {
     fn send_result_batch(&mut self, batch: Vec<Out>) -> bool;
     fn send_error(&mut self, err: E) -> bool;
     fn is_canceled(&self) -> bool;
-    fn retain_scope_buffers(&self) -> bool;
 }
 
 fn run_worker<W, Out, E, K>(options: WorkOptions, input: Items<W, E>, worker: K) -> Items<Out, E>
@@ -1870,10 +1861,6 @@ where
     fn is_canceled(&self) -> bool {
         self.inline.is_canceled()
     }
-
-    fn retain_scope_buffers(&self) -> bool {
-        false
-    }
 }
 
 struct ParallelBackend<'a, W: Send + 'static, Out: Send + 'static, E: Send + 'static, K> {
@@ -1981,10 +1968,6 @@ where
 
     fn is_canceled(&self) -> bool {
         self.state.canceled.load(Ordering::Acquire)
-    }
-
-    fn retain_scope_buffers(&self) -> bool {
-        true
     }
 }
 
