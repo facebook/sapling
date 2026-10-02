@@ -1418,7 +1418,7 @@ enum CommitFingerprintVersion {
   /// where available.
   V1 = 1,
   /// V2: root ContentManifestId blake2 hash. Recommended long-term default.
-  /// Requires `derived_data_use_content_manifests` enabled for the repo;
+  /// Requires ContentManifests derived data enabled for the repo;
   /// otherwise the request fails with InvalidRequest (no auto-fallback).
   V2 = 2,
 }

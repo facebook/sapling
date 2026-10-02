@@ -26,7 +26,7 @@ enum FingerprintVersion {
     #[clap(name = "1")]
     V1,
     /// V2: root ContentManifestId blake2 hash (recommended; requires
-    /// derived_data_use_content_manifests enabled for the repo)
+    /// ContentManifests derived data enabled for the repo)
     #[clap(name = "2")]
     V2,
 }

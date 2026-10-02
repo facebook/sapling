@@ -14,7 +14,6 @@ import sys
 KNOWN_KNOBS = {
     "scm/mononoke": {
         "scm/mononoke:pushrebase_enable_merge_resolution": "True",
-        "scm/mononoke:derived_data_use_content_manifests": "False",
     },
 }
 

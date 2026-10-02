@@ -209,8 +209,7 @@ struct Measurement {
     bytes: u64,
     time: Duration,
     /// Longest single uninterrupted `poll()`. This is what starves a tokio
-    /// worker, and it is the metric the `derived_data_use_content_manifests`
-    /// SEV turned on: a slow request only cascades if it holds the executor.
+    /// worker: a slow request only cascades if it holds the executor.
     max_poll: Duration,
     polls: u64,
 }
