@@ -735,6 +735,12 @@ def collapse(repo, first, commitopts, skipprompt=False):
                 repo.dirstate.delete(f)
         repo.dirstate.setparents(n)
 
+    # Write the new parent out now, as workingctx.markcommitted does. EdenFS
+    # only learns of it when the dirstate is written; until then, a status
+    # check (such as the dirty check in "histedit --continue") gets an
+    # "out-of-date parent" error and resets the parent to the old commit.
+    repo.dirstate.write(repo.currenttransaction())
+
     return n
 
 

@@ -184,10 +184,7 @@ This also holds for a run of them:
   $ sl log -r . -T '{desc} {files}\n'
   C B C
 
-and after stopping for a conflict. Not on EdenFS, where continuing after a
-conflict in a fold, roll or into fails with "working copy has pending changes",
-with or without --plan:
-#if no-eden
+and after stopping for a conflict:
   $ newclientrepo
   $ drawdag <<'EOS'
   > D  # D/f = 3\n
@@ -200,7 +197,7 @@ with or without --plan:
   > EOS
   $ sl goto -q $D
   $ sl histedit --plan "pick $B" --plan "pick $D" --plan "into $C"
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved (?)
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
   Fix up the change (pick a255f7246f36)
@@ -229,7 +226,6 @@ with or without --plan:
   C C D f
   $ sl cat -r . f
   2
-#endif
 
 A drop can go anywhere in the plan, but fold, roll and into need a kept commit
 before it, so it cannot follow only drops:

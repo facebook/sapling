@@ -732,3 +732,47 @@ Like fold and roll, 'into' needs an earlier commit in the plan:
   sl: parse error: first changeset cannot use verb "into"
   (into combines a commit with the kept commit before it)
   [255]
+
+Continuing after a conflict in a fold or roll finishes the fold. (On EdenFS
+this used to fail with "working copy has pending changes".)
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > D  # D/f = 3\n
+  > |
+  > C  # C/f = 2\n
+  > |
+  > B  # B/f = 1\n
+  > |
+  > A
+  > EOS
+  $ sl goto -q $D
+  $ cat > plan <<EOF
+  > pick $B
+  > pick $D
+  > roll $C
+  > EOF
+  $ sl histedit $B --commands plan
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved (?)
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  Fix up the change (pick a255f7246f36)
+  (sl histedit --continue to resume)
+  [1]
+  $ sl resolve --tool internal:other --all
+  (no more unresolved files)
+  continue: sl histedit --continue
+  $ sl histedit --continue
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
+  Fix up the change (roll c9e6a60ee394)
+  (sl histedit --continue to resume)
+  [1]
+  $ sl resolve --tool internal:other --all
+  (no more unresolved files)
+  continue: sl histedit --continue
+  $ sl histedit --continue
+  $ sl log -r 'all()' -T '{desc} {files}\n'
+  A A
+  B B f
+  D C D f
