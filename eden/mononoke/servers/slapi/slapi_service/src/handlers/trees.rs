@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -80,6 +81,7 @@ use repo_identity::RepoIdentityRef;
 use restricted_paths::RestrictedPathsArc;
 use serde::Deserialize;
 use stats::define_stats;
+use stats::prelude::DynamicHistogram;
 use stats::prelude::TimeseriesStatic;
 use types::Key;
 use types::RepoPathBuf;
@@ -107,6 +109,15 @@ define_stats! {
     upload_augmented_manifests_skipped_no_acl_work: timeseries(Rate, Sum),
     upload_augmented_manifests_failed: timeseries(Rate, Sum),
     upload_augmented_manifests_failed_missing_child: timeseries(Rate, Sum),
+    upload_augmented_manifests_build_ms: dynamic_histogram(
+        "{}.upload_augmented_manifests_build_ms", (repo: String);
+        20, 0, 10_000, Average, Count; P 50; P 90; P 99),
+    upload_augmented_manifests_batch_trees: dynamic_histogram(
+        "{}.upload_augmented_manifests_batch_trees", (repo: String);
+        10, 0, 1_000, Average, Count; P 50; P 90; P 99),
+    upload_augmented_manifests_batch_levels: dynamic_histogram(
+        "{}.upload_augmented_manifests_batch_levels", (repo: String);
+        1, 0, 50, Average, Count; P 50; P 90; P 99),
 }
 
 // The size is optimized for the batching settings in EdenFs.
@@ -548,12 +559,24 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     // can look like it is missing a child the client did send. Only a complete
     // batch can tell the client's mistake from our own.
     let complete_batch = trees.len() == batch_len;
+    let repo_name = repo.repo().repo_identity().name().to_string();
     STATS::upload_augmented_manifests_attempted.add_value(trees.len() as i64);
-    match repo
+    STATS::upload_augmented_manifests_batch_trees
+        .add_value(trees.len() as i64, (repo_name.clone(),));
+    // The build runs before the response stream ends, so this is time the
+    // client waits on top of storing the trees.
+    let started = Instant::now();
+    let result = repo
         .build_augmented_manifests_for_uploaded_trees(trees)
-        .await
-    {
-        Ok(built) => record_augmented_manifest_outcomes(&built),
+        .await;
+    STATS::upload_augmented_manifests_build_ms
+        .add_value(started.elapsed().as_millis() as i64, (repo_name.clone(),));
+    match result {
+        Ok(built) => {
+            record_augmented_manifest_outcomes(&built);
+            let levels = built.iter().map(|tree| tree.level + 1).max().unwrap_or(0);
+            STATS::upload_augmented_manifests_batch_levels.add_value(levels as i64, (repo_name,));
+        }
         Err(err) => {
             let failure_kind = if complete_batch && is_client_fault(&err) {
                 STATS::upload_augmented_manifests_failed_missing_child.add_value(1);

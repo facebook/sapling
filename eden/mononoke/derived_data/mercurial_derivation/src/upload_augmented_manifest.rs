@@ -94,6 +94,9 @@ pub struct BuiltTree {
 pub struct UploadTreeAugmented {
     pub node_id: HgNodeHash,
     pub acl: DirectoryAcl,
+    /// The build level it ran in: 0 for a tree containing nothing else in the
+    /// batch, otherwise one above its highest child.
+    pub level: usize,
 }
 
 struct ChildNode {
@@ -314,7 +317,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
 
     let mut built: HashMap<HgNodeHash, BuiltTree> = HashMap::with_capacity(tree_count);
     let mut augmented = Vec::with_capacity(tree_count);
-    for level in levels {
+    for (level_index, level) in levels.into_iter().enumerate() {
         let siblings = &built;
         let builds: Vec<_> = level
             .into_iter()
@@ -347,6 +350,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
             augmented.push(UploadTreeAugmented {
                 node_id,
                 acl: result.acl.clone(),
+                level: level_index,
             });
             built.insert(node_id, result);
         }
