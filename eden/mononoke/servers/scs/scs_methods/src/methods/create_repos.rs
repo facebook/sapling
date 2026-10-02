@@ -584,7 +584,7 @@ async fn create_repo_acl(
     let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     thrift_client
-        .commitChangeSpecificationV2(&request)
+        .commitChangeSpecification(&request)
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     Ok(())
