@@ -22,14 +22,6 @@ A linear history of 10 commits. Generations are 1 (A) .. 10 (J), tip is `main`.
   > # bookmark: I i
   > EOF
 
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:derived_data_use_content_manifests": true
-  >   }
-  > }
-  > EOF
-
 content_manifests derives from its fsnodes predecessor, so
 --unsafe-derive-untopologically lets us derive single commits while their
 ancestors stay underived. Build a gap in the middle of history: derive A,B,C

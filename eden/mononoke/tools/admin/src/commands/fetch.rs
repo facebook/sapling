@@ -26,12 +26,10 @@ use cmdlib_displaying::display_manifest;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use either::Either;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStoreRef;
 use filestore::FetchKey;
-use fsnodes::RootFsnodeId;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
@@ -39,14 +37,12 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
-use repo_identity::RepoIdentityRef;
 
 /// Fetch commit, tree or file data.
 #[derive(Parser)]
@@ -166,7 +162,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 display_hg_entry(&ctx, &blobstore, hg_changeset_id, path).await?;
             }
             ManifestKind::ContentManifest => {
-                display_fsnode(&ctx, &repo, &blobstore, changeset_id, path).await?;
+                display_content_manifest(&ctx, &repo, &blobstore, changeset_id, path).await?;
             }
         },
     }
@@ -196,32 +192,18 @@ async fn display_content_info(
     Ok(())
 }
 
-async fn display_fsnode(
+async fn display_content_manifest(
     ctx: &CoreContext,
     repo: &Repo,
     blobstore: &RepoBlobstore,
     cs_id: ChangesetId,
     path: &str,
 ) -> Result<()> {
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo.repo_identity().name()),
-    );
-
-    let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
-        repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_content_manifest_id()
-            .into()
-    } else {
-        repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_fsnode_id()
-            .into()
-    };
+    let root_manifest_id = repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?
+        .into_content_manifest_id();
 
     let entry = if path.is_empty() {
         Entry::Tree(root_manifest_id)
@@ -233,26 +215,15 @@ async fn display_fsnode(
             .ok_or_else(|| anyhow!("Path does not exist: {path}"))?
     };
     match entry {
-        Entry::Leaf(leaf) => {
-            let file: compat::ContentManifestFile = leaf.into();
-            writeln!(std::io::stdout(), "File-Type: {}", file.file_type())?;
-            display_content_info(ctx, blobstore, &file.content_id().into()).await?;
+        Entry::Leaf(file) => {
+            writeln!(std::io::stdout(), "File-Type: {}", file.file_type)?;
+            display_content_info(ctx, blobstore, &file.content_id.into()).await?;
         }
         Entry::Tree(id) => {
-            let manifest = match id {
-                Either::Left(cm_id) => Either::Left(
-                    cm_id
-                        .load(ctx, blobstore)
-                        .await
-                        .context("Failed to load content manifest")?,
-                ),
-                Either::Right(fsnode_id) => Either::Right(
-                    fsnode_id
-                        .load(ctx, blobstore)
-                        .await
-                        .context("Failed to load manifest")?,
-                ),
-            };
+            let manifest = id
+                .load(ctx, blobstore)
+                .await
+                .context("Failed to load content manifest")?;
             display_manifest(std::io::stdout(), ctx, blobstore, manifest).await?;
         }
     }

@@ -31,11 +31,6 @@ use repo_identity::RepoIdentityRef;
 /// `commit_compare`, in this process, so the diff path can be profiled against
 /// real repo data. Output matches `scsc diff --paths-only`.
 ///
-/// Which manifest type backs the diff is decided by
-/// `scm/mononoke:derived_data_use_content_manifests`, exactly as in production.
-/// To compare backends, override it with the global
-/// `--just-knobs-config-path`.
-///
 /// Pass the two commits oldest first: `-i FROM -i TO`.
 #[derive(Parser)]
 pub struct CommandArgs {

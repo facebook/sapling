@@ -16,8 +16,6 @@ use commit_id::parse_commit_id;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use either::Either;
-use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use metaconfig_types::RepoConfigRef;
@@ -27,11 +25,9 @@ use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
-use mononoke_types::content_manifest::compat;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
-use repo_identity::RepoIdentityRef;
 
 use super::Repo;
 
@@ -52,50 +48,24 @@ pub(super) async fn paths_for_content_keys(
     cs_id: ChangesetId,
     keys: &HashSet<String>,
 ) -> Result<Vec<(NonRootMPath, ContentId)>> {
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo.repo_identity().name()),
-    );
+    let root = repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?
+        .into_content_manifest_id();
 
-    let root: compat::ContentManifestId = if use_content_manifests {
-        repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_content_manifest_id()
-            .into()
-    } else {
-        repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_fsnode_id()
-            .into()
-    };
-
-    let file_count = match &root {
-        Either::Left(content_manifest_id) => {
-            content_manifest_id
-                .load(ctx, repo.repo_blobstore())
-                .await?
-                .subentries
-                .rollup_data()
-                .descendant_counts
-                .files_count
-        }
-        Either::Right(fsnode_id) => {
-            fsnode_id
-                .load(ctx, repo.repo_blobstore())
-                .await?
-                .summary()
-                .descendant_files_count
-        }
-    };
+    let file_count = root
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .subentries
+        .rollup_data()
+        .descendant_counts
+        .files_count;
 
     let mut processed = 0;
     let mut paths = Vec::new();
     let mut entries = root.list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc());
-    while let Some((path, leaf)) = entries.try_next().await? {
-        let manifest_file: compat::ContentManifestFile = leaf.into();
+    while let Some((path, file)) = entries.try_next().await? {
         processed += 1;
         if processed % 100_000 == 0 {
             if paths.is_empty() {
@@ -109,8 +79,8 @@ pub(super) async fn paths_for_content_keys(
                 );
             }
         }
-        if keys.contains(&manifest_file.content_id().blobstore_key()) {
-            paths.push((path, manifest_file.content_id()));
+        if keys.contains(&file.content_id.blobstore_key()) {
+            paths.push((path, file.content_id));
         }
     }
     Ok(paths)

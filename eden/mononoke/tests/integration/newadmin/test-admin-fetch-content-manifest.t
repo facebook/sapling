@@ -18,15 +18,6 @@ setup configuration
   B=749add4e33cf83fda6cce6f4fb4e3037a171dd8068acef09b336fd8ae027bf6f
   C=93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
 
-Enable content manifests via JustKnobs
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:derived_data_use_content_manifests": true
-  >   }
-  > }
-  > EOF
-
   $ mononoke_admin fetch -R repo -B main -p "" -k content-manifest
   Summary:
   Children: 3 files (3), 0 dirs

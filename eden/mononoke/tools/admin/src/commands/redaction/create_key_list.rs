@@ -31,7 +31,6 @@ use commit_id::parse_commit_id;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -45,7 +44,6 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RedactionKeyList;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::typed_hash::RedactionKeyListId;
 use redaction_set::RedactionSets;
 use repo_blobstore::RepoBlobstoreArc;
@@ -367,33 +365,18 @@ async fn content_keys_for_paths(
     commit_label: &str,
     paths: Vec<NonRootMPath>,
 ) -> Result<HashSet<String>> {
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo.repo_identity.name()),
-    );
-
-    let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
-        repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_content_manifest_id()
-            .into()
-    } else {
-        repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_fsnode_id()
-            .into()
-    };
+    let root_manifest_id = repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?
+        .into_content_manifest_id();
 
     let path_content_keys = root_manifest_id
         .find_entries(ctx.clone(), repo.repo_blobstore_arc(), paths.clone())
         .try_filter_map(|(path, entry)| async move {
             match (path.into_optional_non_root_path(), entry) {
-                (Some(path), Entry::Leaf(leaf)) => {
-                    let file: compat::ContentManifestFile = leaf.into();
-                    Ok(Some((path, file.content_id().blobstore_key())))
+                (Some(path), Entry::Leaf(file)) => {
+                    Ok(Some((path, file.content_id.blobstore_key())))
                 }
                 _ => Ok(None),
             }
