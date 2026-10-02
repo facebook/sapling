@@ -19,6 +19,8 @@ use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use try_once_lock::OnceLock;
 use types::HgId;
+use types::Key;
+use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -356,6 +358,24 @@ impl DirLink {
         }
     }
 
+    /// Return a fetch key if this directory is durable and its links are not loaded.
+    pub(crate) fn prefetch_key(&self) -> Option<Key> {
+        match self.link.as_ref() {
+            Durable(entry) if !entry.links_initialized() => {
+                Some(Key::new(self.path.clone(), entry.hgid))
+            }
+            Leaf(_) | Ephemeral(_) | Durable(_) => None,
+        }
+    }
+
+    /// Look up a child without copying its subtree.
+    pub(crate) fn lookup(&self, store: &InnerStore, name: &PathComponent) -> Result<Option<Link>> {
+        Ok(self
+            .link_map(store)?
+            .get(name)
+            .map(|link| link.thread_copy()))
+    }
+
     /// List the contents of this directory.
     ///
     /// Returns two sorted vectors of files and directories contained
@@ -393,12 +413,17 @@ impl DirLink {
         &self,
         store: &InnerStore,
     ) -> Result<impl Iterator<Item = (&PathComponentBuf, &Link)> + use<'_>> {
+        Ok(self.link_map(store)?.iter())
+    }
+
+    /// Return this directory's children, loading them if necessary.
+    fn link_map(&self, store: &InnerStore) -> Result<&BTreeMap<PathComponentBuf, Link>> {
         let links = match self.link.as_ref() {
             Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
             Ephemeral(links) => links,
             Durable(entry) => entry.materialize_links(store, &self.path)?,
         };
-        Ok(links.iter())
+        Ok(links)
     }
 
     pub fn permission_denied_error(&self) -> Option<&types::errors::PermissionDenied> {

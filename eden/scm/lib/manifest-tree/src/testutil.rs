@@ -75,6 +75,8 @@ pub struct TestStoreInner {
     entries: HashMap<HgId, Bytes>,
     // Calls to get_content_iter() and get_tree_iter().
     fetched: Vec<Vec<Key>>,
+    // Calls to prefetch().
+    prefetched: Vec<Vec<Key>>,
     // FetchContexts passed to get_content_iter().
     fetch_contexts: Vec<FetchContext>,
     // Parents recorded via insert_data with InsertOpts.parents.
@@ -99,6 +101,11 @@ impl TestStore {
     #[allow(unused)]
     pub fn fetches(&self) -> Vec<Vec<Key>> {
         self.inner.read().fetched.clone()
+    }
+
+    #[allow(unused)]
+    pub fn prefetches(&self) -> Vec<Vec<Key>> {
+        self.inner.read().prefetched.clone()
     }
 
     #[allow(unused)]
@@ -203,6 +210,11 @@ impl KeyStore for TestStore {
                 )),
             });
         Ok(ContentFetchItems::item_stream(iter))
+    }
+
+    fn prefetch(&self, keys: Vec<Key>) -> anyhow::Result<()> {
+        self.inner.write().prefetched.push(keys);
+        Ok(())
     }
 
     fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
