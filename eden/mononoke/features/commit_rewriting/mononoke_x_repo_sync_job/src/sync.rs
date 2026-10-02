@@ -41,7 +41,6 @@ use cross_repo_sync::unsafe_get_parent_map_for_target_bookmark_rewrite;
 use cross_repo_sync::unsafe_sync_commit;
 use cross_repo_sync::unsafe_sync_commit_pushrebase;
 use derivation_queue_thrift::DerivationPriority;
-use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
@@ -683,38 +682,21 @@ where
             format!("Ancestor {ancestor_cs_id} synced successfully as {synced}"),
         );
 
-        // Fsnodes/content manifests always need to be derived synchronously
+        // Content manifests always need to be derived synchronously
         // during initial import because syncing a commit with submodule
         // expansion depends on the manifests of its parents.
         //
         // If manifests aren't derived synchronously, expansion of submodules
         // will derive it using an InMemoryRepo, throwing away all the results
         // and doing it all again in the next changeset.
-        let use_content_manifests = justknobs::eval(
-            "scm/mononoke:derived_data_use_content_manifests",
-            None,
-            Some(large_repo.repo_identity().name()),
+        let root_content_manifest_id = large_repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, synced, DerivationPriority::LOW)
+            .await?;
+        trace!(
+            "Root content manifest id from {synced}: {0}",
+            root_content_manifest_id.into_content_manifest_id()
         );
-
-        if use_content_manifests {
-            let root_content_manifest_id = large_repo
-                .repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, synced, DerivationPriority::LOW)
-                .await?;
-            trace!(
-                "Root content manifest id from {synced}: {0}",
-                root_content_manifest_id.into_content_manifest_id()
-            );
-        } else {
-            let root_fsnode_id = large_repo
-                .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, synced, DerivationPriority::LOW)
-                .await?;
-            trace!(
-                "Root fsnode id from {synced}: {0}",
-                root_fsnode_id.into_fsnode_id()
-            );
-        }
 
         if !no_automatic_derivation {
             if changesets_to_derive.len() >= derivation_batch_size {

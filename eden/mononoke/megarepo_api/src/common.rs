@@ -29,7 +29,6 @@ use commit_transformation::create_source_to_target_multi_mover;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
@@ -70,8 +69,6 @@ use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use mononoke_types::content_manifest::compat::ContentManifestFile;
-use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use repo_authorization::AuthorizationContext;
 use sorted_vector_map::SortedVectorMap;
@@ -414,29 +411,15 @@ pub trait MegarepoOp<R> {
     where
         R: Repo,
     {
-        let root_id: ContentManifestId = if justknobs::eval(
-            "scm/mononoke:derived_data_use_content_manifests",
-            None,
-            Some(repo.repo_identity().name()),
-        ) {
-            repo.repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-                .await
-                .map_err(Error::from)?
-                .into_content_manifest_id()
-                .into()
-        } else {
-            repo.repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-                .await
-                .map_err(Error::from)?
-                .into_fsnode_id()
-                .into()
-        };
+        let root_id = repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await
+            .map_err(Error::from)?
+            .into_content_manifest_id();
 
         let entries = root_id
             .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-            .map_ok(|(path, file)| (path, ContentManifestFile(file)))
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -452,9 +435,9 @@ pub trait MegarepoOp<R> {
 
             file_changes.extend(moved.into_iter().map(|target| {
                 let fc = FileChange::tracked(
-                    file.content_id(),
-                    file.file_type(),
-                    file.size(),
+                    file.content_id,
+                    file.file_type,
+                    file.size,
                     Some((path.clone(), cs_id)),
                     GitLfs::FullContent,
                 );

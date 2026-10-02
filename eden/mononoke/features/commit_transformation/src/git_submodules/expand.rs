@@ -296,7 +296,7 @@ pub(crate) async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
 /// mirrored in a Mononoke repo and these repos are loaded and available inside
 /// `submodule_deps`. It will crash if that's not the case.
 ///
-/// This depends on fsnodes from the commits in the source repo and the
+/// This depends on content manifests from the commits in the source repo and the
 /// submodule repos, so if they aren't already derived, they will be during the
 /// expansion process.
 ///

@@ -22,7 +22,6 @@ use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use derived_data::macro_export::BonsaiDerivable;
 use either::Either;
-use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::stream;
 use futures::stream::TryStreamExt;
@@ -32,11 +31,12 @@ use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestOps;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentManifestId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
-use mononoke_types::content_manifest::compat;
+use mononoke_types::content_manifest::ContentManifestFile;
 use movers::Mover;
 use reporting::log_error;
 use scuba_ext::FutureStatsScubaExt;
@@ -50,7 +50,6 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_manifest_id_from_submodule_git_commit;
-use crate::git_submodules::utils::use_content_manifests;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::types::Repo;
 use crate::types::SubmodulePath;
@@ -85,13 +84,6 @@ impl ValidSubmoduleExpansionBonsai {
         // Iterate over the submodule dependency paths.
         // Create a map grouping the file changes per submodule dependency.
 
-        // Decided once for the large repo and threaded through every helper
-        // below: expansion manifests from the large repo are compared against
-        // submodule manifests from the submodule repos, and a
-        // `compat::ContentManifestId` can only be compared against the same
-        // variant. Both sides must agree on a backend.
-        let use_content_manifests = use_content_manifests(&sm_exp_data.large_repo);
-
         let bonsai_res: Result<BonsaiChangeset> =
             stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))
                 .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
@@ -104,7 +96,6 @@ impl ValidSubmoduleExpansionBonsai {
                             submodule_path,
                             submodule_repo.as_ref(),
                             mover,
-                            use_content_manifests,
                         )
                         .timed()
                         .await
@@ -156,7 +147,6 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     submodule_path: &'a NonRootMPath,
     submodule_repo: &'a R,
     mover: Arc<dyn Mover>,
-    use_content_manifests: bool,
 ) -> Result<BonsaiChangeset> {
     trace!(
         "Validating expansion of submodule {0} while syncing commit {1:?}",
@@ -207,7 +197,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
             if !submodule_expansion_changed {
                 // Metadata file didn't change but its submodule expansion also
                 // wasn't changed.
-                // Return early in this case to avoid deriving fsnodes for
+                // Return early in this case to avoid deriving content manifests for
                 // the large repo bonsai
                 return Ok(bonsai);
             }
@@ -281,7 +271,6 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         submodule_repo,
         git_hash,
         &sm_exp_data.dangling_submodule_pointers,
-        use_content_manifests,
     )
     .timed()
     .await
@@ -300,7 +289,6 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         sm_exp_data.clone(),
         &bonsai,
         &synced_submodule_path,
-        use_content_manifests,
     )
     .timed()
     .await
@@ -333,7 +321,6 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         submodule_repo,
         expansion_manifest_id,
         submodule_manifest_id,
-        use_content_manifests,
     )
     .timed()
     .await
@@ -441,85 +428,48 @@ async fn get_submodule_expansion_manifest_id<'a, R: Repo>(
     // Bonsai from the large repo
     bonsai: &'a BonsaiChangeset,
     synced_submodule_path: &NonRootMPath,
-    use_content_manifests: bool,
-) -> Result<compat::ContentManifestId> {
+) -> Result<ContentManifestId> {
     let large_repo = sm_exp_data.large_repo.clone();
 
     let large_repo_blobstore = large_repo.repo_blobstore_arc();
     let large_repo_derived_data = large_repo.repo_derived_data();
     let large_derived_data_ctx = large_repo_derived_data.manager().derivation_context(None);
 
-    let new_root_manifest_id: compat::ContentManifestId = if use_content_manifests {
-        let parent_roots = stream::iter(bonsai.parents())
-            .then(|cs_id| {
-                large_repo_derived_data.derive::<RootContentManifestId>(
-                    ctx,
-                    cs_id,
-                    DerivationPriority::LOW,
-                )
-            })
-            .boxed()
-            .try_collect::<Vec<_>>()
-            .timed()
-            .await
-            .log_future_stats(
-                ctx.scuba().clone(),
-                "Deriving large repo bonsai parent's content manifest ids",
-                format!("Synced submodule path: {synced_submodule_path}"),
+    let parent_roots = stream::iter(bonsai.parents())
+        .then(|cs_id| {
+            large_repo_derived_data.derive::<RootContentManifestId>(
+                ctx,
+                cs_id,
+                DerivationPriority::LOW,
             )
-            .context("Failed to derive parent content manifests in large repo")?;
-
-        let root = RootContentManifestId::derive_single(
-            ctx,
-            &large_derived_data_ctx,
-            bonsai.clone(),
-            parent_roots,
-            None,
-        )
+        })
+        .boxed()
+        .try_collect::<Vec<_>>()
         .timed()
         .await
         .log_future_stats(
             ctx.scuba().clone(),
-            "Deriving large repo bonsai root content manifest id",
+            "Deriving large repo bonsai parent's content manifest ids",
             format!("Synced submodule path: {synced_submodule_path}"),
         )
-        .context("Deriving root content manifest for new bonsai")?;
+        .context("Failed to derive parent content manifests in large repo")?;
 
-        Either::Left(root.into_content_manifest_id())
-    } else {
-        let parent_roots = stream::iter(bonsai.parents())
-            .then(|cs_id| {
-                large_repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            })
-            .boxed()
-            .try_collect::<Vec<_>>()
-            .timed()
-            .await
-            .log_future_stats(
-                ctx.scuba().clone(),
-                "Deriving large repo bonsai parent's fsnode ids",
-                format!("Synced submodule path: {synced_submodule_path}"),
-            )
-            .context("Failed to derive parent fsnodes in large repo")?;
-
-        let root = RootFsnodeId::derive_single(
-            ctx,
-            &large_derived_data_ctx,
-            bonsai.clone(),
-            parent_roots,
-            None,
-        )
-        .timed()
-        .await
-        .log_future_stats(
-            ctx.scuba().clone(),
-            "Deriving large repo bonsai root fsnode id",
-            format!("Synced submodule path: {synced_submodule_path}"),
-        )
-        .context("Deriving root fsnode for new bonsai")?;
-
-        Either::Right(root.into_fsnode_id())
-    };
+    let new_root_manifest_id = RootContentManifestId::derive_single(
+        ctx,
+        &large_derived_data_ctx,
+        bonsai.clone(),
+        parent_roots,
+        None,
+    )
+    .timed()
+    .await
+    .log_future_stats(
+        ctx.scuba().clone(),
+        "Deriving large repo bonsai root content manifest id",
+        format!("Synced submodule path: {synced_submodule_path}"),
+    )
+    .context("Deriving root content manifest for new bonsai")?
+    .into_content_manifest_id();
 
     let expansion_entry = new_root_manifest_id
         .find_entry(
@@ -560,9 +510,8 @@ pub async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>
     // account for recursive submodules.
     adjusted_submodule_deps: HashMap<NonRootMPath, Arc<R>>,
     submodule_repo: &'a R,
-    expansion_manifest_id: compat::ContentManifestId,
-    submodule_manifest_id: compat::ContentManifestId,
-    use_content_manifests: bool,
+    expansion_manifest_id: ContentManifestId,
+    submodule_manifest_id: ContentManifestId,
 ) -> Result<()>
 where
     R: Repo,
@@ -626,7 +575,7 @@ where
         .process_results(|iter| {
             iter.partition_map(|(path, entry)| match entry {
                 Entry::Tree(dir_id) => Either::Left((path, dir_id)),
-                Entry::Leaf(file) => Either::Right((path, file.into())),
+                Entry::Leaf(file) => Either::Right((path, file)),
             })
         })?;
 
@@ -647,7 +596,7 @@ where
         should_be_metadata_files
             .into_iter()
             .map(|(path, entry)| match entry {
-                Entry::Leaf(file) => Ok((path, file.into())),
+                Entry::Leaf(file) => Ok((path, file)),
                 Entry::Tree(_) => Err(path),
             })
             .partition_result();
@@ -708,7 +657,7 @@ where
                 entries_to_validate: Vec::new(),
             },
             |iteration_data: EntryValidationData<R>,
-             (exp_path, exp_dir_id): (MPathElement, compat::ContentManifestId)| {
+             (exp_path, exp_dir_id): (MPathElement, ContentManifestId)| {
                 cloned!(sm_exp_data, adjusted_submodule_deps);
                 borrowed!(submodule_repo);
 
@@ -721,7 +670,6 @@ where
                         iteration_data,
                         exp_path.clone(),
                         exp_dir_id,
-                        use_content_manifests,
                     )
                     .timed()
                     .await
@@ -818,7 +766,6 @@ where
                     &submodule_repo,
                     expansion_manifest_id,
                     submodule_repo_manifest_id,
-                    use_content_manifests,
                 )
                 .await
             }
@@ -838,8 +785,8 @@ where
 struct EntriesToValidate<R: Repo> {
     rec_submodule_repo_deps: HashMap<NonRootMPath, Arc<R>>,
     submodule_repo: Arc<R>,
-    expansion_manifest_id: compat::ContentManifestId,
-    submodule_repo_manifest_id: compat::ContentManifestId,
+    expansion_manifest_id: ContentManifestId,
+    submodule_repo_manifest_id: ContentManifestId,
 }
 
 /// Stores all the data for an iteration of the validation fold.
@@ -848,12 +795,12 @@ struct EntriesToValidate<R: Repo> {
 /// that have to be made.
 struct EntryValidationData<R: Repo> {
     /// Submodule directory entries that haven't been matched yet.
-    remaining_sm_dirs: HashMap<MPathElement, compat::ContentManifestId>,
+    remaining_sm_dirs: HashMap<MPathElement, ContentManifestId>,
     /// Submodule file entries that haven't been matched yet.
-    remaining_sm_files: HashMap<MPathElement, compat::ContentManifestFile>,
+    remaining_sm_files: HashMap<MPathElement, ContentManifestFile>,
     /// Expansion file entries that haven't been matched yet **and should be
     /// submodule metadata files**.
-    remaining_md_files: HashMap<MPathElement, compat::ContentManifestFile>,
+    remaining_md_files: HashMap<MPathElement, ContentManifestFile>,
     /// Result of the manifest validation: recursive calls that should be made
     /// to validate either a recursive submodule or go further down in a
     /// directory to find a recursive submodule.
@@ -872,8 +819,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
     adjusted_submodule_deps: HashMap<NonRootMPath, Arc<R>>,
     entry_validation_res: EntryValidationData<R>,
     exp_path: MPathElement,
-    exp_dir_id: compat::ContentManifestId,
-    use_content_manifests: bool,
+    exp_dir_id: ContentManifestId,
 ) -> Result<EntryValidationData<R>> {
     let EntryValidationData {
         mut remaining_sm_dirs,
@@ -917,7 +863,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
     ))?;
 
     // The file has to be of type GitSubmodule
-    if submodule_file.file_type() != FileType::GitSubmodule {
+    if submodule_file.file_type != FileType::GitSubmodule {
         return Err(anyhow!(
             "Submodule entry for the same path has to be a submodule file"
         ));
@@ -943,14 +889,14 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
     let exp_metadata_git_hash = git_hash_from_submodule_metadata_file(
         ctx,
         &sm_exp_data.large_repo,
-        metadata_file.content_id(),
+        metadata_file.content_id,
     )
     .await?;
 
     // Get the git hash from the submodule file change and
     // ensure that it matches the one stored in the metadata file.
     let git_hash_from_sm_entry =
-        get_git_hash_from_submodule_file(ctx, submodule_repo, submodule_file.content_id()).await?;
+        get_git_hash_from_submodule_file(ctx, submodule_repo, submodule_file.content_id).await?;
 
     assert_eq!(
         exp_metadata_git_hash, git_hash_from_sm_entry,
@@ -969,7 +915,6 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
         recursive_submodule_repo.as_ref(),
         exp_metadata_git_hash,
         &sm_exp_data.dangling_submodule_pointers,
-        use_content_manifests,
     )
     .await?;
 

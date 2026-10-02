@@ -38,7 +38,7 @@ use crate::types::Repo;
 /// Container to access a repo's blobstore and derived data without writing
 /// anything to its blobstore or changeset table.
 /// It's current purpose is to perform validation of git submodule expansion
-/// by deriving fsnodes from uncommitted bonsais in the large repo.
+/// by deriving content manifests from uncommitted bonsais in the large repo.
 #[facet::container]
 #[derive(Clone)]
 pub struct InMemoryRepo {

@@ -30,7 +30,7 @@ pub struct InitialImportCommandArgs {
     #[clap(long)]
     pub no_progress_bar: bool,
 
-    /// Disable automatic derivation of fsnodes as commits are synced
+    /// Disable automatic derivation of content manifests as commits are synced
     #[clap(long)]
     pub no_automatic_derivation: bool,
 

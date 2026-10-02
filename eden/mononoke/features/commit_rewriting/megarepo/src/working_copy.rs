@@ -10,7 +10,6 @@ use blobstore::Loadable;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use futures::future::try_join;
 use manifest::Diff;
@@ -18,52 +17,33 @@ use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::content_manifest::compat;
+use mononoke_types::ContentManifestId;
 use tracing::info;
 use unodes::RootUnodeManifestId;
 
 use crate::Repo;
 
-async fn derive_compat_manifest_ids(
+async fn derive_content_manifest_ids(
     ctx: &CoreContext,
     repo: &impl Repo,
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
-) -> Result<(compat::ContentManifestId, compat::ContentManifestId), Error> {
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo.repo_identity().name()),
+) -> Result<(ContentManifestId, ContentManifestId), Error> {
+    let id = repo.repo_derived_data().derive::<RootContentManifestId>(
+        ctx,
+        bcs_id,
+        DerivationPriority::LOW,
     );
-
-    if use_content_manifests {
-        let id = repo.repo_derived_data().derive::<RootContentManifestId>(
-            ctx,
-            bcs_id,
-            DerivationPriority::LOW,
-        );
-        let base_id = repo.repo_derived_data().derive::<RootContentManifestId>(
-            ctx,
-            base_cs_id,
-            DerivationPriority::LOW,
-        );
-        let (id, base_id) = try_join(id, base_id).await?;
-        Ok((
-            id.into_content_manifest_id().into(),
-            base_id.into_content_manifest_id().into(),
-        ))
-    } else {
-        let id =
-            repo.repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, bcs_id, DerivationPriority::LOW);
-        let base_id = repo.repo_derived_data().derive::<RootFsnodeId>(
-            ctx,
-            base_cs_id,
-            DerivationPriority::LOW,
-        );
-        let (id, base_id) = try_join(id, base_id).await?;
-        Ok((id.into_fsnode_id().into(), base_id.into_fsnode_id().into()))
-    }
+    let base_id = repo.repo_derived_data().derive::<RootContentManifestId>(
+        ctx,
+        base_cs_id,
+        DerivationPriority::LOW,
+    );
+    let (id, base_id) = try_join(id, base_id).await?;
+    Ok((
+        id.into_content_manifest_id(),
+        base_id.into_content_manifest_id(),
+    ))
 }
 
 pub async fn get_working_copy_paths(
@@ -93,7 +73,7 @@ pub async fn get_changed_content_working_copy_paths(
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
     let (root_manifest_id, base_root_manifest_id) =
-        derive_compat_manifest_ids(ctx, repo, bcs_id, base_cs_id).await?;
+        derive_content_manifest_ids(ctx, repo, bcs_id, base_cs_id).await?;
 
     let mut paths = base_root_manifest_id
         .diff(ctx.clone(), repo.repo_blobstore().clone(), root_manifest_id)
@@ -126,7 +106,7 @@ pub async fn get_colliding_paths_between_commits(
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
     let (root_manifest_id, base_root_manifest_id) =
-        derive_compat_manifest_ids(ctx, repo, bcs_id, base_cs_id).await?;
+        derive_content_manifest_ids(ctx, repo, bcs_id, base_cs_id).await?;
 
     let mut paths = base_root_manifest_id
         .diff(ctx.clone(), repo.repo_blobstore().clone(), root_manifest_id)

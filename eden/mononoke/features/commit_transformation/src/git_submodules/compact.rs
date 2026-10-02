@@ -42,7 +42,6 @@ use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::derive_root_manifest_id;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
-use crate::git_submodules::utils::use_content_manifests;
 use crate::git_submodules::validation::SubmoduleExpansionValidationToken;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::rewrite_commit_with_file_changes_filter;
@@ -351,14 +350,9 @@ async fn compact_submodule_expansion_deletion<'a, R: Repo>(
         _ => bail!("Can't compact expansion in bonsai with multiple parents"),
     };
 
-    let parent_root = derive_root_manifest_id(
-        ctx,
-        large_repo,
-        parent_cs_id,
-        use_content_manifests(large_repo),
-    )
-    .await
-    .context("Failed to derive parent root manifest id")?;
+    let parent_root = derive_root_manifest_id(ctx, large_repo, parent_cs_id)
+        .await
+        .context("Failed to derive parent root manifest id")?;
 
     let expansion_files_stream = parent_root.list_leaf_entries_under(
         ctx.clone(),

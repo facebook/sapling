@@ -18,7 +18,6 @@ use context::CoreContext;
 use context::PerfCounterType;
 use derivation_queue_thrift::DerivationPriority;
 use filestore::FilestoreConfigRef;
-use fsnodes::RootFsnodeId;
 use manifest::Entry;
 use manifest::ManifestOps;
 pub use megarepo_configs::Source;
@@ -39,8 +38,6 @@ use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use mononoke_types::content_manifest::compat::ContentManifestFile;
-use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -173,29 +170,17 @@ impl CommitRemappingState {
     ) -> Result<Option<Self>, Error> {
         let path = MPath::new(REMAPPING_STATE_FILE)?;
 
-        let root_id: ContentManifestId = if justknobs::eval(
-            "scm/mononoke:derived_data_use_content_manifests",
-            None,
-            Some(repo.repo_identity().name()),
-        ) {
-            repo.repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-                .await?
-                .into_content_manifest_id()
-                .into()
-        } else {
-            repo.repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-                .await?
-                .into_fsnode_id()
-                .into()
-        };
+        let root_id = repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?
+            .into_content_manifest_id();
 
         let entry = root_id
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path)
             .await?;
         let content_id = match entry {
-            Some(Entry::Leaf(file)) => ContentManifestFile(file).content_id(),
+            Some(Entry::Leaf(file)) => file.content_id,
             _ => return Ok(None),
         };
 
