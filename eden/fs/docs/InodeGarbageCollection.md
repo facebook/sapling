@@ -232,7 +232,11 @@ one whose invalidations the kernel ignores: the mount falls back to the
 regular GC period instead of the pressure-derived one, since every run until
 a scan succeeds would pay for a full scan of every process to reclaim files
 only. The next run with a pin set that reclaims normally ends the fallback.
-`eden debug gc-inodes` does whatever the
+An NFS run without pins also keeps to the regular
+`mount:garbage-collection-cutoff` rather than the pressure cutoff, which can
+be seconds: without pins it cannot tell which files processes hold open, and
+a forgotten open file is ESTALE for its process, so it forgets only what the
+periodic GC would have. `eden debug gc-inodes` does whatever the
 periodic GC would do: with pressure GC off it has no pin set and reclaims
 files only, with it on it scans for pins like the tick.
 

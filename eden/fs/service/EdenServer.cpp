@@ -3941,12 +3941,14 @@ void EdenServer::garbageCollectAllMounts() {
        pressureBasedGc,
        scanPins,
        pinScanTimeout,
+       cutoffConfig,
        shutdownToken = std::move(shutdownToken),
        edenFsEventsLogger = std::move(edenFsEventsLogger),
        threadPool]() mutable {
         // Consumed only where pin scans exist.
         (void)scanPins;
         (void)pinScanTimeout;
+        (void)cutoffConfig;
 #if defined(__linux__) || defined(__APPLE__)
         std::optional<PinScanData> scan;
         if (scanPins) {
@@ -3962,21 +3964,35 @@ void EdenServer::garbageCollectAllMounts() {
         }
 #endif
         for (auto& dueMount : dueMounts) {
+          auto& mount = dueMount.mountHandle.getEdenMount();
+          auto cutoff = dueMount.cutoff;
           PinnedInodeSet pinnedInodes;
           bool pinScanFailed = false;
 #if defined(__linux__) || defined(__APPLE__)
-          if (scanPins && usesPinScan(dueMount.mountHandle.getEdenMount())) {
+          if (scanPins && usesPinScan(mount)) {
             pinnedInodes = buildPinnedInodeSet(
-                dueMount.mountHandle.getEdenMount(),
-                scan ? &scan.value() : nullptr,
-                *edenFsEventsLogger);
+                mount, scan ? &scan.value() : nullptr, *edenFsEventsLogger);
             pinScanFailed = pinnedInodes == nullptr;
+          }
+          if (pinScanFailed && mount.getNfsdChannel() != nullptr) {
+            // NFS gives EdenFS no reference for a file a process holds open;
+            // the pins were how this run would have known to keep it. Without
+            // them the pressure cutoff, seconds old at the high end, would
+            // forget files in active use and hand their users ESTALE. Keep to
+            // the regular cutoff, forgetting only what the periodic GC would.
+            cutoff = std::chrono::system_clock::now() - cutoffConfig;
+            XLOGF_EVERY_MS(
+                WARN,
+                60'000,
+                "pin scan failed; pressure GC for {} uses the regular "
+                "garbage-collection-cutoff this run",
+                mount.getPath());
           }
 #endif
           folly::via(
               threadPool,
               [mountHandle = dueMount.mountHandle,
-               cutoff = dueMount.cutoff,
+               cutoff,
                pressureBasedGc,
                lease = std::move(dueMount.lease),
                shutdownToken,
