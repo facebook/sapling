@@ -197,7 +197,14 @@ def _extend_histedit(ui):
     options.append(
         ("x", "retry", False, _("retry exec command that failed and try to continue"))
     )
-    options.append(("", "show-plan", False, _("show remaining actions list")))
+    options.append(
+        (
+            "",
+            "show-plan",
+            False,
+            _("show remaining actions, or the starting plan if no histedit is running"),
+        )
+    )
 
     extensions.wrapfunction(histedit, "_histedit", _histedit)
     extensions.wrapfunction(histedit, "parserules", parserules)
@@ -252,7 +259,9 @@ def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
         if any((outg, abort, revs, freeargs, rules, editplan)):
             raise error.Abort(_("no arguments allowed with --retry"))
     elif goal == goalshowplan:
-        if any((outg, abort, revs, freeargs, rules, editplan)):
+        if any((outg, abort, rules, editplan)) or (
+            (revs or freeargs) and state.inprogress()
+        ):
             raise error.Abort(_("no arguments allowed with --show-plan"))
     elif goal == goalorig:
         # We explicitly left the validation of arguments to orig
@@ -276,8 +285,11 @@ def _histedit(orig, ui, repo, state, *freeargs, **opts):
         histedit._continuehistedit(ui, repo, state)
         histedit._finishhistedit(ui, repo, state)
     elif goal == goalshowplan:
-        state.read()
-        showplan(ui, state)
+        if state.inprogress():
+            state.read()
+            showplan(ui, state)
+        else:
+            showstartplan(ui, repo, state, freeargs, opts)
     else:
         return orig(ui, repo, state, *freeargs, **opts)
 
@@ -306,6 +318,23 @@ def bootstrapretry(ui, state, opts):
         )
 
     return state
+
+
+def showstartplan(ui, repo, state, freeargs, opts) -> None:
+    """Print the plan a new histedit would start with, without running it."""
+    histedit = extensions.find("histedit")
+    revs = list(opts.get("rev", []))
+    histedit._validateargs(ui, repo, state, freeargs, opts, "new", "", revs)
+    root, topmost, nodes = histedit.histeditrevs(repo, state, revs)
+    ui.write(
+        _(
+            "histedit plan for %s to %s (edit it, then pass it to"
+            ' "histedit --commands" to run it):\n'
+        )
+        % (node.short(root), node.short(topmost))
+    )
+    for n in nodes:
+        ui.write("    %s\n" % histedit.pick(state, n).torule())
 
 
 def showplan(ui, state):

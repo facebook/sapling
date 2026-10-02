@@ -1357,13 +1357,13 @@ def _edithisteditplan(ui, repo, state, rules):
     state.write()
 
 
-def _newhistedit(ui, repo, state, revs, freeargs, opts):
-    rules = opts.get("commands", "")
+def histeditrevs(repo, state, revs):
+    """Find the commits a new histedit of ``revs`` would edit.
 
-    cmdutil.checkunfinished(repo)
-    cmdutil.bailifchanged(repo)
-
-    topmost, empty = repo.dirstate.parents()
+    Returns ``(root, topmost, nodes)``: the oldest edited commit, the working
+    copy parent, and every commit from ``root`` to ``topmost``.
+    """
+    topmost = repo.dirstate.p1()
     rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
     if len(rr) != 1:
         raise error.Abort(
@@ -1371,11 +1371,21 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
         )
     root = rr[0].node()
 
-    revs = between(repo, root, topmost, state.keep)
-    if not revs:
+    nodes = between(repo, root, topmost, state.keep)
+    if not nodes:
         raise error.Abort(
             _("%s is not an ancestor of working directory") % node.short(root)
         )
+    return root, topmost, nodes
+
+
+def _newhistedit(ui, repo, state, revs, freeargs, opts):
+    rules = opts.get("commands", "")
+
+    cmdutil.checkunfinished(repo)
+    cmdutil.bailifchanged(repo)
+
+    root, topmost, revs = histeditrevs(repo, state, revs)
 
     ctxs = [repo[r] for r in revs]
     if not rules:

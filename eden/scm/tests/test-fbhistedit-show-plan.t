@@ -54,6 +54,37 @@ log before edit
      summary:     a
   
 
+show-plan before starting a histedit shows the starting plan without running it
+
+  $ sl histedit --show-plan 177f92b77385
+  histedit plan for 177f92b77385 to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+      pick 177f92b77385 c
+      pick 055a42cdd887 d
+      pick e860deea161a e
+      pick 652413bf663e f
+  $ sl histedit --show-plan -r 'desc(e)'
+  histedit plan for e860deea161a to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+      pick e860deea161a e
+      pick 652413bf663e f
+  $ sl log -r . -T '{desc}\n'
+  f
+  $ sl histedit --show-plan cb9a9f314b8b::
+  histedit plan for cb9a9f314b8b to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+      pick cb9a9f314b8b a
+      pick d2ae7f538514 b
+      pick 177f92b77385 c
+      pick 055a42cdd887 d
+      pick e860deea161a e
+      pick 652413bf663e f
+  $ sl histedit --show-plan --config histedit.defaultrev='desc(d)'
+  histedit plan for 055a42cdd887 to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+      pick 055a42cdd887 d
+      pick e860deea161a e
+      pick 652413bf663e f
+  $ sl histedit --show-plan 'desc(c)' 'desc(d)'
+  abort: histedit requires exactly one ancestor revision
+  [255]
+
 a failing command should drop us into the shell
 
   $ sl histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
@@ -68,7 +99,7 @@ a failing command should drop us into the shell
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   Command 'exit 1' failed with exit status 1
 
-show-plan should work
+show-plan shows the remaining plan while a histedit is running
 
   $ sl histedit --show-plan
   histedit plan (call "histedit --continue/--retry" to resume it or "histedit --abort" to abort it):
@@ -76,6 +107,12 @@ show-plan should work
       exec exit 2
       pick 652413bf663e f
       exec exit 3
+
+arguments are not allowed while a histedit is running
+
+  $ sl histedit --show-plan 177f92b77385
+  abort: no arguments allowed with --show-plan
+  [255]
 
 continue should work
 
