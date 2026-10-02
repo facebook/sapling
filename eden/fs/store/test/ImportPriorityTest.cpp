@@ -10,6 +10,8 @@
 #include <folly/logging/xlog.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <cstdint>
+#include <limits>
 
 #include "eden/fs/utils/StaticAssert.h"
 
@@ -50,6 +52,38 @@ TEST(ImportPriorityTest, format) {
 TEST(ImportPriorityTest, minimum_value_cannot_be_deprioritized) {
   auto minimum = ImportPriority::minimumValue();
   EXPECT_EQ(minimum, minimum.adjusted(-1));
+}
+
+TEST(ImportPriorityTest, large_positive_adjustment) {
+  auto low = ImportPriority{ImportPriority::Class::Low};
+  auto largestOffset = low.adjusted((int64_t{1} << 60) - 1);
+  EXPECT_EQ(ImportPriority::Class::Low, largestOffset.getClass());
+
+#ifdef NDEBUG
+  auto beyondOffsetRange = low.adjusted(int64_t{1} << 60);
+  EXPECT_EQ(7, static_cast<int>(beyondOffsetRange.getClass()));
+  EXPECT_EQ("Unlabeled", beyondOffsetRange.className());
+  EXPECT_GT(beyondOffsetRange, largestOffset);
+
+  auto maxAdjustment = low.adjusted(std::numeric_limits<int64_t>::max());
+  EXPECT_EQ(14, static_cast<int>(maxAdjustment.getClass()));
+  EXPECT_GT(maxAdjustment, ImportPriority{ImportPriority::Class::High});
+
+  auto constructed =
+      ImportPriority(ImportPriority::Class::Normal, int64_t{1} << 60);
+  EXPECT_EQ(9, static_cast<int>(constructed.getClass()));
+  EXPECT_LT(constructed, ImportPriority{ImportPriority::Class::High});
+#else
+  EXPECT_DEATH(
+      (void)low.adjusted(int64_t{1} << 60),
+      "Adjusted offset must not overflow into class bits");
+  EXPECT_DEATH(
+      (void)low.adjusted(std::numeric_limits<int64_t>::max()),
+      "Adjusted offset must not overflow into class bits");
+  EXPECT_DEATH(
+      (void)ImportPriority(ImportPriority::Class::Normal, int64_t{1} << 60),
+      "Adjusted offset must not overflow into class bits");
+#endif
 }
 
 } // namespace
