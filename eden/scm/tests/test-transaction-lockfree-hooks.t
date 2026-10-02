@@ -83,7 +83,7 @@ legacy pending files.
   > EOF
   $ touch B
   $ sl add B
-  $ sl --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" commit -m B
+  $ sl --config hooks.pretxnclose="sh '$TESTTMP/checkpending.sh'" commit -m B
 
 Lock-free transactions do not expose preexisting dirstate cache changes to an
 external hook.
@@ -93,7 +93,7 @@ external hook.
   > test ! -e .sl/dirstate.pending
   > EOF
   $ cp .sl/dirstate $TESTTMP/dirstate-before-lockfree
-  $ sl --config hooks.pretxnclose="sh $TESTTMP/checknodirstatepending.sh" --config extensions.ext=$TESTTMP/ext.py debuglockfreewithdirtydirstate A
+  $ sl --config hooks.pretxnclose="sh '$TESTTMP/checknodirstatepending.sh'" --config extensions.ext=$TESTTMP/ext.py debuglockfreewithdirtydirstate A
   $ cmp .sl/dirstate $TESTTMP/dirstate-before-lockfree
 
 Lock-free hooks read generated bookmarks from the pending metalog without a
@@ -109,7 +109,7 @@ A lock-free txnclose hook runs after the final metalog root is committed.
   > test -z "$HG_PENDING_METALOG"
   > sl bookmarks -T '{bookmark}\n' > $TESTTMP/closed-bookmarks
   > EOF
-  $ sl --config hooks.txnclose="sh $TESTTMP/checkclosedbookmark.sh" --config extensions.ext=$TESTTMP/ext.py debuglockfreebookmark closed
+  $ sl --config hooks.txnclose="sh '$TESTTMP/checkclosedbookmark.sh'" --config extensions.ext=$TESTTMP/ext.py debuglockfreebookmark closed
   $ cat $TESTTMP/closed-bookmarks
   closed
   pending
