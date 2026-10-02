@@ -24,7 +24,7 @@ use mononoke_types::ContentMetadataV2;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
 use mononoke_types::blame_v2::BlameData;
-use mononoke_types::content_manifest::compat;
+use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::path::MPath;
 use mononoke_types::path::NonRootMPath;
 
@@ -157,7 +157,7 @@ impl FileMetadata {
         path: MPath,
         bookmark: BookmarkName,
         info: ChangesetInfo,
-        manifest_file: compat::ContentManifestFile,
+        manifest_file: ContentManifestFile,
         change_type: ChangeType,
     ) -> Self {
         Self {
@@ -167,8 +167,8 @@ impl FileMetadata {
                 last_author: info.author().to_string(),
                 last_modified_timestamp: *info.author_date(),
             },
-            file_size: manifest_file.size(),
-            is_executable: manifest_file.file_type() == FileType::Executable,
+            file_size: manifest_file.size,
+            is_executable: manifest_file.file_type == FileType::Executable,
             change_type,
         }
     }

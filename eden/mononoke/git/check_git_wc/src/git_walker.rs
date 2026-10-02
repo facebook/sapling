@@ -105,7 +105,7 @@ fn walk_tree(
         .collect::<Result<HashMap<_, _>>>()?;
 
     // Send this entry down for checking, then recurse into children. The checking task depends
-    // on getting parents before children in order to avoid doing excess fsnode fetches
+    // on getting parents before children in order to avoid doing excess content manifest fetches
     tx.blocking_send(CheckNode {
         path: path.clone(),
         contents,

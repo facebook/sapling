@@ -35,10 +35,8 @@ use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
-use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream;
-use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use maplit::btreemap;
@@ -155,56 +153,38 @@ pub async fn list_working_copy_with_types(
     repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<NonRootMPath, (Bytes, FileType)>, Error> {
-    if justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo.repo_identity().name()),
-    ) {
-        let root = repo
-            .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?;
-
-        root.into_content_manifest_id()
-            .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
-            .map_ok(|(path, file)| (path, file.content_id, file.file_type))
-            .left_stream()
-    } else {
-        let root_fsnode_id = repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?;
-
-        root_fsnode_id
-            .fsnode_id()
-            .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
-            .map_ok(|(path, file)| (path, *file.content_id(), *file.file_type()))
-            .right_stream()
-    }
-    .map_ok(|(path, content_id, file_type)| async move {
-        let maybe_content = filestore::fetch(
-            repo.repo_blobstore().clone(),
-            ctx,
-            &FetchKey::Canonical(content_id),
-        )
+    let root = repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
-        let s = match maybe_content {
-            Some(s) => s,
-            None => {
-                return Err(format_err!("cannot fetch content for {path} {content_id}"));
-            }
-        };
-        let bytes = s
-            .try_fold(BytesMut::new(), |mut bytes, new_bytes| {
-                bytes.extend_from_slice(&new_bytes);
-                future::ready(Ok(bytes))
-            })
+
+    root.into_content_manifest_id()
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
+        .map_ok(|(path, file)| (path, file.content_id, file.file_type))
+        .map_ok(|(path, content_id, file_type)| async move {
+            let maybe_content = filestore::fetch(
+                repo.repo_blobstore().clone(),
+                ctx,
+                &FetchKey::Canonical(content_id),
+            )
             .await?;
-        Ok((path, (bytes.freeze(), file_type)))
-    })
-    .try_buffer_unordered(100)
-    .try_collect()
-    .await
+            let s = match maybe_content {
+                Some(s) => s,
+                None => {
+                    return Err(format_err!("cannot fetch content for {path} {content_id}"));
+                }
+            };
+            let bytes = s
+                .try_fold(BytesMut::new(), |mut bytes, new_bytes| {
+                    bytes.extend_from_slice(&new_bytes);
+                    future::ready(Ok(bytes))
+                })
+                .await?;
+            Ok((path, (bytes.freeze(), file_type)))
+        })
+        .try_buffer_unordered(100)
+        .try_collect()
+        .await
 }
 
 /// Helper to create bonsai changesets in a repo

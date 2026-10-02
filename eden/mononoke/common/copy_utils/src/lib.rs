@@ -21,7 +21,6 @@ use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use filestore::FilestoreConfigRef;
-use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use futures::future::try_join;
 use manifest::Entry;
@@ -33,8 +32,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
-use mononoke_types::content_manifest::compat::ContentManifestFile;
-use mononoke_types::content_manifest::compat::ContentManifestId;
+use mononoke_types::content_manifest::ContentManifestFile;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -121,21 +119,21 @@ pub async fn copy(
                 }
             }
 
-            debug!("from {}, to {}, size: {}", from_path, to_path, file.size(),);
+            debug!("from {}, to {}, size: {}", from_path, to_path, file.size,);
             file_changes.insert(to_path, Some((from_path, file.clone())));
 
             if !same_repo {
-                contents_to_upload.insert(file.content_id());
+                contents_to_upload.insert(file.content_id);
             }
 
             if let Some(lfs_threshold) = limits.lfs_threshold {
-                if file.size() < lfs_threshold.get() {
-                    total_file_size += file.size();
+                if file.size < lfs_threshold.get() {
+                    total_file_size += file.size;
                 } else {
                     debug!("size is not accounted because of lfs threshold");
                 }
             } else {
-                total_file_size += file.size();
+                total_file_size += file.size;
             }
 
             if let Some(limit) = limits.total_file_num_limit {
@@ -184,14 +182,14 @@ async fn create_changesets(
 ) -> Result<Vec<ChangesetId>, Error> {
     let mut changesets = vec![];
     let mut cs_ids = vec![];
-    for path_to_maybe_fsnodes in file_changes {
-        if path_to_maybe_fsnodes.is_empty() {
+    for path_to_maybe_files in file_changes {
+        if path_to_maybe_files.is_empty() {
             continue;
         }
 
         let mut fc = BTreeMap::new();
-        for (to_path, maybe_fsnode) in path_to_maybe_fsnodes {
-            let file_change = match maybe_fsnode {
+        for (to_path, maybe_file) in path_to_maybe_files {
+            let file_change = match maybe_file {
                 Some((from_path, file)) => {
                     let copy_from = if record_copy_from {
                         Some((from_path, parent))
@@ -199,9 +197,9 @@ async fn create_changesets(
                         None
                     };
                     FileChange::tracked(
-                        file.content_id(),
-                        file.file_type(),
-                        file.size(),
+                        file.content_id,
+                        file.file_type,
+                        file.size,
                         copy_from,
                         GitLfs::FullContent,
                     )
@@ -288,24 +286,11 @@ async fn list_directory(
     cs_id: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<Option<BTreeMap<NonRootMPath, ContentManifestFile>>, Error> {
-    let root_id: ContentManifestId = if justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo.repo_identity().name()),
-    ) {
-        repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .into_content_manifest_id()
-            .into()
-    } else {
-        repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-            .await?
-            .fsnode_id()
-            .clone()
-            .into()
-    };
+    let root_id = repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?
+        .into_content_manifest_id();
 
     let entry = root_id
         .find_entry(
@@ -327,7 +312,6 @@ async fn list_directory(
 
     let leaf_entries = tree_id
         .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .map_ok(|(path, file)| (path, file.into()))
         .try_collect::<BTreeMap<_, _>>()
         .await?;
 

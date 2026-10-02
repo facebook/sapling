@@ -17,8 +17,6 @@ use blobstore::Loadable;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use either::Either;
-use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use git2::Repository;
@@ -63,12 +61,12 @@ async fn check_node(
 
     // Check that each Mononoke entry is the same as its matching git entry
     // and remove it from contents once checked
-    for (filename, fsnode_entry) in entries {
+    for (filename, manifest_entry) in entries {
         let git_entry = contents
             .remove(&filename)
             .ok_or_else(|| anyhow!("File {path}/{filename} in Bonsai but not git"))?;
         match git_entry {
-            CheckEntry::Directory => match fsnode_entry {
+            CheckEntry::Directory => match manifest_entry {
                 Entry::Leaf(_) => {
                     let entry_path =
                         RepoPath::dir(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
@@ -76,7 +74,7 @@ async fn check_node(
                 }
                 Entry::Tree(_) => {}
             },
-            CheckEntry::File(git_file_type, git_sha256) => match fsnode_entry {
+            CheckEntry::File(git_file_type, git_sha256) => match manifest_entry {
                 Entry::Leaf((file_type, sha256)) => {
                     let entry_path =
                         RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
@@ -112,31 +110,13 @@ async fn check_receiver(
     rx: mpsc::Receiver<CheckNode>,
     scheduled_max: usize,
 ) -> Result<()> {
-    let root_content_mf = if justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(hg_repo.repo_identity().name()),
-    ) {
-        Either::Left(
-            hg_repo
-                .repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, cs, DerivationPriority::LOW)
-                .await?
-                .into_content_manifest_id()
-                .load(ctx, hg_repo.repo_blobstore())
-                .await?,
-        )
-    } else {
-        Either::Right(
-            hg_repo
-                .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, cs, DerivationPriority::LOW)
-                .await?
-                .into_fsnode_id()
-                .load(ctx, hg_repo.repo_blobstore())
-                .await?,
-        )
-    };
+    let root_content_mf = hg_repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, cs, DerivationPriority::LOW)
+        .await?
+        .into_content_manifest_id()
+        .load(ctx, hg_repo.repo_blobstore())
+        .await?;
 
     let path_to_content_mf = Mutex::new(HashMap::new());
     let path_to_content_mf = &path_to_content_mf;
@@ -186,7 +166,7 @@ async fn check_receiver(
                 .map_ok(|(element, entry)| async move {
                     match entry {
                         Entry::Tree(_) => Ok((element, Entry::Tree(()))),
-                        Entry::Leaf(Either::Left(file)) => {
+                        Entry::Leaf(file) => {
                             let metadata = filestore::get_metadata(
                                 hg_repo.repo_blobstore(),
                                 ctx,
@@ -198,10 +178,6 @@ async fn check_receiver(
                             })?;
                             Ok((element, Entry::Leaf((file.file_type, metadata.sha256))))
                         }
-                        Entry::Leaf(Either::Right(file)) => Ok((
-                            element,
-                            Entry::Leaf((file.file_type().clone(), file.content_sha256().clone())),
-                        )),
                     }
                 })
                 .try_buffered(100)

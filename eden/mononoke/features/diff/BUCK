@@ -21,7 +21,6 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
-        "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
         "//eden/mononoke/git/git_types:git_types",

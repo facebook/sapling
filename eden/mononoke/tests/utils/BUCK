@@ -24,8 +24,6 @@ rust_library(
         "fbsource//third-party/rust:rand_distr",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
-        "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
         "//eden/mononoke/features/changesets_creation:changesets_creation",
         "//eden/mononoke/manifest:manifest",
