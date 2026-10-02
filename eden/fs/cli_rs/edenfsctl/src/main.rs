@@ -35,6 +35,19 @@ struct CliUsageSample;
 /// Value used in Python to indicate a command failed to parse
 pub const PYTHON_EDENFSCTL_EX_USAGE: i32 = 64;
 
+// Initialize OpenSSL before curl's `.init_array` constructor so OpenSSL does
+// not register an atexit cleanup that frees its state under HTTP threads still
+// running at exit. Prioritized constructors run before unprioritized ones.
+#[cfg(target_os = "linux")]
+#[used]
+#[unsafe(link_section = ".init_array.00101")]
+static INIT_OPENSSL: extern "C" fn() = init_openssl;
+
+#[cfg(target_os = "linux")]
+extern "C" fn init_openssl() {
+    http_client::init_openssl();
+}
+
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
         // We might get a command starting with python.exe here instead of a simple path.

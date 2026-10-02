@@ -20,6 +20,9 @@ rust_binary(
         "//eden/scm/lib/util/testutil:testutil",
     ] + select({
         "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//eden/scm/lib/http-client:http-client",
+        ],
         "ovr_config//os:windows": [
             "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
         ],
