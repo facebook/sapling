@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {__TEST__ as ChangedFilesTestUtils} from '../ChangedFilesWithFetching';
 import {tracker} from '../analytics';
+import platform from '../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../testQueries';
 import {
   COMMIT,
@@ -19,6 +20,7 @@ import {
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
+  simulateRepoConnected,
   simulateUncommittedChangedFiles,
   waitForWithTick,
 } from '../testUtils';
@@ -110,6 +112,60 @@ describe('CommitInfoView', () => {
         expect(withinCommitInfo().queryByText('some public base')).not.toBeInTheDocument();
         // stays on head commit
         expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
+      });
+    });
+
+    describe('description markdown preview', () => {
+      function simulateHeadDescription(description: string) {
+        act(() => {
+          simulateRepoConnected();
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public'}),
+              COMMIT('a', 'My Commit', '1'),
+              COMMIT('b', 'Head Commit', 'a', {isDot: true, description}),
+            ],
+          });
+        });
+      }
+
+      it('renders the description as markdown until it is edited', async () => {
+        simulateHeadDescription('Fixes **the bug**\n\n- step one\n- step two');
+        expectIsNOTEditingDescription();
+
+        await waitFor(() => {
+          expect(withinCommitInfo().getByText('the bug').tagName).toBe('STRONG');
+        });
+        expect(withinCommitInfo().getByText('step one').closest('li')).toBeTruthy();
+        expect(withinCommitInfo().queryByText(/\*\*the bug\*\*/)).not.toBeInTheDocument();
+
+        clickToEditDescription();
+        expectIsEditingDescription();
+        expect(getDescriptionEditor().value).toEqual(
+          expect.stringMatching(/Fixes \*\*the bug\*\*/),
+        );
+      });
+
+      it('keeps component names in angle brackets as text', async () => {
+        simulateHeadDescription('Wrap the navbar in <SafeAreaView> on iOS');
+
+        await waitFor(() => {
+          expect(withinCommitInfo().getByText(/<SafeAreaView>/)).toBeInTheDocument();
+        });
+      });
+
+      it('opens links externally instead of entering edit mode', async () => {
+        const openLink = jest
+          .spyOn(platform, 'openExternalLink')
+          .mockImplementation(() => undefined);
+        simulateHeadDescription('See [the docs](https://example.com/docs) first');
+
+        const link = await waitFor(() => withinCommitInfo().getByText('the docs'));
+        expect(link.tagName).toBe('A');
+
+        fireEvent.click(link);
+        expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
+        expectIsNOTEditingDescription();
       });
     });
 
