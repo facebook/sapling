@@ -479,6 +479,7 @@ cpp_unittest(
         "//folly:expected",
         "//folly:file_util",
         "//folly:range",
+        "//folly:scope_guard",
         "//folly/executors:cpu_thread_pool_executor",
         "//folly/logging/test:test_handler",
         "//folly/synchronization:baton",

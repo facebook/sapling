@@ -18,6 +18,7 @@
 #include <folly/Expected.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
+#include <folly/ScopeGuard.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/logging/test/TestLogHandler.h>
 #include <folly/synchronization/Baton.h>
@@ -2309,8 +2310,8 @@ class FailingWalRemovalCatalog : public FsInodeCatalog {
     FsInodeCatalog::removeWal(parent);
   }
 
-  /// Both Overlay call sites swallow removeWal errors, so the injected
-  /// failure is otherwise invisible to the test.
+  /// Normal compaction swallows removeWal errors, so the injected failure
+  /// is otherwise invisible to the test.
   size_t failedRemovals() const {
     return failedRemovals_;
   }
@@ -2443,6 +2444,308 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(OverlayWalCleanupFailureTest, renamePreservesChildWhenWalCleanupFails) {
   verifyRename();
+}
+
+namespace {
+
+enum class WalCheckpointScenario {
+  BaseReadFailure,
+  WalReadFailure,
+  CheckpointWriteFailure,
+  FinalWriteFailureDuringDeferral,
+  MissingBaseSuccess,
+  SourceRemoveFailure,
+  AddWithoutWal,
+};
+
+constexpr std::string_view kWalCheckpointFailure{
+    "injected WAL checkpoint failure"};
+
+/// Delegate persistence to the real catalog except at one selected boundary.
+class FailingWalCheckpointCatalog : public FsInodeCatalog {
+ public:
+  FailingWalCheckpointCatalog(
+      FsFileContentStore* store,
+      InodeNumber source,
+      InodeNumber destination,
+      WalCheckpointScenario scenario)
+      : FsInodeCatalog{store},
+        source_{source},
+        destination_{destination},
+        scenario_{scenario} {}
+
+  bool loadOverlayEntries(InodeNumber parent, OverlayEntryLoader loader)
+      override {
+    if (parent == destination_ &&
+        scenario_ == WalCheckpointScenario::BaseReadFailure) {
+      fail();
+    }
+    return FsInodeCatalog::loadOverlayEntries(parent, std::move(loader));
+  }
+
+  LoadWalResult loadWalDelta(InodeNumber parent, CaseSensitivity caseSensitive)
+      override {
+    if (parent == destination_ &&
+        scenario_ == WalCheckpointScenario::WalReadFailure) {
+      fail();
+    }
+    return FsInodeCatalog::loadWalDelta(parent, caseSensitive);
+  }
+
+  void saveOverlayEntries(
+      InodeNumber parent,
+      size_t count,
+      OverlayEntrySource source,
+      bool crashSafe) override {
+    if (parent == destination_) {
+      ++destinationSaves_;
+      if (scenario_ == WalCheckpointScenario::CheckpointWriteFailure &&
+          destinationSaves_ == 1) {
+        fail();
+      }
+      if (scenario_ == WalCheckpointScenario::FinalWriteFailureDuringDeferral &&
+          destinationSaves_ == 2) {
+        EXPECT_FALSE(FsInodeCatalog::hasWal(parent));
+        fail();
+      }
+    }
+    FsInodeCatalog::saveOverlayEntries(
+        parent, count, std::move(source), crashSafe);
+  }
+
+  uint64_t appendWalEntry(
+      InodeNumber parent,
+      WalOpType op,
+      PathComponentPiece name,
+      const overlay::OverlayEntry* entry) override {
+    if (parent == source_ && op == WalOpType::REMOVE &&
+        scenario_ == WalCheckpointScenario::SourceRemoveFailure) {
+      fail();
+    }
+    return FsInodeCatalog::appendWalEntry(parent, op, name, entry);
+  }
+
+ private:
+  [[noreturn]] static void fail() {
+    throw std::system_error{
+        EIO, std::generic_category(), std::string{kWalCheckpointFailure}};
+  }
+
+  /// Parents whose destination checkpoint and source removal are observed.
+  const InodeNumber source_;
+  const InodeNumber destination_;
+  /// The selected fault; success scenarios delegate every operation.
+  const WalCheckpointScenario scenario_;
+  /// Only saves after this catalog is installed count toward the boundary.
+  size_t destinationSaves_{0};
+};
+
+} // namespace
+
+/// Checks persistence before and after each oversized-ADD checkpoint boundary.
+class OverlayWalCheckpointTest
+    : public ::testing::TestWithParam<WalCheckpointScenario> {
+ protected:
+  void SetUp() override {
+    if (std::getenv(kDirectoryEnv.data()) == nullptr) {
+      tmp_.emplace("eden_wal_checkpoint");
+      directoryEnv_.set(tmp_->path().string());
+    }
+  }
+
+  void verifyRecovery() {
+    const auto scenario = GetParam();
+    const bool add = scenario == WalCheckpointScenario::AddWithoutWal;
+    const bool defer =
+        scenario == WalCheckpointScenario::FinalWriteFailureDuringDeferral;
+    const bool missingBase =
+        defer || scenario == WalCheckpointScenario::MissingBaseSuccess;
+    const bool expectFailure =
+        !add && scenario != WalCheckpointScenario::MissingBaseSuccess;
+    const bool destinationPersisted = !expectFailure ||
+        scenario == WalCheckpointScenario::SourceRemoveFailure;
+    const auto dir = canonicalPath(std::getenv(kDirectoryEnv.data()));
+    auto bundle = makeWalLifecycleOverlay(dir);
+    ASSERT_NE(nullptr, bundle.store);
+    const auto src = bundle.overlay->allocateInodeNumber();
+    const auto dst = bundle.overlay->allocateInodeNumber();
+    const auto child = bundle.overlay->allocateInodeNumber();
+    const auto prior = bundle.overlay->allocateInodeNumber();
+    const auto sentinel = bundle.overlay->allocateInodeNumber();
+    const auto later = bundle.overlay->allocateInodeNumber();
+    std::string idBytes(256, '\x85');
+    idBytes[idBytes.size() / 2] = '\0';
+    const ObjectId id{folly::ByteRange{folly::StringPiece{idBytes}}};
+    const ObjectId priorId{std::string(20, '\x42')};
+    const ObjectId sentinelId{std::string(20, '\x43')};
+    const ObjectId laterId{std::string(20, '\x44')};
+    constexpr auto kMode = S_IFREG | 0640;
+    constexpr auto kAclState = AclRootState::RestrictedAclRoot;
+    DirContents srcContent(CaseSensitivity::Sensitive);
+    DirContents dstContent(CaseSensitivity::Sensitive);
+
+    if (!add) {
+      srcContent.emplace("source"_pc, kMode, child, id, kAclState);
+      bundle.overlay->saveOverlayDir(src, srcContent);
+    }
+    if (!missingBase) {
+      bundle.overlay->saveOverlayDir(dst, dstContent);
+    }
+    if (!add) {
+      auto [priorIt, priorInserted] =
+          dstContent.emplace("target"_pc, S_IFREG | 0600, prior, priorId);
+      ASSERT_TRUE(priorInserted);
+      bundle.overlay->addChild(dst, *priorIt, dstContent);
+      auto [sentinelIt, sentinelInserted] = dstContent.emplace(
+          "sentinel"_pc, S_IFREG | 0644, sentinel, sentinelId);
+      ASSERT_TRUE(sentinelInserted);
+      bundle.overlay->addChild(dst, *sentinelIt, dstContent);
+    }
+    ASSERT_EQ(!add, bundle.store->hasWal(dst));
+    ASSERT_EQ(
+        !missingBase, bundle.overlay->getRawInodeCatalog()->hasOverlayDir(dst));
+
+    OverlayTestHelper::setInodeCatalog(
+        *bundle.overlay,
+        std::make_unique<FailingWalCheckpointCatalog>(
+            bundle.store, src, dst, scenario));
+    srcContent.erase("source"_pc);
+    dstContent.erase("target"_pc);
+    auto [targetIt, targetInserted] =
+        dstContent.emplace("target"_pc, kMode, child, id, kAclState);
+    ASSERT_TRUE(targetInserted);
+    bool failed = false;
+    {
+      if (defer) {
+        bundle.overlay->enterCheckoutDeferral();
+      }
+      SCOPE_EXIT {
+        if (defer) {
+          bundle.overlay->exitCheckoutDeferral();
+        }
+      };
+      try {
+        if (add) {
+          bundle.overlay->addChild(dst, *targetIt, dstContent);
+        } else {
+          bundle.overlay->renameChild(
+              src, dst, "source"_pc, "target"_pc, srcContent, dstContent);
+        }
+      } catch (const std::system_error& error) {
+        failed = true;
+        EXPECT_EQ(std::error_code(EIO, std::generic_category()), error.code());
+        EXPECT_NE(
+            std::string::npos,
+            std::string{error.what()}.find(kWalCheckpointFailure));
+      }
+    }
+    EXPECT_EQ(expectFailure, failed);
+    const bool beforeRetirement =
+        scenario == WalCheckpointScenario::BaseReadFailure ||
+        scenario == WalCheckpointScenario::WalReadFailure ||
+        scenario == WalCheckpointScenario::CheckpointWriteFailure;
+    EXPECT_EQ(beforeRetirement, bundle.store->hasWal(dst));
+
+    if (add) {
+      auto [laterIt, laterInserted] =
+          dstContent.emplace("later"_pc, S_IFREG | 0644, later, laterId);
+      ASSERT_TRUE(laterInserted);
+      bundle.overlay->addChild(dst, *laterIt, dstContent);
+      ASSERT_TRUE(bundle.store->hasWal(dst));
+    }
+    bundle.overlay->close();
+
+    auto reopened = makeWalLifecycleOverlay(
+        dir, CaseSensitivity::Sensitive, 0, true, /*useWal=*/!add);
+    const auto loadedDst = reopened.overlay->loadOverlayDir(dst);
+    ASSERT_EQ(2u, loadedDst.size());
+    if (destinationPersisted) {
+      expectEntry(loadedDst, "target"_pc, child, id, kMode, kAclState);
+    } else {
+      expectEntry(loadedDst, "target"_pc, prior, priorId, S_IFREG | 0600);
+    }
+    if (add) {
+      expectEntry(loadedDst, "later"_pc, later, laterId, S_IFREG | 0644);
+      EXPECT_FALSE(reopened.store->hasWal(dst));
+    } else {
+      expectEntry(
+          loadedDst, "sentinel"_pc, sentinel, sentinelId, S_IFREG | 0644);
+      const auto loadedSrc = reopened.overlay->loadOverlayDir(src);
+      if (expectFailure) {
+        ASSERT_EQ(1u, loadedSrc.size());
+        expectEntry(loadedSrc, "source"_pc, child, id, kMode, kAclState);
+      } else {
+        EXPECT_TRUE(loadedSrc.empty());
+      }
+    }
+    reopened.overlay->close();
+  }
+
+ private:
+  static void expectEntry(
+      const DirContents& content,
+      PathComponentPiece name,
+      InodeNumber inode,
+      const ObjectId& id,
+      mode_t mode,
+      AclRootState aclState = AclRootState::Unknown) {
+    const auto entry = content.find(name);
+    ASSERT_NE(content.end(), entry);
+    EXPECT_EQ(inode, entry->second.getInodeNumber());
+    ASSERT_FALSE(entry->second.isMaterialized());
+    EXPECT_EQ(id, entry->second.getObjectId());
+    EXPECT_EQ(mode, entry->second.getInitialMode());
+    EXPECT_EQ(aclState, entry->second.aclRootState());
+  }
+
+  static constexpr std::string_view kDirectoryEnv =
+      "EDEN_TEST_WAL_CHECKPOINT_DIRECTORY";
+  /// Owned by the parent and borrowed by the re-executed death-test child.
+  std::optional<folly::test::TemporaryDirectory> tmp_;
+  ScopedEnvVar directoryEnv_{folly::StringPiece{kDirectoryEnv}};
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    PersistenceBoundaries,
+    OverlayWalCheckpointTest,
+    ::testing::Values(
+        WalCheckpointScenario::BaseReadFailure,
+        WalCheckpointScenario::WalReadFailure,
+        WalCheckpointScenario::CheckpointWriteFailure,
+        WalCheckpointScenario::FinalWriteFailureDuringDeferral,
+        WalCheckpointScenario::MissingBaseSuccess,
+        WalCheckpointScenario::SourceRemoveFailure,
+        WalCheckpointScenario::AddWithoutWal),
+    [](const ::testing::TestParamInfo<WalCheckpointScenario>& info) {
+      switch (info.param) {
+        case WalCheckpointScenario::BaseReadFailure:
+          return "BaseReadFailure";
+        case WalCheckpointScenario::WalReadFailure:
+          return "WalReadFailure";
+        case WalCheckpointScenario::CheckpointWriteFailure:
+          return "CheckpointWriteFailure";
+        case WalCheckpointScenario::FinalWriteFailureDuringDeferral:
+          return "FinalWriteFailureDuringDeferral";
+        case WalCheckpointScenario::MissingBaseSuccess:
+          return "MissingBaseSuccess";
+        case WalCheckpointScenario::SourceRemoveFailure:
+          return "SourceRemoveFailure";
+        case WalCheckpointScenario::AddWithoutWal:
+          return "AddWithoutWal";
+      }
+      return "Unknown";
+    });
+
+TEST_P(OverlayWalCheckpointTest, preservesRecoveryState) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  // FIXME: Run verifyRecovery() directly when oversized ADDs reach persistence.
+  ASSERT_EXIT(
+      {
+        verifyRecovery();
+        std::_Exit(::testing::Test::HasFailure() ? 1 : 0);
+      },
+      ::testing::KilledBySignal(SIGABRT),
+      "256 vs. 255");
 }
 
 TEST(WalRenameTest, caseInsensitiveCaseOnlyRenameAppendsReplacementAdd) {
