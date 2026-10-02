@@ -4,20 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-# Content-manifest counterpart of
-# test-pushrebase-merge-resolution-no-derive-fsnodes-prederived.t.
-#
-# Verify that merge resolution works when derive_fsnodes=false and the repo has
-# migrated to content manifests (`derived_data_use_content_manifests` on), with
-# content manifests already derived.
-#
-# This is the regression test for the pre-check probing the wrong manifest type:
-# `fetch_manifest_file` reads content manifests when the knob is on, so the
-# pre-check must probe content manifests too. When it hardcoded
-# `fetch_derived::<RootFsnodeId>` it found nothing on a migrated repo and
-# silently skipped merge resolution forever, rejecting conflicts that were
-# perfectly resolvable. Before that fix this test fails on the final push with
-# "Conflicts while pushrebasing".
+# Verify that merge resolution works with on-demand derivation disabled when
+# ContentManifests are already derived.
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig push.edenapi=true
@@ -25,7 +13,6 @@
   $ merge_just_knobs <<EOF
   > {
   >   "bools": {
-  >     "scm/mononoke:derived_data_use_content_manifests": true,
   >     "scm/mononoke:pushrebase_enable_merge_resolution": true,
   >     "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes": false
   >   },

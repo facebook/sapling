@@ -78,7 +78,6 @@ use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::FilestoreConfigRef;
-use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
@@ -103,6 +102,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentManifestId;
 use mononoke_types::DateTime;
 use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
@@ -112,7 +112,6 @@ use mononoke_types::MPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::Timestamp;
 use mononoke_types::check_case_conflicts;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::find_path_conflicts;
 use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
@@ -581,7 +580,7 @@ pub async fn rebase_stack_onto_with_conflict_base(
         root,
         head,
         &client_bcs,
-        RangeDiffManifests::ContentCompat,
+        RangeDiffManifests::ContentManifest,
     )
     .await?;
 
@@ -594,7 +593,7 @@ pub async fn rebase_stack_onto_with_conflict_base(
         onto,
         &client_bcs,
         &client_cf,
-        RangeDiffManifests::ContentCompat,
+        RangeDiffManifests::ContentManifest,
         UnchangedOverlap::TakeClient,
     )
     .await?;
@@ -735,7 +734,7 @@ pub async fn rebase_stack_onto_manifest(
         root,
         head,
         &client_bcs,
-        RangeDiffManifests::ContentCompat,
+        RangeDiffManifests::ContentManifest,
     )
     .await?;
     if client_cf.len() > max_paths {
@@ -1293,7 +1292,7 @@ async fn check_filenodes_backfilled(
 
 /// Info about a single file that was successfully merged during conflict
 /// resolution. Carries the base/server content IDs so the cascading merge
-/// in `create_rebased_changesets` can reuse them without re-fetching fsnodes.
+/// in `create_rebased_changesets` can reuse them without re-fetching manifests.
 ///
 /// Stored across optimistic-lock retries so the next attempt can reuse
 /// resolved file contents without fetching them again.
@@ -1456,7 +1455,7 @@ async fn check_pushrebase_conflicts_with(
                 Some(reponame),
             );
             let merge_result = if merge_enabled {
-                let derive_fsnodes: bool = justknobs::eval(
+                let derive_manifests: bool = justknobs::eval(
                     "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes",
                     None,
                     Some(reponame),
@@ -1472,7 +1471,7 @@ async fn check_pushrebase_conflicts_with(
                         client_bcs,
                         max_merge_conflicts,
                         max_merge_file_size,
-                        derive_fsnodes,
+                        derive_manifests,
                         &config.merge_resolution_excluded_path_prefixes,
                     )
                     .await,
@@ -1900,8 +1899,8 @@ async fn find_closest_ancestor_root(
 /// parent lies outside the range.
 #[derive(Copy, Clone)]
 enum RangeDiffManifests {
-    ContentCompat,
-    /// HG historically; the knob rolls repos onto the content compat.
+    ContentManifest,
+    /// HG historically; the knob rolls repos onto the content manifests.
     /// Resolved lazily so the knob is read only when a merge is in range.
     FromKnob,
 }
@@ -1978,34 +1977,16 @@ async fn id_to_manifestid(
     Ok(hg_cs.manifestid())
 }
 
-/// Content-manifest or fsnode root, per the JustKnobs compat gate.
 async fn id_to_root_manifest_id(
     ctx: &CoreContext,
     repo: &impl Repo,
     bcs_id: ChangesetId,
-) -> Result<compat::ContentManifestId, Error> {
-    let repo_name = repo.repo_identity().name();
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo_name),
-    );
-
-    if use_content_manifests {
-        Ok(repo
-            .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, bcs_id, DerivationPriority::HIGH)
-            .await?
-            .into_content_manifest_id()
-            .into())
-    } else {
-        Ok(repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, bcs_id, DerivationPriority::HIGH)
-            .await?
-            .into_fsnode_id()
-            .into())
-    }
+) -> Result<ContentManifestId, Error> {
+    Ok(repo
+        .repo_derived_data()
+        .derive::<RootContentManifestId>(ctx, bcs_id, DerivationPriority::HIGH)
+        .await?
+        .into_content_manifest_id())
 }
 
 /// `id_to_root_manifest_id` without derivation: `None` if not derived yet.
@@ -2013,27 +1994,12 @@ async fn fetch_root_manifest_id(
     ctx: &CoreContext,
     repo: &impl Repo,
     bcs_id: ChangesetId,
-) -> Result<Option<compat::ContentManifestId>, Error> {
-    let repo_name = repo.repo_identity().name();
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo_name),
-    );
-
-    if use_content_manifests {
-        Ok(repo
-            .repo_derived_data()
-            .fetch_derived::<RootContentManifestId>(ctx, bcs_id)
-            .await?
-            .map(|id| id.into_content_manifest_id().into()))
-    } else {
-        Ok(repo
-            .repo_derived_data()
-            .fetch_derived::<RootFsnodeId>(ctx, bcs_id)
-            .await?
-            .map(|id| id.into_fsnode_id().into()))
-    }
+) -> Result<Option<ContentManifestId>, Error> {
+    Ok(repo
+        .repo_derived_data()
+        .fetch_derived::<RootContentManifestId>(ctx, bcs_id)
+        .await?
+        .map(RootContentManifestId::into_content_manifest_id))
 }
 
 // from smaller generation number to larger
@@ -2086,7 +2052,7 @@ async fn find_changed_files_with(
         .chain(changesets.iter().map(BonsaiChangeset::get_changeset_id))
         .collect();
     let use_content_manifests = match manifests {
-        RangeDiffManifests::ContentCompat => true,
+        RangeDiffManifests::ContentManifest => true,
         RangeDiffManifests::FromKnob => justknobs::eval(
             "scm/mononoke:pushrebase_range_diff_use_content_manifests",
             None,
@@ -2185,10 +2151,6 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
 /// Whether the root manifest `base_files` would read for `cs_id` is already
 /// derived, so merge resolution can run without paying for derivation inside
 /// the pushrebase critical section.
-///
-/// This must probe the same manifest type `id_to_root_manifest_id` derives --
-/// probing fsnodes on a repo that has migrated to content manifests would
-/// report "not derived" forever and silently disable merge resolution.
 async fn root_manifest_is_derived(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -2220,7 +2182,7 @@ async fn base_files(
 async fn base_files_from_manifest(
     ctx: &CoreContext,
     repo: &impl Repo,
-    root_id: compat::ContentManifestId,
+    root_id: ContentManifestId,
     paths: &[NonRootMPath],
 ) -> Result<HashMap<NonRootMPath, Option<BaseFile>>> {
     use manifest::Entry;
@@ -2237,13 +2199,10 @@ async fn base_files_from_manifest(
         .iter()
         .map(|path| {
             let base = match found.get(&MPath::from(path.clone())) {
-                Some(Entry::Leaf(file)) => {
-                    let file: compat::ContentManifestFile = file.clone().into();
-                    Some(BaseFile {
-                        content_id: file.content_id(),
-                        file_type: file.file_type(),
-                    })
-                }
+                Some(Entry::Leaf(file)) => Some(BaseFile {
+                    content_id: file.content_id,
+                    file_type: file.file_type,
+                }),
                 _ => None,
             };
             (path.clone(), base)
@@ -2255,7 +2214,7 @@ async fn base_files_from_manifest(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ManifestState {
     File { file: BaseFile, size: u64 },
-    Tree(compat::ContentManifestId),
+    Tree(ContentManifestId),
     Absent,
 }
 
@@ -2270,7 +2229,7 @@ impl ManifestState {
 async fn lookup_manifest_states(
     ctx: &CoreContext,
     repo: &impl Repo,
-    root_id: compat::ContentManifestId,
+    root_id: ContentManifestId,
     paths: &[MPath],
 ) -> Result<HashMap<MPath, ManifestState>> {
     use manifest::Entry;
@@ -2288,16 +2247,13 @@ async fn lookup_manifest_states(
         )
         .map_ok(|(path, entry)| {
             let state = match entry {
-                Entry::Leaf(file) => {
-                    let file: compat::ContentManifestFile = file.into();
-                    ManifestState::File {
-                        file: BaseFile {
-                            content_id: file.content_id(),
-                            file_type: file.file_type(),
-                        },
-                        size: file.size(),
-                    }
-                }
+                Entry::Leaf(file) => ManifestState::File {
+                    file: BaseFile {
+                        content_id: file.content_id,
+                        file_type: file.file_type,
+                    },
+                    size: file.size,
+                },
                 Entry::Tree(id) => ManifestState::Tree(id),
             };
             (path, state)
@@ -2566,10 +2522,10 @@ enum FileMergeOutcome {
     Error(anyhow::Error),
 }
 
-/// 3-way merge using three ContentIds directly (no fsnode lookup).
+/// 3-way merge using three ContentIds directly (no manifest lookup).
 ///
 /// Used by the cascading merge in the rebase loop, where the base content
-/// comes from a tracked map rather than a fsnode manifest.
+/// comes from a tracked map rather than a manifest.
 async fn merge_file_by_content_ids(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -2613,7 +2569,7 @@ enum MergeResolutionError {
 ///
 /// For each conflicting path, validates that the conflict is an exact path
 /// match (not a prefix conflict), checks file types, sizes, and copy info,
-/// then fetches the base content ID from fsnodes. Returns a list of
+/// then fetches the base content ID from ContentManifests. Returns a list of
 /// `MergedFileInfo` structs containing the path, base content ID, server
 /// content ID, and file type. The actual 3-way merge is deferred to the
 /// per-commit rebase loop in `create_rebased_changesets`.
@@ -2634,7 +2590,7 @@ async fn collect_merge_file_info(
     client_bcs: &[BonsaiChangeset],
     max_conflicts: usize,
     max_file_size: u64,
-    derive_fsnodes: bool,
+    derive_manifests: bool,
     excluded_path_prefixes: &PrefixTrie,
 ) -> Result<Vec<MergedFileInfo>, MergeResolutionError> {
     // Only handle exact path matches (not prefix conflicts like dir vs dir/file)
@@ -2651,13 +2607,13 @@ async fn collect_merge_file_info(
         return Err(MergeResolutionError::TooManyConflicts);
     }
 
-    // If derive_fsnodes is false, check if the root manifest is already
+    // If derive_manifests is false, check if the root manifest is already
     // derived. If not, skip merge resolution to avoid expensive derivation in
     // the pushrebase critical section.
     let bases = match bases {
         Bases::Precomputed(bases) => bases,
         Bases::ProbeThenRead => {
-            if !derive_fsnodes {
+            if !derive_manifests {
                 let is_derived = root_manifest_is_derived(ctx, repo, root)
                     .await
                     .map_err(MergeResolutionError::InternalError)?;

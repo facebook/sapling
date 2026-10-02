@@ -72,7 +72,6 @@ fn init_just_knobs_for_test() {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
     }));
 }
@@ -514,7 +513,7 @@ async fn range_diff_manifest_kind_is_knob_routed_and_equivalent(
         root,
         merge,
         &changesets,
-        RangeDiffManifests::ContentCompat,
+        RangeDiffManifests::ContentManifest,
     )
     .await?;
     assert_eq!(
@@ -530,7 +529,6 @@ async fn range_diff_manifest_kind_is_knob_routed_and_equivalent(
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(true),
     }));
     let via_enabled_knob = find_changed_files(&ctx, &repo, root, merge).await?;
@@ -5618,14 +5616,14 @@ fn manifest_rebase_flags(merge_resolution_override: MergeResolutionOverride) -> 
     }
 }
 
-async fn derive_fsnodes(
+async fn derive_content_manifests(
     ctx: &CoreContext,
     repo: &PushrebaseTestRepo,
     cs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
     for cs_id in cs_ids {
         repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, *cs_id, DerivationPriority::HIGH)
+            .derive::<RootContentManifestId>(ctx, *cs_id, DerivationPriority::HIGH)
             .await?;
     }
     Ok(())
@@ -5666,7 +5664,7 @@ async fn fetch_root_manifest_id_does_not_derive(fb: FacebookInit) -> Result<(), 
         fetch_root_manifest_id(&ctx, &repo, cs).await?.is_none(),
         "the probe must not derive"
     );
-    derive_fsnodes(&ctx, &repo, &[cs]).await?;
+    derive_content_manifests(&ctx, &repo, &[cs]).await?;
     assert!(fetch_root_manifest_id(&ctx, &repo, cs).await?.is_some());
     Ok(())
 }
@@ -5680,7 +5678,7 @@ async fn lookup_manifest_states_reports_file_tree_absent(fb: FacebookInit) -> Re
         .add_file("dir/file", "content")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[cs]).await?;
+    derive_content_manifests(&ctx, &repo, &[cs]).await?;
     let mf = fetch_root_manifest_id(&ctx, &repo, cs)
         .await?
         .expect("derived above");
@@ -5727,11 +5725,8 @@ fn manifest_overlaps_exact_and_prefix() -> Result<(), Error> {
         },
         size: 1,
     };
-    let tree = |byte: u8| {
-        ManifestState::Tree(compat::ContentManifestId::from(
-            mononoke_types::FsnodeId::new(Blake2::from_byte_array([byte; 32])),
-        ))
-    };
+    let tree =
+        |byte: u8| ManifestState::Tree(ContentManifestId::new(Blake2::from_byte_array([byte; 32])));
     let p = MPath::new("a/b/c")?;
     let ab = MPath::new("a/b")?;
     let a = MPath::new("a")?;
@@ -5803,7 +5798,7 @@ async fn manifest_rebase_forward_clean_and_deterministic(fb: FacebookInit) -> Re
         .add_file("server_file", "server")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
     let flags = manifest_rebase_flags(MergeResolutionOverride::ForceOn);
 
     let rebased = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, b, onto, MAX_PATHS).await?;
@@ -5852,7 +5847,7 @@ async fn manifest_rebase_backward_onto_ancestor(fb: FacebookInit) -> Result<(), 
         )
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[older, newer]).await?;
+    derive_content_manifests(&ctx, &repo, &[older, newer]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -5914,7 +5909,7 @@ async fn manifest_rebase_divergent_onto(fb: FacebookInit) -> Result<(), Error> {
         .add_file("stack", "stack")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -5955,7 +5950,7 @@ async fn manifest_rebase_true_conflict(fb: FacebookInit) -> Result<(), Error> {
         .add_file("f", NINE_LINES.replace("l5\n", "server\n"))
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -5986,7 +5981,7 @@ async fn assert_bottom_dropped(
     d2: ChangesetId,
     onto: ChangesetId,
 ) -> Result<(), Error> {
-    derive_fsnodes(ctx, repo, &[root, onto]).await?;
+    derive_content_manifests(ctx, repo, &[root, onto]).await?;
     let rebased = rebase_stack_onto_manifest(
         ctx,
         repo,
@@ -6143,7 +6138,7 @@ async fn manifest_rebase_all_dropped(fb: FacebookInit) -> Result<(), Error> {
         .add_file("f", "v1")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -6180,7 +6175,7 @@ async fn manifest_rebase_prefix_conflict(fb: FacebookInit) -> Result<(), Error> 
         .add_file("a/b", "file, not a dir")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -6227,7 +6222,7 @@ async fn manifest_rebase_requires_derived_manifests(fb: FacebookInit) -> Result<
         .add_file("server_file", "server")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root]).await?;
+    derive_content_manifests(&ctx, &repo, &[root]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -6281,7 +6276,7 @@ async fn manifest_rebase_rejects_bad_shapes(fb: FacebookInit) -> Result<(), Erro
         .add_file("onto", "onto")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto, d1]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto, d1]).await?;
     let flags = manifest_rebase_flags(MergeResolutionOverride::ForceOn);
 
     let err = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, merge, onto, MAX_PATHS)
@@ -6332,7 +6327,7 @@ async fn manifest_rebase_remaps_copy_info(fb: FacebookInit) -> Result<(), Error>
         .add_file("server_file", "server")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -6387,7 +6382,7 @@ async fn manifest_rebase_post_merge_noop_beside_a_real_change_keeps_merged_conte
         .add_file("f", onto_content.clone())
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -6441,7 +6436,7 @@ async fn manifest_rebase_sees_destination_files_under_a_replaced_directory(
         .add_file("dir/b", "b")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -6534,7 +6529,7 @@ async fn manifest_rebase_disabled_merge_makes_landed_bottom_a_conflict(
         .add_file("f", "v1")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -6580,7 +6575,7 @@ async fn manifest_rebase_delete_modify_and_add_add_conflict(fb: FacebookInit) ->
         .add_file("n", "destination")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, deleted, also_adds]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, deleted, also_adds]).await?;
 
     let err = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, modifies, deleted, MAX_PATHS)
         .await
@@ -6612,7 +6607,7 @@ async fn manifest_rebase_requires_derived_root_too(fb: FacebookInit) -> Result<(
         .add_file("file_a", "a")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -6651,7 +6646,7 @@ async fn manifest_rebase_rejects_too_many_paths(fb: FacebookInit) -> Result<(), 
         .add_file("server_file", "server")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -6683,7 +6678,6 @@ async fn manifest_rebase_with_content_manifests(fb: FacebookInit) -> Result<(), 
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
-        "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
     }));
     let ctx = CoreContext::test_mock(fb);
@@ -6751,7 +6745,7 @@ async fn falsify_manifest_rebase_cascade_double_merge(fb: FacebookInit) -> Resul
         .add_file("f", NINE_LINES.replace("l1\n", "ONTO\n"))
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
     let flags = manifest_rebase_flags(MergeResolutionOverride::ForceOn);
 
     let rebased =
@@ -6837,7 +6831,7 @@ async fn falsify_manifest_rebase_merging_stack_is_deterministic(
         .add_file("f", NINE_LINES.replace("l1\n", "ONTO\n"))
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
     let flags = manifest_rebase_flags(MergeResolutionOverride::ForceOn);
 
     let first = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, d3, onto, MAX_PATHS).await?;
@@ -6891,7 +6885,7 @@ async fn falsify_manifest_rebase_first_applied_then_later_change(
         .add_file("g", "g")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -6957,7 +6951,7 @@ async fn falsify_manifest_rebase_add_then_delete_over_identical_add(
         .add_file("n", "X")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -7007,7 +7001,7 @@ async fn falsify_manifest_rebase_delete_then_readd_over_identical_delete(
         .delete_file("doomed")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
@@ -7066,7 +7060,7 @@ async fn falsify_manifest_rebase_deletion_anywhere_in_the_stack_conflicts(
         .add_file("f", "reborn")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, m2, onto, MAX_PATHS)
         .await
@@ -7102,7 +7096,7 @@ async fn falsify_manifest_rebase_copy_source_changed_in_onto(
         .add_file("src", NINE_LINES.replace("l1\n", "ONTO\n"))
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, d1, onto, MAX_PATHS)
         .await
@@ -7153,7 +7147,7 @@ async fn falsify_manifest_rebase_file_type_change_on_overlap(
         .add_file("f", NINE_LINES.replace("l1\n", "ONTO\n"))
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, exec_onto, edit_onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, exec_onto, edit_onto]).await?;
 
     let err = rebase_stack_onto_manifest(&ctx, &repo, &flags, root, edit, exec_onto, MAX_PATHS)
         .await
@@ -7197,7 +7191,7 @@ async fn falsify_manifest_rebase_already_applied_file_to_dir_replacement(
         .add_file("p/c", "c")
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let err = rebase_stack_onto_manifest(
         &ctx,
@@ -7252,7 +7246,7 @@ async fn falsify_manifest_rebase_dropped_commit_reports_no_merged_paths(
         )
         .commit()
         .await?;
-    derive_fsnodes(&ctx, &repo, &[root, onto]).await?;
+    derive_content_manifests(&ctx, &repo, &[root, onto]).await?;
 
     let rebased = rebase_stack_onto_manifest(
         &ctx,
