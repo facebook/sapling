@@ -741,19 +741,48 @@ struct PinScanFailure : public EdenFSEvent {
   std::string reason;
   // Errno text, exit status, or the mount the scan did not cover.
   std::string detail;
+  // The start of the helper's report and the end of its progress trail.
   std::string stdoutPrefix;
-  std::string stderrPrefix;
+  std::string stderrTail;
   int64_t durationMs = 0;
 
   PinScanFailure(std::string reason, std::string detail)
       : reason(std::move(reason)), detail(std::move(detail)) {}
 
+  // Only columns the edenfs_events logger schema declares reach Scuba, so
+  // the fields ride in existing ones: `error` holds the detail, `causeDetail`
+  // the helper's stderr followed by its stdout when there is any, and
+  // `duration` is in seconds like the other GC events.
   void populate(DynamicEvent& event) const override {
-    event.addString("reason", reason);
-    event.addString("detail", detail);
-    event.addString("stdout_prefix", stdoutPrefix);
-    event.addString("stderr_prefix", stderrPrefix);
-    event.addInt("duration_ms", durationMs);
+    event.addString(std::string{xplat_keys::kReason}, reason);
+    event.addString(
+        std::string{xplat_keys::kError}, truncated(detail, kMaxDetail));
+    event.addString(std::string{xplat_keys::kCauseDetail}, helperOutput());
+    event.addDouble(std::string{xplat_keys::kDuration}, durationMs / 1000.0);
+  }
+
+  static constexpr size_t kMaxDetail = 256;
+  static constexpr size_t kMaxOutput = 1024;
+
+  static std::string truncated(const std::string& s, size_t max) {
+    return s.size() <= max ? s : s.substr(0, max);
+  }
+
+  // The end of stderr is the helper's last progress line, which is what a
+  // timed-out scan is judged by, so stderr keeps its tail and stdout, the
+  // report, its head.
+  std::string helperOutput() const {
+    std::string out = stderrTail.size() <= kMaxOutput
+        ? stderrTail
+        : stderrTail.substr(stderrTail.size() - kMaxOutput);
+    if (!stdoutPrefix.empty() && out.size() < kMaxOutput) {
+      if (!out.empty() && out.back() != '\n') {
+        out += '\n';
+      }
+      out += "[stdout] ";
+      out += stdoutPrefix;
+    }
+    return truncated(out, kMaxOutput);
   }
 
   const char* getType() const override {

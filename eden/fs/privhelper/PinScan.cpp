@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <set>
@@ -407,9 +408,18 @@ folly::Expected<std::vector<PinnedInode>, int> scanProcessPins(
   }
   pids.resize(count);
 
+  // Progress goes to stderr so a scan the daemon kills at its deadline
+  // still says how far it got; the daemon reads stderr as it is written,
+  // and the whole trail is a handful of lines.
+  fprintf(stderr, "scan-pins: scanning %zu processes\n", pids.size());
   ProcessScan scan{devices, pidInfo, pidFdInfo};
   bool sawRegion = false;
-  for (pid_t pid : pids) {
+  const size_t quarter = std::max<size_t>(pids.size() / 4, 1);
+  for (size_t i = 0; i < pids.size(); ++i) {
+    const pid_t pid = pids[i];
+    if (i != 0 && i % quarter == 0) {
+      fprintf(stderr, "scan-pins: %zu of %zu processes\n", i, pids.size());
+    }
     if (pid <= 0) {
       continue;
     }
@@ -582,7 +592,11 @@ folly::Expected<std::vector<uint64_t>, int> callerMountDevices() {
     // daemon serves the mount, the caller's or another user's, and hangs
     // while that daemon is wedged. EdenFS mounts are interruptible, so the
     // SIGTERM/SIGKILL the requesting daemon sends when its deadline on the
-    // scan passes ends the wait.
+    // scan passes ends the wait, and the line below says which mount it was.
+    fprintf(
+        stderr,
+        "scan-pins: checking the owner of %s\n",
+        mount.mountPoint.c_str());
     struct stat st{};
     if (stat(mount.mountPoint.c_str(), &st) != 0 || st.st_uid != uid) {
       continue;
@@ -598,6 +612,7 @@ folly::Expected<std::vector<uint64_t>, int> callerMountDevices() {
 } // namespace
 
 int runScanPinsMode() {
+  const auto start = std::chrono::steady_clock::now();
   auto devices = callerMountDevices();
   if (devices.hasError()) {
     fprintf(
@@ -620,6 +635,15 @@ int runScanPinsMode() {
   for (const auto& pin : pins.value()) {
     report.pinsByDevice[pin.dev].push_back(pin.ino);
   }
+  fprintf(
+      stderr,
+      "scan-pins: done, %zu pins on %zu mounts in %lld ms\n",
+      pins.value().size(),
+      devices.value().size(),
+      static_cast<long long>(
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - start)
+              .count()));
   const auto output = formatPinScanReport(report);
   if (fwrite(output.data(), 1, output.size(), stdout) != output.size() ||
       fflush(stdout) != 0) {

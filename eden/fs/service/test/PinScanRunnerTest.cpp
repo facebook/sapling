@@ -62,7 +62,7 @@ TEST_F(PinScanRunnerTest, reportsWhyTheHelperFailed) {
   EXPECT_EQ("exit_status", report.error().reason);
   EXPECT_NE(std::string::npos, report.error().detail.find("1"));
   EXPECT_EQ("dev 5\n", report.error().stdoutPrefix);
-  EXPECT_EQ("scan-pins: boom\n", report.error().stderrPrefix);
+  EXPECT_EQ("scan-pins: boom\n", report.error().stderrTail);
 }
 
 TEST_F(PinScanRunnerTest, stopsWaitingWhenCancelled) {
@@ -95,6 +95,43 @@ TEST_F(PinScanRunnerTest, stopsWaitingAtTheDeadline) {
   ASSERT_FALSE(report.hasValue());
   EXPECT_EQ("timeout", report.error().reason);
   EXPECT_LT(elapsed, 5s);
+}
+
+TEST_F(PinScanRunnerTest, keepsTheProgressOfATimedOutHelper) {
+  auto helper = fakeHelper(
+      "stuck",
+      "echo 'scan-pins: checking the owner of /x' >&2\n"
+      "exec sleep 30\n");
+
+  auto report = runPinScan(helper, folly::CancellationToken{}, 1s);
+
+  ASSERT_FALSE(report.hasValue());
+  EXPECT_EQ("timeout", report.error().reason);
+  EXPECT_EQ("scan-pins: checking the owner of /x\n", report.error().stderrTail);
+}
+
+TEST_F(PinScanRunnerTest, doesNotStallBehindAChattyHelperAndKeepsItsLastWords) {
+  // Far more stderr than a pipe holds: the runner must keep reading past
+  // what it stores so the helper never blocks on a full pipe, and what it
+  // stores is the end of the trail, since that is where the scan got to.
+  auto helper = fakeHelper(
+      "chatty",
+      "head -c 300000 /dev/zero | tr '\\0' x >&2\n"
+      "echo 'scan-pins: 900 of 1200 processes' >&2\n"
+      "exit 1\n");
+
+  auto start = std::chrono::steady_clock::now();
+  auto report = runPinScan(helper, folly::CancellationToken{});
+  auto elapsed = std::chrono::steady_clock::now() - start;
+
+  ASSERT_FALSE(report.hasValue());
+  EXPECT_EQ("exit_status", report.error().reason);
+  EXPECT_LT(elapsed, 5s);
+  const auto& trail = report.error().stderrTail;
+  EXPECT_LE(trail.size(), 4096u);
+  const std::string last = "scan-pins: 900 of 1200 processes\n";
+  ASSERT_GE(trail.size(), last.size());
+  EXPECT_EQ(last, trail.substr(trail.size() - last.size()));
 }
 
 #endif // __linux__ || __APPLE__

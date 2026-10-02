@@ -32,19 +32,30 @@ constexpr auto kKillTimeout = std::chrono::milliseconds{250};
 // waiting for scan output.
 constexpr auto kPollSlice = std::chrono::milliseconds{100};
 constexpr size_t kMaxOutput = 1024 * 1024;
-// How much of each stream a failure event quotes.
-constexpr size_t kPrefixBytes = 1024;
+// How much of each stream a failure keeps. Everything is read regardless, so
+// a chatty helper can never fill the pipe and stall behind us; only what is
+// kept is bounded. stdout keeps its head, the start of the report. stderr is
+// the helper's progress trail and keeps its tail: the last line is where a
+// timed-out scan got to, and a host with many mounts prints a line per mount
+// before it ever reaches the processes.
+constexpr size_t kStdoutPrefixBytes = 1024;
+constexpr size_t kStderrBytes = 4096;
 
 /**
- * Read what the non-blocking descriptor has, keeping the first `limit` bytes.
- * Returns 0, or the errno of a failed read.
+ * Read what the non-blocking descriptor has, keeping the first or the last
+ * `limit` bytes. Returns 0, or the errno of a failed read.
  */
-int drain(int fd, std::string& buffer, size_t limit, bool& eof) {
+int drain(int fd, std::string& buffer, size_t limit, bool keepTail, bool& eof) {
   while (true) {
     char buf[4096];
     auto n = ::read(fd, buf, sizeof(buf));
     if (n > 0) {
-      if (buffer.size() < limit) {
+      if (keepTail) {
+        buffer.append(buf, static_cast<size_t>(n));
+        if (buffer.size() > limit) {
+          buffer.erase(0, buffer.size() - limit);
+        }
+      } else if (buffer.size() < limit) {
         buffer.append(
             buf, std::min(static_cast<size_t>(n), limit - buffer.size()));
       }
@@ -75,8 +86,8 @@ folly::Expected<PinScanReport, PinScanFailure> runPinScan(
   std::string errors;
   auto fail = [&](std::string reason, std::string detail) {
     PinScanFailure failure{std::move(reason), std::move(detail)};
-    failure.stdoutPrefix = output.substr(0, kPrefixBytes);
-    failure.stderrPrefix = errors.substr(0, kPrefixBytes);
+    failure.stdoutPrefix = output.substr(0, kStdoutPrefixBytes);
+    failure.stderrTail = errors;
     failure.durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                              std::chrono::steady_clock::now() - start)
                              .count();
@@ -112,11 +123,26 @@ folly::Expected<PinScanReport, PinScanFailure> runPinScan(
       int fd{};
       std::string& buffer;
       size_t limit{};
+      bool keepTail{};
       bool eof{false};
     };
     Stream streams[] = {
-        {out.fd(), output, kMaxOutput + 1},
-        {err.fd(), errors, kPrefixBytes},
+        {out.fd(), output, kMaxOutput + 1, false},
+        {err.fd(), errors, kStderrBytes, true},
+    };
+    // The helper's last words: whatever it wrote since the last poll, read
+    // without blocking once it is gone.
+    auto drainAfterKill = [&] {
+      for (auto& stream : streams) {
+        if (!stream.eof) {
+          drain(
+              stream.fd,
+              stream.buffer,
+              stream.limit,
+              stream.keepTail,
+              stream.eof);
+        }
+      }
     };
     const auto deadline = start + timeout;
     while (!streams[0].eof || !streams[1].eof) {
@@ -129,7 +155,13 @@ folly::Expected<PinScanReport, PinScanFailure> runPinScan(
           deadline - std::chrono::steady_clock::now());
       if (remaining.count() <= 0) {
         proc.terminateOrKill(kKillTimeout);
-        XLOG(WARN, "pin scan timed out; skipping directory invalidation");
+        drainAfterKill();
+        XLOGF(
+            WARN,
+            "pin scan timed out after {}ms; skipping directory invalidation. "
+            "Helper progress: {}",
+            timeout.count(),
+            folly::rtrimWhitespace(errors).str());
         return fail("timeout", std::to_string(timeout.count()) + "ms");
       }
       // poll ignores a negative descriptor, which stands for a closed stream.
@@ -156,8 +188,12 @@ folly::Expected<PinScanReport, PinScanFailure> runPinScan(
           continue;
         }
         auto& stream = streams[i];
-        if (int readErrno =
-                drain(stream.fd, stream.buffer, stream.limit, stream.eof)) {
+        if (int readErrno = drain(
+                stream.fd,
+                stream.buffer,
+                stream.limit,
+                stream.keepTail,
+                stream.eof)) {
           proc.terminateOrKill(kKillTimeout);
           XLOGF(
               WARN,

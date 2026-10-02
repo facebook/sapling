@@ -222,9 +222,12 @@ knob is off or because the scan failed, GC keeps every directory referenced
 and reclaims files only, which is what the periodic GC does. Open and mapped
 files are unprotected in such a run and see ESTALE if GC forgets them, so a
 failing scan must be fixed rather than lived with: each failure logs a
-`pin_scan_failure` edenfs_events event with the reason, exit status or errno,
-duration and the start of the helper's stdout and stderr, next to a
-rate-limited warning in the log. `eden debug gc-inodes` does whatever the
+`pin_scan_failure` edenfs_events event with the `reason`, the exit status or
+errno (`error`), how long the scan ran (`duration`, seconds) and the end of
+what the helper printed (`causeDetail`), next to a warning in the log. The
+helper prints its progress on stderr, which mount's owner it is checking and
+how far through the process list it is, so a timed-out scan says whether it
+hung or was slow. `eden debug gc-inodes` does whatever the
 periodic GC would do: with pressure GC off it has no pin set and reclaims
 files only, with it on it scans for pins like the tick.
 
