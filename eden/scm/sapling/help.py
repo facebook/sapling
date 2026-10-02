@@ -373,7 +373,7 @@ helphomecommands = [
     ("Rearrange commits", ["rebase", "graft", "hide", "unhide"]),
     (
         "Work with stacks of commits",
-        ["previous", "next", "split", "fold", "histedit", "absorb"],
+        ["previous", "next", "split", "fold", "drop", "histedit", "absorb"],
     ),
     ("Undo changes", ["uncommit", "unamend", "undo", "redo"]),
     ("Other commands", ["config", "doctor", "grep", "journal", "rage", "web", "pr"]),

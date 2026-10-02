@@ -4,6 +4,10 @@
   $ enable morestatus
   $ setconfig morestatus.show=true
 
+Drop is listed with the stack commands in the help home page:
+  $ sl help | grep '^ drop '
+   drop          remove changesets from the middle of a stack
+
 No revision provided:
   $ newclientrepo
   $ sl drop

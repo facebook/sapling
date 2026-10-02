@@ -130,7 +130,7 @@ def _latest(repo, node):
     _("@prog@ drop [OPTION]... -r REV..."),
 )
 def drop(ui, repo, *pats, **opts) -> None:
-    """drop changesets from stack
+    """remove changesets from the middle of a stack
 
     Remove the specified changesets from the stack, rebasing their
     descendants onto the nearest ancestor that is not dropped. Dropped
