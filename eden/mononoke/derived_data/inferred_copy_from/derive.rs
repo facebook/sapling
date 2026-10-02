@@ -17,11 +17,11 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
 use cloned::cloned;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use filestore::FetchKey;
 use filestore::get_metadata;
-use fsnodes::RootFsnodeId;
 use futures::Stream;
 use futures::StreamExt;
 use futures::future::try_join_all;
@@ -39,7 +39,7 @@ use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
-use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::inferred_copy_from::InferredCopyFrom;
 use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use vec1::Vec1;
@@ -68,7 +68,7 @@ enum CopyFromCandidateSource {
 struct CopyFromCandidate {
     cs_id: ChangesetId,
     path: MPath,
-    fsnode: FsnodeFile,
+    file: ContentManifestFile,
     source: CopyFromCandidateSource,
 }
 
@@ -126,20 +126,20 @@ fn filter_by_metadata(
 ) -> bool {
     // Skip LFS files
     // Note that we are only checking dest file as we don't have this
-    // info for the source candidate (fsnode doesn't have it)
+    // info for the source candidate (ContentManifest doesn't have it)
     if dst_file_change.git_lfs().is_lfs_pointer() {
         return false;
     }
 
     // Skip submodules or symlinks
     if should_skip_file_type(&dst_file_change.file_type())
-        || should_skip_file_type(src_candidate.fsnode.file_type())
+        || should_skip_file_type(&src_candidate.file.file_type)
     {
         return false;
     }
 
     let dst_file_size = dst_file_change.size();
-    let candidate_file_size = src_candidate.fsnode.size();
+    let candidate_file_size = src_candidate.file.size;
     let max_size = dst_file_size.max(candidate_file_size);
     let min_size = dst_file_size.min(candidate_file_size);
     // Skip if files are too large or too different in sizes
@@ -226,22 +226,22 @@ async fn get_candidates_from_changeset(
     let mut content_to_candidates = HashMap::new();
 
     let entries = derivation_ctx
-        .fetch_dependency::<RootFsnodeId>(ctx, cs_id)
+        .fetch_dependency::<RootContentManifestId>(ctx, cs_id)
         .await?
-        .fsnode_id()
+        .content_manifest_id()
         .find_entries(ctx.clone(), derivation_ctx.blobstore().clone(), paths)
         .try_collect::<Vec<_>>()
         .await?;
 
     for (path, entry) in entries {
-        if let Some(fsnode) = entry.into_leaf() {
+        if let Some(file) = entry.into_leaf() {
             content_to_candidates
-                .entry(fsnode.content_id().clone())
+                .entry(file.content_id)
                 .or_insert(vec![])
                 .push(CopyFromCandidate {
                     cs_id,
                     path,
-                    fsnode,
+                    file,
                     source: candidate_source,
                 });
         }

@@ -229,7 +229,7 @@ pub(crate) async fn derive_untopologically(
         .await?)
 }
 
-/// Pre-derive AclManifest's dependencies (BSSM V3 + Fsnodes) so that
+/// Pre-derive AclManifest's dependencies (BSSM V3 + ContentManifests) so that
 /// subsequent blobstore counter snapshots only measure AclManifest derivation.
 pub(crate) async fn derive_deps(
     ctx: &CoreContext,
@@ -237,13 +237,13 @@ pub(crate) async fn derive_deps(
     cs_id: ChangesetId,
 ) -> Result<()> {
     use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
-    use fsnodes::RootFsnodeId;
+    use content_manifest_derivation::RootContentManifestId;
 
     repo.repo_derived_data()
         .derive::<RootBssmV3DirectoryId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     repo.repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     Ok(())
 }

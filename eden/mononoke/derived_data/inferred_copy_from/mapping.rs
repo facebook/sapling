@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::BlobstoreGetData;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -20,7 +21,6 @@ use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
-use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -75,7 +75,7 @@ impl RootInferredCopyFromId {
 impl BonsaiDerivable for RootInferredCopyFromId {
     const VARIANT: DerivableType = DerivableType::InferredCopyFrom;
 
-    type Dependencies = dependencies![RootFsnodeId, RootBssmV3DirectoryId];
+    type Dependencies = dependencies![RootContentManifestId, RootBssmV3DirectoryId];
 
     async fn derive_single(
         ctx: &CoreContext,

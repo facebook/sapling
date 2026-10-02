@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobstore::BlobstoreGetData;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -20,7 +21,6 @@ use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
-use fsnodes::RootFsnodeId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -136,8 +136,8 @@ impl DerivableUntopologically for RootAclManifestId {
         DerivableUntopologicallyVariant::AclManifests;
 
     /// From scratch derivation depends on BSSMV3 to efficiently find all
-    /// the ACL files and on fsnodes to get the file content.
-    type PredecessorDependencies = dependencies![RootBssmV3DirectoryId, RootFsnodeId];
+    /// the ACL files and on ContentManifests to get the file content.
+    type PredecessorDependencies = dependencies![RootBssmV3DirectoryId, RootContentManifestId];
 
     async fn unsafe_derive_untopologically(
         ctx: &CoreContext,

@@ -9,10 +9,10 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use blobstore::Loadable;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
-use fsnodes::RootFsnodeId;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_macros::mononoke;
@@ -482,21 +482,21 @@ async fn content_id_at_path(
     cs_id: ChangesetId,
     path: &str,
 ) -> Result<ContentId> {
-    let root_fsnode_id = repo
+    let root_content_manifest_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
-    let entry = root_fsnode_id
-        .fsnode_id()
+    let entry = root_content_manifest_id
+        .content_manifest_id()
         .find_entry(
             ctx.clone(),
             repo.repo_blobstore().clone(),
             MPath::new(path)?,
         )
         .await?
-        .ok_or_else(|| anyhow::anyhow!("{path} not found in fsnodes"))?;
+        .ok_or_else(|| anyhow::anyhow!("{path} not found in ContentManifests"))?;
     match entry {
-        Entry::Leaf(file) => Ok(*file.content_id()),
+        Entry::Leaf(file) => Ok(file.content_id),
         Entry::Tree(_) => anyhow::bail!("{path} is a directory"),
     }
 }
