@@ -474,8 +474,7 @@ Test rebase with showupdate=True and a lot of source revisions
   575c4b5ec114 -> 662a28166552 "H"
   08ebfeb61bac -> 677e16fc90a1 "I"
   a0a5005cec67 -> 47e966978ada "J"
-  83780307a7e8 -> 3ad2160089ee "K"
-  ...
+  ... (6 more)
   b768a41fb64f -> 49a4c1a656cc "Q"
 
 Test rebase with showupdate=True and a long commit message
@@ -486,3 +485,86 @@ Test rebase with showupdate=True and a long commit message
   $ sl rebase -r . -d 'desc(Z)'
   rebasing f5bef8190a99 "This is a long commit message which will be truncated."
   f5bef8190a99 -> 8df4b79a5414 "This is a long commit message which will be tru..."
+
+The updated commits are listed in stack order. Beyond the limit (10 by
+default), the bottom and top of every stack are always shown, and runs of other
+commits are summarised:
+
+  $ newclientrepo
+  $ setconfig tweakdefaults.showupdated=1
+  $ drawdag << 'EOS'
+  > B8
+  > |
+  > B7
+  > |
+  > B6
+  > |
+  > B5
+  > |
+  > B4
+  > |
+  > B3    C6
+  > |     |
+  > B2    C5
+  > |     |
+  > B1    C4
+  > |     |
+  > |     C3
+  > |     |
+  > |     C2
+  > |     |
+  > |     C1
+  > |    /
+  > A   Z
+  > EOS
+  $ sl rebase -q -s $C1 -d $A
+  $ sl rebase -r "(desc(B1)::) + (desc(C1)::)" -d $Z | grep -v rebasing
+  a178212c3433 -> ff960b5d1b00 "B1"
+  7fa699741696 -> 4d9d1021f658 "B2"
+  c61260c6c7b7 -> c607629739f1 "B3"
+  af983229a36e -> 79d63aca3e72 "B4"
+  d02fe5346ae8 -> 551bea22b9bd "B5"
+  dd51f6997e4a -> 7385c9531a88 "B6"
+  4147bcdaf572 -> 63dba79a5a10 "B7"
+  39956745e016 -> 1c7d6cd1acb7 "B8"
+  a500ca6c39da -> 82de329fd685 "C1"
+  ... (4 more)
+  4644a203e6c5 -> 7f3ae96847cc "C6"
+
+An agent sees up to 100 by default, and the limit can be configured:
+
+  $ CODING_AGENT_METADATA=id=test_agent sl rebase -r "(desc(B1)::) + (desc(C1)::)" -d $A | grep -v rebasing
+  ff960b5d1b00 -> fde90be5c9b2 "B1"
+  4d9d1021f658 -> 91ea4d8cdcaa "B2"
+  c607629739f1 -> 527fcd18f366 "B3"
+  79d63aca3e72 -> 800fd3016513 "B4"
+  551bea22b9bd -> 515f9c2e5c2d "B5"
+  7385c9531a88 -> 44a1417024e2 "B6"
+  63dba79a5a10 -> 269e60c050a0 "B7"
+  1c7d6cd1acb7 -> 99d6863838de "B8"
+  82de329fd685 -> 7b8178b5e09c "C1"
+  ec0e1922f5de -> 1ab2ed16fbbe "C2"
+  e60c0262edf6 -> ed316a8bef7e "C3"
+  3703c21efe12 -> d1adcde7c19d "C4"
+  cf2fc28c3a4e -> 9ed18568d410 "C5"
+  7f3ae96847cc -> b3b9a76f0c5d "C6"
+  $ sl rebase -r "(desc(B1)::) + (desc(C1)::)" -d $Z --config tweakdefaults.showupdatedlimit=5 | grep -v rebasing
+  fde90be5c9b2 -> e7be97062340 "B1"
+  91ea4d8cdcaa -> e973d93f21d4 "B2"
+  ... (5 more)
+  99d6863838de -> 28ca03fd4e39 "B8"
+  7b8178b5e09c -> 452a01acc439 "C1"
+  ... (4 more)
+  b3b9a76f0c5d -> baaac3e0143d "C6"
+
+A single omitted commit is shown rather than summarised:
+
+  $ sl rebase -r "desc(B1)::" -d $A --config tweakdefaults.showupdatedlimit=7 | grep -v rebasing
+  e7be97062340 -> 362999f839b7 "B1"
+  e973d93f21d4 -> 0d214380f289 "B2"
+  bfcb687a614e -> f80f377359a0 "B3"
+  476f989a440f -> 3693f2232a9b "B4"
+  d2c9ee29e6dd -> 603cbf2222b8 "B5"
+  341786b23885 -> 966b1762463f "B6"
+  319cd1bf50de -> 5cc92c86555c "B7"
+  28ca03fd4e39 -> fc9a6f5dcf50 "B8"

@@ -517,34 +517,62 @@ def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
     if (
         repo.ui.configbool("tweakdefaults", "showupdated")
         and operation not in formattercommands
+        and hasattr(mapping, "items")  # "mapping" is not always a dictionary.
     ):
-        maxoutput = 10
-        try:
-            oldnodes = list(mapping.keys())
-        except AttributeError:
-            # "mapping" is not always a dictionary.
-            pass
-        else:
-            for i in range(0, min(len(oldnodes), maxoutput)):
-                oldnode = oldnodes[i]
-                newnodes = mapping[oldnode]
-                _printupdatednode(repo, oldnode, newnodes)
-            if len(oldnodes) > maxoutput + 1:
-                repo.ui.status(_("...\n"))
-                lastoldnode = oldnodes[-1]
-                lastnewnodes = mapping[lastoldnode]
-                _printupdatednode(repo, lastoldnode, lastnewnodes)
+        _showupdated(repo, mapping)
     return orig(repo, mapping, operation, *args, **kwargs)
 
 
-def _printupdatednode(repo, oldnode, newnodes: List) -> None:
-    # oldnode was not updated if newnodes is an iterable
-    if len(newnodes) == 1:
-        newnode = newnodes[0]
-        firstline = encoding.trim(repo[newnode].description().split("\n")[0], 50, "...")
-        repo.ui.status(
-            _('%s -> %s "%s"\n') % (short(oldnode), short(newnode), firstline)
-        )
+def _showupdated(repo, mapping) -> None:
+    """Print "old -> new" for each rewritten commit, in stack order.
+
+    When there are more than the limit, the roots and heads of the rewritten
+    commits are always shown, so the ends of every stack are visible, and each
+    run of omitted commits is replaced by "... (N more)".
+    """
+    ui = repo.ui
+    # Only one-to-one rewrites are printed: dropped and split commits are not.
+    oldnodes = [old for old, new in mapping.items() if len(new) == 1]
+    if not oldnodes:
+        return
+    oldnodes = list(repo.nodes("sort(%ln, -topo)", oldnodes))
+
+    limit = ui.configint("tweakdefaults", "showupdatedlimit")
+    if limit is None:
+        limit = 100 if ui.agent() else 10
+    limit = max(limit, 2)
+
+    if len(oldnodes) <= limit:
+        shown = set(oldnodes)
+    else:
+        ends = set(repo.nodes("roots(%ln) + heads(%ln)", oldnodes, oldnodes))
+        if len(ends) > limit:
+            # Too many separate stacks to show all their ends.
+            shown = set(oldnodes[: limit - 1] + oldnodes[-1:])
+        else:
+            spare = limit - len(ends)
+            fill = [n for n in oldnodes if n not in ends][:spare]
+            shown = ends | set(fill)
+
+    # The last commit is a head, so it is always shown, and every run of
+    # omitted commits is followed by a shown one.
+    omitted = []
+    for oldnode in oldnodes:
+        if oldnode not in shown:
+            omitted.append(oldnode)
+            continue
+        if len(omitted) == 1:
+            # "... (1 more)" would take as much space as the commit itself.
+            _printupdatednode(repo, omitted[0], mapping[omitted[0]][0])
+        elif omitted:
+            ui.status(_("... (%d more)\n") % len(omitted))
+        omitted = []
+        _printupdatednode(repo, oldnode, mapping[oldnode][0])
+
+
+def _printupdatednode(repo, oldnode, newnode) -> None:
+    firstline = encoding.trim(repo[newnode].description().split("\n")[0], 50, "...")
+    repo.ui.status(_('%s -> %s "%s"\n') % (short(oldnode), short(newnode), firstline))
 
 
 def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
