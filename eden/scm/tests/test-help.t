@@ -361,7 +361,7 @@ Test extension help:
                      find the creation commit of a tracked path
        dialect       replace terms with more widely used equivalents
        dirsync
-       drop          drop specified changeset from the stack
+       drop          drop specified changesets from the stack
        edensparse    allow sparse EdenFS checkouts
        extdiff       command to allow external programs to compare revisions
        extorder
