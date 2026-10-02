@@ -3011,6 +3011,8 @@ def help_(ui, *names, **opts):
             keep.append(sys.platform.lower())
     if ui.verbose:
         keep.append("verbose")
+    if ui.agent():
+        keep.append("agent")
 
     commands = sys.modules[__name__]
     formatted = help.formattedhelp(ui, commands, name, keep=keep, **opts)

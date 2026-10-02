@@ -1046,6 +1046,42 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `base` to checkout a commit and continue applying subsequent commits
 
+    .. container:: agent
+
+       Running histedit without an editor:
+
+       Do not run histedit with only ANCESTOR: it opens an editor. Instead:
+
+       1. Check out the top of the stack, then print the current plan::
+
+            @prog@ histedit --show-plan [ANCESTOR]
+
+       2. Run the edited plan, giving each line with ``--plan``, oldest
+          commit first::
+
+            @prog@ histedit --plan 'pick 8ef592ce7cc4' --plan 'roll 5339bf82f0ca' --plan 'drop 252a1af424ad'
+
+          Give a rule for every commit from the oldest one in the plan up
+          to the working copy parent. Anything after the hash is ignored,
+          and ``drop`` lines can go anywhere in the plan. To combine a
+          commit with the kept commit before it, use ``roll`` to keep the
+          earlier commit's message, or ``into`` to keep this commit's
+          message. Avoid ``fold``, ``mess`` and ``edit``: they open an
+          editor or stop for changes.
+
+       3. If histedit stops for a conflict, resolve it and run
+          ``@prog@ histedit --continue``, or ``@prog@ histedit --abort`` to
+          undo the whole edit. ``@prog@ histedit --show-plan`` shows the
+          remaining steps.
+
+       For long or generated plans, use ``--commands FILE`` instead, where
+       FILE (or ``-`` for standard input) contains the same lines, or JSON,
+       which can also run commands between steps::
+
+         {"histedit": [{"action": "pick", "node": "8ef592ce7cc4"},
+                       {"action": "exec", "command": "make test"},
+                       {"action": "roll", "node": "5339bf82f0ca"}]}
+
     There are multiple ways to select the root changeset:
 
     - Specify ANCESTOR directly
