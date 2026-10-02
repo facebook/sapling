@@ -456,6 +456,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
   // before waiting for GC work to do.
   auto [initPromise, initFuture] = folly::makePromiseContract<Unit>();
 
+  reloadableConfig_ = config;
   gcThread_ = std::thread([this,
                            config,
                            mountPath = std::move(mountPath),
@@ -1913,11 +1914,15 @@ void Overlay::renameChild(
     if (supportsSemanticOperations_) {
       inodeCatalog_->renameChild(src, dst, srcName, dstName);
     } else if (useWal()) {
-      // Fall back to a full rewrite when dstContent does not yet contain
-      // the renamed entry — there is nothing concrete for the ADD WAL
-      // entry to carry.
+      // An absent destination cannot be serialized as an ADD WAL entry.
       auto dstIt = dstContent.find(dstName);
       if (dstIt == dstContent.end()) {
+        if (reloadableConfig_->getEdenConfig()
+                ->experimentalOverlayRenameRequireDestination.getValue()) {
+          EDEN_BUG() << "rename destination '" << dstName
+                     << "' is missing from directory " << dst.get();
+        }
+        // The legacy full rewrite can lose the child if both snapshots omit it.
         saveOverlayDir(src, srcContent);
         if (dst.get() != src.get()) {
           saveOverlayDir(dst, dstContent);
@@ -1962,6 +1967,12 @@ void Overlay::renameChild(
         }
       }
     } else {
+      if (dstContent.find(dstName) == dstContent.end() &&
+          reloadableConfig_->getEdenConfig()
+              ->experimentalOverlayRenameRequireDestination.getValue()) {
+        EDEN_BUG() << "rename destination '" << dstName
+                   << "' is missing from directory " << dst.get();
+      }
       saveOverlayDir(src, srcContent);
       if (dst.get() != src.get()) {
         saveOverlayDir(dst, dstContent);

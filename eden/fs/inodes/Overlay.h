@@ -328,6 +328,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       const DirContents& content);
   void removeChildren(InodeNumber parent, const DirContents& content);
 
+  /**
+   * Persist a rename using post-rename directory contents. For snapshot-backed
+   * catalogs, dstContent must contain dstName; otherwise this reports a caller
+   * bug before writing either directory.
+   */
   void renameChild(
       InodeNumber src,
       InodeNumber dst,
@@ -649,6 +654,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   // ServerState outlives all EdenMount instances.
   ErrorLogger& errorLogger_;
   EdenStatsPtr stats_;
+  // Retained so renameChild can read the rollback setting after config reloads.
+  std::shared_ptr<ReloadableConfig> reloadableConfig_;
 
   // Borrowed from EdenServer. Valid for Overlay's lifetime because
   // EdenServer::unmountAll() completes before semaphore destruction.

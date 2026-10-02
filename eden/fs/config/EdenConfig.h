@@ -2593,6 +2593,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Require the renamed entry in the destination snapshot before writing.
+   * Disabling this guard restores the legacy full rewrite, which can lose the
+   * moved child when the snapshots omit it.
+   */
+  ConfigSetting<bool> experimentalOverlayRenameRequireDestination{
+      "experimental:overlay-rename-require-destination",
+      true,
+      this};
+
+  /**
    * Keep the file descriptor from creating a new overlay file in the open
    * file cache, instead of closing it and reopening the file on the first
    * write.

@@ -31,14 +31,18 @@
 #include <csignal>
 #include <cstdlib>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <system_error>
 #include <thread>
 #include <tuple>
 
 #include "eden/common/testharness/TempFile.h"
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/common/utils/test/ScopedEnvVar.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMetadata.h"
@@ -1459,8 +1463,8 @@ TEST(PlainOverlayTest, no_semaphore_allows_concurrent_fsck) {
 
 namespace {
 
-// Initialize a fully-functional Overlay with WAL enabled and return the
-// underlying FsFileContentStore so tests can poke the WAL directly.
+// Initialize an Overlay with configurable WAL behavior and return the
+// underlying FsFileContentStore so tests can inspect WAL persistence.
 struct WalLifecycleOverlay {
   // Overlay borrows this logger, so it must outlive the overlay.
   std::unique_ptr<ErrorLogger> errorLogger;
@@ -1473,9 +1477,10 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
     const AbsolutePath& dir,
     CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive,
     uint64_t walMinCompactionThreshold = 0,
-    bool cacheWalFiles = true) {
+    bool cacheWalFiles = true,
+    bool useWal = true) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
-  rawConfig->overlayUseWal.setValue(true, ConfigSourceType::CommandLine);
+  rawConfig->overlayUseWal.setValue(useWal, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayCacheWalFiles.setValue(
       cacheWalFiles, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayWalMinCompactionThreshold.setValue(
@@ -2499,33 +2504,144 @@ TEST(WalRenameTest, crossDirRenameAppendsToBothWals) {
   bundle.overlay->close();
 }
 
-TEST(WalRenameTest, fallbackOnMissingDstEntry) {
-  folly::test::TemporaryDirectory tmp("eden_wal_rename_fallback");
-  auto dir = canonicalPath(tmp.path().string());
-  auto bundle = makeWalLifecycleOverlay(dir);
-  ASSERT_NE(nullptr, bundle.store);
+TEST(WalRenameTest, missingDestinationReportsCallerBug) {
+  for (const bool useWal : {false, true}) {
+    for (const bool sameParent : {false, true}) {
+      SCOPED_TRACE(fmt::format("useWal={}, sameParent={}", useWal, sameParent));
+      EdenBugDisabler disableEdenBugCrash;
+      folly::test::TemporaryDirectory tmp(
+          "eden_wal_rename_missing_destination");
+      const auto dir = canonicalPath(tmp.path().string());
+      auto bundle = makeWalLifecycleOverlay(
+          dir,
+          kPathMapDefaultCaseSensitive,
+          /*walMinCompactionThreshold=*/0,
+          /*cacheWalFiles=*/true,
+          useWal);
+      const auto src = bundle.overlay->allocateInodeNumber();
+      const auto dst = sameParent ? src : bundle.overlay->allocateInodeNumber();
+      const auto child = bundle.overlay->allocateInodeNumber();
+      DirContents content(kPathMapDefaultCaseSensitive);
+      content.emplace("source"_pc, S_IFREG | 0644, child);
+      bundle.overlay->saveOverlayDir(src, content);
+      DirContents postSrc(kPathMapDefaultCaseSensitive);
+      DirContents postDst(kPathMapDefaultCaseSensitive);
+      if (!sameParent) {
+        bundle.overlay->saveOverlayDir(dst, postDst);
+      }
 
-  auto srcParent = bundle.overlay->allocateInodeNumber();
-  auto dstParent = bundle.overlay->allocateInodeNumber();
-  auto childIno = bundle.overlay->allocateInodeNumber();
-  DirContents srcContent(kPathMapDefaultCaseSensitive);
-  srcContent.emplace("old"_pc, S_IFREG | 0644, childIno);
-  bundle.overlay->saveOverlayDir(srcParent, srcContent);
-  DirContents dstContent(kPathMapDefaultCaseSensitive);
-  bundle.overlay->saveOverlayDir(dstParent, dstContent);
+      EXPECT_THROW_RE(
+          bundle.overlay->renameChild(
+              src, dst, "source"_pc, "target"_pc, postSrc, postDst),
+          std::runtime_error,
+          "rename destination 'target' is missing");
+      EXPECT_FALSE(bundle.store->hasWal(src));
+      EXPECT_FALSE(bundle.store->hasWal(dst));
+      bundle.overlay->close();
 
-  // dstContent does not contain "new" — renameChild must fall back to
-  // the dual-saveOverlayDir path. No WAL files should be left behind
-  // since saveOverlayDir runs clearWalAfterFullWrite.
-  DirContents postSrc(kPathMapDefaultCaseSensitive);
-  DirContents postDst(kPathMapDefaultCaseSensitive);
-  bundle.overlay->renameChild(
-      srcParent, dstParent, "old"_pc, "new"_pc, postSrc, postDst);
+      auto reopened = makeWalLifecycleOverlay(
+          dir,
+          kPathMapDefaultCaseSensitive,
+          /*walMinCompactionThreshold=*/0,
+          /*cacheWalFiles=*/true,
+          useWal);
+      const auto loaded = reopened.overlay->loadOverlayDir(src);
+      ASSERT_EQ(1u, loaded.size());
+      const auto source = loaded.find("source"_pc);
+      ASSERT_NE(loaded.end(), source);
+      EXPECT_EQ(child, source->second.getInodeNumber());
+      if (!sameParent) {
+        EXPECT_TRUE(reopened.overlay->loadOverlayDir(dst).empty());
+      }
+      reopened.overlay->close();
+    }
+  }
+}
 
-  EXPECT_FALSE(bundle.store->hasWal(srcParent));
-  EXPECT_FALSE(bundle.store->hasWal(dstParent));
+TEST(WalRenameTest, missingDestinationGuardCanBeDisabledAfterReload) {
+  EdenBugDisabler disableEdenBugCrash;
+  for (const bool useWal : {false, true}) {
+    SCOPED_TRACE(fmt::format("useWal={}", useWal));
+    folly::test::TemporaryDirectory tmp("eden_wal_rename_rollback");
+    const auto dir = canonicalPath(tmp.path().string());
+    const auto configPath = dir + "dynamic.rc"_pc;
+    constexpr std::string_view kDisabled{
+        "[experimental]\noverlay-rename-require-destination=false\n"};
+    constexpr std::string_view kEnabled{
+        "[experimental]\noverlay-rename-require-destination=true\n"};
+    ASSERT_TRUE(folly::writeFile(kEnabled, configPath.c_str()));
 
-  bundle.overlay->close();
+    auto rawConfig = std::make_shared<EdenConfig>(
+        ConfigVariables{},
+        dir,
+        dir,
+        EdenConfig::SourceVector{std::make_shared<TomlFileConfigSource>(
+            configPath, ConfigSourceType::Dynamic)});
+    rawConfig->overlayUseWal.setValue(useWal, ConfigSourceType::CommandLine);
+    rawConfig->overlayFilePreallocPoolSize.setValue(
+        0, ConfigSourceType::Default, true);
+    rawConfig->overlayDirPreallocPoolSize.setValue(
+        0, ConfigSourceType::Default, true);
+    auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
+    auto errorLogger = makeTestErrorLogger();
+    auto overlay = Overlay::create(
+        dir,
+        kPathMapDefaultCaseSensitive,
+        kInodeCatalogType,
+        kInodeCatalogOptions,
+        makeTestEdenFsEventsLogger(),
+        errorLogger,
+        makeRefPtr<EdenStats>(),
+        *rawConfig);
+    overlay->initialize(reloadable).get();
+
+    const auto src = overlay->allocateInodeNumber();
+    const auto dst = overlay->allocateInodeNumber();
+    const auto child = overlay->allocateInodeNumber();
+    DirContents srcContent(kPathMapDefaultCaseSensitive);
+    srcContent.emplace("source"_pc, S_IFREG | 0644, child);
+    overlay->saveOverlayDir(src, srcContent);
+    DirContents dstContent(kPathMapDefaultCaseSensitive);
+    overlay->saveOverlayDir(dst, dstContent);
+    DirContents postSrc(kPathMapDefaultCaseSensitive);
+
+    EXPECT_THROW_RE(
+        overlay->renameChild(
+            src, dst, "source"_pc, "target"_pc, postSrc, dstContent),
+        std::runtime_error,
+        "rename destination 'target' is missing");
+    ASSERT_TRUE(folly::writeFile(kDisabled, configPath.c_str()));
+    reloadable->maybeReload();
+    EXPECT_EQ(
+        "false",
+        reloadable->getEdenConfig()->getValueByFullKey(
+            "experimental:overlay-rename-require-destination"));
+    EXPECT_NO_THROW(overlay->renameChild(
+        src, dst, "source"_pc, "target"_pc, postSrc, dstContent));
+
+    ASSERT_TRUE(folly::writeFile(kEnabled, configPath.c_str()));
+    reloadable->maybeReload();
+    EXPECT_EQ(
+        "true",
+        reloadable->getEdenConfig()->getValueByFullKey(
+            "experimental:overlay-rename-require-destination"));
+    EXPECT_THROW_RE(
+        overlay->renameChild(
+            src, dst, "source"_pc, "target"_pc, postSrc, dstContent),
+        std::runtime_error,
+        "rename destination 'target' is missing");
+    overlay->close();
+
+    auto reopened = makeWalLifecycleOverlay(
+        dir,
+        kPathMapDefaultCaseSensitive,
+        /*walMinCompactionThreshold=*/0,
+        /*cacheWalFiles=*/true,
+        useWal);
+    EXPECT_TRUE(reopened.overlay->loadOverlayDir(src).empty());
+    EXPECT_TRUE(reopened.overlay->loadOverlayDir(dst).empty());
+    reopened.overlay->close();
+  }
 }
 
 TEST(WalRenameTest, destinationCompactionWriteFailurePreservesSource) {
