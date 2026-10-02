@@ -37,6 +37,9 @@ use thiserror::Error;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_for_uploaded_tree;
 
 const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
+/// Each tree build fans out its own child lookups, so this multiplies with
+/// `MAX_CONCURRENT_CHILD_LOOKUPS`.
+const MAX_CONCURRENT_TREE_BUILDS: usize = 10;
 
 /// Why an uploaded batch could not be built.
 #[derive(Debug, Error)]
@@ -135,6 +138,7 @@ pub struct UploadedTreeBatch {
 }
 
 /// One tree of a batch, reached in build order.
+#[derive(Clone, Copy)]
 pub struct OrderedTree<'a> {
     pub node_id: HgNodeHash,
     pub manifest: &'a HgBlobManifest,
@@ -188,15 +192,22 @@ impl UploadedTreeBatch {
         })
     }
 
-    /// The batch ordered so that every tree comes after the trees it contains.
-    pub fn in_build_order(&self) -> impl ExactSizeIterator<Item = OrderedTree<'_>> {
-        bottom_up_order(&self.contains)
+    /// The batch grouped into levels, each containing only trees whose
+    /// in-batch children all sit in earlier levels.
+    pub fn in_build_levels(&self) -> Vec<Vec<OrderedTree<'_>>> {
+        build_levels(&self.contains)
             .into_iter()
-            .map(|index| OrderedTree {
-                node_id: self.trees[index].node_id,
-                manifest: &self.trees[index].manifest,
-                children: &self.children[index],
+            .map(|level| {
+                level
+                    .into_iter()
+                    .map(|index| OrderedTree {
+                        node_id: self.trees[index].node_id,
+                        manifest: &self.trees[index].manifest,
+                        children: &self.children[index],
+                    })
+                    .collect()
             })
+            .collect()
     }
 }
 
@@ -225,6 +236,30 @@ fn bottom_up_order(child_indices: &[Vec<usize>]) -> Vec<usize> {
     order
 }
 
+/// Group the batch by height: a tree with no in-batch children is at level 0,
+/// and any other is one above its highest child.
+///
+/// On a cyclic input some edge cannot point to a strictly lower level, since
+/// heights cannot strictly decrease all the way round a cycle. That child is
+/// then not yet built when its parent is, so the batch fails rather than
+/// building against a missing child.
+fn build_levels(child_indices: &[Vec<usize>]) -> Vec<Vec<usize>> {
+    let mut height = vec![0usize; child_indices.len()];
+    let mut levels: Vec<Vec<usize>> = Vec::new();
+    for node in bottom_up_order(child_indices) {
+        height[node] = child_indices[node]
+            .iter()
+            .map(|&child| height[child] + 1)
+            .max()
+            .unwrap_or(0);
+        if levels.len() <= height[node] {
+            levels.resize_with(height[node] + 1, Vec::new);
+        }
+        levels[height[node]].push(node);
+    }
+    levels
+}
+
 /// Where the children of the tree being built are resolved from.
 struct ChildSources<'a> {
     children: &'a TreeChildren,
@@ -243,9 +278,10 @@ pub async fn build_augmented_manifest_for_uploaded_tree(
 ) -> Result<BuiltTree> {
     // A batch of one, so every child directory is external by construction.
     let batch = UploadedTreeBatch::parse(vec![envelope.clone()])?;
-    let tree = batch
-        .in_build_order()
-        .next()
+    let tree = *batch
+        .in_build_levels()
+        .first()
+        .and_then(|level| level.first())
         .context("a batch of one uploaded tree has one tree to build")?;
     build_uploaded_tree(
         ctx,
@@ -260,8 +296,9 @@ pub async fn build_augmented_manifest_for_uploaded_tree(
     .await
 }
 
-/// Build and store an augmented manifest for every uploaded tree, bottom-up. A
-/// child neither in the batch nor already derived fails the whole batch.
+/// Build and store an augmented manifest for every uploaded tree, bottom-up and
+/// a level at a time. A child neither in the batch nor already derived fails
+/// the whole batch.
 pub async fn build_augmented_manifests_for_uploaded_trees(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -269,33 +306,48 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
     trees: Vec<HgManifestEnvelope>,
 ) -> Result<Vec<UploadTreeAugmented>> {
     let batch = UploadedTreeBatch::parse(trees)?;
-    let ordered = batch.in_build_order();
 
-    let mut built: HashMap<HgNodeHash, BuiltTree> = HashMap::with_capacity(ordered.len());
-    let mut augmented = Vec::with_capacity(ordered.len());
-    for tree in ordered {
-        let result = build_uploaded_tree(
-            ctx,
-            blobstore,
-            restricted_paths,
-            tree.manifest,
-            ChildSources {
-                children: tree.children,
-                siblings: &built,
-            },
-        )
-        .await
-        .with_context(|| {
-            format!(
-                "building the augmented manifest for uploaded tree {}",
-                tree.node_id
-            )
-        })?;
-        augmented.push(UploadTreeAugmented {
-            node_id: tree.node_id,
-            acl: result.acl.clone(),
-        });
-        built.insert(tree.node_id, result);
+    let levels = batch.in_build_levels();
+    let tree_count = levels.iter().map(Vec::len).sum();
+
+    let mut built: HashMap<HgNodeHash, BuiltTree> = HashMap::with_capacity(tree_count);
+    let mut augmented = Vec::with_capacity(tree_count);
+    for level in levels {
+        let siblings = &built;
+        let builds: Vec<_> = level
+            .into_iter()
+            .map(|tree| async move {
+                let result = build_uploaded_tree(
+                    ctx,
+                    blobstore,
+                    restricted_paths,
+                    tree.manifest,
+                    ChildSources {
+                        children: tree.children,
+                        siblings,
+                    },
+                )
+                .await
+                .with_context(|| {
+                    format!(
+                        "building the augmented manifest for uploaded tree {}",
+                        tree.node_id
+                    )
+                })?;
+                anyhow::Ok((tree.node_id, result))
+            })
+            .collect();
+        let level_built: Vec<(HgNodeHash, BuiltTree)> = stream::iter(builds)
+            .buffered(MAX_CONCURRENT_TREE_BUILDS)
+            .try_collect()
+            .await?;
+        for (node_id, result) in level_built {
+            augmented.push(UploadTreeAugmented {
+                node_id,
+                acl: result.acl.clone(),
+            });
+            built.insert(node_id, result);
+        }
     }
 
     Ok(augmented)
@@ -377,8 +429,8 @@ async fn load_children(
         .in_batch
         .iter()
         .map(|(name, node_id)| {
-            // Only reachable if the batch is not a DAG, since bottom-up
-            // ordering otherwise puts every in-batch child before its parent.
+            // Only reachable if the batch is not a DAG, since levelling
+            // otherwise builds every in-batch child before its parent.
             let sibling = sources.siblings.get(node_id).ok_or_else(|| {
                 UploadTreeBuildError::MissingChild {
                     tree,
@@ -486,7 +538,7 @@ mod tests {
             UploadedTreeBatch::parse(vec![tree(foo, &[("bar", bar)]), tree(bar, &[("baz", baz)])])
                 .expect("the fixture batch parses");
 
-        let ordered: Vec<_> = batch.in_build_order().collect();
+        let ordered: Vec<_> = batch.in_build_levels().into_iter().flatten().collect();
         assert_eq!(
             ordered.iter().map(|tree| tree.node_id).collect::<Vec<_>>(),
             vec![bar, foo],
@@ -519,6 +571,44 @@ mod tests {
         assert!(position(3) < position(1), "3 is inside 1");
         assert!(position(1) < position(0), "1 is inside 0");
         assert!(position(2) < position(0), "2 is inside 0");
+    }
+
+    #[mononoke::test]
+    fn test_build_levels_groups_trees_by_height() {
+        // 0 contains 1 and 2; 1 contains 3.
+        let contains = vec![vec![1, 2], vec![3], vec![], vec![]];
+        let mut levels = build_levels(&contains);
+        levels.iter_mut().for_each(|level| level.sort());
+        assert_eq!(
+            levels,
+            vec![vec![2, 3], vec![1], vec![0]],
+            "2 and 3 contain nothing in the batch, so they build together first"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_build_levels_leaves_a_cycle_edge_unsatisfied() {
+        // Not reachable from a content-addressed manifest. Building must then
+        // fail on a missing child, which needs an edge whose child is not in a
+        // strictly lower level than its parent.
+        let contains = vec![vec![1], vec![2], vec![0]];
+        let levels = build_levels(&contains);
+        let level_of = |node: usize| {
+            levels
+                .iter()
+                .position(|level| level.contains(&node))
+                .expect("every tree is placed")
+        };
+        assert_eq!(levels.iter().map(Vec::len).sum::<usize>(), 3);
+        assert!(
+            contains
+                .iter()
+                .enumerate()
+                .any(|(parent, children)| children
+                    .iter()
+                    .any(|&child| level_of(child) >= level_of(parent))),
+            "some child is not built before its parent"
+        );
     }
 
     #[mononoke::test]
