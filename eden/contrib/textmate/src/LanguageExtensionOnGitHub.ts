@@ -80,7 +80,7 @@ export default class LanguageExtensionOnGitHub extends AbstractLanguageExtension
   }: ConstructorArgs) {
     super();
     this._id = `https://github.com/${organization}/${project}/tree/${commit}/${path}`;
-    this._baseUrl = `https://github.com/${organization}/${project}/raw/${commit}`;
+    this._baseUrl = `https://raw.githubusercontent.com/${organization}/${project}/${commit}`;
     this._path = path;
     this._https_proxy = https_proxy;
     this._build =
