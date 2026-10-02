@@ -31,7 +31,10 @@ constexpr auto kKillTimeout = std::chrono::milliseconds{250};
 // Upper bound on how long a cancellation request can go unnoticed while
 // waiting for scan output.
 constexpr auto kPollSlice = std::chrono::milliseconds{100};
-constexpr size_t kMaxOutput = 1024 * 1024;
+// A report line is about 22 bytes, so this holds a few hundred thousand
+// pins: a build with tens of thousands of files open on the mount must not
+// turn into a failed scan, which is a run without pins.
+constexpr size_t kMaxOutput = 16 * 1024 * 1024;
 // How much of each stream a failure keeps. Everything is read regardless, so
 // a chatty helper can never fill the pipe and stall behind us; only what is
 // kept is bounded. stdout keeps its head, the start of the report. stderr is
