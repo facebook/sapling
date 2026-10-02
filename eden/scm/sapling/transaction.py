@@ -162,6 +162,8 @@ class transaction(util.transactional):
         uiconfig=None,
         desc=None,
         lockfree=False,
+        pendingroot=None,
+        sharedpendingroot=None,
     ):
         """Begin a new transaction
 
@@ -187,6 +189,9 @@ class transaction(util.transactional):
         self.report = report
         self.desc = desc
         self.lockfree = lockfree
+        # Repo roots used to scope legacy pending files for child processes.
+        self._pendingroot = pendingroot
+        self._sharedpendingroot = sharedpendingroot
         # a vfs to the store content
         self.opener = opener
         # a map to access file in various {location -> vfs}
@@ -521,15 +526,21 @@ class transaction(util.transactional):
 
         This is used to allow hooks to view a transaction before commit
 
-        Returns whether legacy pending files were written and HG_PENDING
-        should be set.
-
         If `env` is not None, it is a dictionary that will be mutated to
-        include information to pick up _metalog_ pending changes.
+        include information to pick up pending changes.
         """
         for cat, callback in sorted(self._pendingcallback.items()):
             callback(self)
         islegacypending = self._generatefiles(suffix=".pending")
+
+        if env is not None and islegacypending:
+            pendingenv = (
+                ("HG_PENDING", self._pendingroot),
+                ("HG_SHAREDPENDING", self._sharedpendingroot),
+            )
+            for name, root in pendingenv:
+                if root is not None:
+                    env[name] = root
 
         # Write pending metalog changes. Other processes can load the
         # metalog with rootid set to `mlrootid` explicitly to see the
@@ -553,7 +564,6 @@ class transaction(util.transactional):
                     env[ENV_PENDING_METALOG] = encodependingmetalog(pathroots)
                 else:
                     env.pop(ENV_PENDING_METALOG, None)
-        return islegacypending
 
     @active
     def addfinalize(self, category, callback):

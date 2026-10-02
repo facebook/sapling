@@ -1226,6 +1226,7 @@ class ui:
         user,
         extra=None,
         editform=None,
+        env=None,
         pending=None,
         sharedpending=None,
         repopath=None,
@@ -1285,7 +1286,8 @@ class ui:
             f.write(util.tonativeeol(text).encode())
             f.close()
 
-            environ = {"HGUSER": user}
+            environ = dict(env or {})
+            environ["HGUSER"] = user
             if "transplant_source" in extra:
                 environ.update({"HGREVISION": hex(extra["transplant_source"])})
             for label in ("intermediate-source", "source", "rebase_source"):

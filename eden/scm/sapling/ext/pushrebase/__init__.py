@@ -1322,8 +1322,12 @@ def addfinalhooks(op, tr, hookargs, added):
     hookargs["node"] = tr.hookargs["node"] = hex(added[0])
     hookargs["node_last"] = hex(added[-1])
 
-    p = lambda: tr.writepending() and op.repo.root or ""
-    op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
+    def pending():
+        env = {}
+        tr.writepending(env=env)
+        return env.get("HG_PENDING", "")
+
+    op.repo.hook("pretxnchangegroup", throw=True, pending=pending, **hookargs)
 
     def runhooks():
         args = hookargs.copy()

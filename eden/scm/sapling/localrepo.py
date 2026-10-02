@@ -1944,6 +1944,8 @@ class localrepository:
             uiconfig=self.ui.uiconfig(),
             desc=desc,
             lockfree=lockfree,
+            pendingroot=self.root,
+            sharedpendingroot=self.sharedroot,
         )
         tr.changes["nodes"] = []
         tr.changes["obsmarkers"] = set()

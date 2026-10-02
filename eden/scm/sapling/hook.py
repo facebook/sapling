@@ -162,9 +162,8 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
         # file generator that requires the working copy lock.
         if not tr or not tr.lockfree:
             repo.dirstate.write(tr)
-        if tr and tr.writepending(env=env):
-            env["HG_PENDING"] = repo.root
-            env["HG_SHAREDPENDING"] = repo.sharedroot
+        if tr:
+            tr.writepending(env=env)
     env["HG_HOOKTYPE"] = htype
     env["HG_HOOKNAME"] = name
 

@@ -73,6 +73,18 @@ The upload succeeded and does not need to be retried.
   $ touch A
   $ sl commit -Aqm A
 
+`writepending()` adds legacy pending environment variables when it writes
+legacy pending files.
+
+  $ cat > $TESTTMP/checkpending.sh <<'EOF'
+  > test -n "$HG_PENDING"
+  > test -n "$HG_SHAREDPENDING"
+  > test -e .sl/dirstate.pending
+  > EOF
+  $ touch B
+  $ sl add B
+  $ sl --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" commit -m B
+
 Lock-free transactions do not expose preexisting dirstate cache changes to an
 external hook.
 
