@@ -125,7 +125,6 @@ Somehow problematic: With many extensions
   > hgevents=
   > histedit=
   > journal=
-  > logginghelper=
   > lz4revlog=
   > mergedriver =
   > mergedriver=

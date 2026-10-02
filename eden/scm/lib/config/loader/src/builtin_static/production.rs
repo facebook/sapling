@@ -149,7 +149,6 @@ gitrevset=!
 hgsubversion=!
 histedit=
 journal=
-logginghelper=
 morestatus=
 myparent=
 obsshelve=

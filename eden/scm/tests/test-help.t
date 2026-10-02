@@ -377,9 +377,6 @@ Test extension help:
        histedit      interactive history editing
        interactiveui
                      (no help text available)
-       logginghelper
-                     this extension logs different pieces of information that
-                     will be used
        megarepo      provides support for cross repo commit resolution
        morestatus    make status give a bit more context
        myparent
