@@ -1,183 +1,126 @@
-
 #require no-eden
 
 #inprocess-hg-incompatible
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
-UTILS:
-  $ reset() {
-  >   cd ..
-  >   rm -rf a
-  >   sl init a
-  >   cd a
-  > }
 
-TEST: incomplete requirements handling (required extension excluded)
-  $ sl init a
-  $ cd a
   $ enable drop
 
+Drop requires the rebase extension:
+  $ newclientrepo
   $ sl drop 1
   extension rebase not found
   abort: required extensions not detected
   [255]
 
-SETUP: Properly setup all required extensions
-  $ enable rebase drop
+  $ cd $TESTTMP
+  $ enable rebase
 
-TEST: handling no revision provided to drop
+No revision provided:
+  $ newclientrepo
   $ sl drop
   abort: no revision to drop was provided
   [255]
 
-TEST: aborting when drop called on root changeset
-  $ sl debugbuilddag +1
-  $ sl log -G -T '{desc|firstline}'
-  o  r0
-  
-  $ sl drop -r 'desc(r0)'
+Root changesets cannot be dropped:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A
+  > EOS
+  $ sl drop -r $A
   abort: root changeset cannot be dropped
   [255]
 
-  $ sl log -G -T '{desc|firstline}'
-  o  r0
-  
-RESET and SETUP
-  $ reset
-  $ enable rebase drop
+Drop a changeset from the middle of a stack:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ sl drop -r $C
+  Dropping changeset 26805a: C
+  rebasing f585351a92f8 "D"
+  $ tglog
+  o  1e6da8103bc7 'D'
+  │
+  o  112478962961 'B'
+  │
+  o  426bada5c675 'A'
 
-TEST: dropping changeset in the middle of the stack
-  $ sl debugbuilddag +4 -m
-  $ sl log -G -T '{desc|firstline}'
-  o  r3
-  │
-  o  r2
-  │
-  o  r1
-  │
-  o  r0
-  
-  $ sl drop -r 'desc(r2)'
-  Dropping changeset c175ba: r2
-  rebasing c034855f2b01 "r3"
-  merging mf
-  $ sl log -G -T '{desc|firstline}'
-  o  r3
-  │
-  o  r1
-  │
-  o  r0
-  
-TEST: abort when more than one revision provided
-  $ sl drop -r 1 4
+Only one revision can be dropped at a time:
+  $ sl drop -r $A -r $B
   abort: only one revision can be dropped at a time
   [255]
 
-RESET and SETUP
-  $ reset
-  $ enable rebase drop
+Drop a changeset with multiple children:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > D E
+  > |/
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ sl drop $B
+  Dropping changeset 112478: B
+  rebasing 26805aba1e60 "C"
+  rebasing f585351a92f8 "D"
+  rebasing 78d2dca436b2 "E"
+  $ tglog
+  o  8b7d4865d115 'E'
+  │
+  │ o  43a2ce673b14 'D'
+  ├─╯
+  o  fac0cc90d19e 'C'
+  │
+  o  426bada5c675 'A'
 
-TEST: dropping a changest with child changesets
-  $ sl debugbuilddag -m "+5 *3 +2"
-  $ sl log -G -T '{desc|firstline}'
-  o  r7
-  │
-  o  r6
-  │
-  o  r5
-  │
-  │ o  r4
-  │ │
-  │ o  r3
-  ├─╯
-  o  r2
-  │
-  o  r1
-  │
-  o  r0
-  
-  $ sl drop 'desc(r2)'
-  Dropping changeset 37d4c1: r2
-  rebasing e76b6544a13a "r5"
-  merging mf
-  rebasing 4905937520ff "r6"
-  merging mf
-  rebasing 2c7cfba83429 "r7"
-  merging mf
-  rebasing a422badec216 "r3"
-  merging mf
-  rebasing b762560d23fd "r4"
-  merging mf
-  $ sl log -G -T '{desc|firstline}'
-  o  r4
-  │
-  o  r3
-  │
-  │ o  r7
-  │ │
-  │ o  r6
-  │ │
-  │ o  r5
-  ├─╯
-  o  r1
-  │
-  o  r0
-TEST: aborting drop on merge changeset
-
-  $ sl checkout 'max(desc(r3))'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ sl merge 'max(desc(r7))'
-  merging mf
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ sl commit -m "merge"
-  $ sl log -G -T '{desc|firstline}'
-  @    merge
-  ├─╮
-  │ │ o  r4
-  │ ├─╯
-  │ o  r3
-  │ │
-  o │  r7
-  │ │
-  o │  r6
-  │ │
-  o │  r5
-  ├─╯
-  o  r1
-  │
-  o  r0
-  $ sl drop 'desc(merge)'
+Merge changesets cannot be dropped:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  >   D
+  >  /|
+  > B C
+  > |/
+  > A
+  > EOS
+  $ sl drop $D
   abort: merge changeset cannot be dropped
   [255]
 
-TEST: abort when dropping a public changeset
-  $ sl debugmakepublic -r 'desc(r1)'
-  $ sl drop 'desc(r1)'
+Public changesets cannot be dropped:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ sl debugmakepublic $B
+  $ sl drop $B
   abort: public changeset which landed cannot be dropped
   [255]
 
-RESET and SETUP
-  $ reset
-  $ enable rebase drop
-
-TEST: dropping a changeset with merge conflict
-  $ sl debugbuilddag -o +4
-  $ sl log -G -T '{desc|firstline}'
-  o  r3
-  │
-  o  r2
-  │
-  o  r1
-  │
-  o  r0
-  
-  $ sl drop 'desc(r1)'
-  Dropping changeset 2a8ed6: r1
-  rebasing 3d69e4d36b46 "r2"
-  merging of
-  warning: 1 conflicts while merging of! (edit, then use 'sl resolve --mark')
+Conflicts while rebasing descendants stop the drop:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C  # C/f = 3\n
+  > |
+  > B  # B/f = 2\n
+  > |
+  > A  # A/f = 1\n
+  > EOS
+  $ sl drop $B
+  Dropping changeset d24cfa: B
+  rebasing 11b100dbbeb1 "C"
+  merging f
+  warning: 1 conflicts while merging f! (edit, then use 'sl resolve --mark')
   conflict occurred during drop: please fix it by running 'sl rebase --continue', and then re-run 'sl drop'
   unresolved conflicts (see sl resolve, then sl rebase --continue)
   [1]
