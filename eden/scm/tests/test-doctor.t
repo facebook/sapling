@@ -12,7 +12,7 @@ Test indexedlogdatapack
   $ setconfig remotefilelog.server=true remotefilelog.serverexpiration=-1
 
   $ cd $TESTTMP
-  $ setconfig remotefilelog.debug=false remotefilelog.fetchpacks=true
+  $ setconfig remotefilelog.debug=false
   $ setconfig diff.git=true mutation.record=true mutation.enabled=true visibility.enabled=1
 
 # prefer-edenapi-clonedata=false avoids metalog compaction that messes w/ metalog file layout

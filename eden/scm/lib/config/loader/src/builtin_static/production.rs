@@ -133,7 +133,6 @@ amend=
 automv=
 blackbox=
 chistedit=
-clindex=
 conflictinfo=
 debugnetwork=
 dialect=
@@ -217,7 +216,6 @@ useruststore=True
 manifestlimit=4GB
 http=True
 retryprefetch=True
-fetchpacks=True
 getpackversion=2
 
 [remotenames]
@@ -474,7 +472,6 @@ automigrate=True
 
 [treemanifest]
 sendtrees=True
-treeonly=True
 http=True
 usecunionstore=False
 rustmanifest=True
@@ -511,12 +508,7 @@ skipmanifests=True
 enabled=true
 
 [worker]
-rustworkers=True
 numcpus=4
-
-[clindex]
-nodemap=True
-verify=False
 
 [committemplate]
 changeset = {if(desc, desc, emptymsg)}\n
