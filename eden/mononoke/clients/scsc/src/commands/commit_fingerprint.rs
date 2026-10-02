@@ -22,9 +22,6 @@ use crate::render::Render;
 /// Fingerprint algorithm version.
 #[derive(clap::ValueEnum, Clone, Copy, Debug, Serialize)]
 enum FingerprintVersion {
-    /// V1: root FsnodeId blake2 hash (universally available)
-    #[clap(name = "1")]
-    V1,
     /// V2: root ContentManifestId blake2 hash (recommended; requires
     /// ContentManifests derived data enabled for the repo)
     #[clap(name = "2")]
@@ -34,7 +31,6 @@ enum FingerprintVersion {
 impl From<FingerprintVersion> for thrift::CommitFingerprintVersion {
     fn from(v: FingerprintVersion) -> Self {
         match v {
-            FingerprintVersion::V1 => thrift::CommitFingerprintVersion::V1,
             FingerprintVersion::V2 => thrift::CommitFingerprintVersion::V2,
         }
     }
@@ -48,7 +44,7 @@ pub(super) struct CommandArgs {
     #[clap(flatten)]
     commit_id_args: CommitIdArgs,
     /// Fingerprint algorithm version
-    #[clap(long, value_enum, default_value = "1")]
+    #[clap(long, value_enum, default_value = "2")]
     version: FingerprintVersion,
 }
 
