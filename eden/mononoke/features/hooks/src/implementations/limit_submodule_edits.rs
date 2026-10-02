@@ -16,15 +16,14 @@ use bookmarks::BookmarkKey;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentManifestId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::path::MPath;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreArc;
@@ -115,35 +114,18 @@ async fn get_new_submodule_mpaths(
     changeset: &BonsaiChangeset,
     submodule_paths: &BTreeSet<String>,
 ) -> Result<BTreeSet<String>> {
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(hook_repo.repo_identity.name()),
-    );
-
-    let parent_roots: &HashSet<compat::ContentManifestId> = &stream::iter(changeset.parents())
+    let parent_roots: &HashSet<ContentManifestId> = &stream::iter(changeset.parents())
         .map(|p| async move {
-            let root: compat::ContentManifestId = if use_content_manifests {
-                hook_repo
-                    .repo_derived_data()
-                    .derive::<RootContentManifestId>(ctx, p, DerivationPriority::LOW)
-                    .await
-                    .with_context(|| "Can't lookup RootContentManifestId for ChangesetId")?
-                    .into_content_manifest_id()
-                    .into()
-            } else {
-                hook_repo
-                    .repo_derived_data()
-                    .derive::<RootFsnodeId>(ctx, p, DerivationPriority::LOW)
-                    .await
-                    .with_context(|| "Can't lookup RootFsnodeId for ChangesetId")?
-                    .into_fsnode_id()
-                    .into()
-            };
+            let root = hook_repo
+                .repo_derived_data()
+                .derive::<RootContentManifestId>(ctx, p, DerivationPriority::LOW)
+                .await
+                .with_context(|| "Can't lookup RootContentManifestId for ChangesetId")?
+                .into_content_manifest_id();
             anyhow::Ok(root)
         })
         .buffer_unordered(MAX_CONCURRENCY)
-        .try_collect::<HashSet<compat::ContentManifestId>>()
+        .try_collect::<HashSet<ContentManifestId>>()
         .await?;
 
     let existing_submodule_paths: BTreeSet<String> = stream::iter(submodule_paths.iter().cloned())
@@ -157,9 +139,8 @@ async fn get_new_submodule_mpaths(
                     )
                     .await?;
                 if let Some(parent_entry) = entry {
-                    if let Some(leaf) = parent_entry.into_leaf() {
-                        let manifest_file: compat::ContentManifestFile = leaf.into();
-                        if FileType::GitSubmodule == manifest_file.file_type() {
+                    if let Some(manifest_file) = parent_entry.into_leaf() {
+                        if FileType::GitSubmodule == manifest_file.file_type {
                             return Ok(Some(child_submodule_path.clone()));
                         }
                     }

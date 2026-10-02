@@ -30,7 +30,6 @@ use commit_rate_limit_config::CommitRateLimit;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
-use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream::TryStreamExt;
 use manifest::Diff;
@@ -40,11 +39,11 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentManifestId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::hash::GitSha1;
 use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
@@ -186,13 +185,7 @@ impl HookRepo {
         changeset_id: ChangesetId,
         paths: Vec<NonRootMPath>,
     ) -> Result<HashMap<NonRootMPath, PathContent>> {
-        let manifest_id = derive_manifest(
-            ctx,
-            self.repo_identity.name(),
-            &self.repo_derived_data,
-            changeset_id,
-        )
-        .await?;
+        let manifest_id = derive_manifest(ctx, &self.repo_derived_data, changeset_id).await?;
 
         manifest_id
             .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
@@ -201,8 +194,7 @@ impl HookRepo {
                     match entry {
                         Entry::Tree(_) => Ok(Some((path, PathContent::Directory))),
                         Entry::Leaf(file) => {
-                            let file: compat::ContentManifestFile = file.into();
-                            let content_id = file.content_id();
+                            let content_id = file.content_id;
                             Ok(Some((path, PathContent::File(content_id))))
                         }
                     }
@@ -222,18 +214,8 @@ impl HookRepo {
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
     ) -> Result<Vec<(NonRootMPath, FileChangeType)>> {
-        let new_mf_fut = derive_manifest(
-            ctx,
-            self.repo_identity.name(),
-            &self.repo_derived_data,
-            new_cs_id,
-        );
-        let old_mf_fut = derive_manifest(
-            ctx,
-            self.repo_identity.name(),
-            &self.repo_derived_data,
-            old_cs_id,
-        );
+        let new_mf_fut = derive_manifest(ctx, &self.repo_derived_data, new_cs_id);
+        let old_mf_fut = derive_manifest(ctx, &self.repo_derived_data, old_cs_id);
 
         let (new_mf, old_mf) = future::try_join(new_mf_fut, old_mf_fut).await?;
 
@@ -244,9 +226,8 @@ impl HookRepo {
                     Diff::Added(path, entry) => match Option::<NonRootMPath>::from(path) {
                         Some(path) => match entry {
                             Entry::Tree(_) => Ok(None),
-                            Entry::Leaf(c) => {
-                                let file: compat::ContentManifestFile = c.into();
-                                Ok(Some((path, FileChangeType::Added(file.content_id()))))
+                            Entry::Leaf(file) => {
+                                Ok(Some((path, FileChangeType::Added(file.content_id))))
                             }
                         },
                         None => Ok(None),
@@ -254,17 +235,13 @@ impl HookRepo {
                     Diff::Changed(path, old_entry, entry) if !path.is_root() => {
                         match Option::<NonRootMPath>::from(path) {
                             Some(path) => match (old_entry, entry) {
-                                (Entry::Leaf(old_c), Entry::Leaf(c)) => {
-                                    let old_file: compat::ContentManifestFile = old_c.into();
-                                    let new_file: compat::ContentManifestFile = c.into();
-                                    Ok(Some((
-                                        path,
-                                        FileChangeType::Changed(
-                                            old_file.content_id(),
-                                            new_file.content_id(),
-                                        ),
-                                    )))
-                                }
+                                (Entry::Leaf(old_file), Entry::Leaf(new_file)) => Ok(Some((
+                                    path,
+                                    FileChangeType::Changed(
+                                        old_file.content_id,
+                                        new_file.content_id,
+                                    ),
+                                ))),
                                 _ => Ok(None),
                             },
                             None => Ok(None),
@@ -443,33 +420,14 @@ impl HookRepo {
 
 async fn derive_manifest(
     ctx: &CoreContext,
-    repo_name: &str,
     repo_derived_data: &RepoDerivedData,
     changeset_id: ChangesetId,
-) -> Result<compat::ContentManifestId> {
-    let use_content_manifests = justknobs::eval(
-        "scm/mononoke:derived_data_use_content_manifests",
-        None,
-        Some(repo_name),
-    );
-
-    if use_content_manifests {
-        let root_id = repo_derived_data
-            .derive::<RootContentManifestId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
-            .await
-            .with_context(|| {
-                format!("Error deriving content manifest for bonsai: {changeset_id}")
-            })?;
-        Ok(root_id.into_content_manifest_id().into())
-    } else {
-        let root_id = repo_derived_data
-            .derive::<RootFsnodeId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
-            .await
-            .with_context(|| {
-                format!("Error deriving fsnode manifest for bonsai: {changeset_id}")
-            })?;
-        Ok(root_id.into_fsnode_id().into())
-    }
+) -> Result<ContentManifestId> {
+    let root_id = repo_derived_data
+        .derive::<RootContentManifestId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
+        .await
+        .with_context(|| format!("Error deriving content manifest for bonsai: {changeset_id}"))?;
+    Ok(root_id.into_content_manifest_id())
 }
 
 async fn derive_unode_manifest(
