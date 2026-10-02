@@ -385,7 +385,7 @@ async fn build_underived_batched_graph_impl<'a>(
                     root_cs_id,
                     head_cs_id,
                     bubble_id,
-                    deps.flatten().unique().collect(),
+                    deps.unique().collect(),
                     ctx.metadata().client_info(),
                     priority,
                     None,
@@ -397,11 +397,11 @@ async fn build_underived_batched_graph_impl<'a>(
                     None,
                 );
 
-                let mut upstream_dep: Option<DagItemDep> = Some(DagItemDep {
+                let mut upstream_dep = DagItemDep {
                     dag_item_id: item.id().clone(),
                     head_cs_id: item.head_cs_id(),
                     stage_path: None,
-                });
+                };
                 let mut cur_item = Some(item);
                 let mut failed_attempt = 0;
                 let mut err_msg = None;
@@ -433,6 +433,13 @@ async fn build_underived_batched_graph_impl<'a>(
                                     );
                                     None
                                 } else {
+                                    let existing_dep = DagItemDep {
+                                        dag_item_id: existing.id().clone(),
+                                        head_cs_id: existing.head_cs_id(),
+                                        stage_path: existing
+                                            .stage_payload()
+                                            .and_then(|p| p.path().cloned()),
+                                    };
                                     let maybe_dedup = deduplicate(
                                         ctx,
                                         item,
@@ -442,7 +449,9 @@ async fn build_underived_batched_graph_impl<'a>(
                                     )
                                     .await?;
                                     if maybe_dedup.is_none() {
-                                        upstream_dep = None;
+                                        // Covered work is still pending. Children must wait
+                                        // for the existing batch, which may have a later head.
+                                        upstream_dep = existing_dep;
                                         *watch.lock() = Some(
                                             queue.watch_existing(ctx, existing_item_id).await?,
                                         );
@@ -527,11 +536,11 @@ async fn build_underived_batched_graph_impl<'a>(
                         }
                     };
                     cur_item = maybe_inserted.inspect(|item| {
-                        upstream_dep = Some(DagItemDep {
+                        upstream_dep = DagItemDep {
                             dag_item_id: item.id().clone(),
                             head_cs_id: item.head_cs_id(),
                             stage_path: None,
-                        });
+                        };
                     });
                 }
 
