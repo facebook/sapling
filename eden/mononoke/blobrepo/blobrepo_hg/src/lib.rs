@@ -9,6 +9,7 @@ mod bonsai_generation;
 mod create_changeset;
 pub mod repo_commit;
 
+pub use create_changeset::AclFileValidation;
 pub use create_changeset::CreateChangeset;
 
 pub use crate::bonsai_generation::save_bonsai_changeset_object;

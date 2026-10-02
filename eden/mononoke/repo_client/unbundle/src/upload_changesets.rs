@@ -12,6 +12,7 @@ use ::manifest::Entry;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
+use blobrepo_hg::AclFileValidation;
 use blobrepo_hg::ChangesetHandle;
 use blobrepo_hg::CreateChangeset;
 use context::CoreContext;
@@ -325,6 +326,12 @@ pub async fn upload_changeset(
         // XXX pass content blobs to CreateChangeset here
         cs_metadata,
         upload_to_blobstore_only: bonsai.is_some(),
+        // A supplied bonsai comes from a mirror upload, which replicates
+        // changesets that were already validated when first created.
+        acl_file_validation: bonsai.is_none().then(|| AclFileValidation {
+            restricted_paths: repo.restricted_paths_arc(),
+            repo_name: repo.repo_identity().name().to_string(),
+        }),
     };
     let restricted_paths = repo
         .repo_derived_data_arc()
