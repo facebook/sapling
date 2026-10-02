@@ -41,6 +41,7 @@ Hiding a commit also hides its descendants:
   > pick $D
   > drop $C
   > EOF
+  dropping changeset 26805a: C
   $ sl log -r 'lost()' -T '{desc}\n'
   C
 

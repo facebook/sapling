@@ -213,6 +213,7 @@ more testing with full hashes
   > EOF
 
   $ sl histedit --commands b.json
+  folded 85032a8e4f13, 573a8c672aaf -> 04e1eac0d294 "b"
 
   $ sl log --graph -T "{node|short} {desc}"
   @  04e1eac0d294 b

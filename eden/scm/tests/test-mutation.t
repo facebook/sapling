@@ -349,6 +349,8 @@ Histedit
   > roll 64a3bc96c043
   > pick b6ea0faadebf
   > EOF
+  folded f05234144e37, 7d383d1b236d, 9c2c451b82d0, 36e4e93ec194, 48b076c1640c -> 1851fa2d6ef0 "c2"
+  folded c3b5428c707b, c4484fcb5ac0, 64a3bc96c043 -> dd5d0e1bc12e "c6"
  (After histedit)
   $ sl log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c9 3c3b86a5a351 draft
@@ -540,6 +542,7 @@ Histedit with exec that amends in between folds
   > fold 0d4155d128bf
   > EOF
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  folded 08d8367dafb9, 15a208dbcdc5, 0d4155d128bf -> a2235e1011a0 "commit 3 amended"
   $ tglog
   @  a2235e1011a0 'commit 3 amended
   │  ***
@@ -592,6 +595,7 @@ Histedit with stop, extra commit, and fold
   $ echo extra >> file2
   $ sl commit -Aqm "extra commit"
   $ sl histedit --continue | fixbundle
+  folded 15a208dbcdc5, 0d4155d128bf -> d313be93f9b7 "extra commit"
   $ tglog
   @  d313be93f9b7 'extra commit
   │  ***

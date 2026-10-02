@@ -262,6 +262,7 @@ short hash. This tests issue3893.
   SL: --
   SL: user: test
   SL: changed alpha
+  folded c8e68270e35a, 08d98a8350f3 -> 2a30f3cfee78 "four"
 
   $ sl goto -q 'desc(three)'
   $ echo x > x
@@ -478,6 +479,7 @@ commit --amend during histedit is okay.
 
   $ sl commit --amend -m 'allow this fold'
   $ sl histedit --continue
+  folded 6f2f0241f119, 8cde254db839 -> c2f267b6fd98 "allow this fold"
 
   $ cd ..
 
@@ -527,5 +529,6 @@ Check that 'roll' is selected by default
   #  i, into = like fold, but keep only this commit's description
   #  r, roll = like fold, but discard this commit's description and date
   #
+  folded 6058cbb6cfd7, 4f34d0f8b5fa -> d6de9f4a2eca "one"
 
   $ cd ..

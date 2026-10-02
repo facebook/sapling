@@ -1346,6 +1346,9 @@ def _finishhistedit(ui, repo, state, fm):
         if k in nodemap and all(n in nodemap for n in v)
     }
     scmutil.cleanupnodes(repo, mapping, "histedit")
+    # Not for scripts: HGPLAIN or structured (-T) output.
+    if not ui.plain() and fm.isplain():
+        _showresult(ui, repo, mapping)
     hf = fm.hexfunc
     fl = fm.formatlist
     fd = fm.formatdict
@@ -1364,6 +1367,42 @@ def _finishhistedit(ui, repo, state, fm):
         os.unlink(repo.sjoin("undo"))
     if repo.localvfs.exists("histedit-last-edit.txt"):
         repo.localvfs.unlink("histedit-last-edit.txt")
+
+
+def _showresult(ui, repo, mapping) -> None:
+    """Summarise a finished histedit.
+
+    Lists the commits that were combined (the per-commit map alone doesn't make
+    that obvious), and, for agents, the new bottom of the stack, so it is clear
+    where to look for the result.
+    """
+    combined = {}
+    for oldnode, newnodes in mapping.items():
+        if len(newnodes) == 1:
+            combined.setdefault(newnodes[0], []).append(oldnode)
+    combined = {new: olds for new, olds in combined.items() if len(olds) > 1}
+    for newnode in repo.nodes("sort(%ln, -topo)", list(combined)):
+        olds = repo.nodes("sort(%ln, -topo)", combined[newnode])
+        ui.status(
+            _('folded %s -> %s "%s"\n')
+            % (
+                ", ".join(node.short(n) for n in olds),
+                node.short(newnode),
+                _getsummary(repo[newnode]),
+            )
+        )
+
+    # Tells an agent where to look for the result without guessing a revset.
+    if not ui.agent():
+        return
+    bases = list(repo.nodes("roots(draft() & ::.)"))
+    if bases:
+        ui.status(_("new stack base: %s\n") % node.short(bases[0]))
+    else:
+        ui.status(
+            _("no commits left in the stack (working copy is at %s)\n")
+            % node.short(repo["."].node())
+        )
 
 
 def _aborthistedit(ui, repo, state):
@@ -1508,7 +1547,7 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
         warnverifyactions(ui, repo, actions, state, ctxs)
     if not state.keep:
         rewriteutil.precheck(repo, [ctx.rev() for ctx in ctxs], "histedit")
-    if opts.get("plan"):
+    if opts.get("plan") or not (ui.plain() or opts.get("template")):
         _showdrops(ui, repo, actions)
 
     parentctxnode = repo[root].p1().node()

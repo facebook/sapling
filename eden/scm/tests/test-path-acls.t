@@ -772,6 +772,7 @@ reports the restricted path warning.
   > EOF
   warning: rewriting commits with restricted paths (slacl.mixed-commit-mode=warn)
     'restricted' is restricted by ACL 'some-acl'
+  folded 375b4a524931, 8c7b41a4bb4e -> 4579aeb1695c "B"
   warning: results may be incomplete due to path ACLs
     'restricted' is restricted by ACL 'some-acl'
   [1]

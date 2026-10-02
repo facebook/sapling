@@ -87,6 +87,7 @@ Rebase back and drop something
   > drop fb0676d5bfd4 C
   > pick 8e332b0db783 D
   > EOF
+  dropping changeset fb0676: C
 
   $ tglogp
   @  22b78c3c2883 draft 'D'
@@ -153,6 +154,7 @@ Continue
   > drop 3849e69e0651 D
   > pick 5d4ea538b61e X
   > EOF
+  dropping changeset 3849e6: D
   $ tglogp
   @  e077fa5e4ecb draft 'X'
   │

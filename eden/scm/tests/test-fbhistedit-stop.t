@@ -163,6 +163,7 @@ fold a commit to check if other non-pick actions are handled correctly
   When you are done, run sl histedit --continue to resume
 
   $ sl histedit --continue
+  folded 177f92b77385, 055a42cdd887 -> 66584b8c84e1 "c"
 
   $ sl log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f

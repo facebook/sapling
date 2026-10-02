@@ -239,6 +239,7 @@ create an hidden revision
   > drop e80cad0096a5 7 d
   > pick 363adb0b332c 8 f
   > EOF
+  dropping changeset e80cad: d
   $ sl log --graph
   @  2a7423bdcce6 f
   │

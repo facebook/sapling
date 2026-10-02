@@ -384,6 +384,7 @@ Now, let's try to fold the second commit into the first:
   > EOF
 
   $ HGEDITOR="sh ./editor.sh" sl histedit 'desc(initial)'
+  folded 1d3a289dd962, 53b73a71a9f7 -> 3002b6bb02b6 "pick 1d3a289dd962 0 initial commit"
 
   $ sl --config diff.git=yes export 'desc(pick)'
   # SL changeset patch

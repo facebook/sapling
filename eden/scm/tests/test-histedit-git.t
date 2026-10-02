@@ -21,6 +21,7 @@ folding should work
   > fold 081c9e396fa1 'A3'
   > pick 91ad706dafee 'A4'
   > EOF
+  folded bc8bd49c677f, 081c9e396fa1 -> 594d4e89c0ff "A2"
   $ sl st
   $ tglog
   @  17e3aa7dc15f 'A4'

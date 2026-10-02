@@ -60,6 +60,7 @@ edit the history
   > pick 652413bf663e f
   > pick 055a42cdd887 d
   > EOF
+  dropping changeset 177f92: c
 
 log after edit
   $ sl log --graph
@@ -120,6 +121,7 @@ Drop the last changeset
   > pick a4f7421b80f7 f
   > drop f518305ce889 d
   > EOF
+  dropping changeset f51830: d
   $ sl log --graph
   @  commit:      a4f7421b80f7
   │  user:        test
@@ -156,6 +158,8 @@ Drop the last changeset
   > pick cb9a9f314b8b a
   > pick ee283cb5f2d5 e
   > EOF
+  dropping changeset a4f742: f
+  dropping changeset d2ae7f: b
   $ sl log --graph
   @  commit:      e99c679bf03e
   │  user:        test

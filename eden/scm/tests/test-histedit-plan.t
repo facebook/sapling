@@ -18,6 +18,7 @@ oldest commit in the plan:
   > EOS
   $ sl goto -q $E
   $ sl histedit --plan "pick $D" --plan "pick $C" --plan "roll $E"
+  folded 26805aba1e60, 9bc730a19041 -> c4ee4a827480 "C"
   $ tglog
   @  c4ee4a827480 'C'
   │
@@ -116,6 +117,8 @@ original messages. Neither opens an editor:
   > EOS
   $ sl goto -q $E
   $ sl histedit --plan "pick $B" --plan "into $C" --plan "pick $D" --plan "roll $E"
+  folded 112478962961, 26805aba1e60 -> 78d49ca251a9 "C"
+  folded f585351a92f8, 9bc730a19041 -> 711806cc6687 "D"
   $ sl log -r 'all()' -T '{desc} {files}\n'
   A A
   C B C
@@ -134,6 +137,7 @@ This also holds for a run of them:
   > EOS
   $ sl goto -q $D
   $ sl histedit --plan "pick $B" --plan "into $C" --plan "roll $D"
+  folded 112478962961, 26805aba1e60, f585351a92f8 -> dfe31a7152c8 "C"
   $ sl log -r . -T '{desc} {files}\n'
   C B C D
   $ newclientrepo
@@ -148,6 +152,7 @@ This also holds for a run of them:
   > EOS
   $ sl goto -q $D
   $ sl histedit --plan "pick $B" --plan "into $C" --plan "into $D"
+  folded 112478962961, 26805aba1e60, f585351a92f8 -> 66660204f4a3 "D"
   $ sl log -r . -T '{desc} {files}\n'
   D B C D
 
@@ -162,6 +167,7 @@ This also holds for a run of them:
   > EOS
   $ sl goto -q $C
   $ sl histedit --plan "pick $B" --plan "fold $C"
+  folded 112478962961, 26805aba1e60 -> 29b6bb76d76e "B"
   $ sl log -r . -T '{desc}\n'
   B
   ***
@@ -181,6 +187,7 @@ This also holds for a run of them:
   > pick $B
   > i $C
   > EOF
+  folded 112478962961, 26805aba1e60 -> 78d49ca251a9 "C"
   $ sl log -r . -T '{desc} {files}\n'
   C B C
 
@@ -220,6 +227,7 @@ and after stopping for a conflict:
   (no more unresolved files)
   continue: sl histedit --continue
   $ sl histedit --continue
+  folded c9e6a60ee394, a255f7246f36 -> fe86bb7c9198 "C"
   $ sl log -r 'all()' -T '{desc} {files}\n'
   A A
   B B f
@@ -281,6 +289,77 @@ Invalid plans are rejected before anything is changed:
   abort: the commits in the plan must have exactly one common root
   (pass the commit to start from as ANCESTOR)
   [255]
+
+histedit also lists the dropped and combined commits, after the usual list
+of rewritten commits (shown here with tweakdefaults.showupdated, as in
+production). For agents, it then gives the new bottom of the stack:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > F
+  > |
+  > E
+  > |
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ sl debugmakepublic $A
+  $ sl goto -q $F
+  $ cat > plan <<EOF
+  > pick $B
+  > drop $C
+  > into $D
+  > pick $F
+  > pick $E
+  > EOF
+  $ CODING_AGENT_METADATA=id=test_agent sl histedit --commands plan \
+  >   --config extensions.tweakdefaults= --config tweakdefaults.showupdated=true
+  dropping changeset 26805a: C
+  112478962961 -> 34506ddda66e "D"
+  f585351a92f8 -> 34506ddda66e "D"
+  9bc730a19041 -> f11d7a9b22cf "E"
+  a194cadd1693 -> 737b3a5f8fef "F"
+  folded 112478962961, f585351a92f8 -> 34506ddda66e "D"
+  new stack base: 34506ddda66e
+  $ sl log -G -T '{desc}\n'
+  @  E
+  │
+  o  F
+  │
+  o  D
+  │
+  o  A
+
+With HGPLAIN, for scripts, only the list of rewritten commits is shown:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ sl debugmakepublic $A
+  $ sl goto -q $D
+  $ HGPLAIN=1 sl histedit $B --commands - \
+  >   --config extensions.tweakdefaults= --config tweakdefaults.showupdated=true <<EOF
+  > pick $B
+  > drop $C
+  > into $D
+  > EOF
+  112478962961 -> 34506ddda66e "D"
+  f585351a92f8 -> 34506ddda66e "D"
+
+When every commit is dropped, there is no stack left:
+  $ CODING_AGENT_METADATA=id=test_agent sl histedit --plan "drop $(sl log -r . -T '{node}')"
+  dropping changeset 34506d: D
+  no commits left in the stack (working copy is at 426bada5c675)
 
 The help explains to agents how to run histedit without an editor, and only to
 agents:

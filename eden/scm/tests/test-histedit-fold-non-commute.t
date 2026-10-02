@@ -133,6 +133,7 @@ keep the non-commuting change, and thus the pending change will be dropped
   $ sl diff
   $ sl histedit --continue 2>&1 | fixbundle
   7f3755409b00: skipping changeset (no changes)
+  folded ae78f4c9d74f, 42abbb61bede -> e2ac33269083 "d"
 
 log after edit
   $ sl log --graph
@@ -270,6 +271,7 @@ just continue this time
   continue: sl histedit --continue
   $ sl histedit --continue 2>&1 | fixbundle
   7f3755409b00: skipping changeset (no changes)
+  folded ae78f4c9d74f, 42abbb61bede -> 317e37cb6d66 "d"
 
 log after edit
   $ sl log --graph
