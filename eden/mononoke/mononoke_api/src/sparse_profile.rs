@@ -28,7 +28,6 @@ use manifest::Manifest;
 use maplit::btreeset;
 use metaconfig_types::SparseProfilesConfig;
 use mononoke_types::NonRootMPath;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::path::MPath;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
@@ -311,10 +310,9 @@ async fn calculate_size<'a, R: MononokeRepo>(
                     let repo_path = RepoPath::from_utf8(&path_vec)?;
                     match entry {
                         Entry::Leaf(file) => {
-                            let file: compat::ContentManifestFile = file.into();
                             for (source, matcher) in &matchers {
                                 if matcher.matches_file(repo_path)? {
-                                    *sizes.entry(source.to_string()).or_insert(0) += file.size();
+                                    *sizes.entry(source.to_string()).or_insert(0) += file.size;
                                 }
                             }
                         }
@@ -327,17 +325,11 @@ async fn calculate_size<'a, R: MononokeRepo>(
                                             Some(s) => s,
                                             None => {
                                                 let dir = dir_id.load(&ctx, blobstore).await?;
-                                                let s = match &dir {
-                                                    either::Either::Left(cm) => {
-                                                        cm.subentries
-                                                            .rollup_data()
-                                                            .descendant_counts
-                                                            .files_total_size
-                                                    }
-                                                    either::Either::Right(fsnode) => {
-                                                        fsnode.summary().descendant_files_total_size
-                                                    }
-                                                };
+                                                let s = dir
+                                                    .subentries
+                                                    .rollup_data()
+                                                    .descendant_counts
+                                                    .files_total_size;
                                                 total_size = Some(s);
                                                 s
                                             }

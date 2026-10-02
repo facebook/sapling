@@ -13,11 +13,6 @@ use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use fsnodes::RootFsnodeId;
-use futures::FutureExt;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::with_just_knobs_async;
-use maplit::hashmap;
 use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use repo_derived_data::RepoDerivedDataRef;
@@ -302,55 +297,6 @@ async fn test_content_fingerprint_dispatch_structural(fb: FacebookInit) -> Resul
     assert_eq!(
         fp_v2, expected_v2,
         "V2 must equal blake2(RootContentManifestId), not blake2(RootFsnodeId)"
-    );
-
-    Ok(())
-}
-
-/// V1 must produce the same bytes regardless of the
-/// `derived_data_use_content_manifests` JK setting. This pins the
-/// consumer-facing stability promise: V1 dispatches directly to
-/// RootFsnodeId and never routes through the JK-aware `root_content_manifest_id`
-/// helper that swaps backends mid-rollout.
-#[mononoke::fbinit_test]
-async fn test_content_fingerprint_v1_stable_across_jk_flip(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let (repo, _commits, _dag) = Linear::get_repo_and_dag(fb).await;
-
-    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("a", "hello")
-        .commit()
-        .await?;
-
-    let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
-    let repo_ctx = mononoke
-        .repo(ctx.clone(), "test")
-        .await?
-        .expect("repo exists")
-        .build()
-        .await?;
-
-    let cs = repo_ctx.changeset(cs_id).await?.expect("changeset exists");
-
-    let fp_v1_with_cm = with_just_knobs_async(
-        JustKnobsInMemory::new(hashmap! {
-            "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(true),
-        }),
-        cs.content_fingerprint(FingerprintVersion::V1).boxed(),
-    )
-    .await?;
-
-    let fp_v1_without_cm = with_just_knobs_async(
-        JustKnobsInMemory::new(hashmap! {
-            "scm/mononoke:derived_data_use_content_manifests".to_string() => KnobVal::Bool(false),
-        }),
-        cs.content_fingerprint(FingerprintVersion::V1).boxed(),
-    )
-    .await?;
-
-    assert_eq!(
-        fp_v1_with_cm, fp_v1_without_cm,
-        "V1 fingerprint must be stable across `derived_data_use_content_manifests` flips"
     );
 
     Ok(())

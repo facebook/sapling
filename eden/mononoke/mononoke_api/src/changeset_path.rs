@@ -42,6 +42,7 @@ use history_traversal::list_file_history;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentManifestId;
 use mononoke_types::ContentMetadataV2;
 /// Metadata about a file.
 pub use mononoke_types::ContentMetadataV2 as FileMetadata;
@@ -51,7 +52,7 @@ use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::blame_v2::BlameV2;
-use mononoke_types::content_manifest::compat;
+use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstoreArc;
@@ -93,7 +94,7 @@ pub enum PathEntry<R> {
 
 type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
 type ContentManifestResult =
-    Result<Option<Entry<compat::ContentManifestId, compat::ContentManifestFile>>, MononokeError>;
+    Result<Option<Entry<ContentManifestId, ContentManifestFile>>, MononokeError>;
 type LinknodeResult = Result<Option<ChangesetId>, MononokeError>;
 
 /// Context that makes it cheap to fetch content info about a path within a changeset.
@@ -230,7 +231,7 @@ where
     pub(crate) async fn new_with_manifest_entry(
         changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
-        manifest_entry: Entry<compat::ContentManifestId, compat::ContentManifestFile>,
+        manifest_entry: Entry<ContentManifestId, ContentManifestFile>,
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         let id_type = changeset
@@ -267,8 +268,7 @@ where
 
     async fn manifest_entry(
         &self,
-    ) -> Result<Option<Entry<compat::ContentManifestId, compat::ContentManifestFile>>, MononokeError>
-    {
+    ) -> Result<Option<Entry<ContentManifestId, ContentManifestFile>>, MononokeError> {
         self.manifest_entry
             .get_or_init(|| {
                 cloned!(self.changeset, self.path);
@@ -282,7 +282,6 @@ where
                             .find_entry(ctx, blobstore, MPath::from(mpath))
                             .await
                             .map_err(MononokeError::from)
-                            .map(|opt| opt.map(|e| e.map_leaf(Into::into)))
                     } else {
                         Ok(Some(Entry::Tree(root_id)))
                     }
@@ -314,7 +313,7 @@ where
 
     pub async fn file_type(&self) -> Result<Option<FileType>, MononokeError> {
         let file_type = match self.manifest_entry().await? {
-            Some(Entry::Leaf(file)) => Some(file.file_type()),
+            Some(Entry::Leaf(file)) => Some(file.file_type),
             _ => None,
         };
         Ok(file_type)
@@ -326,7 +325,7 @@ where
         let tree = match self.manifest_entry().await? {
             Some(Entry::Tree(manifest_id)) => Some(TreeContext::new_authorized(
                 self.repo_ctx().clone(),
-                manifest_id,
+                manifest_id.into(),
             )),
             _ => None,
         };
@@ -339,7 +338,7 @@ where
         let file = match self.manifest_entry().await? {
             Some(Entry::Leaf(file)) => Some(FileContext::new_authorized(
                 self.repo_ctx().clone(),
-                FetchKey::Canonical(file.content_id()),
+                FetchKey::Canonical(file.content_id),
             )),
             _ => None,
         };
@@ -378,14 +377,14 @@ where
         let entry = match self.manifest_entry().await? {
             Some(Entry::Tree(manifest_id)) => PathEntry::Tree(TreeContext::new_authorized(
                 self.repo_ctx().clone(),
-                manifest_id,
+                manifest_id.into(),
             )),
             Some(Entry::Leaf(file)) => PathEntry::File(
                 FileContext::new_authorized(
                     self.repo_ctx().clone(),
-                    FetchKey::Canonical(file.content_id()),
+                    FetchKey::Canonical(file.content_id),
                 ),
-                file.file_type(),
+                file.file_type,
             ),
             _ => PathEntry::NotPresent,
         };

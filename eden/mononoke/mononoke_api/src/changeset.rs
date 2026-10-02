@@ -70,13 +70,13 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::Globalrev;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentManifestId;
 use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::SubtreeChange;
 use mononoke_types::Svnrev;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifest;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
@@ -127,7 +127,7 @@ pub enum FingerprintVersion {
     /// repo derives Fsnodes — but not the long-term recommendation.
     V1,
     /// V2: root ContentManifestId blake2 hash. Recommended long-term default.
-    /// Requires `scm/mononoke:derived_data_use_content_manifests` enabled for
+    /// Requires ContentManifests derived data enabled for
     /// the repo; otherwise the request fails with InvalidRequest (no
     /// auto-fallback, to keep the fingerprint bytes stable for consumers).
     V2,
@@ -236,7 +236,7 @@ pub struct ChangesetContext<R> {
     bonsai_changeset: LazyShared<Result<BonsaiChangeset, MononokeError>>,
     changeset_info: LazyShared<Result<ChangesetInfo, MononokeError>>,
     root_unode_manifest_id: LazyShared<Result<RootUnodeManifestId, MononokeError>>,
-    root_content_manifest_id: LazyShared<Result<compat::ContentManifestId, MononokeError>>,
+    root_content_manifest_id: LazyShared<Result<ContentManifestId, MononokeError>>,
     root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
     root_skeleton_manifest_v2_id: LazyShared<Result<RootSkeletonManifestV2Id, MononokeError>>,
     root_deleted_manifest_v2_id: LazyShared<Result<RootDeletedManifestV2Id, MononokeError>>,
@@ -515,28 +515,11 @@ impl<R: RepoDerivedDataArc> ChangesetContext<R> {
 impl<R: RepoDerivedDataArc + RepoIdentityRef> ChangesetContext<R> {
     pub(crate) async fn root_content_manifest_id(
         &self,
-    ) -> Result<compat::ContentManifestId, MononokeError> {
+    ) -> Result<ContentManifestId, MononokeError> {
         self.root_content_manifest_id
             .get_or_init(|| {
-                let repo_name = self.repo_ctx().name().to_string();
-                let use_content_manifests = justknobs::eval(
-                    "scm/mononoke:derived_data_use_content_manifests",
-                    None,
-                    Some(&repo_name),
-                );
-                if use_content_manifests {
-                    let fut = self.derive::<RootContentManifestId>();
-                    either::Either::Left(async move {
-                        let id = fut.await?;
-                        Ok(id.into_content_manifest_id().into())
-                    })
-                } else {
-                    let fut = self.derive::<RootFsnodeId>();
-                    either::Either::Right(async move {
-                        let id = fut.await?;
-                        Ok(id.into_fsnode_id().into())
-                    })
-                }
+                let fut = self.derive::<RootContentManifestId>();
+                async move { Ok(fut.await?.into_content_manifest_id()) }
             })
             .await
     }
@@ -1160,7 +1143,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         ChangesetPathContentContext::new_with_manifest_entry(
                             changeset.clone(),
                             mpath,
-                            entry.map_leaf(Into::into),
+                            entry,
                         )
                         .await
                     }
@@ -1570,7 +1553,6 @@ where
                     other.repo_ctx().repo().repo_blobstore().clone(),
                     copy_path_map.keys().cloned(),
                 )
-                .map_ok(|(path, entry)| (path, entry.map_leaf(Into::into)))
                 .try_collect::<HashMap<_, _>>();
 
             // At the same time, find out whether the destinations of copies
@@ -1727,18 +1709,9 @@ where
                                     let manifest = manifest_id
                                         .load(self.ctx(), self.repo_ctx().repo().repo_blobstore())
                                         .await?;
-                                    let weight = match &manifest {
-                                        either::Either::Left(cm) => {
-                                            let counts =
-                                                &cm.subentries.rollup_data().descendant_counts;
-                                            counts.files_count + counts.dirs_count
-                                        }
-                                        either::Either::Right(fsnode) => {
-                                            let summary = fsnode.summary();
-                                            summary.descendant_files_count
-                                                + summary.child_dirs_count
-                                        }
-                                    };
+                                    let counts =
+                                        manifest.subentries.rollup_data().descendant_counts;
+                                    let weight = counts.files_count + counts.dirs_count;
                                     anyhow::Ok((
                                         path,
                                         ManifestEntry::Tree((weight as usize, manifest_id)),
@@ -1770,18 +1743,7 @@ where
             }
         };
 
-        let convert_entry = |e: ManifestEntry<compat::ContentManifestId, _>| e.map_leaf(Into::into);
-
         let mut change_contexts: Vec<ChangesetPathDiffContext<R>> = diff
-            .map_ok(|diff_entry| match diff_entry {
-                ManifestDiff::Added(path, entry) => ManifestDiff::Added(path, convert_entry(entry)),
-                ManifestDiff::Removed(path, entry) => {
-                    ManifestDiff::Removed(path, convert_entry(entry))
-                }
-                ManifestDiff::Changed(path, from, to) => {
-                    ManifestDiff::Changed(path, convert_entry(from), convert_entry(to))
-                }
-            })
             .map_err(MononokeError::from)
             .try_filter_map(|diff_entry| {
                 async {

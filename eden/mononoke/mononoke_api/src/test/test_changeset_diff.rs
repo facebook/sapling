@@ -23,10 +23,12 @@ use maplit::btreeset;
 use maplit::hashmap;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::path::MPath;
 use pretty_assertions::assert_eq;
+use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 use xdiff::CopyInfo;
 
@@ -1579,17 +1581,6 @@ async fn test_diff_ordered_renormalize_pagination_uses_supplement_cursor(
     Ok(())
 }
 
-// ---- commit_compare is backend-agnostic: fsnodes vs content_manifests ----
-//
-// `commit_compare` (via `ChangesetContext::diff`) resolves each side through
-// `root_content_manifest_id()`, which picks content_manifests or fsnodes based
-// on the `derived_data_use_content_manifests` JustKnob. These tests derive both
-// and assert the diff is identical whichever backend is used -- the property the
-// fsnode -> content_manifest migration relies on. Because fsnodes use a flat
-// trie map while content_manifests use a sharded, id-pruned one, this also
-// exercises the sharding-aware diff against a non-sharded reference through the
-// public API, rather than testing the internal fast/slow paths directly.
-
 /// Tiny deterministic xorshift RNG so any failure is reproducible by seed.
 struct DiffTestRng(u64);
 impl DiffTestRng {
@@ -1730,109 +1721,74 @@ fn diff_test_key<R: MononokeRepo>(diff: &ChangesetPathDiffContext<R>) -> String 
     )
 }
 
-/// Run `commit_compare` (`ChangesetContext::diff`) between `parent` and `child`
-/// forced onto a specific manifest backend, returning stable keys for the diff.
-/// The contexts are built *inside* the knob scope because the backend choice is
-/// memoized on first access to `root_content_manifest_id()`.
-async fn diff_test_run_backend(
+async fn diff_test_run(
     ctx: &CoreContext,
     repo: Arc<Repo>,
     parent: ChangesetId,
     child: ChangesetId,
     ordering: ChangesetFileOrdering,
-    use_content_manifests: bool,
 ) -> Result<Vec<String>, Error> {
-    let ctx = ctx.clone();
-    with_just_knobs_async(
-        JustKnobsInMemory::new(hashmap! {
-            "scm/mononoke:derived_data_use_content_manifests".to_string() =>
-                KnobVal::Bool(use_content_manifests),
-        }),
-        async move {
-            let repo_ctx = RepoContext::new_test(ctx, repo).await?;
-            let child_ctx = repo_ctx
-                .changeset(child)
-                .await?
-                .ok_or_else(|| anyhow!("child changeset not found"))?;
-            let parent_ctx = repo_ctx
-                .changeset(parent)
-                .await?
-                .ok_or_else(|| anyhow!("parent changeset not found"))?;
-            let diff = child_ctx
-                .diff(
-                    &parent_ctx,
-                    true, /* include_copies_renames */
-                    true, /* include_subtree_copies */
-                    None, /* path_restrictions */
-                    btreeset! { ChangesetDiffItem::TREES, ChangesetDiffItem::FILES },
-                    ordering,
-                    None, /* limit */
-                )
-                .await?;
-            anyhow::Ok(diff.iter().map(diff_test_key).collect::<Vec<_>>())
-        }
-        .boxed(),
-    )
-    .await
+    let repo_ctx = RepoContext::new_test(ctx.clone(), repo).await?;
+    let child_ctx = repo_ctx
+        .changeset(child)
+        .await?
+        .ok_or_else(|| anyhow!("child changeset not found"))?;
+    let parent_ctx = repo_ctx
+        .changeset(parent)
+        .await?
+        .ok_or_else(|| anyhow!("parent changeset not found"))?;
+    let diff = child_ctx
+        .diff(
+            &parent_ctx,
+            true, /* include_copies_renames */
+            true, /* include_subtree_copies */
+            None, /* path_restrictions */
+            btreeset! { ChangesetDiffItem::TREES, ChangesetDiffItem::FILES },
+            ordering,
+            None, /* limit */
+        )
+        .await?;
+    Ok(diff.iter().map(diff_test_key).collect())
 }
 
 #[mononoke::fbinit_test]
-async fn test_diff_matches_across_manifest_backends(fb: FacebookInit) -> Result<(), Error> {
+async fn test_content_manifest_diff_matches_across_orderings(
+    fb: FacebookInit,
+) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     for seed in 0..25u64 {
-        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let repo: Repo = TestRepoFactory::new(fb)?
+            .with_config_override(|config| {
+                for types in config.derived_data_config.available_configs.values_mut() {
+                    types.types.remove(&DerivableType::Fsnodes);
+                }
+            })
+            .build()
+            .await?;
         let (parent, child) = diff_test_build_scenario(&ctx, &repo, seed).await?;
         let repo = Arc::new(repo);
-
-        // Unordered: same set of entries regardless of backend.
-        let mut fsnode = diff_test_run_backend(
+        let mut unordered = diff_test_run(
             &ctx,
             repo.clone(),
             parent,
             child,
             ChangesetFileOrdering::Unordered,
-            false,
         )
         .await?;
-        let mut content = diff_test_run_backend(
+        let mut ordered = diff_test_run(
             &ctx,
-            repo.clone(),
-            parent,
-            child,
-            ChangesetFileOrdering::Unordered,
-            true,
-        )
-        .await?;
-        fsnode.sort();
-        content.sort();
-        assert_eq!(
-            content, fsnode,
-            "seed {seed}: content_manifest commit_compare != fsnode commit_compare (unordered)"
-        );
-
-        // Ordered: identical entries *and* identical order.
-        let fsnode_ordered = diff_test_run_backend(
-            &ctx,
-            repo.clone(),
+            repo,
             parent,
             child,
             ChangesetFileOrdering::Ordered { after: None },
-            false,
         )
         .await?;
-        let content_ordered = diff_test_run_backend(
-            &ctx,
-            repo.clone(),
-            parent,
-            child,
-            ChangesetFileOrdering::Ordered { after: None },
-            true,
-        )
-        .await?;
+        unordered.sort();
+        ordered.sort();
         assert_eq!(
-            content_ordered, fsnode_ordered,
-            "seed {seed}: content_manifest commit_compare != fsnode commit_compare (ordered)"
+            ordered, unordered,
+            "seed {seed}: ordered and unordered diffs disagree"
         );
     }
 
