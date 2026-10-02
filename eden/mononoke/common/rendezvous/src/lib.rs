@@ -57,6 +57,14 @@ impl RendezVousOptions {
     }
 }
 
+impl MultiRendezVousController for RendezVousOptions {
+    type Controller = ConfigurableRendezVousController;
+
+    fn new_controller(&self) -> Self::Controller {
+        ConfigurableRendezVousController::new(*self)
+    }
+}
+
 /// Command line arguments for controlling rendez-vous
 #[derive(Args, Debug)]
 pub struct RendezVousArgs {

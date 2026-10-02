@@ -924,7 +924,12 @@ impl RepoFactory {
             sql_phases_builder.enable_caching(cache_handler_factory);
         }
         let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
-        Ok(sql_phases_builder.build(repo_identity.id(), commit_graph.clone(), heads_fetcher))
+        Ok(sql_phases_builder.build(
+            repo_identity.id(),
+            commit_graph.clone(),
+            heads_fetcher,
+            self.env.rendezvous_options,
+        ))
     }
 
     pub async fn bonsai_hg_mapping(

@@ -33,6 +33,8 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use phases::Phase;
+use rendezvous::MultiRendezVous;
+use rendezvous::RendezVousOptions;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
@@ -71,6 +73,7 @@ impl Caches {
 pub struct SqlPhasesStore {
     pub(crate) connections: SqlConnections,
     pub(crate) caches: Arc<Caches>,
+    pub(crate) rendezvous: MultiRendezVous<RepositoryId, ChangesetId, SqlPhase, RendezVousOptions>,
 }
 
 impl SqlPhasesStore {
@@ -247,20 +250,35 @@ impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
     ) -> Result<HashMap<ChangesetId, SqlPhase>, Error> {
         let (ctx, repo_id, mapping) = self;
 
-        let cs_ids: Vec<_> = cs_ids.into_iter().collect();
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsReplica);
+        let public = mapping
+            .rendezvous
+            .get(*repo_id)
+            .dispatch(ctx.fb, cs_ids, || {
+                let ctx = (*ctx).clone();
+                let connection = mapping.connections.read_connection.clone();
+                let repo_id = *repo_id;
+                move |cs_ids| async move {
+                    let cs_ids: Vec<_> = cs_ids.into_iter().collect();
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        // NOTE: We only track public phases in the DB.
-        let public = SelectPhases::query(
-            &mapping.connections.read_connection,
-            (*ctx).sql_query_telemetry(),
-            repo_id,
-            &cs_ids,
-        )
-        .await?;
+                    // NOTE: We only track public phases in the DB.
+                    let public = SelectPhases::query(
+                        &connection,
+                        ctx.sql_query_telemetry(),
+                        &repo_id,
+                        &cs_ids,
+                    )
+                    .await?;
+                    Ok(public.into_iter().collect())
+                }
+            })
+            .await?;
 
-        Result::<_, Error>::Ok(public.into_iter().collect())
+        Ok(public
+            .into_iter()
+            .filter_map(|(cs_id, phase)| phase.map(|phase| (cs_id, phase)))
+            .collect())
     }
 }
 
