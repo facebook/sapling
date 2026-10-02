@@ -3772,6 +3772,166 @@ async fn pushrebase_merge_resolution_clean(fb: FacebookInit) -> Result<(), Error
 }
 
 #[mononoke::fbinit_test]
+async fn pushrebase_merge_resolution_identical_lfs_is_already_applied(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Both sides updated an LFS-tracked blob to the same bytes while editing
+    // different lines of a text file. The identical blob is no merge at all,
+    // so the LFS rule must not block the text merge.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let blob = NonRootMPath::new("blob.bin")?;
+    let lfs = GitLfs::canonical_pointer();
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file.txt", "line1\nline2\nline3\nline4\nline5\n")
+        .add_file_with_type_and_lfs("blob.bin", "payload v1", FileType::Regular, lfs)
+        .commit()
+        .await?;
+
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file.txt", "modified_line1\nline2\nline3\nline4\nline5\n")
+        .add_file_with_type_and_lfs("blob.bin", "payload v2", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let book = BookmarkKey::new("master")?;
+    let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
+    set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
+
+    let client = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("file.txt", "line1\nline2\nline3\nline4\nmodified_line5\n")
+        .add_file_with_type_and_lfs("blob.bin", "payload v2", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let client_bcs = client.load(&ctx, repo.repo_blobstore()).await?;
+
+    init_just_knobs_for_merge_test();
+    let result = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &Default::default(),
+        &book,
+        &hashset![client_bcs],
+        &[],
+    )
+    .await?;
+
+    let result_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
+    ensure_content(
+        &ctx,
+        result_hg,
+        &repo,
+        btreemap! {
+            "file.txt".to_string() => "modified_line1\nline2\nline3\nline4\nmodified_line5\n".to_string(),
+            "blob.bin".to_string() => "payload v2".to_string(),
+        },
+    )
+    .await?;
+    let result_bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
+    match result_bcs.file_changes_map().get(&blob) {
+        Some(FileChange::Change(tc)) => assert!(
+            tc.git_lfs().is_lfs_pointer(),
+            "the identical blob is carried through untouched, still as a pointer"
+        ),
+        other => panic!("unexpected blob.bin change after rebase: {other:?}"),
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_merge_resolution_identical_lfs_alone_follows_noop_policy(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // A commit whose only change re-lands the server's LFS bytes is the same
+    // duplicate-content case as a text file: rejected on that path when the
+    // noop knob is on.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let lfs = GitLfs::canonical_pointer();
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file_with_type_and_lfs("blob.bin", "payload v1", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file_with_type_and_lfs("blob.bin", "payload v2", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let book = BookmarkKey::new("master")?;
+    let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
+    set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
+    let client = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file_with_type_and_lfs("blob.bin", "payload v2", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let client_bcs = client.load(&ctx, repo.repo_blobstore()).await?;
+
+    init_just_knobs_for_noop_rejection_test(true);
+    let result = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &Default::default(),
+        &book,
+        &hashset![client_bcs],
+        &[],
+    )
+    .await;
+    match result {
+        Err(PushrebaseError::Conflicts(conflicts)) => {
+            assert_eq!(conflicts.len(), 1);
+            assert_eq!(format!("{}", conflicts[0].left), "blob.bin");
+        }
+        other => panic!("Expected Conflicts error, got: {other:?}"),
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_merge_resolution_differing_lfs_still_conflicts(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // The identical-content early-exit must fire ONLY when both sides carry
+    // the same content id. When the same LFS path lands different bytes on
+    // each side there is nothing identical to short-circuit, so the LFS rule
+    // still refuses the merge and the push conflicts as it did before.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let lfs = GitLfs::canonical_pointer();
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file_with_type_and_lfs("blob.bin", "payload v1", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file_with_type_and_lfs("blob.bin", "payload server", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let book = BookmarkKey::new("master")?;
+    let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
+    set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
+    let client = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file_with_type_and_lfs("blob.bin", "payload client", FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let client_bcs = client.load(&ctx, repo.repo_blobstore()).await?;
+
+    init_just_knobs_for_merge_test();
+    let result = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &Default::default(),
+        &book,
+        &hashset![client_bcs],
+        &[],
+    )
+    .await;
+
+    should_have_conflicts(result);
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
 async fn pushrebase_merge_resolution_conflict(fb: FacebookInit) -> Result<(), Error> {
     // Test: server and client modify the SAME line of a file.
     // Even with merge resolution enabled, pushrebase should fail

@@ -2682,6 +2682,33 @@ async fn collect_merge_file_info(
             )));
         }
 
+        // Get server (bookmark head) content from the server bonsai changesets
+        let server_fc = match server_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
+            _ => {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {path} not a tracked change in bookmark head",
+                )));
+            }
+        };
+
+        // Both sides landed the same bytes: nothing to merge, so the LFS and
+        // size limits below do not apply. The rebase loop sees it as already
+        // applied.
+        if client_fc.content_id() == server_fc.content_id()
+            && client_fc.file_type() == server_fc.file_type()
+        {
+            merged_file_changes.push(MergedFileInfo {
+                path: non_root_path.clone(),
+                base: bases.get(&non_root_path).copied().flatten(),
+                server: Some(BaseFile {
+                    content_id: server_fc.content_id().clone(),
+                    file_type: server_fc.file_type(),
+                }),
+            });
+            continue;
+        }
+
         // An LFS-tracked file's bonsai content is the blob behind the pointer;
         // merged bytes would exist on no LFS server.
         if client_fc.git_lfs().is_lfs_pointer() {
@@ -2698,16 +2725,6 @@ async fn collect_merge_file_info(
                 client_fc.size(),
             )));
         }
-
-        // Get server (bookmark head) content from the server bonsai changesets
-        let server_fc = match server_changes.get(&non_root_path) {
-            Some(FileChange::Change(tc)) => tc,
-            _ => {
-                return Err(MergeResolutionError::Skipped(format!(
-                    "file {path} not a tracked change in bookmark head",
-                )));
-            }
-        };
 
         if server_fc.git_lfs().is_lfs_pointer() {
             return Err(MergeResolutionError::Skipped(format!(
