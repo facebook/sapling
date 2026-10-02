@@ -57,6 +57,7 @@ use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentMetadataV2Id;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
@@ -5627,6 +5628,56 @@ async fn test_upload_path_reuses_unchanged_file_leaves(fb: FacebookInit) -> Resu
     )
     .await
     .context("wide/ must build from the parent's leaves without reading any file blob")?;
+
+    Ok(())
+}
+
+/// What it tests: a file whose content metadata is missing fails the build
+/// instead of having its metadata recomputed.
+///
+/// Why it matters: content is uploaded before the trees that list it, so a miss
+/// means something is already wrong. Recomputing would stream the whole file
+/// back inside the user's upload request, an unbounded cost on a best-effort
+/// pass.
+#[mononoke::fbinit_test]
+async fn test_upload_path_fails_on_missing_content_metadata(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    // A root commit, so there is no parent leaf to reuse and the file's leaf
+    // has to be built.
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("src/deep/nested.rs", "deep")
+        .commit()
+        .await?;
+    let content_id = file_changes_from_bonsai(&ctx, &repo, commit)
+        .await?
+        .into_iter()
+        .find_map(|(_, change)| change.map(|change| change.content_id()))
+        .context("the commit adds one file")?;
+    let metadata_key = ContentMetadataV2Id::from(content_id).blobstore_key();
+
+    let manifest = hg_manifest_id_of(&ctx, &repo, commit).await?;
+    let tree = tree_id_at_path(&ctx, &repo, manifest, "src/deep").await?;
+    let envelope = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), tree).await?;
+    let without_metadata: Arc<dyn KeyedBlobstore> = Arc::new(DenyGetKeyedBlobstore::missing(
+        MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()),
+        [metadata_key],
+    ));
+
+    let err = build_augmented_manifest_for_uploaded_tree(
+        &ctx,
+        &without_metadata,
+        repo.restricted_paths().config_based(),
+        &envelope,
+    )
+    .await
+    .err()
+    .context("a file with no content metadata must fail the build")?;
+    assert!(
+        format!("{err:#}").contains(&format!("missing content metadata for {content_id}")),
+        "the error must name the content, got: {err:#}"
+    );
 
     Ok(())
 }

@@ -2259,7 +2259,6 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
     acl_overlay: Option<AclManifestId>,
 ) -> Result<HgAugmentedDirectoryNode> {
     let files = &uploaded.content().files;
-    let content_metadata_cache = HashMap::new();
 
     // An uploaded manifest lists every file in the directory, not just the
     // changed ones, so without this a one-file change to a wide directory pays
@@ -2295,19 +2294,9 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
     // inferred as higher-ranked, and callers then fail to prove `Send`.
     let leaf_futures: Vec<_> = to_build
         .into_iter()
-        .map(|(name, file_type, filenode_id)| {
-            let content_metadata_cache = &content_metadata_cache;
-            async move {
-                let leaf = build_augmented_file_leaf(
-                    ctx,
-                    blobstore,
-                    content_metadata_cache,
-                    file_type,
-                    filenode_id,
-                )
-                .await?;
-                anyhow::Ok((name, HgAugmentedManifestEntry::FileNode(leaf)))
-            }
+        .map(|(name, file_type, filenode_id)| async move {
+            let leaf = build_uploaded_file_leaf(ctx, blobstore, file_type, filenode_id).await?;
+            anyhow::Ok((name, HgAugmentedManifestEntry::FileNode(leaf)))
         })
         .collect();
     let leaves = stream::iter(leaf_futures)
@@ -2364,6 +2353,41 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
         augmented_manifest_id,
         augmented_manifest_size,
         acl_manifest_directory_id: acl_overlay,
+    })
+}
+
+/// The tree-upload twin of `build_augmented_file_leaf`. Clients upload content
+/// before the trees that list it, so its metadata already exists: a miss is an
+/// error rather than a reason to stream the whole file back and recompute the
+/// metadata inside the upload request.
+async fn build_uploaded_file_leaf(
+    ctx: &CoreContext,
+    blobstore: &impl KeyedBlobstore,
+    file_type: FileType,
+    filenode_id: HgFileNodeId,
+) -> Result<HgAugmentedFileLeafNode> {
+    let filenode = filenode_id.load(ctx, blobstore).await?;
+    let content_id = filenode.content_id();
+    let metadata =
+        filestore::get_metadata_readonly(blobstore, ctx, &FetchKey::Canonical(content_id))
+            .await?
+            .flatten()
+            .ok_or_else(|| {
+                anyhow!(
+                    "missing content metadata for {content_id}; content must be uploaded before the trees that list it"
+                )
+            })?;
+    Ok(HgAugmentedFileLeafNode {
+        file_type,
+        filenode: filenode_id.into_nodehash(),
+        total_size: metadata.total_size,
+        content_blake3: metadata.seeded_blake3,
+        content_sha1: metadata.sha1,
+        file_header_metadata: if filenode.metadata().is_empty() {
+            None
+        } else {
+            Some(filenode.metadata().clone())
+        },
     })
 }
 
