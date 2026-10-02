@@ -255,11 +255,13 @@ def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
     editplan = opts.get("edit_plan")
     abort = opts.get("abort")
 
+    plan = opts.get("plan")
+
     if goal == goalretry:
-        if any((outg, abort, revs, freeargs, rules, editplan)):
+        if any((outg, abort, revs, freeargs, rules, editplan, plan)):
             raise error.Abort(_("no arguments allowed with --retry"))
     elif goal == goalshowplan:
-        if any((outg, abort, rules, editplan)) or (
+        if any((outg, abort, rules, editplan, plan)) or (
             (revs or freeargs) and state.inprogress()
         ):
             raise error.Abort(_("no arguments allowed with --show-plan"))
@@ -328,8 +330,8 @@ def showstartplan(ui, repo, state, freeargs, opts) -> None:
     root, topmost, nodes = histedit.histeditrevs(repo, state, revs)
     ui.write(
         _(
-            "histedit plan for %s to %s (edit it, then pass it to"
-            ' "histedit --commands" to run it):\n'
+            "histedit plan for %s to %s (to run it, pass each line to"
+            ' "histedit --plan", or the whole plan file to "histedit --commands"):\n'
         )
         % (node.short(root), node.short(topmost))
     )

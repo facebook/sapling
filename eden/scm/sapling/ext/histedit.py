@@ -1008,6 +1008,13 @@ class message(histeditaction):
             _("read history edits from the specified file"),
             _("FILE"),
         ),
+        (
+            "",
+            "plan",
+            [],
+            _("run this history edit, e.g. 'pick HASH' (one per commit, oldest first)"),
+            _("RULE"),
+        ),
         ("c", "continue", False, _("continue an edit already in progress")),
         ("", "edit-plan", False, _("edit remaining actions list")),
         ("k", "keep", False, _("don't strip old nodes after edit is complete")),
@@ -1169,7 +1176,16 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     goal = _getgoal(opts)
     revs = opts.get("rev", [])
     rules = opts.get("commands", "")
+    plan = opts.get("plan")
     state.keep = opts.get("keep", False)
+
+    if plan:
+        if rules:
+            raise error.Abort(_("cannot use both --plan and --commands"))
+        if goal != goalnew:
+            raise error.Abort(_("--plan can only be used to start a new histedit"))
+        if not revs and not freeargs:
+            revs.append(_planroot(repo, state, "\n".join(plan)))
 
     _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs)
 
@@ -1365,6 +1381,44 @@ def _edithisteditplan(ui, repo, state, rules):
     state.write()
 
 
+def _showdrops(ui, repo, actions) -> None:
+    """List the commits a plan drops, which otherwise go unreported."""
+    displayer = cmdutil.show_changeset(
+        ui,
+        repo,
+        {
+            "template": "dropping changeset "
+            '{shortest(node, 6)}{if(bookmarks, " ({bookmarks})")}'
+            ": {desc|firstline}\n"
+        },
+    )
+    for action in actions:
+        if action.verb == "drop":
+            displayer.show(repo[action.node])
+
+
+def _planroot(repo, state, rules):
+    """Return the oldest commit named by a plan, to use as the base when none
+    is given."""
+    nodes = []
+    for action in parserules(rules, state):
+        if action.node is None or action.verb == "base":
+            continue
+        try:
+            nodes.append(repo[node.hex(action.node)].node())
+        except error.RepoError:
+            raise error.Abort(
+                _("unknown changeset %s listed") % node.hex(action.node)[:12]
+            )
+    roots = list(repo.nodes("roots(%ln)", nodes))
+    if len(roots) != 1:
+        raise error.Abort(
+            _("the commits in the plan must have exactly one common root"),
+            hint=_("pass the commit to start from as ANCESTOR"),
+        )
+    return node.hex(roots[0])
+
+
 def histeditrevs(repo, state, revs):
     """Find the commits a new histedit of ``revs`` would edit.
 
@@ -1396,16 +1450,24 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
     root, topmost, revs = histeditrevs(repo, state, revs)
 
     ctxs = [repo[r] for r in revs]
-    if not rules:
+    if opts.get("plan"):
+        rules = "\n".join(opts["plan"])
+    elif not rules:
         comment = geteditcomment(ui, node.short(root), node.short(topmost))
         actions = [pick(state, r) for r in revs]
         rules = ruleeditor(repo, ui, actions, comment)
     else:
         rules = _readfile(ui, rules)
     actions = parserules(rules, state)
-    warnverifyactions(ui, repo, actions, state, ctxs)
+    # Commits left out of a --plan are an error rather than silently dropped,
+    # since a plan on the command line is easy to get wrong.
+    overrides = {("histedit", "dropmissing"): False} if opts.get("plan") else {}
+    with ui.configoverride(overrides, "histedit"):
+        warnverifyactions(ui, repo, actions, state, ctxs)
     if not state.keep:
         rewriteutil.precheck(repo, [ctx.rev() for ctx in ctxs], "histedit")
+    if opts.get("plan"):
+        _showdrops(ui, repo, actions)
 
     parentctxnode = repo[root].p1().node()
 
@@ -1584,9 +1646,13 @@ def verifyactions(actions, state, ctxs):
     seen = set()
     prev = None
 
-    if actions and isinstance(actions[0], fold):
+    # Dropped commits are skipped, so a fold after only drops would combine
+    # with the commit below the edited range.
+    first = next((a for a in actions if a.verb != "drop"), None)
+    if isinstance(first, fold):
         raise error.ParseError(
-            _('first changeset cannot use verb "%s"') % actions[0].verb
+            _('first changeset cannot use verb "%s"') % first.verb,
+            hint=_("%s combines a commit with the kept commit before it") % first.verb,
         )
 
     for action in actions:

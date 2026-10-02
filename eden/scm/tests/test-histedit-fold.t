@@ -566,6 +566,7 @@ Test rolling into a commit with multiple children (issue5498)
   > r 5db65b93a12b
   > EOF
   sl: parse error: first changeset cannot use verb "roll"
+  (roll combines a commit with the kept commit before it)
   [255]
   $ sl log -G -T '{node|short} {desc}'
   @  5db65b93a12b cc
@@ -729,4 +730,5 @@ Like fold and roll, 'into' needs an earlier commit in the plan:
   > into $A
   > EOF
   sl: parse error: first changeset cannot use verb "into"
+  (into combines a commit with the kept commit before it)
   [255]

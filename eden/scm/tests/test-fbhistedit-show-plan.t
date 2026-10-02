@@ -57,19 +57,19 @@ log before edit
 show-plan before starting a histedit shows the starting plan without running it
 
   $ sl histedit --show-plan 177f92b77385
-  histedit plan for 177f92b77385 to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+  histedit plan for 177f92b77385 to 652413bf663e (to run it, pass each line to "histedit --plan", or the whole plan file to "histedit --commands"):
       pick 177f92b77385 c
       pick 055a42cdd887 d
       pick e860deea161a e
       pick 652413bf663e f
   $ sl histedit --show-plan -r 'desc(e)'
-  histedit plan for e860deea161a to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+  histedit plan for e860deea161a to 652413bf663e (to run it, pass each line to "histedit --plan", or the whole plan file to "histedit --commands"):
       pick e860deea161a e
       pick 652413bf663e f
   $ sl log -r . -T '{desc}\n'
   f
   $ sl histedit --show-plan cb9a9f314b8b::
-  histedit plan for cb9a9f314b8b to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+  histedit plan for cb9a9f314b8b to 652413bf663e (to run it, pass each line to "histedit --plan", or the whole plan file to "histedit --commands"):
       pick cb9a9f314b8b a
       pick d2ae7f538514 b
       pick 177f92b77385 c
@@ -77,7 +77,7 @@ show-plan before starting a histedit shows the starting plan without running it
       pick e860deea161a e
       pick 652413bf663e f
   $ sl histedit --show-plan --config histedit.defaultrev='desc(d)'
-  histedit plan for 055a42cdd887 to 652413bf663e (edit it, then pass it to "histedit --commands" to run it):
+  histedit plan for 055a42cdd887 to 652413bf663e (to run it, pass each line to "histedit --plan", or the whole plan file to "histedit --commands"):
       pick 055a42cdd887 d
       pick e860deea161a e
       pick 652413bf663e f
