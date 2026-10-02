@@ -3502,7 +3502,8 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
     EdenMount::InodeGCLease lease,
     folly::CancellationToken shutdownToken,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
-    PinnedInodeSet pinnedInodes) {
+    PinnedInodeSet pinnedInodes,
+    bool pinScanFailed) {
   struct InodeGCResult {
     uint64_t numInvalidated;
     size_t numUnloaded;
@@ -3583,7 +3584,8 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
                 inodeMap = mount.getInodeMap(),
                 forgottenBeforeGC = inodeCountsBeforeGC.forgottenInodeCount,
                 totalNumberOfInodesBeforeGC,
-                pressureBased](folly::Try<InodeGCResult> resultTry) {
+                pressureBased,
+                pinScanFailed](folly::Try<InodeGCResult> resultTry) {
         auto runtime = std::chrono::duration<double>{inodeGCRuntime.elapsed()};
 
         bool success = resultTry.hasValue();
@@ -3640,7 +3642,9 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
         // to judge.
         if (success && pressureBased && !resultTry.value().cancelled) {
           mount.recordPressureGcOutcome(
-              resultTry.value().numInvalidated, numUnloaded + numForgotten);
+              resultTry.value().numInvalidated,
+              numUnloaded + numForgotten,
+              pinScanFailed);
         }
 
         return resultTry.value().numInvalidated;
@@ -3675,13 +3679,17 @@ bool usesPinScan(EdenMount& mount) {
  */
 std::optional<PinScanData> runPinnedInodeScan(
     const folly::CancellationToken& cancellationToken,
-    const EdenFsEventsLogger& edenFsEventsLogger) {
+    const EdenFsEventsLogger& edenFsEventsLogger,
+    std::chrono::nanoseconds timeout) {
   std::string helperPath = FLAGS_privhelper_path;
   if (helperPath.empty()) {
     helperPath =
         (executablePath().dirname() + "edenfs_privhelper"_relpath).asString();
   }
-  auto report = runPinScan(helperPath, cancellationToken);
+  auto report = runPinScan(
+      helperPath,
+      cancellationToken,
+      std::chrono::duration_cast<std::chrono::milliseconds>(timeout));
   if (!report) {
     if (report.error().reason != "cancelled") {
       edenFsEventsLogger.logEvent(report.error());
@@ -3775,18 +3783,20 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
   }
 
   PinnedInodeSet pinnedInodes;
+  bool pinScanFailed = false;
 #if defined(__linux__) || defined(__APPLE__)
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
   if (pressureBased && usesPinScan(mount) &&
-      serverState_->getReloadableConfig()
-          ->getEdenConfig()
-          ->pressureBasedGcScanPins.getValue()) {
+      config->pressureBasedGcScanPins.getValue()) {
     const auto& edenFsEventsLogger = *serverState_->getEdenFsEventsLogger();
     auto scan = runPinnedInodeScan(
         folly::cancellation_token_merge(
             gcCancelSource_.rlock()->getToken(), lease->getCancellationToken()),
-        edenFsEventsLogger);
+        edenFsEventsLogger,
+        config->pressureBasedGcPinScanTimeout.getValue());
     pinnedInodes = buildPinnedInodeSet(
         mount, scan ? &scan.value() : nullptr, edenFsEventsLogger);
+    pinScanFailed = pinnedInodes == nullptr;
   }
 #endif
   return garbageCollectInodesWithLease(
@@ -3798,7 +3808,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectInodes(
       std::move(*lease),
       gcCancelSource_.rlock()->getToken(),
       serverState_->getEdenFsEventsLogger(),
-      std::move(pinnedInodes));
+      std::move(pinnedInodes),
+      pinScanFailed);
 }
 
 void EdenServer::garbageCollectAllMounts() {
@@ -3846,10 +3857,11 @@ void EdenServer::garbageCollectAllMounts() {
       if (mount.isPressureGcBackedOff()) {
         // Pressure GC is not reclaiming the inodes it invalidates (e.g.
         // EdenFS is tracking FS refcounts the kernel no longer holds, so
-        // invalidations produce no FORGETs), or a run was cancelled for
-        // repeated tree-load failures. Rerunning at the pressure-derived rate
-        // is wasted work, so fall back to the regular GC cadence until a run
-        // makes progress again.
+        // invalidations produce no FORGETs), a run was cancelled for
+        // repeated tree-load failures, or the pin scan failed and the run
+        // could not touch directories. Rerunning at the pressure-derived
+        // rate is wasted work, so fall back to the regular GC cadence until
+        // a run makes progress again.
         gcPeriod = std::max(
             gcPeriod,
             std::chrono::duration_cast<std::chrono::seconds>(
@@ -3917,6 +3929,7 @@ void EdenServer::garbageCollectAllMounts() {
   auto shutdownToken = gcCancelSource_.rlock()->getToken();
   auto edenFsEventsLogger = serverState_->getEdenFsEventsLogger();
   auto scanPins = pressureBasedGc && config->pressureBasedGcScanPins.getValue();
+  auto pinScanTimeout = config->pressureBasedGcPinScanTimeout.getValue();
   auto* threadPool = getServerState()->getThreadPool().get();
   // Discover pinned directories once for all due mounts, then launch each
   // mount's GC. Both the pin scan (a subprocess with a deadline) and the GC
@@ -3927,10 +3940,13 @@ void EdenServer::garbageCollectAllMounts() {
       [dueMounts = std::move(dueMounts),
        pressureBasedGc,
        scanPins,
+       pinScanTimeout,
        shutdownToken = std::move(shutdownToken),
        edenFsEventsLogger = std::move(edenFsEventsLogger),
        threadPool]() mutable {
-        (void)scanPins; // consumed only where pin scans exist
+        // Consumed only where pin scans exist.
+        (void)scanPins;
+        (void)pinScanTimeout;
 #if defined(__linux__) || defined(__APPLE__)
         std::optional<PinScanData> scan;
         if (scanPins) {
@@ -3940,19 +3956,21 @@ void EdenServer::garbageCollectAllMounts() {
                 usesPinScan(dueMount.mountHandle.getEdenMount());
           }
           if (anyMountUsesPins) {
-            scan = runPinnedInodeScan(shutdownToken, *edenFsEventsLogger);
+            scan = runPinnedInodeScan(
+                shutdownToken, *edenFsEventsLogger, pinScanTimeout);
           }
         }
 #endif
         for (auto& dueMount : dueMounts) {
           PinnedInodeSet pinnedInodes;
+          bool pinScanFailed = false;
 #if defined(__linux__) || defined(__APPLE__)
-          if (pressureBasedGc &&
-              usesPinScan(dueMount.mountHandle.getEdenMount())) {
+          if (scanPins && usesPinScan(dueMount.mountHandle.getEdenMount())) {
             pinnedInodes = buildPinnedInodeSet(
                 dueMount.mountHandle.getEdenMount(),
                 scan ? &scan.value() : nullptr,
                 *edenFsEventsLogger);
+            pinScanFailed = pinnedInodes == nullptr;
           }
 #endif
           folly::via(
@@ -3963,7 +3981,8 @@ void EdenServer::garbageCollectAllMounts() {
                lease = std::move(dueMount.lease),
                shutdownToken,
                edenFsEventsLogger,
-               pinnedInodes = std::move(pinnedInodes)]() mutable {
+               pinnedInodes = std::move(pinnedInodes),
+               pinScanFailed]() mutable {
                 static auto context =
                     ObjectFetchContext::getNullContextWithCauseDetail(
                         ObjectFetchContext::StaticCauseDetail::fromLiteral(
@@ -3977,7 +3996,8 @@ void EdenServer::garbageCollectAllMounts() {
                            std::move(lease),
                            std::move(shutdownToken),
                            std::move(edenFsEventsLogger),
-                           std::move(pinnedInodes))
+                           std::move(pinnedInodes),
+                           pinScanFailed)
                     .semi();
               })
               .ensure([mountHandle = dueMount.mountHandle] {});

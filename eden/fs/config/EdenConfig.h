@@ -739,6 +739,19 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * How long pressure-based GC waits for the privhelper's pin scan before
+   * killing it and running with pins unknown. A scan takes well under a
+   * second on an idle machine, but pressure GC runs on machines short of
+   * memory, where everything is slow; a run without pins forgets open files
+   * on NFS, so waiting is the better outcome. The wait is cancelled with GC
+   * itself, so a checkout never sits behind it.
+   */
+  ConfigSetting<std::chrono::nanoseconds> pressureBasedGcPinScanTimeout{
+      "mount:pressure-gc-pin-scan-timeout",
+      std::chrono::seconds{60},
+      this};
+
+  /**
    * If the number of inodes is greater than this threshold, the garbage
    * collection cutoff will be more aggressive.
    *

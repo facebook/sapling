@@ -227,7 +227,12 @@ errno (`error`), how long the scan ran (`duration`, seconds) and the end of
 what the helper printed (`causeDetail`), next to a warning in the log. The
 helper prints its progress on stderr, which mount's owner it is checking and
 how far through the process list it is, so a timed-out scan says whether it
-hung or was slow. `eden debug gc-inodes` does whatever the
+hung or was slow. A run whose scan failed counts as making no progress, like
+one whose invalidations the kernel ignores: the mount falls back to the
+regular GC period instead of the pressure-derived one, since every run until
+a scan succeeds would pay for a full scan of every process to reclaim files
+only. The next run with a pin set that reclaims normally ends the fallback.
+`eden debug gc-inodes` does whatever the
 periodic GC would do: with pressure GC off it has no pin set and reclaims
 files only, with it on it scans for pins like the tick.
 
@@ -353,6 +358,7 @@ The GC behavior can be configured via `EdenConfig`:
 | `mount:gc-pressure-min-inodes`, `mount:gc-pressure-max-inodes` | Inode counts between which pressure GC ramps up        |
 | `mount:gc-cutoff-min-seconds`, `mount:gc-cutoff-max-seconds` | Cutoff range pressure GC interpolates over                |
 | `mount:pressure-gc-scan-pins`             | Ask the privhelper which inodes processes hold before reclaiming directories |
+| `mount:pressure-gc-pin-scan-timeout`      | How long to wait for the pin scan before running with pins unknown (60s) |
 | `nfs:num-invalidation-threads`            | Threads sending invalidation chmods per NFS mount (at least one)   |
 | `nfs:max-queued-gc-invalidations`         | How many GC chmods may wait in the NFS invalidation queue          |
 | `experimental:nfs-gc-stale-reply`         | Answer GC's chmod with a stale handle error (default); off falls back to forgetting after the chmod |

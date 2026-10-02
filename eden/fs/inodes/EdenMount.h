@@ -677,14 +677,20 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Record the outcome of a completed pressure-based GC run, updating
    * isPressureGcBackedOff(). numUnloaded is what the run reclaimed: what its
    * own sweep unloaded plus the remembered inodes forgotten while it ran.
+   * pinScanFailed says the run wanted a pin set and got none, so it left
+   * every directory alone.
    */
-  void recordPressureGcOutcome(uint64_t numInvalidated, uint64_t numUnloaded);
+  void recordPressureGcOutcome(
+      uint64_t numInvalidated,
+      uint64_t numUnloaded,
+      bool pinScanFailed);
 
   /**
    * Whether pressure-based GC should wait the regular GC period before
    * running again, because the most recent pressure-based run reclaimed too
-   * few of the inodes it invalidated or a run was cancelled for repeated
-   * tree-load failures. When EdenFS tracks FS refcounts the kernel no longer
+   * few of the inodes it invalidated, its pin scan failed so it could not
+   * reclaim directories, or a run was cancelled for repeated tree-load
+   * failures. When EdenFS tracks FS refcounts the kernel no longer
    * holds, GC invalidations fail (silently) with ENOENT and produce no
    * FORGETs, so rerunning pressure GC just re-invalidates the same inodes to
    * no effect. Cleared by the next pressure-based run that reclaims enough.

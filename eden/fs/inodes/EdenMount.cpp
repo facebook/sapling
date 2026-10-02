@@ -1206,7 +1206,8 @@ constexpr uint64_t kPressureGcReclaimMinInvalidated = 10'000;
 
 void EdenMount::recordPressureGcOutcome(
     uint64_t numInvalidated,
-    uint64_t numUnloaded) {
+    uint64_t numUnloaded,
+    bool pinScanFailed) {
   // GC flushes the invalidation queue between invalidating entries and
   // sweeping, and the kernel FORGETs triggered by the invalidations arrive
   // quickly in practice, so most of a run's invalidations should be unloaded
@@ -1217,13 +1218,23 @@ void EdenMount::recordPressureGcOutcome(
   // can push the other way while GC runs.
   auto minReclaimPercent =
       getEdenConfig()->pressureBasedGcMinReclaimPercent.getValue();
-  bool backOff = minReclaimPercent > 0 &&
+  const bool stalled = minReclaimPercent > 0 &&
       numInvalidated >= kPressureGcReclaimMinInvalidated &&
       numUnloaded * 100 <= numInvalidated * minReclaimPercent;
+  // Without a pin set the run reclaimed files only, and every run until a
+  // scan succeeds would do the same; each costs a full scan of every
+  // process, so it is not worth the pressure-derived rate either.
+  const bool backOff = stalled || pinScanFailed;
 
   if (pressureGcBackoff_.exchange(backOff, std::memory_order_relaxed) !=
       backOff) {
-    if (backOff) {
+    if (pinScanFailed) {
+      XLOGF(
+          INFO,
+          "Pressure-based GC for {} ran without a pin set because the pin "
+          "scan failed. Falling back to the regular GC period.",
+          getPath());
+    } else if (backOff) {
       XLOGF(
           INFO,
           "Pressure-based GC for {} invalidated {} inodes but only reclaimed "

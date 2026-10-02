@@ -157,32 +157,39 @@ TEST(EdenMount, pressureGcReclaimBackoff) {
   EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 
   // A large run whose sweep unloads nothing backs off the mount.
-  edenMount->recordPressureGcOutcome(100'000, 0);
+  edenMount->recordPressureGcOutcome(100'000, 0, /*pinScanFailed=*/false);
   EXPECT_TRUE(edenMount->isPressureGcBackedOff());
 
   // A run whose sweep unloads more than 10% of what it invalidated clears
   // the backoff.
-  edenMount->recordPressureGcOutcome(100'000, 10'001);
+  edenMount->recordPressureGcOutcome(100'000, 10'001, /*pinScanFailed=*/false);
   EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 
   // Unloading 10% or less backs off.
-  edenMount->recordPressureGcOutcome(100'000, 10'000);
+  edenMount->recordPressureGcOutcome(100'000, 10'000, /*pinScanFailed=*/false);
   EXPECT_TRUE(edenMount->isPressureGcBackedOff());
 
   // Small runs never back off, and clear an existing backoff.
-  edenMount->recordPressureGcOutcome(5'000, 0);
+  edenMount->recordPressureGcOutcome(5'000, 0, /*pinScanFailed=*/false);
+  EXPECT_FALSE(edenMount->isPressureGcBackedOff());
+
+  // A run that wanted a pin set and got none backs off whatever it
+  // reclaimed, until a run with pins reclaims normally.
+  edenMount->recordPressureGcOutcome(100'000, 90'000, /*pinScanFailed=*/true);
+  EXPECT_TRUE(edenMount->isPressureGcBackedOff());
+  edenMount->recordPressureGcOutcome(100'000, 90'000, /*pinScanFailed=*/false);
   EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 
   // The threshold follows the configured percentage.
   testMount.updateEdenConfig({{"mount:pressure-gc-min-reclaim-percent", "50"}});
-  edenMount->recordPressureGcOutcome(100'000, 40'000);
+  edenMount->recordPressureGcOutcome(100'000, 40'000, /*pinScanFailed=*/false);
   EXPECT_TRUE(edenMount->isPressureGcBackedOff());
-  edenMount->recordPressureGcOutcome(100'000, 60'000);
+  edenMount->recordPressureGcOutcome(100'000, 60'000, /*pinScanFailed=*/false);
   EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 
   // Zero disables the reclaim check.
   testMount.updateEdenConfig({{"mount:pressure-gc-min-reclaim-percent", "0"}});
-  edenMount->recordPressureGcOutcome(100'000, 0);
+  edenMount->recordPressureGcOutcome(100'000, 0, /*pinScanFailed=*/false);
   EXPECT_FALSE(edenMount->isPressureGcBackedOff());
 }
 
@@ -215,7 +222,7 @@ TEST(EdenMount, gcTreeLoadFailureLimit) {
   ASSERT_TRUE(lease);
   EXPECT_FALSE(lease->getCancellationToken().isCancellationRequested());
   EXPECT_TRUE(mount->isPressureGcBackedOff());
-  mount->recordPressureGcOutcome(100'000, 50'000);
+  mount->recordPressureGcOutcome(100'000, 50'000, /*pinScanFailed=*/false);
   EXPECT_FALSE(mount->isPressureGcBackedOff());
 }
 
