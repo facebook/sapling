@@ -2257,13 +2257,9 @@ pub async fn derive_augmented_manifest_for_uploaded_tree(
     uploaded: &HgBlobManifest,
     children: &HashMap<MPathElement, HgAugmentedDirectoryNode>,
     acl_overlay: Option<AclManifestId>,
+    reusable: &HashMap<MPathElement, HgAugmentedFileLeafNode>,
 ) -> Result<HgAugmentedDirectoryNode> {
     let files = &uploaded.content().files;
-
-    // An uploaded manifest lists every file in the directory, not just the
-    // changed ones, so without this a one-file change to a wide directory pays
-    // two blob reads for each of the files that did not change.
-    let reusable = parent_file_leaves(ctx, blobstore, uploaded.p1()).await?;
 
     let mut subentries = TrieMap::default();
     let mut to_build: Vec<(MPathElement, FileType, HgFileNodeId)> = Vec::new();
@@ -2392,11 +2388,14 @@ async fn build_uploaded_file_leaf(
 }
 
 /// This directory's file leaves in the parent commit, to reuse for the files
-/// that did not change.
+/// that did not change. An uploaded manifest lists every file in the
+/// directory, not just the changed ones, so without this a one-file change to a
+/// wide directory pays two blob reads for each of the files that did not
+/// change.
 ///
 /// No parent, or a parent that was never derived, is not an error: every leaf
 /// is then built from scratch, which is what this path did before.
-async fn parent_file_leaves(
+pub(crate) async fn parent_file_leaves(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),
     p1: Option<HgNodeHash>,

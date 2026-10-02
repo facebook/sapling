@@ -21,6 +21,7 @@ use blobstore::Loadable;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
 use futures::stream;
 use manifest::Entry;
 use mercurial_types::HgAugmentedManifestEnvelope;
@@ -35,6 +36,7 @@ use restricted_paths_common::RestrictedPathsConfigBased;
 use thiserror::Error;
 
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_for_uploaded_tree;
+use crate::derive_hg_augmented_manifest::parent_file_leaves;
 
 const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
 /// Each tree build fans out its own child lookups, so this multiplies with
@@ -360,6 +362,39 @@ async fn build_uploaded_tree(
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
 ) -> Result<BuiltTree> {
+    // The parent's leaves depend on nothing below, so they load while the
+    // children and the ACL node do rather than after them.
+    let ((children, acl), reusable) = future::try_join(
+        children_and_acl(ctx, blobstore, restricted_paths, manifest, sources),
+        parent_file_leaves(ctx, blobstore, manifest.p1()),
+    )
+    .await?;
+
+    let directories = children
+        .iter()
+        .map(|(name, child)| (name.clone(), child.directory.clone()))
+        .collect();
+    let directory = derive_augmented_manifest_for_uploaded_tree(
+        ctx,
+        blobstore,
+        manifest,
+        &directories,
+        acl.node().map(|entry| entry.id),
+        &reusable,
+    )
+    .await?;
+
+    Ok(BuiltTree { directory, acl })
+}
+
+/// Resolve the tree's child directories, then build its ACL node from them.
+async fn children_and_acl(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    restricted_paths: &RestrictedPathsConfigBased,
+    manifest: &HgBlobManifest,
+    sources: ChildSources<'_>,
+) -> Result<(HashMap<MPathElement, ChildNode>, DirectoryAcl)> {
     let children = load_children(ctx, blobstore, manifest.node_id(), sources).await?;
 
     let acl_file_name = restricted_paths.config().acl_file_name().to_string();
@@ -400,20 +435,7 @@ async fn build_uploaded_tree(
         }
     };
 
-    let directories = children
-        .iter()
-        .map(|(name, child)| (name.clone(), child.directory.clone()))
-        .collect();
-    let directory = derive_augmented_manifest_for_uploaded_tree(
-        ctx,
-        blobstore,
-        manifest,
-        &directories,
-        acl.node().map(|entry| entry.id),
-    )
-    .await?;
-
-    Ok(BuiltTree { directory, acl })
+    Ok((children, acl))
 }
 
 /// Resolve every child directory, from the batch when it arrived there and from
