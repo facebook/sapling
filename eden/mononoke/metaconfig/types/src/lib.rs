@@ -363,6 +363,8 @@ pub enum ShardedService {
     GitBundleGenerator,
     /// Derivation Pipeline Tailer
     DerivationPipelineTailer,
+    /// Derivation Pipeline Worker
+    DerivationPipelineWorker,
 }
 
 /// Indicates types of commit hashes used in a repo context.
