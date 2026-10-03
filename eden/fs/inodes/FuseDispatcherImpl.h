@@ -43,6 +43,7 @@ class FuseDispatcherImpl : public FuseDispatcher {
 
   void forget(InodeNumber ino, unsigned long nlookup) override;
   ImmediateFuture<uint64_t> open(InodeNumber ino, int flags) override;
+  ImmediateFuture<folly::Unit> release(InodeNumber ino, uint64_t fh) override;
   ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       bool kernelCachesReadlink,

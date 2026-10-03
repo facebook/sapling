@@ -311,6 +311,14 @@ ImmediateFuture<uint64_t> FuseDispatcherImpl::open(
   return 0ull;
 }
 
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::release(
+    InodeNumber /*ino*/,
+    uint64_t /*fh*/) {
+  // A file handle from create is still released by the kernel even though
+  // open is stateless, and the kernel ignores the reply.
+  return folly::unit;
+}
+
 namespace {
 /**
  * The mode bits a new file never gets: setattr refuses to set them, and the
