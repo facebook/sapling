@@ -117,22 +117,9 @@ void InodeAccessLogger::processInodeAccessEvents() {
       work.swap(state->work);
     }
 
-    // logInodeAccess posts for every event added to the work queue, but we wait
-    // on the semaphore only once per batch of events. For example, we could
-    // post multiple times before this single wait, and we will pull and process
-    // all the events on the queue for just a single wait. This makes the
-    // semaphore more positive than it needs to be and is a performance cost of
-    // extra spinning if left unaddressed.  sem_.wait() consumed one count, but
-    // we know this semaphore was posted work.size() amount of times. Since we
-    // will process all entries at once, rather than waking repeatedly, consume
-    // the rest.
-    if (!work.empty()) {
-      // The - 1 here is to account for the initial semaphore wait. For example,
-      // if only one event was added to the queue and the wait() was fulfilled,
-      // work.size() would be 1, and we would not wait to try any extra waits,
-      // so the -1 brings this to 0.
-      (void)sem_.tryWait(work.size() - 1);
-    }
+    const auto denominator =
+        reloadableConfig_->getEdenConfig()
+            ->logFileAccessesSamplingDenominator.getValue();
 
     for (auto& event : work) {
       folly::StringPiece repo;
@@ -190,10 +177,6 @@ void InodeAccessLogger::processInodeAccessEvents() {
       // logging 100% of file accesses.
       std::string filename;
 
-      // Use a configurable percentage to determine if we should log the sample.
-      auto denominator = reloadableConfig_->getEdenConfig()
-                             ->logFileAccessesSamplingDenominator.getValue();
-
       // Only log the filename if we're logging 100% of file accesses and the
       // path is not to a directory
       if (denominator == 1 && dtype != dtype_t::Dir) {
@@ -207,12 +190,6 @@ void InodeAccessLogger::processInodeAccessEvents() {
       }
 
       // TODO: Don't log files that match gitignore rules.
-
-      // We check our percentage after we've passed all of our filtering and
-      // have determined that this a sample we'd actually log.
-      if (0 != folly::Random::rand32(denominator)) {
-        continue;
-      }
 
       std::string source;
       switch (event.cause) {
@@ -257,11 +234,28 @@ void InodeAccessLogger::processInodeAccessEvents() {
 }
 
 void InodeAccessLogger::logInodeAccess(InodeAccess access) {
-  if (!reloadableConfig_->getEdenConfig()->logFileAccesses.getValue()) {
+  auto config = reloadableConfig_->getEdenConfig();
+  if (!config->logFileAccesses.getValue()) {
     return;
   }
-  auto state = state_.wlock();
-  state->work.push_back(std::move(access));
-  sem_.post();
+  // Sampling is uniform, so deciding it here gives the same distribution of
+  // logged events as deciding it on the worker, and an event that is dropped
+  // costs neither the queue, the wakeup nor the path lookup.
+  if (0 !=
+      folly::Random::rand32(
+          config->logFileAccessesSamplingDenominator.getValue())) {
+    return;
+  }
+  bool wasIdle;
+  {
+    auto state = state_.wlock();
+    wasIdle = state->work.empty();
+    state->work.push_back(std::move(access));
+  }
+  // The worker drains the whole queue per wakeup, so only the event that
+  // makes it non-empty needs to wake it.
+  if (wasIdle) {
+    sem_.post();
+  }
 }
 } // namespace facebook::eden
