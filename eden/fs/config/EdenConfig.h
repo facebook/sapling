@@ -1308,6 +1308,20 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
 
   /**
+   * Send and receive buffer size of the nfsd socket when it is a Unix domain
+   * socket (nfs:use-uds), 0 to keep the kernel default. Such a socket on
+   * macOS defaults to 8 KiB each way, less than one READ reply, so every
+   * large reply took a partial write, a wait for the client to drain, and a
+   * second write. TCP sockets keep the kernel's buffers and autotuning.
+   * Applied when the socket is accepted, so a change applies to mounts
+   * started afterwards.
+   */
+  ConfigSetting<uint64_t> nfsSocketBufferSize{
+      "nfs:socket-buffer-size",
+      1024 * 1024,
+      this};
+
+  /**
    * ========== MACOS ONLY ==========
    *
    * Set the directory read size to the specified value. The value should

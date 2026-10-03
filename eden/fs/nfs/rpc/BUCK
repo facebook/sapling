@@ -38,6 +38,7 @@ cpp_library(
         "//folly:string",
         "//folly/futures:core",
         "//folly/io:iobuf",
+        "//folly/portability:sockets",
     ],
     exported_deps = [
         ":rpc",

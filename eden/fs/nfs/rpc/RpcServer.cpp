@@ -13,6 +13,7 @@
 #include <folly/futures/Future.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
+#include <folly/portability/Sockets.h>
 
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
@@ -693,6 +694,7 @@ void RpcServer::connectionAccepted(
     AcceptInfo /* info */) noexcept {
   XLOGF(DBG7, "Accepted connection from: {}", clientAddr.describe());
   auto socket = AsyncSocket::newSocket(evb_, fd);
+  configureSocket(*socket);
   auto& state = state_.get();
 
   // EOF on any connection with a handler stops the server (see readEOF), so
@@ -774,7 +776,8 @@ std::shared_ptr<RpcServer> RpcServer::create(
     std::shared_ptr<folly::Executor> threadPool,
     const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     size_t maximumInFlightRequests,
-    std::chrono::nanoseconds highNfsRequestsLogInterval) {
+    std::chrono::nanoseconds highNfsRequestsLogInterval,
+    size_t socketBufferSize) {
   return std::shared_ptr<RpcServer>{
       new RpcServer{
           std::move(proc),
@@ -782,7 +785,8 @@ std::shared_ptr<RpcServer> RpcServer::create(
           std::move(threadPool),
           edenFsEventsLogger,
           maximumInFlightRequests,
-          highNfsRequestsLogInterval},
+          highNfsRequestsLogInterval,
+          socketBufferSize},
       [](RpcServer* p) { p->destroy(); }};
 }
 
@@ -792,7 +796,8 @@ RpcServer::RpcServer(
     std::shared_ptr<folly::Executor> threadPool,
     const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
     size_t maximumInFlightRequests,
-    std::chrono::nanoseconds highNfsRequestsLogInterval)
+    std::chrono::nanoseconds highNfsRequestsLogInterval,
+    size_t socketBufferSize)
     : evb_(evb),
       threadPool_(threadPool),
       edenFsEventsLogger_(edenFsEventsLogger),
@@ -800,7 +805,37 @@ RpcServer::RpcServer(
       proc_(std::move(proc)),
       state_{evb},
       maximumInFlightRequests_{maximumInFlightRequests},
-      highNfsRequestsLogInterval_{highNfsRequestsLogInterval} {}
+      highNfsRequestsLogInterval_{highNfsRequestsLogInterval},
+      socketBufferSize_{socketBufferSize} {}
+
+void RpcServer::configureSocket(folly::AsyncSocket& socket) {
+  if (socketBufferSize_ == 0) {
+    return;
+  }
+  // TCP sockets keep the kernel's buffers: they start out large enough, and
+  // on Linux an explicit size turns off the kernel's autotuning of them.
+  folly::SocketAddress address;
+  try {
+    socket.getLocalAddress(&address);
+  } catch (const std::exception& ex) {
+    XLOGF(WARN, "could not get the RPC socket's address: {}", ex.what());
+    return;
+  }
+  if (address.getFamily() != AF_UNIX) {
+    return;
+  }
+  int err = socket.setSendBufSize(socketBufferSize_);
+  if (err == 0) {
+    err = socket.setRecvBufSize(socketBufferSize_);
+  }
+  if (err != 0) {
+    XLOGF(
+        WARN,
+        "failed to set the RPC socket buffer size to {}: {}",
+        socketBufferSize_,
+        folly::errnoStr(err));
+  }
+}
 
 void RpcServer::destroy() {
   evb_->runInEventBaseThread([this] { delete this; });
@@ -823,12 +858,14 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
   // meant for server that only ever has one connected socket (nfsd3). Since
   // we already have the one connected socket, we will not need the
   // accepting socket to make any more connections.
+  auto asyncSocket = AsyncSocket::newSocket(
+      evb_, folly::NetworkSocket::fromFd(socket.release()));
+  configureSocket(*asyncSocket);
   auto& state = state_.get();
   state.connectionHandlers.push_back(
       RpcConnectionHandler::create(
           proc_,
-          AsyncSocket::newSocket(
-              evb_, folly::NetworkSocket::fromFd(socket.release())),
+          std::move(asyncSocket),
           threadPool_,
           edenFsEventsLogger_,
           weak_from_this(),

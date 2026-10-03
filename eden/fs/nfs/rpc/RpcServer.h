@@ -456,7 +456,8 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<folly::Executor> threadPool,
       const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
-      std::chrono::nanoseconds highNfsRequestsLogInterval);
+      std::chrono::nanoseconds highNfsRequestsLogInterval,
+      size_t socketBufferSize = 0);
 
   /**
    * RpcServer must be torn down on its EventBase. destroy() is called by the
@@ -529,9 +530,15 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
       std::shared_ptr<folly::Executor> threadPool,
       const std::shared_ptr<EdenFsEventsLogger>& edenFsEventsLogger,
       size_t maximumInFlightRequests,
-      std::chrono::nanoseconds highNfsRequestsLogInterval);
+      std::chrono::nanoseconds highNfsRequestsLogInterval,
+      size_t socketBufferSize);
 
   ~RpcServer() override;
+
+  /**
+   * Apply socketBufferSize_ to a connected socket, if configured.
+   */
+  void configureSocket(folly::AsyncSocket& socket);
 
   // AsyncServerSocket::AcceptCallback
 
@@ -588,6 +595,10 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
   // We log when the number of pending requests exceeds maximumInFlightRequests,
   // however to avoid spamming the logs once per highNfsRequestsLogInterval.
   std::chrono::nanoseconds highNfsRequestsLogInterval_;
+
+  // Send and receive buffer size for connected Unix domain sockets, 0 for
+  // the kernel default.
+  size_t socketBufferSize_;
 };
 
 } // namespace facebook::eden

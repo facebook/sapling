@@ -2917,7 +2917,9 @@ Nfsd3::Nfsd3(
             std::move(threadPool),
             edenFsEventsLogger,
             maximumInFlightRequests,
-            highNfsRequestsLogInterval);
+            highNfsRequestsLogInterval,
+            config ? config->getEdenConfig()->nfsSocketBufferSize.getValue()
+                   : 0);
       }()),
       processAccessLog_(std::move(processInfoCache)),
       edenFsEventsLogger_{edenFsEventsLogger},
