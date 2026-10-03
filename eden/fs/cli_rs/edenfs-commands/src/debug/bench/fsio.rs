@@ -173,6 +173,13 @@ struct CachePreparationResult {
 struct PhaseResult {
     wall_seconds: f64,
     throughput_mib_per_second: f64,
+    /// Time inside the measured filesystem calls, summed across jobs. The
+    /// wall time also holds the benchmark's own work between calls, which
+    /// is the same for every filesystem and hides differences between them.
+    #[serde(default)]
+    syscall_seconds: f64,
+    #[serde(default)]
+    syscall_nanoseconds_per_file: f64,
     files: u64,
     directories: u64,
     bytes: u64,
@@ -205,6 +212,10 @@ struct FileSizeResult {
 struct RemoveResult {
     wall_seconds: f64,
     files_per_second: f64,
+    #[serde(default)]
+    syscall_seconds: f64,
+    #[serde(default)]
+    syscall_nanoseconds_per_file: f64,
     files: u64,
     directories: u64,
     file_unlink: OperationResult,
@@ -498,6 +509,7 @@ fn bench_remove(
     }
 
     let wall_seconds = wall_start.elapsed().as_secs_f64();
+    let syscall_seconds = (file_unlink.elapsed + directory_remove.elapsed).as_secs_f64();
     Ok(RemoveResult {
         wall_seconds,
         files_per_second: if wall_seconds > 0.0 {
@@ -505,6 +517,11 @@ fn bench_remove(
         } else {
             0.0
         },
+        syscall_seconds,
+        syscall_nanoseconds_per_file: nanoseconds_per_file(
+            syscall_seconds,
+            workload.files.len() as u64,
+        ),
         files: workload.files.len() as u64,
         directories: workload.directories.len() as u64,
         file_unlink: file_unlink.result(),
@@ -1086,17 +1103,35 @@ where
     })
 }
 
+fn nanoseconds_per_file(seconds: f64, files: u64) -> f64 {
+    if files == 0 {
+        0.0
+    } else {
+        seconds * 1_000_000_000.0 / files as f64
+    }
+}
+
 fn phase_result(
     wall_seconds: f64,
     directories: u64,
     directory_operations: DirectoryOperations,
     files: FileAccumulator,
 ) -> PhaseResult {
+    let syscall_seconds = (directory_operations.create.elapsed
+        + directory_operations.open.elapsed
+        + directory_operations.read.elapsed
+        + directory_operations.close.elapsed
+        + files.file_open.elapsed
+        + files.file_io.elapsed
+        + files.file_close.elapsed)
+        .as_secs_f64();
     PhaseResult {
         wall_seconds,
         throughput_mib_per_second: files.bytes as f64
             / types::BYTES_IN_MEGABYTE as f64
             / wall_seconds,
+        syscall_seconds,
+        syscall_nanoseconds_per_file: nanoseconds_per_file(syscall_seconds, files.files),
         files: files.files,
         directories,
         bytes: files.bytes,
@@ -1236,7 +1271,11 @@ impl fmt::Display for FsIoResult {
         )?;
         writeln!(
             formatter,
-            "Sums add measured durations; latency values are per call or file."
+            "Sums add measured durations across jobs; latency values are per call or file."
+        )?;
+        writeln!(
+            formatter,
+            "Time in filesystem calls excludes the benchmark's own work, which wall time includes."
         )?;
         write_phase(formatter, "Write", "file create", &self.write)?;
         writeln!(
@@ -1260,8 +1299,10 @@ impl fmt::Display for FsIoResult {
 fn write_remove_phase(formatter: &mut fmt::Formatter<'_>, result: &RemoveResult) -> fmt::Result {
     writeln!(
         formatter,
-        "\nRemove: {} wall, {:.0} files/s, {} files, {} directories",
+        "\nRemove: {} wall, {} in filesystem calls ({}/file), {:.0} files/s, {} files, {} directories",
         format_duration_seconds(result.wall_seconds),
+        format_duration_seconds(result.syscall_seconds),
+        format_duration_nanoseconds(result.syscall_nanoseconds_per_file),
         result.files_per_second,
         result.files,
         result.directories
@@ -1283,8 +1324,10 @@ fn write_phase(
 ) -> fmt::Result {
     writeln!(
         formatter,
-        "\n{name}: {} wall, {:.2} MiB/s, {} files, {} directories",
+        "\n{name}: {} wall, {} in filesystem calls ({}/file), {:.2} MiB/s, {} files, {} directories",
         format_duration_seconds(result.wall_seconds),
+        format_duration_seconds(result.syscall_seconds),
+        format_duration_nanoseconds(result.syscall_nanoseconds_per_file),
         result.throughput_mib_per_second,
         result.files,
         result.directories

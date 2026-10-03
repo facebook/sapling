@@ -41,6 +41,7 @@ pub(super) struct FsIoDiff {
 #[derive(Debug, Serialize)]
 struct RemoveDiff {
     wall_time_percent: Option<f64>,
+    syscall_time_percent: Option<f64>,
     files_per_second_percent: Option<f64>,
     file_unlink: OperationDiff,
     directory_remove: OperationDiff,
@@ -55,6 +56,7 @@ struct CachePreparationDiff {
 #[derive(Debug, Serialize)]
 struct PhaseDiff {
     wall_time_percent: Option<f64>,
+    syscall_time_percent: Option<f64>,
     throughput_percent: Option<f64>,
     directory_create: OperationDiff,
     directory_open: OperationDiff,
@@ -154,6 +156,7 @@ impl RemoveDiff {
     fn new(current: &RemoveResult, baseline: &RemoveResult) -> Self {
         Self {
             wall_time_percent: percent_change(current.wall_seconds, baseline.wall_seconds),
+            syscall_time_percent: percent_change(current.syscall_seconds, baseline.syscall_seconds),
             files_per_second_percent: percent_change(
                 current.files_per_second,
                 baseline.files_per_second,
@@ -180,6 +183,7 @@ impl PhaseDiff {
     fn new(current: &PhaseResult, baseline: &PhaseResult) -> Self {
         Self {
             wall_time_percent: percent_change(current.wall_seconds, baseline.wall_seconds),
+            syscall_time_percent: percent_change(current.syscall_seconds, baseline.syscall_seconds),
             throughput_percent: percent_change(
                 current.throughput_mib_per_second,
                 baseline.throughput_mib_per_second,
@@ -422,8 +426,9 @@ pub(super) fn write_diff(formatter: &mut fmt::Formatter<'_>, diff: &FsIoDiff) ->
 fn write_remove_diff(formatter: &mut fmt::Formatter<'_>, diff: &RemoveDiff) -> fmt::Result {
     writeln!(
         formatter,
-        "\nRemove: wall {}, files/s {}",
+        "\nRemove: wall {}, filesystem calls {}, files/s {}",
         format_change(diff.wall_time_percent, false),
+        format_change(diff.syscall_time_percent, false),
         format_change(diff.files_per_second_percent, true)
     )?;
     write_operation_diff_header(formatter)?;
@@ -455,8 +460,9 @@ fn write_phase_diff(
 ) -> fmt::Result {
     writeln!(
         formatter,
-        "\n{name}: wall {}, throughput {}",
+        "\n{name}: wall {}, filesystem calls {}, throughput {}",
         format_change(diff.wall_time_percent, false),
+        format_change(diff.syscall_time_percent, false),
         format_change(diff.throughput_percent, true)
     )?;
     write_operation_diff_header(formatter)?;
@@ -556,6 +562,8 @@ mod tests {
         PhaseResult {
             wall_seconds: scale,
             throughput_mib_per_second: 100.0 / scale,
+            syscall_seconds: scale / 2.0,
+            syscall_nanoseconds_per_file: scale * 50_000_000.0,
             files: 10,
             directories: 2,
             bytes: 1_000,
@@ -609,6 +617,8 @@ mod tests {
             remove: Some(RemoveResult {
                 wall_seconds: scale,
                 files_per_second: 10.0 / scale,
+                syscall_seconds: scale / 2.0,
+                syscall_nanoseconds_per_file: scale * 50_000_000.0,
                 files: 10,
                 directories: 2,
                 file_unlink: operation(scale),
@@ -631,7 +641,9 @@ mod tests {
         assert_eq!(diff.write.wall_time_percent, Some(-50.0));
         assert_eq!(diff.write.throughput_percent, Some(100.0));
         let output = current.to_string();
-        assert!(output.contains("wall 50.0% faster, throughput 100.0% faster"));
+        assert!(output.contains(
+            "wall 50.0% faster, filesystem calls 50.0% faster, throughput 100.0% faster"
+        ));
         assert!(output.contains("file I/O"));
     }
 
