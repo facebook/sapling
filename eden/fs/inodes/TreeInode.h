@@ -318,6 +318,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<InodePtr> getOrLoadChild(
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
+
+  /**
+   * Like getOrLoadChild(), but a name with no entry yields a null InodePtr
+   * rather than an ENOENT error, so callers that expect misses, such as FUSE
+   * lookup, do not pay for an exception on each one.
+   */
+  ImmediateFuture<InodePtr> getOrLoadChildIfExists(
+      PathComponentPiece name,
+      const ObjectFetchContextPtr& context);
+
   folly::coro::now_task<InodePtr> co_getOrLoadChild(
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
@@ -1588,6 +1598,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * This should be called without the contents lock held!
    */
   void loadChildCleanUp(PathComponentPiece name, LoadChildCleanUp result);
+
+  /**
+   * Load the child `name`, whose entry is present but not loaded, releasing
+   * the contents lock before the load's clean-up runs.
+   */
+  ImmediateFuture<InodePtr> loadChildAndCleanUp(
+      folly::Synchronized<TreeInodeState>::LockedPtr& contents,
+      PathComponentPiece name,
+      const ObjectFetchContextPtr& context);
 
   folly::Synchronized<TreeInodeState> contents_;
 

@@ -826,6 +826,19 @@ void TreeInode::loadChildCleanUp(
   }
 }
 
+ImmediateFuture<InodePtr> TreeInode::loadChildAndCleanUp(
+    folly::Synchronized<TreeInodeState>::LockedPtr& contents,
+    PathComponentPiece name,
+    const ObjectFetchContextPtr& context) {
+  auto result = loadChild(contents, name, context);
+  // it's important the code between loadChild and loadChildCleanUp is no
+  // throw. We need to perform the loadChildCleanUp now regardless of
+  // exception.
+  contents.unlock();
+  loadChildCleanUp(name, std::move(result.second));
+  return ImmediateFuture<InodePtr>{std::move(result.first)};
+}
+
 ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
     PathComponentPiece name,
     const ObjectFetchContextPtr& context,
@@ -858,13 +871,7 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
                      contents, name, context, loadInodes);
                },
                [&](auto& contents) -> ImmediateFuture<VirtualInode> {
-                 auto result = self->loadChild(contents, name, context);
-                 // it's important the code between loadChild and
-                 // loadChildCleanUp is no throw. We need to perform the
-                 // loadChildCleanUp now regardless of exception.
-                 contents.unlock();
-                 self->loadChildCleanUp(name, std::move(result.second));
-                 return ImmediateFuture<InodePtr>{std::move(result.first)}
+                 return self->loadChildAndCleanUp(contents, name, context)
                      .thenValue([](auto&& inode) {
                        return VirtualInode{std::move(inode)};
                      });
@@ -1198,6 +1205,37 @@ ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
   return getOrFindChild(name, context, true).thenValue([](auto&& virtualInode) {
     return virtualInode.asInodePtr();
   });
+}
+
+ImmediateFuture<InodePtr> TreeInode::getOrLoadChildIfExists(
+    PathComponentPiece name,
+    const ObjectFetchContextPtr& context) {
+  bool dotEden = false;
+#ifndef _WIN32
+  dotEden = name == kDotEdenName && getNodeId() != kRootNodeId;
+#endif
+  if (FOLLY_UNLIKELY(dotEden || isRestricted())) {
+    // Both have their own handling in getOrFindChild(), and neither is a
+    // path where misses are common.
+    return getOrLoadChild(name, context);
+  }
+  checkAccess();
+  return tryRlockCheckBeforeUpdate<ImmediateFuture<InodePtr>>(
+      contents_,
+      [&](const auto& contents) -> std::optional<ImmediateFuture<InodePtr>> {
+        auto iter = contents.entries.find(name);
+        if (iter == contents.entries.end()) {
+          return ImmediateFuture<InodePtr>{InodePtr{}};
+        }
+        if (auto inode = iter->second.getInodePtr()) {
+          logAccess(*context);
+          return ImmediateFuture<InodePtr>{std::move(inode)};
+        }
+        return std::nullopt;
+      },
+      [&](auto& contents) {
+        return loadChildAndCleanUp(contents, name, context);
+      });
 }
 
 folly::coro::now_task<InodePtr> TreeInode::co_getOrLoadChild(

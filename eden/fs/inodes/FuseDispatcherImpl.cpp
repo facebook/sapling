@@ -118,6 +118,14 @@ uint64_t FuseDispatcherImpl::computeNegativeEntryTtl() const {
   return mount_->getEdenConfig()->fuseNegativeDcacheTtlSeconds.getValue();
 }
 
+fuse_entry_out FuseDispatcherImpl::negativeLookupEntry() const {
+  fuse_entry_out entry = {};
+  auto ttl = computeNegativeEntryTtl();
+  entry.attr_valid = ttl;
+  entry.entry_valid = ttl;
+  return entry;
+}
+
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
     const ObjectFetchContextPtr& context) {
@@ -160,49 +168,56 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
   return inodeMap_->lookupTreeInode(parent)
       .thenValue([name = PathComponent(namepiece),
                   context = context.copy()](const TreeInodePtr& tree) {
-        return tree->getOrLoadChild(name, context);
+        return tree->getOrLoadChildIfExists(name, context);
       })
-      .thenValue([this, context = context.copy()](const InodePtr& inode) {
-        inode->updateLastFsRequestTime();
-        return makeImmediateFutureWith([&]() { return inode->stat(context); })
-            .thenTry([this, inode](folly::Try<struct stat> maybeStat) {
-              if (maybeStat.hasValue()) {
-                inode->incFsRefcount();
-                const auto& st = maybeStat.value();
-                return computeEntryParam(
-                    FuseDispatcher::Attr{st, computeTtlForStat(st)});
-              } else {
-                // The most common case for stat() failing is if this file is
-                // materialized but the data for it in the overlay is missing
-                // or corrupt.  This can happen after a hard reboot where the
-                // overlay data was not synced to disk first.
-                //
-                // We intentionally want to return a result here rather than
-                // failing; otherwise we can't return the inode number to the
-                // kernel at all.  This blocks other operations on the file,
-                // like FUSE_UNLINK.  By successfully returning from the
-                // lookup we allow clients to remove this corrupt file with an
-                // unlink operation.  (Even though FUSE_UNLINK does not require
-                // the child inode number, the kernel does not appear to send a
-                // FUSE_UNLINK request to us if it could not get the child inode
-                // number first.)
-                XLOGF(
-                    WARN,
-                    "error getting attributes for inode {} ({}): {}",
-                    inode->getNodeId(),
-                    inode->getLogPath(),
-                    maybeStat.exception().what());
-                inode->incFsRefcount();
-                return computeEntryParam(
-                    attrForInodeWithCorruptOverlay(inode->getNodeId()));
-              }
-            });
-      })
+      .thenValue(
+          [this, context = context.copy()](
+              const InodePtr& inode) -> ImmediateFuture<fuse_entry_out> {
+            if (!inode) {
+              return negativeLookupEntry();
+            }
+            inode->updateLastFsRequestTime();
+            return makeImmediateFutureWith(
+                       [&]() { return inode->stat(context); })
+                .thenTry([this, inode](folly::Try<struct stat> maybeStat) {
+                  if (maybeStat.hasValue()) {
+                    inode->incFsRefcount();
+                    const auto& st = maybeStat.value();
+                    return computeEntryParam(
+                        FuseDispatcher::Attr{st, computeTtlForStat(st)});
+                  } else {
+                    // The most common case for stat() failing is if this file
+                    // is materialized but the data for it in the overlay is
+                    // missing or corrupt.  This can happen after a hard reboot
+                    // where the overlay data was not synced to disk first.
+                    //
+                    // We intentionally want to return a result here rather than
+                    // failing; otherwise we can't return the inode number to
+                    // the kernel at all.  This blocks other operations on the
+                    // file, like FUSE_UNLINK.  By successfully returning from
+                    // the lookup we allow clients to remove this corrupt file
+                    // with an unlink operation.  (Even though FUSE_UNLINK does
+                    // not require the child inode number, the kernel does not
+                    // appear to send a FUSE_UNLINK request to us if it could
+                    // not get the child inode number first.)
+                    XLOGF(
+                        WARN,
+                        "error getting attributes for inode {} ({}): {}",
+                        inode->getNodeId(),
+                        inode->getLogPath(),
+                        maybeStat.exception().what());
+                    inode->incFsRefcount();
+                    return computeEntryParam(
+                        attrForInodeWithCorruptOverlay(inode->getNodeId()));
+                  }
+                });
+          })
       .thenTry([this](folly::Try<fuse_entry_out> try_) {
         if (auto* err = try_.tryGetExceptionObject<std::system_error>()) {
           if (isEnoent(*err)) {
-            // Translate ENOENT into a successful response with an inode
-            // number of 0 so the kernel can cache the negative lookup result.
+            // A missing name is normally answered above without an error;
+            // this covers the paths that still report ENOENT, such as a
+            // restricted directory or the .eden entry.
             //
             // Note: if this negative dcache entry becomes incorrect for a
             // name that is still returned by readdir, the kernel will stop
@@ -215,11 +230,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
             // reducing how long a negative dcache entry can remain incorrect.
             //
             // Example report: https://fburl.com/workplace/329ni6ek
-            fuse_entry_out entry = {};
-            auto ttl = computeNegativeEntryTtl();
-            entry.attr_valid = ttl;
-            entry.entry_valid = ttl;
-            return folly::Try<fuse_entry_out>{entry};
+            return folly::Try<fuse_entry_out>{negativeLookupEntry()};
           }
         }
         return try_;

@@ -165,6 +165,12 @@ class FuseDispatcherImpl : public FuseDispatcher {
    */
   uint64_t computeNegativeEntryTtl() const;
 
+  /**
+   * The reply for a name that does not exist: inode number 0 with the
+   * negative-entry TTL, which the kernel caches as a negative dentry.
+   */
+  fuse_entry_out negativeLookupEntry() const;
+
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
 

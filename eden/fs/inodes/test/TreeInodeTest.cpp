@@ -2038,3 +2038,27 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<bool>& info) {
       return info.param ? "Coroutines" : "Futures";
     });
+
+TEST(TreeInode, getOrLoadChildIfExists) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/present.txt", "x");
+  TestMount mount{builder};
+  auto dir = mount.getTreeInode("dir");
+  auto ctx = ObjectFetchContext::getNullContext();
+  auto run = [&mount](auto&& future) {
+    auto fut = std::forward<decltype(future)>(future).semi().via(
+        mount.getServerExecutor().get());
+    mount.drainServerExecutor();
+    return std::move(fut).get(0ms);
+  };
+
+  EXPECT_FALSE(run(dir->getOrLoadChildIfExists("missing.txt"_pc, ctx)));
+
+  // The first call loads the child; the second finds it loaded.
+  auto loaded = run(dir->getOrLoadChildIfExists("present.txt"_pc, ctx));
+  ASSERT_TRUE(loaded);
+  EXPECT_EQ(RelativePath{"dir/present.txt"}, loaded->getPath().value());
+  EXPECT_EQ(
+      loaded.get(),
+      run(dir->getOrLoadChildIfExists("present.txt"_pc, ctx)).get());
+}
