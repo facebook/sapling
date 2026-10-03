@@ -301,6 +301,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::optional<bool> ancestorUnderAcl = std::nullopt);
 
   /**
+   * Attributes of a directory this process just created, for the entry
+   * reply. Logs the access like stat() does, but does not feed the parent's
+   * readdir prefetch heuristic.
+   */
+  struct stat statNewlyCreated(const ObjectFetchContext& context) {
+    logAccess(context);
+    return statWithCurrentRestrictionState();
+  }
+
+  /**
    * Get the inode object for a child of this directory.
    *
    * The Inode object will be loaded if it is not already loaded.

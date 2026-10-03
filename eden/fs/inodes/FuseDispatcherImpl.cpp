@@ -323,12 +323,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::create(
       [this, mode, childName = PathComponent{name}, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
-        auto ttl = computeTtl();
-        return child->stat(context).thenValue(
-            [child, ttl](struct stat st) -> fuse_entry_out {
-              child->incFsRefcount();
-              return computeEntryParam(FuseDispatcher::Attr{st, ttl});
-            });
+        FuseDispatcher::Attr attr{
+            child->statNewlyCreated(*context), computeTtl()};
+        // The kernel holds a reference only once the reply reaches it.
+        child->incFsRefcount();
+        return computeEntryParam(attr);
       });
 }
 
@@ -451,12 +450,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mknod(
        context = context.copy()](const TreeInodePtr& inode) {
         auto child =
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
-        auto ttl = computeTtl();
-        return child->stat(context).thenValue(
-            [child, ttl](struct stat st) -> fuse_entry_out {
-              child->incFsRefcount();
-              return computeEntryParam(FuseDispatcher::Attr{st, ttl});
-            });
+        FuseDispatcher::Attr attr{
+            child->statNewlyCreated(*context), computeTtl()};
+        // The kernel holds a reference only once the reply reaches it.
+        child->incFsRefcount();
+        return computeEntryParam(attr);
       });
 }
 
@@ -469,11 +467,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mkdir(
       [this, childName = PathComponent{name}, mode, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
-        auto ttl = computeTtl();
-        return child->stat(context).thenValue([child, ttl](struct stat st) {
-          child->incFsRefcount();
-          return computeEntryParam(FuseDispatcher::Attr{st, ttl});
-        });
+        FuseDispatcher::Attr attr{
+            child->statNewlyCreated(*context), computeTtl()};
+        // The kernel holds a reference only once the reply reaches it.
+        child->incFsRefcount();
+        return computeEntryParam(attr);
       });
 }
 
@@ -513,12 +511,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::symlink(
        context = context.copy()](const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
+        FuseDispatcher::Attr attr{
+            symlinkInode->statNewlyCreated(*context), computeTtl()};
+        // The kernel holds a reference only once the reply reaches it.
         symlinkInode->incFsRefcount();
-        auto ttl = computeTtl();
-        return symlinkInode->stat(context).thenValue(
-            [symlinkInode, ttl](struct stat st) {
-              return computeEntryParam(FuseDispatcher::Attr{st, ttl});
-            });
+        return computeEntryParam(attr);
       });
 }
 

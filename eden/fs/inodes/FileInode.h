@@ -428,6 +428,13 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   /// mutates the Synchronized<> wrapper.
   std::optional<struct stat> tryGetCachedStat();
 
+  /**
+   * Attributes of a file this process just created, for the entry reply.
+   * Logs the access like stat() does, but does not feed the parent's readdir
+   * prefetch heuristic: the client asked to create the file, not to stat it.
+   */
+  struct stat statNewlyCreated(const ObjectFetchContext& context);
+
  private:
   using State = FileInodeState;
   class LockedState;

@@ -1111,6 +1111,13 @@ folly::coro::now_task<struct stat> FileInode::co_stat(
   co_return built.partialStat;
 }
 
+struct stat FileInode::statNewlyCreated(const ObjectFetchContext& context) {
+  logAccess(context);
+  auto built = buildStatUnderLock(false);
+  XDCHECK(!built.needsBlobSize.has_value());
+  return built.partialStat;
+}
+
 std::optional<struct stat> FileInode::tryGetCachedStat() {
   auto built = buildStatUnderLock(true);
   if (built.needsBlobSize.has_value() || built.materializedSizeMissing) {
