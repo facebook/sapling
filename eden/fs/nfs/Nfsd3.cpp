@@ -182,6 +182,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       ProcessAccessLog& processAccessLog,
       std::atomic<size_t>& traceDetailedArguments,
       std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus,
+      NfsRequestTracker& requestTracker,
       std::chrono::nanoseconds longRunningFSRequestThreshold,
       bool fastPathRPCs,
       std::shared_ptr<ReloadableConfig> config,
@@ -199,6 +200,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         traceDetailedArguments_(traceDetailedArguments),
         metadataSizeMismatchLogged_(false),
         traceBus_(traceBus),
+        requestTracker_(requestTracker),
         longRunningFSRequestThreshold_(longRunningFSRequestThreshold),
         fastPathRPCs_(fastPathRPCs),
         config_{std::move(config)},
@@ -371,6 +373,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // size metadata.
   std::atomic_bool metadataSizeMismatchLogged_;
   std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
+  NfsRequestTracker& requestTracker_;
   /**
    * The duration that must elapse before we consider a NFS request to be
    * "long running" and therefore log it with EdenFsEventsLogger. This value
@@ -2388,48 +2391,35 @@ void Nfsd3ServerProcessor::onRequestComplete(const RpcRequestTimeline& t) {
 }
 
 namespace {
-struct LiveRequest {
-  LiveRequest(
-      std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus,
-      std::atomic<size_t>& traceDetailedArguments,
-      const HandlerEntry& handlerEntry,
-      folly::io::Cursor& deser,
-      uint32_t xid,
-      uint32_t procNumber,
-      const std::optional<authsys_parms>& authSysCreds)
-      : traceBus_{std::move(traceBus)}, xid_{xid}, procNumber_{procNumber} {
-    if (traceDetailedArguments.load(std::memory_order_acquire)) {
-      auto details = handlerEntry.formatArgs(deser);
-      // The kernel issues requests of its own, as root, next to those it
-      // makes for processes; the credential tells them apart in a trace.
-      if (authSysCreds) {
-        // Named apart from the uid and gid a SETATTR asks to set.
-        details.str += fmt::format(
-            "{}cred_uid={}, cred_gid={}",
-            details.str.empty() ? "" : ", ",
-            authSysCreds->uid,
-            authSysCreds->gid);
-      }
-      traceBus_->publish(
-          NfsTraceEvent::start(xid, procNumber, std::move(details)));
-    } else {
-      traceBus_->publish(NfsTraceEvent::start(xid, procNumber));
-    }
+/**
+ * Publish the START trace event for a request, with its formatted arguments
+ * while `eden trace fs --verbose` is attached.
+ */
+void publishStartEvent(
+    TraceBus<NfsTraceEvent>& traceBus,
+    const std::atomic<size_t>& traceDetailedArguments,
+    const HandlerEntry& handlerEntry,
+    folly::io::Cursor deser,
+    uint32_t xid,
+    uint32_t procNumber,
+    const std::optional<authsys_parms>& authSysCreds) {
+  if (!traceDetailedArguments.load(std::memory_order_acquire)) {
+    traceBus.publish(NfsTraceEvent::start(xid, procNumber));
+    return;
   }
-
-  LiveRequest(LiveRequest&& that) noexcept = default;
-  LiveRequest& operator=(LiveRequest&&) = delete;
-
-  ~LiveRequest() {
-    if (traceBus_) {
-      traceBus_->publish(NfsTraceEvent::finish(xid_, procNumber_));
-    }
+  auto details = handlerEntry.formatArgs(deser);
+  // The kernel issues requests of its own, as root, next to those it
+  // makes for processes; the credential tells them apart in a trace.
+  if (authSysCreds) {
+    // Named apart from the uid and gid a SETATTR asks to set.
+    details.str += fmt::format(
+        "{}cred_uid={}, cred_gid={}",
+        details.str.empty() ? "" : ", ",
+        authSysCreds->uid,
+        authSysCreds->gid);
   }
-
-  std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
-  uint32_t xid_;
-  uint32_t procNumber_;
-};
+  traceBus.publish(NfsTraceEvent::start(xid, procNumber, std::move(details)));
+}
 
 /**
  * Whether the procedure resolves a directory's entries, handing the client
@@ -2706,14 +2696,21 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 
   auto inodeNumber = handlerEntry.formatArgs(deser).inode;
 
-  auto liveRequest = LiveRequest{
-      traceBus_,
-      traceDetailedArguments_,
-      handlerEntry,
-      deser,
-      xid,
-      procNumber,
-      authSysCreds};
+  const auto now = std::chrono::steady_clock::now();
+  // Trace events only feed live `eden trace fs` streams, so they are not
+  // built or published while nothing is subscribed.
+  const bool traced = traceBus_->hasSubscription();
+  if (traced) {
+    publishStartEvent(
+        *traceBus_,
+        traceDetailedArguments_,
+        handlerEntry,
+        deser,
+        xid,
+        procNumber,
+        authSysCreds);
+  }
+  requestTracker_.start(xid, now);
 
   // TODO: Add requestMetrics for NFS.
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
@@ -2771,9 +2768,14 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
         }
         return res;
       })
-      .ensure([this,
-               liveRequest = std::move(liveRequest),
-               context = std::move(context)]() {
+      .ensure([this, xid, procNumber, context = std::move(context)]() {
+        requestTracker_.finish(xid, procNumber);
+        // A subscriber may have attached after this request started and
+        // learned of it through debugOutstandingNfsCalls, as `eden trace fs`
+        // does.
+        if (traceBus_->hasSubscription()) {
+          traceBus_->publish(NfsTraceEvent::finish(xid, procNumber));
+        }
         inflightRequests_.fetch_sub(1, std::memory_order_relaxed);
       });
 }
@@ -2797,6 +2799,49 @@ void Nfsd3ServerProcessor::clientConnected() {
   }
 }
 } // namespace
+
+NfsRequestTracker::NfsRequestTracker(
+    std::shared_ptr<FsEventLogger> fsEventLogger)
+    : fsEventLogger_{std::move(fsEventLogger)} {}
+
+void NfsRequestTracker::start(
+    uint32_t xid,
+    std::chrono::steady_clock::time_point startTime) {
+  auto state = stripes_[xid % kStripes].wlock();
+  (void)state->requests.emplace(xid, OutstandingRequest{xid, startTime});
+}
+
+void NfsRequestTracker::finish(uint32_t xid, uint32_t procNumber) {
+  std::chrono::nanoseconds duration{0};
+  {
+    auto state = stripes_[xid % kStripes].wlock();
+    auto it = state->requests.find(xid);
+    if (it == state->requests.end()) {
+      return;
+    }
+    duration = std::chrono::steady_clock::now() - it->second.requestStartTime;
+    state->requests.erase(it);
+  }
+  if (fsEventLogger_) {
+    fsEventLogger_->log({
+        duration,
+        nfsProcSamplingGroup(procNumber),
+        nfsProcName(procNumber),
+    });
+  }
+}
+
+std::vector<NfsRequestTracker::OutstandingRequest>
+NfsRequestTracker::outstanding() const {
+  std::vector<OutstandingRequest> result;
+  for (const auto& stripe : stripes_) {
+    auto state = stripe.rlock();
+    for (const auto& entry : state->requests) {
+      result.push_back(entry.second);
+    }
+  }
+  return result;
+}
 
 Nfsd3::Nfsd3(
     PrivHelper* privHelper,
@@ -2823,6 +2868,7 @@ Nfsd3::Nfsd3(
     FaultInjector& faultInjector)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
+      requestTracker_{std::move(fsEventLogger)},
       faultInjector_{faultInjector},
       stats_{dispatcher->getStats().copy()},
       server_([&]() {
@@ -2839,6 +2885,7 @@ Nfsd3::Nfsd3(
             processAccessLog_,
             traceDetailedArguments_,
             traceBus_,
+            requestTracker_,
             longRunningFSRequestThreshold,
             fastPathRPCs,
             // Not moved: the invalidation queue below reads its thread count
@@ -2871,47 +2918,6 @@ Nfsd3::Nfsd3(
   invalidationQueue_.start();
 
   initializeInflightRequestsRateLimiter(maximumInFlightRequests);
-
-  traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
-      "NFS request tracking",
-      [this,
-       fsEventLogger = std::move(fsEventLogger)](const NfsTraceEvent& event) {
-        switch (event.getType()) {
-          case NfsTraceEvent::START: {
-            auto state = telemetryState_.wlock();
-            // NFS client is allowed to retry requests and emplace could
-            // therefore fail. We just ignore duplicated requests.
-            (void)state->requests.emplace(
-                event.getXid(),
-                OutstandingRequest{event.getXid(), event.monotonicTime});
-            break;
-          }
-          case NfsTraceEvent::FINISH: {
-            std::chrono::nanoseconds durationNs{0};
-            {
-              auto state = telemetryState_.wlock();
-              auto it = state->requests.find(event.getXid());
-              if (it == state->requests.end()) {
-                // Duplicated request, break early.
-                break;
-              }
-              durationNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  event.monotonicTime - it->second.requestStartTime);
-              (void)state->requests.erase(it);
-            }
-
-            if (fsEventLogger) {
-              auto procNumber = event.getProcNumber();
-              fsEventLogger->log({
-                  durationNs,
-                  nfsProcSamplingGroup(procNumber),
-                  nfsProcName(procNumber),
-              });
-            }
-            break;
-          }
-        }
-      }));
 }
 
 folly::Future<FsChannel::StopFuture> Nfsd3::initialize() {
@@ -3187,13 +3193,7 @@ folly::coro::now_task<folly::Unit> Nfsd3::co_completeInvalidations() {
 }
 
 std::vector<Nfsd3::OutstandingRequest> Nfsd3::getOutstandingRequests() {
-  std::vector<Nfsd3::OutstandingRequest> outstandingCalls;
-
-  auto telemetryStateLockedPtr = telemetryState_.rlock();
-  for (const auto& entry : telemetryStateLockedPtr->requests) {
-    outstandingCalls.push_back(entry.second);
-  }
-  return outstandingCalls;
+  return requestTracker_.outstanding();
 }
 
 TraceDetailedArgumentsHandle Nfsd3::traceDetailedArguments() {

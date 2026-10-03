@@ -10,6 +10,8 @@
 // Implementation of the NFSv3 protocol as described in:
 // https://tools.ietf.org/html/rfc1813
 
+#include <array>
+#include <chrono>
 #include <optional>
 #include <vector>
 
@@ -177,6 +179,41 @@ class InvalidatingInodes {
 };
 
 class FaultInjector;
+
+/**
+ * Requests received but not yet answered, for `debugOutstandingNfsCalls`
+ * and the sampled `FsEventLogger`. Striped by xid so the worker threads
+ * rarely contend on one lock.
+ */
+class NfsRequestTracker {
+ public:
+  struct OutstandingRequest {
+    uint32_t xid;
+    std::chrono::steady_clock::time_point requestStartTime;
+  };
+
+  explicit NfsRequestTracker(std::shared_ptr<FsEventLogger> fsEventLogger);
+
+  void start(uint32_t xid, std::chrono::steady_clock::time_point startTime);
+
+  /**
+   * Forget the request and log its duration to the FsEventLogger. A xid
+   * that was never started, or was already finished, is ignored.
+   */
+  void finish(uint32_t xid, uint32_t procNumber);
+
+  std::vector<OutstandingRequest> outstanding() const;
+
+ private:
+  static constexpr size_t kStripes = 16;
+
+  struct State {
+    folly::F14FastMap<uint32_t, OutstandingRequest> requests;
+  };
+
+  std::array<folly::Synchronized<State>, kStripes> stripes_;
+  const std::shared_ptr<FsEventLogger> fsEventLogger_;
+};
 
 class Nfsd3 final : public FsChannel {
  public:
@@ -371,10 +408,7 @@ class Nfsd3 final : public FsChannel {
     return server_->getAddr();
   }
 
-  struct OutstandingRequest {
-    uint32_t xid;
-    std::chrono::steady_clock::time_point requestStartTime;
-  };
+  using OutstandingRequest = NfsRequestTracker::OutstandingRequest;
 
   using StopData = RpcStopData;
 
@@ -393,9 +427,7 @@ class Nfsd3 final : public FsChannel {
   Nfsd3& operator=(Nfsd3&&) = delete;
 
   /**
-   * Returns the approximate set of outstanding NFS requests. Since
-   * telemetry is tracked on a background thread, the result may very slightly
-   * lag reality.
+   * Returns the set of outstanding NFS requests.
    */
   std::vector<Nfsd3::OutstandingRequest> getOutstandingRequests();
 
@@ -416,10 +448,6 @@ class Nfsd3 final : public FsChannel {
   }
 
  private:
-  struct TelemetryState {
-    std::unordered_map<uint64_t, OutstandingRequest> requests;
-  };
-
   /**
    * This is triggered when the kernel closes the socket. The socket is closed
    * when the privhelper or a user runs umount.
@@ -429,8 +457,8 @@ class Nfsd3 final : public FsChannel {
   PrivHelper* const privHelper_;
   AbsolutePath mountPath_;
 
-  folly::Synchronized<TelemetryState> telemetryState_;
-  std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
+  // Referenced by the RpcServerProcessor that server_ owns, so declared first.
+  NfsRequestTracker requestTracker_;
   InvalidatingInodes invalidatingInodes_;
   FaultInjector& faultInjector_;
 
@@ -440,10 +468,6 @@ class Nfsd3 final : public FsChannel {
   ProcessAccessLog processAccessLog_;
   std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
   std::atomic<size_t> traceDetailedArguments_;
-  // The TraceBus is declared after every member its subscribed functions may
-  // use, since they close over `this` and can run until the TraceBus itself
-  // is deallocated. Only the invalidation queue follows it, whose workers do
-  // not use the TraceBus.
   std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
 
   /**
