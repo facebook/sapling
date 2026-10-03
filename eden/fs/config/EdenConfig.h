@@ -2616,10 +2616,16 @@ class EdenConfig : private ConfigSettingManager {
    * is compacted with probability 1/max(this, multiplier * entries), so
    * small directories are compacted far less often. 0 restores the
    * previous 1/(multiplier * max(entries, 10)) behavior.
+   *
+   * A compaction rewrites the directory's record through a temporary file
+   * and a rename on the request path, under the parent's contents lock, so
+   * it should stay rare for directories that see steady churn; replaying a
+   * hundred WAL entries when the directory is next loaded costs well under a
+   * millisecond.
    */
   ConfigSetting<uint64_t> experimentalOverlayWalMinCompactionThreshold{
       "experimental:overlay-wal-min-compaction-threshold",
-      50,
+      100,
       this};
 
   /**
