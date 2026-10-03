@@ -672,6 +672,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Number of directories whose paths are remembered so that an inode's path
+   * can be built from its parent's instead of walked up to the root. 0
+   * disables the cache. Read when a mount starts.
+   */
+  ConfigSetting<size_t> inodePathCacheSize{
+      "mount:inode-path-cache-size",
+      64,
+      this};
+
+  /**
    * How often inode garbage collection will run.
    *
    * Default to every hour.

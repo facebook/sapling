@@ -60,19 +60,60 @@ TEST(InodeBase, getPath) {
   auto noopC = childFile(abc, "noop.c");
   EXPECT_EQ(RelativePath{"a/b/c/noop.c"}, noopC->getPath().value());
   EXPECT_EQ("a/b/c/noop.c", noopC->getLogPath());
+}
 
-  // TODO: Test that the path gets updated after unlink() and rename()
-  // operations.
-  //
-  // Currently calling TreeInode::unlink() and TreeInode::rename() here does
-  // not work.  (TreeInode::getChildByName() does not correctly register new
-  // inodes it creates in the EdenDispatcher's inode map.  The unlink() and
-  // rename() operations require that the inode exist in the dispatcher map.)
-  //
-  // I am currently working on refactoring the inode map in a subsequent diff.
-  // My refactoring ensures that inodes always get registered correctly,
-  // regardless of how they are created.  I'll come back and work on test cases
-  // here once my refactored InodeMap code lands.
+TEST(InodeBase, getPathAfterRenameAndRemoval) {
+  FakeTreeBuilder builder;
+  builder.setFiles({
+      {"a/b/c/noop.c", "int main() { return 0; }\n"},
+      {"a/d/other.c", "int other() { return 1; }\n"},
+  });
+  TestMount testMount{builder};
+  auto ctx = ObjectFetchContext::getNullContext();
+  auto run = [&testMount](auto&& future) {
+    auto fut = std::forward<decltype(future)>(future).semi().via(
+        testMount.getServerExecutor().get());
+    testMount.drainServerExecutor();
+    return std::move(fut).get(0ms);
+  };
+
+  auto a = testMount.getTreeInode("a");
+  auto b = testMount.getTreeInode("a/b");
+  auto c = testMount.getTreeInode("a/b/c");
+  auto noopC = testMount.getFileInode("a/b/c/noop.c");
+  auto d = testMount.getTreeInode("a/d");
+  auto otherC = testMount.getFileInode("a/d/other.c");
+
+  // Compute every path once so each directory on it is remembered.
+  EXPECT_EQ(RelativePath{"a/b/c/noop.c"}, noopC->getPath().value());
+  EXPECT_EQ(RelativePath{"a/d/other.c"}, otherC->getPath().value());
+
+  // Renaming a directory changes the path of everything below it.
+  run(a->rename("b"_pc, a, "x"_pc, InvalidationRequired::No, ctx));
+  EXPECT_EQ(RelativePath{"a/x"}, b->getPath().value());
+  EXPECT_EQ(RelativePath{"a/x/c"}, c->getPath().value());
+  EXPECT_EQ(RelativePath{"a/x/c/noop.c"}, noopC->getPath().value());
+  EXPECT_EQ(RelativePath{"a/d/other.c"}, otherC->getPath().value());
+
+  // Moving a directory under another remembered directory.
+  run(b->rename("c"_pc, d, "c"_pc, InvalidationRequired::No, ctx));
+  EXPECT_EQ(RelativePath{"a/d/c"}, c->getPath().value());
+  EXPECT_EQ(RelativePath{"a/d/c/noop.c"}, noopC->getPath().value());
+
+  // Renaming a file changes only its own path.
+  run(c->rename("noop.c"_pc, d, "moved.c"_pc, InvalidationRequired::No, ctx));
+  EXPECT_EQ(RelativePath{"a/d/moved.c"}, noopC->getPath().value());
+  EXPECT_EQ(RelativePath{"a/d/c"}, c->getPath().value());
+
+  // Removed inodes have no path, and a new directory at the old name does
+  // not inherit the removed one's.
+  run(d->unlink("moved.c"_pc, InvalidationRequired::No, ctx));
+  EXPECT_FALSE(noopC->getPath().has_value());
+  run(d->rmdir("c"_pc, InvalidationRequired::No, ctx));
+  EXPECT_FALSE(c->getPath().has_value());
+  auto newC = d->mkdir("c"_pc, 0755, InvalidationRequired::No);
+  EXPECT_EQ(RelativePath{"a/d/c"}, newC->getPath().value());
+  EXPECT_FALSE(c->getPath().has_value());
 }
 
 class InodeBaseEnsureMaterializedTest : public ::testing::Test {

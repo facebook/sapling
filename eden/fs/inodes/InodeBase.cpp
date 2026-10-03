@@ -9,6 +9,7 @@
 
 #include <folly/Likely.h>
 #include <folly/logging/xlog.h>
+#include <folly/small_vector.h>
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeAccessLogger.h"
@@ -26,6 +27,36 @@
 #include "eden/fs/utils/NotImplemented.h"
 
 namespace facebook::eden {
+
+namespace {
+
+/**
+ * Brackets a directory's location change for the path cache. Files are not
+ * cached, so their location changes need no bracket.
+ */
+class DirectoryLocationChange {
+ public:
+  DirectoryLocationChange(InodePathCache& cache, bool isDirectory)
+      : cache_{isDirectory ? &cache : nullptr} {
+    if (cache_) {
+      cache_->beginChange();
+    }
+  }
+  ~DirectoryLocationChange() {
+    if (cache_) {
+      cache_->endChange();
+    }
+  }
+  DirectoryLocationChange(const DirectoryLocationChange&) = delete;
+  DirectoryLocationChange(DirectoryLocationChange&&) = delete;
+  DirectoryLocationChange& operator=(const DirectoryLocationChange&) = delete;
+  DirectoryLocationChange& operator=(DirectoryLocationChange&&) = delete;
+
+ private:
+  InodePathCache* cache_;
+};
+
+} // namespace
 
 InodeBase::InodeBase(EdenMount* mount)
     : ino_{kRootNodeId},
@@ -241,11 +272,87 @@ std::optional<RelativePath> InodeBase::getPath() const {
     return RelativePath();
   }
 
-  std::vector<PathComponent> names;
-  if (!getPathHelper(names, true)) {
+  auto& cache = mount_->getInodePathCache();
+  // While a directory is moving, read the locations directly: see
+  // InodePathCache::changing().
+  if (!cache.enabled() || cache.changing()) {
+    std::vector<PathComponent> names;
+    if (!getPathHelper(names, true)) {
+      return std::nullopt;
+    }
+    return RelativePath(names);
+  }
+
+  const auto generation = cache.generation();
+  const bool isDirectory = getType() == dtype_t::Dir;
+  if (isDirectory) {
+    // A cached entry for this directory is current as long as no directory
+    // has moved or been removed since it was recorded, which is exactly what
+    // an unchanged generation says, so no lock is needed.
+    if (auto path = cache.find(ino_, generation)) {
+      if (cache.generation() == generation) {
+        return path;
+      }
+    }
+  }
+  // Names from this inode up to, but not including, the nearest directory
+  // whose path is cached, innermost first.
+  folly::small_vector<PathComponent, 2> names;
+  TreeInodePtr parent;
+  {
+    auto loc = location_.rlock();
+    if (loc->unlinked) {
+      return std::nullopt;
+    }
+    parent = loc->parent;
+    names.push_back(loc->name);
+  }
+  if (!parent) {
     return std::nullopt;
   }
-  return RelativePath(names);
+  const auto parentNumber = parent->ino_;
+
+  std::optional<RelativePath> path;
+  while (true) {
+    if (parent->ino_ == kRootNodeId) {
+      path = RelativePath();
+      break;
+    }
+    path = cache.find(parent->ino_, generation);
+    if (path) {
+      break;
+    }
+    auto loc = parent->location_.rlock();
+    if (loc->unlinked) {
+      return std::nullopt;
+    }
+    names.push_back(loc->name);
+    parent = loc->parent;
+    if (!parent) {
+      return std::nullopt;
+    }
+  }
+  for (auto iter = names.rbegin(); iter != names.rend(); ++iter) {
+    path = *path + *iter;
+  }
+
+  if (cache.generation() != generation) {
+    // A directory moved or was removed while this path was being built, so
+    // the cached prefix may not match the names read after it. Build the
+    // path from the locations alone.
+    std::vector<PathComponent> all;
+    if (!getPathHelper(all, true)) {
+      return std::nullopt;
+    }
+    return RelativePath(all);
+  }
+  if (names.size() > 1) {
+    cache.insert(parentNumber, path->dirname(), generation);
+  }
+  if (isDirectory) {
+    cache.insert(ino_, *path, generation);
+  }
+  return path;
 }
 
 RelativePath InodeBase::getUnsafePath() const {
@@ -276,6 +383,8 @@ std::string InodeBase::getLogPath() const {
 }
 
 void InodeBase::markUnlinkedAfterLoad() {
+  DirectoryLocationChange change{
+      mount_->getInodePathCache(), getType() == dtype_t::Dir};
   auto loc = location_.wlock();
   XDCHECK(!loc->unlinked);
   loc->unlinked = true;
@@ -289,6 +398,8 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
   XDCHECK(renameLock.isHeld(mount_));
 
   {
+    DirectoryLocationChange change{
+        mount_->getInodePathCache(), getType() == dtype_t::Dir};
     auto loc = location_.wlock();
     XDCHECK(!loc->unlinked);
     XDCHECK_EQ(loc->parent.get(), parent);
@@ -336,6 +447,8 @@ void InodeBase::updateLocation(
   XDCHECK(renameLock.isHeld(mount_));
   XDCHECK_EQ(mount_, newParent->mount_);
 
+  DirectoryLocationChange change{
+      mount_->getInodePathCache(), getType() == dtype_t::Dir};
   auto loc = location_.wlock();
   XDCHECK(!loc->unlinked);
   loc->parent = newParent;

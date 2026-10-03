@@ -292,6 +292,8 @@ EdenMount::EdenMount(
           serverState_->getReloadableConfig(),
           stats.copy(),
           serverState_->getEdenFsEventsLogger())},
+      inodePathCache_{
+          serverState_->getEdenConfig()->inodePathCacheSize.getValue()},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},

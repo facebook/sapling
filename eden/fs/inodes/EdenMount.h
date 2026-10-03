@@ -39,6 +39,7 @@
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/FsChannel.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/InodePathCache.h"
 #include "eden/fs/inodes/InodePressurePolicy.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
@@ -620,6 +621,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   std::weak_ptr<InodeMap> getInodeMapWeak() const {
     return inodeMap_;
+  }
+
+  InodePathCache& getInodePathCache() {
+    return inodePathCache_;
   }
 
   /**
@@ -1415,6 +1420,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::optional<bool> shouldUseNFSMount_{std::nullopt};
 
   std::shared_ptr<InodeMap> inodeMap_;
+  InodePathCache inodePathCache_;
 
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;
