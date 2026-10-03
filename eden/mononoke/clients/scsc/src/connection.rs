@@ -7,8 +7,8 @@
 
 //! Connection management.
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use std::collections::HashMap;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use std::net::IpAddr;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use std::sync::Arc;
