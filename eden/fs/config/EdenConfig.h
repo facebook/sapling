@@ -2602,6 +2602,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * How many directories' WAL files to keep open at once when
+   * experimental:overlay-cache-wal-files is on. A directory not in the
+   * cache pays an open and a close for its next append.
+   */
+  ConfigSetting<size_t> overlayWalFileCacheSize{
+      "overlay:wal-file-cache-size",
+      64,
+      this};
+
+  /**
    * Floor on the WAL compaction probability denominator: a directory's WAL
    * is compacted with probability 1/max(this, multiplier * entries), so
    * small directories are compacted far less often. 0 restores the

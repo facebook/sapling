@@ -12,6 +12,7 @@
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <gtest/gtest_prod.h>
+#include <algorithm>
 #include <array>
 #include <map>
 #include <memory>
@@ -44,10 +45,14 @@ class FsFileContentStore : public FileContentStore {
   explicit FsFileContentStore(
       AbsolutePathPiece localDir,
       bool directFileCreate = false,
-      bool cacheWalFiles = false)
+      bool cacheWalFiles = false,
+      size_t walFileCacheSize = kDefaultWalFileCacheSize)
       : localDir_{localDir},
         directFileCreate_{directFileCreate},
-        cacheWalFiles_{cacheWalFiles} {}
+        cacheWalFiles_{cacheWalFiles},
+        walFileCache_{std::in_place, walFileCacheSize} {}
+
+  static constexpr size_t kDefaultWalFileCacheSize = 64;
 
   /**
    * Initialize the FileContentStore, acquire the "info" file lock and load the
@@ -382,7 +387,7 @@ class FsFileContentStore : public FileContentStore {
   using CachedWalFilePtr = std::shared_ptr<CachedWalFile>;
 
   struct WalFileCache {
-    WalFileCache() : entries{64} {}
+    explicit WalFileCache(size_t size) : entries{std::max<size_t>(size, 1)} {}
 
     folly::EvictingCacheMap<InodeNumber, CachedWalFilePtr> entries;
   };
@@ -421,7 +426,7 @@ class FsFileContentStore : public FileContentStore {
    */
   folly::File dirFile_;
 
-  folly::Synchronized<WalFileCache> walFileCache_{std::in_place};
+  folly::Synchronized<WalFileCache> walFileCache_;
 };
 
 /**

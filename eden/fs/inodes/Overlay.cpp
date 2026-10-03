@@ -243,12 +243,14 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
     const std::shared_ptr<EdenFsEventsLogger>& logger,
     InodeCatalogType inodeCatalogType,
     bool directFileCreate,
-    bool cacheWalFiles) {
+    bool cacheWalFiles,
+    size_t walFileCacheSize) {
 #ifdef _WIN32
   (void)localDir;
   (void)logger;
   (void)directFileCreate;
   (void)cacheWalFiles;
+  (void)walFileCacheSize;
   return nullptr;
 #else
   // LegacyEphemeral only applies to the inode catalog, not the file content
@@ -256,7 +258,7 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
   if (inodeCatalogType == InodeCatalogType::Legacy ||
       inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     return std::make_unique<FsFileContentStore>(
-        localDir, directFileCreate, cacheWalFiles);
+        localDir, directFileCreate, cacheWalFiles, walFileCacheSize);
   } else if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     return std::make_unique<FsFileContentStoreDev>(localDir);
   } else {
@@ -334,7 +336,8 @@ Overlay::Overlay(
           logger,
           inodeCatalogType,
           config.experimentalOverlayDirectFileCreate.getValue(),
-          config.experimentalOverlayCacheWalFiles.getValue())},
+          config.experimentalOverlayCacheWalFiles.getValue(),
+          config.overlayWalFileCacheSize.getValue())},
       inodeCatalog_{makeInodeCatalog(
           localDir,
           inodeCatalogType,
