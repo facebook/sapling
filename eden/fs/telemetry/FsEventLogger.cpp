@@ -64,7 +64,7 @@ void FsEventLogger::log(Event event) {
   const auto& denominators =
       config->requestSamplingGroupDenominators.getValue();
   auto samplingGroup = folly::to_underlying(event.samplingGroup);
-  if (samplingGroup > denominators.size()) {
+  if (samplingGroup >= denominators.size()) {
     // sampling group does not exist
     return;
   }
