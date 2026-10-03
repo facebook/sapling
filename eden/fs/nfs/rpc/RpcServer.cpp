@@ -526,15 +526,40 @@ class RequestWriteCallback : public folly::AsyncWriter::WriteCallback {
 };
 } // namespace
 
+void RpcConnectionHandler::writeReply(folly::Try<ReplyResult> result) {
+  if (result.hasException()) {
+    XLOGF(
+        DFATAL,
+        "Unexpected exception in RPC response pipeline: {}",
+        folly::exceptionStr(result.exception()));
+    return;
+  }
+  auto [resultBuffer, tl] = std::move(result).value();
+  XLOG(DBG7, "About to write to the socket.");
+  auto* writeCb =
+      new RequestWriteCallback(std::move(tl), this, DestructorGuard(this));
+  sock_->writeChain(writeCb, std::move(resultBuffer));
+}
+
+void RpcConnectionHandler::finishRequest() {
+  XLOG(DBG7, "Request complete");
+  auto& state = state_.get();
+  state.pendingRequests -= 1;
+  XLOGF(DBG7, "{} more requests to process", state.pendingRequests);
+  if (state.pendingRequests == 0 && state.stopReason.has_value()) {
+    // We are shutting down and the last request has been handled, so signal
+    // that all pending requests have completed.
+    pendingRequestsComplete_.setValue();
+  }
+}
+
 void RpcConnectionHandler::dispatchAndReply(
     std::unique_ptr<folly::IOBuf> input,
     DestructorGuard guard,
     std::unique_ptr<RequestPermit> permit,
     RpcRequestTimeline timeline) {
-  makeImmediateFutureWith(
-      [&]() mutable
-          -> ImmediateFuture<
-              std::pair<std::unique_ptr<folly::IOBuf>, RpcRequestTimeline>> {
+  auto reply =
+      makeImmediateFutureWith([&]() mutable -> ImmediateFuture<ReplyResult> {
         folly::io::Cursor deser(input.get());
         rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
         timeline.procNumber = call.cbody.proc;
@@ -586,11 +611,8 @@ void RpcConnectionHandler::dispatchAndReply(
              input = std::move(input),
              iobufQueue = std::move(iobufQueue),
              call = std::move(call),
-             timeline =
-                 std::move(timeline)](folly::Try<folly::Unit> result) mutable
-                -> std::pair<
-                    std::unique_ptr<folly::IOBuf>,
-                    RpcRequestTimeline> {
+             timeline = std::move(timeline)](
+                folly::Try<folly::Unit> result) mutable -> ReplyResult {
               XLOG(DBG7, "Request done, sending response.");
               if (result.hasException()) {
                 if (auto* err =
@@ -615,50 +637,48 @@ void RpcConnectionHandler::dispatchAndReply(
               return {
                   finalizeFragment(std::move(iobufQueue)), std::move(timeline)};
             });
-      })
+      });
+
+  // Most requests complete inline, on this worker thread. Their reply only
+  // needs the hop to the EventBase that owns the socket; re-queueing them on
+  // the thread pool first, as the deferred path does, woke another worker for
+  // nothing. The permit is released when the request has been accounted for.
+  if (reply.isReady()) {
+    sock_->getEventBase()->runInEventBaseThread(
+        [this,
+         result = std::move(reply).getTry(),
+         guard = std::move(guard),
+         permit = std::move(permit)]() mutable {
+          // The request is accounted for even when the reply cannot be
+          // written, as the deferred path's ensure() guarantees; otherwise
+          // the pending count never reaches zero and shutdown waits forever.
+          try {
+            writeReply(std::move(result));
+          } catch (...) {
+            XLOGF(
+                WARN,
+                "failed to write an NFS reply: {}",
+                folly::exceptionStr(std::current_exception()));
+          }
+          finishRequest();
+        });
+    return;
+  }
+
+  std::move(reply)
       .semi()
-      // Make sure that all the computation occurs on the threadPool.
-      // TODO(xavierd): In the case where the ImmediateFuture is ready adding
-      // it to the thread pool is inefficient. In the case where this shows up
-      // in profiling, this can be slightly optimized by simply pushing the
-      // value to the EventBase directly.
+      // A deferred request is fulfilled on some other thread, such as a
+      // backing store importer; finish serializing its reply on the thread
+      // pool rather than there.
       .via(threadPool_.get())
       // Then move it back to the EventBase to write the result to the socket.
       .via(this->sock_->getEventBase())
-      .then(
-          [this](
-              folly::Try<
-                  std::pair<std::unique_ptr<folly::IOBuf>, RpcRequestTimeline>>
-                  result) {
-            // This code runs in the EventBase and thus must be as fast as
-            // possible to avoid unnecessary overhead in the EventBase. Always
-            // prefer duplicating work in the future above to adding code here.
-
-            if (result.hasException()) {
-              XLOGF(
-                  DFATAL,
-                  "Unexpected exception in RPC response pipeline: {}",
-                  folly::exceptionStr(result.exception()));
-            } else {
-              auto [resultBuffer, tl] = std::move(result).value();
-              XLOG(DBG7, "About to write to the socket.");
-              auto* writeCb = new RequestWriteCallback(
-                  std::move(tl), this, DestructorGuard(this));
-              sock_->writeChain(writeCb, std::move(resultBuffer));
-            }
-          })
+      .then([this](folly::Try<ReplyResult> result) {
+        writeReply(std::move(result));
+      })
       .ensure([this, guard = std::move(guard), permit = std::move(permit)]() {
         (void)permit; // held for RAII lifetime, released when request completes
-        XLOG(DBG7, "Request complete");
-        auto& state = this->state_.get();
-        state.pendingRequests -= 1;
-        XLOGF(DBG7, "{} more requests to process", state.pendingRequests);
-        if (state.pendingRequests == 0 && state.stopReason.has_value()) {
-          // We are shutting down and the last request has been
-          // handled, so signal that all pending requests have
-          // completed.
-          pendingRequestsComplete_.setValue();
-        }
+        finishRequest();
       });
 }
 

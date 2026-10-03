@@ -329,6 +329,20 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
       std::unique_ptr<RequestPermit> permit,
       RpcRequestTimeline timeline);
 
+  using ReplyResult =
+      std::pair<std::unique_ptr<folly::IOBuf>, RpcRequestTimeline>;
+
+  /**
+   * Write a finished reply to the socket. Must run on the EventBase thread.
+   */
+  void writeReply(folly::Try<ReplyResult> result);
+
+  /**
+   * Account for a request that has been answered, completing shutdown if it
+   * was the last one. Must run on the EventBase thread.
+   */
+  void finishRequest();
+
   /**
    * Reply to an rpc call with an error.
    * This function assumes that some data may have already been written to the
