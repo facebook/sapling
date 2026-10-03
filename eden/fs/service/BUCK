@@ -427,6 +427,7 @@ cpp_library(
         "//eden/fs/utils:proc_util",
         "//eden/fs/utils:source_location",
         "//fb303:service_data",
+        "//fb303:thread_cached_service_data",
         "//folly:conv",
         "//folly:exception",
         "//folly:file_util",

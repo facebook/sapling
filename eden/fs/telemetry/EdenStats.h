@@ -61,7 +61,7 @@ class EdenStats : public RefCounted {
   }
 
   template <typename T>
-  void increment(StatsGroupBase::Counter T::* counter, double value = 1.0) {
+  void increment(StatsGroupBase::Counter T::* counter, int64_t value = 1) {
     (getStatsForCurrentThread<T>().*counter).addValue(value);
   }
 

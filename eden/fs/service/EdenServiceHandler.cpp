@@ -20,6 +20,7 @@
 #include <utility>
 
 #include <fb303/ServiceData.h>
+#include <fb303/ThreadCachedServiceData.h>
 #include <fmt/format.h>
 #include <folly/Conv.h>
 #include <folly/Exception.h>
@@ -44,7 +45,6 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "ThriftGetObjectImpl.h"
-#include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/telemetry/Tracing.h"
 #include "eden/common/utils/Bug.h"
@@ -6621,6 +6621,7 @@ void EdenServiceHandler::getStatInfo(
     result.mountPointJournalInfo() = mountPointJournalInfo;
   }
 
+  fb303::ThreadCachedServiceData::get()->publishStats();
   auto counters = fb303::ServiceData::get()->getCounters();
   if (statsMask & eden_constants::STATS_COUNTERS_) {
     // Get the counters and set number of inodes unloaded by periodic unload
@@ -6685,6 +6686,30 @@ void EdenServiceHandler::getStatInfo(
 void EdenServiceHandler::flushStatsNow() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   server_->flushStatsNow();
+}
+
+void EdenServiceHandler::getCounters(std::map<std::string, int64_t>& result) {
+  fb303::ThreadCachedServiceData::get()->publishStats();
+  fb303::BaseService::getCounters(result);
+}
+
+void EdenServiceHandler::getRegexCounters(
+    std::map<std::string, int64_t>& result,
+    std::unique_ptr<std::string> regex) {
+  fb303::ThreadCachedServiceData::get()->publishStats();
+  fb303::BaseService::getRegexCounters(result, std::move(regex));
+}
+
+void EdenServiceHandler::getSelectedCounters(
+    std::map<std::string, int64_t>& result,
+    std::unique_ptr<std::vector<std::string>> keys) {
+  fb303::ThreadCachedServiceData::get()->publishStats();
+  fb303::BaseService::getSelectedCounters(result, std::move(keys));
+}
+
+int64_t EdenServiceHandler::getCounter(std::unique_ptr<std::string> key) {
+  fb303::ThreadCachedServiceData::get()->publishStats();
+  return fb303::BaseService::getCounter(std::move(key));
 }
 
 folly::SemiFuture<Unit>

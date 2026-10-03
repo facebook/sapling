@@ -503,6 +503,19 @@ class EdenServiceHandler
       InternalStats& result,
       std::unique_ptr<GetStatInfoParams> params) override;
 
+  /**
+   * The fb303 counter getters, preceded by a publish of the thread-cached
+   * counters so that a read sees increments made just before it.
+   */
+  void getCounters(std::map<std::string, int64_t>& result) override;
+  void getRegexCounters(
+      std::map<std::string, int64_t>& result,
+      std::unique_ptr<std::string> regex) override;
+  void getSelectedCounters(
+      std::map<std::string, int64_t>& result,
+      std::unique_ptr<std::vector<std::string>> keys) override;
+  int64_t getCounter(std::unique_ptr<std::string> key) override;
+
   void enableTracing() override;
   void disableTracing() override;
   void getTracePoints(std::vector<TracePoint>& result) override;
