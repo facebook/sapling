@@ -1608,6 +1608,9 @@ EdenServiceHandler::streamJournalChanged(
     apache::thrift::ServerStreamPublisher<JournalPosition> publisher;
     std::shared_ptr<std::atomic<bool>> disconnected;
     std::shared_ptr<std::atomic<bool>> shuttingDown;
+    // Set while a delayed notification is scheduled; further changes in the
+    // window are covered by it.
+    std::atomic<bool> notifyPending{false};
 
     explicit Publisher(
         apache::thrift::ServerStreamPublisher<JournalPosition> publisher,
@@ -1639,15 +1642,49 @@ EdenServiceHandler::streamJournalChanged(
       std::move(disconnected),
       std::move(shuttingDown));
 
+  // The position value sent below is intentionally undefined and should not
+  // be used. Instead, the subscriber should call getCurrentJournalPosition or
+  // getFilesChangedSince.
+  auto notify = [](Publisher& stream) {
+    if (stream.disconnected->load() || stream.shuttingDown->load()) {
+      return;
+    }
+    JournalPosition pos;
+    stream.publisher.next(pos);
+  };
+
   // Register onJournalChange with the journal subsystem, and assign
   // the subscriber id into the handle so that the callbacks can consume it.
+  // folly's timekeeper resolves microseconds, so a configured delay below
+  // that takes the immediate path rather than a sleep of zero.
+  const auto delay = std::chrono::duration_cast<std::chrono::microseconds>(
+      server_->getServerState()
+          ->getEdenConfig()
+          ->thriftJournalChangedDelay.getValue());
+  auto executor = server_->getServerState()->getThreadPool();
   handle->emplace(mountHandle.getEdenMount().getJournal().registerSubscriber(
-      [stream = std::move(stream)]() mutable {
-        JournalPosition pos;
-        // The value is intentionally undefined and should not be used. Instead,
-        // the subscriber should call getCurrentJournalPosition or
-        // getFilesChangedSince.
-        stream->publisher.next(pos);
+      [stream = std::move(stream), notify, delay = delay, executor]() mutable {
+        if (delay.count() == 0) {
+          notify(*stream);
+          return;
+        }
+        // A write burst can change the journal tens of thousands of times a
+        // second. One notification at the end of the window covers all of
+        // them, since the subscriber reads the journal position itself.
+        if (stream->notifyPending.exchange(true)) {
+          return;
+        }
+        folly::futures::sleep(delay)
+            .via(executor.get())
+            // The thread pool has no keep-alive support, so the task itself
+            // holds the executor until it has run.
+            .thenTry([stream, notify, executor](folly::Try<folly::Unit>&&) {
+              // Reset on every outcome. If the executor refused the task at
+              // shutdown the flag would otherwise stay set and starve the
+              // subscriber of every later notification.
+              stream->notifyPending.store(false);
+              notify(*stream);
+            });
       }));
 
   return std::move(streamAndPublisher.first);

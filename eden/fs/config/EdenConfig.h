@@ -515,6 +515,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * How long `streamJournalChanged` waits after a change before notifying a
+   * subscriber, so a burst of changes produces one notification per window
+   * rather than one per change. Zero notifies on every change.
+   */
+  ConfigSetting<std::chrono::nanoseconds> thriftJournalChangedDelay{
+      "thrift:journal-changed-delay",
+      std::chrono::milliseconds(5),
+      this};
+
+  /**
    * Whether Eden should use resource pools
    */
   ConfigSetting<bool> thriftUseResourcePools{
