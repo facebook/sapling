@@ -30,6 +30,7 @@
 #include <folly/ThreadLocal.h>
 #include <folly/coro/safe/NowTask.h>
 #include <folly/futures/SharedPromise.h>
+#include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/synchronization/LifoSem.h>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -805,6 +806,17 @@ class EdenServer : private TakeoverHandler {
 
   folly::Synchronized<BackingStoreMap> backingStores_;
   std::shared_ptr<ReloadableConfig> config_;
+
+  /**
+   * The thread that serves the NFS sockets: mountd, rpcbind and every
+   * mount's nfsd. NFS requests must not wait behind the main EventBase,
+   * whose periodic tasks can block it for tens of seconds (the backing
+   * store flush syncs the hgcache), and soft mounts turn such a stall into
+   * ETIMEDOUT for the application. Declared before mountPoints_ and
+   * serverState_: a mount's NFS channel and the servers are destroyed on
+   * this thread, so it must outlive them.
+   */
+  folly::ScopedEventBaseThread nfsEventBaseThread_{"NfsEventBase"};
 
   std::shared_ptr<folly::Synchronized<MountMap>> mountPoints_;
   std::shared_ptr<folly::Synchronized<

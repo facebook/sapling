@@ -83,7 +83,7 @@ class ServerState {
       std::shared_ptr<IScribeLogger> scribeLogger,
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       const EdenConfig& initialConfig,
-      folly::EventBase* mainEventBase,
+      folly::EventBase* nfsEventBase,
       std::shared_ptr<Notifier> notifier,
       bool enableFaultInjection = false,
       std::shared_ptr<InodeAccessLogger> inodeAccessLogger = nullptr,

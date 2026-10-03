@@ -28,6 +28,7 @@
 #include <fb303/ServiceData.h>
 #include <fmt/core.h>
 #include <folly/Exception.h>
+#include <folly/ExceptionWrapper.h>
 #include <folly/FileUtil.h>
 #include <folly/Indestructible.h>
 #include <folly/ScopeGuard.h>
@@ -194,6 +195,28 @@ using namespace std::chrono_literals;
 namespace {
 
 using namespace facebook::eden;
+
+/**
+ * Run fn on evb and wait for it, or run it inline when already on evb. The
+ * EventBase runs fn inside a noexcept task, so an exception from fn would end
+ * the process; this rethrows it to the caller instead. The wait only returns
+ * once fn has run: an EventBase that is being destroyed drains its queue by
+ * running what is left in it.
+ */
+template <typename Fn>
+void runInEventBaseThreadAndRethrow(folly::EventBase* evb, Fn&& fn) {
+  folly::exception_wrapper error;
+  evb->runImmediatelyOrRunInEventBaseThreadAndWait([&] {
+    try {
+      fn();
+    } catch (...) {
+      error = folly::exception_wrapper{std::current_exception()};
+    }
+  });
+  if (error) {
+    error.throw_exception();
+  }
+}
 
 constexpr auto kMountHealthCheckTimeout = std::chrono::seconds{5};
 
@@ -777,7 +800,7 @@ EdenServer::EdenServer(
           std::move(scribeLogger),
           config_,
           *edenConfig,
-          mainEventBase_,
+          nfsEventBaseThread_.getEventBase(),
           getPlatformNotifier(config_, edenFsEventsLogger_, version),
           FLAGS_enable_fault_injection,
           nullptr, // inodeAccessLogger — use default
@@ -1649,7 +1672,8 @@ ImmediateFuture<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   if (auto nfsServer = serverState_->getNfsServer();
       nfsServer && takeoverData.mountdAcceptsPaused) {
     XLOG(DBG7, "Resuming mountd accepts after takeover recovery");
-    nfsServer->resumeMountdAccepting();
+    runInEventBaseThreadAndRethrow(
+        nfsServer->getEventBase(), [&] { nfsServer->resumeMountdAccepting(); });
   }
 
   // Remount our mounts from our prepared takeoverData
@@ -1827,10 +1851,15 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   }
 
   if (auto nfsServer = serverState_->getNfsServer()) {
+    // The sockets belong to the NFS EventBase, so they are set up there.
+    auto* nfsEventBase = nfsServer->getEventBase();
 #ifndef _WIN32
     if (doingTakeover && takeoverData.mountdServerSocket.has_value()) {
       XLOG(DBG7, "Initializing mountd from existing socket");
-      nfsServer->initialize(std::move(takeoverData.mountdServerSocket.value()));
+      runInEventBaseThreadAndRethrow(nfsEventBase, [&] {
+        nfsServer->initialize(
+            std::move(takeoverData.mountdServerSocket.value()));
+      });
     } else {
 #endif
       XLOG(DBG7, "Initializing mountd from scratch");
@@ -1838,9 +1867,11 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
       if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
         unixSocketPath = edenDir_.getMountdSocketPath();
       }
-      nfsServer->initialize(
-          makeNfsSocket(std::move(unixSocketPath)),
-          serverState_->getEdenConfig()->registerMountd.getValue());
+      runInEventBaseThreadAndRethrow(nfsEventBase, [&] {
+        nfsServer->initialize(
+            makeNfsSocket(std::move(unixSocketPath)),
+            serverState_->getEdenConfig()->registerMountd.getValue());
+      });
 #ifndef _WIN32
     }
 #endif
@@ -3261,7 +3292,11 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
             auto takeover = std::move(result).value();
             takeover.lockFile = edenDir_.extractLock();
             takeover.thriftSocket = std::move(socket);
-            return via(getMainEventBase())
+            // Mountd is stopped on the NFS EventBase, which owns its
+            // sockets; the rest of the preparation stays on the main one.
+            auto& nfsServer = this->getServerState()->getNfsServer();
+            return via(nfsServer ? nfsServer->getEventBase()
+                                 : getMainEventBase())
                 .thenValue(
                     [this](auto&&)
                         -> folly::SemiFuture<std::optional<folly::File>> {
@@ -3276,6 +3311,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
                         return std::nullopt;
                       }
                     })
+                .via(getMainEventBase())
                 .thenTry(
                     [this, takeover = std::move(takeover)](
                         folly::Try<std::optional<folly::File>>&&

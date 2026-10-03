@@ -80,7 +80,7 @@ ServerState::ServerState(
     std::shared_ptr<IScribeLogger> scribeLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
-    [[maybe_unused]] folly::EventBase* mainEventBase,
+    [[maybe_unused]] folly::EventBase* nfsEventBase,
     std::shared_ptr<Notifier> notifier,
     bool enableFaultDetection,
     std::shared_ptr<InodeAccessLogger> inodeAccessLogger,
@@ -102,7 +102,7 @@ ServerState::ServerState(
           initialConfig.enableNfsServer.getValue()
               ? std::make_shared<NfsServer>(
                     privHelper_.get(),
-                    mainEventBase,
+                    nfsEventBase,
                     fsChannelThreadPool_,
                     initialConfig.runInternalRpcbind.getValue(),
                     edenFsEventsLogger_,
