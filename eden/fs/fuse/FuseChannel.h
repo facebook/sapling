@@ -961,6 +961,10 @@ class FuseChannel final : public FsChannel {
       uint64_t requestId,
       const fuse_in_header& header,
       std::optional<int64_t> result);
+  void finishRequest(
+      uint64_t requestId,
+      const fuse_in_header& header,
+      const std::optional<int64_t>& result);
   void stopInvalidationThread();
   void sendInvalidation(InvalidationEntry& entry);
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);

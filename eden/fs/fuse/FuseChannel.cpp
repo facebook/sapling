@@ -1623,6 +1623,31 @@ void FuseChannel::recordRequestFinish(
   }
 }
 
+void FuseChannel::finishRequest(
+    uint64_t requestId,
+    const fuse_in_header& header,
+    const std::optional<int64_t>& result) {
+  recordRequestFinish(requestId, header, result);
+
+  // We may be complete; check to see if all requests are
+  // done and whether there are any threads remaining.
+  auto state = state_.wlock();
+  XCHECK_NE(state->pendingRequests, 0u) << "pendingRequests double decrement";
+  if (--state->pendingRequests == 0) {
+    // If workers are still running, wake transport-specific waits
+    // so they can observe that shutdown has fully drained. If they
+    // already stopped, completing the final request completes the
+    // session immediately.
+    if (state->stopReason != StopReason::RUNNING &&
+        state->stoppedThreads != effectiveWorkerThreadCount_) {
+      requestTransportStopWakeup();
+    }
+    if (state->stoppedThreads == effectiveWorkerThreadCount_) {
+      sessionComplete(std::move(state));
+    }
+  }
+}
+
 TraceDetailedArgumentsHandle FuseChannel::traceDetailedArguments() const {
   // We could implement something fancier here that just copies the shared_ptr
   // into a handle struct that increments upon taking ownership and decrements
@@ -2382,75 +2407,76 @@ void FuseChannel::dispatchRequest(
               rendered);
         })());
 
-        request
-            ->catchErrors(
-                folly::makeFutureWith([&] {
-                  auto stats = dispatcher_->getStats().copy();
-                  request->startRequest(
-                      stats.copy(),
-                      handlerEntry->duration,
-                      *(liveRequestWatches_.get()));
-                  auto fut = (this->*handlerEntry->handler)(
-                      *request, request->getReq(), arg);
-                  auto incrementDispatchCounter =
-                      [&stats](
-                          FuseStats::CounterPtr aggregateCounter,
-                          FuseStats::CounterPtr opcodeCounter) {
-                        stats->increment(aggregateCounter);
-                        if (opcodeCounter) {
-                          stats->increment(opcodeCounter);
-                        }
-                      };
-                  if (fut.isReady()) {
-                    incrementDispatchCounter(
-                        &FuseStats::dispatchImmediate,
-                        handlerEntry->dispatchImmediate);
-                    // In the case where the handler executed immediately,
-                    // let's avoid an expensive context switch by simply
-                    // extracting the value from the future.
-                    return folly::makeFuture<folly::Unit>(std::move(fut).get());
-                  } else {
-                    incrementDispatchCounter(
-                        &FuseStats::dispatchDeferred,
-                        handlerEntry->dispatchDeferred);
-                    return std::move(fut).semi().via(threadPool_.get());
-                  }
-                }).ensure([request] {
-                  }).within(requestTimeout_),
-                notifier_.get(),
-                dispatcher_->getStats().copy(),
-                handlerEntry->countSuccessful,
-                handlerEntry->countFailure)
-            .ensure([this,
-                     request,
-                     requestId,
-                     headerCopy,
-                     requestPermit = std::move(requestPermit)] {
-              recordRequestFinish(requestId, headerCopy, request->getResult());
-
-              // We may be complete; check to see if all requests are
-              // done and whether there are any threads remaining.
-              auto state = state_.wlock();
-              XCHECK_NE(state->pendingRequests, 0u)
-                  << "pendingRequests double decrement";
-              if (--state->pendingRequests == 0) {
-                // If workers are still running, wake transport-specific waits
-                // so they can observe that shutdown has fully drained. If they
-                // already stopped, completing the final request completes the
-                // session immediately.
-                if (state->stopReason != StopReason::RUNNING &&
-                    state->stoppedThreads != effectiveWorkerThreadCount_) {
-                  requestTransportStopWakeup();
-                }
-                if (state->stoppedThreads == effectiveWorkerThreadCount_) {
-                  sessionComplete(std::move(state));
-                }
+        auto stats = dispatcher_->getStats().copy();
+        auto fut = [&]() -> ImmediateFuture<folly::Unit> {
+          try {
+            request->startRequest(
+                stats.copy(),
+                handlerEntry->duration,
+                *(liveRequestWatches_.get()));
+            return (this->*handlerEntry->handler)(
+                *request, request->getReq(), arg);
+          } catch (...) {
+            return folly::Try<folly::Unit>{
+                folly::exception_wrapper{std::current_exception()}};
+          }
+        }();
+        auto incrementDispatchCounter =
+            [&stats](
+                FuseStats::CounterPtr aggregateCounter,
+                FuseStats::CounterPtr opcodeCounter) {
+              stats->increment(aggregateCounter);
+              if (opcodeCounter) {
+                stats->increment(opcodeCounter);
               }
-
-              // The requestPermit will automatically release the permit when
-              // it's destroyed at the end of this lambda, so we don't need an
-              // explicit releasePermit() call
-            });
+            };
+        if (fut.isReady()) {
+          incrementDispatchCounter(
+              &FuseStats::dispatchImmediate, handlerEntry->dispatchImmediate);
+          // Most requests complete inline, so finish them here rather than
+          // through the folly::Future chain the deferred path needs for its
+          // executor hop and timeout. The request permit is released when it
+          // goes out of scope below, after the request has finished.
+          try {
+            request->handleResult(
+                std::move(fut).getTry(),
+                notifier_.get(),
+                stats,
+                handlerEntry->countSuccessful,
+                handlerEntry->countFailure);
+          } catch (...) {
+            // Replying failed, typically because the kernel already dropped
+            // an interrupted request. handleResult counted the failure
+            // before it replied; the request must still be accounted for
+            // below so the session can drain.
+            XLOGF(
+                DBG3,
+                "failed to reply to FUSE request: {}",
+                folly::exceptionStr(std::current_exception()));
+          }
+          finishRequest(requestId, headerCopy, request->getResult());
+        } else {
+          incrementDispatchCounter(
+              &FuseStats::dispatchDeferred, handlerEntry->dispatchDeferred);
+          request
+              ->catchErrors(
+                  std::move(fut)
+                      .semi()
+                      .via(threadPool_.get())
+                      .ensure([request] {})
+                      .within(requestTimeout_),
+                  notifier_.get(),
+                  stats.copy(),
+                  handlerEntry->countSuccessful,
+                  handlerEntry->countFailure)
+              .ensure([this,
+                       request,
+                       requestId,
+                       headerCopy,
+                       requestPermit = std::move(requestPermit)] {
+                finishRequest(requestId, headerCopy, request->getResult());
+              });
+        }
         break;
       }
 

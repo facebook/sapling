@@ -77,6 +77,39 @@ class FuseRequestContext : public RequestContext {
   const fuse_in_header& getReq() const;
 
   /**
+   * Count the outcome of a request and reply with the appropriate error if
+   * it failed.
+   */
+  void handleResult(
+      folly::Try<folly::Unit>&& try_,
+      Notifier* FOLLY_NULLABLE notifier,
+      const EdenStatsPtr& stats,
+      StatsGroupBase::Counter FuseStats::* countSuccessful,
+      StatsGroupBase::Counter FuseStats::* countFailure) {
+    if (try_.hasException()) {
+      if (stats && countFailure) {
+        stats->increment(countFailure);
+      }
+      if (auto* futureTimeoutErr =
+              try_.tryGetExceptionObject<folly::FutureTimeout>()) {
+        timeoutErrorHandler(*futureTimeoutErr, notifier);
+      } else if (
+          auto* systemErr = try_.tryGetExceptionObject<std::system_error>()) {
+        systemErrorHandler(*systemErr, notifier);
+      } else if (auto* ex = try_.tryGetExceptionObject<std::exception>()) {
+        genericErrorHandler(*ex, notifier);
+      } else {
+        genericErrorHandler(
+            std::runtime_error{"unknown exception type"}, notifier);
+      }
+    } else {
+      if (stats && countSuccessful) {
+        stats->increment(countSuccessful);
+      }
+    }
+  }
+
+  /**
    * Append error handling clauses to a future chain. These clauses result in
    * reporting a fuse request error back to the kernel.
    */
@@ -86,34 +119,15 @@ class FuseRequestContext : public RequestContext {
       EdenStatsPtr stats,
       StatsGroupBase::Counter FuseStats::* countSuccessful,
       StatsGroupBase::Counter FuseStats::* countFailure) {
-    return std::move(fut).thenTryInline([this,
-                                         notifier,
-                                         stats = std::move(stats),
-                                         countSuccessful,
-                                         countFailure](
-                                            folly::Try<folly::Unit>&& try_) {
-      if (try_.hasException()) {
-        if (stats && countFailure) {
-          stats->increment(countFailure);
-        }
-        if (auto* futureTimeoutErr =
-                try_.tryGetExceptionObject<folly::FutureTimeout>()) {
-          timeoutErrorHandler(*futureTimeoutErr, notifier);
-        } else if (
-            auto* systemErr = try_.tryGetExceptionObject<std::system_error>()) {
-          systemErrorHandler(*systemErr, notifier);
-        } else if (auto* ex = try_.tryGetExceptionObject<std::exception>()) {
-          genericErrorHandler(*ex, notifier);
-        } else {
-          genericErrorHandler(
-              std::runtime_error{"unknown exception type"}, notifier);
-        }
-      } else {
-        if (stats && countSuccessful) {
-          stats->increment(countSuccessful);
-        }
-      }
-    });
+    return std::move(fut).thenTryInline(
+        [this,
+         notifier,
+         stats = std::move(stats),
+         countSuccessful,
+         countFailure](folly::Try<folly::Unit>&& try_) {
+          handleResult(
+              std::move(try_), notifier, stats, countSuccessful, countFailure);
+        });
   }
 
   void systemErrorHandler(
