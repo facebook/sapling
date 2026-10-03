@@ -376,6 +376,8 @@ Overlay::Overlay(
       inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     dirPreallocPoolSize_ = config.overlayDirPreallocPoolSize.getValue();
   }
+  preallocPool_.reserve(filePreallocPoolSize_);
+  preallocDirPool_.reserve(dirPreallocPoolSize_);
 #endif
 }
 
@@ -1522,8 +1524,6 @@ void Overlay::preallocThreadLoop() {
           preallocBroken_ ? 0 : filePreallocPoolSize_ - preallocPool_.size();
       wantDirs = dirPreallocPoolSize_ - preallocDirPool_.size();
     }
-    std::vector<PreparedFile> fileBatch;
-    fileBatch.reserve(wantFiles);
     for (size_t i = 0; i < wantFiles; ++i) {
       // If creation fails below, this number stays consumed; the inode
       // number space is 64 bits, so the gap is harmless.
@@ -1552,7 +1552,10 @@ void Overlay::preallocThreadLoop() {
           }
           break;
         }
-        fileBatch.push_back(PreparedFile{number, std::move(*file)});
+        // A whole batch takes milliseconds, long enough for claimers to
+        // drain the pool, so each entry is published as soon as it exists.
+        std::lock_guard<std::mutex> guard{preallocMutex_};
+        preallocPool_.push_back(PreparedFile{number, std::move(*file)});
       } catch (const std::exception& ex) {
         // Likely ENOSPC or an unusable overlay directory. Keep what we
         // have and retry after a delay instead of spinning.
@@ -1565,15 +1568,14 @@ void Overlay::preallocThreadLoop() {
         break;
       }
     }
-    std::vector<InodeNumber> dirBatch;
-    dirBatch.reserve(wantDirs);
     for (size_t i = 0; i < wantDirs; ++i) {
       auto number = allocateInodeNumber();
       try {
         // Publish a complete record before making its inode number claimable.
         inodeCatalog_->saveOverlayEntries(
             number, 0, [](auto) {}, /*crashSafe=*/true);
-        dirBatch.push_back(number);
+        std::lock_guard<std::mutex> guard{preallocMutex_};
+        preallocDirPool_.push_back(number);
       } catch (const std::exception& ex) {
         XLOGF(
             WARN,
@@ -1602,11 +1604,6 @@ void Overlay::preallocThreadLoop() {
       if (filePoolBroken) {
         preallocBroken_ = true;
       }
-      for (auto& entry : fileBatch) {
-        preallocPool_.push_back(std::move(entry));
-      }
-      preallocDirPool_.insert(
-          preallocDirPool_.end(), dirBatch.begin(), dirBatch.end());
       allPoolsInactive = (filePreallocPoolSize_ == 0 || preallocBroken_) &&
           dirPreallocPoolSize_ == 0;
     }
