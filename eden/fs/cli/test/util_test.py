@@ -21,6 +21,19 @@ from .. import util
 
 
 class UtilTest(unittest.TestCase):
+    def test_is_edenfs_mount(self) -> None:
+        self.assertTrue(util.is_edenfs_mount(b"edenfs:", b"nfs"))
+        self.assertTrue(util.is_edenfs_mount(b"edenfs:", b"edenfs:"))
+        # An NFS checkout served over a Unix domain socket on macOS.
+        self.assertTrue(
+            util.is_edenfs_mount(
+                b"</Users/me/.eden/clients/repo/nfsd.socket>:/Users/me/repo",
+                b"edenfs:",
+            )
+        )
+        self.assertFalse(util.is_edenfs_mount(b"/dev/disk3s5", b"apfs"))
+        self.assertFalse(util.is_edenfs_mount(b"server:/export", b"nfs"))
+
     def test_missing_backing_repo_does_not_block_edensparse_migration(self) -> None:
         backing_repo = MagicMock()
         backing_repo._run_hg.side_effect = FileNotFoundError("backing repo deleted")

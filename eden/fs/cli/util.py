@@ -809,6 +809,17 @@ def is_edenfs_mount_device(device: bytes) -> bool:
     return device == b"eden" or device == b"edenfs" or device.startswith(b"edenfs:")
 
 
+def is_edenfs_mount(device: bytes, vfstype: bytes) -> bool:
+    """Whether a mount table entry is an EdenFS checkout.
+
+    On macOS the kernel replaces the device of an NFS mount served over a
+    Unix domain socket with the socket path, so the device alone does not
+    identify EdenFS there; the filesystem type, which EdenFS overrides to
+    "edenfs:", still does.
+    """
+    return is_edenfs_mount_device(device) or vfstype == b"edenfs:"
+
+
 def get_eden_cli_cmd(argv: List[str] = sys.argv) -> List[str]:
     # We likely only need to do this on windows to make sure we run the
     # edenfsctl in a python environment that isn't frozen. But this should

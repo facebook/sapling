@@ -35,7 +35,7 @@ from typing import (
     Union,
 )
 
-from eden.fs.cli import proc_utils as proc_utils_mod, util
+from eden.fs.cli import mtab, proc_utils as proc_utils_mod, util
 from eden.fs.service.eden.thrift_clients import EdenService
 from eden.fs.service.eden.thrift_types import MountInfo, MountState
 from eden.thrift import client
@@ -964,9 +964,9 @@ class EdenFS:
         elif sys.platform == "darwin":
             allmounts = subprocess.check_output("mount")
             return any(
-                mount_path_bytes == line.split(b" ")[2]
-                for line in allmounts.split(b"\n")
-                if util.is_edenfs_mount_device(line.split(b" ")[0])
+                mount_path_bytes == mount.mount_point
+                for mount in mtab.parse_macos_mount_output(allmounts)
+                if util.is_edenfs_mount(mount.device, mount.vfstype)
             )
         else:
             raise Exception(f"Unsupported platform: {sys.platform}")
