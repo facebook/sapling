@@ -71,6 +71,15 @@ bool sigbus_try_read(const void* src, size_t len) {
   }
 }
 
+bool sigbus_try_store_u64(void* dst, uint64_t value) {
+  __try {
+    *(volatile uint64_t*)dst = value;
+    return true;
+  } __except (sigbus_memops_filter(GetExceptionCode())) {
+    return false;
+  }
+}
+
 #elif SIGBUS_MEMOPS_HAS_PROTECTION
 
 #include <pthread.h>
@@ -90,6 +99,8 @@ extern void sigbus_try_memcpy_fault_pc(void);
 extern void sigbus_try_memcpy_recover_pc(void);
 extern void sigbus_try_read_fault_pc(void);
 extern void sigbus_try_read_recover_pc(void);
+extern void sigbus_try_store_u64_fault_pc(void);
+extern void sigbus_try_store_u64_recover_pc(void);
 #if SIGBUS_MEMOPS_ARCH_AARCH64
 // Only AArch64 splits the destination write into its own protected
 // instruction; x86-64 faults on the same `rep movsb` for both accesses.
@@ -195,6 +206,11 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
     registers[REG_RIP] = (greg_t)(uintptr_t)&sigbus_try_read_recover_pc;
     return true;
   }
+
+  if (pc == (uintptr_t)&sigbus_try_store_u64_fault_pc) {
+    registers[REG_RIP] = (greg_t)(uintptr_t)&sigbus_try_store_u64_recover_pc;
+    return true;
+  }
 #elif SIGBUS_MEMOPS_ARCH_AARCH64
 #if SIGBUS_MEMOPS_DARWIN_AARCH64
   arm_thread_state64_t* registers = &context->uc_mcontext->__ss;
@@ -209,6 +225,12 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
     arm_thread_state64_set_pc_fptr(*registers, &sigbus_try_read_recover_pc);
     return true;
   }
+
+  if (pc == &sigbus_try_store_u64_fault_pc) {
+    arm_thread_state64_set_pc_fptr(
+        *registers, &sigbus_try_store_u64_recover_pc);
+    return true;
+  }
 #else
   uintptr_t pc = (uintptr_t)context->uc_mcontext.pc;
   if (pc == (uintptr_t)&sigbus_try_memcpy_fault_pc ||
@@ -219,6 +241,11 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* opaque) {
 
   if (pc == (uintptr_t)&sigbus_try_read_fault_pc) {
     context->uc_mcontext.pc = (uintptr_t)&sigbus_try_read_recover_pc;
+    return true;
+  }
+
+  if (pc == (uintptr_t)&sigbus_try_store_u64_fault_pc) {
+    context->uc_mcontext.pc = (uintptr_t)&sigbus_try_store_u64_recover_pc;
     return true;
   }
 #endif
@@ -272,6 +299,11 @@ bool sigbus_try_read(const void* src, size_t len) {
   for (size_t i = 0; i < len; ++i) {
     (void)bytes[i];
   }
+  return true;
+}
+
+bool sigbus_try_store_u64(void* dst, uint64_t value) {
+  *(volatile uint64_t*)dst = value;
   return true;
 }
 

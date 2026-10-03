@@ -33,5 +33,8 @@ int main(void) {
   CHECK(memcmp(destination, source, sizeof(source)) == 0);
   CHECK(sigbus_try_read(source, sizeof(source)));
   CHECK(sigbus_try_read(NULL, 0));
+  uint64_t slot = 0;
+  CHECK(sigbus_try_store_u64(&slot, 0x0102030405060708ull));
+  CHECK(slot == 0x0102030405060708ull);
   return 0;
 }

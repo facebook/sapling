@@ -13,6 +13,7 @@
 #endif
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +73,21 @@ bool sigbus_try_handle(int signo, siginfo_t* info, void* ucontext);
  * `src` and `dst` must not overlap.
  */
 bool sigbus_try_memcpy(void* dst, const void* src, size_t len);
+
+/*
+ * Store the 8-byte `value` at `dst` with SIGBUS protection, as one naturally
+ * aligned store, so that `dst` holds either its previous contents or `value`
+ * afterwards and never a mix of the two. `dst` must be 8-byte aligned.
+ *
+ * On supported targets, returns false if the store raises a recognized
+ * synchronous SIGBUS; nothing is written in that case.
+ *
+ * On Windows, the equivalent exception is `EXCEPTION_IN_PAGE_ERROR`.
+ * `EXCEPTION_ACCESS_VIOLATION` is not handled.
+ *
+ * On unsupported targets, the store is unprotected.
+ */
+bool sigbus_try_store_u64(void* dst, uint64_t value);
 
 /*
  * Read `len` bytes starting at `src` with SIGBUS protection.

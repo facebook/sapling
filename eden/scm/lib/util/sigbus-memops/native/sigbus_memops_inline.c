@@ -54,6 +54,27 @@ sigbus_try_memcpy(void* dst, const void* src, size_t len) {
   return result;
 }
 
+SIGBUS_MEMOPS_NOINLINE bool sigbus_try_store_u64(void* dst, uint64_t value) {
+  int result;
+
+  __asm__ volatile(
+      ".globl sigbus_try_store_u64_fault_pc\n"
+      ".hidden sigbus_try_store_u64_fault_pc\n"
+      "sigbus_try_store_u64_fault_pc:\n"
+      "movq %[value], (%[dst])\n"
+      "movl $1, %k[result]\n"
+      "jmp 1f\n"
+      ".globl sigbus_try_store_u64_recover_pc\n"
+      ".hidden sigbus_try_store_u64_recover_pc\n"
+      "sigbus_try_store_u64_recover_pc:\n"
+      "xorl %k[result], %k[result]\n"
+      "1:\n"
+      : [result] "=&r"(result)
+      : [dst] "r"(dst), [value] "r"(value)
+      : "cc", "memory");
+  return result;
+}
+
 SIGBUS_MEMOPS_NOINLINE bool sigbus_try_read(const void* src, size_t len) {
   int result;
   const void* src_cursor = src;
@@ -121,6 +142,23 @@ sigbus_try_memcpy(void* dst, const void* src, size_t len) {
       :
       : "x3", "cc", "memory");
   return (bool)dst_and_result;
+}
+
+SIGBUS_MEMOPS_NOINLINE bool sigbus_try_store_u64(void* dst, uint64_t value) {
+  uintptr_t result;
+
+  __asm__ volatile(
+      SIGBUS_MEMOPS_ASM_LABEL(sigbus_try_store_u64_fault_pc)
+      "str %[value], [%[dst]]\n"
+      "mov %w[result], 1\n"
+      "b 1f\n"
+      SIGBUS_MEMOPS_ASM_LABEL(sigbus_try_store_u64_recover_pc)
+      "mov %w[result], wzr\n"
+      "1:\n"
+      : [result] "=&r"(result)
+      : [dst] "r"(dst), [value] "r"(value)
+      : "memory");
+  return (bool)result;
 }
 
 SIGBUS_MEMOPS_NOINLINE bool sigbus_try_read(const void* src, size_t len) {

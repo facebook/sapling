@@ -25,6 +25,9 @@ unsafe extern "C" {
     #[link_name = "sigbus_try_read"]
     fn ffi_try_read(src: *const c_void, len: usize) -> bool;
 
+    #[link_name = "sigbus_try_store_u64"]
+    fn ffi_try_store_u64(dst: *mut c_void, value: u64) -> bool;
+
     #[cfg(not(windows))]
     #[link_name = "sigbus_try_handle"]
     fn ffi_try_handle(signo: c_int, info: *mut c_void, ucontext: *mut c_void) -> bool;
@@ -90,8 +93,28 @@ pub unsafe fn try_read(src: *const u8, len: usize) -> bool {
     unsafe { ffi_try_read(src.cast(), len) }
 }
 
-/// Tries to handle a synchronous SIGBUS raised by [`try_memcpy`] or
-/// [`try_read`], or an unhandled BUS_ADRERR when retry budget remains.
+/// Tries to store `value` at `dst` as one aligned 8-byte store, so that `dst`
+/// holds either its previous contents or `value` afterwards, never a mix.
+///
+/// Returns `false` if a recognized synchronous SIGBUS interrupts the store;
+/// nothing is written in that case.
+///
+/// # Safety
+///
+/// `dst` must be 8-byte aligned and identify a mapped range of 8 bytes. On
+/// protected platforms, [`install_handler`] must have been called or the
+/// process SIGBUS handler must call [`try_handle`] before delegating to its
+/// fallback handler.
+pub unsafe fn try_store_u64(dst: *mut u64, value: u64) -> bool {
+    // SAFETY: By this function's contract, `dst` is an aligned, mapped
+    // 8-byte location. Casting to `c_void` preserves its address and
+    // provenance.
+    unsafe { ffi_try_store_u64(dst.cast(), value) }
+}
+
+/// Tries to handle a synchronous SIGBUS raised by [`try_memcpy`],
+/// [`try_store_u64`] or [`try_read`], or an unhandled BUS_ADRERR when retry
+/// budget remains.
 ///
 /// # Safety
 ///
@@ -125,6 +148,11 @@ mod tests {
         assert!(unsafe { try_read(source.as_ptr(), source.len()) });
         // SAFETY: A zero-length read does not access the pointer.
         assert!(unsafe { try_read(std::ptr::null(), 0) });
+
+        let mut slot: u64 = 0;
+        // SAFETY: `slot` is an aligned, writable u64.
+        assert!(unsafe { try_store_u64(&mut slot, 0x1122_3344_5566_7788) });
+        assert_eq!(slot, 0x1122_3344_5566_7788);
     }
 
     #[cfg(unix)]

@@ -101,6 +101,9 @@ int main(int argc, char** argv) {
   CHECK(memcmp(destination, source, sizeof(source)) == 0);
   CHECK(sigbus_try_read(destination, sizeof(destination)));
   CHECK(sigbus_try_read(NULL, 0));
+  uint64_t slot = 0;
+  CHECK(sigbus_try_store_u64(&slot, 0x1122334455667788ull));
+  CHECK(slot == 0x1122334455667788ull);
   CHECK(sigbus_test_raise_in_page_error());
   return 0;
 #else
@@ -181,6 +184,11 @@ int main(int argc, char** argv) {
   CHECK(!sigbus_try_memcpy(&source_fault_destination, mapping + page_size, 1));
   CHECK(!sigbus_try_read(mapping + page_size, 1));
   CHECK(!sigbus_try_read(mapping + page_size - 8, 16));
+
+  const uint64_t stored = 0x1122334455667788ull;
+  CHECK(sigbus_try_store_u64(mapping + page_size - 8, stored));
+  CHECK(memcmp(mapping + page_size - 8, &stored, sizeof(stored)) == 0);
+  CHECK(!sigbus_try_store_u64(mapping + page_size, stored));
 
   CHECK(sigaction(SIGBUS, &old_action, NULL) == 0);
   CHECK(munmap(mapping, 2 * page_size) == 0);
