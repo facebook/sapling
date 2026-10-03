@@ -1055,6 +1055,7 @@ FuseChannel::FuseChannel(
       dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       edenFsEventsLogger_(edenFsEventsLogger),
+      fsEventLogger_(std::move(fsEventLogger)),
       errorLogger_(errorLogger),
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
@@ -1115,47 +1116,6 @@ FuseChannel::FuseChannel(
   installSignalHandler();
 
   initializeInflightRequestsRateLimiter(maximumInFlightRequests);
-
-  traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
-      "FuseChannel request tracking",
-      [this,
-       fsEventLogger = std::move(fsEventLogger)](const FuseTraceEvent& event) {
-        switch (event.getType()) {
-          case FuseTraceEvent::START: {
-            auto state = telemetryState_.wlock();
-            auto [iter, inserted] = state->requests.emplace(
-                event.getUnique(),
-                OutstandingRequest{
-                    event.getUnique(),
-                    event.getRequest(),
-                    event.monotonicTime});
-            XCHECK(inserted) << "duplicate fuse start event";
-            break;
-          }
-          case FuseTraceEvent::FINISH: {
-            std::chrono::nanoseconds durationNs{0};
-            {
-              auto state = telemetryState_.wlock();
-              auto it = state->requests.find(event.getUnique());
-              XCHECK(it != state->requests.end())
-                  << "duplicate fuse finish event";
-              durationNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  event.monotonicTime - it->second.requestStartTime);
-              state->requests.erase(it);
-            }
-
-            if (fsEventLogger) {
-              auto opcode = event.getRequest().opcode;
-              fsEventLogger->log({
-                  durationNs,
-                  fuseOpcodeSamplingGroup(opcode),
-                  fuseOpcodeName(opcode),
-              });
-            }
-            break;
-          }
-        }
-      }));
 }
 
 FuseChannel::~FuseChannel() {
@@ -1608,11 +1568,59 @@ std::vector<FuseChannel::OutstandingRequest>
 FuseChannel::getOutstandingRequests() {
   std::vector<FuseChannel::OutstandingRequest> outstandingCalls;
 
-  auto telemetryStateLockedPtr = telemetryState_.rlock();
-  for (const auto& entry : telemetryStateLockedPtr->requests) {
-    outstandingCalls.push_back(entry.second);
+  for (auto& stripe : outstandingRequests_) {
+    auto state = stripe.rlock();
+    for (const auto& entry : state->requests) {
+      outstandingCalls.push_back(entry.second);
+    }
   }
   return outstandingCalls;
+}
+
+void FuseChannel::recordRequestStart(
+    uint64_t requestId,
+    const fuse_in_header& header,
+    std::chrono::steady_clock::time_point startTime) {
+  auto state =
+      outstandingRequests_[requestId % kOutstandingRequestStripes].wlock();
+  auto [iter, inserted] = state->requests.emplace(
+      requestId,
+      OutstandingRequest{
+          requestId, FuseTraceEvent::RequestHeader{header}, startTime});
+  XDCHECK(inserted) << "duplicate fuse request id " << requestId;
+}
+
+void FuseChannel::recordRequestFinish(
+    uint64_t requestId,
+    const fuse_in_header& header,
+    std::optional<int64_t> result) {
+  const auto now = std::chrono::steady_clock::now();
+  std::optional<std::chrono::nanoseconds> duration;
+  {
+    auto state =
+        outstandingRequests_[requestId % kOutstandingRequestStripes].wlock();
+    auto iter = state->requests.find(requestId);
+    if (iter != state->requests.end()) {
+      duration = now - iter->second.requestStartTime;
+      state->requests.erase(iter);
+    }
+  }
+  // A finish with no recorded start is a double finish or an id that was
+  // never started; a zero-length sample would only hide that.
+  XDCHECK(duration.has_value())
+      << "FUSE request " << requestId << " finished without a start";
+  if (fsEventLogger_ && duration) {
+    fsEventLogger_->log({
+        *duration,
+        fuseOpcodeSamplingGroup(header.opcode),
+        fuseOpcodeName(header.opcode),
+    });
+  }
+  // A subscriber may have attached after this request started and learned
+  // of it through debugOutstandingFuseCalls, as `eden trace fs` does.
+  if (traceBus_->hasSubscription()) {
+    traceBus_->publish(FuseTraceEvent::finish(requestId, header, result));
+  }
 }
 
 TraceDetailedArgumentsHandle FuseChannel::traceDetailedArguments() const {
@@ -2310,14 +2318,21 @@ void FuseChannel::dispatchRequest(
     default: {
       if (handlerEntry && handlerEntry->handler) {
         auto requestId = generateUniqueID();
-        if (handlerEntry->argRenderer &&
-            traceDetailedArguments_->load(std::memory_order_acquire)) {
-          traceBus_->publish(
-              FuseTraceEvent::start(
-                  requestId, header, handlerEntry->argRenderer(arg)));
-        } else {
-          traceBus_->publish(FuseTraceEvent::start(requestId, header));
+        // Trace events only feed live `eden trace fs` streams, so they are
+        // not built or published while nothing is subscribed.
+        const bool traced = traceBus_->hasSubscription();
+        if (traced) {
+          if (handlerEntry->argRenderer &&
+              traceDetailedArguments_->load(std::memory_order_acquire)) {
+            traceBus_->publish(
+                FuseTraceEvent::start(
+                    requestId, header, handlerEntry->argRenderer(arg)));
+          } else {
+            traceBus_->publish(FuseTraceEvent::start(requestId, header));
+          }
         }
+        const auto now = std::chrono::steady_clock::now();
+        recordRequestStart(requestId, header, now);
 
         // Acquire a RequestPermit before executing the FUSE request. This
         // function will block if there are too many inflight requests. This
@@ -2331,7 +2346,6 @@ void FuseChannel::dispatchRequest(
         auto request =
             std::make_shared<FuseRequestContext>(this, source, header);
 
-        auto now = std::chrono::steady_clock::now();
         auto should_log = false;
         {
           auto state = state_.wlock();
@@ -2412,9 +2426,7 @@ void FuseChannel::dispatchRequest(
                      requestId,
                      headerCopy,
                      requestPermit = std::move(requestPermit)] {
-              traceBus_->publish(
-                  FuseTraceEvent::finish(
-                      requestId, headerCopy, request->getResult()));
+              recordRequestFinish(requestId, headerCopy, request->getResult());
 
               // We may be complete; check to see if all requests are
               // done and whether there are any threads remaining.

@@ -11,11 +11,13 @@
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/synchronization/CallOnce.h>
 #include <gtest/gtest_prod.h>
 #include <stdlib.h>
+#include <array>
 #include <iosfwd>
 #include <memory>
 #include <optional>
@@ -645,9 +647,9 @@ class FuseChannel final : public FsChannel {
   }
 
   /**
-   * Returns the approximate number of outstanding FUSE requests. Since
-   * telemetry is tracked on a background thread, this number may very slightly
-   * lag reality.
+   * Returns the outstanding FUSE requests. Each stripe of the table is read
+   * under its own lock, so a request that starts or finishes while the
+   * stripes are being read may or may not be included.
    *
    * As another option, Linux kernel maintains a count, accessible via
    * /sys/fs/fuse/connections/${conn_id}/waiting
@@ -748,11 +750,13 @@ class FuseChannel final : public FsChannel {
   };
 
   /**
-   * Only written by the TraceBus thread, but must be synchronized for readers.
+   * Requests received but not yet answered, striped by request id so the
+   * worker threads rarely contend on one lock.
    */
   struct TelemetryState {
-    std::unordered_map<uint64_t, OutstandingRequest> requests;
+    folly::F14FastMap<uint64_t, OutstandingRequest> requests;
   };
+  static constexpr size_t kOutstandingRequestStripes = 16;
 
   struct DataRange {
     DataRange(int64_t offset, int64_t length);
@@ -948,6 +952,15 @@ class FuseChannel final : public FsChannel {
   void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
+
+  void recordRequestStart(
+      uint64_t requestId,
+      const fuse_in_header& header,
+      std::chrono::steady_clock::time_point startTime);
+  void recordRequestFinish(
+      uint64_t requestId,
+      const fuse_in_header& header,
+      std::optional<int64_t> result);
   void stopInvalidationThread();
   void sendInvalidation(InvalidationEntry& entry);
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
@@ -1028,6 +1041,7 @@ class FuseChannel final : public FsChannel {
   std::unique_ptr<FuseDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_;
   const std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger_;
+  const std::shared_ptr<FsEventLogger> fsEventLogger_;
   ErrorLogger& errorLogger_;
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
@@ -1112,7 +1126,8 @@ class FuseChannel final : public FsChannel {
   std::atomic<bool> takeoverReadinessStarted_{false};
   std::atomic<bool> takeoverReadyFinished_{false};
 
-  folly::Synchronized<TelemetryState> telemetryState_;
+  std::array<folly::Synchronized<TelemetryState>, kOutstandingRequestStripes>
+      outstandingRequests_;
 
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;
@@ -1137,9 +1152,6 @@ class FuseChannel final : public FsChannel {
       liveRequestWatches_{[] {
         return std::make_shared<RequestMetricsScope::LockedRequestWatchList>();
       }};
-
-  std::vector<TraceSubscriptionHandle<FuseTraceEvent>>
-      traceSubscriptionHandles_;
 
   /*
    * TraceBus subscribers can indicate they would like detailed argument strings

@@ -60,6 +60,7 @@ cpp_library(
         "//folly:range",
         "//folly:shared_mutex",
         "//folly:synchronized",
+        "//folly/container:f14_hash",
         "//folly/futures:core",
         "//folly/synchronization:call_once",
     ] + select({
