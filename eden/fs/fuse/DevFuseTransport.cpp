@@ -14,11 +14,13 @@
 
 #include <folly/ScopeGuard.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Asm.h>
 
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
 #include <cerrno>
+#include <chrono>
 #include <limits>
 
 namespace facebook::eden {
@@ -77,9 +79,41 @@ void DevFuseTransport::processSession(
   // Save this for the sanity check later in the loop to avoid
   // additional syscalls on each loop iteration.
   auto myPid = getpid();
+  const auto busyPoll = channel.getBusyPoll();
+  auto& lastDispatchEndNs = channel.lastDispatchEndNs();
+  const auto nowNs = [] {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+  };
+  // Poll only while a client is streaming requests: the request just served
+  // has to have arrived within the poll window of the previous reply. A
+  // sporadic request therefore costs a blocking read, not a spin.
+  bool pollNext = false;
   onReady();
 
   while (!channel.isStopRequested()) {
+    // Under io_uring the companion reader (stopFd >= 0) only sees what the
+    // kernel still sends over /dev/fuse, such as FORGET, so it is not polled.
+    if (pollNext && stopFd < 0) {
+      // A serial client sends its next request microseconds after the
+      // reply; polling for it briefly serves it without the sleep and
+      // cross-CPU wakeup that a blocking read costs.
+      // Each poll() takes the FUSE queue's spinlock, the same lock the
+      // client's enqueue needs, so pause about a microsecond between polls
+      // rather than hammering it.
+      constexpr int kPausesBetweenPolls = 50;
+      const auto deadline = std::chrono::steady_clock::now() + busyPoll;
+      pollfd pfd{fuseFd, POLLIN, 0};
+      while (poll(&pfd, 1, 0) == 0 &&
+             std::chrono::steady_clock::now() < deadline &&
+             !channel.isStopRequested()) {
+        for (int i = 0; i < kPausesBetweenPolls; ++i) {
+          folly::asm_volatile_pause();
+        }
+      }
+    }
+    pollNext = false;
     if (stopFd >= 0) {
       pollfd fds[] = {{fuseFd, POLLIN, 0}, {stopFd, POLLIN, 0}};
       if (poll(fds, 2, -1) < 0) {
@@ -114,6 +148,12 @@ void DevFuseTransport::processSession(
       if (!(fds[0].revents & (POLLIN | POLLHUP | POLLERR))) {
         continue;
       }
+    }
+    // A stop requested while polling above, such as takeover's SIGUSR2, has
+    // already been handled and another wakeup is not guaranteed, so do not
+    // block in read() after it.
+    if (channel.isStopRequested()) {
+      break;
     }
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
     // We can look at turning this on once the main plumbing is complete.
@@ -177,7 +217,14 @@ void DevFuseTransport::processSession(
 
     // A successfully dequeued FORGET cannot be retried, even if stop raced
     // with read(). Dispatch it before leaving the reader.
+    if (busyPoll.count() > 0) {
+      const auto last = lastDispatchEndNs.load(std::memory_order_relaxed);
+      pollNext = last != 0 && nowNs() - last <= busyPoll.count();
+    }
     channel.dispatchRequestFromTransport(*this, *header, arg, myPid);
+    if (busyPoll.count() > 0) {
+      lastDispatchEndNs.store(nowNs(), std::memory_order_relaxed);
+    }
   }
 }
 

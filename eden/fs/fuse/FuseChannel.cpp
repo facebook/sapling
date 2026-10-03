@@ -1038,7 +1038,8 @@ FuseChannel::FuseChannel(
     bool ioUringDisableIoWait,
     bool ioUringSkipSelfWakeup,
     bool ioUringPreCreateQueues,
-    size_t numInvalidationThreads)
+    size_t numInvalidationThreads,
+    std::chrono::nanoseconds busyPoll)
     : privHelper_{privHelper},
       // Pre-allocate based on configured max_pages so the buffer can handle
       // the larger requests we'll negotiate during FUSE_INIT. This is
@@ -1075,6 +1076,7 @@ FuseChannel::FuseChannel(
       ioUringDisableIoWait_{ioUringDisableIoWait},
       ioUringSkipSelfWakeup_{ioUringSkipSelfWakeup},
       ioUringPreCreateQueues_{ioUringPreCreateQueues},
+      busyPoll_{busyPoll},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
       invalidationQueue_{

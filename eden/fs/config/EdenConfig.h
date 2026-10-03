@@ -1093,6 +1093,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> fuseUseIoUring{"fuse:use-io-uring", false, this};
 
   /**
+   * How long a /dev/fuse worker thread polls for the next request after
+   * answering one before blocking in read(). Zero disables polling. Read
+   * when a mount starts; a change applies to mounts started afterwards.
+   */
+  ConfigSetting<std::chrono::nanoseconds> fuseBusyPoll{
+      "fuse:busy-poll",
+      std::chrono::microseconds(100),
+      this};
+
+  /**
    * Skip the eventfd wakeup when a FUSE io_uring reply is queued from the
    * ring worker that owns the queue: the worker drains pending commits
    * before its next submit_and_wait, so it does not need to be woken.

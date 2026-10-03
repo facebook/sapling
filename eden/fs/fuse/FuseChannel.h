@@ -349,7 +349,8 @@ class FuseChannel final : public FsChannel {
       bool ioUringDisableIoWait = true,
       bool ioUringSkipSelfWakeup = true,
       bool ioUringPreCreateQueues = false,
-      size_t numInvalidationThreads = 4);
+      size_t numInvalidationThreads = 4,
+      std::chrono::nanoseconds busyPoll = std::chrono::nanoseconds{0});
 
   FuseChannel(const FuseChannel&) = delete;
   FuseChannel(FuseChannel&&) = delete;
@@ -696,6 +697,19 @@ class FuseChannel final : public FsChannel {
 
   std::shared_ptr<Notifier> getNotifier() const {
     return notifier_;
+  }
+
+  std::chrono::nanoseconds getBusyPoll() const {
+    return busyPoll_;
+  }
+
+  /**
+   * Steady-clock nanoseconds at which any worker last finished dispatching a
+   * request. Shared across workers because the kernel hands consecutive
+   * requests of one client to whichever worker is blocked in read().
+   */
+  std::atomic<int64_t>& lastDispatchEndNs() {
+    return lastDispatchEndNs_;
   }
 
   size_t getRequestMetric(RequestMetricsScope::RequestMetric metric) const;
@@ -1086,6 +1100,8 @@ class FuseChannel final : public FsChannel {
   bool ioUringDisableIoWait_{true};
   bool ioUringSkipSelfWakeup_{true};
   bool ioUringPreCreateQueues_{false};
+  const std::chrono::nanoseconds busyPoll_;
+  std::atomic<int64_t> lastDispatchEndNs_{0};
 #if EDEN_HAVE_FUSE_IO_URING
   mutable folly::once_flag ioUringTransportAvailabilityInitFlag_;
   mutable bool ioUringTransportAvailable_{false};
