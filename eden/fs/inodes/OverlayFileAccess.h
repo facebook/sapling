@@ -179,6 +179,13 @@ class OverlayFileAccess {
     explicit State(size_t cacheSize);
 
     folly::EvictingCacheMap<InodeNumber, EntryPtr> entries;
+
+    /**
+     * Insert an entry, returning the one it evicted, if any. Destroying an
+     * evicted entry closes its file, which must not happen while the state
+     * lock is held.
+     */
+    EntryPtr insert(InodeNumber ino, EntryPtr entry);
   };
 
   using LockedStatePtr = folly::Synchronized<State>::LockedPtr;
