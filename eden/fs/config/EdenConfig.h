@@ -2578,6 +2578,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Remove the overlay data of unlinked inodes on the overlay GC thread once
+   * the kernel forgets them, instead of on the FsChannel thread handling the
+   * forget.
+   */
+  ConfigSetting<bool> overlayBackgroundInodeRemoval{
+      "overlay:background-inode-removal",
+      true,
+      this};
+
+  /**
    * When true, write a newly created overlay file directly instead of
    * creating a temporary file and renaming it into place. A torn write
    * leaves a partial file, which is safe here because an inode is only

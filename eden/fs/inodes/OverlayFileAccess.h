@@ -66,6 +66,12 @@ class OverlayFileAccess {
   bool cacheCreatedFile(InodeNumber ino, OverlayFile file, size_t size);
 
   /**
+   * Drops the cached open file for an inode, if any, and hands it to the
+   * caller so the descriptor can be closed elsewhere.
+   */
+  std::shared_ptr<void> releaseEntry(InodeNumber ino);
+
+  /**
    * Return the size of the overlay file at the given inode number. The result
    * will never be negative.
    *

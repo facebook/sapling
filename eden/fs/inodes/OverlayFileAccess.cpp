@@ -149,6 +149,17 @@ bool OverlayFileAccess::cacheCreatedFile(
   return true;
 }
 
+std::shared_ptr<void> OverlayFileAccess::releaseEntry(InodeNumber ino) {
+  auto state = state_.wlock();
+  auto iter = state->entries.findWithoutPromotion(ino);
+  if (iter == state->entries.end()) {
+    return nullptr;
+  }
+  std::shared_ptr<void> entry = iter->second;
+  state->entries.erase(iter);
+  return entry;
+}
+
 FileOffset OverlayFileAccess::getFileSize(FileInode& inode) {
   return getFileSize(inode.getNodeId(), &inode);
 }

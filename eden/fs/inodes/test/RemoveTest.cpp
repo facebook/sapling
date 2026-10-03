@@ -331,6 +331,8 @@ TEST(RemoveAllChildrenTest, loadedChildKeepsItsOverlayStateUntilUnloaded) {
   EXPECT_NO_THROW(sub->getMetadata());
 
   sub.reset();
+  // The overlay data is removed on the overlay's GC thread.
+  overlay->flushPendingAsync().get();
   EXPECT_FALSE(overlay->hasOverlayDir(subNumber));
   EXPECT_FALSE(metadata->getOptional(subNumber).has_value());
 }
@@ -364,6 +366,7 @@ TEST(RemoveAllChildrenTest, loadedFileKeepsItsOverlayStateUntilUnloaded) {
   EXPECT_FILE_INODE(file, "This is the new file.txt.\n", 0644);
 
   file.reset();
+  overlay->flushPendingAsync().get();
   EXPECT_FALSE(overlay->hasOverlayFile(fileNumber));
   EXPECT_FALSE(metadata->getOptional(fileNumber).has_value());
 }

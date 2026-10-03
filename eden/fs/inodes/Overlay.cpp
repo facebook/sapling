@@ -361,6 +361,7 @@ Overlay::Overlay(
           (inodeCatalogType == InodeCatalogType::Legacy ||
            inodeCatalogType == InodeCatalogType::LegacyDev)},
       useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()},
+      backgroundInodeRemoval_{config.overlayBackgroundInodeRemoval.getValue()},
       walCompactionMultiplier_{
           config.overlayWalCompactionMultiplier.getValue()},
       walCompactionByteCap_{config.overlayWalCompactionByteCap.getValue()},
@@ -1284,6 +1285,28 @@ void Overlay::recursivelyRemoveOverlayDirBackground(InodeNumber inodeNumber) {
   gcCondVar_.notify_one();
 }
 
+bool Overlay::removeOverlayDataInBackground(
+    InodeNumber inodeNumber,
+    bool isDir,
+    std::shared_ptr<void>&& openFile) {
+  // Each queued request may hold an open descriptor; the GC thread removes
+  // about 20k inodes per second, so this is a fraction of a second of work.
+  constexpr size_t kMaxQueuedInodeRemovals = 4096;
+  if (!backgroundInodeRemoval_) {
+    return false;
+  }
+  {
+    auto gcQueue = gcQueue_.lock();
+    if (gcQueue->queue.size() >= kMaxQueuedInodeRemovals) {
+      return false;
+    }
+    gcQueue->queue.emplace_back(
+        GCRequest::RemoveInodeRequest{inodeNumber, isDir, std::move(openFile)});
+  }
+  gcCondVar_.notify_one();
+  return true;
+}
+
 #ifndef _WIN32
 folly::Future<folly::Unit> Overlay::flushPendingAsync() {
   folly::Promise<folly::Unit> promise;
@@ -1291,6 +1314,11 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
   gcQueue_.lock()->queue.emplace_back(std::move(promise));
   gcCondVar_.notify_one();
   return future;
+}
+#else
+folly::Future<folly::Unit> Overlay::flushPendingAsync() {
+  // Windows has no overlay GC thread, so nothing is ever pending.
+  return folly::makeFuture();
 }
 #endif // !_WIN32
 
@@ -1756,6 +1784,28 @@ void Overlay::handleGCRequest(GCRequest& request) {
   if (auto* flush =
           std::get_if<GCRequest::FlushRequest>(&request.requestType)) {
     flush->setValue();
+    return;
+  }
+
+  if (auto* remove =
+          std::get_if<GCRequest::RemoveInodeRequest>(&request.requestType)) {
+    // Closing the last descriptor of an unlinked file is where btrfs evicts
+    // the inode, so it is dropped here rather than wherever the open-file
+    // cache would otherwise have evicted it.
+    remove->openFile.reset();
+    try {
+      if (remove->isDir) {
+        removeOverlayDir(remove->ino);
+      } else {
+        removeOverlayFile(remove->ino);
+      }
+    } catch (const std::exception& ex) {
+      // removeOverlayDir/removeOverlayFile logged and counted the failure;
+      // this is the structured record the inline removal path also emits.
+      errorLogger_.log(
+          EdenErrorInfo::overlay(ex, remove->ino.get())
+              .withErrorType("overlay_unload_failed"));
+    }
     return;
   }
 

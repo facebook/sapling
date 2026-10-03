@@ -275,6 +275,18 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void recursivelyRemoveOverlayDirBackground(InodeNumber inodeNumber);
 
   /**
+   * Queue the removal of an unlinked inode's overlay data to the GC thread.
+   * openFile, if set, is released there before the removal. Returns false
+   * without queueing when overlay:background-inode-removal is off or the GC
+   * thread is too far behind, so the caller removes the data itself and the
+   * queue and its descriptors stay bounded.
+   */
+  bool removeOverlayDataInBackground(
+      InodeNumber inodeNumber,
+      bool isDir,
+      std::shared_ptr<void>&& openFile);
+
+  /**
    * Returns a future that completes once all previously-issued async
    * operations, namely recursivelyRemoveOverlayDir, finish.
    */
@@ -513,11 +525,24 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
      */
     explicit GCRequest(InodeNumber ino) : requestType{ino} {}
 
+    /**
+     * Request to remove the overlay data of one unlinked inode. openFile is
+     * the cached open overlay file, if any, released on the GC thread so the
+     * filesystem's inode eviction happens there too.
+     */
+    struct RemoveInodeRequest {
+      InodeNumber ino;
+      bool isDir;
+      std::shared_ptr<void> openFile;
+    };
+    explicit GCRequest(RemoveInodeRequest req) : requestType{std::move(req)} {}
+
     std::variant<
         MaintenanceRequest,
         overlay::OverlayDir,
         FlushRequest,
-        InodeNumber>
+        InodeNumber,
+        RemoveInodeRequest>
         requestType;
   };
 
@@ -671,6 +696,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool useInodeReservation_;
 
   bool useWal_{false};
+  bool backgroundInodeRemoval_{false};
   size_t walCompactionMultiplier_{3};
   uint64_t walCompactionByteCap_{5'000'000};
 

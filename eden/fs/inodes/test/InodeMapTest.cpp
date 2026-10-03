@@ -513,6 +513,7 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   dir2.reset();
 
   edenMount->getInodeMap()->decFsRefcount(dir2ino);
+  edenMount->getOverlay()->flushPendingAsync().get();
   EXPECT_FALSE(mount.hasOverlayDir(dir1ino));
   EXPECT_FALSE(mount.hasOverlayDir(dir2ino));
 #ifndef _WIN32
@@ -554,11 +555,13 @@ TEST(InodeMap, unloadedUnlinkedFilesAreRemovedFromOverlay) {
     std::move(fut).get(0ms);
   }
 
-  // Unlinked and unreferenced: gone as soon as the unlink finished.
+  // Unlinked and unreferenced: removed once the overlay GC thread gets to it.
+  overlay->flushPendingAsync().get();
   EXPECT_FALSE(overlay->hasOverlayFile(file1ino));
   // Still referenced by the filesystem: kept until that reference drops.
   EXPECT_TRUE(overlay->hasOverlayFile(file2ino));
   edenMount->getInodeMap()->decFsRefcount(file2ino);
+  overlay->flushPendingAsync().get();
   EXPECT_FALSE(overlay->hasOverlayFile(file2ino));
 }
 
@@ -597,10 +600,12 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
           ObjectFetchContext::getNullContext())
       .get(0ms);
 
+  edenMount->getOverlay()->flushPendingAsync().get();
   EXPECT_TRUE(mount.hasMetadata(file1ino));
   EXPECT_FALSE(mount.hasMetadata(file2ino));
 
   edenMount->getInodeMap()->decFsRefcount(file1ino);
+  edenMount->getOverlay()->flushPendingAsync().get();
   EXPECT_FALSE(mount.hasMetadata(file1ino));
   EXPECT_FALSE(mount.hasMetadata(file2ino));
 }

@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -110,7 +111,26 @@ InodeBase::~InodeBase() {
 void InodeBase::removeOverlayData() noexcept {
   try {
     auto* overlay = mount_->getOverlay();
-    if (getType() == dtype_t::Dir) {
+    const bool isDir = getType() == dtype_t::Dir;
+#ifndef _WIN32
+    // Drop the cached descriptor of a deleted file now, so its space is freed
+    // when this scope or the GC thread closes it rather than whenever the
+    // cache happens to evict it.
+    std::shared_ptr<void> openFile;
+    if (!isDir) {
+      openFile = mount_->getOverlayFileAccess()->releaseEntry(ino_);
+    }
+    // Removing overlay data is a btrfs unlink and inode evict, several
+    // metadata tree walks that serialize on the subvolume's root lock. Doing
+    // them from many FsChannel threads at once contends with each other and
+    // with the writes being served; one GC thread doing them in sequence
+    // does not.
+    if (overlay->removeOverlayDataInBackground(
+            ino_, isDir, std::move(openFile))) {
+      return;
+    }
+#endif
+    if (isDir) {
       overlay->removeOverlayDir(ino_);
     } else {
       overlay->removeOverlayFile(ino_);
