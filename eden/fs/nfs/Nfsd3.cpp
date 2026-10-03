@@ -2089,6 +2089,24 @@ using Handler = ImmediateFuture<folly::Unit> (Nfsd3ServerProcessor::*)(
 using FormatArgs = NfsArgsDetails (*)(folly::io::Cursor deser);
 using AccessType = ProcessAccessLog::AccessType;
 
+/**
+ * The inode a request operates on, read from its arguments without
+ * formatting them: the file handle they start with, or for RENAME the
+ * destination directory, the same inode the formatters report.
+ */
+std::optional<InodeNumber> peekInodeNumber(
+    uint32_t procNumber,
+    folly::io::Cursor deser) {
+  const auto proc = static_cast<nfsv3Procs>(procNumber);
+  if (proc == nfsv3Procs::null || proc == nfsv3Procs::commit) {
+    return std::nullopt;
+  }
+  if (proc == nfsv3Procs::rename) {
+    return XdrTrait<RENAME3args>::deserialize(deser).to.dir.ino;
+  }
+  return XdrTrait<nfs_fh3>::deserialize(deser).ino;
+}
+
 struct HandlerEntry {
   constexpr HandlerEntry() = default;
   constexpr HandlerEntry(
@@ -2694,7 +2712,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       handlerEntry.name,
       handlerEntry.formatArgs(deser).str);
 
-  auto inodeNumber = handlerEntry.formatArgs(deser).inode;
+  auto inodeNumber = peekInodeNumber(procNumber, deser);
 
   const auto now = std::chrono::steady_clock::now();
   // Trace events only feed live `eden trace fs` streams, so they are not
