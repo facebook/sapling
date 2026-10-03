@@ -26,19 +26,19 @@
   > A # A/foo = random:30
   > EOS
 
-  $ hg goto A -q
+  $ hg goto $A -q
   $ hg_push_retry -r . --to master_bookmark -q --create
 
-  $ hg goto B -q
+  $ hg goto $B -q
   $ hg_push_retry -r . --to master_bookmark -q
 
-  $ hg goto C -q
+  $ hg goto $C -q
   $ hg_push_retry -r . --to master_bookmark -q
 
-  $ hg goto D -q
+  $ hg goto $D -q
   $ hg_push_retry -r . --to master_bookmark -q
 
-  $ hg goto F -q
+  $ hg goto $F -q
   $ hg_push_retry -r . --to other_bookmark -q --create
 
 Check that new entry was added to the sync database. 4 pushes

@@ -21,16 +21,16 @@
   > A # A/foo = one\n
   > EOS
 
-  $ hg goto A -q
+  $ hg goto $A -q
   $ hg push -r . --to master_bookmark -q --create
 
-  $ hg goto B -q
+  $ hg goto $B -q
   $ hg push -r . --to master_bookmark -q
 
-  $ hg goto C -q
+  $ hg goto $C -q
   $ hg push -r . --to master_bookmark -q
 
-  $ hg goto D -q
+  $ hg goto $D -q
   $ hg push -r . --to master_bookmark -q
 
 Check that new entry was added to the sync database. 4 pushes

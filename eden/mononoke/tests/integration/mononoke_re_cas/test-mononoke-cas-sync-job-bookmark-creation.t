@@ -22,7 +22,7 @@
   > A # A/foo = random:30
   > EOS
 
-  $ hg goto D -q
+  $ hg goto $D -q
   $ hg push -r . --to master_bookmark -q --create
 
 

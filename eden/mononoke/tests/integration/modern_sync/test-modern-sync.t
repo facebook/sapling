@@ -54,10 +54,10 @@
   > EOS
 
 
-  $ hg goto A -q
+  $ hg goto $A -q
   $ hg push -r . --to master_bookmark -q --create
 
-  $ hg goto E -q
+  $ hg goto $E -q
   $ hg push -r . --to master_bookmark -q
 
   $ hg log > $TESTTMP/hglog.out

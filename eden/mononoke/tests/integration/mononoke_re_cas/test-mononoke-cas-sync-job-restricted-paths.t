@@ -33,10 +33,10 @@ Create commits with files under both restricted and unrestricted paths.
   > A # A/public/readme = random:30
   > EOS
 
-  $ hg goto A -q
+  $ hg goto $A -q
   $ hg push -r . --to master_bookmark -q --create
 
-  $ hg goto B -q
+  $ hg goto $B -q
   $ hg push -r . --to master_bookmark -q
 
 Sync all bookmark moves. The sync should detect restricted path roots and
