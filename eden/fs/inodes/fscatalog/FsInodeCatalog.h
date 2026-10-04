@@ -297,6 +297,9 @@ class FsFileContentStore : public FileContentStore {
   // Unmarked WAL files use the original record format. Versioned WALs start
   // with this identifier followed by a big-endian uint32_t version.
   static constexpr folly::StringPiece kWalHeaderIdentifier{"OVWL"};
+  // Version 2 header: the identifier and big-endian version only.
+  static constexpr uint32_t kWalVersion2 = 2;
+  static constexpr size_t kWalVersion2HeaderLength = 8;
   static constexpr uint32_t kNumShards = 256;
   static constexpr size_t kShardDirPathLength = 2;
 

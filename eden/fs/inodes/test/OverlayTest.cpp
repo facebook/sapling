@@ -29,7 +29,6 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <cerrno>
-#include <csignal>
 #include <cstdlib>
 #include <optional>
 #include <stdexcept>
@@ -41,7 +40,6 @@
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/SpawnedProcess.h"
-#include "eden/common/utils/test/ScopedEnvVar.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -1479,9 +1477,12 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
     CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive,
     uint64_t walMinCompactionThreshold = 0,
     bool cacheWalFiles = true,
-    bool useWal = true) {
+    bool useWal = true,
+    bool writeWalV2 = false) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(useWal, ConfigSourceType::CommandLine);
+  rawConfig->overlayWalWriteV2.setValue(
+      writeWalV2, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayCacheWalFiles.setValue(
       cacheWalFiles, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayWalMinCompactionThreshold.setValue(
@@ -2146,8 +2147,13 @@ class OverlayWalObjectIdTest
     idBytes[idSize / 2] = '\0';
     const ObjectId id{folly::ByteRange{folly::StringPiece{idBytes}}};
 
-    auto bundle =
-        makeWalLifecycleOverlay(dir, caseSensitivity, 0, cacheWalFiles);
+    auto bundle = makeWalLifecycleOverlay(
+        dir,
+        caseSensitivity,
+        0,
+        cacheWalFiles,
+        /*useWal=*/true,
+        /*writeWalV2=*/true);
     ASSERT_NE(nullptr, bundle.store);
     const auto src = bundle.overlay->allocateInodeNumber();
     const auto dst =
@@ -2196,9 +2202,7 @@ class OverlayWalObjectIdTest
       bundle.overlay->renameChild(
           src, dst, srcName, dstName, srcContent, dstContent);
     }
-    if (idSize == 255) {
-      EXPECT_TRUE(bundle.store->hasWal(dst));
-    }
+    EXPECT_TRUE(bundle.store->hasWal(dst));
 
     const auto later = bundle.overlay->allocateInodeNumber();
     auto [laterIt, laterInserted] =
@@ -2230,31 +2234,8 @@ class OverlayWalObjectIdTest
   }
 
   void runMutation(Mutation mutation) {
-    constexpr char kDirectoryEnv[] = "EDEN_TEST_WAL_OBJECT_ID_DIRECTORY";
-    std::optional<folly::test::TemporaryDirectory> tmp;
-    ScopedEnvVar directoryEnv{folly::StringPiece{kDirectoryEnv}};
-    // Re-executed death-test children borrow the parent's directory so the
-    // parent still removes it when the child aborts without running
-    // destructors.
-    if (std::getenv(kDirectoryEnv) == nullptr) {
-      tmp.emplace("eden_wal_object_id");
-      directoryEnv.set(tmp->path().string());
-    }
-    const auto dir = canonicalPath(std::getenv(kDirectoryEnv));
-    if (std::get<0>(GetParam()) == 255) {
-      verifyMutation(mutation, dir);
-      return;
-    }
-    GTEST_FLAG_SET(death_test_style, "threadsafe");
-    // FIXME: Valid object IDs must survive and satisfy verifyMutation().
-    // Remove this death expectation when oversized ADDs can be persisted.
-    ASSERT_EXIT(
-        {
-          verifyMutation(mutation, dir);
-          std::_Exit(::testing::Test::HasFailure() ? 1 : 0);
-        },
-        ::testing::KilledBySignal(SIGABRT),
-        "(256|262) vs. 255");
+    folly::test::TemporaryDirectory tmp("eden_wal_object_id");
+    verifyMutation(mutation, canonicalPath(tmp.path().string()));
   }
 };
 
@@ -2292,6 +2273,69 @@ TEST_P(
 
 TEST_P(OverlayWalObjectIdTest, caseOnlyRenamePreservesObjectIdAcrossRestart) {
   runMutation(Mutation::RenameCaseOnly);
+}
+
+TEST(OverlayWalFormatTest, oversizedObjectIdRewritesVersion1WalDirectory) {
+  folly::test::TemporaryDirectory tmp("eden_wal_format_fallback");
+  const auto dir = canonicalPath(tmp.path().string());
+  auto version1 = makeWalLifecycleOverlay(dir);
+  ASSERT_NE(nullptr, version1.store);
+  const auto src = version1.overlay->allocateInodeNumber();
+  const auto dst = version1.overlay->allocateInodeNumber();
+  const auto child = version1.overlay->allocateInodeNumber();
+  const auto sentinel = version1.overlay->allocateInodeNumber();
+  const ObjectId id{std::string(262, '\x85')};
+  DirContents srcContent(CaseSensitivity::Sensitive);
+  srcContent.emplace("source"_pc, S_IFREG | 0644, child, id);
+  DirContents dstContent(CaseSensitivity::Sensitive);
+  version1.overlay->saveOverlayDir(src, srcContent);
+  version1.overlay->saveOverlayDir(dst, dstContent);
+  auto [sentinelIt, inserted] =
+      dstContent.emplace("sentinel"_pc, S_IFREG | 0644, sentinel);
+  ASSERT_TRUE(inserted);
+  version1.overlay->addChild(dst, *sentinelIt, dstContent);
+  ASSERT_TRUE(version1.store->hasWal(dst));
+  version1.overlay->close();
+
+  // The 262-byte ID cannot be appended to dst's headerless v1 WAL, so the
+  // rename falls back to a full rewrite of dst, which retires that WAL.
+  auto enabled = makeWalLifecycleOverlay(
+      dir,
+      CaseSensitivity::Sensitive,
+      0,
+      true,
+      /*useWal=*/true,
+      /*writeWalV2=*/true);
+  srcContent.erase("source"_pc);
+  dstContent.emplace("target"_pc, S_IFREG | 0644, child, id);
+  enabled.overlay->renameChild(
+      src, dst, "source"_pc, "target"_pc, srcContent, dstContent);
+  EXPECT_FALSE(enabled.store->hasWal(dst));
+
+  // The next mutation starts a fresh WAL in the configured v2 format.
+  const auto later = enabled.overlay->allocateInodeNumber();
+  auto [laterIt, laterInserted] =
+      dstContent.emplace("later"_pc, S_IFREG | 0644, later);
+  ASSERT_TRUE(laterInserted);
+  enabled.overlay->addChild(dst, *laterIt, dstContent);
+  std::string walBytes;
+  ASSERT_TRUE(
+      folly::readFile(
+          (dir + RelativePathPiece{FsFileContentStore::getWalPath(dst)})
+              .c_str(),
+          walBytes));
+  EXPECT_EQ("OVWL", walBytes.substr(0, 4));
+  enabled.overlay->close();
+
+  auto reopened = makeWalLifecycleOverlay(dir);
+  const auto loaded = reopened.overlay->loadOverlayDir(dst);
+  ASSERT_EQ(3u, loaded.size());
+  EXPECT_EQ(id, loaded.at("target"_pc).getObjectId());
+  EXPECT_EQ(child, loaded.at("target"_pc).getInodeNumber());
+  EXPECT_EQ(sentinel, loaded.at("sentinel"_pc).getInodeNumber());
+  EXPECT_EQ(later, loaded.at("later"_pc).getInodeNumber());
+  EXPECT_TRUE(reopened.overlay->loadOverlayDir(src).empty());
+  reopened.overlay->close();
 }
 
 namespace {
@@ -2448,78 +2492,41 @@ TEST_P(OverlayWalCleanupFailureTest, renamePreservesChildWhenWalCleanupFails) {
 
 namespace {
 
-enum class WalCheckpointScenario {
-  BaseReadFailure,
-  WalReadFailure,
-  CheckpointWriteFailure,
-  FinalWriteFailureDuringDeferral,
+enum class WalV2Scenario {
+  AppendFailure,
+  AppendFailureDuringDeferral,
   MissingBaseSuccess,
   SourceRemoveFailure,
   AddWithoutWal,
 };
 
-constexpr std::string_view kWalCheckpointFailure{
-    "injected WAL checkpoint failure"};
+constexpr std::string_view kWalAppendFailure{"injected WAL append failure"};
 
 /// Delegate persistence to the real catalog except at one selected boundary.
-class FailingWalCheckpointCatalog : public FsInodeCatalog {
+class FailingWalAppendCatalog : public FsInodeCatalog {
  public:
-  FailingWalCheckpointCatalog(
+  FailingWalAppendCatalog(
       FsFileContentStore* store,
       InodeNumber source,
       InodeNumber destination,
-      WalCheckpointScenario scenario)
+      WalV2Scenario scenario)
       : FsInodeCatalog{store},
         source_{source},
         destination_{destination},
         scenario_{scenario} {}
-
-  bool loadOverlayEntries(InodeNumber parent, OverlayEntryLoader loader)
-      override {
-    if (parent == destination_ &&
-        scenario_ == WalCheckpointScenario::BaseReadFailure) {
-      fail();
-    }
-    return FsInodeCatalog::loadOverlayEntries(parent, std::move(loader));
-  }
-
-  LoadWalResult loadWalDelta(InodeNumber parent, CaseSensitivity caseSensitive)
-      override {
-    if (parent == destination_ &&
-        scenario_ == WalCheckpointScenario::WalReadFailure) {
-      fail();
-    }
-    return FsInodeCatalog::loadWalDelta(parent, caseSensitive);
-  }
-
-  void saveOverlayEntries(
-      InodeNumber parent,
-      size_t count,
-      OverlayEntrySource source,
-      bool crashSafe) override {
-    if (parent == destination_) {
-      ++destinationSaves_;
-      if (scenario_ == WalCheckpointScenario::CheckpointWriteFailure &&
-          destinationSaves_ == 1) {
-        fail();
-      }
-      if (scenario_ == WalCheckpointScenario::FinalWriteFailureDuringDeferral &&
-          destinationSaves_ == 2) {
-        EXPECT_FALSE(FsInodeCatalog::hasWal(parent));
-        fail();
-      }
-    }
-    FsInodeCatalog::saveOverlayEntries(
-        parent, count, std::move(source), crashSafe);
-  }
 
   uint64_t appendWalEntry(
       InodeNumber parent,
       WalOpType op,
       PathComponentPiece name,
       const overlay::OverlayEntry* entry) override {
+    if (parent == destination_ && op == WalOpType::ADD &&
+        (scenario_ == WalV2Scenario::AppendFailure ||
+         scenario_ == WalV2Scenario::AppendFailureDuringDeferral)) {
+      fail();
+    }
     if (parent == source_ && op == WalOpType::REMOVE &&
-        scenario_ == WalCheckpointScenario::SourceRemoveFailure) {
+        scenario_ == WalV2Scenario::SourceRemoveFailure) {
       fail();
     }
     return FsInodeCatalog::appendWalEntry(parent, op, name, entry);
@@ -2528,44 +2535,43 @@ class FailingWalCheckpointCatalog : public FsInodeCatalog {
  private:
   [[noreturn]] static void fail() {
     throw std::system_error{
-        EIO, std::generic_category(), std::string{kWalCheckpointFailure}};
+        EIO, std::generic_category(), std::string{kWalAppendFailure}};
   }
 
   /// Parents whose destination checkpoint and source removal are observed.
   const InodeNumber source_;
   const InodeNumber destination_;
   /// The selected fault; success scenarios delegate every operation.
-  const WalCheckpointScenario scenario_;
-  /// Only saves after this catalog is installed count toward the boundary.
-  size_t destinationSaves_{0};
+  const WalV2Scenario scenario_;
 };
 
 } // namespace
 
-/// Checks persistence before and after each oversized-ADD checkpoint boundary.
-class OverlayWalCheckpointTest
-    : public ::testing::TestWithParam<WalCheckpointScenario> {
+/**
+ * With v2 WALs an oversized object ID is an ordinary append. Checks that the
+ * entry survives a reopen, and what survives on each side of the append when
+ * it fails, including under checkout deferral and with the base missing.
+ */
+class OverlayWalVersion2Test : public ::testing::TestWithParam<WalV2Scenario> {
  protected:
-  void SetUp() override {
-    if (std::getenv(kDirectoryEnv.data()) == nullptr) {
-      tmp_.emplace("eden_wal_checkpoint");
-      directoryEnv_.set(tmp_->path().string());
-    }
-  }
-
   void verifyRecovery() {
     const auto scenario = GetParam();
-    const bool add = scenario == WalCheckpointScenario::AddWithoutWal;
-    const bool defer =
-        scenario == WalCheckpointScenario::FinalWriteFailureDuringDeferral;
+    const bool add = scenario == WalV2Scenario::AddWithoutWal;
+    const bool defer = scenario == WalV2Scenario::AppendFailureDuringDeferral;
     const bool missingBase =
-        defer || scenario == WalCheckpointScenario::MissingBaseSuccess;
+        defer || scenario == WalV2Scenario::MissingBaseSuccess;
     const bool expectFailure =
-        !add && scenario != WalCheckpointScenario::MissingBaseSuccess;
-    const bool destinationPersisted = !expectFailure ||
-        scenario == WalCheckpointScenario::SourceRemoveFailure;
-    const auto dir = canonicalPath(std::getenv(kDirectoryEnv.data()));
-    auto bundle = makeWalLifecycleOverlay(dir);
+        !add && scenario != WalV2Scenario::MissingBaseSuccess;
+    const bool destinationPersisted =
+        !expectFailure || scenario == WalV2Scenario::SourceRemoveFailure;
+    const auto dir = canonicalPath(tmp_.path().string());
+    auto bundle = makeWalLifecycleOverlay(
+        dir,
+        CaseSensitivity::Sensitive,
+        0,
+        true,
+        /*useWal=*/true,
+        /*writeWalV2=*/true);
     ASSERT_NE(nullptr, bundle.store);
     const auto src = bundle.overlay->allocateInodeNumber();
     const auto dst = bundle.overlay->allocateInodeNumber();
@@ -2607,7 +2613,7 @@ class OverlayWalCheckpointTest
 
     OverlayTestHelper::setInodeCatalog(
         *bundle.overlay,
-        std::make_unique<FailingWalCheckpointCatalog>(
+        std::make_unique<FailingWalAppendCatalog>(
             bundle.store, src, dst, scenario));
     srcContent.erase("source"_pc);
     dstContent.erase("target"_pc);
@@ -2636,15 +2642,22 @@ class OverlayWalCheckpointTest
         EXPECT_EQ(std::error_code(EIO, std::generic_category()), error.code());
         EXPECT_NE(
             std::string::npos,
-            std::string{error.what()}.find(kWalCheckpointFailure));
+            std::string{error.what()}.find(kWalAppendFailure));
       }
     }
     EXPECT_EQ(expectFailure, failed);
-    const bool beforeRetirement =
-        scenario == WalCheckpointScenario::BaseReadFailure ||
-        scenario == WalCheckpointScenario::WalReadFailure ||
-        scenario == WalCheckpointScenario::CheckpointWriteFailure;
-    EXPECT_EQ(beforeRetirement, bundle.store->hasWal(dst));
+    // Nothing compacts here, so the destination keeps its WAL whether the
+    // append succeeded or failed, and that WAL is in the v2 layout.
+    if (!add) {
+      ASSERT_TRUE(bundle.store->hasWal(dst));
+      std::string walBytes;
+      ASSERT_TRUE(
+          folly::readFile(
+              (dir + RelativePathPiece{FsFileContentStore::getWalPath(dst)})
+                  .c_str(),
+              walBytes));
+      EXPECT_EQ("OVWL", walBytes.substr(0, 4));
+    }
 
     if (add) {
       auto [laterIt, laterInserted] =
@@ -2698,54 +2711,36 @@ class OverlayWalCheckpointTest
     EXPECT_EQ(aclState, entry->second.aclRootState());
   }
 
-  static constexpr std::string_view kDirectoryEnv =
-      "EDEN_TEST_WAL_CHECKPOINT_DIRECTORY";
-  /// Owned by the parent and borrowed by the re-executed death-test child.
-  std::optional<folly::test::TemporaryDirectory> tmp_;
-  ScopedEnvVar directoryEnv_{folly::StringPiece{kDirectoryEnv}};
+  folly::test::TemporaryDirectory tmp_{"eden_wal_v2"};
 };
 
 INSTANTIATE_TEST_SUITE_P(
     PersistenceBoundaries,
-    OverlayWalCheckpointTest,
+    OverlayWalVersion2Test,
     ::testing::Values(
-        WalCheckpointScenario::BaseReadFailure,
-        WalCheckpointScenario::WalReadFailure,
-        WalCheckpointScenario::CheckpointWriteFailure,
-        WalCheckpointScenario::FinalWriteFailureDuringDeferral,
-        WalCheckpointScenario::MissingBaseSuccess,
-        WalCheckpointScenario::SourceRemoveFailure,
-        WalCheckpointScenario::AddWithoutWal),
-    [](const ::testing::TestParamInfo<WalCheckpointScenario>& info) {
+        WalV2Scenario::AppendFailure,
+        WalV2Scenario::AppendFailureDuringDeferral,
+        WalV2Scenario::MissingBaseSuccess,
+        WalV2Scenario::SourceRemoveFailure,
+        WalV2Scenario::AddWithoutWal),
+    [](const ::testing::TestParamInfo<WalV2Scenario>& info) {
       switch (info.param) {
-        case WalCheckpointScenario::BaseReadFailure:
-          return "BaseReadFailure";
-        case WalCheckpointScenario::WalReadFailure:
-          return "WalReadFailure";
-        case WalCheckpointScenario::CheckpointWriteFailure:
-          return "CheckpointWriteFailure";
-        case WalCheckpointScenario::FinalWriteFailureDuringDeferral:
-          return "FinalWriteFailureDuringDeferral";
-        case WalCheckpointScenario::MissingBaseSuccess:
+        case WalV2Scenario::AppendFailure:
+          return "AppendFailure";
+        case WalV2Scenario::AppendFailureDuringDeferral:
+          return "AppendFailureDuringDeferral";
+        case WalV2Scenario::MissingBaseSuccess:
           return "MissingBaseSuccess";
-        case WalCheckpointScenario::SourceRemoveFailure:
+        case WalV2Scenario::SourceRemoveFailure:
           return "SourceRemoveFailure";
-        case WalCheckpointScenario::AddWithoutWal:
+        case WalV2Scenario::AddWithoutWal:
           return "AddWithoutWal";
       }
       return "Unknown";
     });
 
-TEST_P(OverlayWalCheckpointTest, preservesRecoveryState) {
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  // FIXME: Run verifyRecovery() directly when oversized ADDs reach persistence.
-  ASSERT_EXIT(
-      {
-        verifyRecovery();
-        std::_Exit(::testing::Test::HasFailure() ? 1 : 0);
-      },
-      ::testing::KilledBySignal(SIGABRT),
-      "256 vs. 255");
+TEST_P(OverlayWalVersion2Test, preservesRecoveryState) {
+  verifyRecovery();
 }
 
 TEST(WalRenameTest, caseInsensitiveCaseOnlyRenameAppendsReplacementAdd) {

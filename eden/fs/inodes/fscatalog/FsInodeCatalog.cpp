@@ -23,6 +23,7 @@
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/String.h>
+#include <folly/Varint.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/ToAscii.h>
@@ -682,11 +683,17 @@ constexpr size_t kWalVersionOffset =
 constexpr size_t kWalVersionedPrefixLength =
     kWalVersionOffset + sizeof(uint32_t);
 
+// The v2 header is only the shared identifier and version prefix.
+static_assert(
+    FsFileContentStore::kWalVersion2HeaderLength == kWalVersionedPrefixLength);
+
 /** Bytes before the first record in a file of `format`; v1 is headerless. */
 size_t walHeaderLength(WalFormat format) {
   switch (format) {
     case WalFormat::Version1:
       return 0;
+    case WalFormat::Version2:
+      return FsFileContentStore::kWalVersion2HeaderLength;
   }
   throw std::runtime_error(
       fmt::format(
@@ -701,6 +708,8 @@ constexpr size_t kWalMinFrameSize = sizeof(uint32_t) + sizeof(uint8_t);
 WalFormat walFormatForVersion(uint32_t version, InodeNumber parent) {
   // Add a case here when introducing a new on-disk WAL version.
   switch (version) {
+    case FsFileContentStore::kWalVersion2:
+      return WalFormat::Version2;
     default:
       throw std::runtime_error(
           fmt::format(
@@ -754,10 +763,20 @@ readWalHeader(folly::StringPiece prefix, size_t fileSize, InodeNumber parent) {
  * Write the header for a new WAL of `format` into `dest`, which must hold
  * walHeaderLength(format) bytes. Returns the number of bytes written.
  */
-size_t writeWalHeader(uint8_t* /* dest */, WalFormat format) {
+size_t writeWalHeader(uint8_t* dest, WalFormat format) {
   switch (format) {
     case WalFormat::Version1:
       return 0;
+    case WalFormat::Version2: {
+      memcpy(
+          dest,
+          FsFileContentStore::kWalHeaderIdentifier.data(),
+          FsFileContentStore::kWalHeaderIdentifier.size());
+      const auto versionBE =
+          folly::Endian::big(FsFileContentStore::kWalVersion2);
+      memcpy(dest + kWalVersionOffset, &versionBE, sizeof(versionBE));
+      return FsFileContentStore::kWalVersion2HeaderLength;
+    }
   }
   throw std::runtime_error(
       fmt::format(
@@ -855,12 +874,19 @@ void FsFileContentStore::invalidateCachedWalFile(InodeNumber parent) {
 namespace {
 /**
  * Integer fields of a WAL record. Version1 stores each at a fixed width in
- * native little-endian byte order.
+ * native little-endian byte order. Version2 stores every one as an unsigned
+ * LEB128 varint, so a v2 record has no byte-order dependence.
  */
 enum class WalField { EntryLen, NameLen, Mode, InodeNumber, ObjectIdLen };
 
+/** Largest value the reader accepts for a field in any format. */
+uint64_t walFieldMax(WalField field) {
+  return field == WalField::InodeNumber ? std::numeric_limits<uint64_t>::max()
+                                        : std::numeric_limits<uint32_t>::max();
+}
+
 /** Encoded size of `value` in `field`; v1 widths do not depend on the value. */
-size_t walFieldSize(uint64_t /* value */, WalFormat format, WalField field) {
+size_t walFieldSize(uint64_t value, WalFormat format, WalField field) {
   switch (format) {
     case WalFormat::Version1:
       switch (field) {
@@ -877,6 +903,8 @@ size_t walFieldSize(uint64_t /* value */, WalFormat format, WalField field) {
       }
       throw std::runtime_error(
           fmt::format("unknown WAL field {}", static_cast<int>(field)));
+    case WalFormat::Version2:
+      return static_cast<size_t>(folly::encodeVarintSize(value));
   }
   throw std::runtime_error(
       fmt::format(
@@ -905,6 +933,12 @@ void writeWalField(
       // encoding.
       memcpy(dest.data(), &value, size);
       break;
+    case WalFormat::Version2: {
+      [[maybe_unused]] const auto written =
+          folly::encodeVarint(value, dest.data());
+      XDCHECK_EQ(written, size);
+      break;
+    }
   }
   dest.advance(size);
 }
@@ -925,8 +959,9 @@ uint64_t FsFileContentStore::appendWalEntry(
   //   [uint8_t isRestricted][uint8_t aclRootState]
   // Headerless v1 WALs store the bracketed integers at fixed widths
   // (uint32_t, uint16_t, int32_t, int64_t, uint8_t) in native byte order.
-  // entryLen covers everything after the entryLen field itself, and is used
-  // during replay to detect torn writes.
+  // V2 WALs have an OVWL+version header and store every one of them as an
+  // unsigned varint. entryLen covers everything after the entryLen field
+  // itself, and is used during replay to detect torn writes.
   static_assert(
       std::endian::native == std::endian::little,
       "The v1 WAL wire format is native little-endian; a big-endian target "
@@ -958,12 +993,31 @@ uint64_t FsFileContentStore::appendWalEntry(
   auto walFile = getCachedWalFile(parent);
   const auto format = walFile->format;
 
-  // The v1 fixed widths bound what a record can carry. XCHECK rather than
-  // truncating so a wider value fails loudly.
-  XCHECK_LE(
-      nameStr.size(),
-      static_cast<size_t>(std::numeric_limits<uint16_t>::max()));
-  XCHECK_LE(hashSize, static_cast<size_t>(std::numeric_limits<uint8_t>::max()));
+  // Sizes come from the filesystem and the backing store, so an entry that
+  // does not fit is an input condition, not a bug: throw and let the Overlay
+  // persist the directory with a full write instead. Checked against the
+  // file's actual format, so a brand-new WAL may be left empty on rejection;
+  // the Overlay's full write removes it.
+  size_t maxName = std::numeric_limits<uint32_t>::max();
+  size_t maxHash = std::numeric_limits<uint32_t>::max();
+  if (format == WalFormat::Version1) {
+    maxName = std::numeric_limits<uint16_t>::max();
+    maxHash = std::numeric_limits<uint8_t>::max();
+  }
+  if (nameStr.size() > maxName) {
+    throw WalEntryTooLargeError(
+        fmt::format(
+            "name of {} bytes does not fit the WAL for inode {}",
+            nameStr.size(),
+            parent));
+  }
+  if (hashSize > maxHash) {
+    throw WalEntryTooLargeError(
+        fmt::format(
+            "object ID of {} bytes does not fit the WAL for inode {}",
+            hashSize,
+            parent));
+  }
 
   const auto nameLen = static_cast<uint32_t>(nameStr.size());
   const auto hashLen = static_cast<uint32_t>(hashSize);
@@ -984,7 +1038,13 @@ uint64_t FsFileContentStore::appendWalEntry(
         walFieldSize(hashLen, format, WalField::ObjectIdLen) + hashLen +
         kWalAclRootStateTailSize;
   }
-  XCHECK_LE(payloadSize, std::numeric_limits<uint32_t>::max());
+  if (payloadSize > std::numeric_limits<uint32_t>::max()) {
+    throw WalEntryTooLargeError(
+        fmt::format(
+            "WAL record of {} bytes exceeds the frame limit for inode {}",
+            payloadSize,
+            parent));
+  }
 
   const auto headerSize = walFile->size == 0 ? walHeaderLength(format) : 0;
   size_t totalSize = headerSize +
@@ -1051,10 +1111,9 @@ uint64_t FsFileContentStore::appendWalEntry(
   // below). Adding fsync to every WAL append would dominate the fast-
   // path cost and erase the latency win over a full directory rewrite.
   auto written = folly::writeFull(fd, buf.data(), totalSize);
-  folly::checkUnixError(
-      written, fmt::format("error writing WAL entry for inode {}", parent));
-  if (FOLLY_UNLIKELY(static_cast<size_t>(written) != totalSize)) {
-    // Short write (e.g. ENOSPC, signal interrupt). Truncate the torn tail
+  if (FOLLY_UNLIKELY(
+          written < 0 || static_cast<size_t>(written) != totalSize)) {
+    // Failed or short write (e.g. ENOSPC). Truncate the torn tail
     // so subsequent O_APPEND writes land on a valid prefix instead of
     // burying the tear mid-file. Capture errno before ftruncate clobbers it.
     int writeErrno = errno;
@@ -1065,7 +1124,7 @@ uint64_t FsFileContentStore::appendWalEntry(
     folly::throwSystemErrorExplicit(
         writeErrno != 0 ? writeErrno : EIO,
         fmt::format(
-            "short WAL write for inode {} ({} of {} bytes; "
+            "failed or short WAL write for inode {} ({} of {} bytes; "
             "ftruncate-recovery errno={})",
             parent,
             written,
@@ -1109,7 +1168,9 @@ bool isValidPathComponent(const std::string& name) {
 
 /**
  * Read one integer field without consuming bytes outside its frame. Returns
- * nullopt when the frame ends early.
+ * nullopt when the frame ends early, a v2 varint is overlong or not the
+ * shortest encoding of its value, or the value exceeds what the field may
+ * hold.
  */
 std::optional<uint64_t> readWalField(
     folly::ByteRange frame,
@@ -1126,6 +1187,24 @@ std::optional<uint64_t> readWalField(
       memcpy(&value, frame.data() + offset, size);
       offset += size;
       return value;
+    }
+    case WalFormat::Version2: {
+      if (offset > frame.size()) {
+        return std::nullopt;
+      }
+      auto rest = frame.subpiece(offset);
+      const auto value = folly::tryDecodeVarint(rest);
+      if (!value || *value > walFieldMax(field)) {
+        return std::nullopt;
+      }
+      // The writer emits the shortest encoding, so a padded one (trailing
+      // 0x80 0x00 style continuation) is corruption, not a value.
+      const auto consumed = frame.size() - offset - rest.size();
+      if (consumed != static_cast<size_t>(folly::encodeVarintSize(*value))) {
+        return std::nullopt;
+      }
+      offset = frame.size() - rest.size();
+      return *value;
     }
   }
   throw std::runtime_error(

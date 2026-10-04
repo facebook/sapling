@@ -2701,6 +2701,20 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> overlayUseWal{"overlay:use-wal", false, this};
 
   /**
+   * Write new overlay WAL files in the versioned format. Existing WAL files
+   * are always read according to their on-disk format. Snapshot at mount
+   * creation; disabling this setting does not disable versioned WAL reads.
+   *
+   * Rollout invariant: only enable once every EdenFS binary that could run
+   * against the overlay can read versioned WALs. A binary that predates the
+   * reader sees the `OVWL` header as a torn v1 frame, reports a parse error,
+   * and heals the directory by rewriting its base without the WAL, which
+   * silently drops the pending mutations. Turning this flag back off does
+   * not rewrite existing versioned WALs.
+   */
+  ConfigSetting<bool> overlayWalWriteV2{"overlay:wal-write-v2", false, this};
+
+  /**
    * Persist an upper bound on allocated inode numbers so an unclean startup
    * can eventually avoid discovering the next inode number by scanning the
    * overlay. Only applies to Legacy and LegacyDev catalog types.

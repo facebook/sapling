@@ -462,7 +462,6 @@ cpp_unittest(
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:bug",
         "//eden/common/utils:process",
-        "//eden/common/utils/test:scoped_env_var",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_metadata",
         "//eden/fs/inodes:inodes",

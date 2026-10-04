@@ -29,7 +29,13 @@ import time
 import unittest
 from typing import Dict, List, Optional, Tuple
 
-from eden.fs.service.eden.thrift_types import MountState
+from eden.fs.cli.util import poll_until
+from eden.fs.service.eden.thrift_types import (
+    DIS_ENABLE_FLAGS,
+    DIS_NOT_RECURSIVE,
+    MountState,
+    SyncBehavior,
+)
 from eden.integration.lib import overlay as overlay_mod, testcase
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -100,9 +106,9 @@ class WalTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     crash semantics are covered by test_wal_torn_write_recovery
     (synthetic torn WAL) and by C++ fault-injection unit tests.
 
-    Rename crash semantics are covered by WalRenameTest in
-    eden/fs/inodes/test/OverlayTest.cpp (the cross-dir both-visible
-    state is not expressible through FUSE/NFS).
+    Detailed rename invariants are covered by WalRenameTest in
+    eden/fs/inodes/test/OverlayTest.cpp. The mounted NFS WithPath
+    object-ID boundary is covered by WalWithPathRenameTest below.
     """
 
     # pyre-fixme[13]: Attribute `overlay` is never initialized.
@@ -303,4 +309,113 @@ class WalTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             missing,
             f"WAL replay lost {len(missing)} successfully-written entries: "
             f"{sorted(missing)[:10]}{'...' if len(missing) > 10 else ''}",
+        )
+
+
+@unittest.skipIf(sys.platform == "win32", "WAL requires FsInodeCatalog")
+class WalWithPathRenameTest(
+    testcase.NFSTestMixin,
+    testcase.HgRepoTestMixin,
+    testcase.EdenRepoTest,
+):
+    """Verify a long tracked WithPath ID survives a gated v2 WAL rename."""
+
+    # The encoded ID has a 20-byte node, a separator, and "src/" plus this
+    # 231-byte name, yielding 256 bytes.
+    source_name: str = "f" * 231
+
+    def select_storage_engine(self) -> str:
+        return "sqlite"
+
+    def edenfs_extra_config(self) -> dict[str, list[str]] | None:
+        configs = super().edenfs_extra_config() or {}
+        configs.setdefault("overlay", []).extend(
+            ["use-wal = true", "wal-write-v2 = true"]
+        )
+        configs.setdefault("hg", []).append('object-id-format = "withpath"')
+        return configs
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("src/" + self.source_name, "tracked contents\n")
+        self.repo.write_file("dst/keep", "unrelated contents\n")
+        self.repo.commit("Create long-path rename source.")
+
+    def _wait_for_mount_running(self) -> None:
+        last_state: MountState | None = None
+
+        def mount_is_running() -> bool | None:
+            nonlocal last_state
+            last_state = self.eden.get_mount_state(self.mount_path)
+            return True if last_state == MountState.RUNNING else None
+
+        try:
+            poll_until(mount_is_running, timeout=30, interval=0.02)
+        except TimeoutError as error:
+            raise TimeoutError(
+                f"mount {self.mount_path!s} did not reach RUNNING within "
+                f"30s (last state: {last_state})"
+            ) from error
+
+    def _entry_identity(self, parent_path: str, name: str) -> tuple[bytes, int, int]:
+        with self.eden.get_thrift_client() as client:
+            infos = client.debugInodeStatus(
+                os.fsencode(self.mount),
+                parent_path.encode(),
+                flags=DIS_ENABLE_FLAGS | DIS_NOT_RECURSIVE,
+                sync=SyncBehavior(),
+            )
+        [parent] = [info for info in infos if info.path == parent_path.encode()]
+        [entry] = [item for item in parent.entries if item.name == name.encode()]
+        self.assertFalse(entry.materialized)
+        return entry.hash, entry.inodeNumber, entry.mode
+
+    def _prepare_rename(
+        self,
+    ) -> tuple[pathlib.Path, pathlib.Path, tuple[bytes, int, int]]:
+        source_relative = "src/" + self.source_name
+        source = self.mount_path / source_relative
+        target = self.mount_path / "dst/target"
+        overlay = overlay_mod.OverlayStore(self.eden, self.mount_path)
+        overlay.materialize_dir(self.mount_path / "src")
+        overlay.materialize_dir(self.mount_path / "dst")
+        destination_wal = _wal_path_for(
+            overlay.overlay_dir, os.lstat(self.mount_path / "dst").st_ino
+        )
+
+        def seed_pending_wal() -> bool | None:
+            target.write_text("overwritten contents\n")
+            target.unlink()
+            try:
+                return True if destination_wal.stat().st_size > 0 else None
+            except FileNotFoundError:
+                return None
+
+        poll_until(seed_pending_wal, timeout=30)
+        identity = self._entry_identity("src", self.source_name)
+        self.assertTrue(identity[0].endswith(b":" + source_relative.encode()))
+        return source, target, identity
+
+    def test_rename_with_256_byte_object_id(self) -> None:
+        source, target, identity = self._prepare_rename()
+        rename = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import os,sys; os.rename(sys.argv[1], sys.argv[2])",
+                os.fspath(source),
+                os.fspath(target),
+            ],
+            capture_output=True,
+            timeout=30,
+        )
+        self.assertEqual(0, rename.returncode, rename.stderr.decode(errors="replace"))
+        self.assertEqual(MountState.RUNNING, self.eden.get_mount_state(self.mount_path))
+
+        self.eden.restart()
+        self._wait_for_mount_running()
+        self.assertEqual(identity, self._entry_identity("dst", "target"))
+        self.assertFalse(source.exists())
+        self.assertEqual("tracked contents\n", target.read_text())
+        self.assertEqual(
+            "unrelated contents\n", (self.mount_path / "dst/keep").read_text()
         )

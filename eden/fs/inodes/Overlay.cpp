@@ -244,13 +244,15 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
     InodeCatalogType inodeCatalogType,
     bool directFileCreate,
     bool cacheWalFiles,
-    size_t walFileCacheSize) {
+    size_t walFileCacheSize,
+    WalFormat walFormat) {
 #ifdef _WIN32
   (void)localDir;
   (void)logger;
   (void)directFileCreate;
   (void)cacheWalFiles;
   (void)walFileCacheSize;
+  (void)walFormat;
   return nullptr;
 #else
   // LegacyEphemeral only applies to the inode catalog, not the file content
@@ -258,7 +260,7 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
   if (inodeCatalogType == InodeCatalogType::Legacy ||
       inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     return std::make_unique<FsFileContentStore>(
-        localDir, directFileCreate, cacheWalFiles, walFileCacheSize);
+        localDir, directFileCreate, cacheWalFiles, walFileCacheSize, walFormat);
   } else if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     return std::make_unique<FsFileContentStoreDev>(localDir);
   } else {
@@ -337,7 +339,9 @@ Overlay::Overlay(
           inodeCatalogType,
           config.experimentalOverlayDirectFileCreate.getValue(),
           config.experimentalOverlayCacheWalFiles.getValue(),
-          config.overlayWalFileCacheSize.getValue())},
+          config.overlayWalFileCacheSize.getValue(),
+          config.overlayWalWriteV2.getValue() ? WalFormat::Version2
+                                              : WalFormat::Version1)},
       inodeCatalog_{makeInodeCatalog(
           localDir,
           inodeCatalogType,
@@ -1187,8 +1191,20 @@ void Overlay::appendWalEntryAndCompact(
     PathComponentPiece childName,
     const overlay::OverlayEntry* entry,
     const DirContents& content) {
-  uint64_t walFileSizeBytes =
-      inodeCatalog_->appendWalEntry(parent, op, childName, entry);
+  uint64_t walFileSizeBytes = 0;
+  try {
+    walFileSizeBytes =
+        inodeCatalog_->appendWalEntry(parent, op, childName, entry);
+  } catch (const WalEntryTooLargeError& ex) {
+    // `content` already includes this mutation, so a full rewrite persists
+    // it and retires the incompatible WAL; the next append starts a fresh
+    // file in the configured format.
+    XLOGF(DBG4, "{}; rewriting directory instead", ex.what());
+    DurationScope<EdenStats> compactScope{
+        stats_, &OverlayStats::walCompactionInline};
+    saveOverlayDir(parent, content, /*isMaterialized=*/true);
+    return;
+  }
   stats_->increment(&OverlayStats::walAppend);
   maybeCompactWal(parent, content, walFileSizeBytes);
 }
