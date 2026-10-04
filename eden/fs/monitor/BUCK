@@ -30,6 +30,12 @@ cpp_library(
         ["*.cpp"],
         exclude = ["main.cpp"],
     ),
+    headers = [
+        "EdenInstance.h",
+        "EdenMonitor.h",
+        "LogFile.h",
+        "LogRotation.h",
+    ],
     compatible_with = [
         "ovr_config//os:linux",
         "ovr_config//os:macos",

@@ -9,6 +9,7 @@ cpp_library(
     ],
     headers = [
         "LMDBFileContentStore.cpp",
+        "LMDBFileContentStore.h",
     ],
     compatible_with = [
         "ovr_config//os:linux",

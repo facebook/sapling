@@ -235,6 +235,10 @@ cpp_library(
         "ChronoParse.cpp",
         "ChronoUnit.cpp",
     ],
+    headers = [
+        "ChronoParse.h",
+        "ChronoUnit.h",
+    ],
     deps = [
         "//folly:conv",
         "//folly:string",
@@ -267,6 +271,9 @@ cpp_library(
 cpp_library(
     name = "thread",
     srcs = ["Thread.cpp"],
+    headers = [
+        "Thread.h",
+    ],
     external_deps = [
         ("glibc", None, "pthread"),
     ],

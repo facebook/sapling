@@ -14,8 +14,12 @@ cpp_library(
         "Blob.h",
         "BlobAuxData.h",
         "EntryAttributeFlags.h",
+        "Hash.h",
+        "ObjectId.h",
         "RootId.h",
+        "Tree.h",
         "TreeAuxData.h",
+        "TreeEntry.h",
     ],
     deps = [
         "//eden/common/utils:enum",
@@ -51,6 +55,9 @@ cpp_library(
     name = "testutil",
     srcs = [
         "TestOps.cpp",
+    ],
+    headers = [
+        "TestOps.h",
     ],
     exported_deps = [
         ":model",

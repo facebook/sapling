@@ -13,6 +13,9 @@ cpp_library(
     srcs = [
         "EdenMain.cpp",
     ],
+    headers = [
+        "EdenMain.h",
+    ],
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":init",
@@ -222,6 +225,9 @@ cpp_library(
     srcs = [
         "EdenInit.cpp",
     ],
+    headers = [
+        "EdenInit.h",
+    ],
     deps = [
         "//eden/common/utils:user_info",
         "//eden/fs:config",
@@ -356,6 +362,16 @@ cpp_library(
         "PeriodicTask.cpp",
         "RestartArmer.cpp",
         "ThriftPermissionChecker.cpp",
+    ],
+    headers = [
+        "EdenCPUThreadPool.h",
+        "EdenServer.h",
+        "EdenServiceHandler.h",
+        "EdenStateDir.h",
+        "HeartbeatManager.h",
+        "PeriodicTask.h",
+        "RestartArmer.h",
+        "ThriftPermissionChecker.h",
     ],
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",

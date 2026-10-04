@@ -68,6 +68,9 @@ cpp_library(
         "parsers.c",
         "revlog.c",
     ],
+    headers = [
+        "charencode.h",
+    ],
     # Python 2.x violate's C's strict aliasing rules, so compile with
     # -fno-strict-aliasing.  This has been fixed in Python 3 (PEP 3123)
     compiler_flags = [

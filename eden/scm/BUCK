@@ -41,6 +41,9 @@ cpp_library(
     srcs = [
         "sapling/bdiff.c",
     ],
+    headers = [
+        "sapling/bdiff.h",
+    ],
     exported_deps = [":core_headers"],
 )
 
@@ -62,6 +65,9 @@ cpp_library(
     name = "libmpatch",
     srcs = [
         "sapling/mpatch.c",
+    ],
+    headers = [
+        "sapling/mpatch.h",
     ],
     compiler_flags = [
         "-Wno-deprecated-declarations",

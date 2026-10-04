@@ -14,6 +14,7 @@ cpp_library(
         "xdiffi.h",
         "xinclude.h",
         "xmacros.h",
+        "xprepare.h",
         "xtypes.h",
         "xutils.h",
     ],
