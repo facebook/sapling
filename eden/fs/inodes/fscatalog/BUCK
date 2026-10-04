@@ -16,6 +16,7 @@ cpp_library(
         "InodePath.h",
     ],
     deps = [
+        "//eden/common/utils:bug",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:throw",
         "//eden/fs/model:model",

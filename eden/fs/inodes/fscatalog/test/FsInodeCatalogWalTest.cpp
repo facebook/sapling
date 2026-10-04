@@ -11,9 +11,12 @@
 #include <sys/stat.h>
 #include <cstdint>
 #include <cstring>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <folly/FileUtil.h>
+#include <folly/String.h>
 #include <folly/testing/TestUtil.h>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -661,6 +664,222 @@ TEST_P(FsInodeCatalogWalTest, loadWalDelta_truncatedTailIsDiscarded) {
   ASSERT_EQ(1u, delta.size());
   EXPECT_TRUE(delta.count("keep"));
   EXPECT_FALSE(delta.count("drop"));
+}
+
+namespace {
+
+// A WAL written by the EdenFS daemon on a devserver before the versioned
+// WAL work, copied from the overlay (`local/7a/13178.wal`). It holds REMOVE
+// journal.branch, REMOVE undo.desc, ADD undo.desc (0100644, inode
+// 317029781, no object ID), REMOVE journal.desc.
+const std::string kProductionV1WalHex =
+    "11000000020e006a6f75726e616c2e6272616e63680c000000020900756e646f2e646573"
+    "631b000000010900756e646f2e64657363a4810000957de512000000000000000f000000"
+    "020c006a6f75726e616c2e64657363";
+
+// Written by appendWalEntry before the versioned WAL work via the same calls
+// as appendGoldenEntries(). Covers what the production sample lacks: object
+// IDs (20 and 255 bytes, one with an embedded NUL), the ACL tail, a
+// directory, MATERIALIZE, and a 300-byte name.
+const std::string kSyntheticV1WalHex =
+    "2e00000001080066696c652e747874a48100002a0000000000000014abababababababab"
+    "abababababababababababab000018000000010600737562646972ed4100000700000000"
+    "000000000000180000000106007365637265748081000009000000000000000001030700"
+    "0000020400676f6e65060000000303006d61743d020000012c016e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e"
+    "6e6ea481000015cd5b0700000000ff858585858585858585858585858585858585858585"
+    "858585858585858585858585858585858585858585858585858585858585858585858585"
+    "858585858585858585858585858585858585858585858585858585858585858585858585"
+    "858585858585850085858585858585858585858585858585858585858585858585858585"
+    "858585858585858585858585858585858585858585858585858585858585858585858585"
+    "858585858585858585858585858585858585858585858585858585858585858585858585"
+    "858585858585858585858585858585858585858585858585858585858585858585858585"
+    "8585858585858585858585858585858585850000";
+
+std::string unhex(const std::string& hex) {
+  std::string out;
+  CHECK(folly::unhexlify(hex, out));
+  return out;
+}
+
+std::string goldenLongHash() {
+  std::string hash(255, '\x85');
+  hash[100] = '\0';
+  return hash;
+}
+
+void appendGoldenEntries(FsFileContentStore& store, InodeNumber parent) {
+  auto file = makeEntryWithHash(0100644, 42, std::string(20, '\xab'));
+  store.appendWalEntry(parent, WalOpType::ADD, "file.txt"_pc, &file);
+  auto dir = makeEntry(S_IFDIR | 0755, 7);
+  store.appendWalEntry(parent, WalOpType::ADD, "subdir"_pc, &dir);
+  auto restricted =
+      makeEntryWithAclRootState(0100600, 9, AclRootState::RestrictedAclRoot);
+  store.appendWalEntry(parent, WalOpType::ADD, "secret"_pc, &restricted);
+  store.appendWalEntry(parent, WalOpType::REMOVE, "gone"_pc, nullptr);
+  store.appendWalEntry(parent, WalOpType::MATERIALIZE, "mat"_pc, nullptr);
+  auto big = makeEntryWithHash(0100644, 123456789, goldenLongHash());
+  store.appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{std::string(300, 'n')}, &big);
+}
+
+void appendProductionEntries(FsFileContentStore& store, InodeNumber parent) {
+  store.appendWalEntry(parent, WalOpType::REMOVE, "journal.branch"_pc, nullptr);
+  store.appendWalEntry(parent, WalOpType::REMOVE, "undo.desc"_pc, nullptr);
+  auto undo = makeEntry(0100644, 317029781);
+  store.appendWalEntry(parent, WalOpType::ADD, "undo.desc"_pc, &undo);
+  store.appendWalEntry(parent, WalOpType::REMOVE, "journal.desc"_pc, nullptr);
+}
+
+} // namespace
+
+// The golden tests pin the v1 byte layout to captures made before this
+// code existed, so a change to the encoder or decoder fails against real
+// bytes rather than against itself.
+TEST_P(FsInodeCatalogWalTest, goldenV1_productionWalDecodes) {
+  const InodeNumber parent{13178};
+  const auto bytes = unhex(kProductionV1WalHex);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+  const auto result = store_->loadWalDelta(parent);
+  EXPECT_EQ(0u, result.parseErrors);
+  EXPECT_EQ(4u, result.rawEntriesParsed);
+  ASSERT_EQ(3u, result.delta.size());
+  EXPECT_EQ(WalOpType::REMOVE, result.delta.at("journal.branch").type);
+  EXPECT_EQ(WalOpType::REMOVE, result.delta.at("journal.desc").type);
+  const auto& undo = result.delta.at("undo.desc");
+  EXPECT_EQ(WalOpType::ADD, undo.type);
+  EXPECT_EQ(0100644, *undo.entry.mode());
+  EXPECT_EQ(317029781, *undo.entry.inodeNumber());
+  EXPECT_FALSE(undo.entry.hash().has_value());
+  EXPECT_FALSE(*undo.entry.isRestricted());
+  EXPECT_EQ(0, *undo.entry.aclRootState());
+}
+
+TEST_P(FsInodeCatalogWalTest, goldenV1_productionWalReencodes) {
+  const InodeNumber parent{13179};
+  appendProductionEntries(*store_, parent);
+  EXPECT_EQ(kProductionV1WalHex, folly::hexlify(readWal(parent)));
+}
+
+TEST_P(FsInodeCatalogWalTest, goldenV1_syntheticWalDecodes) {
+  const InodeNumber parent{778};
+  ASSERT_NO_FATAL_FAILURE(
+      writeRawWal(testDir_, parent, unhex(kSyntheticV1WalHex)));
+
+  const auto result = store_->loadWalDelta(parent);
+  EXPECT_EQ(0u, result.parseErrors);
+  EXPECT_EQ(6u, result.rawEntriesParsed);
+  ASSERT_EQ(6u, result.delta.size());
+
+  const auto& file = result.delta.at("file.txt");
+  EXPECT_EQ(WalOpType::ADD, file.type);
+  EXPECT_EQ(0100644, *file.entry.mode());
+  EXPECT_EQ(42, *file.entry.inodeNumber());
+  EXPECT_EQ(std::string(20, '\xab'), *file.entry.hash());
+  EXPECT_FALSE(*file.entry.isRestricted());
+
+  const auto& dir = result.delta.at("subdir");
+  EXPECT_EQ(S_IFDIR | 0755, *dir.entry.mode());
+  EXPECT_EQ(7, *dir.entry.inodeNumber());
+  EXPECT_FALSE(dir.entry.hash().has_value());
+
+  const auto& secret = result.delta.at("secret");
+  EXPECT_EQ(0100600, *secret.entry.mode());
+  EXPECT_EQ(9, *secret.entry.inodeNumber());
+  EXPECT_TRUE(*secret.entry.isRestricted());
+  EXPECT_EQ(
+      static_cast<int32_t>(AclRootState::RestrictedAclRoot),
+      *secret.entry.aclRootState());
+
+  EXPECT_EQ(WalOpType::REMOVE, result.delta.at("gone").type);
+  EXPECT_EQ(WalOpType::MATERIALIZE, result.delta.at("mat").type);
+
+  const auto& big = result.delta.at(std::string(300, 'n'));
+  EXPECT_EQ(123456789, *big.entry.inodeNumber());
+  EXPECT_EQ(goldenLongHash(), *big.entry.hash());
+}
+
+TEST_P(FsInodeCatalogWalTest, goldenV1_syntheticWalReencodes) {
+  const InodeNumber parent{779};
+  appendGoldenEntries(*store_, parent);
+  EXPECT_EQ(kSyntheticV1WalHex, folly::hexlify(readWal(parent)));
+}
+
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_trailingBytesShorterThanEntryLen) {
+  // A tail too short to hold an entryLen is a torn write, not padding.
+  // Reporting it lets loadOverlayDir heal the file.
+  const InodeNumber parent{352};
+  const auto frame = makeOldFormatAddWalFrame("keep", 0100644, 1);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, frame + "\x05\x00"));
+  const auto result = store_->loadWalDelta(parent);
+  EXPECT_EQ(1u, result.delta.size());
+  EXPECT_EQ(1u, result.rawEntriesParsed);
+  EXPECT_EQ(1u, result.parseErrors);
+}
+
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_preservesLegacyLongObjectIds) {
+  for (const auto size : {128u, 255u}) {
+    const InodeNumber parent{350 + size};
+    const std::string id(size, '\x85');
+    const auto bytes = makeOldFormatAddWalFrame("entry", 0100644, 12, id);
+    ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+    const auto result = store_->loadWalDelta(parent);
+    ASSERT_EQ(1u, result.delta.size());
+    EXPECT_EQ(id, *result.delta.at("entry").entry.hash());
+    EXPECT_EQ(0u, result.parseErrors);
+    EXPECT_EQ(bytes, readWal(parent));
+  }
+}
+
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_rejectsVersionedWal) {
+  const InodeNumber parent{351};
+  std::string bytes{"OVWL"};
+  bytes.push_back(0);
+  bytes.push_back(0);
+  bytes.push_back(0);
+  bytes.push_back(2);
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+  EXPECT_THROW(store_->loadWalDelta(parent), std::runtime_error);
+  EXPECT_EQ(bytes, readWal(parent));
+}
+
+TEST_P(FsInodeCatalogWalTest, shortWalHealsLikeTornWrite) {
+  // A file that ends inside "OVWL" + version, or is too short to hold even
+  // an entryLen and op byte, holds no record. The reader reports it so
+  // loadOverlayDir rewrites and clears it, and the writer starts the file
+  // over instead of wedging behind it or appending after a partial header.
+  const std::vector<std::string> torn{
+      std::string("OVWL\0", 5), // versioned header cut inside the version
+      "OVW", // versioned header cut inside the identifier
+      std::string("\x05\0\0", 3), // v1 entryLen cut short
+  };
+  uint64_t ino = 356;
+  for (const auto& bytes : torn) {
+    const InodeNumber parent{ino++};
+    ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+    auto result = store_->loadWalDelta(parent);
+    EXPECT_TRUE(result.delta.empty());
+    EXPECT_EQ(1u, result.parseErrors);
+    EXPECT_EQ(bytes, readWal(parent));
+
+    store_->appendWalEntry(parent, WalOpType::REMOVE, "x"_pc, nullptr);
+    EXPECT_FALSE(folly::StringPiece{readWal(parent)}.startsWith("OVW"));
+    result = store_->loadWalDelta(parent);
+    EXPECT_EQ(0u, result.parseErrors);
+    ASSERT_EQ(1u, result.delta.size());
+    EXPECT_EQ(WalOpType::REMOVE, result.delta.at("x").type);
+  }
 }
 
 TEST_P(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {

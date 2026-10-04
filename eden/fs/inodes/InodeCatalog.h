@@ -62,6 +62,10 @@ enum class WalOpType : uint8_t {
   MATERIALIZE = 3,
 };
 
+// Version1 WAL files have no header; later versions start with an OVWL
+// header that names their version.
+enum class WalFormat : uint8_t { Version1 };
+
 /**
  * A collapsed WAL delta for a single child name. Represents the net
  * effect of all WAL entries for that name.

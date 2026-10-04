@@ -35,6 +35,7 @@ cpp_unittest(
         "//folly:expected",
         "//folly:file_util",
         "//folly:range",
+        "//folly:string",
         "//folly/executors:cpu_thread_pool_executor",
         "//folly/logging:logging",
         "//folly/logging/test:test_handler",

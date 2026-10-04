@@ -46,10 +46,12 @@ class FsFileContentStore : public FileContentStore {
       AbsolutePathPiece localDir,
       bool directFileCreate = false,
       bool cacheWalFiles = false,
-      size_t walFileCacheSize = kDefaultWalFileCacheSize)
+      size_t walFileCacheSize = kDefaultWalFileCacheSize,
+      WalFormat walFormat = WalFormat::Version1)
       : localDir_{localDir},
         directFileCreate_{directFileCreate},
         cacheWalFiles_{cacheWalFiles},
+        walFormat_{walFormat},
         walFileCache_{std::in_place, walFileCacheSize} {}
 
   static constexpr size_t kDefaultWalFileCacheSize = 64;
@@ -292,6 +294,9 @@ class FsFileContentStore : public FileContentStore {
   static constexpr folly::StringPiece kHeaderIdentifierFile{"OVFL"};
   static constexpr uint32_t kHeaderVersion = 1;
   static constexpr size_t kHeaderLength = 64;
+  // Unmarked WAL files use the original record format. Versioned WALs start
+  // with this identifier followed by a big-endian uint32_t version.
+  static constexpr folly::StringPiece kWalHeaderIdentifier{"OVWL"};
   static constexpr uint32_t kNumShards = 256;
   static constexpr size_t kShardDirPathLength = 2;
 
@@ -377,11 +382,12 @@ class FsFileContentStore : public FileContentStore {
       bool removeOnFailure);
 
   struct CachedWalFile {
-    CachedWalFile(folly::File file, uint64_t size)
-        : file{std::move(file)}, size{size} {}
+    CachedWalFile(folly::File file, uint64_t size, WalFormat format)
+        : file{std::move(file)}, size{size}, format{format} {}
 
     folly::File file;
     uint64_t size;
+    WalFormat format;
   };
 
   using CachedWalFilePtr = std::shared_ptr<CachedWalFile>;
@@ -409,6 +415,12 @@ class FsFileContentStore : public FileContentStore {
    * experimental:overlay-cache-wal-files.
    */
   const bool cacheWalFiles_{false};
+
+  /**
+   * Format for newly created WAL files. Existing files keep the format
+   * named by their header regardless of this setting.
+   */
+  const WalFormat walFormat_{WalFormat::Version1};
 
   /**
    * An open file descriptor to the overlay info file.
