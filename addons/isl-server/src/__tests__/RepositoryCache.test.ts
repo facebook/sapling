@@ -68,6 +68,13 @@ class SimpleMockRepositoryImpl {
 }
 const SimpleMockRepository = SimpleMockRepositoryImpl as unknown as typeof Repository;
 
+function mockRealpath(impl: (p: string) => string) {
+  return jest
+    .spyOn(fs, 'realpath')
+    .mockImplementation(((p: string, cb: (err: null, resolved: string) => void) =>
+      cb(null, impl(p))) as unknown as typeof fs.realpath);
+}
+
 const ctx: RepositoryContext = {
   cmd: 'sl',
   logger: mockLogger,
@@ -98,10 +105,7 @@ describe('RepositoryCache', () => {
     // downstream "... is not under root" abort.
     const logicalCwd = '/path/to/symlink/cwd';
     const canonicalCwd = '/path/to/repo/cwd';
-    const realpathSpy = jest
-      .spyOn(fs.promises, 'realpath')
-      .mockImplementation((async (p: string) =>
-        p === logicalCwd ? canonicalCwd : p) as unknown as typeof fs.promises.realpath);
+    const realpathSpy = mockRealpath(p => (p === logicalCwd ? canonicalCwd : p));
 
     const cache = new RepositoryCache(SimpleMockRepository);
     const symlinkedCtx: RepositoryContext = {...ctx, cwd: logicalCwd};
@@ -122,10 +126,7 @@ describe('RepositoryCache', () => {
   it('reuses the fast path for a symlinked cwd after caching its canonical path', async () => {
     const logicalCwd = '/path/to/symlink-root';
     const canonicalRoot = '/path/to/repo';
-    const realpathSpy = jest
-      .spyOn(fs.promises, 'realpath')
-      .mockImplementation((async (p: string) =>
-        p === logicalCwd ? canonicalRoot : p) as unknown as typeof fs.promises.realpath);
+    const realpathSpy = mockRealpath(p => (p === logicalCwd ? canonicalRoot : p));
 
     const cache = new RepositoryCache(SimpleMockRepository);
     const ref1 = cache.getOrCreate({...ctx, cwd: logicalCwd});
@@ -142,6 +143,26 @@ describe('RepositoryCache', () => {
 
     ref1.unref();
     ref2.unref();
+    realpathSpy.mockRestore();
+  });
+
+  it('does not canonicalize cwd with the native realpath', async () => {
+    // Native realpath uppercases Windows drive letters, which VS Code's `Uri.fsPath` does not.
+    const nativeSpy = jest
+      .spyOn(fs.promises, 'realpath')
+      .mockImplementation((async (p: string) =>
+        p.toUpperCase()) as unknown as typeof fs.promises.realpath);
+    const realpathSpy = mockRealpath(p => p);
+
+    const cache = new RepositoryCache(SimpleMockRepository);
+    const cwdCtx: RepositoryContext = {...ctx, cwd: '/path/to/repo/cwd'};
+    const ref = cache.getOrCreate(cwdCtx);
+    await ref.promise;
+    expect(cwdCtx.cwd).toBe('/path/to/repo/cwd');
+    expect(nativeSpy).not.toHaveBeenCalled();
+
+    ref.unref();
+    nativeSpy.mockRestore();
     realpathSpy.mockRestore();
   });
 

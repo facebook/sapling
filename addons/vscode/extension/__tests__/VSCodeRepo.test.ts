@@ -81,8 +81,9 @@ beforeEach(() => {
   // realpath resolves via async threadpool I/O that may not settle within a single `nextTick()`,
   // so stub it to resolve synchronously and keep repo-creation timing deterministic.
   jest
-    .spyOn(fs.promises, 'realpath')
-    .mockImplementation((async (p: string) => p) as unknown as typeof fs.promises.realpath);
+    .spyOn(fs, 'realpath')
+    .mockImplementation(((p: string, cb: (err: null, resolved: string) => void) =>
+      cb(null, p)) as unknown as typeof fs.realpath);
 });
 
 describe('adding and removing repositories', () => {
