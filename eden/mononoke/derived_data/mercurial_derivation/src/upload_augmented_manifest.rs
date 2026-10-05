@@ -10,6 +10,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use acl_manifest::AclChildNode;
 use acl_manifest::DirectoryAclInputs;
@@ -18,7 +19,9 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
+use bounded_traversal::bounded_traversal_dag;
 use context::CoreContext;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future;
@@ -94,7 +97,7 @@ pub struct BuiltTree {
 pub struct UploadTreeAugmented {
     pub node_id: HgNodeHash,
     pub acl: DirectoryAcl,
-    /// The build level it ran in: 0 for a tree containing nothing else in the
+    /// Its height in the batch: 0 for a tree containing nothing else in the
     /// batch, otherwise one above its highest child.
     pub level: usize,
 }
@@ -214,6 +217,18 @@ impl UploadedTreeBatch {
             })
             .collect()
     }
+
+    /// The trees no other tree in the batch contains, so building down from
+    /// them reaches the whole batch unless it has a cycle.
+    fn top_trees(&self) -> Vec<usize> {
+        let mut contained = vec![false; self.trees.len()];
+        for &child in self.contains.iter().flatten() {
+            contained[child] = true;
+        }
+        (0..self.trees.len())
+            .filter(|&index| !contained[index])
+            .collect()
+    }
 }
 
 /// Order the batch so that every tree comes after the trees it contains. A node
@@ -270,7 +285,7 @@ struct ChildSources<'a> {
     children: &'a TreeChildren,
     /// Trees built earlier in the same batch. What the map adds over a
     /// blobstore lookup is their ACL flags, which the envelope does not record.
-    siblings: &'a HashMap<HgNodeHash, BuiltTree>,
+    siblings: &'a HashMap<HgNodeHash, &'a BuiltTree>,
 }
 
 /// Build and store the augmented manifest for one uploaded tree. Every
@@ -301,9 +316,24 @@ pub async fn build_augmented_manifest_for_uploaded_tree(
     .await
 }
 
-/// Build and store an augmented manifest for every uploaded tree, bottom-up and
-/// a level at a time. A child neither in the batch nor already derived fails
-/// the whole batch.
+/// A node of the build traversal. The traversal starts from a single node, so
+/// `Root` stands above the batch's top trees.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum BuildNode {
+    Root,
+    Tree(usize),
+}
+
+/// What a built tree hands up to the trees that contain it.
+struct AugmentedTree {
+    node_id: HgNodeHash,
+    tree: BuiltTree,
+    level: usize,
+}
+
+/// Build and store an augmented manifest for every uploaded tree, each as soon
+/// as the batch trees it contains are built. A child neither in the batch nor
+/// already derived fails the whole batch.
 pub async fn build_augmented_manifests_for_uploaded_trees(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -311,25 +341,45 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
     trees: Vec<HgManifestEnvelope>,
 ) -> Result<Vec<UploadTreeAugmented>> {
     let batch = UploadedTreeBatch::parse(trees)?;
+    let top_trees: Vec<BuildNode> = batch.top_trees().into_iter().map(BuildNode::Tree).collect();
+    // Indexed by batch position, so the output order does not depend on which
+    // build finishes first.
+    let built: Mutex<Vec<Option<UploadTreeAugmented>>> =
+        Mutex::new(batch.trees.iter().map(|_| None).collect());
 
-    let levels = batch.in_build_levels();
-    let tree_count = levels.iter().map(Vec::len).sum();
-
-    let mut built: HashMap<HgNodeHash, BuiltTree> = HashMap::with_capacity(tree_count);
-    let mut augmented = Vec::with_capacity(tree_count);
-    for (level_index, level) in levels.into_iter().enumerate() {
-        let siblings = &built;
-        let builds: Vec<_> = level
-            .into_iter()
-            .map(|tree| async move {
+    let (batch, built_ref) = (&batch, &built);
+    let traversed = bounded_traversal_dag(
+        MAX_CONCURRENT_TREE_BUILDS,
+        BuildNode::Root,
+        move |node| {
+            let children = match node {
+                BuildNode::Root => top_trees.clone(),
+                BuildNode::Tree(index) => batch.contains[index]
+                    .iter()
+                    .map(|&child| BuildNode::Tree(child))
+                    .collect(),
+            };
+            future::ok((node, children)).boxed()
+        },
+        move |node, children: bounded_traversal::Iter<Option<Arc<AugmentedTree>>>| {
+            let children: Vec<Arc<AugmentedTree>> = children.flatten().collect();
+            async move {
+                let BuildNode::Tree(index) = node else {
+                    return Ok(None);
+                };
+                let tree = &batch.trees[index];
+                let siblings = children
+                    .iter()
+                    .map(|child| (child.node_id, &child.tree))
+                    .collect();
                 let result = build_uploaded_tree(
                     ctx,
                     blobstore,
                     restricted_paths,
-                    tree.manifest,
+                    &tree.manifest,
                     ChildSources {
-                        children: tree.children,
-                        siblings,
+                        children: &batch.children[index],
+                        siblings: &siblings,
                     },
                 )
                 .await
@@ -339,24 +389,39 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                         tree.node_id
                     )
                 })?;
-                anyhow::Ok((tree.node_id, result))
-            })
-            .collect();
-        let level_built: Vec<(HgNodeHash, BuiltTree)> = stream::iter(builds)
-            .buffered(MAX_CONCURRENT_TREE_BUILDS)
-            .try_collect()
-            .await?;
-        for (node_id, result) in level_built {
-            augmented.push(UploadTreeAugmented {
-                node_id,
-                acl: result.acl.clone(),
-                level: level_index,
-            });
-            built.insert(node_id, result);
-        }
-    }
+                let level = children
+                    .iter()
+                    .map(|child| child.level + 1)
+                    .max()
+                    .unwrap_or(0);
+                built_ref
+                    .lock()
+                    .expect("should not be poisoned, nothing panics while holding it")[index] =
+                    Some(UploadTreeAugmented {
+                        node_id: tree.node_id,
+                        acl: result.acl.clone(),
+                        level,
+                    });
+                anyhow::Ok(Some(Arc::new(AugmentedTree {
+                    node_id: tree.node_id,
+                    tree: result,
+                    level,
+                })))
+            }
+            .boxed()
+        },
+    )
+    .await?;
 
-    Ok(augmented)
+    // Not reachable from content-addressed manifests. A cycle under a root
+    // stops the traversal, and one with no root above it is never visited.
+    traversed.context("the uploaded batch contains a cycle")?;
+    built
+        .into_inner()
+        .expect("should not be poisoned, nothing panics while holding it")
+        .into_iter()
+        .collect::<Option<Vec<_>>>()
+        .context("the uploaded batch contains a cycle")
 }
 
 async fn build_uploaded_tree(
@@ -642,5 +707,17 @@ mod tests {
         // Not reachable from a content-addressed manifest, but must not hang.
         let contains = vec![vec![1], vec![0]];
         assert_eq!(bottom_up_order(&contains).len(), 2);
+    }
+
+    #[mononoke::test]
+    fn test_a_cycle_has_no_top_trees() {
+        // Not reachable from a content-addressed manifest. With no root the
+        // traversal visits nothing, so the build must fail on the trees it
+        // never reached rather than return an empty success.
+        let (foo, bar) = (node(1), node(2));
+        let batch =
+            UploadedTreeBatch::parse(vec![tree(foo, &[("bar", bar)]), tree(bar, &[("foo", foo)])])
+                .expect("the fixture batch parses");
+        assert!(batch.top_trees().is_empty(), "each tree contains the other");
     }
 }
