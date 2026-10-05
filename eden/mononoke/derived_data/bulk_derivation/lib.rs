@@ -500,9 +500,6 @@ fn manager_for_derivable_untopologically_variant(
         DerivableUntopologicallyVariant::BssmV3 => {
             Arc::new(SingleTypeManager::<RootBssmV3DirectoryId>::new(manager))
         }
-        DerivableUntopologicallyVariant::ContentManifests => {
-            Arc::new(SingleTypeManager::<RootContentManifestId>::new(manager))
-        }
         DerivableUntopologicallyVariant::HgAugmentedManifests => {
             Arc::new(SingleTypeManager::<RootHgAugmentedManifestId>::new(manager))
         }

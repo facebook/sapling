@@ -76,7 +76,6 @@ pub enum DerivableUntopologicallyVariant {
     BlameV3,
     BssmV3,
     Ccsm,
-    ContentManifests,
     HgAugmentedManifests,
     GitDeltaManifestsV3,
     InferredCopyFrom,
@@ -252,9 +251,6 @@ impl DerivableType {
             DerivableType::InferredCopyFrom => {
                 Ok(DerivableUntopologicallyVariant::InferredCopyFrom)
             }
-            DerivableType::ContentManifests => {
-                Ok(DerivableUntopologicallyVariant::ContentManifests)
-            }
             DerivableType::SkeletonManifestsV2 => {
                 Ok(DerivableUntopologicallyVariant::SkeletonManifestsV2)
             }
@@ -318,7 +314,6 @@ impl DerivableUntopologicallyVariant {
             DerivableUntopologicallyVariant::BlameV3 => DerivableType::BlameV3,
             DerivableUntopologicallyVariant::BssmV3 => DerivableType::BssmV3,
             DerivableUntopologicallyVariant::Ccsm => DerivableType::Ccsm,
-            DerivableUntopologicallyVariant::ContentManifests => DerivableType::ContentManifests,
             DerivableUntopologicallyVariant::HgAugmentedManifests => {
                 DerivableType::HgAugmentedManifests
             }
