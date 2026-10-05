@@ -128,6 +128,7 @@ python_library(
 python_library(
     name = "lib",
     srcs = [
+        "ai_diagnosis.py",
         "buck.py",
         "cmd_util.py",
         "config.py",

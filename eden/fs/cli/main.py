@@ -21,10 +21,8 @@ import shlex
 import signal
 import subprocess
 import sys
-import time
 import traceback
 import typing
-import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -168,6 +166,7 @@ from thrift.python.exceptions import (
 )
 
 from . import (
+    ai_diagnosis,
     config as config_mod,
     daemon,
     daemon_util,
@@ -955,9 +954,6 @@ class ReloadConfigCmd(Subcmd):
         raise NotImplementedError("Stub -- only implemented in Rust")
 
 
-CLAUDE_TIMEOUT_SECS = 120
-
-
 @subcmd("doctor", "Debug and fix issues with EdenFS")
 class DoctorCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -1018,32 +1014,18 @@ class DoctorAICmd(Subcmd):
         parser.add_argument(
             "--claude-timeout-secs",
             type=int,
-            default=CLAUDE_TIMEOUT_SECS,
+            default=ai_diagnosis.CLAUDE_TIMEOUT_SECS,
             help="Timeout for the local claude diagnosis subprocess.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        # Not a `with` block: that would overwrite `duration` with the whole
-        # command's wall time, and the `claude` subprocess is the part worth
-        # timing when tuning --claude-timeout-secs.
         sample = instance.get_telemetry_logger().new_sample("eden_doctor_ai")
         # Seeded so an aborted run still emits a row with every field set:
-        # `finally` logs the sample even for KeyboardInterrupt, which `Exception`
-        # does not cover, and `exit_code` is unknown until doctor returns.
-        sample.add_string("reason", "unhandled_exception")
+        # `exit_code` is unknown until doctor returns.
         sample.add_int("exit_code", -1)
-        try:
+        with ai_diagnosis.logged_sample(sample):
             return self._run(args, instance, sample)
-        except KeyboardInterrupt:
-            sample.add_string("reason", "interrupted")
-            sample.fail("interrupted")
-            raise
-        except BaseException as ex:
-            sample.fail(str(ex))
-            raise
-        finally:
-            sample.log()
 
     def _run(
         self,
@@ -1077,81 +1059,7 @@ class DoctorAICmd(Subcmd):
 
 {doctor_text.strip()}
 """
-        claude_env = os.environ.copy()
-        claude_env.pop("CLAUDECODE", None)
-        # Choosing the session id rather than parsing it back out of `claude`
-        # keeps its output untouched, and lets a row be traced to the
-        # conversation that produced the diagnosis.
-        claude_session_id = str(uuid.uuid4())
-        sample.add_string("claude_session_id", claude_session_id)
-        claude_start = time.monotonic()
-        try:
-            claude_result = subprocess.run(
-                ["claude", "--print", "--session-id", claude_session_id],
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=args.claude_timeout_secs,
-                env=claude_env,
-                check=False,
-            )
-        except FileNotFoundError:
-            sample.add_string("reason", "claude_not_on_path")
-            sample.add_bool("success", False)
-            print(
-                "Local `claude` was not found on PATH; skipping AI diagnosis.",
-                file=sys.stderr,
-            )
-            return doctor_returncode
-        except OSError as ex:
-            # `claude` exists but could not be started, e.g. it is not
-            # executable. Must follow FileNotFoundError, which subclasses this.
-            sample.add_string("reason", "claude_failed")
-            sample.add_bool("success", False)
-            sample.add_double("duration", time.monotonic() - claude_start)
-            print(
-                f"Local `claude` could not be started: {ex}",
-                file=sys.stderr,
-            )
-            return doctor_returncode
-        except subprocess.TimeoutExpired as ex:
-            sample.add_string("reason", "claude_timed_out")
-            sample.add_bool("success", False)
-            sample.add_double("duration", time.monotonic() - claude_start)
-            stdout = (
-                ex.stdout.decode(errors="replace")
-                if isinstance(ex.stdout, bytes)
-                else (ex.stdout or "")
-            )
-            stderr = (
-                ex.stderr.decode(errors="replace")
-                if isinstance(ex.stderr, bytes)
-                else (ex.stderr or "")
-            )
-            print(
-                "Local `claude` timed out while generating the diagnosis.",
-                file=sys.stderr,
-            )
-            if stdout:
-                sys.stdout.write(stdout)
-            if stderr:
-                sys.stderr.write(stderr)
-            return doctor_returncode
-
-        sample.add_double("duration", time.monotonic() - claude_start)
-        sample.add_bool("success", claude_result.returncode == 0)
-        sample.add_string(
-            "reason", "claude_ok" if claude_result.returncode == 0 else "claude_failed"
-        )
-        if claude_result.returncode != 0:
-            print(
-                "Local `claude` failed while generating the diagnosis.",
-                file=sys.stderr,
-            )
-        if claude_result.stdout:
-            sys.stdout.write(claude_result.stdout)
-        if claude_result.stderr:
-            sys.stderr.write(claude_result.stderr)
+        ai_diagnosis.run_claude(prompt, args.claude_timeout_secs, sample)
         return doctor_returncode
 
 

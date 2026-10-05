@@ -15,7 +15,8 @@ from unittest.mock import MagicMock, patch
 
 from eden.fs.cli import telemetry
 
-from ..main import CLAUDE_TIMEOUT_SECS, DoctorAICmd
+from ..ai_diagnosis import CLAUDE_TIMEOUT_SECS
+from ..main import DoctorAICmd
 
 
 class DoctorAITest(unittest.TestCase):
@@ -48,7 +49,7 @@ class DoctorAITest(unittest.TestCase):
                 "eden.fs.cli.doctor.cure_what_ails_you", side_effect=cure_what_ails_you
             ):
                 with patch(
-                    "eden.fs.cli.main.subprocess.run",
+                    "eden.fs.cli.ai_diagnosis.subprocess.run",
                     side_effect=claude_run or (lambda *a, **kw: None),
                 ) as mock_run:
                     returncode = cmd.run(args)
