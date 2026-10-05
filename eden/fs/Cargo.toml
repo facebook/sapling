@@ -106,27 +106,27 @@ zvariant = { git = "https://github.com/z-galaxy/zbus", rev = "40d8995fa012652c1b
 zvariant_derive = { git = "https://github.com/z-galaxy/zbus", rev = "40d8995fa012652c1b1e1e9bd96e54327024be09" }
 
 [patch."https://github.com/lance-format/lance.git"]
-fsst = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-arrow = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-arrow-scalar = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-arrow-stats = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-bitpacking = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-core = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-datafusion = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-datagen = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-derive = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-encoding = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-file = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-index = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-index-core = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-io = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-linalg = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-namespace = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-namespace-impls = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-select = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-table = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
-lance-tokenizer = { git = "https://github.com/fbsource/lance", rev = "f7d475539cefbd140cc46a828f3d843e68cd10f1" }
+fsst = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-arrow = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-arrow-scalar = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-arrow-stats = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-bitpacking = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-core = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-datafusion = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-datagen = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-derive = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-encoding = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-file = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-index = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-index-core = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-io = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-linalg = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-namespace = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-namespace-impls = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-select = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-table = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
+lance-tokenizer = { git = "https://github.com/fbsource/lance", rev = "e5a3553b1699a7062ff7afe4ee268d596bbf2e0d" }
 
 [patch."https://github.com/milvus-io/rust-stemmers.git"]
 rust-stemmers = { git = "https://github.com/fbsource/rust-stemmers", rev = "3b2545218f76e797baecbf91fa1cbd2c0db60726" }
