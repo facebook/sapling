@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+from __future__ import annotations
 
 import asyncio
 import binascii
@@ -14,18 +14,16 @@ import socket
 import stat
 import sys
 import time
+from collections.abc import Awaitable
 from threading import Thread
 from typing import Dict, List
 
-from eden.fs.cli import util
 from eden.fs.service.eden.thrift_types import (
     EdenError,
     EdenErrorType,
     FaultDefinition,
     GetBlockedFaultsRequest,
     GetScmStatusParams,
-    MountId,
-    RootIdOptions,
     ScmFileStatus,
     SynchronizeWorkingCopyParams,
     UnblockFaultArg,
@@ -38,6 +36,13 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_cached_status_test
 THREAD_JOIN_TIMEOUT_SECONDS = 3
 
 WINDOWS_RUNTIME_ERR_PREFIX = "class " if sys.platform == "win32" else ""
+
+
+async def _gather_status_checks(*checks: Awaitable[object]) -> None:
+    results = await asyncio.gather(*checks, return_exceptions=True)
+    errors = [result for result in results if isinstance(result, BaseException)]
+    if errors:
+        raise BaseExceptionGroup("Concurrent status checks failed", errors)
 
 
 @hg_cached_status_test
@@ -432,44 +437,22 @@ class StatusTest(EdenHgTestCase):
                 # at the beginning, all counters should be 0
                 await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
-                def two_threads_call_in_parallel(func, args_1=(), args_2=()) -> None:
-                    t1 = Thread(target=func, args=args_1)
-                    t2 = Thread(target=func, args=args_2)
-                    t1.start()
-                    t2.start()
-                    t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
-                    t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
-
-                def two_threads_async_call_in_parallel(
-                    func, args_1=(), args_2=()
-                ) -> None:
-                    t1 = Thread(
-                        target=util.run_async_func_in_thread, args=(func, *args_1)
-                    )
-                    t2 = Thread(
-                        target=util.run_async_func_in_thread, args=(func, *args_2)
-                    )
-                    t1.start()
-                    t2.start()
-                    t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
-                    t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
-
-                two_threads_call_in_parallel(
-                    self.assert_status_empty,
+                await _gather_status_checks(
+                    asyncio.to_thread(self.assert_status_empty),
+                    asyncio.to_thread(self.assert_status_empty),
                 )
 
                 # we can't assert the exact number of hits and misses since
                 # we don't know if both two threads miss or only one of them misses.
 
                 self.touch("world.txt")
-                two_threads_call_in_parallel(
-                    self.assert_status,
-                    (self, {"world.txt": "?"}),
-                    (self, {"world.txt": "?"}),
+                await _gather_status_checks(
+                    asyncio.to_thread(self.assert_status, {"world.txt": "?"}),
+                    asyncio.to_thread(self.assert_status, {"world.txt": "?"}),
                 )
 
                 self.hg("add", "world.txt")
-                second_commit = self.repo.commit("adding world")
+                second_commit = binascii.unhexlify(self.repo.commit("adding world"))
 
                 commit_list = [initial_commit, second_commit]
                 listIgnoredFlags = [True, False]
@@ -481,14 +464,15 @@ class StatusTest(EdenHgTestCase):
                 print(f"arg_pairs: {arg_pairs}")
                 for commit, flag in arg_pairs:
                     arg_tuple = (
-                        self,
+                        client,
                         commit,
                         flag,
                         {b"world.txt": 0} if commit == initial_commit else {},
                     )
 
-                    two_threads_async_call_in_parallel(
-                        self.verify_status, args_1=arg_tuple, args_2=arg_tuple
+                    await _gather_status_checks(
+                        self.verify_status(*arg_tuple),
+                        self.verify_status(*arg_tuple),
                     )
 
                 # "testing concurrent calls with different arguments"
@@ -498,7 +482,6 @@ class StatusTest(EdenHgTestCase):
                 print(f"arg_pairs_2: {arg_pairs_2}")
                 for i in range(len(arg_pairs)):
                     arg_tuple_1 = (
-                        self,
                         client,
                         *arg_pairs_1[i],
                         {b"world.txt": 0}
@@ -506,7 +489,6 @@ class StatusTest(EdenHgTestCase):
                         else {},
                     )
                     arg_tuple_2 = (
-                        self,
                         client2,
                         *arg_pairs_2[i],
                         {b"world.txt": 0}
@@ -514,8 +496,9 @@ class StatusTest(EdenHgTestCase):
                         else {},
                     )
 
-                    two_threads_async_call_in_parallel(
-                        self.verify_status, args_1=arg_tuple_1, args_2=arg_tuple_2
+                    await _gather_status_checks(
+                        self.verify_status(*arg_tuple_1),
+                        self.verify_status(*arg_tuple_2),
                     )
 
     async def wait_for_status_cache_block_hit(self, client):

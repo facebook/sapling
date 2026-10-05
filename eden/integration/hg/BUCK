@@ -409,7 +409,6 @@ python_integration_test(
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [
-        "//eden/fs/cli:lib",
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
         "//thrift/lib/python:types",
