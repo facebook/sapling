@@ -44,6 +44,7 @@ use scm_client::UploadOutcome;
 use stats::prelude::*;
 use tracing::debug;
 use tracing::info;
+use tracing::warn;
 
 const MAX_CONCURRENT_MANIFESTS: usize = 50;
 const MAX_CONCURRENT_MANIFESTS_TREES_ONLY: usize = 500;
@@ -208,6 +209,16 @@ impl UploadCounters {
 
     pub fn redacted_files(&self) -> usize {
         self.redacted_files.get()
+    }
+
+    fn warn_skipped_redacted(&self, changeset_id: &ChangesetId) {
+        let redacted_files = self.redacted_files.get();
+        if redacted_files > 0 {
+            warn!(
+                "Skipped {} redacted files for changeset {}",
+                redacted_files, changeset_id,
+            );
+        }
     }
 }
 
@@ -493,6 +504,7 @@ where
                 upload_counter.tick_trees(ctx, outcome_root);
             }
         }
+        upload_counter.warn_skipped_redacted(changeset_id);
 
         debug!(
             "Upload of (bonsai) changeset {} to CAS took {} seconds, corresponding hg changeset is {}",
@@ -584,6 +596,7 @@ where
                                         )
                                     })?;
                                 upload_counter.tick_files(ctx, outcome);
+                                upload_counter.warn_skipped_redacted(changeset_id);
                                 debug!(
                                     "Upload completed for '{}' in {:.2} seconds",
                                     path,
@@ -728,6 +741,7 @@ where
                 skipped_restricted_trees, changeset_id,
             );
         }
+        final_upload_counter.warn_skipped_redacted(changeset_id);
 
         final_upload_counter.log(ctx);
         debug!(

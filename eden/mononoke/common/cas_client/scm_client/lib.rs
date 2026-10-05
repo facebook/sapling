@@ -20,6 +20,7 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::ContentId;
 use mononoke_types::MononokeDigest;
+use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
 define_stats! {
@@ -95,13 +96,19 @@ where
         content_id: ContentId,  // for fetching
         digest: MononokeDigest, // for uploading
     ) -> Result<UploadOutcome, Error> {
-        let stream = filestore::fetch(blobstore.clone(), ctx, &content_id.into())
-            .await?
-            .ok_or_else(|| {
-                anyhow!(
-                    "The following Mononoke Content Id is unexpectedly missing in the blobstore: {content_id}"
-                )
-            })?;
+        // Redaction has to be detected here: the CAS client re-wraps upload errors as strings,
+        // so the `RedactionError` root cause is lost once the upload fails.
+        let stream = match filestore::fetch(blobstore.clone(), ctx, &content_id.into()).await {
+            Err(e) if has_redaction_root_cause(&e).is_some() => {
+                return Ok(UploadOutcome::Redacted);
+            }
+            res => res?,
+        }
+        .ok_or_else(|| {
+            anyhow!(
+                "The following Mononoke Content Id is unexpectedly missing in the blobstore: {content_id}"
+            )
+        })?;
         if digest.1 <= MAX_BYTES_FOR_INLINE_UPLOAD {
             let bytes_to_upload = stream.try_collect::<BytesMut>().await?;
             self.client
