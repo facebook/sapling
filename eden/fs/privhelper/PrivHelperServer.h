@@ -331,7 +331,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // Virtual so that a test can observe whether a code path skipped it.
   virtual void cleanupMountPoints();
 
-#ifdef __APPLE__
   /** Everything prepareRestart() resolved as root. */
   struct RestartPlan {
     AbsolutePath binary;
@@ -401,7 +400,6 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * Virtual so tests can supply controlled credentials.
    */
   virtual void validateRestartOwner() const;
-#endif // __APPLE__
 
  private:
 #ifndef __APPLE__

@@ -423,7 +423,6 @@ EdenFsRestartArgs makeRestartArgs(std::string sentinelPath) {
   return args;
 }
 
-#ifdef __APPLE__
 const std::vector<std::string> kSentinelArgv{
     "/usr/local/libexec/eden/edenfs",
     "--edenfs"};
@@ -436,7 +435,6 @@ const std::vector<std::string> kSentinelArgv{
 void restrictSentinelToOwner(const std::string& path) {
   checkUnixError(::chmod(path.c_str(), 0600));
 }
-#endif // __APPLE__
 
 EdenFsRestartArgs roundTrip(const EdenFsRestartArgs& args) {
   auto msg = PrivHelperConn::serializeSetRestartArgsRequest(/*xid=*/42, args);
@@ -2440,8 +2438,6 @@ TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
   EXPECT_EQ(0ul, recorder->getEvents().size());
 }
 
-#ifdef __APPLE__
-
 /**
  * The sentinel is created by the daemon's unprivileged user and examined by a
  * root privhelper, so these cases are all about what a file planted at the name
@@ -2994,13 +2990,47 @@ class PrivHelperRealSpawnTestServer : public PrivHelperServer {
   void validateRestartOwner() const override {}
 };
 
+/**
+ * Checks whether this environment can spawn a process with reset user and
+ * group IDs. Returns false for EPERM, EACCES, or EINVAL from the spawn.
+ * Other spawn errors propagate.
+ */
+bool canSpawnWithResetIds() {
+  SpawnedProcess::Options opts;
+  opts.nullStdin();
+  opts.resetIds();
+  try {
+    SpawnedProcess proc({"/usr/bin/true"}, std::move(opts));
+    // Whatever the probe exited with, the reset was permitted. Report the
+    // oddity rather than skipping over it.
+    const auto status = proc.wait();
+    EXPECT_EQ(0, status.exitStatus()) << "the reset-ids probe " << status.str();
+    return true;
+  } catch (const std::system_error& ex) {
+    // POSIX_SPAWN_RESETIDS is all this probe asks for beyond a plain spawn, so
+    // a setuid/setgid the kernel refuses arrives as one of these.
+    const auto errorCode = ex.code().value();
+    if (ex.code().category() == std::generic_category() &&
+        (errorCode == EPERM || errorCode == EACCES || errorCode == EINVAL)) {
+      return false;
+    }
+    throw;
+  }
+}
+
 TEST(PrivHelperRestartLaunchTest, aChildThatExitsNonzeroDidNotFinishStarting) {
+  if (!canSpawnWithResetIds()) {
+    GTEST_SKIP() << "this environment forbids spawning with reset ids";
+  }
   PrivHelperRealSpawnTestServer server;
 
   EXPECT_FALSE(server.launchExecutable("/usr/bin/false"));
 }
 
 TEST(PrivHelperRestartLaunchTest, aChildThatExitsZeroFinishedStarting) {
+  if (!canSpawnWithResetIds()) {
+    GTEST_SKIP() << "this environment forbids spawning with reset ids";
+  }
   PrivHelperRealSpawnTestServer server;
 
   EXPECT_TRUE(server.launchExecutable("/usr/bin/true"));
@@ -3261,7 +3291,7 @@ class PrivHelperRestartRunTest : public ::testing::Test {
     // The command travels in the arguments now, so a relaunch has nothing to
     // spawn without it.
     args.relaunchArgv = kSentinelArgv;
-    std::move(client_->setRestartArgs(std::move(args))).get(1s);
+    std::move(client_->setRestartArgs(args)).get(1s);
   }
 
   /** Closes the connection, as a dying daemon would, and waits for run(). */
@@ -3361,5 +3391,3 @@ TEST_F(PrivHelperRestartRunTest, anInvalidRestartOwnerStillCleansUp) {
   EXPECT_EQ(0, server_.spawnCount());
   EXPECT_TRUE(server_.cleanupRan.load());
 }
-
-#endif // __APPLE__

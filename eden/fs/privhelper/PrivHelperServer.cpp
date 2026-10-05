@@ -337,7 +337,6 @@ folly::File PrivHelperServer::openBindMountTarget(
 #endif
 }
 
-#ifdef __APPLE__
 namespace {
 uint64_t currentEpochSeconds() {
   return static_cast<uint64_t>(
@@ -398,9 +397,6 @@ bool spawnEdenFs(
 
 PrivHelperServer::PrivHelperServer()
     : spawnEdenFs_{spawnEdenFs}, now_{currentEpochSeconds} {}
-#else
-PrivHelperServer::PrivHelperServer() = default;
-#endif // __APPLE__
 
 PrivHelperServer::~PrivHelperServer() = default;
 
@@ -439,9 +435,7 @@ void PrivHelperServer::initPartial(folly::File socket, uid_t uid, gid_t gid) {
   conn_ = UnixSocket::makeUnique(eventBase_.get(), std::move(socket));
   uid_ = uid;
   gid_ = gid;
-#ifdef __APPLE__
   sentinel_.emplace(uid);
-#endif
 
   folly::checkPosixError(chdir("/"), "privhelper failed to chdir(/)");
 }
@@ -1772,7 +1766,6 @@ void PrivHelperServer::bindUnmount(
   insecureBindUnmount(mountPath);
 }
 
-#ifdef __APPLE__
 UnixSocket::Message PrivHelperServer::processSetRestartArgsMsg(Cursor& cursor) {
   EdenFsRestartArgs args;
   PrivHelperConn::parseSetRestartArgsRequest(cursor, args);
@@ -1800,7 +1793,7 @@ UnixSocket::Message PrivHelperServer::processNotifyCleanShutdownMsg(
 
 std::optional<AbsolutePath> PrivHelperServer::findSiblingEdenFs(
     AbsolutePathPiece dir) {
-  const auto sibling = dir + "edenfs"_relpath;
+  auto sibling = dir + "edenfs"_relpath;
 
   struct stat st{};
   if (lstat(sibling.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) {
@@ -1928,7 +1921,6 @@ bool PrivHelperServer::launchRestart(const RestartPlan& plan) const {
   }
   return true;
 }
-#endif // __APPLE__
 
 void PrivHelperServer::run() {
   // Log and ignore signals that would otherwise terminate the process.
@@ -1963,7 +1955,6 @@ void PrivHelperServer::run() {
   // too.
   XLOG(DBG5, "privhelper process exiting");
 
-#ifdef __APPLE__
   if (peerExited_) {
     if (const auto plan = prepareRestart()) {
       if (launchRestart(*plan)) {
@@ -1971,7 +1962,6 @@ void PrivHelperServer::run() {
       }
     }
   }
-#endif
 
   // Unmount all active mount points
   cleanupMountPoints();
@@ -2114,19 +2104,9 @@ UnixSocket::Message PrivHelperServer::processMessage(
     case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
       return processSetFuseReadAhead(cursor);
     case PrivHelperConn::REQ_SET_RESTART_ARGS:
-#ifdef __APPLE__
       return processSetRestartArgsMsg(cursor);
-#else
-      // Only macOS restarts edenfs; on Linux systemd owns the lifecycle, so
-      // accept and ignore.
-      return makeResponse();
-#endif
     case PrivHelperConn::REQ_NOTIFY_CLEAN_SHUTDOWN:
-#ifdef __APPLE__
       return processNotifyCleanShutdownMsg(cursor);
-#else
-      return makeResponse();
-#endif
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

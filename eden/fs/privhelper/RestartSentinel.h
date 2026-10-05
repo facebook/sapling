@@ -7,8 +7,7 @@
 
 #pragma once
 
-#ifdef __APPLE__
-
+#include <folly/CppAttributes.h>
 #include <folly/File.h>
 #include <sys/types.h>
 #include <cstdint>
@@ -106,7 +105,7 @@ class RestartSentinel {
    * the unprivileged daemon, so root walks it once and afterwards only looks
    * the leaf up in the pinned directory, which no ancestor rename can redirect.
    */
-  const Location* location() const;
+  const Location* FOLLY_NULLABLE location() const;
 
   // The daemon's uid, as supplied to PrivHelperServer::init().
   uid_t uid_;
@@ -130,5 +129,3 @@ class RestartSentinel {
 };
 
 } // namespace facebook::eden
-
-#endif // __APPLE__

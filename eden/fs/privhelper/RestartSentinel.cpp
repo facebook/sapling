@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/privhelper/RestartSentinel.h"
+#ifndef _WIN32
 
-#ifdef __APPLE__
+#include "eden/fs/privhelper/RestartSentinel.h"
 
 #include <fcntl.h>
 #include <folly/Expected.h>
@@ -169,7 +169,8 @@ uint64_t RestartSentinel::firstRestartEpochSec() const {
   return config_.value().firstRestartEpochSec;
 }
 
-const RestartSentinel::Location* RestartSentinel::location() const {
+const RestartSentinel::Location* FOLLY_NULLABLE
+RestartSentinel::location() const {
   if (location_.has_value()) {
     return &*location_;
   }
@@ -288,4 +289,4 @@ bool RestartSentinel::admitRestartAttempt(uint64_t now) {
 
 } // namespace facebook::eden
 
-#endif // __APPLE__
+#endif // !_WIN32

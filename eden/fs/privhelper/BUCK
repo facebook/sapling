@@ -117,6 +117,7 @@ cpp_library(
         ":interface",
         "//eden/common/utils:io",
         "//eden/common/utils:process",
+        "//folly:cpp_attributes",
         "//folly:file",
     ],
     external_deps = [
