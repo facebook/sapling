@@ -134,8 +134,9 @@ pub struct TreeChildren {
     pub external: Vec<(MPathElement, HgNodeHash)>,
 }
 
-/// A batch of uploaded trees, parsed and ordered by containment. Built from the
-/// uploaded bytes alone, so its shape is known before the blobstore is touched.
+/// A batch of uploaded trees, parsed, with which tree contains which. Built from
+/// the uploaded bytes alone, so its shape is known before the blobstore is
+/// touched.
 pub struct UploadedTreeBatch {
     trees: Vec<ParsedTree>,
     /// Per tree, the positions of the batch trees it directly contains. Names
@@ -143,14 +144,6 @@ pub struct UploadedTreeBatch {
     contains: Vec<Vec<usize>>,
     /// Per tree, its children split by where they resolve from.
     children: Vec<TreeChildren>,
-}
-
-/// One tree of a batch, reached in build order.
-#[derive(Clone, Copy)]
-pub struct OrderedTree<'a> {
-    pub node_id: HgNodeHash,
-    pub manifest: &'a HgBlobManifest,
-    pub children: &'a TreeChildren,
 }
 
 impl UploadedTreeBatch {
@@ -200,24 +193,6 @@ impl UploadedTreeBatch {
         })
     }
 
-    /// The batch grouped into levels, each containing only trees whose
-    /// in-batch children all sit in earlier levels.
-    pub fn in_build_levels(&self) -> Vec<Vec<OrderedTree<'_>>> {
-        build_levels(&self.contains)
-            .into_iter()
-            .map(|level| {
-                level
-                    .into_iter()
-                    .map(|index| OrderedTree {
-                        node_id: self.trees[index].node_id,
-                        manifest: &self.trees[index].manifest,
-                        children: &self.children[index],
-                    })
-                    .collect()
-            })
-            .collect()
-    }
-
     /// The trees no other tree in the batch contains, so building down from
     /// them reaches the whole batch unless it has a cycle.
     fn top_trees(&self) -> Vec<usize> {
@@ -229,55 +204,6 @@ impl UploadedTreeBatch {
             .filter(|&index| !contained[index])
             .collect()
     }
-}
-
-/// Order the batch so that every tree comes after the trees it contains. A node
-/// is marked seen when pushed, not when finished, so a cyclic input terminates.
-fn bottom_up_order(child_indices: &[Vec<usize>]) -> Vec<usize> {
-    let mut seen = vec![false; child_indices.len()];
-    let mut order = Vec::with_capacity(child_indices.len());
-    for root in 0..child_indices.len() {
-        if std::mem::replace(&mut seen[root], true) {
-            continue;
-        }
-        let mut stack = vec![(root, 0usize)];
-        while let Some((node, child_position)) = stack.pop() {
-            match child_indices[node].get(child_position) {
-                Some(&child) => {
-                    stack.push((node, child_position + 1));
-                    if !std::mem::replace(&mut seen[child], true) {
-                        stack.push((child, 0));
-                    }
-                }
-                None => order.push(node),
-            }
-        }
-    }
-    order
-}
-
-/// Group the batch by height: a tree with no in-batch children is at level 0,
-/// and any other is one above its highest child.
-///
-/// On a cyclic input some edge cannot point to a strictly lower level, since
-/// heights cannot strictly decrease all the way round a cycle. That child is
-/// then not yet built when its parent is, so the batch fails rather than
-/// building against a missing child.
-fn build_levels(child_indices: &[Vec<usize>]) -> Vec<Vec<usize>> {
-    let mut height = vec![0usize; child_indices.len()];
-    let mut levels: Vec<Vec<usize>> = Vec::new();
-    for node in bottom_up_order(child_indices) {
-        height[node] = child_indices[node]
-            .iter()
-            .map(|&child| height[child] + 1)
-            .max()
-            .unwrap_or(0);
-        if levels.len() <= height[node] {
-            levels.resize_with(height[node] + 1, Vec::new);
-        }
-        levels[height[node]].push(node);
-    }
-    levels
 }
 
 /// Where the children of the tree being built are resolved from.
@@ -298,18 +224,18 @@ pub async fn build_augmented_manifest_for_uploaded_tree(
 ) -> Result<BuiltTree> {
     // A batch of one, so every child directory is external by construction.
     let batch = UploadedTreeBatch::parse(vec![envelope.clone()])?;
-    let tree = *batch
-        .in_build_levels()
+    let (tree, children) = batch
+        .trees
         .first()
-        .and_then(|level| level.first())
+        .zip(batch.children.first())
         .context("a batch of one uploaded tree has one tree to build")?;
     build_uploaded_tree(
         ctx,
         blobstore,
         restricted_paths,
-        tree.manifest,
+        &tree.manifest,
         ChildSources {
-            children: tree.children,
+            children,
             siblings: &HashMap::new(),
         },
     )
@@ -629,84 +555,37 @@ mod tests {
             UploadedTreeBatch::parse(vec![tree(foo, &[("bar", bar)]), tree(bar, &[("baz", baz)])])
                 .expect("the fixture batch parses");
 
-        let ordered: Vec<_> = batch.in_build_levels().into_iter().flatten().collect();
-        assert_eq!(
-            ordered.iter().map(|tree| tree.node_id).collect::<Vec<_>>(),
-            vec![bar, foo],
-            "bar is built before the foo that contains it"
+        let position = |node_id: HgNodeHash| {
+            batch
+                .trees
+                .iter()
+                .position(|tree| tree.node_id == node_id)
+                .expect("the tree was uploaded")
+        };
+        let (foo_children, bar_children) = (
+            &batch.children[position(foo)],
+            &batch.children[position(bar)],
         );
 
         assert_eq!(
-            node_ids(&ordered[0].children.external),
+            node_ids(&bar_children.external),
             vec![baz],
             "baz did not arrive, so it has to come from storage"
         );
         assert_eq!(
-            node_ids(&ordered[1].children.in_batch),
+            node_ids(&foo_children.in_batch),
             vec![bar],
             "bar arrived with the batch, so foo needs nothing from storage"
         );
         assert!(
-            ordered[1].children.external.is_empty(),
+            foo_children.external.is_empty(),
             "foo's only child directory arrived with it"
         );
-    }
-
-    #[mononoke::test]
-    fn test_bottom_up_order_puts_children_first() {
-        // 0 contains 1 and 2; 1 contains 3.
-        let contains = vec![vec![1, 2], vec![3], vec![], vec![]];
-        let order = bottom_up_order(&contains);
-        let position = |node: usize| order.iter().position(|n| *n == node).expect("visited");
-        assert_eq!(order.len(), 4, "every tree is visited exactly once");
-        assert!(position(3) < position(1), "3 is inside 1");
-        assert!(position(1) < position(0), "1 is inside 0");
-        assert!(position(2) < position(0), "2 is inside 0");
-    }
-
-    #[mononoke::test]
-    fn test_build_levels_groups_trees_by_height() {
-        // 0 contains 1 and 2; 1 contains 3.
-        let contains = vec![vec![1, 2], vec![3], vec![], vec![]];
-        let mut levels = build_levels(&contains);
-        levels.iter_mut().for_each(|level| level.sort());
         assert_eq!(
-            levels,
-            vec![vec![2, 3], vec![1], vec![0]],
-            "2 and 3 contain nothing in the batch, so they build together first"
+            batch.top_trees(),
+            vec![position(foo)],
+            "only foo is contained by nothing else in the batch"
         );
-    }
-
-    #[mononoke::test]
-    fn test_build_levels_leaves_a_cycle_edge_unsatisfied() {
-        // Not reachable from a content-addressed manifest. Building must then
-        // fail on a missing child, which needs an edge whose child is not in a
-        // strictly lower level than its parent.
-        let contains = vec![vec![1], vec![2], vec![0]];
-        let levels = build_levels(&contains);
-        let level_of = |node: usize| {
-            levels
-                .iter()
-                .position(|level| level.contains(&node))
-                .expect("every tree is placed")
-        };
-        assert_eq!(levels.iter().map(Vec::len).sum::<usize>(), 3);
-        assert!(
-            contains
-                .iter()
-                .enumerate()
-                .any(|(parent, children)| children
-                    .iter()
-                    .any(|&child| level_of(child) >= level_of(parent))),
-            "some child is not built before its parent"
-        );
-    }
-
-    #[mononoke::test]
-    fn test_bottom_up_order_terminates_on_a_cycle() {
-        // Not reachable from a content-addressed manifest, but must not hang.
-        let contains = vec![vec![1], vec![0]];
-        assert_eq!(bottom_up_order(&contains).len(), 2);
     }
 
     #[mononoke::test]
