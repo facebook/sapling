@@ -7,6 +7,11 @@ rust_library(
     name = "cas_client",
     srcs = glob(["client/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "client"},
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = (
         [
             "fbsource//third-party/rust:anyhow",

@@ -121,7 +121,60 @@ impl CasClient for DummyCasClient {
         Ok(missing)
     }
 
+    async fn delete_blobs(&self, digests: &[MononokeDigest]) -> Result<(), Error> {
+        stream::iter(digests.iter().copied().map(|digest| async move {
+            if self.lookup_blob(&digest).await? {
+                self.file_blobstore
+                    .unlink(&self.ctx, &digest.to_string())
+                    .await?;
+            }
+            Ok::<_, Error>(())
+        }))
+        .buffer_unordered(100)
+        .try_collect()
+        .await
+    }
+
     fn repo_name(&self) -> &str {
         &self.repo
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
+    use mononoke_types::hash::Blake3;
+
+    use super::*;
+
+    #[mononoke::fbinit_test]
+    async fn test_delete_blobs(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let dir = tempfile::tempdir()?;
+        let client = DummyCasClient::new_with_storage_path(ctx, "repo", dir.path())?;
+
+        let deleted = MononokeDigest(Blake3::from_byte_array([1; 32]), 3);
+        let kept = MononokeDigest(Blake3::from_byte_array([2; 32]), 3);
+        let never_uploaded = MononokeDigest(Blake3::from_byte_array([3; 32]), 3);
+        client
+            .upload_blobs(vec![
+                (deleted, Bytes::from_static(b"foo")),
+                (kept, Bytes::from_static(b"bar")),
+            ])
+            .await?;
+
+        client.delete_blobs(&[deleted, never_uploaded]).await?;
+        assert!(
+            !client.lookup_blob(&deleted).await?,
+            "deleted digest should be absent"
+        );
+        assert!(
+            client.lookup_blob(&kept).await?,
+            "digest not passed to delete should still be present"
+        );
+
+        client.delete_blobs(&[deleted]).await?;
+        Ok(())
     }
 }

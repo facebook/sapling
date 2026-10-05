@@ -39,6 +39,8 @@ pub trait CasClient: Sync + Send {
         &self,
         digests: &'a [MononokeDigest],
     ) -> Result<Vec<MononokeDigest>, Error>;
+    /// Delete given digests from a Cas backend. Digests that are not present are not an error.
+    async fn delete_blobs(&self, digests: &[MononokeDigest]) -> Result<(), Error>;
     /// Get the name of the repo this client is for.
     fn repo_name(&self) -> &str;
 }
