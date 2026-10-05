@@ -37,7 +37,12 @@ def py_fib(n):
         return n
     return sys.native_fib(n - 1) + sys.native_fib(n - 2)
 
-print(f"{py_fib(11)=}")
+# A non-ASCII function name cannot be read without the GIL. It should show
+# up as a placeholder in every backtrace, not drop the frames below it.
+def 斐波那契(n):
+    return py_fib(n)
+
+print(f"{斐波那契(11)=}")
 "#;
     let sys = py.import("sys").unwrap();
     sys.add(py, "native_fib", py_fn!(py, py_native_fib(n: u64)))
@@ -96,7 +101,7 @@ fn main() {
 
     println!(
         "Python frame resolution support: {:?}",
-        &*backtrace_python::SUPPORTED_INFO
+        *backtrace_python::SUPPORTED_INFO
     );
 
     backtrace_python::init();
@@ -148,6 +153,7 @@ fn main() {
     println!(
         r#"Check:
 - Profiler 1 and 2 outputs mix Python (py_fib) and Rust function (py_native_fib) names, if Python frame resolution is supported.
+- Profiler 1 and 2 outputs show the non-ASCII Python function as `<non-ascii> at <string>:11` below py_fib, so the backtrace is not truncated there.
 - Profiler 2 has a high frequency than Profiler 1 and is more detailed.
 - Profiler 3 (do_rust_work in a separate thread) has separate output (sleepy_fib) not containing Python frames."#
     );

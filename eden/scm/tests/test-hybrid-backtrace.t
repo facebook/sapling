@@ -21,14 +21,20 @@ Test getting backtrace:
   >         # e.g. commands::run::dispatch_command::hac40196f059e3564 (-C symbol-mangling-version=legacy)
   >         frame = re.sub(r'::h[0-9a-f]{16}$', '', frame)
   >         print(frame)
-  > my_unique_function_name_for_test()
+  > def 非ascii函数名():
+  >     my_unique_function_name_for_test()
+  > def outer_function_name_for_test():
+  >     非ascii函数名()
+  > outer_function_name_for_test()
   > 'EOF'
 
-The backtrace should include the `my_unique_function_name_for_test` Python function and the `run_command` Rust function:
+The backtrace should include the `my_unique_function_name_for_test` Python function and the `run_command` Rust function. A function with a non-ASCII name cannot be named without the GIL, so it shows as a placeholder, and the frames around it are still there:
 
   $ sl debugshell print_backtrace.py
   ...
   my_unique_function_name_for_test at print_backtrace.py:2
+  <non-ascii> at print_backtrace.py:10
+  outer_function_name_for_test at print_backtrace.py:12
   ...
   commands::run::run_command
   ...
