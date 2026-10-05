@@ -18,7 +18,9 @@ sl_rust_library(
         },
     },
     crate_root = "src/lib.rs",
-    test_deps = [],
+    test_deps = [
+        "//eden/scm/lib/blob:blob",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",

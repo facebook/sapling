@@ -1248,6 +1248,14 @@ pub trait TreeResolver: Send + Sync + 'static {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest>;
     fn get_root_id(&self, commit_id: &HgId) -> Result<HgId>;
     fn get_by_root_id(&self, root_id: &HgId) -> Result<TreeManifest>;
+
+    /// Resolve a batch of root tree IDs while preserving input order.
+    fn get_by_root_ids(&self, root_ids: &[HgId]) -> Result<Vec<TreeManifest>> {
+        root_ids
+            .iter()
+            .map(|root_id| self.get_by_root_id(root_id))
+            .collect()
+    }
 }
 
 /// The purpose of this function is to provide compatible behavior with the C++ implementation

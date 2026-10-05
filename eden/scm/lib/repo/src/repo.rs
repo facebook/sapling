@@ -24,7 +24,7 @@ use context::CoreContext;
 use eagerepo::EagerRepoStore;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
-use grepocompat::trees::synthesize_grepo_projects;
+use grepocompat::trees::synthesize_grepo_projects_batch;
 use identity::Identity;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeResolver;
@@ -479,8 +479,8 @@ impl Repo {
             if self.requirements.contains("grepo") {
                 let file_store = self.file_store()?;
                 let tree_store = self.tree_store()?;
-                let synthesize_fn = Arc::new(move |manifest: &TreeManifest| {
-                    synthesize_grepo_projects(&tree_store, &file_store, manifest)
+                let synthesize_fn = Arc::new(move |manifests: Vec<TreeManifest>| {
+                    synthesize_grepo_projects_batch(&tree_store, &file_store, manifests)
                 });
                 resolver = Arc::new(GrepoTreeResolver::new(resolver, synthesize_fn))
             }

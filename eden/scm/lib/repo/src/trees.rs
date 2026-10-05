@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_runtime::block_on;
 use commits_trait::DagCommits;
 use configmodel::Text;
@@ -206,19 +207,23 @@ impl TreeResolver for UnionTreeResolver {
     }
 }
 
+/// Synthesize a batch of manifests.
+///
+/// The outer error is a batch failure. Each inner result is the result for the input at the same
+/// position.
+pub type GrepoSynthesizeFn =
+    Arc<dyn Fn(Vec<TreeManifest>) -> Result<Vec<Result<TreeManifest>>> + Send + Sync>;
+
 /// A resolver wrapper which synthesizes virtual TreeManifest based off
 /// the commit content. Useful for trees which are not directly available
 /// in store but can be derived from the commit content (e.g. projects in .repo/manifests).
 pub struct GrepoTreeResolver {
     inner_resolver: Arc<dyn TreeResolver>,
-    synthesize_fn: Arc<dyn Fn(&TreeManifest) -> Result<TreeManifest> + Send + Sync>,
+    synthesize_fn: GrepoSynthesizeFn,
 }
 
 impl GrepoTreeResolver {
-    pub fn new(
-        inner_resolver: Arc<dyn TreeResolver>,
-        synthesize_fn: Arc<dyn Fn(&TreeManifest) -> Result<TreeManifest> + Send + Sync>,
-    ) -> Self {
+    pub fn new(inner_resolver: Arc<dyn TreeResolver>, synthesize_fn: GrepoSynthesizeFn) -> Self {
         GrepoTreeResolver {
             inner_resolver,
             synthesize_fn,
@@ -236,17 +241,77 @@ impl TreeResolver for GrepoTreeResolver {
     }
 
     fn get_by_root_id(&self, root_id: &HgId) -> Result<TreeManifest> {
-        let manifest = self.inner_resolver.get_by_root_id(root_id)?;
-        if !root_id.is_null() {
-            return (self.synthesize_fn)(&manifest)
-                .with_context(|| format!("synthesizing tree for root {}", root_id.to_hex()));
+        self.get_by_root_ids(std::slice::from_ref(root_id))?
+            .pop()
+            .with_context(|| format!("missing resolved tree for root {}", root_id.to_hex()))
+    }
+
+    fn get_by_root_ids(&self, root_ids: &[HgId]) -> Result<Vec<TreeManifest>> {
+        let manifests = self.inner_resolver.get_by_root_ids(root_ids)?;
+        if manifests.len() != root_ids.len() {
+            bail!(
+                "tree resolver returned {} manifests for {} root ids",
+                manifests.len(),
+                root_ids.len()
+            );
         }
-        Ok(manifest)
+
+        let mut passthrough = Vec::with_capacity(manifests.len());
+        let mut synthesize_root_ids = Vec::new();
+        let mut to_synthesize = Vec::new();
+        for (root_id, manifest) in root_ids.iter().zip(manifests) {
+            if root_id.is_null() {
+                passthrough.push(Some(manifest));
+            } else {
+                passthrough.push(None);
+                synthesize_root_ids.push(root_id);
+                to_synthesize.push(manifest);
+            }
+        }
+
+        let expected = to_synthesize.len();
+        let synthesized = if to_synthesize.is_empty() {
+            Vec::new()
+        } else {
+            (self.synthesize_fn)(to_synthesize)
+                .with_context(|| format!("synthesizing {expected} grepo trees"))?
+        };
+        if synthesized.len() != expected {
+            bail!(
+                "grepo synthesizer returned {} manifests for {expected} inputs",
+                synthesized.len()
+            );
+        }
+        let mut synthesized =
+            synthesize_root_ids
+                .into_iter()
+                .zip(synthesized)
+                .map(|(root_id, result)| {
+                    result
+                        .with_context(|| format!("synthesizing tree for root {}", root_id.to_hex()))
+                });
+
+        passthrough
+            .into_iter()
+            .map(|manifest| match manifest {
+                Some(manifest) => Ok(manifest),
+                None => synthesized.next().unwrap_or_else(|| {
+                    Err(anyhow::anyhow!(
+                        "grepo synthesizer result count changed while merging results"
+                    ))
+                }),
+            })
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
+    use manifest_tree::testutil::TestStore;
+
     use super::*;
 
     /// A mock resolver that returns not found for any commit.
@@ -298,6 +363,26 @@ mod tests {
     /// A mock resolver that returns an unexpected error.
     struct ErrorResolver {
         message: String,
+    }
+
+    struct CountingTreeResolver {
+        calls: Arc<AtomicUsize>,
+        store: Arc<TestStore>,
+    }
+
+    impl TreeResolver for CountingTreeResolver {
+        fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
+            self.get_by_root_id(commit_id)
+        }
+
+        fn get_root_id(&self, commit_id: &HgId) -> Result<HgId> {
+            Ok(*commit_id)
+        }
+
+        fn get_by_root_id(&self, _root_id: &HgId) -> Result<TreeManifest> {
+            self.calls.fetch_add(1, Ordering::Relaxed);
+            Ok(TreeManifest::ephemeral(self.store.clone()))
+        }
     }
 
     impl TreeResolver for ErrorResolver {
@@ -393,5 +478,75 @@ mod tests {
                 .contains("dddddddddddddddddddddddddddddddddddddddd")
         );
         assert!(err.to_string().contains("tree not found"));
+    }
+
+    #[test]
+    fn test_grepo_resolver_synthesizes_non_null_trees_in_one_batch() -> Result<()> {
+        let inner_calls = Arc::new(AtomicUsize::new(0));
+        let synthesize_calls = Arc::new(AtomicUsize::new(0));
+        let synthesize_size = Arc::new(AtomicUsize::new(0));
+        let inner = CountingTreeResolver {
+            calls: inner_calls.clone(),
+            store: Arc::new(TestStore::new()),
+        };
+        let synthesize_fn = {
+            let synthesize_calls = synthesize_calls.clone();
+            let synthesize_size = synthesize_size.clone();
+            Arc::new(move |manifests: Vec<TreeManifest>| {
+                synthesize_calls.fetch_add(1, Ordering::Relaxed);
+                synthesize_size.store(manifests.len(), Ordering::Relaxed);
+                Ok(manifests.into_iter().map(Ok).collect())
+            })
+        };
+        let resolver = GrepoTreeResolver::new(Arc::new(inner), synthesize_fn);
+        let root_ids = vec![
+            hgid::NULL_ID,
+            HgId::from_hex(b"1111111111111111111111111111111111111111")?,
+            HgId::from_hex(b"2222222222222222222222222222222222222222")?,
+        ];
+
+        let manifests = resolver.get_by_root_ids(&root_ids)?;
+
+        assert_eq!(manifests.len(), 3);
+        assert_eq!(inner_calls.load(Ordering::Relaxed), 3);
+        assert_eq!(synthesize_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(synthesize_size.load(Ordering::Relaxed), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_grepo_resolver_reports_failing_root() -> Result<()> {
+        let inner = CountingTreeResolver {
+            calls: Arc::new(AtomicUsize::new(0)),
+            store: Arc::new(TestStore::new()),
+        };
+        let synthesize_fn: GrepoSynthesizeFn = Arc::new(|manifests: Vec<TreeManifest>| {
+            Ok(manifests
+                .into_iter()
+                .enumerate()
+                .map(|(index, manifest)| {
+                    if index == 1 {
+                        Err(anyhow::anyhow!("bad manifest"))
+                    } else {
+                        Ok(manifest)
+                    }
+                })
+                .collect())
+        });
+        let resolver = GrepoTreeResolver::new(Arc::new(inner), synthesize_fn);
+        let root_ids = vec![
+            HgId::from_hex(b"1111111111111111111111111111111111111111")?,
+            HgId::from_hex(b"2222222222222222222222222222222222222222")?,
+        ];
+
+        let error = resolver
+            .get_by_root_ids(&root_ids)
+            .expect_err("the second root should fail");
+
+        assert_eq!(
+            format!("{error:#}"),
+            "synthesizing tree for root 2222222222222222222222222222222222222222: bad manifest"
+        );
+        Ok(())
     }
 }
