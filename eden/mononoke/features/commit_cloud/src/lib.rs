@@ -111,7 +111,7 @@ pub enum Phase {
     Draft,
 }
 
-const HISTORY_KEEP_VERSIONS: u64 = 500;
+const HISTORY_KEEP_VERSIONS: u64 = 100;
 const HISTORY_KEEP_DAYS: u64 = 30;
 
 impl Display for Phase {
