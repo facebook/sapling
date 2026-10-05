@@ -114,7 +114,6 @@ pushrebase_client = { version = "0.1.0", path = "../../features/pushrebase/pushr
 pushrebase_hooks = { version = "0.1.0", path = "../../features/pushrebase/pushrebase_hooks" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
-redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 redaction = { version = "0.1.0", path = "../../features/redaction" }
 redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }
 regex = "1.13.1"

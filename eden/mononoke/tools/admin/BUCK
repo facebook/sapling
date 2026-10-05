@@ -198,7 +198,6 @@ rust_binary(
             "//configerator/structs/scm/mononoke/repos:repos-rust",
             "//eden/mononoke/blobstore:blobstore_factory",
             "//eden/mononoke/blobstore:fileblob",
-            "//eden/mononoke/blobstore:redactedblobstore",
             "//eden/mononoke/common/sql_construct:sql_construct",
             "//eden/mononoke/metaconfig:metaconfig_parser",
             "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
