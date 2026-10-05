@@ -251,6 +251,7 @@ cpp_library(
     headers = ["CgroupFileCacheReclaimer.h"],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:proc_mount_info",
         "//folly:file",
         "//folly:file_util",
     ],

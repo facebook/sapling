@@ -379,7 +379,7 @@ cpp_library(
         ":statmount",
         "//folly/logging:logging",
     ],
-    exported_deps = ["//folly:expected"],
+    exported_deps = ["//eden/common/utils:proc_mount_info"],
 )
 
 cpp_library(

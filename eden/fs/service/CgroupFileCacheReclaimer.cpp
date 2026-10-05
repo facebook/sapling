@@ -9,6 +9,8 @@
 
 #include "eden/fs/service/CgroupFileCacheReclaimer.h"
 
+#include "eden/common/utils/ProcMountInfo.h"
+
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -118,47 +120,6 @@ uint64_t readNamedValue(
   throw std::runtime_error{fmt::format("{} does not contain {}", path, name)};
 }
 
-std::string decodeMountInfoPath(std::string_view encoded) {
-  std::string decoded;
-  decoded.reserve(encoded.size());
-  for (size_t i = 0; i < encoded.size(); ++i) {
-    if (encoded[i] != '\\' || i + 3 >= encoded.size() || encoded[i + 1] < '0' ||
-        encoded[i + 1] > '7' || encoded[i + 2] < '0' || encoded[i + 2] > '7' ||
-        encoded[i + 3] < '0' || encoded[i + 3] > '7') {
-      decoded.push_back(encoded[i]);
-      continue;
-    }
-    const auto value = static_cast<char>(
-        (encoded[i + 1] - '0') * 64 + (encoded[i + 2] - '0') * 8 +
-        (encoded[i + 3] - '0'));
-    decoded.push_back(value);
-    i += 3;
-  }
-  return decoded;
-}
-
-struct Cgroup2Mount {
-  std::string root;
-  std::string mountPoint;
-};
-
-std::vector<Cgroup2Mount> findCgroup2Mounts(std::string_view mountInfo) {
-  std::vector<Cgroup2Mount> mounts;
-  for (const auto line : splitLines(mountInfo)) {
-    const auto fields = splitFields(line);
-    const auto separator =
-        std::find(fields.begin(), fields.end(), std::string_view{"-"});
-    if (fields.size() > 4 && separator != fields.end() &&
-        separator + 1 != fields.end() && separator[1] == "cgroup2") {
-      mounts.push_back({
-          .root = decodeMountInfoPath(fields[3]),
-          .mountPoint = decodeMountInfoPath(fields[4]),
-      });
-    }
-  }
-  return mounts;
-}
-
 std::string findCgroupPath(std::string_view cgroupFile) {
   for (const auto line : splitLines(cgroupFile)) {
     if (line.starts_with("0::")) {
@@ -240,8 +201,18 @@ std::string findCgroup2Directory(
     std::string_view cgroupPath) {
   std::optional<std::string> directory;
   size_t bestRootLength = 0;
-  for (const auto& mount : findCgroup2Mounts(mountInfo)) {
-    const auto root = stripTrailingSlashes(mount.root);
+  auto mounts = parseProcMountInfo(mountInfo);
+  if (mounts.hasError()) {
+    throw std::system_error{
+        mounts.error(),
+        std::generic_category(),
+        "parsing /proc/self/mountinfo"};
+  }
+  for (const auto& mount : mounts.value()) {
+    if (mount.fsType != "cgroup2") {
+      continue;
+    }
+    const auto root = stripTrailingSlashes(mount.mountRoot);
     const auto relativePath = pathBelowMountRoot(cgroupPath, root);
     if (relativePath && (!directory || root.size() > bestRootLength)) {
       directory = joinCgroupPath(mount.mountPoint, *relativePath);

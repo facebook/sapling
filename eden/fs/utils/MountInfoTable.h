@@ -7,30 +7,15 @@
 
 #pragma once
 
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include <folly/Expected.h>
+#include "eden/common/utils/ProcMountInfo.h"
 
 namespace facebook::eden {
 
 #ifdef __linux__
-
-struct MountTableEntry {
-  uint32_t devMajor{};
-  uint32_t devMinor{};
-  std::string mountPoint;
-  std::string mountSource;
-  std::string fsType;
-  std::string mountOptions;
-};
-
-struct MountInfoOptions {
-  bool includeMountSource{false};
-  bool includeMountOptions{false};
-};
 
 /**
  * Find mount info for an exact mount point path using

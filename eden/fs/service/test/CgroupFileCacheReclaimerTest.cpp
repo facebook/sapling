@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 
 #include <fmt/core.h>
 #include <folly/FileUtil.h>
@@ -242,6 +243,48 @@ TEST_F(CgroupFileCacheReclaimerTest, resolvesCgroupBelowRootMountPoint) {
   ASSERT_TRUE(
       folly::readFile((directory + "/memory.reclaim").c_str(), request));
   EXPECT_EQ("1500 swappiness=0", request);
+}
+
+TEST_F(CgroupFileCacheReclaimerTest, choosesMostSpecificMountRoot) {
+  const auto broadMount = fmt::format(
+      "35 25 0:31 / {} rw - cgroup2 cgroup rw\n",
+      (tmpDir_.path() / "broad").string());
+  setProcFiles(
+      "/delegated", mountPoint_, "/delegated/edenfs_test.scope", broadMount);
+  setMemoryStat("active_file 2000\ninactive_file 3000\n");
+
+  makeReclaimer().reclaim({.targetBytes = 1'000, .maxReclaimBytes = 1'500});
+
+  EXPECT_EQ("1500 swappiness=0", reclaimRequest());
+}
+
+TEST_F(CgroupFileCacheReclaimerTest, resolvesEscapedMountRootAndPoint) {
+  const auto encodedMountPoint = mountPoint_ + "\\040with\\040spaces";
+  mountPoint_ += " with spaces";
+  cgroupDirectory_ = mountPoint_ + "/edenfs_test.scope";
+  createCgroupFiles(cgroupDirectory_);
+  setProcFiles(
+      "/delegated\\040root",
+      encodedMountPoint,
+      "/delegated root/edenfs_test.scope");
+  setMemoryStat("active_file 2000\ninactive_file 3000\n");
+
+  makeReclaimer().reclaim({.targetBytes = 1'000, .maxReclaimBytes = 1'500});
+
+  EXPECT_EQ("1500 swappiness=0", reclaimRequest());
+}
+
+TEST_F(CgroupFileCacheReclaimerTest, rejectsMalformedMountInfoBeforeReclaim) {
+  write(
+      procSelfMountInfo_,
+      fmt::format(
+          "36 25 0:32 / {} rw - cgroup2 cgroup rw\nmalformed\n", mountPoint_));
+  setMemoryStat("active_file 2000\ninactive_file 3000\n");
+
+  EXPECT_THROW(
+      makeReclaimer().reclaim({.targetBytes = 1'000, .maxReclaimBytes = 1'500}),
+      std::system_error);
+  EXPECT_EQ("", reclaimRequest());
 }
 
 TEST_F(CgroupFileCacheReclaimerTest, readsMountInfoBeyond64KiB) {
