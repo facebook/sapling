@@ -27,7 +27,6 @@ use fastlog::unode_entry_to_fastlog_batch_key;
 use filenodes::FilenodeInfo;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::Alias;
-use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::future::BoxFuture;
@@ -58,7 +57,6 @@ use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::DerivableType;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::FsnodeId;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::MononokeId;
@@ -68,7 +66,6 @@ use mononoke_types::SkeletonManifestId;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
-use mononoke_types::fsnode::Fsnode;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::unode::FileUnode;
@@ -364,8 +361,6 @@ create_graph!(
             FastlogBatch,
             FastlogDir,
             FastlogFile,
-            Fsnode,
-            FsnodeMapping,
             SkeletonManifest,
             SkeletonManifestMapping,
             UnodeFile,
@@ -386,7 +381,6 @@ create_graph!(
             ChangesetInfo,
             ChangesetInfoMapping,
             DeletedManifestV2Mapping,
-            FsnodeMapping,
             SkeletonManifestMapping,
             UnodeMapping
         ]
@@ -468,11 +462,6 @@ create_graph!(
     ),
     (DeletedManifestV2Mapping, ChangesetId, [RootDeletedManifestV2(DeletedManifestV2)]),
     (
-        Fsnode,
-        FsnodeId,
-        [ChildFsnode(Fsnode), FileContent]
-    ),
-    (
         FastlogBatch,
         FastlogBatchId,
         [Changeset, PreviousBatch(FastlogBatch)]
@@ -487,7 +476,6 @@ create_graph!(
         FastlogKey<FileUnodeId>,
         [Changeset, PreviousBatch(FastlogBatch)]
     ),
-    (FsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
     (
         SkeletonManifest,
         SkeletonManifestId,
@@ -547,8 +535,6 @@ impl NodeType {
             NodeType::FastlogBatch => Some(RootFastlog::VARIANT),
             NodeType::FastlogDir => Some(RootFastlog::VARIANT),
             NodeType::FastlogFile => Some(RootFastlog::VARIANT),
-            NodeType::Fsnode => Some(RootFsnodeId::VARIANT),
-            NodeType::FsnodeMapping => Some(RootFsnodeId::VARIANT),
             NodeType::SkeletonManifest => Some(RootSkeletonManifestId::VARIANT),
             NodeType::SkeletonManifestMapping => Some(RootSkeletonManifestId::VARIANT),
             NodeType::UnodeFile => Some(RootUnodeManifestId::VARIANT),
@@ -588,8 +574,6 @@ impl NodeType {
             NodeType::FastlogBatch => true,
             NodeType::FastlogDir => true,
             NodeType::FastlogFile => true,
-            NodeType::Fsnode => true,
-            NodeType::FsnodeMapping => false,
             NodeType::SkeletonManifest => true,
             NodeType::SkeletonManifestMapping => false,
             NodeType::UnodeFile => true,
@@ -845,8 +829,6 @@ pub enum NodeData {
     FastlogBatch(Option<FastlogBatch>),
     FastlogDir(Option<FastlogBatch>),
     FastlogFile(Option<FastlogBatch>),
-    Fsnode(Fsnode),
-    FsnodeMapping(Option<FsnodeId>),
     SkeletonManifest(Option<SkeletonManifest>),
     SkeletonManifestMapping(Option<SkeletonManifestId>),
     UnodeFile(FileUnode),
@@ -916,8 +898,6 @@ impl Node {
             Node::FastlogBatch(_) => None,
             Node::FastlogDir(_) => None,
             Node::FastlogFile(_) => None,
-            Node::Fsnode(_) => None,
-            Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
@@ -956,8 +936,6 @@ impl Node {
             Node::FastlogBatch(k) => k.blobstore_key(),
             Node::FastlogDir(k) => k.blobstore_key(),
             Node::FastlogFile(k) => k.blobstore_key(),
-            Node::Fsnode(k) => k.blobstore_key(),
-            Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::SkeletonManifest(k) => k.blobstore_key(),
             Node::SkeletonManifestMapping(k) => k.blobstore_key(),
             Node::UnodeFile(k) => k.blobstore_key(),
@@ -996,8 +974,6 @@ impl Node {
             Node::FastlogBatch(_) => None,
             Node::FastlogDir(_) => None,
             Node::FastlogFile(_) => None,
-            Node::Fsnode(_) => None,
-            Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
@@ -1037,8 +1013,6 @@ impl Node {
             Node::FastlogBatch(k) => Some(k.sampling_fingerprint()),
             Node::FastlogDir(k) => Some(k.sampling_fingerprint()),
             Node::FastlogFile(k) => Some(k.sampling_fingerprint()),
-            Node::Fsnode(k) => Some(k.sampling_fingerprint()),
-            Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifest(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(k) => Some(k.sampling_fingerprint()),
@@ -1192,6 +1166,7 @@ mod tests {
         // in different stores
         let grandfathered: HashSet<DerivableType> = HashSet::from_iter(vec![
             DerivableType::AclManifests,
+            DerivableType::Fsnodes,
             DerivableType::GitCommits,
             DerivableType::GitDeltaManifestsV2,
             DerivableType::GitDeltaManifestsV3,

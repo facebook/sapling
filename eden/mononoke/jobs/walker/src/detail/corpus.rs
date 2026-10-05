@@ -208,8 +208,6 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::FastlogBatch => false,
         NodeType::FastlogDir => false,
         NodeType::FastlogFile => false,
-        NodeType::Fsnode => false,
-        NodeType::FsnodeMapping => false,
         NodeType::SkeletonManifest => false,
         NodeType::SkeletonManifestMapping => false,
         NodeType::UnodeFile => false,

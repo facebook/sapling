@@ -363,18 +363,6 @@ mod tests {
                     &parse_node(&format!("FastlogFile{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
                 );
             }
-            NodeType::Fsnode => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!("Fsnode{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
-                );
-            }
-            NodeType::FsnodeMapping => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!("FsnodeMapping{NODE_SEP}{SAMPLE_BLAKE2}"))?.get_type()
-                );
-            }
             NodeType::SkeletonManifest => {
                 assert_eq!(
                     node_type,

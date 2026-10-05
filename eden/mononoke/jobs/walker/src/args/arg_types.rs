@@ -90,7 +90,6 @@ pub enum ChunkByPublicArg {
     ChangesetInfo,
     ChangesetInfoMapping,
     DeletedManifestV2Mapping,
-    FsnodeMapping,
     SkeletonManifestMapping,
     UnodeMapping,
 }
@@ -104,7 +103,6 @@ impl From<ChunkByPublicArg> for NodeType {
             ChunkByPublicArg::ChangesetInfo => NodeType::ChangesetInfo,
             ChunkByPublicArg::ChangesetInfoMapping => NodeType::ChangesetInfoMapping,
             ChunkByPublicArg::DeletedManifestV2Mapping => NodeType::DeletedManifestV2Mapping,
-            ChunkByPublicArg::FsnodeMapping => NodeType::FsnodeMapping,
             ChunkByPublicArg::SkeletonManifestMapping => NodeType::SkeletonManifestMapping,
             ChunkByPublicArg::UnodeMapping => NodeType::UnodeMapping,
         }

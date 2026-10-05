@@ -36,7 +36,6 @@ use mononoke_types::ContentId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use phases::Phase;
@@ -231,8 +230,6 @@ pub struct WalkState {
     visited_fastlog_batch: StateMap<FastlogBatchId>,
     visited_fastlog_dir: StateMap<InternedId<ManifestUnodeId>>,
     visited_fastlog_file: StateMap<InternedId<FileUnodeId>>,
-    visited_fsnode: StateMap<FsnodeId>,
-    visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
     visited_skeleton_manifest: StateMap<SkeletonManifestId>,
     visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_unode_file: StateMap<UnodeInterned<FileUnodeId>>,
@@ -294,8 +291,6 @@ impl WalkState {
             visited_fastlog_batch: StateMap::with_hasher(fac.clone()),
             visited_fastlog_dir: StateMap::with_hasher(fac.clone()),
             visited_fastlog_file: StateMap::with_hasher(fac.clone()),
-            visited_fsnode: StateMap::with_hasher(fac.clone()),
-            visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
             visited_skeleton_manifest: StateMap::with_hasher(fac.clone()),
             visited_skeleton_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_unode_file: StateMap::with_hasher(fac.clone()),
@@ -377,9 +372,6 @@ impl WalkState {
                     &self.visited_deleted_manifest_v2_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
-            }
-            (Node::FsnodeMapping(bcs_id), Some(_)) => {
-                self.record(&self.visited_fsnode_mapping, &self.bcs_ids.interned(bcs_id));
             }
             (Node::SkeletonManifestMapping(bcs_id), Some(_)) => {
                 self.record(
@@ -488,8 +480,6 @@ impl WalkState {
             NodeType::FastlogBatch => self.visited_fastlog_batch.clear(),
             NodeType::FastlogDir => self.visited_fastlog_dir.clear(),
             NodeType::FastlogFile => self.visited_fastlog_file.clear(),
-            NodeType::Fsnode => self.visited_fsnode.clear(),
-            NodeType::FsnodeMapping => self.visited_fsnode_mapping.clear(),
             NodeType::SkeletonManifest => self.visited_skeleton_manifest.clear(),
             NodeType::SkeletonManifestMapping => self.visited_skeleton_manifest_mapping.clear(),
             NodeType::UnodeFile => self.visited_unode_file.clear(),
@@ -637,15 +627,6 @@ impl WalkState {
                 &self.visited_fastlog_file,
                 &self.unode_file_ids.interned(&k.inner),
             ),
-            (Node::Fsnode(_), true) => true,
-            (Node::Fsnode(id), false) => self.record(&self.visited_fsnode, id),
-            (Node::FsnodeMapping(bcs_id), _) => {
-                if let Some(id) = self.bcs_ids.get(bcs_id) {
-                    !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
-                } else {
-                    true
-                }
-            }
             (Node::SkeletonManifest(_), true) => true,
             (Node::SkeletonManifest(id), false) => self.record(&self.visited_skeleton_manifest, id),
             (Node::SkeletonManifestMapping(bcs_id), _) => {

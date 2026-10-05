@@ -65,7 +65,6 @@ rust_binary(
         "//eden/mononoke/derived_data:deleted_manifest",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:fastlog",
-        "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:skeleton_manifest",
         "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",

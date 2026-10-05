@@ -42,7 +42,6 @@ use fastlog::fetch_fastlog_batch_by_unode_id;
 use filenodes::FilenodeInfo;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::Alias;
-use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -65,11 +64,9 @@ use mononoke_types::ContentId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
-use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::UnodeEntry;
@@ -624,10 +621,6 @@ async fn bonsai_changeset_step<V: VisitOne>(
     // Unode mapping is 1:1 but from their expands considerably
     checker.add_edge(&mut edges, EdgeType::ChangesetToUnodeMapping, || {
         Node::UnodeMapping(*bcs_id)
-    });
-    // Fs node mapping is 1:1 but from their expands considerably
-    checker.add_edge(&mut edges, EdgeType::ChangesetToFsnodeMapping, || {
-        Node::FsnodeMapping(*bcs_id)
     });
     // Skeleton manifest mapping is 1:1 but from their expands less than unodes
     checker.add_edge(
@@ -1239,94 +1232,6 @@ async fn is_derived<Derivable: BonsaiDerivable>(
             .await?
             .is_some())
     }
-}
-
-async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &Repo,
-    checker: &Checker<V>,
-    bcs_id: ChangesetId,
-    enable_derive: bool,
-) -> Result<StepOutput, StepError> {
-    let root_fsnode_id = maybe_derived::<RootFsnodeId>(ctx, repo, bcs_id, enable_derive).await?;
-
-    if let Some(root_fsnode_id) = root_fsnode_id {
-        let mut edges = vec![];
-        checker.add_edge_with_path(
-            &mut edges,
-            EdgeType::FsnodeMappingToRootFsnode,
-            || Node::Fsnode(*root_fsnode_id.fsnode_id()),
-            || Some(WrappedPath::Root),
-        );
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::FsnodeMapping, || {
-                NodeData::FsnodeMapping(Some(*root_fsnode_id.fsnode_id()))
-            }),
-            edges,
-        ))
-    } else {
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::FsnodeMapping, || NodeData::FsnodeMapping(None)),
-            vec![],
-        ))
-    }
-}
-
-async fn fsnode_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &Repo,
-    checker: &Checker<V>,
-    fsnode_id: &FsnodeId,
-    path: Option<&WrappedPath>,
-) -> Result<StepOutput, StepError> {
-    let fsnode = fsnode_id.load(ctx, &repo.repo_blobstore().clone()).await?;
-
-    let mut content_edges = vec![];
-    let mut dir_edges = vec![];
-    {
-        let mut children =
-            stream::iter(fsnode.list()).yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
-        while let Some((child, fsnode_entry)) = children.next().await {
-            // Fsnode do not have separate "file" entries, so we visit only directories
-            match fsnode_entry {
-                FsnodeEntry::Directory(dir) => {
-                    let fsnode_id = dir.id();
-                    checker.add_edge_with_path(
-                        &mut dir_edges,
-                        EdgeType::FsnodeToChildFsnode,
-                        || Node::Fsnode(*fsnode_id),
-                        || {
-                            path.map(|p| {
-                                let path: &MPath = p.as_ref().into();
-                                WrappedPath::from(path.join_element(Some(child)))
-                            })
-                        },
-                    );
-                }
-                FsnodeEntry::File(file) => {
-                    checker.add_edge_with_path(
-                        &mut content_edges,
-                        EdgeType::FsnodeToFileContent,
-                        || Node::FileContent(*file.content_id()),
-                        || {
-                            path.map(|p| {
-                                let path: &MPath = p.as_ref().into();
-                                WrappedPath::from(path.join_element(Some(child)))
-                            })
-                        },
-                    );
-                }
-            }
-        }
-    }
-
-    // Ordering to reduce queue depth
-    dir_edges.append(&mut content_edges);
-
-    Ok(StepOutput::Done(
-        checker.step_data(NodeType::Fsnode, || NodeData::Fsnode(fsnode)),
-        dir_edges,
-    ))
 }
 
 async fn bonsai_to_unode_mapping_step<V: VisitOne>(
@@ -2165,10 +2070,6 @@ where
         }
         Node::FastlogFile(id) => {
             fastlog_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
-        }
-        Node::Fsnode(id) => fsnode_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await,
-        Node::FsnodeMapping(bcs_id) => {
-            bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::SkeletonManifest(id) => {
             skeleton_manifest_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await

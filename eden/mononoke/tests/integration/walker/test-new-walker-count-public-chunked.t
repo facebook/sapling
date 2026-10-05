@@ -157,19 +157,6 @@ derived deleted_manifest, chunked, deep.  No deferred as there is no parent look
   [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Completed in 2 chunks of size 2
 
-derived fsnodes, chunked, deep.  No deferred as there is no parent lookup in the walk
-  $ mononoke_walker scrub -q -p FsnodeMapping --chunk-size=2 -I deep -i derived_fsnodes 2>&1 | grep -vE "(Bytes|Walked)/s"
-  [INFO] Walking edge types [FsnodeMappingToRootFsnode, FsnodeToChildFsnode]
-  [INFO] Walking node types [Fsnode, FsnodeMapping]
-  [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 4)
-  [INFO] [walker scrub{repo=repo}] Starting chunk 1 with bounds (2, 4)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 4,4
-  [INFO] [walker scrub{repo=repo}] Deferred: 0
-  [INFO] [walker scrub{repo=repo}] Starting chunk 2 with bounds (1, 2)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 2,2
-  [INFO] [walker scrub{repo=repo}] Deferred: 0
-  [INFO] [walker scrub{repo=repo}] Completed in 2 chunks of size 2
-
 derived skeleton_manifests, chunked, deep.  No deferred as there is no parent lookup in the walk
   $ mononoke_walker scrub -q -p SkeletonManifestMapping --chunk-size=2 -I deep -i derived_skeleton_manifests 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [SkeletonManifestMappingToRootSkeletonManifest, SkeletonManifestToSkeletonManifestChild]
