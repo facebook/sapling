@@ -19,7 +19,9 @@ use anyhow::format_err;
 use assembly_line::TryAssemblyLine;
 use async_trait::async_trait;
 use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogEntry;
 use borrowed::borrowed;
+use cas_client::CasClient;
 use cas_client::build_mononoke_cas_client;
 use changesets_uploader::CasChangesetsUploader;
 use clap::Parser;
@@ -162,6 +164,40 @@ fn shared_lock_path(repo_name: &str, use_case: Option<&str>) -> String {
         ),
         None => format!("{JOB_NAME}_{}", encode_repo_name(repo_name)),
     }
+}
+
+async fn sync_combined_entries(
+    attempt_num: usize,
+    ctx: &CoreContext,
+    repo: &Repo,
+    re_cas_client: &CasChangesetsUploader<impl CasClient>,
+    scuba_sample: &MononokeScubaSampleBuilder,
+    main_bookmark: &str,
+    entries: Vec<BookmarkUpdateLogEntry>,
+) -> Result<Vec<BookmarkUpdateLogEntry>, Error> {
+    let combined_entry = CombinedBookmarkUpdateLogEntry {
+        components: entries,
+    };
+    let (stats, res) =
+        try_sync_single_combined_entry(re_cas_client, repo, ctx, &combined_entry, main_bookmark)
+            .watched()
+            .timed()
+            .await;
+
+    let res = bind_sync_result(&combined_entry.components, res);
+    let res = match res {
+        Ok(ok) => Ok((stats, ok)),
+        Err(err) => Err((Some(stats), err)),
+    };
+    let res = build_reporting_handler(
+        ctx,
+        scuba_sample,
+        attempt_num,
+        repo.bookmark_update_log_arc(),
+    )(res)
+    .watched()
+    .await;
+    build_outcome_handler(ctx)(res).watched().await
 }
 
 #[async_trait]
@@ -348,13 +384,6 @@ async fn run_sync(
     scuba_sample.add("repo_name", repo_name.clone());
     scuba_sample.add("use_case", use_case);
 
-    let reporting_handler = build_reporting_handler(
-        ctx,
-        &scuba_sample,
-        attempt_num,
-        repo.bookmark_update_log_arc(),
-    );
-
     let main_bookmark_to_sync = sync_config.main_bookmark_to_sync.as_str();
     let sync_all_bookmarks = sync_config.sync_all_bookmarks;
 
@@ -408,14 +437,12 @@ async fn run_sync(
             .await?,
     );
 
-    let outcome_handler = build_outcome_handler(ctx);
     borrowed!(
-        outcome_handler,
         can_continue,
-        reporting_handler,
         replayed_sync_counter,
         re_cas_client,
         repo,
+        scuba_sample,
     );
 
     loop_over_log_entries(
@@ -423,7 +450,7 @@ async fn run_sync(
         repo.bookmark_update_log_arc(),
         start_id,
         loop_forever,
-        &scuba_sample,
+        scuba_sample,
         batch_size,
     )
     .try_filter(|entries| future::ready(!entries.is_empty()))
@@ -442,24 +469,17 @@ async fn run_sync(
                 .collect::<Vec<_>>(),
         };
         if can_continue() && !combined_entry.components.is_empty() {
-            let (stats, res) = try_sync_single_combined_entry(
-                re_cas_client,
-                repo,
+            let entry = sync_combined_entries(
+                attempt_num,
                 ctx,
-                &combined_entry,
+                repo,
+                re_cas_client,
+                scuba_sample,
                 main_bookmark_to_sync,
+                combined_entry.components,
             )
             .watched()
-            .timed()
-            .await;
-
-            let res = bind_sync_result(&combined_entry.components, res);
-            let res = match res {
-                Ok(ok) => Ok((stats, ok)),
-                Err(err) => Err((Some(stats), err)),
-            };
-            let res = reporting_handler(res).watched().await;
-            let entry = outcome_handler(res).watched().await?;
+            .await?;
             let next_id = get_id_to_search_after(&entry);
             let success = replayed_sync_counter
                 .set_counter(ctx, next_id.try_into()?)
