@@ -142,6 +142,7 @@ use http_client::AsyncResponse;
 use http_client::Encoding;
 use http_client::HttpClient;
 use http_client::Request;
+use http_client::Stats;
 use itertools::Itertools;
 use metrics::Counter;
 use metrics::EntranceGuard;
@@ -1331,7 +1332,7 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let requests = self.prepare_requests(
+        let mut requests = self.prepare_requests(
             None,
             paths::UPLOAD_TREES,
             items,
@@ -1349,7 +1350,37 @@ impl Client {
             |url, _keys| url.clone(),
         )?;
 
-        self.fetch::<UploadTreeResponse>(requests)
+        if self.config().disable_sequential_tree_uploads {
+            return self.fetch::<UploadTreeResponse>(requests);
+        }
+
+        // The server orders trees only within one request, so each request is
+        // drained before the next is sent: a parent must never arrive while a
+        // child in an earlier request is still in flight.
+        let Some(last) = requests.pop() else {
+            return Ok(Response::empty());
+        };
+        let mut entries = Vec::new();
+        let mut stats = Stats::default();
+        for request in requests {
+            let response = self.fetch::<UploadTreeResponse>(vec![request])?;
+            entries.extend(response.entries.try_collect::<Vec<_>>().await?);
+            stats += response.stats.await?;
+        }
+
+        let last = self.fetch::<UploadTreeResponse>(vec![last])?;
+        Ok(Response {
+            entries: stream::iter(entries.into_iter().map(Ok))
+                .chain(last.entries)
+                .boxed(),
+            stats: last
+                .stats
+                .map_ok(move |last_stats| {
+                    stats += last_stats;
+                    stats
+                })
+                .boxed(),
+        })
     }
 
     async fn with_retry<'t, T>(

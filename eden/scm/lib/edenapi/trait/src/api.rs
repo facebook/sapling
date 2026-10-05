@@ -347,6 +347,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     }
 
     /// Upload list of trees
+    ///
+    /// `items` must list children before their parents: they may be split
+    /// across several requests, and the server orders trees only within one.
     async fn upload_trees_batch(
         &self,
         items: Vec<UploadTreeEntry>,

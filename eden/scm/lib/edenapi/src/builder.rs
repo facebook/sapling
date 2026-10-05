@@ -133,6 +133,7 @@ pub struct HttpClientBuilder {
     server_url: Option<Url>,
     headers: HashMap<String, String>,
     try_route_consistently: bool,
+    disable_sequential_tree_uploads: bool,
     augmented_trees: bool,
     max_commit_data_per_batch: Option<usize>,
     max_files_per_batch: Option<usize>,
@@ -240,6 +241,9 @@ impl HttpClientBuilder {
         let try_route_consistently =
             get_config(config, "edenapi", "try-route-consistently")?.unwrap_or_default();
 
+        let disable_sequential_tree_uploads =
+            get_config(config, "edenapi", "disable-sequential-tree-uploads")?.unwrap_or_default();
+
         let augmented_trees = get_config(config, "edenapi", "augmented-trees")?.unwrap_or_default();
 
         let min_batch_size = get_config(config, "edenapi", "min-batch-size")?;
@@ -343,6 +347,7 @@ impl HttpClientBuilder {
             server_url: Some(server_url),
             headers,
             try_route_consistently,
+            disable_sequential_tree_uploads,
             augmented_trees,
             max_commit_data_per_batch,
             max_files_per_batch,
@@ -529,6 +534,7 @@ pub(crate) struct Config {
     pub(crate) server_url: Url,
     pub(crate) headers: HashMap<String, String>,
     pub(crate) try_route_consistently: bool,
+    pub(crate) disable_sequential_tree_uploads: bool,
     pub(crate) augmented_trees: bool,
     pub(crate) max_commit_data_per_batch: Option<usize>,
     pub(crate) max_files_per_batch: Option<usize>,
@@ -562,6 +568,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             server_url,
             headers,
             try_route_consistently,
+            disable_sequential_tree_uploads,
             augmented_trees,
             max_commit_data_per_batch,
             max_files_per_batch,
@@ -608,6 +615,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             server_url,
             headers,
             try_route_consistently,
+            disable_sequential_tree_uploads,
             augmented_trees,
             max_commit_data_per_batch,
             max_files_per_batch,
