@@ -743,7 +743,7 @@ mod tests {
     fn pending_when_type_not_in_active_config() {
         let repo_id = RepositoryId::new(1);
         let configs = hashmap! {
-            repo_id => info("repo1", "default", &[DerivableType::Fsnodes]),
+            repo_id => info("repo1", "default", &[DerivableType::ContentManifests]),
         }
         .into_iter()
         .collect();
@@ -774,13 +774,16 @@ mod tests {
             repo_id => RepoReconcileInfo {
                 repo_name: "scs-configerator_test".to_string(),
                 commit_identity_scheme: CommitIdentityScheme::HG,
-                derived_data_config: ddc_with("default", &[DerivableType::Fsnodes]),
+                derived_data_config: ddc_with("default", &[DerivableType::ContentManifests]),
             },
         }
         .into_iter()
         .collect();
 
-        let work = compute_work_list(vec![(repo_id, DerivableType::ContentManifests)], &configs);
+        let work = compute_work_list(
+            vec![(repo_id, DerivableType::SkeletonManifestsV2)],
+            &configs,
+        );
         assert_eq!(work.pending.len(), 1);
         assert_eq!(
             work.pending[0].commit_identity_scheme,
@@ -888,7 +891,7 @@ mod tests {
         let work = compute_work_list(
             vec![
                 (r2, DerivableType::Unodes),
-                (r1, DerivableType::Fsnodes),
+                (r1, DerivableType::ContentManifests),
                 (r1, DerivableType::Unodes),
             ],
             &configs,
@@ -901,7 +904,7 @@ mod tests {
         assert_eq!(
             ordered,
             vec![
-                (r1, DerivableType::Fsnodes),
+                (r1, DerivableType::ContentManifests),
                 (r1, DerivableType::Unodes),
                 (r2, DerivableType::Unodes),
             ],

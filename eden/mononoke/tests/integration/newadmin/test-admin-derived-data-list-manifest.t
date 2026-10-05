@@ -67,20 +67,6 @@ Skeleton manifest of main's root directory (recursive)
   a/b/	tree	count=5
   a/foo.txt	file
 
-Fsnodes of main's a directory
-  $ mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t fsnodes --derive | sort
-  a/b/	f43b8e1f3b620c61eb8e47329df9cee895b77613f2afeb1d53238c63ebba58c4
-  a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
-Fsnodes from B's root path (recursive)
-  $ mononoke_admin derived-data -R repo list-manifest -i "$B" -t fsnodes --recursive | sort
-  A	eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9	type=regular	size=1
-  B	55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f	type=regular	size=1
-  a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	type=regular	size=5
-  a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
-  b/hoo.txt	88c50336ada15d8abe61f2adce8af17b63eb74985d50eec76d4d0248f33bb4a9	type=regular	size=5
-  script	f3fffae72590e3c9b4bd8801665ac3c9e16f35c63ba77c4642a54e1c0ad1d3f8	type=symlink	size=9
-  script.sh	7944a589808e894931ed482c1cb0543524483a49aaf9568e60959a34fe9700d9	type=executable	size=4
-
 Content manifests
   $ mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t content-manifests --derive | sort
   a/b/	f422eaf3d8684d0116745ae3c9271b392a39921fa245d458b5c5ae6a1d0b55b9
@@ -170,6 +156,6 @@ History manifest of main from root (recursive): shows all live and deleted entri
   script.sh	File	linknode=734dc23869fbed1c81d6561a16f0e896aa73bf037e688562c6bad691368db9fa	parents=0
 
 Validate all these manifests are equivalent
-  $ mononoke_admin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
-  $ mononoke_admin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
-  $ mononoke_admin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ mononoke_admin derived-data -R repo verify-manifests -i "$A" -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ mononoke_admin derived-data -R repo verify-manifests -i "$B" -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ mononoke_admin derived-data -R repo verify-manifests -i "$C" -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests

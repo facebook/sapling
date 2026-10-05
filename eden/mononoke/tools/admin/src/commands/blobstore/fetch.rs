@@ -48,7 +48,6 @@ use mononoke_types::content_manifest::ContentManifest;
 use mononoke_types::content_manifest::ContentManifestEntry;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
-use mononoke_types::fsnode::Fsnode;
 use mononoke_types::inferred_copy_from::InferredCopyFrom;
 use mononoke_types::inferred_copy_from::InferredCopyFromEntry;
 use mononoke_types::sharded_map::ShardedMapNode;
@@ -106,7 +105,6 @@ pub enum DecodeAs {
     SkeletonManifest,
     SkeletonManifestV2MapNode,
     SkeletonManifestV2,
-    Fsnode,
     ContentMetadataV2,
     Alias,
     FileUnode,
@@ -155,7 +153,6 @@ impl DecodeAs {
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
                 ("skmf2.map2node.", DecodeAs::SkeletonManifestV2MapNode),
                 ("skmf2.", DecodeAs::SkeletonManifestV2),
-                ("fsnode.", DecodeAs::Fsnode),
                 ("content_metadata2.", DecodeAs::ContentMetadataV2),
                 ("alias.", DecodeAs::Alias),
                 ("fileunode.", DecodeAs::FileUnode),
@@ -296,7 +293,6 @@ async fn decode(
         DecodeAs::SkeletonManifest => {
             Decoded::try_debug(SkeletonManifest::from_bytes(data.into_raw_bytes().as_ref()))
         }
-        DecodeAs::Fsnode => Decoded::try_debug(Fsnode::from_bytes(data.into_raw_bytes().as_ref())),
         DecodeAs::ContentMetadataV2 => Decoded::try_debug(ContentMetadataV2::from_bytes(
             data.into_raw_bytes().as_ref(),
         )),

@@ -63,7 +63,7 @@ Simple usage
   $ mononoke_admin derived-data -R repo verify-manifests -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 && echo success || echo failure
   success
 Multiple types 
-  $ mononoke_admin derived-data -R repo verify-manifests -T unodes -T fsnodes -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be && echo success || echo failure
+  $ mononoke_admin derived-data -R repo verify-manifests -T unodes -T content_manifests -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be && echo success || echo failure
   success
 Bookmark
   $ mononoke_admin derived-data -R repo verify-manifests -T unodes -B main && echo success || echo failure

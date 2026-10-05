@@ -19,7 +19,6 @@ use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
-use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use futures::future::FutureExt;
 use futures::future::try_join_all;
@@ -43,7 +42,6 @@ use unodes::RootUnodeManifestId;
 use super::Repo;
 
 const MANIFEST_DERIVED_DATA_TYPES: &[&str] = &[
-    RootFsnodeId::NAME,
     MappedHgChangesetId::NAME,
     RootUnodeManifestId::NAME,
     RootSkeletonManifestId::NAME,
@@ -115,7 +113,6 @@ impl FileContentValue {
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 enum ManifestType {
-    Fsnodes,
     Hg,
     Unodes,
     Skeleton,
@@ -125,7 +122,6 @@ enum ManifestType {
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 enum ManifestData {
-    Fsnodes(FileType, ContentId),
     Hg(FileType, ContentId),
     Unodes(FileType, ContentId),
     Skeleton,
@@ -138,7 +134,6 @@ impl fmt::Display for ManifestType {
         use ManifestType::*;
 
         match &self {
-            Fsnodes => write!(f, "Fsnodes"),
             Hg => write!(f, "Hg"),
             Unodes => write!(f, "Unodes"),
             Skeleton => write!(f, "Skeleton"),
@@ -153,7 +148,6 @@ impl ManifestData {
         use ManifestData::*;
 
         match self {
-            Fsnodes(..) => ManifestType::Fsnodes,
             Hg(..) => ManifestType::Hg,
             Unodes(..) => ManifestType::Unodes,
             Skeleton => ManifestType::Skeleton,
@@ -167,7 +161,7 @@ impl ManifestData {
 
         match self {
             Content(ty, id, _size) => Some((*ty, *id)),
-            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => Some((*ty, *id)),
+            Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => Some((*ty, *id)),
             Skeleton => None,
         }
     }
@@ -177,7 +171,7 @@ impl fmt::Display for ManifestData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ManifestData::*;
         match &self {
-            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => {
+            Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => {
                 write!(f, "{}: {}, {}", self.manifest_type(), ty, id)
             }
             Content(ty, id, size) => {
@@ -250,28 +244,6 @@ async fn list_skeleton_manifest(
         .await?;
     trace!("Loaded skeleton manifests for {} paths", map.len());
     Ok((ManifestType::Skeleton, map))
-}
-
-async fn list_fsnodes(
-    ctx: &CoreContext,
-    repo: &Repo,
-    cs_id: ChangesetId,
-    fetch_derived: bool,
-) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>)> {
-    let root_fsnode_id = derive_or_fetch::<RootFsnodeId>(ctx, repo, cs_id, fetch_derived).await?;
-
-    let fsnode_id = root_fsnode_id.fsnode_id();
-    let map: HashMap<_, _> = fsnode_id
-        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .map_ok(|(path, fsnode)| {
-            let (content_id, ty): (ContentId, FileType) = fsnode.into();
-            let val = ManifestData::Fsnodes(ty, content_id);
-            (path, val)
-        })
-        .try_collect()
-        .await?;
-    trace!("Loaded fsnodes for {} paths", map.len());
-    Ok((ManifestType::Fsnodes, map))
 }
 
 async fn list_unodes(
@@ -370,10 +342,7 @@ pub(super) async fn verify_manifests(
     let mut manifests = HashSet::new();
     let mut futs = vec![];
     for ty in args.manifest_type {
-        if ty == RootFsnodeId::NAME {
-            manifests.insert(ManifestType::Fsnodes);
-            futs.push(list_fsnodes(ctx, repo, cs_id, fetch_derived).boxed());
-        } else if ty == RootUnodeManifestId::NAME {
+        if ty == RootUnodeManifestId::NAME {
             manifests.insert(ManifestType::Unodes);
             futs.push(list_unodes(ctx, repo, cs_id, fetch_derived).boxed());
         } else if ty == MappedHgChangesetId::NAME {

@@ -9,7 +9,7 @@
 //! a single large directory, and then 10 more commits that add, modify, and
 //! remove some of those files at random.
 //!
-//! It then benchmarks deriving one of the derived data types (fsnodes,
+//! It then benchmarks deriving one of the derived data types (content manifests,
 //! unodes, skeleton manifest or deleted manifests) for those commits.
 
 use std::collections::BTreeSet;
@@ -29,7 +29,6 @@ use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
-use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
@@ -212,13 +211,6 @@ async fn derive(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -
             .unwrap()
             .id()
             .to_string(),
-        RootFsnodeId::NAME => repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, csid, DerivationPriority::LOW)
-            .await
-            .unwrap()
-            .fsnode_id()
-            .to_string(),
         RootHgAugmentedManifestId::NAME => repo
             .repo_derived_data()
             .derive::<RootHgAugmentedManifestId>(ctx, csid, DerivationPriority::LOW)
@@ -302,16 +294,6 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .try_fold(0u64, |acc, _| future::ok(acc + 1))
             .await
             .unwrap(),
-        RootFsnodeId::NAME => repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, csid, DerivationPriority::LOW)
-            .await
-            .unwrap()
-            .fsnode_id()
-            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
-            .try_fold(0u64, |acc, _| future::ok(acc + 1))
-            .await
-            .unwrap(),
         RootHgAugmentedManifestId::NAME => repo
             .repo_derived_data()
             .derive::<RootHgAugmentedManifestId>(ctx, csid, DerivationPriority::LOW)
@@ -348,7 +330,9 @@ async fn main(fb: FacebookInit) -> Result<()> {
 
     let mut args = std::env::args();
     let _ = args.next();
-    let data = args.next().unwrap_or_else(|| String::from("fsnodes"));
+    let data = args
+        .next()
+        .unwrap_or_else(|| String::from("content_manifests"));
     println!("Deriving: {data}");
 
     let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;

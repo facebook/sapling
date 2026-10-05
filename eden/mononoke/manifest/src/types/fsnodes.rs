@@ -21,8 +21,6 @@ use mononoke_types::fsnode::FsnodeFile;
 
 use super::Entry;
 use super::Manifest;
-use super::OrderedManifest;
-use super::Weight;
 
 #[async_trait]
 impl<Store: KeyedBlobstore> Manifest<Store> for Fsnode {
@@ -70,59 +68,5 @@ fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
     match fsnode_entry {
         FsnodeEntry::File(fsnode_file) => Entry::Leaf(*fsnode_file),
         FsnodeEntry::Directory(fsnode_directory) => Entry::Tree(fsnode_directory.id().clone()),
-    }
-}
-
-#[async_trait]
-impl<Store: KeyedBlobstore> OrderedManifest<Store> for Fsnode {
-    type WeightedTrieMapType = SortedVectorTrieMap<Entry<(Weight, FsnodeId), FsnodeFile>>;
-
-    async fn into_weighted_trie_map(
-        self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-    ) -> Result<Self::WeightedTrieMapType> {
-        let entries = self
-            .into_subentries()
-            .iter()
-            .map(|(k, v)| (k.clone().to_smallvec(), convert_fsnode_weighted(v)))
-            .collect();
-        Ok(SortedVectorTrieMap::new(entries))
-    }
-
-    async fn lookup_weighted(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-        name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>> {
-        Ok(self.lookup(name).map(convert_fsnode_weighted))
-    }
-
-    async fn list_weighted(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-    ) -> Result<
-        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
-    > {
-        let v: Vec<_> = self
-            .list()
-            .map(|(basename, entry)| (basename.clone(), convert_fsnode_weighted(entry)))
-            .collect();
-        Ok(stream::iter(v).map(Ok).boxed())
-    }
-}
-
-fn convert_fsnode_weighted(fsnode_entry: &FsnodeEntry) -> Entry<(Weight, FsnodeId), FsnodeFile> {
-    match fsnode_entry {
-        FsnodeEntry::File(fsnode_file) => Entry::Leaf(*fsnode_file),
-        FsnodeEntry::Directory(fsnode_directory) => {
-            let summary = fsnode_directory.summary();
-            // Fsnodes don't have a full descendant dirs count, so we use the
-            // child count as a lower-bound estimate.
-            let weight = summary.descendant_files_count + summary.child_dirs_count;
-            Entry::Tree((weight as Weight, fsnode_directory.id().clone()))
-        }
     }
 }

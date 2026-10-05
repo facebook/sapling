@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Benchmark manifest diffs and path lookups over fsnodes and content manifests.
+//! Benchmark manifest diffs and path lookups over content manifests.
 //!
 //! Builds a repo with one large flat directory and several medium directories,
 //! then measures result counts, blobstore reads, bytes, and wall-clock time.
@@ -45,7 +45,6 @@ use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
-use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future;
@@ -53,14 +52,10 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures_stats::TimedFutureExt;
 use manifest::Entry;
-use manifest::Manifest;
 use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
-use manifest::OrderedManifest;
-use manifest::TrieMapOps;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
-use mononoke_types::FsnodeId;
 use mononoke_types::path::MPath;
 use rand::Rng;
 use rand::RngExt as _;
@@ -322,81 +317,31 @@ fn scenarios(limit: usize) -> Vec<Scenario> {
     scenarios
 }
 
-/// Root manifest ids of the fixture's commits, for one manifest backend.
-struct Roots<Id> {
+/// Root content manifest IDs of the fixture's commits.
+struct Roots {
     /// No `large_directory`.
-    no_big: Id,
+    no_big: ContentManifestId,
     /// `large_directory` present; the base of every "changed" scenario.
-    base: Id,
+    base: ContentManifestId,
     /// `base` with a few files in `large_directory` modified.
-    small_change: Id,
+    small_change: ContentManifestId,
     /// `base` with a few files in `large_directory` modified AND one file in
     /// `wide/dir_0` modified, so that a replacement can be placed in either
     /// directory and the two compared.
-    mixed_change: Id,
+    mixed_change: ContentManifestId,
     /// `base` with one file modified in each `wide/dir_*`.
-    wide_change: Id,
+    wide_change: ContentManifestId,
 }
 
-/// The descendant count a manifest replacement contributes to the ordered
-/// traversal's queue weighting -- read from the manifest's rollup rather than
-/// counted, exactly as `ChangesetContext::diff` does.
-#[async_trait]
-trait TreeWeight: Sized {
-    async fn tree_weight(&self, ctx: &CoreContext, store: &Store) -> Result<usize>;
-}
-
-#[async_trait]
-impl TreeWeight for FsnodeId {
-    async fn tree_weight(&self, ctx: &CoreContext, store: &Store) -> Result<usize> {
-        let fsnode = StoreLoadable::load(self, ctx, store).await?;
-        let summary = fsnode.summary();
-        Ok((summary.descendant_files_count + summary.child_dirs_count) as usize)
-    }
-}
-
-#[async_trait]
-impl TreeWeight for ContentManifestId {
-    async fn tree_weight(&self, ctx: &CoreContext, store: &Store) -> Result<usize> {
-        let manifest = StoreLoadable::load(self, ctx, store).await?;
-        let counts = manifest.subentries.rollup_data().descendant_counts;
-        Ok((counts.files_count + counts.dirs_count) as usize)
-    }
-}
-
-/// Run one scenario against one manifest backend.
-async fn run_scenario<Id>(
+/// Run one scenario against the fixture content manifests.
+async fn run_scenario(
     ctx: &CoreContext,
     store: &Store,
-    roots: &Roots<Id>,
+    roots: &Roots,
     lookup_paths: &[MPath],
     scenario: &Scenario,
     counters: &Counters,
-) -> Result<Measurement>
-where
-    Id: ManifestOps<Store>
-        + ManifestOrderedOps<Store>
-        + TreeWeight
-        + StoreLoadable<Store>
-        + Clone
-        + Send
-        + Sync
-        + Eq
-        + Unpin
-        + 'static,
-    <Id as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = Id> + OrderedManifest<Store> + Send + Sync,
-    <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf:
-        Clone + Send + Sync + Eq + Unpin + 'static,
-    <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType: TrieMapOps<Store, Entry<Id, <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>
-        + Eq,
-    <<Id as StoreLoadable<Store>>::Value as OrderedManifest<Store>>::WeightedTrieMapType:
-        TrieMapOps<
-                Store,
-                Entry<(usize, Id), <<Id as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
-            > + Eq
-            + 'static,
-{
+) -> Result<Measurement> {
     // Path-lookup scenarios bypass the diff code entirely.
     match scenario.kind {
         Kind::MetadataLookupPerPath => {
@@ -474,7 +419,9 @@ where
         if let Some((at, entry)) = replacement {
             let entry = match entry {
                 Entry::Tree(id) => {
-                    let weight = id.tree_weight(ctx, store).await?;
+                    let manifest = StoreLoadable::load(&id, ctx, store).await?;
+                    let counts = manifest.subentries.rollup_data().descendant_counts;
+                    let weight = (counts.files_count + counts.dirs_count) as usize;
                     Entry::Tree((weight, id))
                 }
                 Entry::Leaf(leaf) => Entry::Leaf(leaf),
@@ -512,13 +459,13 @@ where
 
 fn print_header() {
     println!(
-        "\n{:<32} {:<10} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} time",
-        "scenario", "ordering", "backend", "entries", "blob_gets", "bytes", "max_poll", "polls"
+        "\n{:<32} {:<10} {:<8} {:<11} {:<12} {:<13} {:<7} time",
+        "scenario", "ordering", "entries", "blob_gets", "bytes", "max_poll", "polls"
     );
-    println!("{}", "-".repeat(140));
+    println!("{}", "-".repeat(130));
 }
 
-fn print_pair(scenario: &Scenario, fsnode: &Measurement, content: &Measurement) {
+fn print_measurement(scenario: &Scenario, measurement: &Measurement) {
     let ordering = if scenario.ordered {
         "ordered"
     } else {
@@ -529,33 +476,15 @@ fn print_pair(scenario: &Scenario, fsnode: &Measurement, content: &Measurement) 
         None => scenario.name.to_string(),
     };
     println!(
-        "{:<32} {:<10} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}",
+        "{:<32} {:<10} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}",
         name,
         ordering,
-        "fsnode",
-        fsnode.entries,
-        fsnode.gets,
-        fsnode.bytes,
-        format!("{:?}", fsnode.max_poll),
-        fsnode.polls,
-        fsnode.time,
-    );
-    let ratio = if fsnode.gets == 0 {
-        String::from("n/a")
-    } else {
-        format!("{:.1}x", content.gets as f64 / fsnode.gets as f64)
-    };
-    println!(
-        "{:<32} {:<10} {:<9} {:<8} {:<11} {:<12} {:<13} {:<7} {:?}   ({ratio} gets)",
-        "",
-        "",
-        "content",
-        content.entries,
-        content.gets,
-        content.bytes,
-        format!("{:?}", content.max_poll),
-        content.polls,
-        content.time,
+        measurement.entries,
+        measurement.gets,
+        measurement.bytes,
+        format!("{:?}", measurement.max_poll),
+        measurement.polls,
+        measurement.time,
     );
 }
 
@@ -677,14 +606,6 @@ async fn build_fixture(
     })
 }
 
-async fn derive_fsnode(ctx: &CoreContext, repo: &Repo, csid: ChangesetId) -> Result<FsnodeId> {
-    Ok(*repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, csid, DerivationPriority::LOW)
-        .await?
-        .fsnode_id())
-}
-
 async fn derive_content_manifest(
     ctx: &CoreContext,
     repo: &Repo,
@@ -735,26 +656,13 @@ async fn main(fb: FacebookInit) -> Result<()> {
         fixture.mixed_change,
         fixture.wide_change,
     ];
-    let (fsnodes, content_manifests) = future::try_join(
-        future::try_join_all(commits.iter().map(|csid| derive_fsnode(&ctx, &repo, *csid))),
-        future::try_join_all(
-            commits
-                .iter()
-                .map(|csid| derive_content_manifest(&ctx, &repo, *csid)),
-        ),
+    let content_manifests = future::try_join_all(
+        commits
+            .iter()
+            .map(|csid| derive_content_manifest(&ctx, &repo, *csid)),
     )
     .await?;
 
-    let [no_big, base, small_change, mixed_change, wide_change]: [FsnodeId; 5] = fsnodes
-        .try_into()
-        .map_err(|_| anyhow!("expected one fsnode per fixture commit"))?;
-    let fsnode_roots = Roots {
-        no_big,
-        base,
-        small_change,
-        mixed_change,
-        wide_change,
-    };
     let [no_big, base, small_change, mixed_change, wide_change]: [ContentManifestId; 5] =
         content_manifests
             .try_into()
@@ -778,15 +686,6 @@ async fn main(fb: FacebookInit) -> Result<()> {
 
     print_header();
     for scenario in scenarios(limit) {
-        let fsnode = run_scenario(
-            &ctx,
-            &store,
-            &fsnode_roots,
-            &fixture.changed_paths,
-            &scenario,
-            &counters,
-        )
-        .await?;
         let content = run_scenario(
             &ctx,
             &store,
@@ -796,7 +695,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
             &counters,
         )
         .await?;
-        print_pair(&scenario, &fsnode, &content);
+        print_measurement(&scenario, &content);
     }
 
     Ok(())

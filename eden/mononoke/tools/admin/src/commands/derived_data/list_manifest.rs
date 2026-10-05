@@ -22,7 +22,6 @@ use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivedDataManager;
 use directory_branch_cluster_manifest::RootDirectoryBranchClusterManifestId;
-use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -47,7 +46,6 @@ use mononoke_types::ContentManifestId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
-use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
@@ -59,7 +57,6 @@ use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifest;
 use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifestFile;
-use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::history_manifest::HistoryManifestDeletedNode;
 use mononoke_types::history_manifest::HistoryManifestDirectory;
 use mononoke_types::history_manifest::HistoryManifestEntry;
@@ -82,7 +79,6 @@ enum ListManifestType {
     SkeletonManifests2,
     ContentManifests,
     DirectoryBranchClusterManifests,
-    Fsnodes,
     Unodes,
     DeletedManifests,
     HgManifests,
@@ -239,20 +235,6 @@ impl Listable for Entry<DirectoryBranchClusterManifest, DirectoryBranchClusterMa
                     format!("file\t{cluster}")
                 }
             }
-        }
-    }
-}
-
-impl Listable for Entry<FsnodeId, FsnodeFile> {
-    fn list_item(self) -> String {
-        match self {
-            Entry::Tree(tree) => tree.to_string(),
-            Entry::Leaf(file) => format!(
-                "{}\ttype={}\tsize={}",
-                file.content_id(),
-                file.file_type(),
-                file.size()
-            ),
         }
     }
 }
@@ -941,12 +923,6 @@ pub(super) async fn list_manifest(
             .load(ctx, repo.repo_blobstore())
             .await?;
             list_dbcm(ctx, repo, root, path, args.directory, args.recursive).await?
-        }
-        ListManifestType::Fsnodes => {
-            let root_id = fetch_or_derive_root::<RootFsnodeId>(ctx, manager, cs_id, args.derive)
-                .await?
-                .into_fsnode_id();
-            list(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
         ListManifestType::Unodes => {
             let root_id =
