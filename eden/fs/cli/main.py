@@ -13,7 +13,6 @@ import concurrent.futures
 import enum
 import errno
 import inspect
-import io
 import json
 import os
 import platform
@@ -166,7 +165,6 @@ from thrift.python.exceptions import (
 )
 
 from . import (
-    ai_diagnosis,
     config as config_mod,
     daemon,
     daemon_util,
@@ -220,6 +218,20 @@ except ImportError:
 
 
 subcmd = subcmd_mod.Decorator()
+
+# The AI-backed commands shell out to a local `claude` and log to internal
+# telemetry, so they live under facebook/ and are absent from the OSS export.
+_AI_DIAGNOSIS_MODULE = "eden.fs.cli.facebook.ai_diagnosis"
+try:
+    from .facebook.ai_diagnosis import register as _register_ai_commands
+except ImportError as ex:
+    # Only tolerate the module itself being absent, which is how the OSS export
+    # is built. An ImportError from *inside* it means the module is present but
+    # broken, and swallowing that would drop both commands with no signal.
+    if ex.name is None or not _AI_DIAGNOSIS_MODULE.startswith(ex.name):
+        raise
+else:
+    _register_ai_commands(subcmd)
 
 # For a non-unix system (like Windows), we will define our own error codes.
 try:
@@ -1006,100 +1018,6 @@ class DoctorCmd(Subcmd):
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()
-
-
-@subcmd("doctor-ai", "Run eden doctor and, on failure, ask local AI for diagnosis")
-class DoctorAICmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "--claude-timeout-secs",
-            type=int,
-            default=ai_diagnosis.CLAUDE_TIMEOUT_SECS,
-            help="Timeout for the local claude diagnosis subprocess.",
-        )
-
-    def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        sample = instance.get_telemetry_logger().new_sample("eden_doctor_ai")
-        # Seeded so an aborted run still emits a row with every field set:
-        # `exit_code` is unknown until doctor returns.
-        sample.add_int("exit_code", -1)
-        with ai_diagnosis.logged_sample(sample):
-            return self._run(args, instance, sample)
-
-    def _run(
-        self,
-        args: argparse.Namespace,
-        instance: EdenInstance,
-        sample: TelemetrySample,
-    ) -> int:
-        doctor_output = io.StringIO()
-        doctor_returncode = doctor_mod.cure_what_ails_you(
-            instance,
-            dry_run=False,
-            debug=args.debug,
-            fast=False,
-            wait=False,
-            min_severity_to_report=ProblemSeverity.ALL,
-            out=ui.PlainOutput(doctor_output),
-        )
-
-        doctor_text = doctor_output.getvalue()
-        sample.add_int("exit_code", doctor_returncode)
-        if doctor_text:
-            sys.stdout.write(doctor_text)
-            if not doctor_text.endswith("\n"):
-                sys.stdout.write("\n")
-        if doctor_returncode == 0:
-            sample.add_string("reason", "doctor_ok")
-            return doctor_returncode
-
-        print("\nAI diagnosis follows.\n", file=sys.stderr)
-        prompt = f"""Use the local `diagnose-sapling` skill on this `eden doctor` output.
-
-{doctor_text.strip()}
-"""
-        ai_diagnosis.run_claude(prompt, args.claude_timeout_secs, sample)
-        return doctor_returncode
-
-
-@subcmd("diagnose-ai", "Ask local AI to diagnose a Sapling or EdenFS problem")
-class DiagnoseAICmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "symptom",
-            nargs="+",
-            help="What is going wrong, in your own words, e.g. "
-            '"sl status is slow" or "sl pull hangs".',
-        )
-        parser.add_argument(
-            "--claude-timeout-secs",
-            type=int,
-            default=ai_diagnosis.CLAUDE_INVESTIGATION_TIMEOUT_SECS,
-            help="Timeout for the local claude diagnosis subprocess.",
-        )
-
-    def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        sample = instance.get_telemetry_logger().new_sample("eden_diagnose_ai")
-        with ai_diagnosis.logged_sample(sample):
-            # claude buffers until it is done, so say so: the skill runs a
-            # spread of diagnostic commands before it has anything to report.
-            print(
-                "AI diagnosis follows; this can take several minutes.\n",
-                file=sys.stderr,
-            )
-            # The skill routes on the symptom itself and collects whatever
-            # evidence it needs, so hand it the words rather than pre-running
-            # checks that may not apply.
-            prompt = f"""Use the local `diagnose-sapling` skill to diagnose this problem.
-
-{" ".join(args.symptom)}
-"""
-            succeeded = ai_diagnosis.run_claude(
-                prompt, args.claude_timeout_secs, sample
-            )
-        return 0 if succeeded else 1
 
 
 @subcmd("health-report", "Notify critical eden issues")

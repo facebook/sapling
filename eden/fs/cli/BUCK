@@ -93,6 +93,7 @@ python_library(
         ":trace",
         ":version",
         "//cli/py/usage:lib",
+        "//eden/fs/cli/facebook:ai_diagnosis",
         "//eden/fs/cli/facebook:hostcaps",
         "//eden/fs/cli/facebook:util",
         "//eden/fs/py/eden/thrift:client",
@@ -128,7 +129,6 @@ python_library(
 python_library(
     name = "lib",
     srcs = [
-        "ai_diagnosis.py",
         "buck.py",
         "cmd_util.py",
         "config.py",
