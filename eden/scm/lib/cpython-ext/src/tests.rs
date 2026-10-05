@@ -114,6 +114,22 @@ fn test_serde_deserialize_string_as_bytes() {
     assert_eq!(b.0.as_ref(), s.0.as_bytes());
 }
 
+#[test]
+fn test_allow_threads_reacquires_gil_on_panic() {
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        py.allow_threads(|| -> () { panic!("panic while the GIL is released") })
+    }));
+    assert!(result.is_err());
+
+    // The py_class! callback wrapper reports a caught panic to Python, which
+    // needs the thread state that allow_threads detached.
+    let gil_held = unsafe { python3_sys::PyGILState_Check() };
+    assert_eq!(gil_held, 1, "GIL should be held again after the panic");
+}
+
 fn example_hashmap() -> HashMap<u64, String> {
     let mut m = HashMap::new();
     for i in 1..10 {
