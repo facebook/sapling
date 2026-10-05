@@ -64,6 +64,8 @@ pub struct UploadCounters {
     uploaded_files: RelaxedCounter,
     // Only file content blobs
     already_present_files: RelaxedCounter,
+    // Only file content blobs
+    redacted_files: RelaxedCounter,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -126,6 +128,7 @@ impl UploadCounters {
         self.uploaded_files.add(other.uploaded_files.get());
         self.already_present_files
             .add(other.already_present_files.get());
+        self.redacted_files.add(other.redacted_files.get());
     }
 
     fn tick(&self, ctx: &CoreContext, outcome: UploadOutcome) {
@@ -142,6 +145,7 @@ impl UploadCounters {
             UploadOutcome::AlreadyPresent => {
                 self.already_present.inc();
             }
+            UploadOutcome::Redacted => {}
         }
         self.maybe_log(ctx, DEBUG_LOG_INTERVAL);
     }
@@ -154,6 +158,9 @@ impl UploadCounters {
             }
             UploadOutcome::AlreadyPresent => {
                 self.already_present_files.inc();
+            }
+            UploadOutcome::Redacted => {
+                self.redacted_files.inc();
             }
         }
     }
@@ -197,6 +204,10 @@ impl UploadCounters {
 
     pub fn already_present_trees(&self) -> usize {
         self.already_present.get() - self.already_present_files.get()
+    }
+
+    pub fn redacted_files(&self) -> usize {
+        self.redacted_files.get()
     }
 }
 

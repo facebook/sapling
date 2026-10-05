@@ -40,6 +40,7 @@ const SMALL_BLOBS_THRESHOLD: u64 = 2_621_440;
 pub enum UploadOutcome {
     Uploaded(u64),
     AlreadyPresent,
+    Redacted,
 }
 
 pub struct ScmCasClient<Client>
