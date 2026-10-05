@@ -285,6 +285,13 @@ def sl_binary(name, extra_deps = [], extra_features = [], **kwargs):
             "//eden/scm/lib/commands:commands",
             "//eden/scm/lib/util/atexit:atexit",
         ]
+        + (
+            []
+            if rust_oss.is_oss_build()
+            else [
+                "//scm/telemetry/distributed-tracing-artillery:distributed-tracing-artillery",
+            ]
+        )
         + extra_deps
         + select({
             "DEFAULT": [],

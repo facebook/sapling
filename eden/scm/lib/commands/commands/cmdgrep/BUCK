@@ -42,6 +42,7 @@ sl_rust_library(
         []
         if rust_oss.is_oss_build()
         else [
+            "//eden/scm/lib/distributed-tracing:distributed-tracing",
             "//eden/scm/lib/manifest:manifest",
         ]
     ),

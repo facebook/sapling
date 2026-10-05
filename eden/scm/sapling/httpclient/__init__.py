@@ -54,6 +54,8 @@ import select
 import socket
 import ssl
 
+import bindings
+
 from .. import util
 from . import _readers
 
@@ -702,6 +704,10 @@ class HTTPConnection:
         )
 
         hdrs = _foldheaders(headers)
+        hdrs.update(
+            (name, (name, value))
+            for name, value in bindings.clientinfo.outgoing_trace(self.host)
+        )
         # Figure out headers that have to be computed from the request
         # body.
         chunked = False

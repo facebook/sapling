@@ -174,6 +174,7 @@ impl Hooks {
                         format!("{}", client_info.entry_point),
                     );
                     cmd.env("SAPLING_CLIENT_CORRELATOR", &client_info.correlator);
+                    cmd.envs(distributed_tracing::outgoing_env());
 
                     if let Some(kwargs) = kwargs {
                         for (k, v) in to_env_vars(kwargs)? {

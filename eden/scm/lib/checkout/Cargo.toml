@@ -24,6 +24,7 @@ sapling-atexit = { version = "0.1.0", path = "../util/atexit" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-dag = { version = "0.1.0", path = "../dag" }
+sapling-distributed-tracing = { version = "0.1.0", path = "../distributed-tracing" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics", optional = true }
 sapling-hook = { version = "0.1.0", path = "../hook" }

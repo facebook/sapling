@@ -13,6 +13,7 @@ use ::clientinfo as client_info;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::Serde;
+use distributed_tracing::Headers;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pyclientinfo"].join(".");
@@ -35,7 +36,27 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "get_client_entry_point",
         py_fn!(py, get_client_entry_point()),
     )?;
+    m.add(
+        py,
+        "outgoing_trace",
+        py_fn!(py, outgoing_trace(host: PyBytes)),
+    )?;
+    m.add(py, "outgoing_trace_env", py_fn!(py, outgoing_trace_env()))?;
     Ok(m)
+}
+
+/// Trace headers for an HTTP request to `host`; empty unless a trace is active.
+fn outgoing_trace(py: Python, host: PyBytes) -> PyResult<Headers> {
+    let Ok(host) = std::str::from_utf8(host.data(py)) else {
+        return Ok(Vec::new());
+    };
+    let url = format!("//{host}");
+    Ok(py.allow_threads(|| distributed_tracing::outgoing_http(&url)))
+}
+
+/// Environment that continues the active trace in a child process.
+fn outgoing_trace_env(py: Python) -> PyResult<Headers> {
+    Ok(py.allow_threads(distributed_tracing::outgoing_env))
 }
 
 /// Convert `io::Result<Vec<u8>>` to a `PyResult<PyBytes>`.

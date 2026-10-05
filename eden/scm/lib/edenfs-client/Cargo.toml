@@ -20,6 +20,7 @@ parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-distributed-tracing = { version = "0.1.0", path = "../distributed-tracing" }
 sapling-filters = { version = "0.1.0", path = "../filters" }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-identity = { version = "0.1.0", path = "../identity" }

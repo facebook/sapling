@@ -146,8 +146,9 @@ hg_binary(
                     "fbsource//third-party/rust:cc",
                 ],
                 "dependencies": [
-                    # drop fbinit dependency.
+                    # Internal-only dependencies have no Cargo equivalents.
                     (None, "//common/rust/shed/fbinit:fbinit"),
+                    (None, "//scm/telemetry/distributed-tracing-artillery:distributed-tracing-artillery"),
                 ],
             },
             "features": {

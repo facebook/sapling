@@ -418,6 +418,7 @@ class mononokepeer(stdiopeer.stdiopeer):
                 if self._confheaders:
                     headers.update(json.loads(self._confheaders))
 
+                headers.update(clientinfo.outgoing_trace(self._host.encode()))
                 headersstr = b"\r\n".join(
                     map(lambda x: (x[0] + ": " + x[1]).encode(), headers.items())
                 )

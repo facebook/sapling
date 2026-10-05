@@ -1,0 +1,26 @@
+load("//eden/scm:targets.bzl", "sl_rust_library")
+
+oncall("sapling")
+
+sl_rust_library(
+    name = "distributed-tracing",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "distributed_tracing"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-distributed-tracing",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = ["fbsource//third-party/rust:mockito"],
+    deps = [
+        "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/util/atexit:atexit",
+    ],
+)

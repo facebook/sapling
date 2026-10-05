@@ -1295,6 +1295,7 @@ def shellenviron(environ=None):
         env.update((k, py2shell(v)) for k, v in environ.items())
     env["HG"] = hgexecutable()
     env.pop("NODE_CHANNEL_FD", None)
+    env.update(bindings.clientinfo.outgoing_trace_env())
     return env
 
 
@@ -4889,6 +4890,8 @@ def spawndetached(args, cwd=None, env=None, shell=False):
         cmd.currentdir(cwd)
     if env is not None:
         cmd.envclear().envs(sorted(env.items()))
+    else:
+        cmd.envs(bindings.clientinfo.outgoing_trace_env())
     return cmd.spawndetached().id()
 
 

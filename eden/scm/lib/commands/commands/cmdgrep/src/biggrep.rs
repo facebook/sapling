@@ -131,7 +131,8 @@ pub fn try_biggrep(
 
     // Build the biggrep command
     let mut cmd = Command::new(&biggrep_client);
-    cmd.arg(&*biggrep_tier)
+    cmd.envs(distributed_tracing::outgoing_env())
+        .arg(&*biggrep_tier)
         .arg(&biggrep_corpus)
         .arg(biggrep_engine)
         .arg("--stripdir")

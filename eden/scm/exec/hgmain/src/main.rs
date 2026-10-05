@@ -56,6 +56,9 @@ use windows::disable_standard_handle_inheritability;
 use windows::is_edenfs_stopped;
 
 fn main() {
+    #[cfg(fbcode_build)]
+    distributed_tracing_artillery::register_provider();
+
     // Meta's Python 3.12 version has the built-in lazy_imports feature,
     // which can be enabled with `PYTHONLAZYIMPORTSALL=1` env variable.
     // However, Sapling is not lazy_imports safe. The following disables

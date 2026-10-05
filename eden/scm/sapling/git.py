@@ -1246,7 +1246,7 @@ def callgitnorepo(ui, args, gitdir=None):
     if gitdir is not None:
         cmd.append("--git-dir=%s" % gitdir)
     cmd += args
-    return subprocess.run(cmd, capture_output=True)
+    return subprocess.run(cmd, capture_output=True, env=util.shellenviron())
 
 
 def rungit(repo, args):

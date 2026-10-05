@@ -153,6 +153,12 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                 let _guard = span.enter();
 
                 sampling::init(dispatcher.config());
+                let _trace = distributed_tracing::scope(
+                    dispatcher
+                        .config()
+                        .get_or_default("experimental", "enable-distributed-tracing")
+                        .unwrap_or_default(),
+                );
 
                 dispatch_command(
                     io,

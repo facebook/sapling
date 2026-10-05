@@ -70,6 +70,7 @@ pub fn build_eden_command_type(config: &dyn Config, cmd_type: EdenCmdType) -> Re
         Some(cmd) => Command::new(cmd),
         None => anyhow::bail!("edenfs.{} config is not set", cmd_type.config_key()),
     };
+    cmd.envs(distributed_tracing::outgoing_env());
 
     // allow tests to specify different configuration directories from prod defaults
     if let Some(base_dir) = config.get_opt::<PathBuf>("edenfs", "basepath")? {

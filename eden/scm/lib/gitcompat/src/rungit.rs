@@ -315,6 +315,7 @@ fn git_cmd_impl(
 ) -> Command {
     let cfg = &opts.config;
     let mut cmd = Command::new(&cfg.git_binary);
+    cmd.envs(distributed_tracing::outgoing_env());
 
     // -c foo.bar=baz ...
     for c in &opts.extra_git_configs {

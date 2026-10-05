@@ -571,6 +571,7 @@ pub fn edenfs_redirect_fixup(
     let mut cmd0 = Command::new(arg0.as_ref());
     let cmd = cmd0
         .args(args_raw.split_whitespace())
+        .envs(distributed_tracing::outgoing_env())
         .current_dir(wc.vfs().root());
     if is_okay {
         cmd.spawn_detached()?;

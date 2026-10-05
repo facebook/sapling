@@ -20,6 +20,8 @@ import io
 import os
 import socket
 
+import bindings
+
 from . import (
     encoding,
     error,
@@ -220,10 +222,16 @@ def _generic_start_transaction(handler, h, req):
     if tunnel_host:
         if tunnel_host[:7] not in ["http://", "https:/"]:
             tunnel_host = "https://" + tunnel_host
+        trace_host = util.url(tunnel_host).host
         new_tunnel = True
     else:
+        trace_host = util.url(urllibcompat.getfullurl(req)).host
         tunnel_host = urllibcompat.getselector(req)
         new_tunnel = False
+    if trace_host:
+        req.unredirected_hdrs.update(
+            bindings.clientinfo.outgoing_trace(trace_host.encode())
+        )
 
     if new_tunnel or tunnel_host == urllibcompat.getfullurl(req):  # has proxy
         u = util.url(tunnel_host)
