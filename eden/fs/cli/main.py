@@ -1063,6 +1063,45 @@ class DoctorAICmd(Subcmd):
         return doctor_returncode
 
 
+@subcmd("diagnose-ai", "Ask local AI to diagnose a Sapling or EdenFS problem")
+class DiagnoseAICmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "symptom",
+            nargs="+",
+            help="What is going wrong, in your own words, e.g. "
+            '"sl status is slow" or "sl pull hangs".',
+        )
+        parser.add_argument(
+            "--claude-timeout-secs",
+            type=int,
+            default=ai_diagnosis.CLAUDE_INVESTIGATION_TIMEOUT_SECS,
+            help="Timeout for the local claude diagnosis subprocess.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        sample = instance.get_telemetry_logger().new_sample("eden_diagnose_ai")
+        with ai_diagnosis.logged_sample(sample):
+            # claude buffers until it is done, so say so: the skill runs a
+            # spread of diagnostic commands before it has anything to report.
+            print(
+                "AI diagnosis follows; this can take several minutes.\n",
+                file=sys.stderr,
+            )
+            # The skill routes on the symptom itself and collects whatever
+            # evidence it needs, so hand it the words rather than pre-running
+            # checks that may not apply.
+            prompt = f"""Use the local `diagnose-sapling` skill to diagnose this problem.
+
+{" ".join(args.symptom)}
+"""
+            succeeded = ai_diagnosis.run_claude(
+                prompt, args.claude_timeout_secs, sample
+            )
+        return 0 if succeeded else 1
+
+
 @subcmd("health-report", "Notify critical eden issues")
 class HealthReportCmd(Subcmd):
     class ErrorCode(Enum):

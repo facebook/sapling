@@ -16,7 +16,13 @@ from typing import Iterator
 
 from eden.fs.cli.telemetry import TelemetrySample
 
+# Enough for claude to interpret a report it was handed.
 CLAUDE_TIMEOUT_SECS = 120
+
+# Enough for claude to gather the evidence first. A command that only describes
+# a symptom pays for the diagnostic commands the `diagnose-sapling` skill runs
+# before it can say anything; one real "sl status is slow" run took 8m14s.
+CLAUDE_INVESTIGATION_TIMEOUT_SECS = 900
 
 
 @contextlib.contextmanager
