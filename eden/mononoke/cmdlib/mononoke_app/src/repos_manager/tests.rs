@@ -9,25 +9,49 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Weak;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
+use arc_swap::ArcSwap;
+use cached_config::ConfigStore;
+use cached_config::ModificationTime;
+use cached_config::TestSource;
 use config_reconcile::RepoGeneration;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
+use metaconfig_types::CommitIdentityScheme;
+use metaconfig_types::CommitIdentityScheme::GIT;
+use metaconfig_types::CommitIdentityScheme::HG;
+use metaconfig_types::CommitIdentityScheme::UNKNOWN;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_configs::ConfigUpdateReceiver;
+use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
+use mononoke_types::RepositoryId;
+use repos::RawAllowlistIdentity;
+use repos::RawBlobstoreConfig;
+use repos::RawBlobstoreDisabled;
+use repos::RawCommonConfig;
+use repos::RawDbLocal;
+use repos::RawMetadataConfig;
+use repos::RawRedactionConfig;
+use repos::RawStorageConfig;
+use repos::TierManifest;
+use repos::TierRepoEntry;
 use tokio::sync::Notify;
 
+use super::MononokeConfigUpdateReceiver;
 use super::ReconcileTrigger;
 use super::apply_generation;
 use super::memoized_spec_hash;
 use super::reconcile_loop;
+use super::repo_names_from_manifest;
 use super::retain_live_cache_entries;
 use super::run_exclusive;
+use super::scheme_from_config_path;
 use super::tick_interval_secs;
 
 #[mononoke::test]
@@ -52,12 +76,7 @@ async fn test_reconcile_trigger_wakes_on_bulk_update() {
         notify: notify.clone(),
     };
     trigger
-        .apply_update(
-            Arc::new(RepoConfigs::new(HashMap::new(), CommonConfig::default())),
-            Arc::new(StorageConfigs {
-                storage: HashMap::new(),
-            }),
-        )
+        .apply_update(empty_cache(), storage())
         .await
         .expect("apply_update is infallible");
     // notify_one leaves a permit, so notified() resolves at once; the timeout
@@ -421,4 +440,273 @@ fn test_apply_generation_truth_table() {
         None,
         "a deep repo that was not present must not record a generation",
     );
+}
+
+// --- repo_names_from_manifest ----------------------------------------------
+
+fn git_path(name: &str) -> String {
+    format!("scm/mononoke/repos/git/ab/{name}")
+}
+
+fn hg_path(name: &str) -> String {
+    format!("scm/mononoke/repos/hg/cd/{name}")
+}
+
+fn entry(name: &str, config_path: &str) -> TierRepoEntry {
+    TierRepoEntry {
+        repo_name: name.to_owned(),
+        config_path: config_path.to_owned(),
+        is_deep_sharded: true,
+        ..Default::default()
+    }
+}
+
+fn manifest_of(entries: &[(&str, String)]) -> TierManifest {
+    TierManifest {
+        repos: entries.iter().map(|(n, p)| entry(n, p)).collect(),
+        ..Default::default()
+    }
+}
+
+fn served_of(entries: &[(&str, bool, CommitIdentityScheme)]) -> RepoConfigs {
+    let mut configs = RepoConfigs::new(HashMap::new(), CommonConfig::default());
+    for (i, (name, enabled, scheme)) in entries.iter().enumerate() {
+        let repoid = RepositoryId::new(i as i32 + 1);
+        let default_commit_identity_scheme = scheme.clone();
+        configs.insert_repo(
+            name.to_string(),
+            RepoConfig {
+                repoid,
+                enabled: *enabled,
+                default_commit_identity_scheme,
+                ..Default::default()
+            },
+        );
+    }
+    configs
+}
+
+fn names_of(entries: &[(&str, CommitIdentityScheme)]) -> HashMap<String, CommitIdentityScheme> {
+    entries
+        .iter()
+        .map(|(n, s)| (n.to_string(), s.clone()))
+        .collect()
+}
+
+// The layout convention is the only source of the scheme: git/ and hg/ trees
+// map to their schemes, anything else is UNKNOWN rather than a guess.
+#[mononoke::test]
+fn test_scheme_from_config_path_follows_the_tree_layout() {
+    assert_eq!(scheme_from_config_path(&git_path("org/repo")), GIT);
+    assert_eq!(scheme_from_config_path(&hg_path("fbsource")), HG);
+    assert_eq!(
+        scheme_from_config_path("scm/mononoke/repos/common/x"),
+        UNKNOWN
+    );
+    assert_eq!(scheme_from_config_path("test/repos/x"), UNKNOWN);
+    assert_eq!(scheme_from_config_path(""), UNKNOWN);
+}
+
+// Every manifest entry is listed, enabled or not, served or not; an empty
+// manifest yields an empty map.
+#[mononoke::test]
+fn test_repo_names_from_manifest_lists_every_entry() {
+    let names = repo_names_from_manifest(&manifest_of(&[
+        ("a", git_path("a")),
+        ("fbsource", hg_path("fbsource")),
+        ("odd", "elsewhere/odd".to_string()),
+    ]));
+    assert_eq!(
+        names,
+        names_of(&[("a", GIT), ("fbsource", HG), ("odd", UNKNOWN)])
+    );
+    assert!(repo_names_from_manifest(&manifest_of(&[])).is_empty());
+}
+
+// --- MononokeConfigUpdateReceiver ------------------------------------------
+
+fn storage() -> Arc<StorageConfigs> {
+    Arc::new(StorageConfigs {
+        storage: HashMap::new(),
+    })
+}
+
+fn empty_cache() -> Arc<RepoConfigs> {
+    Arc::new(RepoConfigs::new(HashMap::new(), CommonConfig::default()))
+}
+
+// Legacy (blob) mode or knob off: no manifest source, rebuild from the cache as before.
+#[mononoke::test]
+async fn test_receiver_no_manifest_source_rebuilds_from_cache() {
+    let map = Arc::new(ArcSwap::from_pointee(names_of(&[("a", GIT), ("b", GIT)])));
+    let receiver = MononokeConfigUpdateReceiver::new(map.clone(), None);
+    receiver
+        .apply_update(Arc::new(served_of(&[("a", true, GIT)])), storage())
+        .await
+        .unwrap();
+    assert_eq!(**map.load(), names_of(&[("a", GIT)]));
+}
+
+// Legacy mode: a per-repo update still patches the map by `enabled`.
+#[mononoke::test]
+async fn test_receiver_no_manifest_source_patches_on_repo_update() {
+    let map = Arc::new(ArcSwap::from_pointee(names_of(&[("a", GIT)])));
+    let receiver = MononokeConfigUpdateReceiver::new(map.clone(), None);
+    let disabled = RepoConfig {
+        enabled: false,
+        ..Default::default()
+    };
+    receiver.apply_repo_update("a", &disabled).await.unwrap();
+    assert!(map.load().is_empty());
+}
+
+// MononokeConfigs gone (teardown): fall back to the cache-derived map, no panic.
+#[mononoke::test]
+async fn test_receiver_dead_manifest_source_rebuilds_from_cache() {
+    let map = Arc::new(ArcSwap::from_pointee(names_of(&[("a", GIT)])));
+    let receiver = MononokeConfigUpdateReceiver::new(map.clone(), Some(Weak::new()));
+    receiver
+        .apply_update(empty_cache(), storage())
+        .await
+        .unwrap();
+    assert!(map.load().is_empty());
+}
+
+const TIER_CONFIG_PATH: &str = "configerator://scm/mononoke/repos/tiers/scs";
+const MANIFEST_PATH: &str = "scm/mononoke/repos/tiers/scs_manifest";
+const STORAGE: &str = "test_storage";
+
+fn manifest_json(entries: &[(&str, String)]) -> String {
+    let manifest = TierManifest {
+        repos: entries.iter().map(|(n, p)| entry(n, p)).collect(),
+        common: RawCommonConfig {
+            trusted_parties_hipster_tier: Some("tier".to_string()),
+            internal_identity: RawAllowlistIdentity {
+                identity_type: "SERVICE_IDENTITY".to_string(),
+                identity_data: "internal".to_string(),
+            },
+            redaction_config: RawRedactionConfig {
+                blobstore: STORAGE.to_string(),
+                redaction_sets_location: "test/redaction_sets".to_string(),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        storage: HashMap::from([(
+            STORAGE.to_string(),
+            RawStorageConfig {
+                metadata: RawMetadataConfig::local(RawDbLocal {
+                    local_db_path: "/tmp/test_db".to_string(),
+                }),
+                blobstore: RawBlobstoreConfig::disabled(RawBlobstoreDisabled {}),
+                ephemeral_blobstore: None,
+                mutable_blobstore: RawBlobstoreConfig::disabled(RawBlobstoreDisabled {}),
+            },
+        )]),
+        ..Default::default()
+    };
+    serde_json::to_string(&manifest).unwrap()
+}
+
+/// Manifest-mode MononokeConfigs over a TestSource. Every entry is deep-sharded
+/// so the watcher subscribes nothing; no spec is readable because none is read.
+/// Leaves the store's poller thread sleeping (as the mononoke_configs tests do).
+fn manifest_configs(
+    entries: &[(&str, String)],
+) -> (Arc<MononokeConfigs>, Arc<TestSource>, ConfigStore) {
+    let source = Arc::new(TestSource::new());
+    source.insert_config(
+        MANIFEST_PATH,
+        &manifest_json(entries),
+        ModificationTime::UnixTimestamp(0),
+    );
+    let store = ConfigStore::new(source.clone(), Duration::from_secs(3600), None);
+    let configs = Arc::new(
+        MononokeConfigs::new(
+            TIER_CONFIG_PATH,
+            &store,
+            Some(MANIFEST_PATH),
+            tokio::runtime::Handle::current(),
+        )
+        .expect("manifest mode constructs"),
+    );
+    (configs, source, store)
+}
+
+// Manifest source live: the map is exactly the manifest, whatever the cache
+// holds. A stale entry drops, a never-cached entry appears, and a second pass
+// over the same manifest is stable.
+#[mononoke::test]
+async fn test_receiver_manifest_source_derives_from_manifest() {
+    let (configs, _source, _store) = manifest_configs(&[
+        ("a", git_path("a")),
+        ("b", git_path("b")),
+        ("hg", hg_path("hg")),
+    ]);
+    let map = Arc::new(ArcSwap::from_pointee(names_of(&[
+        ("a", GIT),
+        ("gone", GIT),
+    ])));
+    let receiver = MononokeConfigUpdateReceiver::new(map.clone(), Some(Arc::downgrade(&configs)));
+
+    let expected = names_of(&[("a", GIT), ("b", GIT), ("hg", HG)]);
+    receiver
+        .apply_update(empty_cache(), storage())
+        .await
+        .unwrap();
+    assert_eq!(**map.load(), expected);
+
+    receiver
+        .apply_update(empty_cache(), storage())
+        .await
+        .unwrap();
+    assert_eq!(**map.load(), expected, "second pass is stable");
+}
+
+// Manifest source live: a per-repo update is not a writer. A served repo
+// flipping disabled neither removes it nor adds anything.
+#[mononoke::test]
+async fn test_receiver_manifest_source_ignores_repo_updates() {
+    let (configs, _source, _store) = manifest_configs(&[("a", git_path("a"))]);
+    let map = Arc::new(ArcSwap::from_pointee(names_of(&[("a", GIT)])));
+    let receiver = MononokeConfigUpdateReceiver::new(map.clone(), Some(Arc::downgrade(&configs)));
+    let disabled = RepoConfig {
+        enabled: false,
+        ..Default::default()
+    };
+    receiver.apply_repo_update("a", &disabled).await.unwrap();
+    receiver
+        .apply_repo_update("new", &RepoConfig::default())
+        .await
+        .unwrap();
+    assert_eq!(**map.load(), names_of(&[("a", GIT)]));
+}
+
+// A manifest change reaches the map through the real handle: a new entry
+// appears and a removed one drops on the next pass.
+#[mononoke::test]
+async fn test_receiver_manifest_change_is_picked_up() {
+    let (configs, source, store) = manifest_configs(&[("a", git_path("a")), ("b", git_path("b"))]);
+    let map = Arc::new(ArcSwap::from_pointee(HashMap::new()));
+    let receiver = MononokeConfigUpdateReceiver::new(map.clone(), Some(Arc::downgrade(&configs)));
+    receiver
+        .apply_update(empty_cache(), storage())
+        .await
+        .unwrap();
+    assert_eq!(**map.load(), names_of(&[("a", GIT), ("b", GIT)]));
+
+    source.insert_config(
+        MANIFEST_PATH,
+        &manifest_json(&[("a", git_path("a")), ("c", hg_path("c"))]),
+        ModificationTime::UnixTimestamp(1),
+    );
+    // TestSource only reports paths it has been told changed; the real
+    // configerator source reports every changed path on its own.
+    source.insert_to_refresh(MANIFEST_PATH.to_string());
+    store.force_update_configs();
+    receiver
+        .apply_update(empty_cache(), storage())
+        .await
+        .unwrap();
+    assert_eq!(**map.load(), names_of(&[("a", GIT), ("c", HG)]));
 }

@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Weak;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -57,6 +58,7 @@ use mononoke_repos::RepoLoader;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use repos::RepoSpec;
+use repos::TierManifest;
 use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
@@ -80,6 +82,8 @@ define_stats! {
     reconcile_dropped: timeseries(Average, Sum, Count),
     reconcile_failed_repos: timeseries(Average, Sum, Count),
     reconcile_tick_duration_ms: timeseries(Average, Sum, Count),
+    tier_names_len: timeseries(Average),
+    tier_names_manifest_len: timeseries(Average),
 }
 
 /// A manager of a MononokeRepos collection.
@@ -101,6 +105,11 @@ pub struct MononokeReposManager<Repo> {
     // Shared with Mononoke<R> (read by list_repos) and with
     // MononokeConfigUpdateReceiver (which refreshes it on each config update).
     repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
+    // True when `repo_names_in_tier` is a pure function of the tier manifest
+    // (manifest mode with the knob on). Then the receiver's manifest refresh is
+    // its only writer: `make_mononoke_api` does not seed it from the per-task
+    // config cache and per-repo updates do not patch it.
+    names_from_manifest: bool,
     // Holds all state a reconcile pass needs (per-repo state, spec-hash cache,
     // single-flight lock). Shared with the background loop.
     reconcile_driver: Arc<ReconcileDriver<Repo>>,
@@ -203,17 +212,34 @@ impl<Repo> MononokeReposManager<Repo> {
             spec_hash_cache: Arc::new(Mutex::new(HashMap::new())),
             reconcile_lock: Arc::new(tokio::sync::Mutex::new(())),
         });
+        // Decided once per task. In manifest mode with the knob on, the tier-wide
+        // names map is a pure function of the manifest: seeded here, rebuilt on
+        // every manifest change, written by nothing else.
+        let manifest_source = match (configs.tier_name(), configs.manifest()) {
+            (Some(tier), Some(manifest)) => {
+                let on = justknobs::eval(TIER_NAMES_FROM_MANIFEST_KNOB, None, Some(tier));
+                info!("tier_repo_names_from_manifest={on} for tier {tier}");
+                if on {
+                    repo_names_in_tier.store(Arc::new(repo_names_from_manifest(&manifest)));
+                }
+                on.then(|| Arc::downgrade(&configs))
+            }
+            _ => None,
+        };
+        let names_from_manifest = manifest_source.is_some();
         let mut mgr = MononokeReposManager {
             repos,
             configs,
             repo_factory,
             redaction_disabled,
             repo_names_in_tier: repo_names_in_tier.clone(),
+            names_from_manifest,
             reconcile_driver,
             reconcile_loop_handle: None,
         };
         mgr.populate_repos(repo_names).await?;
-        let update_receiver = MononokeConfigUpdateReceiver::new(repo_names_in_tier);
+        let update_receiver =
+            MononokeConfigUpdateReceiver::new(repo_names_in_tier, manifest_source);
         mgr.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
 
@@ -774,6 +800,11 @@ impl<Repo> Drop for MononokeReposManager<Repo> {
 
 impl<R> MononokeReposManager<R> {
     pub fn make_mononoke_api(&self) -> Result<Mononoke<R>> {
+        // Legacy seed from the per-task config cache. Skipped when the map is
+        // manifest-derived: that map was seeded at construction and a cache-
+        // derived store here would be a second writer with different contents
+        // (`load_all_repo_configs` warn-drops repos whose spec fails to parse).
+        //
         // Note: the watcher receiver is already registered by the time we
         // run, so in principle a configerator update fired between
         // registration and this call could land a fresher snapshot that
@@ -781,11 +812,13 @@ impl<R> MononokeReposManager<R> {
         // milliseconds after registration during startup, before any
         // notification is plausible; subsequent apply_update calls will
         // correct any drift within one config refresh cycle.
-        let configs = self.configs.load_all_repo_configs()?;
-        self.repo_names_in_tier
-            .store(Arc::new(build_repo_names_in_tier(
-                configs.iter().map(|(name, config)| (name, config)),
-            )));
+        if !self.names_from_manifest {
+            let configs = self.configs.load_all_repo_configs()?;
+            self.repo_names_in_tier
+                .store(Arc::new(build_repo_names_in_tier(
+                    configs.iter().map(|(name, config)| (name, config)),
+                )));
+        }
         Mononoke::new(self.repos.clone(), self.repo_names_in_tier.clone())
     }
 }
@@ -805,6 +838,43 @@ where
         .collect()
 }
 
+const TIER_NAMES_FROM_MANIFEST_KNOB: &str = "scm/mononoke:tier_repo_names_from_manifest";
+
+const GIT_SPEC_PATH_SEGMENT: &str = "/repos/git/";
+const HG_SPEC_PATH_SEGMENT: &str = "/repos/hg/";
+
+/// The identity scheme of a manifest entry, from where its spec lives.
+/// Configerator keeps Git repo specs under `repos/git/` and Mercurial repo
+/// specs under `repos/hg/`, with no exceptions in the tree (10,051 and 52
+/// entries in the SCS manifest on 2026-10-05). Anything else is `UNKNOWN`: it
+/// is still listed, but never matches a scheme filter.
+fn scheme_from_config_path(config_path: &str) -> CommitIdentityScheme {
+    if config_path.contains(GIT_SPEC_PATH_SEGMENT) {
+        CommitIdentityScheme::GIT
+    } else if config_path.contains(HG_SPEC_PATH_SEGMENT) {
+        CommitIdentityScheme::HG
+    } else {
+        CommitIdentityScheme::UNKNOWN
+    }
+}
+
+/// Tier-wide (name -> scheme) map as a pure function of the manifest: every
+/// entry, no spec reads, no per-task state. The manifest is what the tier
+/// serves, so the map is complete by construction and cannot shrink with what
+/// this task happens to have cached.
+fn repo_names_from_manifest(manifest: &TierManifest) -> HashMap<String, CommitIdentityScheme> {
+    manifest
+        .repos
+        .iter()
+        .map(|entry| {
+            (
+                entry.repo_name.clone(),
+                scheme_from_config_path(&entry.config_path),
+            )
+        })
+        .collect()
+}
+
 /// A `ConfigUpdateReceiver` that keeps the tier-wide repo names map fresh on
 /// every config change. Repo (re)building is owned by the reconcile loop;
 /// reconcile does not maintain this map, so it lives here.
@@ -813,11 +883,20 @@ pub struct MononokeConfigUpdateReceiver {
     // config change so `list_repos` sees newly-added repos without waiting
     // for a process restart.
     repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
+    // Some only in manifest mode with the knob on, decided once at construction.
+    // Weak: MononokeConfigs owns the receiver list.
+    manifest_source: Option<Weak<MononokeConfigs>>,
 }
 
 impl MononokeConfigUpdateReceiver {
-    fn new(repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>) -> Self {
-        Self { repo_names_in_tier }
+    fn new(
+        repo_names_in_tier: Arc<ArcSwap<HashMap<String, CommitIdentityScheme>>>,
+        manifest_source: Option<Weak<MononokeConfigs>>,
+    ) -> Self {
+        Self {
+            repo_names_in_tier,
+            manifest_source,
+        }
     }
 
     /// Rebuild the tier-wide repo names map from `repo_configs` (the full
@@ -826,6 +905,21 @@ impl MononokeConfigUpdateReceiver {
         let names =
             build_repo_names_in_tier(repo_configs.repos.iter().map(|(k, v)| (k, v.as_ref())));
         self.repo_names_in_tier.store(Arc::new(names));
+    }
+
+    /// Rebuild the map from the live manifest snapshot. The handle always holds
+    /// the last good manifest, so this cannot fail once in manifest mode.
+    fn refresh_from_manifest(&self, configs: &MononokeConfigs) {
+        match configs.manifest() {
+            Some(manifest) => {
+                STATS::tier_names_manifest_len.add_value(manifest.repos.len() as i64);
+                self.repo_names_in_tier
+                    .store(Arc::new(repo_names_from_manifest(&manifest)));
+            }
+            // Cannot happen: manifest_source is only Some in manifest mode. Keep
+            // the map as it was rather than shrink it to the per-task cache.
+            None => warn!("tier names: manifest source set but no manifest; map left unchanged"),
+        }
     }
 }
 
@@ -838,11 +932,21 @@ impl ConfigUpdateReceiver for MononokeConfigUpdateReceiver {
     ) -> Result<()> {
         // Keep the tier-wide names map fresh so `list_repos` reflects the latest
         // tier config. Repo (re)building is owned by the reconcile loop.
-        self.refresh_repo_names_in_tier(&repo_configs);
+        match self.manifest_source.as_ref().and_then(Weak::upgrade) {
+            Some(configs) => self.refresh_from_manifest(&configs),
+            None => self.refresh_repo_names_in_tier(&repo_configs),
+        }
+        STATS::tier_names_len.add_value(self.repo_names_in_tier.load().len() as i64);
         Ok(())
     }
 
     async fn apply_repo_update(&self, repo_name: &str, repo_config: &RepoConfig) -> Result<()> {
+        // Manifest-derived map: membership comes from the manifest alone, so a
+        // repo's own spec changing adds or removes nothing. Patching from
+        // `enabled` here would make this a second writer with other semantics.
+        if self.manifest_source.is_some() {
+            return Ok(());
+        }
         // Patch the names map from the passed-in arg (authoritative for THIS
         // repo). rcu() makes the load-mutate-store atomic against concurrent
         // writers (e.g. apply_update's bulk refresh); idempotent for this shape.

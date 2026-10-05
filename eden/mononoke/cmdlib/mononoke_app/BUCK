@@ -13,6 +13,9 @@ rust_library(
             "MononokeAppStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeAppStats_ods3-rust",
         }
     ),
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+    ],
     deps = (
         [
             "fbsource//third-party/rust:anyhow",

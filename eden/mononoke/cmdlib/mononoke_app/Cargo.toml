@@ -66,3 +66,6 @@ strum = { version = "0.28.0", features = ["derive"] }
 tls = { version = "0.1.0", path = "tls" }
 tokio = { version = "1.53.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
+
+[dev-dependencies]
+serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
