@@ -377,7 +377,7 @@ cpp_library(
     headers = ["MountInfoTable.h"],
     deps = [
         ":statmount",
-        "//folly/logging:logging",
+        "//folly:file_util",
     ],
     exported_deps = ["//eden/common/utils:proc_mount_info"],
 )

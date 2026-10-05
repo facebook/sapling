@@ -194,6 +194,19 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "mount_info_table_test",
+    srcs = ["MountInfoTableTest.cpp"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:mount_info_table",
+        "//eden/fs/utils:statmount",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
     name = "mount_health_check_test",
     srcs = ["MountHealthCheckTest.cpp"],
     network_access = network_access_utils.none(),

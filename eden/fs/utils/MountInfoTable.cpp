@@ -11,7 +11,7 @@
 
 #ifdef __linux__
 
-#include <folly/logging/xlog.h>
+#include <folly/FileUtil.h>
 
 #include <unistd.h>
 #include <cerrno>
@@ -25,8 +25,22 @@ namespace {
 constexpr size_t kStatmountBufSize = 4096;
 constexpr size_t kListmountBufSize = 1024;
 
+bool shouldUseProcMountInfo(int error) {
+  return error == ENOSYS || error == EOPNOTSUPP || error == EOVERFLOW;
+}
+
+folly::Expected<std::vector<MountTableEntry>, int> readProcMountInfo(
+    MountInfoOptions options) {
+  std::string contents;
+  if (!folly::readFile("/proc/self/mountinfo", contents)) {
+    return folly::makeUnexpected(errno);
+  }
+  return parseProcMountInfo(contents, options);
+}
+
 uint64_t getStatmountMask(MountInfoOptions options) {
-  auto mask = STATMOUNT_SB_BASIC | STATMOUNT_MNT_POINT | STATMOUNT_FS_TYPE;
+  auto mask = STATMOUNT_SB_BASIC | STATMOUNT_MNT_ROOT | STATMOUNT_MNT_POINT |
+      STATMOUNT_FS_TYPE;
   if (options.includeMountSource) {
     mask |= STATMOUNT_SB_SOURCE;
   }
@@ -81,8 +95,8 @@ folly::Expected<std::vector<uint64_t>, int> listAllMountIds() {
 
 /**
  * Call statmount(2) for a single mount ID.
- * Returns an error code on failure (ENOSYS for unsupported kernels,
- * or the errno from the failed syscall).
+ * Returns ENOSYS for unsupported kernels, EOPNOTSUPP for missing requested
+ * fields, or the errno from a failed syscall.
  */
 folly::Expected<MountTableEntry, int> statmountById(
     uint64_t mntId,
@@ -96,58 +110,84 @@ folly::Expected<MountTableEntry, int> statmountById(
   req.mnt_id = mntId;
   req.param = getStatmountMask(options);
 
-  long ret = syscall(__NR_statmount, &req, sm, buf.size(), 0);
+  const auto ret = syscall(__NR_statmount, &req, sm, buf.size(), 0);
   if (ret < 0) {
-    if (errno == EOVERFLOW) {
-      // Buffer too small — try again with reported size
-      buf.resize(sm->size);
-      sm = reinterpret_cast<struct statmount*>(buf.data());
-      ret = syscall(__NR_statmount, &req, sm, buf.size(), 0);
-      if (ret < 0) {
-        return folly::makeUnexpected(errno);
-      }
-    } else {
-      return folly::makeUnexpected(errno);
-    }
+    // EOVERFLOW does not return the required buffer size. Use mountinfo for
+    // these entries instead of retrying with an unknown size.
+    return folly::makeUnexpected(errno);
+  }
+
+  return detail::parseStatmount(*sm, options);
+}
+
+} // namespace
+
+namespace detail {
+
+folly::Expected<MountTableEntry, int> parseStatmount(
+    const struct statmount& sm,
+    MountInfoOptions options) {
+  // Kernels can support statmount but omit newer fields such as SB_SOURCE
+  // and MNT_OPTS. Do not treat missing metadata as empty mount information.
+  const auto requestedMask = getStatmountMask(options);
+  if ((sm.mask & requestedMask) != requestedMask) {
+    return folly::makeUnexpected(EOPNOTSUPP);
   }
 
   MountTableEntry info;
-  info.devMajor = sm->sb_dev_major;
-  info.devMinor = sm->sb_dev_minor;
+  info.devMajor = sm.sb_dev_major;
+  info.devMinor = sm.sb_dev_minor;
+  info.mountRoot = sm.str + sm.mnt_root;
+  info.mountPoint = sm.str + sm.mnt_point;
+  info.fsType = sm.str + sm.fs_type;
 
-  if (sm->mask & STATMOUNT_MNT_POINT) {
-    info.mountPoint = sm->str + sm->mnt_point;
+  if (options.includeMountSource) {
+    info.mountSource = sm.str + sm.sb_source;
   }
-  if (sm->mask & STATMOUNT_FS_TYPE) {
-    info.fsType = sm->str + sm->fs_type;
-  }
-  if (sm->mask & STATMOUNT_SB_SOURCE) {
-    info.mountSource = sm->str + sm->sb_source;
-  }
-  if (sm->mask & STATMOUNT_MNT_OPTS) {
-    info.mountOptions = sm->str + sm->mnt_opts;
+  if (options.includeMountOptions) {
+    info.mountOptions = sm.str + sm.mnt_opts;
   }
 
   return info;
 }
 
-} // namespace
+} // namespace detail
 
 folly::Expected<std::optional<MountTableEntry>, int> getMountInfoForPath(
     const char* path,
     MountInfoOptions options) {
+  auto fromProc =
+      [&]() -> folly::Expected<std::optional<MountTableEntry>, int> {
+    auto mounts = readProcMountInfo(options);
+    if (mounts.hasError()) {
+      return folly::makeUnexpected(mounts.error());
+    }
+    for (auto& mount : mounts.value()) {
+      if (mount.mountPoint == path) {
+        return std::move(mount);
+      }
+    }
+    return std::nullopt;
+  };
+
   auto idsResult = listAllMountIds();
   if (idsResult.hasError()) {
+    if (shouldUseProcMountInfo(idsResult.error())) {
+      return fromProc();
+    }
     return folly::makeUnexpected(idsResult.error());
   }
 
   for (auto id : idsResult.value()) {
     auto infoResult = statmountById(id, options);
     if (infoResult.hasError()) {
+      if (shouldUseProcMountInfo(infoResult.error())) {
+        return fromProc();
+      }
       return folly::makeUnexpected(infoResult.error());
     }
     if (infoResult.value().mountPoint == path) {
-      return infoResult.value();
+      return std::move(infoResult.value());
     }
   }
   return std::nullopt;
@@ -159,6 +199,9 @@ folly::Expected<std::vector<MountTableEntry>, int> getAllMounts(
 
   auto idsResult = listAllMountIds();
   if (idsResult.hasError()) {
+    if (shouldUseProcMountInfo(idsResult.error())) {
+      return readProcMountInfo(options);
+    }
     return folly::makeUnexpected(idsResult.error());
   }
 
@@ -166,6 +209,9 @@ folly::Expected<std::vector<MountTableEntry>, int> getAllMounts(
   for (auto id : idsResult.value()) {
     auto infoResult = statmountById(id, options);
     if (infoResult.hasError()) {
+      if (shouldUseProcMountInfo(infoResult.error())) {
+        return readProcMountInfo(options);
+      }
       return folly::makeUnexpected(infoResult.error());
     }
     result.push_back(std::move(infoResult.value()));
