@@ -20,7 +20,6 @@ use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::test_utils::init_small_large_repo;
 use cross_repo_sync::update_mapping_with_version;
-use either::Either;
 use fbinit::FacebookInit;
 use fixtures::BranchUneven;
 use fixtures::Linear;
@@ -362,7 +361,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             .get("subsubdir2")
             .expect("entry should exist for subsubdir2")
         {
-            Either::Left(ContentManifestEntry::Directory(dir)) => dir.id.clone().into(),
+            ContentManifestEntry::Directory(dir) => dir.id,
             entry => panic!("subsubdir2 entry should be a directory, not {entry:?}"),
         }
     };
@@ -374,7 +373,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
                 .await?
                 .into_iter()
                 .map(|(name, entry)| match entry {
-                    Either::Left(ContentManifestEntry::File(file)) => {
+                    ContentManifestEntry::File(file) => {
                         Some((name, file.size, file.content_id.to_string()))
                     }
                     _ => None,
@@ -401,13 +400,9 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     );
     // Get tree by non-existent id returns None.
     assert!(
-        repo.tree(
-            mononoke_types::ContentManifestId::from_bytes([1; 32])
-                .unwrap()
-                .into()
-        )
-        .await?
-        .is_none()
+        repo.tree(mononoke_types::ContentManifestId::from_bytes([1; 32]).unwrap())
+            .await?
+            .is_none()
     );
     // Get tree by non-existent path returns None.
     {

@@ -41,7 +41,7 @@ use mononoke_api::specifiers::GitSha1;
 use mononoke_api::specifiers::GitSha1Prefix;
 use mononoke_api::specifiers::Globalrev;
 use mononoke_api::specifiers::Svnrev;
-use mononoke_types::content_manifest::compat;
+use mononoke_types::ContentManifestId;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
@@ -285,33 +285,21 @@ impl_from_request_binary_id!(Sha1, "sha-1");
 impl_from_request_binary_id!(Sha256, "sha-256");
 impl_from_request_binary_id!(GitSha1, "git-sha-1");
 
-// compat::ContentManifestId is Either<ContentManifestId, FsnodeId>.
-// Use the id_type field from TreeIdSpecifier to determine the correct variant.
-// When id_type is absent (old clients), default to FsnodeId.
-impl FromRequest<thrift::TreeIdSpecifier> for compat::ContentManifestId {
+impl FromRequest<thrift::TreeIdSpecifier> for ContentManifestId {
     fn from_request(tree_id: &thrift::TreeIdSpecifier) -> Result<Self, thrift::RequestError> {
-        let id = &tree_id.id;
         match tree_id.id_type {
             Some(thrift::TreeIdType::CONTENT_MANIFEST) => {
-                mononoke_types::ContentManifestId::from_bytes(id)
-                    .map(compat::ContentManifestId::from)
-                    .map_err(|e| {
-                        scs_errors::invalid_request(format!(
-                            "invalid content manifest tree id ({}): {}",
-                            hex_string(id),
-                            e,
-                        ))
-                    })
-            }
-            Some(thrift::TreeIdType::FSNODE) | None => mononoke_types::FsnodeId::from_bytes(id)
-                .map(compat::ContentManifestId::from)
-                .map_err(|e| {
+                ContentManifestId::from_bytes(&tree_id.id).map_err(|e| {
                     scs_errors::invalid_request(format!(
-                        "invalid tree id ({}): {}",
-                        hex_string(id),
+                        "invalid content manifest tree id ({}): {}",
+                        hex_string(&tree_id.id),
                         e,
                     ))
-                }),
+                })
+            }
+            Some(thrift::TreeIdType::FSNODE) | None => Err(scs_errors::invalid_request(
+                "fsnode tree IDs are no longer supported; specify the tree by commit and path",
+            )),
             Some(val) => Err(scs_errors::invalid_request(format!(
                 "unsupported tree id type ({})",
                 val.0,
@@ -506,4 +494,53 @@ pub(crate) fn convert_pushvars(
             .map(|(name, value)| (name, Bytes::from(value)))
             .collect()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn content_manifest_tree_id() {
+        let specifier = thrift::TreeIdSpecifier {
+            id: vec![42; 32],
+            id_type: Some(thrift::TreeIdType::CONTENT_MANIFEST),
+            ..Default::default()
+        };
+        assert_eq!(
+            ContentManifestId::from_request(&specifier)
+                .unwrap()
+                .as_ref(),
+            specifier.id.as_slice(),
+        );
+    }
+
+    #[mononoke::test]
+    fn reject_fsnode_tree_ids() {
+        for id_type in [None, Some(thrift::TreeIdType::FSNODE)] {
+            let specifier = thrift::TreeIdSpecifier {
+                id: vec![42; 32],
+                id_type,
+                ..Default::default()
+            };
+            assert!(ContentManifestId::from_request(&specifier).is_err());
+        }
+    }
+
+    #[mononoke::test]
+    fn reject_invalid_tree_ids() {
+        for (id_type, id) in [
+            (Some(thrift::TreeIdType::CONTENT_MANIFEST), vec![42; 31]),
+            (Some(thrift::TreeIdType(99)), vec![42; 32]),
+        ] {
+            let specifier = thrift::TreeIdSpecifier {
+                id,
+                id_type,
+                ..Default::default()
+            };
+            assert!(ContentManifestId::from_request(&specifier).is_err());
+        }
+    }
 }

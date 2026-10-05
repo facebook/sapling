@@ -131,7 +131,7 @@ struct CommitPathSpecifier {
 
 /// The type of manifest backing a tree ID.
 enum TreeIdType {
-  /// An FsnodeId (legacy default).
+  /// An FsnodeId. No longer supported; retained for wire compatibility.
   FSNODE = 0,
 
   /// A ContentManifestId.
@@ -146,8 +146,7 @@ struct TreeIdSpecifier {
   /// The ID of the tree, obtained from a previous call to the service.
   2: binary id;
 
-  /// The type of the tree ID. If absent, defaults to FSNODE for backward
-  /// compatibility with existing clients.
+  /// Must be CONTENT_MANIFEST. Requests with FSNODE or no type are rejected.
   3: optional TreeIdType id_type;
 }
 

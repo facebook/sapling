@@ -120,10 +120,10 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::ContentId;
+use mononoke_types::ContentManifestId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
-use mononoke_types::content_manifest::compat;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
@@ -1730,7 +1730,7 @@ impl<
     /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
     pub async fn tree(
         &self,
-        tree_id: compat::ContentManifestId,
+        tree_id: ContentManifestId,
     ) -> Result<Option<TreeContext<R>>, MononokeError> {
         TreeContext::new_check_exists(self.clone(), tree_id).await
     }

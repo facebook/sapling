@@ -105,15 +105,6 @@ async fn test_no_restricted_change(fb: FacebookInit) -> Result<()> {
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Fsnode tree traversal
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // ContentManifest tree traversal
             base_sample
                 .clone()
@@ -237,17 +228,6 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["user_project/foo"])?)
                 .with_full_path(NonRootMPath::new("user_project/foo/bar")?)
-                .with_has_authorization(true)
-                .with_has_acl_access(true)
-                .with_acls(vec![project_acl.clone()])
-                .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                // The restricted path root is logged, not the full path
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["user_project/foo"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
                 .with_has_authorization(true)
                 .with_has_acl_access(true)
                 .with_acls(vec![project_acl.clone()])
@@ -401,15 +381,6 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                     .with_has_authorization(false)
                     .with_acls(vec![restricted_acl.clone()])
                     .build()?,
-                // Fsnode access log
-                base_sample
-                    .clone()
-                    .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                    .with_manifest_id(expected_fsnode_id.clone())
-                    .with_manifest_type(ManifestType::Fsnode)
-                    .with_has_authorization(false)
-                    .with_acls(vec![restricted_acl.clone()])
-                    .build()?,
                 // ContentManifest access log
                 base_sample
                     .clone()
@@ -435,7 +406,7 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                     .with_has_authorization(false)
                     .with_acls(vec![restricted_acl.clone()])
                     .build()?,
-                // Path fsnode access log
+                // Path content access log
                 base_sample
                     .clone()
                     .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
@@ -1335,15 +1306,6 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // ContentManifest access log
             base_sample
                 .clone()
@@ -1492,15 +1454,6 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // ContentManifest access log
             base_sample
                 .clone()
@@ -1526,7 +1479,7 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Path fsnode access log - only for restricted directory
+            // Path content access log - only for restricted directory
             base_sample
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
@@ -1803,24 +1756,6 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // restricted/two access - Fsnode log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/two"])?)
-                .with_manifest_id(expected_fsnode_id_two.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![another_acl.clone()])
-                .build()?,
-            // restricted/one access - Fsnode log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"])?)
-                .with_manifest_id(expected_fsnode_id_one.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // restricted/two access - ContentManifest log
             base_sample
                 .clone()
@@ -2060,26 +1995,6 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"])?)
                 .with_full_path(NonRootMPath::new("restricted/one")?)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
-            // user_project/foo access - Fsnode log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["user_project/foo"])?)
-                .with_manifest_id(expected_fsnode_id_user.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                // User had access to this restricted path
-                .with_has_authorization(true)
-                .with_has_acl_access(true)
-                .with_acls(vec![myusername_project_acl.clone()])
-                .build()?,
-            // restricted/one access - Fsnode log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"])?)
-                .with_manifest_id(expected_fsnode_id_restricted.clone())
-                .with_manifest_type(ManifestType::Fsnode)
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
@@ -2341,27 +2256,6 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 .with_has_authorization(false)
                 .with_acls(vec![more_restricted_acl.clone(), project_acl.clone()])
                 .build()?,
-            // project access - Fsnode log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["project"])?)
-                .with_manifest_id(expected_fsnode_id_root.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                // User has access to the broader project ACL
-                .with_has_authorization(true)
-                .with_has_acl_access(true)
-                .with_acls(vec![project_acl.clone()])
-                .build()?,
-            // project/restricted access - Fsnode log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["project/restricted"])?)
-                .with_manifest_id(expected_fsnode_id_subdir.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                // User has access to the broader project ACL
-                .with_has_authorization(false)
-                .with_acls(vec![more_restricted_acl.clone()])
-                .build()?,
             // project access - ContentManifest log
             base_sample
                 .clone()
@@ -2587,15 +2481,6 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // ContentManifest access log
             base_sample
                 .clone()
@@ -2704,16 +2589,6 @@ async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> 
                 .with_is_allowlisted_tooling(true)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(true)
-                .with_is_allowlisted_tooling(true)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // ContentManifest access log
             base_sample
                 .clone()
@@ -2742,7 +2617,7 @@ async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> 
                 .with_is_allowlisted_tooling(true)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Path fsnode access log
+            // Path content access log
             base_sample
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
@@ -2862,16 +2737,6 @@ async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<
                 .with_is_allowlisted_tooling(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Fsnode access log
-            base_sample
-                .clone()
-                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
-                .with_manifest_id(expected_fsnode_id.clone())
-                .with_manifest_type(ManifestType::Fsnode)
-                .with_has_authorization(false)
-                .with_is_allowlisted_tooling(false)
-                .with_acls(vec![restricted_acl.clone()])
-                .build()?,
             // ContentManifest access log
             base_sample
                 .clone()
@@ -2900,7 +2765,7 @@ async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<
                 .with_is_allowlisted_tooling(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
-            // Path fsnode access log
+            // Path content access log
             base_sample
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"])?)
@@ -3210,11 +3075,7 @@ async fn test_shadow_manifest_dispatch_skips_unsupported_manifest_types(
         .observe_restricted_paths_scenario(&[])
         .await?;
 
-    for manifest_type in [
-        ManifestType::Hg,
-        ManifestType::Fsnode,
-        ManifestType::ContentManifest,
-    ] {
+    for manifest_type in [ManifestType::Hg, ManifestType::ContentManifest] {
         assert!(
             result.scuba_logs.iter().any(|log| {
                 log.manifest_type() == Some(&manifest_type)

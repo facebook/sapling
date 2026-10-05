@@ -808,8 +808,8 @@ impl RestrictedPathsTestData {
             .derive::<RootHgAugmentedManifestId>(&self.ctx, bcs_id, DerivationPriority::LOW)
             .await?;
 
-        // Derive Fsnode
-        let root_fsnode_id = scenario_repo
+        // Derive Fsnode to verify restricted manifest registration for V1 fingerprints.
+        scenario_repo
             .repo_derived_data()
             .derive::<RootFsnodeId>(&self.ctx, bcs_id, DerivationPriority::LOW)
             .await?;
@@ -831,7 +831,6 @@ impl RestrictedPathsTestData {
             HgManifestId,
             HgAugmentedManifestId,
             Path,
-            Fsnode,
             PathsWithContent,
             PathsWithHistory,
             ContentManifest,
@@ -892,33 +891,6 @@ impl RestrictedPathsTestData {
             }
         }
 
-        // Access all fsnode tree entries
-        let fsnode_results: Vec<Result<Option<(AccessMethod, MononokeError)>, MononokeError>> =
-            root_fsnode_id
-                .into_fsnode_id()
-                .list_tree_entries(self.ctx.clone(), blobstore.clone())
-                .map_err(MononokeError::from)
-                .and_then(async |(_path, fsnode_id)| {
-                    // Access Fsnode by loading it from blobstore
-                    match repo_ctx.tree(fsnode_id.into()).await {
-                        Ok(_) => Ok(None),
-                        Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
-                            Ok(Some((AccessMethod::Fsnode, e)))
-                        }
-                        Err(e) => Err(e),
-                    }
-                })
-                .collect()
-                .await;
-
-        for result in fsnode_results {
-            match result {
-                Ok(Some(err)) => auth_errors.push(err),
-                Ok(None) => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
-
         // Access all content manifest tree entries
         let content_manifest_results: Vec<
             Result<Option<(AccessMethod, MononokeError)>, MononokeError>,
@@ -927,7 +899,7 @@ impl RestrictedPathsTestData {
             .list_tree_entries(self.ctx.clone(), blobstore.clone())
             .map_err(MononokeError::from)
             .and_then(async |(_path, content_manifest_id)| {
-                match repo_ctx.tree(content_manifest_id.into()).await {
+                match repo_ctx.tree(content_manifest_id).await {
                     Ok(_) => Ok(None),
                     Err(e @ MononokeError::RestrictedPathsAuthorizationError(_)) => {
                         Ok(Some((AccessMethod::ContentManifest, e)))

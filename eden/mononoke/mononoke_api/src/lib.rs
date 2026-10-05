@@ -106,7 +106,6 @@ pub use crate::specifiers::Globalrev;
 pub use crate::specifiers::HgChangesetId;
 pub use crate::specifiers::HgChangesetIdPrefix;
 pub use crate::tree::TreeContext;
-pub use crate::tree::TreeSummary;
 pub use crate::xrepo::CandidateSelectionHintArgs;
 
 /// An instance of Mononoke, which may manage multiple repositories.

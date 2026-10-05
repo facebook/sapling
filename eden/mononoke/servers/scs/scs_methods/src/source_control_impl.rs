@@ -72,7 +72,7 @@ use mononoke_api::SessionContainer;
 use mononoke_api::TreeContext;
 use mononoke_app::MononokeApp;
 use mononoke_configs::MononokeConfigs;
-use mononoke_types::content_manifest::compat;
+use mononoke_types::ContentManifestId;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use permission_checker::AclProvider;
@@ -720,7 +720,7 @@ impl SourceControlServiceImpl {
             thrift::TreeSpecifier::by_id(tree_id) => {
                 ensure_tree_id_requests_allowed(&tree_id.repo.name)?;
                 let repo = self.repo(ctx, &tree_id.repo).await?;
-                let tree_id = compat::ContentManifestId::from_request(tree_id)?;
+                let tree_id = ContentManifestId::from_request(tree_id)?;
                 let tree = repo
                     .tree(tree_id)
                     .await?

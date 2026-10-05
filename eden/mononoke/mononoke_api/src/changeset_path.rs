@@ -325,7 +325,7 @@ where
         let tree = match self.manifest_entry().await? {
             Some(Entry::Tree(manifest_id)) => Some(TreeContext::new_authorized(
                 self.repo_ctx().clone(),
-                manifest_id.into(),
+                manifest_id,
             )),
             _ => None,
         };
@@ -377,7 +377,7 @@ where
         let entry = match self.manifest_entry().await? {
             Some(Entry::Tree(manifest_id)) => PathEntry::Tree(TreeContext::new_authorized(
                 self.repo_ctx().clone(),
-                manifest_id.into(),
+                manifest_id,
             )),
             Some(Entry::Leaf(file)) => PathEntry::File(
                 FileContext::new_authorized(

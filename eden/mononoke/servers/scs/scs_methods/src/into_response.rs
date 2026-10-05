@@ -31,13 +31,12 @@ use mononoke_api::MononokeError;
 use mononoke_api::PushrebaseOutcome;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
-use mononoke_api::TreeSummary;
 use mononoke_api::UnifiedDiff;
+use mononoke_types::ContentManifestId;
 use mononoke_types::MPath;
 use mononoke_types::SubtreeChange;
 use mononoke_types::content_manifest::ContentManifestEntry;
-use mononoke_types::content_manifest::compat;
-use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::content_manifest::ContentManifestRollupData;
 use mononoke_types::subtree_change::SubtreeCopy;
 use mononoke_types::subtree_change::SubtreeCrossRepoMerge;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
@@ -92,71 +91,25 @@ impl IntoResponse<Option<thrift::MetadataDiffFileType>> for Option<FileType> {
     }
 }
 
-impl IntoResponse<thrift::TreeEntry>
-    for (String, either::Either<ContentManifestEntry, FsnodeEntry>)
-{
+impl IntoResponse<thrift::TreeEntry> for (String, ContentManifestEntry) {
     fn into_response(self) -> thrift::TreeEntry {
         let (name, entry) = self;
         let (r#type, info) = match entry {
-            either::Either::Left(cm_entry) => match cm_entry {
-                ContentManifestEntry::File(file) => {
-                    let info = thrift::FileInfo {
-                        id: file.content_id.as_ref().to_vec(),
-                        file_size: file.size as i64,
-                        content_sha1: Vec::new(),
-                        content_sha256: Vec::new(),
-                        ..Default::default()
-                    };
-                    (
-                        file.file_type.into_response(),
-                        thrift::EntryInfo::file(info),
-                    )
-                }
-                ContentManifestEntry::Directory(dir) => {
-                    let rollup = &dir.rollup_data;
-                    let info = thrift::TreeInfo {
-                        id: dir.id.as_ref().to_vec(),
-                        child_files_count: rollup.child_counts.files_count as i64,
-                        child_files_total_size: rollup.child_counts.files_total_size as i64,
-                        child_dirs_count: rollup.child_counts.dirs_count as i64,
-                        descendant_files_count: rollup.descendant_counts.files_count as i64,
-                        descendant_files_total_size: rollup.descendant_counts.files_total_size
-                            as i64,
-                        id_type: Some(thrift::TreeIdType::CONTENT_MANIFEST),
-                        ..Default::default()
-                    };
-                    (thrift::EntryType::TREE, thrift::EntryInfo::tree(info))
-                }
-            },
-            either::Either::Right(fsnode_entry) => match fsnode_entry {
-                FsnodeEntry::File(file) => {
-                    let info = thrift::FileInfo {
-                        id: file.content_id().as_ref().to_vec(),
-                        file_size: file.size() as i64,
-                        content_sha1: file.content_sha1().as_ref().to_vec(),
-                        content_sha256: file.content_sha256().as_ref().to_vec(),
-                        ..Default::default()
-                    };
-                    (
-                        (*file.file_type()).into_response(),
-                        thrift::EntryInfo::file(info),
-                    )
-                }
-                FsnodeEntry::Directory(dir) => {
-                    let summary = dir.summary();
-                    let info = thrift::TreeInfo {
-                        id: dir.id().as_ref().to_vec(),
-                        child_files_count: summary.child_files_count as i64,
-                        child_files_total_size: summary.child_files_total_size as i64,
-                        child_dirs_count: summary.child_dirs_count as i64,
-                        descendant_files_count: summary.descendant_files_count as i64,
-                        descendant_files_total_size: summary.descendant_files_total_size as i64,
-                        id_type: Some(thrift::TreeIdType::FSNODE),
-                        ..Default::default()
-                    };
-                    (thrift::EntryType::TREE, thrift::EntryInfo::tree(info))
-                }
-            },
+            ContentManifestEntry::File(file) => {
+                let info = thrift::FileInfo {
+                    id: file.content_id.as_ref().to_vec(),
+                    file_size: file.size as i64,
+                    ..Default::default()
+                };
+                (
+                    file.file_type.into_response(),
+                    thrift::EntryInfo::file(info),
+                )
+            }
+            ContentManifestEntry::Directory(dir) => (
+                thrift::EntryType::TREE,
+                thrift::EntryInfo::tree((dir.id, dir.rollup_data).into_response()),
+            ),
         };
         thrift::TreeEntry {
             name,
@@ -189,40 +142,18 @@ impl IntoResponse<thrift::FileInfo> for FileMetadata {
     }
 }
 
-impl IntoResponse<thrift::TreeInfo> for (compat::ContentManifestId, TreeSummary) {
+impl IntoResponse<thrift::TreeInfo> for (ContentManifestId, ContentManifestRollupData) {
     fn into_response(self) -> thrift::TreeInfo {
-        let (id, summary) = self;
-        let (id_bytes, id_type) = match &id {
-            either::Either::Left(cm_id) => (
-                cm_id.as_ref().to_vec(),
-                Some(thrift::TreeIdType::CONTENT_MANIFEST),
-            ),
-            either::Either::Right(fsnode_id) => (
-                fsnode_id.as_ref().to_vec(),
-                Some(thrift::TreeIdType::FSNODE),
-            ),
-        };
-        match summary {
-            either::Either::Left(rollup) => thrift::TreeInfo {
-                id: id_bytes,
-                child_files_count: rollup.child_counts.files_count as i64,
-                child_files_total_size: rollup.child_counts.files_total_size as i64,
-                child_dirs_count: rollup.child_counts.dirs_count as i64,
-                descendant_files_count: rollup.descendant_counts.files_count as i64,
-                descendant_files_total_size: rollup.descendant_counts.files_total_size as i64,
-                id_type,
-                ..Default::default()
-            },
-            either::Either::Right(fsnode_summary) => thrift::TreeInfo {
-                id: id_bytes,
-                child_files_count: fsnode_summary.child_files_count as i64,
-                child_files_total_size: fsnode_summary.child_files_total_size as i64,
-                child_dirs_count: fsnode_summary.child_dirs_count as i64,
-                descendant_files_count: fsnode_summary.descendant_files_count as i64,
-                descendant_files_total_size: fsnode_summary.descendant_files_total_size as i64,
-                id_type,
-                ..Default::default()
-            },
+        let (id, rollup) = self;
+        thrift::TreeInfo {
+            id: id.as_ref().to_vec(),
+            child_files_count: rollup.child_counts.files_count as i64,
+            child_files_total_size: rollup.child_counts.files_total_size as i64,
+            child_dirs_count: rollup.child_counts.dirs_count as i64,
+            descendant_files_count: rollup.descendant_counts.files_count as i64,
+            descendant_files_total_size: rollup.descendant_counts.files_total_size as i64,
+            id_type: Some(thrift::TreeIdType::CONTENT_MANIFEST),
+            ..Default::default()
         }
     }
 }

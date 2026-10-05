@@ -13,7 +13,6 @@ use bytes::Bytes;
 use futures::TryStream;
 use futures::TryStreamExt;
 use getbundle_response::SessionLfsParams;
-use mercurial_types::FileType;
 use mercurial_types::HgFileHistoryEntry;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
@@ -23,7 +22,6 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::NonRootMPath;
-use mononoke_types::fsnode::FsnodeFile;
 use remotefilelog::create_getpack_v2_blob;
 use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
@@ -115,26 +113,6 @@ impl<R: MononokeRepo> HgFileContext<R> {
                     "metadata not found for content id {content_id}"
                 ))
             })
-    }
-
-    /// Fetches the metadata that would be present in this file's corresponding FsNode, returning
-    /// it with the FsNode type, but without actually fetching the FsNode.
-    ///
-    /// Instead, this method separately reads the `ContentId`, uses that to fetch the size, Sha1,
-    /// and Sha256, and combines that with the FileType, which the user must be provide (available
-    /// in the parent tree manifest).
-    pub async fn fetch_fsnode_data(
-        &self,
-        file_type: FileType,
-    ) -> Result<FsnodeFile, MononokeError> {
-        let metadata = self.content_metadata().await?;
-        Ok(FsnodeFile::new(
-            metadata.content_id,
-            file_type,
-            metadata.total_size,
-            metadata.sha1,
-            metadata.sha256,
-        ))
     }
 }
 

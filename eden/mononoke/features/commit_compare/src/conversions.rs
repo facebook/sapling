@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use anyhow::anyhow;
-use either::Either;
 use futures::try_join;
 use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::CopyInfo;
@@ -97,38 +96,16 @@ pub async fn to_tree_path_info<R: crate::Repo>(
                 .tree()
                 .await?
                 .ok_or_else(|| anyhow!("programming error: not a tree"))?;
-            let summary = tree.summary().await?;
-            let (id_bytes, id_type) = match tree.id() {
-                Either::Left(cm_id) => (
-                    cm_id.as_ref().to_vec(),
-                    Some(source_control_thrift::TreeIdType::CONTENT_MANIFEST),
-                ),
-                Either::Right(fsnode_id) => (
-                    fsnode_id.as_ref().to_vec(),
-                    Some(source_control_thrift::TreeIdType::FSNODE),
-                ),
-            };
-            let info = match summary {
-                Either::Left(rollup) => source_control_thrift::TreeInfo {
-                    id: id_bytes,
-                    child_files_count: rollup.child_counts.files_count as i64,
-                    child_files_total_size: rollup.child_counts.files_total_size as i64,
-                    child_dirs_count: rollup.child_counts.dirs_count as i64,
-                    descendant_files_count: rollup.descendant_counts.files_count as i64,
-                    descendant_files_total_size: rollup.descendant_counts.files_total_size as i64,
-                    id_type,
-                    ..Default::default()
-                },
-                Either::Right(fsnode_summary) => source_control_thrift::TreeInfo {
-                    id: id_bytes,
-                    child_files_count: fsnode_summary.child_files_count as i64,
-                    child_files_total_size: fsnode_summary.child_files_total_size as i64,
-                    child_dirs_count: fsnode_summary.child_dirs_count as i64,
-                    descendant_files_count: fsnode_summary.descendant_files_count as i64,
-                    descendant_files_total_size: fsnode_summary.descendant_files_total_size as i64,
-                    id_type,
-                    ..Default::default()
-                },
+            let rollup = tree.summary().await?;
+            let info = source_control_thrift::TreeInfo {
+                id: tree.id().as_ref().to_vec(),
+                child_files_count: rollup.child_counts.files_count as i64,
+                child_files_total_size: rollup.child_counts.files_total_size as i64,
+                child_dirs_count: rollup.child_counts.dirs_count as i64,
+                descendant_files_count: rollup.descendant_counts.files_count as i64,
+                descendant_files_total_size: rollup.descendant_counts.files_total_size as i64,
+                id_type: Some(source_control_thrift::TreeIdType::CONTENT_MANIFEST),
+                ..Default::default()
             };
             Ok(Some(source_control_thrift::TreePathInfo {
                 path: ctx.path().to_string(),
