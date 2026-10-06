@@ -88,6 +88,23 @@ pub struct HgRepoContext<R> {
     repo_ctx: RepoContext<R>,
 }
 
+/// Where `get_graph_mapping` takes the draft flag of each commit from.
+enum DraftClassification {
+    /// The draft commits found by the getbundle walk down from the heads.
+    Walked(HashSet<HgChangesetId>),
+    /// The public commits among the commits being returned, from the phases.
+    Phases(HashSet<ChangesetId>),
+}
+
+impl DraftClassification {
+    fn is_draft(&self, cs_id: ChangesetId, hg_id: HgChangesetId) -> bool {
+        match self {
+            DraftClassification::Walked(draft_commits) => draft_commits.contains(&hg_id),
+            DraftClassification::Phases(public_commits) => !public_commits.contains(&cs_id),
+        }
+    }
+}
+
 impl<R: MononokeRepo> HgRepoContext<R> {
     pub(crate) fn new(repo_ctx: RepoContext<R>) -> Self {
         Self { repo_ctx }
@@ -831,10 +848,8 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     }
 
     /// Return a mapping of commits to their parents that are in the segment of
-    /// of the commit graph bounded by common and heads.
-    ///
-    /// We need to make sure filenodes are derived before sending for draft commits.
-    /// This method also return commit's phases.
+    /// of the commit graph bounded by common and heads, along with whether
+    /// each commit is a draft.
     pub async fn get_graph_mapping(
         &self,
         common: Vec<HgChangesetId>,
@@ -852,20 +867,55 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             self.convert_changeset_ids(common),
             self.convert_changeset_ids(heads),
         )?;
-        let (draft_commits, missing_commits) = try_join!(
-            find_new_draft_commits_and_derive_filenodes_for_public_roots(
-                &ctx,
-                repo,
-                &common_set,
-                &heads_vec,
-                phases
-            ),
+
+        // Getbundle walks the draft commits down from the heads to derive
+        // filenodes for their public roots, because it sends filenodes along
+        // with the commits, and classifies drafts from that walk.  The commit
+        // graph doesn't include filenodes, so with the pull optimizations on
+        // the walk is skipped and drafts are classified from the phases of
+        // the commits being returned instead.
+        let walk_drafts = !justknobs::eval(
+            "scm/mononoke:commit_graph_pull_optimizations",
+            None,
+            Some(self.repo_ctx().name()),
+        );
+        let walked_draft_commits = async {
+            if !walk_drafts {
+                return anyhow::Ok(None);
+            }
+            Ok(Some(
+                find_new_draft_commits_and_derive_filenodes_for_public_roots(
+                    &ctx,
+                    repo,
+                    &common_set,
+                    &heads_vec,
+                    phases,
+                )
+                .await?,
+            ))
+        };
+        let (walked_draft_commits, missing_commits) = try_join!(
+            walked_draft_commits,
             self.repo_ctx().repo().commit_graph().ancestors_difference(
                 &ctx,
                 bonsai_heads,
                 bonsai_common,
             )
         )?;
+
+        let classification = async {
+            match walked_draft_commits {
+                Some(draft_commits) => anyhow::Ok(DraftClassification::Walked(draft_commits)),
+                None => Ok(DraftClassification::Phases(
+                    stream::iter(missing_commits.clone())
+                        .chunks(100)
+                        .map(|chunk| phases.get_cached_public(&ctx, chunk))
+                        .buffered(25)
+                        .try_concat()
+                        .await?,
+                )),
+            }
+        };
 
         let cs_parent_mapping = stream::iter(missing_commits.clone())
             .map(move |cs_id| async move {
@@ -876,8 +926,9 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 Ok::<_, Error>((cs_id, parents))
             })
             .buffered(100)
-            .try_collect::<Vec<_>>()
-            .await?;
+            .try_collect::<Vec<_>>();
+
+        let (classification, cs_parent_mapping) = try_join!(classification, cs_parent_mapping)?;
 
         let all_cs_ids = cs_parent_mapping
             .clone()
@@ -922,7 +973,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                     .map(get_hg_id_fn)
                     .collect::<Result<Vec<HgChangesetId>, Error>>()
                     .map_err(MononokeError::from)?;
-                let is_draft = draft_commits.contains(&hg_id);
+                let is_draft = classification.is_draft(cs_id, hg_id);
                 Ok((hg_id, (hg_parents, is_draft)))
             })
             .collect::<Result<Vec<_>, MononokeError>>()?;
@@ -936,9 +987,15 @@ mod tests {
     use std::sync::Arc;
 
     use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use maplit::hashmap;
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
     use mononoke_macros::mononoke;
+    use tests_utils::CreateCommitContext;
 
     use super::*;
     use crate::RepoContextHgExt;
@@ -953,6 +1010,70 @@ mod tests {
         let hg = repo_ctx.hg();
         assert_eq!(hg.repo_ctx().name(), "repo");
 
+        Ok(())
+    }
+
+    async fn assert_graph_mapping_marks_drafts(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+
+        // A and B are public, C and D are drafts on top of them, and only A
+        // is common, so B is returned as a public commit among the drafts.
+        let a = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a", "a")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(&ctx, &repo, vec![a])
+            .add_file("b", "b")
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(&ctx, &repo, vec![a])
+            .add_file("c", "c")
+            .commit()
+            .await?;
+        let d = CreateCommitContext::new(&ctx, &repo, vec![b])
+            .add_file("d", "d")
+            .commit()
+            .await?;
+        repo.phases().add_reachable_as_public(&ctx, vec![b]).await?;
+
+        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
+        let hg = repo_ctx.hg();
+        let hg_a = hg.get_hg_from_bonsai(a).await?;
+        let hg_b = hg.get_hg_from_bonsai(b).await?;
+        let hg_c = hg.get_hg_from_bonsai(c).await?;
+        let hg_d = hg.get_hg_from_bonsai(d).await?;
+
+        let mapping: HashMap<_, _> = hg
+            .get_graph_mapping(vec![hg_a], vec![hg_c, hg_d])
+            .await?
+            .into_iter()
+            .collect();
+        assert_eq!(
+            mapping,
+            hashmap! {
+                hg_d => (vec![hg_b], true),
+                hg_b => (vec![hg_a], false),
+                hg_c => (vec![hg_a], true),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_graph_mapping_marks_drafts(fb: FacebookInit) -> Result<(), MononokeError> {
+        // Drafts are classified from the phases with the knob on and by the
+        // getbundle draft walk with it off.
+        for knob_on in [true, false] {
+            with_just_knobs_async(
+                JustKnobsInMemory::new(hashmap! {
+                    "scm/mononoke:commit_graph_pull_optimizations".to_string() => KnobVal::Bool(knob_on),
+                }),
+                assert_graph_mapping_marks_drafts(fb).boxed(),
+            )
+            .await?;
+        }
         Ok(())
     }
 }
