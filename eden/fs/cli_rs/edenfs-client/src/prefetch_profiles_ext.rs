@@ -16,13 +16,13 @@ use std::process::Command;
 use anyhow::Context;
 use anyhow::anyhow;
 use async_trait::async_trait;
+use edenfs_core::checkout::EdenFsCheckout;
+use edenfs_core::checkout::PrefetchProfilesResult;
+use edenfs_core::checkout::find_checkout;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use thrift_types::edenfs::PrefetchParams;
 
-use crate::checkout::EdenFsCheckout;
-use crate::checkout::PrefetchProfilesResult;
-use crate::checkout::find_checkout;
 use crate::client::Client;
 use crate::instance::EdenFsInstance;
 use crate::methods::EdenThriftMethod;

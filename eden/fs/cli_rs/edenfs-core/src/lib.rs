@@ -13,4 +13,11 @@
 //! The daemon calls those workflows need go through the narrow
 //! [`daemon::EdenFsDaemon`] trait.
 
+pub mod checkout;
 pub mod daemon;
+pub mod fsutil;
+pub mod instance;
+pub(crate) mod mounttable;
+pub mod redirect;
+pub mod unmount;
+pub mod utils;

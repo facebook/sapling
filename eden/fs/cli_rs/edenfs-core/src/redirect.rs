@@ -63,7 +63,6 @@ use crate::mounttable::MountTableSnapshot;
 #[cfg(target_os = "linux")]
 use crate::mounttable::is_mount_point;
 use crate::mounttable::read_mount_table;
-pub use crate::redirect_add::try_add_redirection;
 
 pub const REPO_SOURCE: &str = ".eden-redirections";
 pub const USER_REDIRECTION_SOURCE: &str = ".eden/client/config.toml:redirections";
@@ -3152,7 +3151,7 @@ mod tests {
     }
 
     #[cfg(target_os = "linux")]
-    #[fbinit::test]
+    #[tokio::test]
     async fn backing_cleanup_requires_mount_to_disappear() {
         let checkout = tempdir().unwrap();
         let repo_path = checkout.path().join("buck-out");

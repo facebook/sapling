@@ -15,21 +15,20 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::anyhow;
+use edenfs_core::checkout::CheckoutConfig;
+use edenfs_core::checkout::EdenFsCheckout;
+use edenfs_core::instance::EdenFsInstance;
+use edenfs_core::redirect::Redirection;
+use edenfs_core::redirect::RedirectionState;
+use edenfs_core::redirect::RedirectionType;
+use edenfs_core::redirect::USER_REDIRECTION_SOURCE;
+use edenfs_core::redirect::get_configured_redirections;
+use edenfs_core::redirect::get_effective_redirections;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use hg_util::path::absolute;
 use pathdiff::diff_paths;
-
-use crate::checkout::CheckoutConfig;
-use crate::checkout::EdenFsCheckout;
-use crate::instance::EdenFsInstance;
-use crate::redirect::Redirection;
-use crate::redirect::RedirectionState;
-use crate::redirect::RedirectionType;
-use crate::redirect::USER_REDIRECTION_SOURCE;
-use crate::redirect::get_configured_redirections;
-use crate::redirect::get_effective_redirections;
 
 /// We should return success early iff:
 /// 1) we're adding a symlink redirection
@@ -313,8 +312,9 @@ pub async fn try_add_redirection(
 }
 #[cfg(test)]
 mod tests {
+    use edenfs_core::redirect::RedirectionState;
+
     use super::redirection_needs_repair;
-    use crate::redirect::RedirectionState;
 
     #[test]
     fn test_broken_redirection_states_need_repair() {

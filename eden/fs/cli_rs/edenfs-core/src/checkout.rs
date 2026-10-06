@@ -49,7 +49,6 @@ use toml::value::Value;
 use uuid::Uuid;
 
 use crate::instance::EdenFsInstance;
-pub use crate::prefetch_profiles_ext::CheckoutPrefetchExt;
 use crate::redirect::REPO_SOURCE;
 use crate::redirect::Redirection;
 use crate::redirect::RedirectionType;
