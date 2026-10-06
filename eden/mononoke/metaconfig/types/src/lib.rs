@@ -260,6 +260,8 @@ pub struct RepoConfig {
     /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
     /// on select servers.
     pub deep_sharding_config: Option<ShardingModeConfig>,
+    /// Whether the repo is built on its first request rather than on assignment.
+    pub lazy_loading_config: Option<LazyLoadingConfig>,
     /// Local directory to write files to instead of uploading to everstore
     pub everstore_local_path: Option<String>,
     /// Configuration for the repo metadata logger
@@ -320,6 +322,17 @@ pub struct RepoConfig {
 pub struct ShardingModeConfig {
     /// Deep sharded status of repo for individual services.
     pub status: HashMap<ShardedService, bool>,
+}
+
+/// Lazy is opt-in: anything short of an explicit `true` is eager, so neither
+/// field is optional here although both are in the thrift.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct LazyLoadingConfig {
+    /// Per sharded service.
+    pub sharded: HashMap<ShardedService, bool>,
+    /// For a task running without ShardManager, which has no per-service
+    /// identity in config.
+    pub unsharded: bool,
 }
 
 /// Mononoke services for which sharding can be enabled.

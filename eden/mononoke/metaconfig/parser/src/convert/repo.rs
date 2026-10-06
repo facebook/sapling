@@ -57,6 +57,7 @@ use metaconfig_types::HookParams;
 use metaconfig_types::InferredCopyFromConfig;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
+use metaconfig_types::LazyLoadingConfig;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
 use metaconfig_types::MergeResolutionOverride;
@@ -129,6 +130,7 @@ use repos::RawHookConfig;
 use repos::RawHookManagerParams;
 use repos::RawInferredCopyFromConfig;
 use repos::RawInfinitepushParams;
+use repos::RawLazyLoadingConfig;
 use repos::RawLfsParams;
 use repos::RawLoggingDestination;
 use repos::RawLoggingDestinationScribe;
@@ -1222,6 +1224,24 @@ impl Convert for RawShardingModeConfig {
                 // such a case, it should be safe to ignore this unknown value cause the existing code can work without it.
                 .filter_map(|(k, v)| k.convert().map(|k| (k, v)).ok())
                 .collect(),
+        })
+    }
+}
+
+impl Convert for RawLazyLoadingConfig {
+    type Output = LazyLoadingConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(LazyLoadingConfig {
+            sharded: self
+                .sharded
+                .unwrap_or_default()
+                .into_iter()
+                // Unknown services are dropped, not rejected, so adding one is
+                // not a breaking change for older binaries.
+                .filter_map(|(k, v)| k.convert().map(|k| (k, v)).ok())
+                .collect(),
+            unsharded: self.unsharded.unwrap_or(false),
         })
     }
 }

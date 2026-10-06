@@ -451,6 +451,7 @@ fn build_repo_config(
         update_logging_config,
         commit_graph_config,
         deep_sharding_config,
+        lazy_loading_config,
         everstore_local_path,
         metadata_logger_config,
         commit_cloud_config,
@@ -560,6 +561,7 @@ fn build_repo_config(
 
     let commit_graph_config = commit_graph_config.convert()?.unwrap_or_default();
     let deep_sharding_config = deep_sharding_config.convert()?;
+    let lazy_loading_config = lazy_loading_config.convert()?;
     let metadata_logger_config = metadata_logger_config.convert()?.unwrap_or_default();
     let zelos_config = zelos_config.convert()?;
     let pipeline_zelos_config = pipeline_zelos_config.convert()?;
@@ -626,6 +628,7 @@ fn build_repo_config(
         commit_graph_config,
         default_commit_identity_scheme: metadata.default_commit_identity_scheme,
         deep_sharding_config,
+        lazy_loading_config,
         everstore_local_path,
         metadata_logger_config,
         zelos_config,
@@ -1800,6 +1803,7 @@ mod test {
                     disable_commit_graph_v2_with_empty_common: false,
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
+                lazy_loading_config: None,
                 everstore_local_path: None,
 
                 metadata_logger_config: MetadataLoggerConfig {
@@ -1921,6 +1925,7 @@ mod test {
                 update_logging_config: UpdateLoggingConfig::default(),
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,
+                lazy_loading_config: None,
                 everstore_local_path: None,
                 metadata_logger_config: MetadataLoggerConfig::default(),
                 zelos_config: None,
