@@ -227,8 +227,12 @@ impl GitRepos {
         Ok(Self { repo_mgr })
     }
 
-    pub(crate) fn get(&self, repo_name: &str) -> Option<Arc<Repo>> {
-        self.repo_mgr.repos().get_by_name(repo_name)
+    /// Builds the repo first if it was assigned without being built.
+    pub(crate) async fn get(&self, repo_name: &str) -> Result<Option<Arc<Repo>>> {
+        if !justknobs::eval("scm/mononoke:enable_git_server_lazy_repo_build", None, None) {
+            return Ok(self.repo_mgr.repos().get_by_name(repo_name));
+        }
+        self.repo_mgr.repos().get(repo_name).await
     }
 
     pub(crate) fn repo_configs(&self) -> Arc<RepoConfigs> {

@@ -194,19 +194,37 @@ impl GitServerContext {
             .enforce_auth
     }
 
+    fn repos(&self) -> GitRepos {
+        self.inner
+            .read()
+            .expect("poisoned lock in git server context")
+            .repos
+            .clone()
+    }
+
     pub async fn request_context(
         &self,
         ctx: CoreContext,
         method_info: GitMethodInfo,
         pushvars: Pushvars,
     ) -> Result<RepositoryRequestContext, GitServerContextErrorKind> {
-        // First, try to get the repo from the already loaded repos
+        // First, try the repos assigned to this task, building one that was
+        // assigned lazily. A failed build is reported as is rather than
+        // falling through to the on-demand path below, which would build it
+        // again.
+        let assigned_repo = self.repos().get(&method_info.repo).await.map_err(|e| {
+            GitServerContextErrorKind::RepoSetupError {
+                repo_name: method_info.repo.to_string(),
+                error: e.to_string(),
+            }
+        })?;
+
         let initial_lookup = {
             let inner = self
                 .inner
                 .read()
                 .expect("poisoned lock in git server context");
-            match inner.repos.get(&method_info.repo) {
+            match assigned_repo {
                 Some(repo) => Ok((
                     repo,
                     inner.repos.repo_mgr.repos().clone(),
