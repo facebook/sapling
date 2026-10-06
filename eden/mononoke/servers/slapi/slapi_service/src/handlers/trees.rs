@@ -567,7 +567,7 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     // client waits on top of storing the trees.
     let started = Instant::now();
     let result = repo
-        .build_augmented_manifests_for_uploaded_trees(trees)
+        .build_and_store_augmented_manifests_for_uploaded_trees(trees)
         .await;
     STATS::upload_augmented_manifests_build_ms
         .add_value(started.elapsed().as_millis() as i64, (repo_name.clone(),));

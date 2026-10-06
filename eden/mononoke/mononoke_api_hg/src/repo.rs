@@ -412,7 +412,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// alone and the put is if-absent, so a wrong envelope cannot be corrected
     /// later. Turning the knob off stops new writes, it does not repair old
     /// ones.
-    pub async fn build_augmented_manifests_for_uploaded_trees(
+    pub async fn build_and_store_augmented_manifests_for_uploaded_trees(
         &self,
         trees: Vec<HgManifestEnvelope>,
     ) -> Result<Vec<UploadTreeAugmented>, Error> {
