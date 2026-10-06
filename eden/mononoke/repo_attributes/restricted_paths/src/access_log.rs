@@ -920,8 +920,14 @@ mod schematized_logger {
         logger.set_is_allowlisted_tooling(is_allowlisted_tooling.to_string());
         logger.set_is_rollout_allowlisted(is_rollout_allowlisted.to_string());
         logger.set_is_admin_bypass(is_admin_bypass);
+        if let Some(value) = enforcement.enforcement_decision {
+            logger.set_enforcement_decision(value.as_ref().to_owned());
+        }
         if let Some(value) = enforcement.access_enforcement_enabled {
             logger.set_access_enforcement_enabled(value);
+        }
+        if let Some(value) = enforcement.has_enforcement_exemption {
+            logger.set_has_enforcement_exemption(value);
         }
         logger.set_acls(acls.iter().map(|acl| acl.to_string()).collect::<Vec<_>>());
 
