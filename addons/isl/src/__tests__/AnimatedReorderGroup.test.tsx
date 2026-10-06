@@ -95,4 +95,53 @@ describe('AnimatedReorderGroup', () => {
     unmount();
     expect(cancelAnimationFrame).toHaveBeenCalledWith(7);
   });
+
+  it('animates only rows that are on screen before or after they move', () => {
+    let frame: FrameRequestCallback | undefined;
+    Object.defineProperty(window, 'requestAnimationFrame', {
+      configurable: true,
+      value: jest.fn((callback: FrameRequestCallback) => {
+        frame = callback;
+        return 1;
+      }),
+    });
+    const animate = jest.fn(() => ({cancel: jest.fn(), onfinish: null}));
+    Object.defineProperty(HTMLElement.prototype, 'animate', {configurable: true, value: animate});
+    // jsdom's viewport is 768px tall.
+    const topsBeforeAndAfter: Record<string, [number, number]> = {
+      onScreen: [100, 140],
+      offScreen: [2000, 2040],
+      scrollsIntoView: [2000, 300],
+    };
+    let moved = false;
+    jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const id = this.getAttribute('data-reorder-id');
+      return rect(id == null ? 0 : topsBeforeAndAfter[id][moved ? 1 : 0]);
+    });
+    const rows = (ids: Array<string>) => ids.map(id => <div key={id} data-reorder-id={id} />);
+
+    try {
+      const {rerender} = render(
+        <AnimatedReorderGroup>
+          {rows(['onScreen', 'offScreen', 'scrollsIntoView'])}
+        </AnimatedReorderGroup>,
+      );
+      moved = true;
+      rerender(
+        <AnimatedReorderGroup>
+          {rows(['scrollsIntoView', 'onScreen', 'offScreen'])}
+        </AnimatedReorderGroup>,
+      );
+      frame?.(0);
+
+      const animated = animate.mock.contexts.map(element =>
+        (element as HTMLElement).getAttribute('data-reorder-id'),
+      );
+      expect(animated.sort()).toEqual(['onScreen', 'scrollsIntoView']);
+    } finally {
+      delete (HTMLElement.prototype as {animate?: unknown}).animate;
+    }
+  });
 });

@@ -108,6 +108,7 @@ class ReorderAnimationController {
 
   private measureMovements(container: HTMLElement, animationMinPixel: number): ElementMovement[] {
     const containerBox = container.getBoundingClientRect();
+    const viewportHeight = container.ownerDocument.defaultView?.innerHeight ?? Infinity;
     const nextPositions = new Map<string, ElementPosition>();
     const movements: ElementMovement[] = [];
     for (const element of container.querySelectorAll<HTMLElement>('[data-reorder-id]')) {
@@ -124,7 +125,11 @@ class ReorderAnimationController {
       if (previous != null) {
         const dx = previous.left - position.left;
         const dy = previous.top - position.top;
-        if (Math.abs(dx) + Math.abs(dy) > animationMinPixel) {
+        // An insertion near the top of a long list moves every row below it, and animating
+        // thousands of rows nobody can see makes every frame of the animation expensive.
+        const visibleBefore = box.bottom + dy > 0 && box.top + dy < viewportHeight;
+        const visibleAfter = box.bottom > 0 && box.top < viewportHeight;
+        if (Math.abs(dx) + Math.abs(dy) > animationMinPixel && (visibleBefore || visibleAfter)) {
           movements.push([element, dx, dy]);
         }
       }
