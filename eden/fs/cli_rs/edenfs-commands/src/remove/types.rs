@@ -14,6 +14,7 @@ use std::time::Duration;
 use anyhow::Result;
 use crossterm::style::Stylize;
 use dialoguer::Confirm;
+use edenfs_remove::RemoveCheckoutOptions;
 use io::IO;
 use termlogger::TermLogger;
 
@@ -79,8 +80,25 @@ impl PathType {
         }
 
         match self {
-            PathType::ActiveEdenMount => operations::remove_active_eden_mount(context).await,
-            PathType::InactiveEdenMount => operations::remove_inactive_eden_mount(context).await,
+            PathType::ActiveEdenMount | PathType::InactiveEdenMount => {
+                context.io.info(format!(
+                    "Removing EdenFS checkout at {} ...",
+                    context.original_path
+                ));
+                edenfs_remove::remove_checkout_with_warning_handler(
+                    crate::get_edenfs_instance(),
+                    &context.canonical_path,
+                    RemoveCheckoutOptions {
+                        preserve_mount_point: context.preserve_mount_point,
+                        no_force: context.no_force,
+                        auxiliary_process_timeout: context.timeout,
+                    },
+                    |warning| context.io.warn(warning.to_string()),
+                )
+                .await?;
+                context.io.done();
+                Ok(())
+            }
             PathType::RegularFile => {
                 fs::remove_file(context.canonical_path.as_path()).map_err(Into::into)
             }

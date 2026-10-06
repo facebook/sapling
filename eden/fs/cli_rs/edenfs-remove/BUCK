@@ -1,0 +1,21 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-remove",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = [
+        "//eden/fs/cli_rs/edenfs-commands:",
+        "//eden/scm/lib/commands/commands/cmdworktree:",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:dunce",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
+        "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
+    ],
+)

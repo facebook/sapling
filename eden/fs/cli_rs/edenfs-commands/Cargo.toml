@@ -17,11 +17,11 @@ comfy-table = { version = "7.2.2", features = ["custom_styling"] }
 crossterm = { version = "0.29", features = ["event-stream", "serde"] }
 ctrlc = { version = "3.5.2", features = ["termination"] }
 dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
-dunce = "1.0.5"
 edenfs-asserted-states = { version = "0.1.0", path = "../../rust/edenfs-asserted-states" }
 edenfs-asserted-states-client = { version = "0.1.0", path = "../../rust/edenfs-asserted-states-client" }
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
+edenfs-remove = { version = "0.1.0", path = "../edenfs-remove" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fail = { version = "0.5.1", features = ["failpoints"] }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
