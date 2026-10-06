@@ -26,6 +26,7 @@ use commit_graph_types::edges::ParentsAndSubtreeSources;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
+use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use mononoke_macros::mononoke;
@@ -459,6 +460,17 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         }
 
         Ok(fetched_edges)
+    }
+
+    async fn prefetch_many_edges(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        target: PrefetchTarget,
+    ) -> Result<()> {
+        self.persistent_storage
+            .prefetch_many_edges(ctx, cs_ids, target)
+            .await
     }
 
     async fn find_by_prefix(

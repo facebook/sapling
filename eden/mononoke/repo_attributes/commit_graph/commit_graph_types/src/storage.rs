@@ -65,6 +65,12 @@ pub enum Prefetch {
     Include(PrefetchTarget),
 }
 
+/// Number of first-parent steps prefetched by
+/// `Prefetch::for_p1_linear_traversal`.  This is arbitrary, but is a balance
+/// between not overfetching for the cache and reducing the number of
+/// sequential steps.
+pub const P1_LINEAR_PREFETCH_STEPS: u64 = 128;
+
 impl Prefetch {
     /// Prepare prefetching for skew-binary traversal over the skip tree.
     pub fn for_exact_skip_tree_traversal(generation: Generation) -> Self {
@@ -73,12 +79,9 @@ impl Prefetch {
 
     /// Prepare prefetching for linear traversal of the p1 history.
     pub fn for_p1_linear_traversal() -> Self {
-        // Prefetch linear ranges of 128 commits.  This is arbitrary, but is a
-        // balance between not overfetching for the cache and reducing the
-        // number of sequential steps.
         Prefetch::Hint(PrefetchTarget::LinearAncestors {
             generation: FIRST_GENERATION,
-            steps: 128,
+            steps: P1_LINEAR_PREFETCH_STEPS,
         })
     }
 
@@ -264,6 +267,24 @@ pub trait CommitGraphStorage: Send + Sync {
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>>;
+
+    /// Warm any caches this storage has with the edges of these changesets
+    /// and the edges that prefetching towards `target` from them fetches.
+    ///
+    /// Unlike a prefetch hint passed to `fetch_many_edges`, this looks past
+    /// the edges of `cs_ids` themselves: a cache hit for them says nothing
+    /// about what is cached beyond them, so whatever is missing beyond them
+    /// is fetched from the backing store.  Finding out what is missing costs
+    /// up to one cache lookup per changeset per step, so callers should
+    /// bound `cs_ids`.  Storages without caches do nothing.
+    async fn prefetch_many_edges(
+        &self,
+        _ctx: &CoreContext,
+        _cs_ids: &[ChangesetId],
+        _target: PrefetchTarget,
+    ) -> Result<()> {
+        Ok(())
+    }
 
     /// Find all changeset ids with a given prefix.
     async fn find_by_prefix(

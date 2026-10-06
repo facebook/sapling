@@ -24,11 +24,13 @@ use caching_ext::McErrorKind;
 use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
+use caching_ext::fill_cache;
 use caching_ext::fill_cachelib;
 use caching_ext::get_or_fill;
 use caching_ext::get_or_fill_chunked;
 use commit_graph_thrift as thrift;
 use commit_graph_types::edges::ChangesetEdges;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
@@ -40,6 +42,7 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use repo_identity::ArcRepoIdentity;
 use stats::prelude::*;
 use vec1::Vec1;
@@ -475,6 +478,45 @@ impl CachingCommitGraphStorage {
         }
     }
 
+    /// Follows the first-parent chains below `cs_ids` through cachelib and
+    /// returns the first changeset of each chain that isn't cached, within
+    /// `steps` and not below `generation`.  Chains that are cached all the
+    /// way don't need fetching, and chains cached part of the way only need
+    /// fetching from where the cache ends, from which the fetch covers
+    /// `steps` again.  Chains that meet are followed once from there on.
+    /// Memcache isn't consulted, to keep the walk cheap.
+    fn first_uncached_linear_ancestors(
+        &self,
+        cs_ids: &[ChangesetId],
+        generation: Generation,
+        steps: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        let mut uncached = Vec::new();
+        let mut seen: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
+        let mut current: Vec<ChangesetId> = seen.iter().copied().collect();
+        for _ in 0..steps {
+            let mut next = Vec::new();
+            for cs_id in current {
+                match self.cachelib.get_cached(&self.cache_key(&cs_id))? {
+                    None => uncached.push(cs_id),
+                    Some(edges) => {
+                        if let Some(parent) = edges.parents::<Parents>().next()
+                            && parent.generation::<Parents>() >= generation
+                            && seen.insert(parent.cs_id)
+                        {
+                            next.push(parent.cs_id);
+                        }
+                    }
+                }
+            }
+            if next.is_empty() {
+                break;
+            }
+            current = next;
+        }
+        Ok(uncached)
+    }
+
     /// Check if fallback should be applied for this repository
     fn should_apply_fallback(&self) -> bool {
         !justknobs::eval(
@@ -557,6 +599,27 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
             .into_iter()
             .map(|(cs_id, edges)| (cs_id, edges.take().into()))
             .collect())
+    }
+
+    async fn prefetch_many_edges(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        target: PrefetchTarget,
+    ) -> Result<()> {
+        let request = self.request(ctx, Prefetch::Hint(target));
+        if !request.prefetch.is_include() {
+            return Ok(());
+        }
+        let cs_ids = match target {
+            PrefetchTarget::LinearAncestors { generation, steps } => {
+                self.first_uncached_linear_ancestors(cs_ids, generation, steps)?
+            }
+            PrefetchTarget::ExactSkipTreeAncestors { .. } => cs_ids.to_vec(),
+        };
+        let fetched = request.get_from_db(cs_ids.into_iter().collect()).await?;
+        fill_cache(&request, fetched.iter()).await;
+        Ok(())
     }
 
     async fn find_by_prefix(
