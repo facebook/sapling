@@ -143,6 +143,7 @@ const CONFIG_JSON_MODE: u32 = 0o664;
 /// * `home_dir` - Optional path to the user's home directory
 /// * `client` - An `EdenFsClient` for interacting with EdenFS Thrift endpoint.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct EdenFsInstance {
     use_case: Arc<UseCase>,
     config_dir: PathBuf,

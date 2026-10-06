@@ -5,6 +5,12 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-remove",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tempfile",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
     visibility = [
         "//eden/fs/cli_rs/edenfs-commands:",
         "//eden/scm/lib/commands/commands/cmdworktree:",

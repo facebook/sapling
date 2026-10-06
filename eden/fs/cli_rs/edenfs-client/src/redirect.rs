@@ -8,6 +8,8 @@
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fmt;
+#[cfg(target_os = "linux")]
+use std::future::Future;
 #[cfg(unix)]
 use std::io::ErrorKind;
 #[cfg(target_os = "linux")]
@@ -61,6 +63,8 @@ use crate::fsutil::remove_file;
 use crate::instance::EdenFsInstance;
 #[cfg(target_os = "linux")]
 use crate::mounttable::MountTableSnapshot;
+#[cfg(target_os = "linux")]
+use crate::mounttable::is_mount_point;
 use crate::mounttable::read_mount_table;
 
 pub const REPO_SOURCE: &str = ".eden-redirections";
@@ -322,6 +326,8 @@ impl AsRef<Path> for ValidatedRepoPath {
 #[derive(Debug)]
 enum BackingCleanupAction {
     ScratchDirectory {
+        scratch_root_parent: NoFollowRoot,
+        scratch_root_name: PathBuf,
         parent: NoFollowRoot,
         name: PathBuf,
     },
@@ -343,19 +349,41 @@ impl RedirectionBackingCleanupAction {
     }
 
     /// Delete this resolved backing target.
+    /// A scratch target also takes the checkout's scratch root with it once nothing else is
+    /// left there.
     pub fn execute(self) -> Result<()> {
         match self.action {
-            BackingCleanupAction::ScratchDirectory { parent, name } => {
+            BackingCleanupAction::ScratchDirectory {
+                scratch_root_parent,
+                scratch_root_name,
+                parent,
+                name,
+            } => {
                 match parent.remove_dir_all(&name) {
-                    Ok(()) => Ok(()),
+                    Ok(()) => {}
                     // An already-absent target counts as success so an
                     // interrupted cleanup can be retried.
-                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-                    Err(error) => Err(EdenFsError::Other(anyhow!(
-                        "failed to delete redirection backing directory {}: {error}",
-                        self.target.display()
-                    ))),
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => {
+                        return Err(EdenFsError::Other(anyhow!(
+                            "failed to delete redirection backing directory {}: {error}",
+                            self.target.display()
+                        )));
+                    }
                 }
+                // Windows can't delete a directory while a handle to it is open, and in the
+                // default scratch layout `parent` is the scratch root.
+                drop(parent);
+                if let Err(error) =
+                    remove_unused_scratch_root(&scratch_root_parent, &scratch_root_name)
+                    && error.kind() != std::io::ErrorKind::NotFound
+                {
+                    tracing::warn!(
+                        "failed to delete the unused scratch root of {}: {error}",
+                        self.target.display()
+                    );
+                }
+                Ok(())
             }
             #[cfg(target_os = "macos")]
             BackingCleanupAction::ApfsVolume(volume) => {
@@ -365,6 +393,82 @@ impl RedirectionBackingCleanupAction {
                 }
             }
         }
+    }
+
+    /// Delete everything inside this resolved backing target but keep the target itself, for
+    /// a redirection that may still be mounted into the checkout. APFS volumes are kept whole.
+    pub fn execute_contents(self) -> Result<()> {
+        let contents = match &self.action {
+            BackingCleanupAction::ScratchDirectory { parent, name, .. } => parent.open_root(name),
+            // The mount point of a volume that can't be unmounted might hold a different volume.
+            #[cfg(target_os = "macos")]
+            BackingCleanupAction::ApfsVolume(_) => {
+                return Err(EdenFsError::Other(anyhow!(
+                    "kept APFS volume at {} because it could not be unmounted",
+                    self.target.display()
+                )));
+            }
+        };
+        let result = match contents {
+            Ok(contents) => remove_dir_contents(&contents),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error),
+        };
+        result.map_err(|error| {
+            EdenFsError::Other(anyhow!(
+                "failed to delete the contents of redirection backing target {}: {error}",
+                self.target.display()
+            ))
+        })
+    }
+}
+
+/// mkscratch writes this into a checkout's scratch root.
+const SCRATCH_README: &str = "README.txt";
+
+/// Delete a checkout's scratch root if it holds nothing but mkscratch's README. Other tools
+/// can keep their own files there, so any other entry leaves it in place.
+fn remove_unused_scratch_root(
+    scratch_root_parent: &NoFollowRoot,
+    scratch_root_name: &Path,
+) -> std::io::Result<()> {
+    let entries = scratch_root_parent.list_dir(Some(scratch_root_name))?;
+    if entries.iter().any(|entry| entry != SCRATCH_README) {
+        return Ok(());
+    }
+    if !entries.is_empty() {
+        scratch_root_parent.remove_file(scratch_root_name.join(SCRATCH_README).as_path())?;
+    }
+    scratch_root_parent.remove_dir(scratch_root_name)
+}
+
+/// Remove every entry in `dir` without following symlinks, attempting all of them before
+/// returning the failures.
+fn remove_dir_contents(dir: &NoFollowRoot) -> std::io::Result<()> {
+    let failures: Vec<String> = dir
+        .list_dir(None::<&Path>)?
+        .iter()
+        .filter_map(|entry| {
+            let entry = Path::new(entry);
+            let removed = dir.symlink_metadata(Some(entry)).and_then(|metadata| {
+                if metadata.is_dir() {
+                    dir.remove_dir_all(entry)
+                } else {
+                    dir.remove_file(entry)
+                }
+            });
+            match removed {
+                Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                    Some(error.to_string())
+                }
+                _ => None,
+            }
+        })
+        .collect();
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(std::io::Error::other(failures.join("; ")))
     }
 }
 
@@ -1258,6 +1362,56 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
         Ok(disposition)
     }
 
+    /// Detach this redirection before deleting its backing target.
+    pub async fn unmount_for_backing_cleanup(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
+        let repo_path = self.expand_repo_path(checkout);
+        #[cfg(target_os = "linux")]
+        {
+            // A leftover bind on an inactive checkout can share its parent's st_dev.
+            // Covered mount entries also prevent deletion until they are detached.
+            unmount_and_verify(
+                &repo_path,
+                || {
+                    let path = repo_path.clone();
+                    async move {
+                        tokio::task::spawn_blocking(move || is_mount_point(&path))
+                            .await
+                            .from_err()?
+                    }
+                },
+                self._bind_unmount(instance, checkout),
+            )
+            .await?;
+        }
+        // Leftover content at the repo path is not a mount, so it can't keep the backing in use.
+        let disposition = RepoPathDisposition::analyze(&repo_path)
+            .with_context(|| format!("Failed to analyze path {}", repo_path.display()))?;
+        if matches!(
+            disposition,
+            RepoPathDisposition::IsNonEmptyDir | RepoPathDisposition::IsFile
+        ) {
+            return Ok(());
+        }
+        self.remove_existing(instance, checkout, false, false, "fixup")
+            .await?;
+        Ok(())
+    }
+
+    /// Request a bind unmount without inspecting mounts or removing checkout paths.
+    /// The caller must verify the batch with fresh mount state before deleting backing targets.
+    #[cfg(target_os = "linux")]
+    pub async fn detach_for_backing_cleanup(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
+        self._bind_unmount(instance, checkout).await
+    }
+
     pub async fn apply(
         &self,
         instance: &EdenFsInstance,
@@ -1562,10 +1716,11 @@ fn scratch_cleanup_action(
             .file_name()
             .expect("validated target has a name"),
     );
-    let open_parent = || -> std::io::Result<NoFollowRoot> {
+    let open_parents = || -> std::io::Result<(NoFollowRoot, NoFollowRoot)> {
         // Only the configured scratch prefix may traverse aliases. Keep the
         // target's real parent open across checkout removal.
-        let parent = NoFollowRoot::new(root_parent)?.open_root(
+        let scratch_root_parent = NoFollowRoot::new(root_parent)?;
+        let parent = scratch_root_parent.open_root(
             relative_target
                 .parent()
                 .expect("target is below scratch root"),
@@ -1576,10 +1731,10 @@ fn scratch_cleanup_action(
                 "scratch target must be a directory, not a symlink or file",
             ));
         }
-        Ok(parent)
+        Ok((scratch_root_parent, parent))
     };
-    let parent = match open_parent() {
-        Ok(parent) => parent,
+    let (scratch_root_parent, parent) = match open_parents() {
+        Ok(parents) => parents,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => {
             return Err(EdenFsError::Other(anyhow!(
@@ -1590,8 +1745,71 @@ fn scratch_cleanup_action(
     };
     Ok(Some(RedirectionBackingCleanupAction {
         target,
-        action: BackingCleanupAction::ScratchDirectory { parent, name },
+        action: BackingCleanupAction::ScratchDirectory {
+            scratch_root_parent,
+            scratch_root_name: PathBuf::from(root_name),
+            parent,
+            name,
+        },
     }))
+}
+
+/// Observe a batch without retaining mount state across unmount operations.
+#[cfg(target_os = "linux")]
+pub fn redirection_mount_status(paths: &[PathBuf]) -> Result<Vec<bool>> {
+    let mut mounts = MountTableSnapshot::default();
+    paths
+        .iter()
+        .map(|path| mounts.is_mount_point(path))
+        .collect()
+}
+
+/// Remove an unmounted redirection's symlink or empty directory, leaving other content alone.
+/// Call only after checking fresh mount state. This does not unmount anything.
+#[cfg(target_os = "linux")]
+pub fn finish_backing_cleanup_unmount(path: &Path) -> Result<()> {
+    let metadata = match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error).from_err(),
+    };
+    if metadata.is_symlink() {
+        remove_symlink(path).from_err()?;
+    } else if metadata.is_dir() {
+        // rmdir also rejects a mount that appeared since verification, including a
+        // same-filesystem bind. Never recurse through checkout-side content here.
+        match std::fs::remove_dir(path) {
+            Ok(()) => {}
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    ErrorKind::NotFound | ErrorKind::DirectoryNotEmpty
+                ) => {}
+            Err(error) => return Err(error).from_err(),
+        }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn unmount_and_verify<Probe>(
+    repo_path: &Path,
+    mut is_mounted: impl FnMut() -> Probe,
+    unmount: impl Future<Output = Result<()>>,
+) -> Result<()>
+where
+    Probe: Future<Output = Result<bool>>,
+{
+    if is_mounted().await? {
+        unmount.await?;
+        if is_mounted().await? {
+            return Err(EdenFsError::Other(anyhow!(
+                "redirection {} is still mounted after unmount",
+                repo_path.display()
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Plans backing cleanup while sharing a lazy mount-table snapshot across calls.
@@ -2718,6 +2936,7 @@ mod tests {
     use crate::redirect::RedirectionState;
     use crate::redirect::RedirectionType;
     use crate::redirect::RepoPathDisposition;
+    use crate::redirect::SCRATCH_README;
     #[cfg(unix)]
     use crate::redirect::SubprocessExitStatus;
     use crate::redirect::ValidatedRepoPath;
@@ -3229,6 +3448,50 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
+    #[fbinit::test]
+    async fn backing_cleanup_requires_mount_to_disappear() {
+        let checkout = tempdir().unwrap();
+        let repo_path = checkout.path().join("buck-out");
+        std::fs::create_dir(&repo_path).unwrap();
+        std::fs::write(repo_path.join("contents"), "backing data").unwrap();
+        assert_eq!(
+            RepoPathDisposition::analyze(&repo_path).unwrap(),
+            RepoPathDisposition::IsNonEmptyDir
+        );
+        for detach in [false, true] {
+            let mounted = std::cell::Cell::new(true);
+            let called = std::cell::Cell::new(false);
+            let result =
+                super::unmount_and_verify(&repo_path, || async { Ok(mounted.get()) }, async {
+                    called.set(true);
+                    if detach {
+                        mounted.set(false);
+                    }
+                    Ok(())
+                })
+                .await;
+            assert!(
+                called.get(),
+                "mount-table detection must request unmount even when st_dev matches"
+            );
+            if detach {
+                result.expect("confirmed unmount permits backing cleanup");
+            } else {
+                assert!(
+                    result
+                        .unwrap_err()
+                        .to_string()
+                        .contains("still mounted after unmount")
+                );
+            }
+            assert_eq!(
+                std::fs::read_to_string(repo_path.join("contents")).unwrap(),
+                "backing data"
+            );
+        }
+    }
+
     #[cfg(unix)]
     #[test]
     fn cleanup_validates_unrecorded_symlink_target() {
@@ -3383,8 +3646,10 @@ mod tests {
     fn scratch_cleanup_action_deletes_only_resolved_target() {
         let temp_dir = tempdir().expect("temporary directory should be created");
         let target = temp_dir.path().join("backing");
+        let other_tool = temp_dir.path().join(".pyre");
         std::fs::create_dir(&target).expect("backing directory should be created");
         std::fs::write(target.join("artifact"), "data").expect("backing file should be created");
+        std::fs::create_dir(&other_tool).expect("another tool's directory should be created");
         let action = scratch_cleanup_action(temp_dir.path(), target.clone())
             .expect("scratch target should be safe")
             .expect("scratch target should exist");
@@ -3396,8 +3661,74 @@ mod tests {
             "resolved backing target should be deleted"
         );
         assert!(
-            temp_dir.path().exists(),
-            "cleanup must not delete the target parent"
+            other_tool.exists(),
+            "cleanup must not delete a scratch root that holds other files"
+        );
+    }
+
+    #[test]
+    fn scratch_cleanup_deletes_scratch_root_after_its_last_target() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let scratch = temp_dir.path().join("scratch");
+        let first = scratch.join("first");
+        let second = scratch.join("second");
+        std::fs::create_dir_all(&first).expect("first backing directory should be created");
+        std::fs::create_dir(&second).expect("second backing directory should be created");
+        std::fs::write(scratch.join(SCRATCH_README), "mkscratch")
+            .expect("README should be created");
+        let first = scratch_cleanup_action(&scratch, first)
+            .expect("scratch target should be safe")
+            .expect("scratch target should exist");
+        let second = scratch_cleanup_action(&scratch, second)
+            .expect("scratch target should be safe")
+            .expect("scratch target should exist");
+
+        first.execute().expect("scratch cleanup should succeed");
+        assert!(
+            scratch.join(SCRATCH_README).exists(),
+            "the scratch root stays while another target is in it"
+        );
+        second.execute().expect("scratch cleanup should succeed");
+        assert!(
+            !scratch.exists(),
+            "a scratch root left with only mkscratch's README should be deleted"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scratch_contents_cleanup_keeps_target_and_does_not_follow_symlinks() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let target = temp_dir.path().join("backing");
+        let outside = temp_dir.path().join("unrelated");
+        std::fs::create_dir_all(target.join("nested")).expect("backing tree should be created");
+        std::fs::write(target.join("nested/artifact"), "data")
+            .expect("backing file should be created");
+        std::fs::write(target.join("artifact"), "data").expect("backing file should be created");
+        std::fs::create_dir(&outside).expect("unrelated directory should be created");
+        std::fs::write(outside.join("artifact"), "keep").expect("unrelated file should be created");
+        std::os::unix::fs::symlink(&outside, target.join("link"))
+            .expect("symlink should be created");
+        let action = scratch_cleanup_action(temp_dir.path(), target.clone())
+            .expect("scratch target should be safe")
+            .expect("scratch target should exist");
+
+        action
+            .execute_contents()
+            .expect("contents cleanup should succeed");
+
+        assert!(target.is_dir(), "a possibly mounted target must be kept");
+        assert_eq!(
+            std::fs::read_dir(&target)
+                .expect("target should be readable")
+                .count(),
+            0,
+            "every entry in the target should be deleted"
+        );
+        assert_eq!(
+            std::fs::read_to_string(outside.join("artifact"))
+                .expect("data behind a symlink must survive"),
+            "keep"
         );
     }
 

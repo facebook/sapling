@@ -65,7 +65,7 @@ fn parse_linux_mtab(mtab_string: String) -> Vec<MountTableInfo> {
     mounts
 }
 
-/// A lazy mount-table snapshot for one planning batch, before mount changes.
+/// A lazy mount-table snapshot for one batch without intervening mount changes.
 #[cfg(target_os = "linux")]
 #[derive(Default)]
 pub(crate) struct MountTableSnapshot {
@@ -103,7 +103,7 @@ impl MountTableSnapshot {
 }
 
 /// Observe current mounts without reusing a planning snapshot.
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(target_os = "linux")]
 pub(crate) fn is_mount_point(path: &Path) -> Result<bool> {
     if is_visible_mount_point(path)? {
         return Ok(true);

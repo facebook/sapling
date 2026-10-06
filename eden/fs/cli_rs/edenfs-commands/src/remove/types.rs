@@ -14,6 +14,7 @@ use std::time::Duration;
 use anyhow::Result;
 use crossterm::style::Stylize;
 use dialoguer::Confirm;
+use edenfs_remove::BackingCleanupPolicy;
 use edenfs_remove::RemoveCheckoutOptions;
 use io::IO;
 use termlogger::TermLogger;
@@ -92,6 +93,7 @@ impl PathType {
                         preserve_mount_point: context.preserve_mount_point,
                         no_force: context.no_force,
                         auxiliary_process_timeout: context.timeout,
+                        backing_cleanup: BackingCleanupPolicy::Preserve,
                     },
                     |warning| context.io.warn(warning.to_string()),
                 )
