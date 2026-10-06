@@ -23,7 +23,7 @@ use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
 use serde::Serialize;
-use thrift_thriftclients::thrift::errors::ChangesSinceV2Error;
+use thrift_types::edenfs_clients::errors::ChangesSinceV2Error;
 use tokio::time;
 
 use crate::client::Client;

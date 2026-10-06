@@ -48,9 +48,7 @@ use thrift_types::edenfs::MountState;
 use toml::value::Value;
 use uuid::Uuid;
 
-use crate::client::Client;
 use crate::instance::EdenFsInstance;
-use crate::methods::EdenThriftMethod;
 pub use crate::prefetch_profiles_ext::CheckoutPrefetchExt;
 use crate::redirect::REPO_SOURCE;
 use crate::redirect::Redirection;
@@ -905,12 +903,10 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
 
     // Get active mounted checkouts info from eden daemon. Error from listMounts indicates that the
     // Eden daemon is not running or is unhealthy.
-    let client = instance.get_client();
-    let mounted_checkouts = (client
-        .with_thrift_with_timeouts(Some(Duration::from_secs(3)), None, |thrift| {
-            (thrift.listMounts(), EdenThriftMethod::ListMounts)
-        })
-        .await)
+    let mounted_checkouts = instance
+        .daemon()
+        .list_mounts(Some(Duration::from_secs(3)))
+        .await
         .ok();
 
     // Combine mount info from active mounts and mount info from config files

@@ -99,6 +99,7 @@ use anyhow::Context;
 use anyhow::anyhow;
 use atomicfile::atomic_write;
 use edenfs_config::EdenFsConfig;
+use edenfs_core::daemon::EdenFsDaemon;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -150,6 +151,7 @@ pub struct EdenFsInstance {
     etc_eden_dir: PathBuf,
     home_dir: Option<PathBuf>,
     client: Arc<EdenFsClient>,
+    daemon: Arc<dyn EdenFsDaemon>,
 }
 
 impl fmt::Debug for EdenFsInstance {
@@ -197,12 +199,19 @@ impl EdenFsInstance {
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
         let use_case = Arc::new(UseCase::new(&config_dir, use_case_id));
+        let client = Arc::new(EdenFsClient::new(
+            expect_init(),
+            use_case.clone(),
+            socketfile,
+        ));
+        let daemon: Arc<dyn EdenFsDaemon> = client.clone();
         Self {
-            use_case: use_case.clone(),
+            use_case,
             config_dir,
             etc_eden_dir,
             home_dir,
-            client: Arc::new(EdenFsClient::new(expect_init(), use_case, socketfile)),
+            client,
+            daemon,
         }
     }
 
@@ -288,6 +297,12 @@ impl EdenFsInstance {
     /// Returns a `Arc<EdenFsClient>` instance.
     pub fn get_client(&self) -> Arc<EdenFsClient> {
         self.client.clone()
+    }
+
+    /// Returns the [`EdenFsDaemon`] handle used for the daemon calls made by
+    /// the checkout and redirection workflows.
+    pub fn daemon(&self) -> &Arc<dyn EdenFsDaemon> {
+        &self.daemon
     }
 
     /// Returns the path to the EdenFS state directory.

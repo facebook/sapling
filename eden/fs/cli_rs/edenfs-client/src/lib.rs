@@ -7,7 +7,6 @@
 
 pub mod attributes;
 pub mod backing_store;
-pub mod bind_mount;
 pub mod changes_since;
 pub mod checkout;
 pub mod client;
@@ -32,6 +31,7 @@ mod redirect_add;
 pub mod request_factory;
 pub mod scm_status;
 pub mod stats;
+mod thrift_daemon;
 pub mod types;
 pub mod unmount;
 pub mod use_case;

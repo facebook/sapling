@@ -787,7 +787,7 @@ impl Redirection {
         checkout_path: &Path,
         target: &Path,
     ) -> Result<()> {
-        let client = instance.get_client();
+        let daemon = instance.daemon();
         let abs_mount_path_in_repo = checkout_path.join(&self.repo_path);
         if abs_mount_path_in_repo.exists() {
             // To deal with the case where someone has manually unmounted
@@ -795,7 +795,7 @@ impl Redirection {
             // list of bind mounts, we first speculatively try asking the
             // eden daemon to unmount it first, ignoring any error that
             // might raise.
-            client
+            daemon
                 .remove_bind_mount(checkout_path, &self.repo_path)
                 .await
                 .ok();
@@ -812,7 +812,7 @@ impl Redirection {
                     abs_mount_path_in_repo.display()
                 )
             })?;
-        client
+        daemon
             .add_bind_mount(checkout_path, &self.repo_path, target)
             .await
             .with_context(|| {
@@ -1032,8 +1032,8 @@ impl Redirection {
         instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
     ) -> Result<()> {
-        let client = instance.get_client();
-        client
+        instance
+            .daemon()
             .remove_bind_mount(&checkout.path(), &self.repo_path)
             .await
             .with_context(|| {

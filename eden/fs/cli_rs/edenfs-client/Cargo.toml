@@ -15,6 +15,7 @@ byteorder = "1.5"
 dirs = "7.0"
 dunce = "1.0.5"
 edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
+edenfs-core = { version = "0.1.0", path = "../edenfs-core" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.2.0", path = "../../../../common/rust/shed/fbinit", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

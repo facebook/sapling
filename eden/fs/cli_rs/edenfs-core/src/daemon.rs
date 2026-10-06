@@ -66,14 +66,18 @@ pub enum DaemonError {
 
 pub type DaemonResult<T> = std::result::Result<T, DaemonError>;
 
-fn request_error(method: &'static str, error: impl Into<anyhow::Error>) -> DaemonError {
+/// Wrap a transport-specific request failure for `method`. Helper for
+/// [`EdenFsDaemon`] implementations.
+pub fn request_error(method: &'static str, error: impl Into<anyhow::Error>) -> DaemonError {
     DaemonError::Request {
         method,
         source: error.into(),
     }
 }
 
-fn encode_path(method: &'static str, path: &Path) -> DaemonResult<Vec<u8>> {
+/// Encode a path for a thrift argument. Helper for [`EdenFsDaemon`]
+/// implementations.
+pub fn encode_path(method: &'static str, path: &Path) -> DaemonResult<Vec<u8>> {
     bytes_from_path(path.to_path_buf()).map_err(|error| request_error(method, error))
 }
 
