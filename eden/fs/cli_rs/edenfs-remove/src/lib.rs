@@ -21,19 +21,19 @@ use std::time::Instant;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use edenfs_client::checkout::EdenFsCheckout;
-use edenfs_client::checkout::find_checkout;
-use edenfs_client::checkout::get_mounts;
-use edenfs_client::fsutil::forcefully_remove_dir_all;
-use edenfs_client::instance::EdenFsInstance;
-use edenfs_client::redirect::Redirection;
-use edenfs_client::redirect::RedirectionBackingCleanupAction;
-use edenfs_client::redirect::RedirectionBackingCleanupPlanner;
+use edenfs_core::checkout::EdenFsCheckout;
+use edenfs_core::checkout::find_checkout;
+use edenfs_core::checkout::get_mounts;
+use edenfs_core::fsutil::forcefully_remove_dir_all;
+use edenfs_core::instance::EdenFsInstance;
+use edenfs_core::redirect::Redirection;
+use edenfs_core::redirect::RedirectionBackingCleanupAction;
+use edenfs_core::redirect::RedirectionBackingCleanupPlanner;
 #[cfg(target_os = "linux")]
-use edenfs_client::redirect::finish_backing_cleanup_unmount;
-use edenfs_client::redirect::get_effective_redirections;
+use edenfs_core::redirect::finish_backing_cleanup_unmount;
+use edenfs_core::redirect::get_effective_redirections;
 #[cfg(target_os = "linux")]
-use edenfs_client::redirect::redirection_mount_status;
+use edenfs_core::redirect::redirection_mount_status;
 use edenfs_utils::is_active_eden_mount;
 use fail::fail_point;
 use tracing::debug;
@@ -398,9 +398,7 @@ async fn remove_active_checkout(
     path: &Path,
     options: RemoveCheckoutOptions,
 ) -> Result<()> {
-    instance
-        .get_client()
-        .unmount_for_removal(instance, path, options.no_force)
+    edenfs_core::unmount::unmount_for_removal(instance, path, options.no_force)
         .await
         .with_context(|| format!("failed to unmount mount point at {}", path.display()))?;
     remove_inactive_checkout(instance, path, options).await
@@ -845,17 +843,18 @@ pub async fn path_in_eden_config(instance: &EdenFsInstance, path: &Path) -> Resu
 mod tests {
     use std::collections::BTreeMap;
     use std::fs;
+    use std::sync::Arc;
 
-    use edenfs_client::use_case::UseCaseId;
+    use edenfs_core::daemon::DisconnectedDaemon;
     use tempfile::tempdir;
 
     use super::*;
 
     #[cfg(target_os = "linux")]
-    #[fbinit::test]
+    #[tokio::test]
     async fn batch_unmount_cleans_paths_without_following_symlinks() {
-        use edenfs_client::redirect::RedirectionState;
-        use edenfs_client::redirect::RedirectionType;
+        use edenfs_core::redirect::RedirectionState;
+        use edenfs_core::redirect::RedirectionType;
 
         let temp = tempdir().unwrap();
         let config_dir = temp.path().join("eden");
@@ -873,11 +872,11 @@ mod tests {
             "[repository]\npath = '/tmp'\ntype = 'hg'\n[redirections]\n",
         )
         .unwrap();
-        let instance = EdenFsInstance::new(
-            UseCaseId::ExampleUseCase,
+        let instance = EdenFsInstance::with_daemon(
             config_dir.clone(),
             config_dir,
             None,
+            Arc::new(DisconnectedDaemon),
         );
         let checkout = find_checkout(&instance, &path).unwrap();
         let target = temp.path().join("backing");
@@ -1028,7 +1027,7 @@ mod tests {
         );
     }
 
-    #[fbinit::test]
+    #[tokio::test]
     async fn delete_managed_unregisters_checkout_with_missing_client_config() {
         let temp_dir = tempdir().expect("temporary directory");
         let config_dir = temp_dir.path().join("eden");
@@ -1042,11 +1041,11 @@ mod tests {
                 .expect("directory map"),
         )
         .expect("write directory map");
-        let instance = EdenFsInstance::new(
-            UseCaseId::ExampleUseCase,
+        let instance = EdenFsInstance::with_daemon(
             config_dir.clone(),
             config_dir,
             None,
+            Arc::new(DisconnectedDaemon),
         );
         let mut warnings = Vec::new();
 

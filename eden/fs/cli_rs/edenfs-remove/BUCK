@@ -8,8 +8,6 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tempfile",
-        "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/fbinit:fbinit-tokio",
     ],
     visibility = [
         "//eden/fs/cli_rs/edenfs-commands:",
@@ -21,7 +19,7 @@ rust_library(
         "fbsource//third-party/rust:fail",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
-        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
+        "//eden/fs/cli_rs/edenfs-core:edenfs-core",
         "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
     ],
 )
