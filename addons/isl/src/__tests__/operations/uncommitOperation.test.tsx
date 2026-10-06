@@ -90,8 +90,9 @@ describe('UncommitOperation', () => {
 
   const clickUncommit = async (hash: string, filesSample: Array<ChangedFile>) => {
     const dialog = await openUncommitDialog(hash, filesSample);
-    expect(within(dialog).getByRole('button', {name: 'Cancel'})).toHaveFocus();
-    fireEvent.click(within(dialog).getByRole('button', {name: 'Uncommit'}));
+    const uncommitButton = within(dialog).getByRole('button', {name: 'Uncommit'});
+    expect(uncommitButton).toHaveFocus();
+    fireEvent.click(uncommitButton);
     await waitFor(() =>
       expectMessageSentToServer({
         type: 'runOperation',

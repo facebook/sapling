@@ -195,14 +195,16 @@ export async function showConfirmation({
   icon?: string;
   dataTestId?: string;
 }): Promise<boolean> {
-  const confirmButton = {label: confirmLabel};
+  // Focus the confirm button by default so Enter confirms, matching native confirm dialogs.
+  // Escape still cancels.
+  const confirmButton = {label: confirmLabel, primary: true};
   const result = await showModal({
     type: 'confirm',
     title,
     message,
     icon,
     dataTestId,
-    buttons: [{label: cancelLabel, primary: true}, confirmButton],
+    buttons: [{label: cancelLabel}, confirmButton],
   });
   return result === confirmButton;
 }

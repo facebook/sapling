@@ -49,8 +49,9 @@ describe('RevertOperation', () => {
   const confirmModal = async (label: string) => {
     await act(async () => {
       const dialog = screen.getByRole('dialog');
-      expect(within(dialog).getByRole('button', {name: 'Cancel'})).toHaveFocus();
-      fireEvent.click(within(dialog).getByRole('button', {name: label}));
+      const confirmButton = within(dialog).getByRole('button', {name: label});
+      expect(confirmButton).toHaveFocus();
+      fireEvent.click(confirmButton);
       await nextTick();
     });
   };
