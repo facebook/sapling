@@ -37,6 +37,7 @@ rust_library(
         else [
             "fbsource//third-party/rust:base64",
             "fbsource//third-party/rust:maplit",
+            "fbsource//third-party/rust:tokio",
             "fbsource//third-party/rust:tracing",
             "//access/if:access_config_thrift-rust",
             "//access/if:authenticated_identity_thrift-rust",

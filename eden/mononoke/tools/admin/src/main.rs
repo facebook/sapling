@@ -64,6 +64,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_app_extension(ScrubAppExtension::new())
         .with_app_extension(MonitoringAppExtension {})
         .with_paged_help(true)
+        .with_lazy_acl_provider(true)
         .build_with_subcommands::<AdminArgs>(subcommands)?;
 
     let args: AdminArgs = app.args()?;

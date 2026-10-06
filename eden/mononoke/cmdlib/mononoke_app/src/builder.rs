@@ -83,6 +83,7 @@ pub struct MononokeAppBuilder {
     override_cmd_args: Option<Vec<String>>,
     paged_help: bool,
     with_logging: bool,
+    lazy_acl_provider: bool,
 }
 
 #[derive(Args, Debug)]
@@ -159,6 +160,7 @@ impl MononokeAppBuilder {
             override_cmd_args: None,
             paged_help: false,
             with_logging: true,
+            lazy_acl_provider: false,
         }
     }
 
@@ -220,6 +222,16 @@ impl MononokeAppBuilder {
     /// the pager cannot be started, help is printed directly as usual.
     pub fn with_paged_help(mut self, paged_help: bool) -> Self {
         self.paged_help = paged_help;
+        self
+    }
+
+    /// Defer the `AccessCheckerProvider` REPO/REPO_REGION preload until the
+    /// first ACL check instead of blocking startup on it. Intended for CLIs
+    /// like `mononoke_admin`, where most invocations never check permissions.
+    /// Services keep the eager default so they fail fast when the ACL backend
+    /// is unreachable.
+    pub fn with_lazy_acl_provider(mut self, lazy_acl_provider: bool) -> Self {
+        self.lazy_acl_provider = lazy_acl_provider;
         self
     }
 
@@ -405,7 +417,7 @@ impl MononokeAppBuilder {
 
         let remote_diff_options = remote_diff_args.into();
 
-        let acl_provider = create_acl_provider(self.fb, &acl_args, runtime)
+        let acl_provider = create_acl_provider(self.fb, &acl_args, runtime, self.lazy_acl_provider)
             .context("Failed to create ACL provider")?;
 
         let commit_graph_options = commit_graph_args.into();
@@ -603,12 +615,18 @@ fn create_acl_provider(
     fb: FacebookInit,
     acl_args: &AclArgs,
     runtime: &Runtime,
+    lazy_acl_provider: bool,
 ) -> Result<Arc<dyn AclProvider>> {
     if let Some(acl_file) = &acl_args.acl_file {
         return InternalAclProvider::from_file(acl_file)
             .with_context(|| format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy()));
     }
     let verifier = parse_access_checker_verifier(acl_args)?;
+    if lazy_acl_provider {
+        return Ok(Arc::new(
+            permission_checker::AccessCheckerProvider::new_lazy(fb, verifier),
+        ));
+    }
     runtime
         .block_on(permission_checker::AccessCheckerProvider::new(fb, verifier))
         .context("Failed to create AccessCheckerProvider")
@@ -632,6 +650,7 @@ fn create_acl_provider(
     fb: FacebookInit,
     acl_args: &AclArgs,
     _runtime: &Runtime,
+    _lazy_acl_provider: bool,
 ) -> Result<Arc<dyn AclProvider>> {
     if let Some(acl_file) = &acl_args.acl_file {
         return InternalAclProvider::from_file(acl_file)
