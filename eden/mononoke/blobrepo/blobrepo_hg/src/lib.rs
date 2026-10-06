@@ -297,20 +297,22 @@ impl<T: CommitGraphRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     {
         STATS::get_hg_changeset_and_parents_from_bonsai.add_value(1);
 
-        let parents = self
-            .commit_graph()
-            .changeset_parents(&ctx, csid)
-            .await?
-            .into_iter()
-            .map(|parent| self.derive_hg_changeset(&ctx, parent));
+        let (parents, changesetid) = future::try_join(
+            self.commit_graph().changeset_parents(&ctx, csid),
+            self.bonsai_hg_mapping().get_hg_from_bonsai(&ctx, csid),
+        )
+        .await?;
 
-        let changesetid = self
-            .bonsai_hg_mapping()
-            .get_hg_from_bonsai(&ctx, csid)
-            .await?
-            .ok_or_else(|| anyhow!("Bonsai cs {csid} not found"))?;
+        let changesetid = changesetid.ok_or_else(|| anyhow!("Bonsai cs {csid} not found"))?;
 
-        Ok((changesetid, future::try_join_all(parents).await?))
+        let parents = future::try_join_all(
+            parents
+                .into_iter()
+                .map(|parent| self.derive_hg_changeset(&ctx, parent)),
+        )
+        .await?;
+
+        Ok((changesetid, parents))
     }
 
     async fn get_hg_changeset_parents(
