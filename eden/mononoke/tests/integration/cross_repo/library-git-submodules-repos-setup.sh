@@ -53,7 +53,7 @@ function setup_git_repos_a_b_c {
   git commit -q -am "Added git repo C as submodule in B"
   git log --oneline
 
-  tree -a -I ".git"
+  find . -path "./.git" -prune -o -print | sort
 
 
 
@@ -84,7 +84,7 @@ function setup_git_repos_a_b_c {
 
   git add . && git commit -q -am "Added git repo C as submodule directly in A"
 
-  tree -a -I ".git"
+  find . -path "./.git" -prune -o -print | sort
 
 
   cd "$TESTTMP" || exit
@@ -182,7 +182,7 @@ function merge_repo_a_to_large_repo {
   hg co -q "$MASTER_BOOKMARK_NAME"
 
   echo "Large repo tree:"
-  tree -a -I ".hg" | tee "${TESTTMP}/large_repo_tree_1"
+  find . -path "./.hg" -prune -o -print | sort | tee "${TESTTMP}/large_repo_tree_1"
 
 
   sleep 2;

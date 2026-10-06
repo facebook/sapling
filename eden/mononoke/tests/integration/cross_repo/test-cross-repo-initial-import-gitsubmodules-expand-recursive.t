@@ -112,39 +112,37 @@ Run the x-repo with submodules setup
 
 
 TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
-  $ tree -a -I ".hg" &> ${TESTTMP}/large_repo_tree_2
+  $ find . -path "./.hg" -prune -o -print | sort &> ${TESTTMP}/large_repo_tree_2
   $ diff -y -t -T ${TESTTMP}/large_repo_tree_1 ${TESTTMP}/large_repo_tree_2
   .                                                                  .
-  |-- file_in_large_repo.txt                                         |-- file_in_large_repo.txt
-  `-- smallrepofolder1                                               `-- smallrepofolder1
-      |-- .gitmodules                                                    |-- .gitmodules
-      |-- .x-repo-submodule-git-repo-b                                   |-- .x-repo-submodule-git-repo-b
-      |-- .x-repo-submodule-repo_c                                <
-      |-- duplicates                                                     |-- duplicates
-      |   |-- x                                                          |   |-- x
-      |   |-- y                                                          |   |-- y
-      |   `-- z                                                          |   `-- z
-      |-- git-repo-b                                                     |-- git-repo-b
-      |   |-- .gitmodules                                                |   |-- .gitmodules
-      |   |-- .x-repo-submodule-git-repo-c                               |   |-- .x-repo-submodule-git-repo-c
-      |   |-- bar                                                 <
-      |   |   `-- zoo                                             <
-      |   |-- foo                                                 <
-      |   `-- git-repo-c                                                 |   `-- git-repo-c
-      |       |-- choo                                                   |       |-- choo
-                                                                  >      |       |-- choo3
-                                                                  >      |       |-- choo4
-      |       `-- hoo                                                    |       `-- hoo
-      |           `-- qux                                                |           `-- qux
-      |-- regular_dir                                                    |-- regular_dir
-      |   `-- aardvar                                                    |   `-- aardvar
-      |-- repo_c                                                  <
-      |   |-- choo                                                <
-      |   `-- hoo                                                 <
-      |       `-- qux                                             <
-      `-- root_file                                                      `-- root_file
-  
-  9 directories, 17 files                                         |  6 directories, 14 files
+  ./file_in_large_repo.txt                                           ./file_in_large_repo.txt
+  ./smallrepofolder1                                                 ./smallrepofolder1
+  ./smallrepofolder1/.gitmodules                                     ./smallrepofolder1/.gitmodules
+  ./smallrepofolder1/.x-repo-submodule-git-repo-b                    ./smallrepofolder1/.x-repo-submodule-git-repo-b
+  ./smallrepofolder1/.x-repo-submodule-repo_c                     <
+  ./smallrepofolder1/duplicates                                      ./smallrepofolder1/duplicates
+  ./smallrepofolder1/duplicates/x                                    ./smallrepofolder1/duplicates/x
+  ./smallrepofolder1/duplicates/y                                    ./smallrepofolder1/duplicates/y
+  ./smallrepofolder1/duplicates/z                                    ./smallrepofolder1/duplicates/z
+  ./smallrepofolder1/git-repo-b                                      ./smallrepofolder1/git-repo-b
+  ./smallrepofolder1/git-repo-b/.gitmodules                          ./smallrepofolder1/git-repo-b/.gitmodules
+  ./smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c         ./smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
+  ./smallrepofolder1/git-repo-b/bar                               <
+  ./smallrepofolder1/git-repo-b/bar/zoo                           <
+  ./smallrepofolder1/git-repo-b/foo                               <
+  ./smallrepofolder1/git-repo-b/git-repo-c                           ./smallrepofolder1/git-repo-b/git-repo-c
+  ./smallrepofolder1/git-repo-b/git-repo-c/choo                      ./smallrepofolder1/git-repo-b/git-repo-c/choo
+                                                                  >  ./smallrepofolder1/git-repo-b/git-repo-c/choo3
+                                                                  >  ./smallrepofolder1/git-repo-b/git-repo-c/choo4
+  ./smallrepofolder1/git-repo-b/git-repo-c/hoo                       ./smallrepofolder1/git-repo-b/git-repo-c/hoo
+  ./smallrepofolder1/git-repo-b/git-repo-c/hoo/qux                   ./smallrepofolder1/git-repo-b/git-repo-c/hoo/qux
+  ./smallrepofolder1/regular_dir                                     ./smallrepofolder1/regular_dir
+  ./smallrepofolder1/regular_dir/aardvar                             ./smallrepofolder1/regular_dir/aardvar
+  ./smallrepofolder1/repo_c                                       <
+  ./smallrepofolder1/repo_c/choo                                  <
+  ./smallrepofolder1/repo_c/hoo                                   <
+  ./smallrepofolder1/repo_c/hoo/qux                               <
+  ./smallrepofolder1/root_file                                       ./smallrepofolder1/root_file
   [1]
 
 -- Check that the diff that updates the submodule generates the correct delta
@@ -309,26 +307,23 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
                 o  54a6db91baf1 L_A
   
 
-  $ tree
-  .
-  |-- file_in_large_repo.txt
-  `-- smallrepofolder1
-      |-- duplicates
-      |   |-- x
-      |   |-- y
-      |   `-- z
-      |-- git-repo-b
-      |   `-- git-repo-c
-      |       |-- choo
-      |       |-- choo3
-      |       |-- choo4
-      |       `-- hoo
-      |           `-- qux
-      |-- regular_dir
-      |   `-- aardvar
-      `-- root_file
-  
-  6 directories, 10 files
+  $ find . -mindepth 1 -name ".*" -prune -o -print | sort
+  ./file_in_large_repo.txt
+  ./smallrepofolder1
+  ./smallrepofolder1/duplicates
+  ./smallrepofolder1/duplicates/x
+  ./smallrepofolder1/duplicates/y
+  ./smallrepofolder1/duplicates/z
+  ./smallrepofolder1/git-repo-b
+  ./smallrepofolder1/git-repo-b/git-repo-c
+  ./smallrepofolder1/git-repo-b/git-repo-c/choo
+  ./smallrepofolder1/git-repo-b/git-repo-c/choo3
+  ./smallrepofolder1/git-repo-b/git-repo-c/choo4
+  ./smallrepofolder1/git-repo-b/git-repo-c/hoo
+  ./smallrepofolder1/git-repo-b/git-repo-c/hoo/qux
+  ./smallrepofolder1/regular_dir
+  ./smallrepofolder1/regular_dir/aardvar
+  ./smallrepofolder1/root_file
   $ function backsync_get_info_and_derive_data() {
   >   hg cloud backup -q
   >   COMMIT_TO_SYNC=$(hg whereami)
