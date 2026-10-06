@@ -270,3 +270,39 @@ and the failure is only logged.
   >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
   >            | "\(.normal.failure_kind): \(.normal.msg)"' \
   >   | sed -E 's/[0-9a-f]{40}/HASH/g'
+
+Scenario 4 -- store knob OFF with the build still ON, which is shadow. The build
+runs on every uploaded tree but must write no envelope. Changeset-upload
+derivation is still off from scenario 2, so nothing else can create one either.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ BEFORE=$(scuba_rows)
+  $ echo four > dir/file4
+  $ sl commit -qAm "fourth commit, shadow"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+
+The build did not fail, so an absent envelope below means it was never written,
+not that the build gave up first.
+  $ tail -n +$((BEFORE + 1)) "$SCUBA" \
+  >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
+  >            | .normal.msg'
+
+  $ ROOT_MFID_4=$(sl log -r . -T '{manifest}')
+  $ cd $TESTTMP
+  $ echo "hgaugmentedmanifest.sha1.$ROOT_MFID_4" > envelope_keys
+  $ mononoke_admin blobstore -R repo fetch-many --keys-file envelope_keys
+  present: 0
+  missing: 1
+  failed: 0
