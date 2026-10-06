@@ -17,29 +17,39 @@ use acl_manifest::DirectoryAclInputs;
 use acl_manifest::acl_node_for_directory;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
+use blobstore::Storable;
 use bounded_traversal::bounded_traversal_dag;
 use context::CoreContext;
+use either::Either;
+use filestore::FetchKey;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future;
 use futures::stream;
 use manifest::Entry;
+use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgNodeHash;
+use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
+use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
+use mononoke_types::FileType;
 use mononoke_types::MPathElement;
+use mononoke_types::TrieMap;
 use mononoke_types::acl_manifest::AclManifestDirectoryEntry;
+use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use restricted_paths_common::RestrictedPathsConfigBased;
 use thiserror::Error;
 
-use crate::derive_hg_augmented_manifest::derive_augmented_manifest_for_uploaded_tree;
-use crate::derive_hg_augmented_manifest::parent_file_leaves;
+use crate::derive_hg_augmented_manifest::validate_augmented_manifest_element;
 
 const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
 /// Each tree build fans out its own child lookups, so this multiplies with
@@ -350,6 +360,13 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
         .context("the uploaded batch contains a cycle")
 }
 
+/// Build and store the augmented manifest for one uploaded tree.
+///
+/// Subentries are built from the uploaded manifest alone, so no `HgManifest`
+/// blob is read. The per-changeset derivation instead splices unchanged runs
+/// out of the parent's sharded map; that is a read optimisation, and it can
+/// serialise a large directory's map differently from the same entries built
+/// directly.
 async fn build_uploaded_tree(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -364,22 +381,179 @@ async fn build_uploaded_tree(
         parent_file_leaves(ctx, blobstore, manifest.p1()),
     )
     .await?;
+    let acl_overlay = acl.node().map(|entry| entry.id);
 
-    let directories = children
-        .iter()
-        .map(|(name, child)| (name.clone(), child.directory.clone()))
+    let files = &manifest.content().files;
+
+    let mut subentries = TrieMap::default();
+    let mut to_build: Vec<(MPathElement, FileType, HgFileNodeId)> = Vec::new();
+    for (name, entry) in files.iter() {
+        let Entry::Leaf((file_type, filenode_id)) = entry else {
+            continue;
+        };
+        validate_augmented_manifest_element(name.as_ref())?;
+        // Agreement with the uploaded bytes is what makes this safe, not trust
+        // in `p1`: a leaf is a pure function of its filenode and file type, so
+        // an entry matching both is the one this would have built. A wrong
+        // parent can only cost a miss.
+        match reusable.get(name) {
+            Some(leaf)
+                if leaf.filenode == filenode_id.into_nodehash() && leaf.file_type == *file_type =>
+            {
+                subentries.insert(
+                    name.clone(),
+                    Either::Left(HgAugmentedManifestEntry::FileNode(leaf.clone())),
+                );
+            }
+            _ => to_build.push((name.clone(), *file_type, *filenode_id)),
+        }
+    }
+
+    // The leaf futures are materialised before the stream: a closure that
+    // borrows `ctx` and `blobstore` inlined into `stream::iter` cannot be
+    // inferred as higher-ranked, and callers then fail to prove `Send`.
+    let leaf_futures: Vec<_> = to_build
+        .into_iter()
+        .map(|(name, file_type, filenode_id)| async move {
+            let leaf = build_uploaded_file_leaf(ctx, blobstore, file_type, filenode_id).await?;
+            anyhow::Ok((name, HgAugmentedManifestEntry::FileNode(leaf)))
+        })
         .collect();
-    let directory = derive_augmented_manifest_for_uploaded_tree(
-        ctx,
-        blobstore,
-        manifest,
-        &directories,
-        acl.node().map(|entry| entry.id),
-        &reusable,
-    )
-    .await?;
+    let leaves = stream::iter(leaf_futures)
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    for (name, entry) in leaves {
+        subentries.insert(name, Either::Left(entry));
+    }
+    for (name, entry) in files.iter() {
+        let Entry::Tree(id) = entry else { continue };
+        let child = children
+            .get(name)
+            .map(|child| &child.directory)
+            .ok_or_else(|| {
+                anyhow!(
+                    "uploaded tree {} names child directory {name} ({}) with no augmented manifest",
+                    manifest.node_id(),
+                    id.into_nodehash(),
+                )
+            })?;
+        validate_augmented_manifest_element(name.as_ref())?;
+        subentries.insert(
+            name.clone(),
+            Either::Left(HgAugmentedManifestEntry::DirectoryNode(child.clone())),
+        );
+    }
+
+    // The header is the client's and must not be recomputed: a mirror upload
+    // supplies a `node_id` that is not the content hash, and that id is the key
+    // this envelope is stored under and the serve path looks it up by.
+    let augmented_manifest = ShardedHgAugmentedManifest {
+        hg_node_id: manifest.node_id(),
+        p1: manifest.p1(),
+        p2: manifest.p2(),
+        computed_node_id: manifest.computed_node_id(),
+        subentries: ShardedMapV2Node::from_entries_and_partial_maps(ctx, blobstore, subentries)
+            .await?,
+        acl_manifest_directory_id: acl_overlay,
+    };
+    let (augmented_manifest_id, augmented_manifest_size) = augmented_manifest
+        .clone()
+        .compute_content_addressed_digest(ctx, blobstore)
+        .await?;
+    let treenode = HgAugmentedManifestEnvelope {
+        augmented_manifest_id,
+        augmented_manifest_size,
+        augmented_manifest,
+    }
+    .store(ctx, blobstore)
+    .await?
+    .into_nodehash();
+
+    let directory = HgAugmentedDirectoryNode {
+        treenode,
+        augmented_manifest_id,
+        augmented_manifest_size,
+        acl_manifest_directory_id: acl_overlay,
+    };
 
     Ok(BuiltTree { directory, acl })
+}
+
+/// The tree-upload twin of `build_augmented_file_leaf`. Clients upload content
+/// before the trees that list it, so its metadata already exists: a miss is an
+/// error rather than a reason to stream the whole file back and recompute the
+/// metadata inside the upload request.
+async fn build_uploaded_file_leaf(
+    ctx: &CoreContext,
+    blobstore: &impl KeyedBlobstore,
+    file_type: FileType,
+    filenode_id: HgFileNodeId,
+) -> Result<HgAugmentedFileLeafNode> {
+    let filenode = filenode_id.load(ctx, blobstore).await?;
+    let content_id = filenode.content_id();
+    let metadata =
+        filestore::get_metadata_readonly(blobstore, ctx, &FetchKey::Canonical(content_id))
+            .await?
+            .flatten()
+            .ok_or_else(|| {
+                anyhow!(
+                    "missing content metadata for {content_id}; content must be uploaded before the trees that list it"
+                )
+            })?;
+    Ok(HgAugmentedFileLeafNode {
+        file_type,
+        filenode: filenode_id.into_nodehash(),
+        total_size: metadata.total_size,
+        content_blake3: metadata.seeded_blake3,
+        content_sha1: metadata.sha1,
+        file_header_metadata: if filenode.metadata().is_empty() {
+            None
+        } else {
+            Some(filenode.metadata().clone())
+        },
+    })
+}
+
+/// This directory's file leaves in the parent commit, to reuse for the files
+/// that did not change. An uploaded manifest lists every file in the
+/// directory, not just the changed ones, so without this a one-file change to a
+/// wide directory pays two blob reads for each of the files that did not
+/// change.
+///
+/// No parent, or a parent that was never derived, is not an error: every leaf
+/// is then built from scratch, which is what this path did before.
+async fn parent_file_leaves(
+    ctx: &CoreContext,
+    blobstore: &(impl KeyedBlobstore + 'static),
+    p1: Option<HgNodeHash>,
+) -> Result<HashMap<MPathElement, HgAugmentedFileLeafNode>> {
+    let Some(p1) = p1 else {
+        return Ok(HashMap::new());
+    };
+    let Some(envelope) =
+        HgAugmentedManifestEnvelope::load(ctx, blobstore, HgAugmentedManifestId::new(p1)).await?
+    else {
+        return Ok(HashMap::new());
+    };
+    // One pass over the parent's map, rather than a lookup per file: the
+    // directory is being rebuilt precisely because most of it is unchanged, so
+    // nearly every entry is wanted.
+    envelope
+        .augmented_manifest
+        .subentries
+        .into_entries(ctx, blobstore)
+        .try_filter_map(|(name, entry)| async move {
+            match entry {
+                HgAugmentedManifestEntry::FileNode(leaf) => {
+                    Ok(Some((MPathElement::from_smallvec(name)?, leaf)))
+                }
+                HgAugmentedManifestEntry::DirectoryNode(_) => Ok(None),
+            }
+        })
+        .try_collect()
+        .await
 }
 
 /// Resolve the tree's child directories, then build its ACL node from them.
