@@ -36,6 +36,9 @@ use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use context::PerfCounterType;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use futures_retry::retry;
 use itertools::Itertools;
 use metaconfig_types::OssRemoteDatabaseConfig;
@@ -77,6 +80,13 @@ mod tests;
 ///
 /// The configured maximum number of recursive steps in MySQL is 1000.
 const DEFAULT_PREFETCH_STEP_LIMIT: u64 = 1000;
+
+/// Maximum number of changesets a single prefetching query is asked about,
+/// since it returns up to the step limit of rows for each of them.
+const MAX_PREFETCH_KEYS_PER_QUERY: usize = 50;
+
+/// Maximum number of prefetching queries a batch runs concurrently.
+const MAX_CONCURRENT_PREFETCH_QUERIES: usize = 16;
 
 pub struct SqlCommitGraphStorageBuilder {
     connections: SqlConnections,
@@ -157,6 +167,11 @@ struct RendezVousConnection {
     fetch_skip_tree_prefetch: RendezVous<ChangesetId, Vec<FetchedChangesetEdges>>,
     fetch_exact_skip_tree_prefetch: RendezVous<ChangesetId, Vec<FetchedChangesetEdges>>,
 
+    // Prefetching keyed by the target as well, so that each batched request
+    // gets the path it asked for.  Prefetching returns up to the step limit
+    // of rows per key, so batches are capped.
+    fetch_prefetch: RendezVous<(ChangesetId, PrefetchTarget), Vec<FetchedChangesetEdges>>,
+
     conn: Connection,
 }
 
@@ -186,6 +201,15 @@ impl RendezVousConnection {
                 ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "commit_graph.fetch_exact_skip_tree_prefetch.{name}"
+                ))),
+            ),
+            fetch_prefetch: RendezVous::new(
+                ConfigurableRendezVousController::new(RendezVousOptions {
+                    cap_batch_at_threshold: true,
+                    ..opts
+                }),
+                Arc::new(RendezVousStats::new(format!(
+                    "commit_graph.fetch_prefetch.{name}"
                 ))),
             ),
         }
@@ -817,6 +841,133 @@ mononoke_queries! {
         )
     }
 
+    read SelectManyChangesetsWithExactSkipTreeAncestorPrefetchThroughRoots(repo_id: RepositoryId, step_limit: u64, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
+        u64, // id
+        ChangesetId, // cs_id
+        Option<ChangesetId>, // origin_cs_id
+        Option<u64>, // gen
+        Option<u64>, // subtree_source_gen
+        Option<u64>, // skip_tree_depth
+        Option<u64>, // p1_linear_depth
+        Option<u64>, // subtree_source_depth
+        Option<usize>, // parent_count
+        Option<usize>, // subtree_source_count
+        Option<ChangesetId>, // merge_ancestor
+        Option<u64>, // merge_ancestor_gen
+        Option<u64>, // merge_ancestor_subtree_source_gen
+        Option<u64>, // merge_ancestor_skip_tree_depth
+        Option<u64>, // merge_ancestor_p1_linear_depth
+        Option<u64>, // merge_ancestor_subtree_source_depth
+        Option<ChangesetId>, // skip_tree_parent
+        Option<u64>, // skip_tree_parent_gen
+        Option<u64>, // skip_tree_parent_subtree_source_gen
+        Option<u64>, // skip_tree_parent_skip_tree_depth
+        Option<u64>, // skip_tree_parent_p1_linear_depth
+        Option<u64>, // skip_tree_parent_subtree_source_depth
+        Option<ChangesetId>, // skip_tree_skew_ancestor
+        Option<u64>, // skip_tree_skew_ancestor_gen
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_gen
+        Option<u64>, // skip_tree_skew_ancestor_skip_tree_depth
+        Option<u64>, // skip_tree_skew_ancestor_p1_linear_depth
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_depth
+        Option<ChangesetId>, // p1_linear_skew_ancestor
+        Option<u64>, // p1_linear_skew_ancestor_gen
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_gen
+        Option<u64>, // p1_linear_skew_ancestor_skip_tree_depth
+        Option<u64>, // p1_linear_skew_ancestor_p1_linear_depth
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_or_merge_ancestor
+        Option<u64>, // subtree_or_merge_ancestor_gen
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_gen
+        Option<u64>, // subtree_or_merge_ancestor_skip_tree_depth
+        Option<u64>, // subtree_or_merge_ancestor_p1_linear_depth
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_parent
+        Option<u64>, // subtree_source_parent_gen
+        Option<u64>, // subtree_source_parent_subtree_source_gen
+        Option<u64>, // subtree_source_parent_skip_tree_depth
+        Option<u64>, // subtree_source_parent_p1_linear_depth
+        Option<u64>, // subtree_source_parent_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_skew_ancestor
+        Option<u64>, // subtree_source_skew_ancestor_gen
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_gen
+        Option<u64>, // subtree_source_skew_ancestor_skip_tree_depth
+        Option<u64>, // subtree_source_skew_ancestor_p1_linear_depth
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_depth
+        Option<usize>, // parent_num
+        Option<usize>, // subtree_source_num
+        Option<ChangesetId>, // parent
+        Option<u64>, // parent_gen
+        Option<u64>, // parent_subtree_source_gen
+        Option<u64>, // parent_skip_tree_depth
+        Option<u64>, // parent_p1_linear_depth
+        Option<u64>, // parent_subtree_source_depth
+    ) {
+        // Follows the same edges as the skew binary traversal in
+        // `lower_frontier_step`: the skew ancestor if it doesn't go below the
+        // target generation, otherwise the skip tree parent if it doesn't,
+        // otherwise the parents.  Following the parents matters at skip tree
+        // roots, which occur at every merge of histories that have no common
+        // ancestor.  Without that, the traversal misses the cache once per
+        // skip tree root it crosses.
+        //
+        // Only the first parent is followed further.  The other parents are
+        // returned, since the traversal lowers them too, but not recursed
+        // into, which keeps the rows a query can return proportional to the
+        // step limit rather than to the number of histories being crossed.
+        fetch_commit_graph_edges!(
+            "WITH RECURSIVE csp AS (
+                SELECT
+                    cs.cs_id AS origin_cs_id, cs.id, cs.p1_parent, cs.skip_tree_parent, cs.skip_tree_skew_ancestor, 1 AS step
+                FROM commit_graph_edges cs
+                WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
+
+                UNION ALL
+
+                SELECT
+                    csp.origin_cs_id, skew.id, skew.p1_parent, skew.skip_tree_parent, skew.skip_tree_skew_ancestor, csp.step + 1
+                FROM csp
+                INNER JOIN commit_graph_edges skew ON skew.id = csp.skip_tree_skew_ancestor
+                WHERE csp.step < {step_limit} AND skew.gen >= {prefetch_gen}
+
+                UNION ALL
+
+                SELECT
+                    csp.origin_cs_id, stp.id, stp.p1_parent, stp.skip_tree_parent, stp.skip_tree_skew_ancestor, csp.step + 1
+                FROM csp
+                INNER JOIN commit_graph_edges stp ON stp.id = csp.skip_tree_parent
+                LEFT JOIN commit_graph_edges skew ON skew.id = csp.skip_tree_skew_ancestor
+                WHERE csp.step < {step_limit} AND stp.gen >= {prefetch_gen}
+                    AND (skew.id IS NULL OR skew.gen < {prefetch_gen})
+
+                UNION ALL
+
+                SELECT
+                    csp.origin_cs_id, p1.id, p1.p1_parent, p1.skip_tree_parent, p1.skip_tree_skew_ancestor, csp.step + 1
+                FROM csp
+                INNER JOIN commit_graph_edges p1 ON p1.id = csp.p1_parent
+                LEFT JOIN commit_graph_edges stp ON stp.id = csp.skip_tree_parent
+                LEFT JOIN commit_graph_edges skew ON skew.id = csp.skip_tree_skew_ancestor
+                WHERE csp.step < {step_limit} AND p1.gen >= {prefetch_gen}
+                    AND (stp.id IS NULL OR stp.gen < {prefetch_gen})
+                    AND (skew.id IS NULL OR skew.gen < {prefetch_gen})
+
+                UNION ALL
+
+                SELECT
+                    csp.origin_cs_id, mp.id, mp.p1_parent, mp.skip_tree_parent, mp.skip_tree_skew_ancestor, {step_limit}
+                FROM csp
+                INNER JOIN commit_graph_merge_parents cgmp ON cgmp.id = csp.id
+                INNER JOIN commit_graph_edges mp ON mp.id = cgmp.parent
+                LEFT JOIN commit_graph_edges stp ON stp.id = csp.skip_tree_parent
+                LEFT JOIN commit_graph_edges skew ON skew.id = csp.skip_tree_skew_ancestor
+                WHERE csp.step < {step_limit} AND mp.gen >= {prefetch_gen}
+                    AND (stp.id IS NULL OR stp.gen < {prefetch_gen})
+                    AND (skew.id IS NULL OR skew.gen < {prefetch_gen})
+            )"
+        )
+    }
+
     // The only difference between mysql and sqlite is the FORCE INDEX
     read SelectManyChangesetsInIdRange(repo_id: RepositoryId, start_id: u64, end_id: u64, limit: u64) -> (
         u64, // id
@@ -1402,45 +1553,130 @@ impl SqlCommitGraphStorage {
             let steps_limit =
                 justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None);
 
-            let fetched_edges = match target {
-                PrefetchTarget::LinearAncestors { steps, generation } => {
-                    rendezvous
-                        .fetch_linear_prefetch
-                        .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
-                            let conn = rendezvous.conn.clone();
-                            let repo_id = self.repo_identity.id().clone();
-                            let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
+            if justknobs::eval(
+                "scm/mononoke:commit_graph_pull_optimizations",
+                None,
+                Some(self.repo_identity.name()),
+            ) {
+                // The target is a parameter of the query, so batched
+                // requests are keyed by it and a batch is split into one
+                // query per target.
+                let keys: HashSet<(ChangesetId, PrefetchTarget)> =
+                    cs_ids.iter().map(|cs_id| (*cs_id, target)).collect();
+                let fetched_edges = rendezvous
+                    .fetch_prefetch
+                    .dispatch(ctx.fb.clone(), keys, || {
+                        let conn = rendezvous.conn.clone();
+                        let repo_id = self.repo_identity.id().clone();
 
-                            move |cs_ids| async move {
-                                let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
-                                let fetched_rows =
-                                    SelectManyChangesetsWithFirstParentPrefetch::query(
-                                        &conn,
-                                        sql_query_tel.clone(),
-                                        &repo_id,
-                                        &std::cmp::min(steps, steps_limit),
-                                        &generation.value(),
-                                        &cs_ids,
-                                    )
-                                    .await?;
-                                Ok(Self::collect_prefetched_changeset_edges(
-                                    &fetched_rows,
-                                    should_apply_fallback,
-                                ))
-                            }
-                        })
-                        .await?
-                }
-                PrefetchTarget::ExactSkipTreeAncestors { generation } => {
-                    rendezvous
-                        .fetch_exact_skip_tree_prefetch
-                        .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
-                            let conn = rendezvous.conn.clone();
-                            let repo_id = self.repo_identity.id().clone();
+                        move |keys| async move {
+                            let queries: Vec<(PrefetchTarget, Vec<ChangesetId>)> = keys
+                                .into_iter()
+                                .map(|(cs_id, target)| (target, cs_id))
+                                .into_group_map()
+                                .into_iter()
+                                .flat_map(|(target, cs_ids)| {
+                                    cs_ids
+                                        .chunks(MAX_PREFETCH_KEYS_PER_QUERY)
+                                        .map(|chunk| (target, chunk.to_vec()))
+                                        .collect::<Vec<_>>()
+                                })
+                                .collect();
+                            stream::iter(queries)
+                                .map(|(target, cs_ids)| {
+                                    let conn = conn.clone();
+                                    let sql_query_tel = sql_query_tel.clone();
+                                    async move {
+                                        let fetched_rows = match target {
+                                            PrefetchTarget::LinearAncestors { steps, generation } => {
+                                                SelectManyChangesetsWithFirstParentPrefetch::query(
+                                                    &conn,
+                                                    sql_query_tel,
+                                                    &repo_id,
+                                                    &std::cmp::min(steps, steps_limit),
+                                                    &generation.value(),
+                                                    &cs_ids,
+                                                )
+                                                .await?
+                                            }
+                                            PrefetchTarget::ExactSkipTreeAncestors { generation } => {
+                                                SelectManyChangesetsWithExactSkipTreeAncestorPrefetchThroughRoots::query(
+                                                    &conn,
+                                                    sql_query_tel,
+                                                    &repo_id,
+                                                    &steps_limit,
+                                                    &generation.value(),
+                                                    &cs_ids,
+                                                )
+                                                .await?
+                                            }
+                                        };
+                                        anyhow::Ok(
+                                            Self::collect_prefetched_changeset_edges(
+                                                &fetched_rows,
+                                                should_apply_fallback,
+                                            )
+                                            .into_iter()
+                                            .map(|(origin, edges)| ((origin, target), edges))
+                                            .collect::<Vec<_>>(),
+                                        )
+                                    }
+                                })
+                                .buffer_unordered(MAX_CONCURRENT_PREFETCH_QUERIES)
+                                .try_fold(HashMap::new(), |mut fetched, edges| async move {
+                                    fetched.extend(edges);
+                                    Ok(fetched)
+                                })
+                                .await
+                        }
+                    })
+                    .await?;
+                Ok(fetched_edges
+                    .into_values()
+                    .flatten()
+                    .flatten()
+                    .map(|edges| (edges.node().cs_id, edges))
+                    .collect())
+            } else {
+                let fetched_edges = match target {
+                    PrefetchTarget::LinearAncestors { steps, generation } => {
+                        rendezvous
+                            .fetch_linear_prefetch
+                            .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
+                                let conn = rendezvous.conn.clone();
+                                let repo_id = self.repo_identity.id().clone();
+                                let sql_query_tel: SqlQueryTelemetry = ctx.sql_query_telemetry();
 
-                            move |cs_ids| async move {
-                                let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
-                                let fetched_rows =
+                                move |cs_ids| async move {
+                                    let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+                                    let fetched_rows =
+                                        SelectManyChangesetsWithFirstParentPrefetch::query(
+                                            &conn,
+                                            sql_query_tel.clone(),
+                                            &repo_id,
+                                            &std::cmp::min(steps, steps_limit),
+                                            &generation.value(),
+                                            &cs_ids,
+                                        )
+                                        .await?;
+                                    Ok(Self::collect_prefetched_changeset_edges(
+                                        &fetched_rows,
+                                        should_apply_fallback,
+                                    ))
+                                }
+                            })
+                            .await?
+                    }
+                    PrefetchTarget::ExactSkipTreeAncestors { generation } => {
+                        rendezvous
+                            .fetch_exact_skip_tree_prefetch
+                            .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
+                                let conn = rendezvous.conn.clone();
+                                let repo_id = self.repo_identity.id().clone();
+
+                                move |cs_ids| async move {
+                                    let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+                                    let fetched_rows =
                                     SelectManyChangesetsWithExactSkipTreeAncestorPrefetch::query(
                                         &conn,
                                         sql_query_tel.clone(),
@@ -1449,21 +1685,22 @@ impl SqlCommitGraphStorage {
                                         &cs_ids,
                                     )
                                     .await?;
-                                Ok(Self::collect_prefetched_changeset_edges(
-                                    &fetched_rows,
-                                    should_apply_fallback,
-                                ))
-                            }
-                        })
-                        .await?
-                }
-            };
-            Ok(fetched_edges
-                .into_values()
-                .flatten()
-                .flatten()
-                .map(|edges| (edges.node().cs_id, edges))
-                .collect())
+                                    Ok(Self::collect_prefetched_changeset_edges(
+                                        &fetched_rows,
+                                        should_apply_fallback,
+                                    ))
+                                }
+                            })
+                            .await?
+                    }
+                };
+                Ok(fetched_edges
+                    .into_values()
+                    .flatten()
+                    .flatten()
+                    .map(|edges| (edges.node().cs_id, edges))
+                    .collect())
+            }
         } else {
             let ret = rendezvous
                 .fetch_single

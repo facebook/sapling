@@ -28,7 +28,7 @@ use vec1::Vec1;
 use crate::edges::ChangesetEdges;
 
 /// Indication of what changesets to prefetch.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PrefetchTarget {
     /// Prefetch a linear range of changesets by following the first parent
     LinearAncestors {
