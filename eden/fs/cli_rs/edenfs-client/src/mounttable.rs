@@ -5,6 +5,16 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(target_os = "linux")]
+use std::collections::HashSet;
+#[cfg(target_os = "linux")]
+use std::ffi::CString;
+#[cfg(target_os = "linux")]
+use std::mem::MaybeUninit;
+#[cfg(target_os = "linux")]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(target_os = "linux")]
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
@@ -41,12 +51,161 @@ fn parse_linux_mtab(mtab_string: String) -> Vec<MountTableInfo> {
         } else if let [device, mount_point, vfstype, _opts, _freq, _passno] = &entries[..] {
             mounts.push(MountTableInfo {
                 device: String::from(*device),
-                mount_point: PathBuf::from(*mount_point),
+                mount_point: PathBuf::from(
+                    mount_point
+                        .replace(r"\040", " ")
+                        .replace(r"\011", "\t")
+                        .replace(r"\012", "\n")
+                        .replace(r"\134", "\\"),
+                ),
                 vfstype: String::from(*vfstype),
             });
         }
     }
     mounts
+}
+
+/// A lazy mount-table snapshot for one planning batch, before mount changes.
+#[cfg(target_os = "linux")]
+#[derive(Default)]
+pub(crate) struct MountTableSnapshot {
+    mount_points: Option<HashSet<PathBuf>>,
+}
+
+#[cfg(target_os = "linux")]
+impl MountTableSnapshot {
+    pub(crate) fn is_mount_point(&mut self, path: &Path) -> Result<bool> {
+        self.is_mount_point_with(path, is_visible_mount_point(path)?, read_mount_table)
+    }
+
+    fn is_mount_point_with(
+        &mut self,
+        path: &Path,
+        visible_mount: bool,
+        read_table: impl FnOnce() -> Result<Vec<MountTableInfo>>,
+    ) -> Result<bool> {
+        if visible_mount {
+            return Ok(true);
+        }
+        // A path lookup cannot see mounts covered by another mount. Keep the table
+        // check when statx does not confirm a visible mount root, including on older kernels.
+        let mount_points = match &self.mount_points {
+            Some(mount_points) => mount_points,
+            None => self.mount_points.insert(
+                read_table()?
+                    .into_iter()
+                    .map(|mount| mount.mount_point)
+                    .collect(),
+            ),
+        };
+        Ok(mount_points.contains(path))
+    }
+}
+
+/// Observe current mounts without reusing a planning snapshot.
+#[cfg(all(test, target_os = "linux"))]
+pub(crate) fn is_mount_point(path: &Path) -> Result<bool> {
+    if is_visible_mount_point(path)? {
+        return Ok(true);
+    }
+    Ok(read_mount_table()?
+        .iter()
+        .any(|mount| mount.mount_point == path))
+}
+
+// Unlike comparing st_dev with the parent, this also detects same-filesystem binds.
+#[cfg(target_os = "linux")]
+fn is_visible_mount_point(path: &Path) -> Result<bool> {
+    let c_path = CString::new(path.as_os_str().as_bytes()).from_err()?;
+    let mut stat = MaybeUninit::<libc::statx>::uninit();
+    // SAFETY: c_path is NUL-terminated and stat points to writable storage.
+    let result = unsafe {
+        libc::statx(
+            libc::AT_FDCWD,
+            c_path.as_ptr(),
+            libc::AT_SYMLINK_NOFOLLOW,
+            libc::STATX_BASIC_STATS,
+            stat.as_mut_ptr(),
+        )
+    };
+    if result == 0 {
+        // SAFETY: a successful statx call initialized stat.
+        let stat = unsafe { stat.assume_init() };
+        if stat.stx_attributes_mask & stat.stx_attributes & libc::STATX_ATTR_MOUNT_ROOT as u64 != 0
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn test_is_mount_point() {
+    let temp = tempfile::tempdir().unwrap();
+    assert!(is_mount_point(Path::new("/")).unwrap());
+    assert!(!is_mount_point(temp.path()).unwrap());
+    let link = temp.path().join("root-link");
+    std::os::unix::fs::symlink("/", &link).unwrap();
+    assert!(!is_mount_point(&link).unwrap());
+    assert!(!is_mount_point(&temp.path().join("missing")).unwrap());
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod snapshot_tests {
+    use std::cell::Cell;
+
+    use super::*;
+
+    #[test]
+    fn planning_fallbacks_share_one_read_and_detect_covered_mounts() {
+        let mut snapshot = MountTableSnapshot::default();
+        let reads = Cell::new(0);
+        // Neither covered path is visible to statx, but both remain in the table.
+        for (path, expected) in [
+            ("/checkout/buck-out", true),
+            ("/checkout/missing", false),
+            ("/checkout/space dir", true),
+        ] {
+            assert_eq!(
+                snapshot
+                    .is_mount_point_with(Path::new(path), false, || {
+                        reads.set(reads.get() + 1);
+                        Ok(parse_linux_mtab(
+                            "/dev/root /checkout/buck-out ext4 rw 0 0\n\
+                             /dev/root /checkout/space\\040dir ext4 rw 0 0"
+                                .to_owned(),
+                        ))
+                    })
+                    .unwrap(),
+                expected,
+                "unexpected mount-table lookup for {path}"
+            );
+        }
+        assert_eq!(reads.get(), 1);
+    }
+
+    #[test]
+    fn failed_read_propagates_and_can_be_retried() {
+        let mut snapshot = MountTableSnapshot::default();
+        let path = Path::new("/checkout/buck-out");
+        let error = snapshot
+            .is_mount_point_with(path, false, || {
+                Err(EdenFsError::Other(anyhow!("mount table unavailable")))
+            })
+            .expect_err("a read error must not mean not mounted");
+        assert!(error.to_string().contains("mount table unavailable"));
+        assert!(snapshot.mount_points.is_none());
+        assert!(
+            snapshot
+                .is_mount_point_with(path, false, || {
+                    Ok(parse_linux_mtab(
+                        "/dev/root /checkout/buck-out ext4 rw 0 0".to_owned(),
+                    ))
+                })
+                .unwrap()
+        );
+    }
 }
 
 fn parse_macos_mtab(mtab_string: String) -> Vec<MountTableInfo> {
@@ -109,6 +268,18 @@ edenfs: /tmp/eden_test.4rec6drf/mounts/main fuse rw,nosuid,relatime,user_id=1386
         mount_infos[2].mount_point
     );
     assert_eq!("fuse", mount_infos[2].vfstype);
+}
+
+#[test]
+fn linux_mount_paths_decode_escapes_once() {
+    let mounts = parse_linux_mtab(
+        r"/dev/root /checkout\040space/buck\134040out\011tab\012line ext4 rw 0 0".to_owned(),
+    );
+    assert_eq!(mounts.len(), 1);
+    assert_eq!(
+        mounts[0].mount_point,
+        PathBuf::from("/checkout space/buck\\040out\ttab\nline")
+    );
 }
 
 #[test]

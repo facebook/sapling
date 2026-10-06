@@ -75,6 +75,7 @@ rust_library(
         "DEFAULT": [],
         "ovr_config//os:macos": [
             "fbsource//third-party/rust:psutil",
+            "//eden/scm/exec/eden_apfs_mount_helper:eden_apfs",
         ],
         "ovr_config//os:windows": [
             "//eden/scm/exec/scratch:mkscratch",

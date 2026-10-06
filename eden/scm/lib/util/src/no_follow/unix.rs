@@ -37,6 +37,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use std::vec::IntoIter;
 
 use nix::errno::Errno;
 
@@ -72,6 +73,7 @@ impl From<Metadata> for LiteMetadata {
 /// The root path passed to [`NoFollowRoot::new`] may contain symlinks. All
 /// subsequent operations are fd-relative to the opened root and refuse symlink
 /// traversal in the operation path's parent components.
+#[derive(Debug)]
 pub struct NoFollowRoot {
     root: OwnedFd,
 }
@@ -700,35 +702,18 @@ fn write_symlink(dir: BorrowedFd<'_>, leaf: &CString, target: &CString) -> io::R
 
 fn remove_dir_all(dir: BorrowedFd<'_>, leaf: CString) -> io::Result<()> {
     let child = retry_io(|| open_dir_no_follow_cstring(dir, &leaf))?;
-    let mut stack = vec![PendingDirRemove {
-        parent: dir.try_clone_to_owned()?,
-        name: leaf,
-        dir: child,
-        entered: false,
-    }];
-    // Keep directory enumeration separate from deletion. Mutating a directory
-    // while iterating its stream is platform-sensitive, and the pending stack
-    // needs owned names for postorder deletion. Reusing this scratch list avoids
-    // one Vec allocation per directory without borrowing names past `readdir`.
-    let mut names = Vec::new();
+    let mut stack = vec![PendingDirRemove::read(dir, leaf, child)?];
 
-    while let Some(mut pending) = stack.pop() {
-        if pending.entered {
+    // Open one child at a time, keeping handles only for the active ancestor chain.
+    while let Some(pending) = stack.last_mut() {
+        let Some(name) = pending.names.next() else {
             remove_empty_dir(pending.parent.as_fd(), &pending.name)?;
+            stack.pop();
             continue;
-        }
+        };
 
-        names.clear();
-        read_dir_names(pending.dir.as_fd().try_clone_to_owned()?, |name| {
-            names.push(name);
-            Ok(())
-        })?;
-        let child_parent = pending.dir.as_fd().try_clone_to_owned()?;
-        pending.entered = true;
-        stack.push(pending);
-
-        for name in names.drain(..) {
-            remove_child_all(child_parent.as_fd(), name, &mut stack)?;
+        if let Some(child) = remove_child_all(pending.dir.as_fd(), name)? {
+            stack.push(child);
         }
     }
 
@@ -739,38 +724,46 @@ struct PendingDirRemove {
     parent: OwnedFd,
     name: CString,
     dir: OwnedFd,
-    entered: bool,
+    names: IntoIter<CString>,
 }
 
-fn remove_child_all(
-    dir: BorrowedFd<'_>,
-    name: CString,
-    stack: &mut Vec<PendingDirRemove>,
-) -> io::Result<()> {
+impl PendingDirRemove {
+    fn read(parent: BorrowedFd<'_>, name: CString, dir: OwnedFd) -> io::Result<Self> {
+        // Finish enumeration before deleting entries: mutating a directory while
+        // iterating its stream is platform-sensitive.
+        let mut names = Vec::new();
+        read_dir_names(dir.as_fd().try_clone_to_owned()?, |name| {
+            names.push(name);
+            Ok(())
+        })?;
+        Ok(Self {
+            parent: parent.try_clone_to_owned()?,
+            name,
+            dir,
+            names: names.into_iter(),
+        })
+    }
+}
+
+fn remove_child_all(dir: BorrowedFd<'_>, name: CString) -> io::Result<Option<PendingDirRemove>> {
     let stat = match retry_io(|| fstatat(dir, &name, libc::AT_SYMLINK_NOFOLLOW)) {
         Ok(stat) => stat,
-        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(err) => return Err(err),
     };
 
     if stat.st_mode & libc::S_IFMT == libc::S_IFDIR {
         let child = match retry_io(|| open_dir_no_follow_cstring(dir, &name)) {
             Ok(child) => child,
-            Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
             Err(err) => return Err(err),
         };
-        stack.push(PendingDirRemove {
-            parent: dir.try_clone_to_owned()?,
-            name,
-            dir: child,
-            entered: false,
-        });
-        return Ok(());
+        return Ok(Some(PendingDirRemove::read(dir, name, child)?));
     }
 
     match retry_io(|| unlinkat(dir, &name, 0)) {
-        Ok(()) => Ok(()),
-        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
+        Ok(()) => Ok(None),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(err),
     }
 }

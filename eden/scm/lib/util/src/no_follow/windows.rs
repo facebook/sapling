@@ -112,6 +112,7 @@ use crate::path_error;
 /// The root path passed to [`NoFollowRoot::new`] may contain symlinks. Child
 /// directory and file operations are opened relative to the root handle and
 /// reject Windows reparse points.
+#[derive(Debug)]
 pub struct NoFollowRoot {
     root: OwnedHandle,
     root_ancestor_pins: Vec<OwnedHandle>,

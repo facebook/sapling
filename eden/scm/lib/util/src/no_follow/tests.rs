@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#[cfg(unix)]
+use std::env;
 use std::fs;
 use std::io;
 use std::io::Read;
@@ -13,6 +15,8 @@ use std::io::Write;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg(unix)]
+use std::process::Command;
 use std::sync::Arc;
 use std::sync::Barrier;
 use std::thread;
@@ -1260,6 +1264,46 @@ fn remove_dir_all_removes_tree() -> io::Result<()> {
     fs::write(dir.path().join("tree/file"), b"contents")?;
     fs::write(dir.path().join("tree/a/b/file"), b"contents")?;
     let root = NoFollowRoot::new(dir.path())?;
+
+    root.remove_dir_all(Path::new("tree"))?;
+
+    assert!(!dir.path().join("tree").exists());
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_dir_all_handles_wide_tree_with_low_fd_limit() -> io::Result<()> {
+    const CHILD_ENV: &str = "SAPLING_TEST_REMOVE_DIR_ALL_LOW_NOFILE";
+    if env::var_os(CHILD_ENV).is_none() {
+        // Resource limits are process-wide, so isolate this from parallel tests.
+        let output = Command::new(env::current_exe()?)
+            .args([
+                "--exact",
+                "no_follow::tests::remove_dir_all_handles_wide_tree_with_low_fd_limit",
+                "--nocapture",
+            ])
+            .env(CHILD_ENV, "1")
+            .output()?;
+        assert!(output.status.success(), "child test failed: {output:?}");
+        return Ok(());
+    }
+
+    let dir = tempdir()?;
+    fs::create_dir(dir.path().join("tree"))?;
+    for index in 0..128 {
+        fs::create_dir(dir.path().join(format!("tree/{index}")))?;
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+    let limit = libc::rlimit {
+        rlim_cur: 64,
+        rlim_max: 64,
+    };
+    // SAFETY: `limit` points to an initialized rlimit for the duration of the
+    // call. Only the isolated child process has its descriptor limit changed.
+    if unsafe { libc::setrlimit(libc::RLIMIT_NOFILE, &limit) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
 
     root.remove_dir_all(Path::new("tree"))?;
 

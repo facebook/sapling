@@ -6,13 +6,15 @@
  */
 
 use std::collections::BTreeMap;
-#[cfg(unix)]
 use std::ffi::OsStr;
 use std::fmt;
 #[cfg(unix)]
 use std::io::ErrorKind;
+#[cfg(target_os = "linux")]
+use std::os::linux::fs::MetadataExt as MetadataLinuxExt;
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
+use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -27,6 +29,7 @@ use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
+use hg_util::no_follow::NoFollowRoot;
 use hg_util::path::absolute;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
@@ -56,6 +59,8 @@ use crate::checkout::find_checkout;
 use crate::fsutil::forcefully_remove_dir_all;
 use crate::fsutil::remove_file;
 use crate::instance::EdenFsInstance;
+#[cfg(target_os = "linux")]
+use crate::mounttable::MountTableSnapshot;
 use crate::mounttable::read_mount_table;
 
 pub const REPO_SOURCE: &str = ".eden-redirections";
@@ -280,6 +285,89 @@ pub struct Redirection {
     pub target: Option<PathBuf>,
 }
 
+#[derive(Debug)]
+struct ValidatedRepoPath(PathBuf);
+
+impl TryFrom<&Path> for ValidatedRepoPath {
+    type Error = EdenFsError;
+
+    fn try_from(path: &Path) -> Result<Self> {
+        // Configured keys are kept verbatim, so `./buck-out` reaches here;
+        // `components()` only yields `.` as a leading component.
+        let normalized: PathBuf = path
+            .components()
+            .filter(|component| *component != Component::CurDir)
+            .collect();
+        if normalized.as_os_str().is_empty()
+            || normalized
+                .components()
+                .any(|component| !matches!(component, Component::Normal(_)))
+        {
+            return Err(EdenFsError::ConfigurationError(format!(
+                "redirection path {} must be a non-empty canonical path relative to the repository root",
+                path.display()
+            )));
+        }
+
+        Ok(Self(normalized))
+    }
+}
+
+impl AsRef<Path> for ValidatedRepoPath {
+    fn as_ref(&self) -> &Path {
+        &self.0
+    }
+}
+
+#[derive(Debug)]
+enum BackingCleanupAction {
+    ScratchDirectory {
+        parent: NoFollowRoot,
+        name: PathBuf,
+    },
+    #[cfg(target_os = "macos")]
+    ApfsVolume(eden_apfs::ManagedVolume),
+}
+
+/// A fully resolved action for deleting one managed redirection backing target.
+#[derive(Debug)]
+pub struct RedirectionBackingCleanupAction {
+    target: PathBuf,
+    action: BackingCleanupAction,
+}
+
+impl RedirectionBackingCleanupAction {
+    /// Return the resolved target represented by this cleanup action.
+    pub fn target(&self) -> &Path {
+        &self.target
+    }
+
+    /// Delete this resolved backing target.
+    pub fn execute(self) -> Result<()> {
+        match self.action {
+            BackingCleanupAction::ScratchDirectory { parent, name } => {
+                match parent.remove_dir_all(&name) {
+                    Ok(()) => Ok(()),
+                    // An already-absent target counts as success so an
+                    // interrupted cleanup can be retried.
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                    Err(error) => Err(EdenFsError::Other(anyhow!(
+                        "failed to delete redirection backing directory {}: {error}",
+                        self.target.display()
+                    ))),
+                }
+            }
+            #[cfg(target_os = "macos")]
+            BackingCleanupAction::ApfsVolume(volume) => {
+                match eden_apfs::ApfsUtil::global().delete_managed_volume(&volume)? {
+                    eden_apfs::DeleteManagedVolumeOutcome::Deleted
+                    | eden_apfs::DeleteManagedVolumeOutcome::NotFound => Ok(()),
+                }
+            }
+        }
+    }
+}
+
 impl Redirection {
     pub fn repo_path(&self) -> PathBuf {
         self.repo_path.clone()
@@ -426,7 +514,7 @@ impl Redirection {
     }
 
     #[cfg(unix)]
-    fn retry_mkscratch_after_reap(mkscratch: &Path, args: &[&str]) -> Result<MkscratchOutput> {
+    fn retry_mkscratch_after_reap(mkscratch: &Path, args: &[&OsStr]) -> Result<MkscratchOutput> {
         let mut child = Exec::cmd("/bin/sh")
             .arg("-c")
             .arg(MKSCRATCH_WRAPPER)
@@ -442,7 +530,7 @@ impl Redirection {
         Self::finish_mkscratch_recovery(|| communicator.read(), || child.wait())
     }
 
-    fn run_mkscratch(mkscratch: &Path, args: &[&str]) -> Result<MkscratchOutput> {
+    fn run_mkscratch(mkscratch: &Path, args: &[&OsStr]) -> Result<MkscratchOutput> {
         let output = Command::new(mkscratch).args(args).output();
         match output {
             Ok(output) => Ok(MkscratchOutput {
@@ -462,29 +550,40 @@ impl Redirection {
     }
 
     fn resolve_scratch_dir(
-        checkout: &EdenFsCheckout,
+        checkout_path: &Path,
         subdir: &Path,
+        no_create: bool,
+    ) -> Result<PathBuf> {
+        Self::resolve_scratch_path(
+            checkout_path,
+            Some(&Self::scratch_subdir().join(subdir)),
+            no_create,
+        )
+    }
+
+    fn resolve_scratch_path(
+        checkout_path: &Path,
+        subdir: Option<&Path>,
         no_create: bool,
     ) -> Result<PathBuf> {
         // This client-library function is also called in the EdenFS daemon by
         // EdenServiceHandler::listRedirections() through redirect_ffi.
         // TODO(zeyi): we can probably embed the logic from mkscratch here directly, without asking the CLI
         let mkscratch = Redirection::mkscratch_bin();
-        let checkout_path_str = checkout.path().to_string_lossy().into_owned();
-        let subdir = Redirection::scratch_subdir()
-            .join(subdir)
-            .to_string_lossy()
-            .into_owned();
         let mut args = Vec::with_capacity(5);
         if no_create {
-            args.push("--no-create");
+            args.push(OsStr::new("--no-create"));
         }
-        args.extend(["path", &checkout_path_str, "--subdir", &subdir]);
+        args.extend([OsStr::new("path"), checkout_path.as_os_str()]);
+        if let Some(subdir) = subdir {
+            args.extend([OsStr::new("--subdir"), subdir.as_os_str()]);
+        }
         let command = || {
+            let args: Vec<_> = args.iter().map(|arg| arg.to_string_lossy()).collect();
             format!(
                 "{} {}",
                 mkscratch.display(),
-                shlex::try_join(args.iter().copied())
+                shlex::try_join(args.iter().map(|arg| arg.as_ref()))
                     .unwrap_or_else(|_| "<undecodable arguments>".to_owned()),
             )
         };
@@ -543,7 +642,7 @@ impl Redirection {
                 Ok(Some(checkout.path().join(&self.repo_path)))
             }
             RedirectionType::Bind | RedirectionType::Symlink => Ok(Some(
-                Self::resolve_scratch_dir(checkout, &self.repo_path, no_create)?,
+                Self::resolve_scratch_dir(&checkout.path(), &self.repo_path, no_create)?,
             )),
         }
     }
@@ -1437,6 +1536,349 @@ pub fn get_effective_redirs_for_mount(
     Ok(redirections)
 }
 
+fn scratch_cleanup_action(
+    scratch_root: &Path,
+    target: PathBuf,
+) -> Result<Option<RedirectionBackingCleanupAction>> {
+    let relative_target = target.strip_prefix(scratch_root).with_context(|| {
+        format!(
+            "scratch target {} is outside scratch root {}",
+            target.display(),
+            scratch_root.display()
+        )
+    })?;
+    let relative_target = ValidatedRepoPath::try_from(relative_target)?;
+    let root_parent = scratch_root.parent().filter(|_| scratch_root.is_absolute());
+    let (Some(root_parent), Some(root_name)) = (root_parent, scratch_root.file_name()) else {
+        return Err(EdenFsError::ConfigurationError(format!(
+            "invalid scratch root {}",
+            scratch_root.display()
+        )));
+    };
+
+    let relative_target = Path::new(root_name).join(relative_target.as_ref());
+    let name = PathBuf::from(
+        relative_target
+            .file_name()
+            .expect("validated target has a name"),
+    );
+    let open_parent = || -> std::io::Result<NoFollowRoot> {
+        // Only the configured scratch prefix may traverse aliases. Keep the
+        // target's real parent open across checkout removal.
+        let parent = NoFollowRoot::new(root_parent)?.open_root(
+            relative_target
+                .parent()
+                .expect("target is below scratch root"),
+        )?;
+        if !parent.symlink_metadata(Some(&name))?.is_dir() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "scratch target must be a directory, not a symlink or file",
+            ));
+        }
+        Ok(parent)
+    };
+    let parent = match open_parent() {
+        Ok(parent) => parent,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(EdenFsError::Other(anyhow!(
+                "failed to open scratch target {} without following symlinks: {error}",
+                target.display()
+            )));
+        }
+    };
+    Ok(Some(RedirectionBackingCleanupAction {
+        target,
+        action: BackingCleanupAction::ScratchDirectory { parent, name },
+    }))
+}
+
+/// Plans backing cleanup while sharing a lazy mount-table snapshot across calls.
+/// Drop the planner before changing mounts; unmount verification needs fresh state.
+pub struct RedirectionBackingCleanupPlanner<'a> {
+    checkout_path: &'a Path,
+    scratch_root: Option<PathBuf>,
+    #[cfg(target_os = "linux")]
+    mounts: MountTableSnapshot,
+}
+
+impl<'a> RedirectionBackingCleanupPlanner<'a> {
+    /// Create a planner for one checkout's planning batch without reading mounts.
+    pub fn new(checkout_path: &'a Path) -> Self {
+        Self {
+            checkout_path,
+            scratch_root: None,
+            #[cfg(target_os = "linux")]
+            mounts: MountTableSnapshot::default(),
+        }
+    }
+
+    fn resolve_scratch_root(
+        &mut self,
+        resolve: impl FnOnce(&Path) -> Result<PathBuf>,
+    ) -> Result<PathBuf> {
+        if let Some(root) = &self.scratch_root {
+            return Ok(root.clone());
+        }
+        let root = resolve(self.checkout_path)?;
+        self.scratch_root = Some(root.clone());
+        Ok(root)
+    }
+
+    fn resolve_scratch_cleanup_target(
+        &mut self,
+        repo_path: &ValidatedRepoPath,
+        recorded_target: Option<&Path>,
+        resolved_target: &Path,
+    ) -> Result<PathBuf> {
+        let checkout_path = self.checkout_path;
+        if !resolved_target.is_absolute()
+            || resolved_target
+                .components()
+                .any(|component| matches!(component, Component::CurDir | Component::ParentDir))
+        {
+            return Err(EdenFsError::ConfigurationError(format!(
+                "resolved scratch target {} must be an absolute canonical path",
+                resolved_target.display()
+            )));
+        }
+        let Some(recorded_target) = recorded_target.filter(|target| !target.as_os_str().is_empty())
+        else {
+            let checkout_target = checkout_path.join(repo_path.as_ref());
+            match std::fs::symlink_metadata(&checkout_target) {
+                Ok(metadata) if metadata.file_type().is_symlink() => {
+                    let target = std::fs::read_link(&checkout_target).from_err()?;
+                    let target = checkout_target
+                        .parent()
+                        .expect("validated repo path has a parent")
+                        .join(target);
+                    return self.resolve_scratch_cleanup_target(
+                        repo_path,
+                        Some(&target),
+                        resolved_target,
+                    );
+                }
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error).from_err(),
+            }
+            #[cfg(target_os = "linux")]
+            if self.mounts.is_mount_point(&checkout_target)? {
+                let installed = std::fs::metadata(&checkout_target).from_err()?;
+                let resolved = std::fs::metadata(resolved_target).from_err().with_context(|| {
+                    format!(
+                        "cannot validate installed redirection {} against resolved scratch target {}",
+                        checkout_target.display(),
+                        resolved_target.display()
+                    )
+                })?;
+                if (installed.st_dev(), installed.st_ino())
+                    != (resolved.st_dev(), resolved.st_ino())
+                {
+                    return Err(EdenFsError::ConfigurationError(format!(
+                        "installed redirection {} does not match resolved managed scratch target {}",
+                        checkout_target.display(),
+                        resolved_target.display()
+                    )));
+                }
+            }
+            return Ok(resolved_target.to_path_buf());
+        };
+        if !recorded_target.is_absolute()
+            || recorded_target
+                .components()
+                .any(|component| matches!(component, Component::CurDir | Component::ParentDir))
+        {
+            return Err(EdenFsError::ConfigurationError(format!(
+                "recorded redirection target {} must be an absolute canonical path",
+                recorded_target.display()
+            )));
+        }
+
+        let checkout_target = checkout_path.join(repo_path.as_ref());
+        if recorded_target == checkout_target {
+            return Ok(resolved_target.to_path_buf());
+        }
+        let canonical_checkout = std::fs::canonicalize(checkout_path)
+            .from_err()
+            .with_context(|| {
+                format!(
+                    "failed to canonicalize checkout path {}",
+                    checkout_path.display()
+                )
+            })?;
+        match std::fs::canonicalize(recorded_target) {
+            Ok(canonical_target)
+                if canonical_target == canonical_checkout.join(repo_path.as_ref()) =>
+            {
+                return Ok(resolved_target.to_path_buf());
+            }
+            Ok(canonical_recorded_target) => match std::fs::canonicalize(resolved_target) {
+                Ok(canonical_resolved_target)
+                    if canonical_recorded_target == canonical_resolved_target =>
+                {
+                    return Ok(resolved_target.to_path_buf());
+                }
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => {
+                    return Err(EdenFsError::Other(anyhow!(
+                        "failed to canonicalize resolved scratch target {}: {error}",
+                        resolved_target.display()
+                    )));
+                }
+            },
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if recorded_target == resolved_target
+                    || std::fs::symlink_metadata(resolved_target)
+                        .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound)
+                {
+                    return Ok(resolved_target.to_path_buf());
+                }
+            }
+            Err(error) => {
+                return Err(EdenFsError::Other(anyhow!(
+                    "failed to canonicalize recorded redirection target {}: {error}",
+                    recorded_target.display()
+                )));
+            }
+        }
+
+        Err(EdenFsError::ConfigurationError(format!(
+            "recorded redirection target {} does not match resolved managed scratch target {}",
+            recorded_target.display(),
+            resolved_target.display()
+        )))
+    }
+}
+
+// Also compiled under cfg(test) so the path validation is exercised on every
+// platform, not just macOS.
+#[cfg(any(test, target_os = "macos"))]
+fn resolve_apfs_cleanup_target(
+    checkout_path: &Path,
+    repo_path: &ValidatedRepoPath,
+) -> Result<PathBuf> {
+    let canonical_checkout = std::fs::canonicalize(checkout_path)
+        .from_err()
+        .with_context(|| {
+            format!(
+                "failed to canonicalize checkout path {}",
+                checkout_path.display()
+            )
+        })?;
+    let expected_target = canonical_checkout.join(repo_path.as_ref());
+    if std::fs::symlink_metadata(&expected_target)
+        .is_ok_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Ok(expected_target);
+    }
+    match std::fs::canonicalize(&expected_target) {
+        Ok(canonical_target) if canonical_target == expected_target => Ok(canonical_target),
+        Ok(canonical_target) => Err(EdenFsError::ConfigurationError(format!(
+            "APFS redirection path {} resolves to {} instead of its canonical checkout-relative location",
+            expected_target.display(),
+            canonical_target.display()
+        ))),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(expected_target),
+        Err(error) => Err(EdenFsError::Other(anyhow!(
+            "failed to canonicalize APFS redirection path {}: {error}",
+            expected_target.display()
+        ))),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn resolve_apfs_cleanup_action(
+    checkout_path: &Path,
+    repo_path: &ValidatedRepoPath,
+) -> Result<Option<RedirectionBackingCleanupAction>> {
+    let target = resolve_apfs_cleanup_target(checkout_path, repo_path)?;
+    let volume_name = eden_apfs::encode_mount_point_as_volume_name(&target);
+    let volume = eden_apfs::ApfsUtil::global()
+        .resolve_managed_volume(&volume_name)
+        .with_context(|| {
+            format!(
+                "failed to resolve APFS volume for redirection {}",
+                repo_path.as_ref().display()
+            )
+        })?;
+    Ok(volume.map(|volume| RedirectionBackingCleanupAction {
+        target,
+        action: BackingCleanupAction::ApfsVolume(volume),
+    }))
+}
+
+/// Resolve and validate cleanup actions for one batch of redirection backing targets.
+/// Use [`RedirectionBackingCleanupPlanner`] to share mount lookups across calls
+/// in the same planning batch.
+pub fn plan_redirection_backing_cleanup(
+    checkout_path: &Path,
+    redirections: &BTreeMap<PathBuf, Redirection>,
+) -> Result<Vec<RedirectionBackingCleanupAction>> {
+    RedirectionBackingCleanupPlanner::new(checkout_path).plan(redirections)
+}
+
+impl RedirectionBackingCleanupPlanner<'_> {
+    /// Resolve and validate cleanup actions for all redirection backing targets.
+    pub fn plan(
+        &mut self,
+        redirections: &BTreeMap<PathBuf, Redirection>,
+    ) -> Result<Vec<RedirectionBackingCleanupAction>> {
+        let checkout_path = self.checkout_path;
+        if !cfg!(any(
+            target_os = "linux",
+            target_os = "macos",
+            target_os = "windows"
+        )) {
+            return Err(EdenFsError::Other(anyhow!(
+                "redirection backing cleanup is not supported on {}",
+                std::env::consts::OS
+            )));
+        }
+        // Unknown redirections are unconfigured bind mounts with no managed backing;
+        // checkout removal still unmounts them.
+        let mut redirections = redirections
+            .values()
+            .filter(|redirection| redirection.redir_type != RedirectionType::Unknown)
+            .peekable();
+        if redirections.peek().is_none() {
+            return Ok(Vec::new());
+        }
+        let scratch_root =
+            self.resolve_scratch_root(|path| Redirection::resolve_scratch_path(path, None, true))?;
+        redirections.try_fold(Vec::new(), |mut actions, redirection| {
+            let repo_path = ValidatedRepoPath::try_from(redirection.repo_path.as_path())
+                .with_context(|| {
+                    format!(
+                        "failed to validate cleanup path for redirection {}",
+                        redirection.repo_path.display()
+                    )
+                })?;
+            #[cfg(target_os = "macos")]
+            if let Some(action) = resolve_apfs_cleanup_action(checkout_path, &repo_path)? {
+                actions.push(action);
+            }
+
+            // Creation passes the configured key to mkscratch, whose flat layout keeps `.`
+            // components, so `./buck-out` and `buck-out` have different backing directories.
+            let resolved_target =
+                Redirection::resolve_scratch_dir(checkout_path, &redirection.repo_path, true)?;
+            let target = self.resolve_scratch_cleanup_target(
+                &repo_path,
+                redirection.target.as_deref(),
+                &resolved_target,
+            )?;
+            if let Some(action) = scratch_cleanup_action(&scratch_root, target)? {
+                actions.push(action);
+            }
+
+            Ok(actions)
+        })
+    }
+}
+
 /// Computes the complete set of redirections that are currently in effect.
 /// This is based on the explicitly configured settings but also factors in
 /// effective configuration by reading the mount table.
@@ -1842,6 +2284,7 @@ pub async fn try_add_redirection(
 pub mod scratch {
     use std::collections::BTreeSet;
     use std::collections::VecDeque;
+    use std::ffi::OsStr;
     use std::fs;
     use std::fs::DirEntry;
     use std::path::Path;
@@ -2032,13 +2475,14 @@ pub mod scratch {
         };
         let home_dir_str = home_dir.to_string_lossy();
 
-        let mkscratch_args = vec![
+        let mkscratch_args = [
             "--no-create",
             "path",
             &*home_dir_str,
             "--subdir",
             &*scratch_subdir_str,
-        ];
+        ]
+        .map(OsStr::new);
         let mkscratch_res = Redirection::run_mkscratch(&mkscratch, &mkscratch_args);
 
         let scratch_path = match mkscratch_res {
@@ -2238,6 +2682,9 @@ pub mod scratch {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    #[cfg(unix)]
+    use std::ffi::OsStr;
     #[cfg(unix)]
     use std::io::ErrorKind;
     #[cfg(unix)]
@@ -2267,13 +2714,18 @@ mod tests {
     use crate::redirect::MkscratchExitStatus;
     use crate::redirect::REPO_SOURCE;
     use crate::redirect::Redirection;
+    use crate::redirect::RedirectionBackingCleanupPlanner;
     use crate::redirect::RedirectionState;
     use crate::redirect::RedirectionType;
     use crate::redirect::RepoPathDisposition;
     #[cfg(unix)]
     use crate::redirect::SubprocessExitStatus;
+    use crate::redirect::ValidatedRepoPath;
+    use crate::redirect::plan_redirection_backing_cleanup;
     use crate::redirect::redirection_needs_repair;
     use crate::redirect::redirection_uses_symlink;
+    use crate::redirect::resolve_apfs_cleanup_target;
+    use crate::redirect::scratch_cleanup_action;
 
     #[test]
     fn test_broken_redirection_states_need_repair() {
@@ -2481,7 +2933,7 @@ mod tests {
     fn test_mkscratch_recovery_wrapper_reports_command_result() {
         let success = Redirection::retry_mkscratch_after_reap(
             Path::new("/bin/sh"),
-            &["-c", "printf '/tmp/scratch\\n'; printf warning >&2"],
+            &["-c", "printf '/tmp/scratch\\n'; printf warning >&2"].map(OsStr::new),
         )
         .expect("successful retry should be recognized");
         assert!(matches!(
@@ -2494,7 +2946,7 @@ mod tests {
         assert!(
             Redirection::retry_mkscratch_after_reap(
                 Path::new("/bin/sh"),
-                &["-c", "printf failure >&2; exit 7"],
+                &["-c", "printf failure >&2; exit 7"].map(OsStr::new),
             )
             .is_err(),
             "a failed retry must remain a failure",
@@ -2727,5 +3179,257 @@ mod tests {
                 Token::StructEnd,
             ],
         );
+    }
+
+    #[test]
+    fn cleanup_reuses_scratch_root_and_retries_failed_resolution() {
+        let checkout = Path::new("checkout");
+        let mut planner = RedirectionBackingCleanupPlanner::new(checkout);
+        let attempts = std::cell::Cell::new(0);
+        let resolve = |path: &Path| {
+            assert_eq!(path, checkout);
+            attempts.set(attempts.get() + 1);
+            if attempts.get() == 1 {
+                return Err(edenfs_error::EdenFsError::Other(anyhow::anyhow!(
+                    "scratch resolution failed"
+                )));
+            }
+            Ok(PathBuf::from("scratch"))
+        };
+
+        assert!(planner.resolve_scratch_root(resolve).is_err());
+        for _ in 0..3 {
+            assert_eq!(
+                planner.resolve_scratch_root(resolve).unwrap(),
+                Path::new("scratch")
+            );
+        }
+        assert_eq!(attempts.get(), 2);
+    }
+
+    #[test]
+    fn cleanup_accepts_matching_recorded_scratch_target() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let checkout = temp_dir.path().join("checkout");
+        std::fs::create_dir(&checkout).expect("checkout directory should be created");
+        let repo_path = ValidatedRepoPath::try_from(Path::new("generated/output"))
+            .expect("repo-relative path should be valid");
+        let resolved_target = temp_dir.path().join("scratch/generated-output");
+        std::fs::create_dir_all(&resolved_target).expect("scratch directory should be created");
+
+        assert_eq!(
+            RedirectionBackingCleanupPlanner::new(&checkout)
+                .resolve_scratch_cleanup_target(
+                    &repo_path,
+                    Some(&resolved_target),
+                    &resolved_target,
+                )
+                .expect("recorded scratch target should be valid"),
+            resolved_target
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cleanup_validates_unrecorded_symlink_target() {
+        let temp_dir = tempdir().unwrap();
+        let checkout = temp_dir.path().join("checkout");
+        let installed = temp_dir.path().join("scratch-before");
+        let resolved = temp_dir.path().join("scratch-after");
+        std::fs::create_dir(&checkout).unwrap();
+        std::fs::create_dir(&installed).unwrap();
+        let repo_path = ValidatedRepoPath::try_from(Path::new("buck-out")).unwrap();
+        let link = checkout.join(repo_path.as_ref());
+        std::os::unix::fs::symlink(&installed, &link).unwrap();
+
+        for recorded in [None, Some(Path::new(""))] {
+            let error = RedirectionBackingCleanupPlanner::new(&checkout)
+                .resolve_scratch_cleanup_target(&repo_path, recorded, &resolved)
+                .expect_err("a changed scratch template must not abandon the installed backing");
+            assert!(
+                error
+                    .to_string()
+                    .contains("does not match resolved managed scratch target")
+            );
+        }
+        assert_eq!(std::fs::read_link(&link).unwrap(), installed);
+        assert!(installed.exists());
+        assert!(!resolved.exists());
+        assert_eq!(
+            RedirectionBackingCleanupPlanner::new(&checkout)
+                .resolve_scratch_cleanup_target(&repo_path, None, &installed)
+                .unwrap(),
+            installed
+        );
+        std::fs::remove_dir(&installed).unwrap();
+        assert_eq!(
+            RedirectionBackingCleanupPlanner::new(&checkout)
+                .resolve_scratch_cleanup_target(&repo_path, None, &installed)
+                .unwrap(),
+            installed,
+            "a matching dangling symlink needs no backing cleanup"
+        );
+    }
+
+    #[test]
+    fn cleanup_rejects_unrelated_recorded_scratch_target() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let checkout = temp_dir.path().join("checkout");
+        std::fs::create_dir(&checkout).expect("checkout directory should be created");
+        let repo_path = ValidatedRepoPath::try_from(Path::new("generated/output"))
+            .expect("repo-relative path should be valid");
+        let resolved_target = temp_dir.path().join("scratch/generated-output");
+        let unrelated_target = temp_dir.path().join("unrelated-data");
+        std::fs::create_dir(&unrelated_target).expect("unrelated target should be created");
+
+        let error = RedirectionBackingCleanupPlanner::new(&checkout)
+            .resolve_scratch_cleanup_target(&repo_path, Some(&unrelated_target), &resolved_target)
+            .expect_err("unrelated recorded target should be rejected");
+
+        assert!(
+            error
+                .to_string()
+                .contains("does not match resolved managed scratch target"),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn cleanup_skips_unknown_redirections() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let redirections = BTreeMap::from([(
+            PathBuf::from("stray-bind"),
+            Redirection {
+                repo_path: PathBuf::from("stray-bind"),
+                redir_type: RedirectionType::Unknown,
+                target: None,
+                source: "mount".to_string(),
+                state: RedirectionState::UnknownMount,
+            },
+        )]);
+
+        assert!(
+            plan_redirection_backing_cleanup(temp_dir.path(), &redirections)
+                .expect("unknown redirections have no managed backing to plan")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn cleanup_does_not_treat_checkout_target_as_scratch() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let checkout = temp_dir.path().join("checkout");
+        std::fs::create_dir(&checkout).expect("checkout directory should be created");
+        let repo_path = ValidatedRepoPath::try_from(Path::new("generated/output"))
+            .expect("repo-relative path should be valid");
+        let checkout_target = checkout.join(repo_path.as_ref());
+        let resolved_target = temp_dir.path().join("scratch/generated-output");
+
+        assert_eq!(
+            RedirectionBackingCleanupPlanner::new(&checkout)
+                .resolve_scratch_cleanup_target(
+                    &repo_path,
+                    Some(&checkout_target),
+                    &resolved_target,
+                )
+                .expect("checkout-relative APFS target should be valid"),
+            resolved_target
+        );
+    }
+
+    #[test]
+    fn cleanup_paths_must_be_canonical_and_repo_relative() {
+        for path in ["", ".", "../outside", "nested/../../outside", "/outside"] {
+            let error = ValidatedRepoPath::try_from(Path::new(path))
+                .expect_err("unsafe cleanup path should be rejected");
+            assert!(
+                error.to_string().contains("canonical path relative"),
+                "unexpected error for {path}: {error:#}"
+            );
+        }
+
+        let path = ValidatedRepoPath::try_from(Path::new("generated/output"))
+            .expect("nested repo-relative path should be valid");
+        assert_eq!(path.as_ref(), Path::new("generated/output"));
+
+        let path = ValidatedRepoPath::try_from(Path::new("./buck-out"))
+            .expect("dot-prefixed configured path should be valid");
+        assert_eq!(path.as_ref(), Path::new("buck-out"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn apfs_cleanup_target_rejects_symlink_traversal() {
+        let checkout = tempdir().expect("temporary checkout should be created");
+        let outside = tempdir().expect("external directory should be created");
+        std::fs::create_dir(outside.path().join("buck-out"))
+            .expect("external target should be created");
+        std::os::unix::fs::symlink(outside.path(), checkout.path().join("generated"))
+            .expect("parent symlink should be created");
+        let repo_path = ValidatedRepoPath::try_from(Path::new("generated/buck-out"))
+            .expect("repo-relative path should be valid");
+
+        let error = resolve_apfs_cleanup_target(checkout.path(), &repo_path)
+            .expect_err("symlink traversal should be rejected");
+        assert!(
+            error
+                .to_string()
+                .contains("instead of its canonical checkout-relative location"),
+            "unexpected error: {error:#}"
+        );
+    }
+
+    #[test]
+    fn scratch_cleanup_action_deletes_only_resolved_target() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let target = temp_dir.path().join("backing");
+        std::fs::create_dir(&target).expect("backing directory should be created");
+        std::fs::write(target.join("artifact"), "data").expect("backing file should be created");
+        let action = scratch_cleanup_action(temp_dir.path(), target.clone())
+            .expect("scratch target should be safe")
+            .expect("scratch target should exist");
+
+        action.execute().expect("scratch cleanup should succeed");
+
+        assert!(
+            !target.exists(),
+            "resolved backing target should be deleted"
+        );
+        assert!(
+            temp_dir.path().exists(),
+            "cleanup must not delete the target parent"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scratch_cleanup_rejects_symlinked_root_ancestor_and_target() {
+        for link_path in ["scratch", "scratch/generated", "scratch/generated/output"] {
+            let temp_dir = tempdir().expect("temporary directory should be created");
+            let outside = temp_dir.path().join("unrelated");
+            let suffix = Path::new("scratch/generated/output")
+                .strip_prefix(link_path)
+                .expect("link is an ancestor of the target");
+            let external_target = outside.join(suffix);
+            std::fs::create_dir_all(&external_target)
+                .expect("unrelated directory should be created");
+            let marker = external_target.join("artifact");
+            std::fs::write(&marker, "keep").expect("unrelated file should be created");
+            let link = temp_dir.path().join(link_path);
+            std::fs::create_dir_all(link.parent().expect("link has a parent"))
+                .expect("link parent should be created");
+            std::os::unix::fs::symlink(&outside, &link).expect("symlink should be created");
+
+            let error = scratch_cleanup_action(
+                &temp_dir.path().join("scratch"),
+                temp_dir.path().join("scratch/generated/output"),
+            )
+            .expect_err("symlink traversal should be rejected during planning");
+            assert!(error.to_string().contains("without following symlinks"));
+            assert_eq!(
+                std::fs::read_to_string(&marker).expect("unrelated data must survive"),
+                "keep"
+            );
+        }
     }
 }
