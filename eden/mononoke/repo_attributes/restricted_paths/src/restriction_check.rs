@@ -31,6 +31,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
 use tokio::task::JoinHandle;
 
@@ -890,6 +891,72 @@ pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
     check_manifest_restriction_infos(ctx, restricted_paths, restriction_info).await
 }
 
+/// Request metadata that the request-local filters of an enforcement
+/// condition set are matched against.
+///
+/// Built once per access so every condition set is evaluated against the same
+/// snapshot of the request.
+struct RequestFacts<'a> {
+    entry_point: Option<String>,
+    server_side_tenting: bool,
+    machine_tier: Option<&'a str>,
+    build_rule: Option<&'static str>,
+    identities: &'a MononokeIdentitySet,
+    is_agent: bool,
+}
+
+impl<'a> RequestFacts<'a> {
+    fn new(ctx: &'a CoreContext) -> Self {
+        let metadata = ctx.metadata();
+        Self {
+            entry_point: metadata
+                .client_request_info()
+                .map(|cri| cri.entry_point.to_string()),
+            server_side_tenting: ctx.session().server_side_tenting(),
+            machine_tier: metadata.machine_tier(),
+            build_rule: server_build_rule(),
+            identities: metadata.identities(),
+            is_agent: metadata.likely_an_agent(),
+        }
+    }
+
+    /// Whether every non-empty request-local filter of `set` matches this
+    /// request.
+    ///
+    /// Only covers the filters that can be decided from request metadata:
+    /// `always_enabled` and `restriction_acls` are the caller's to evaluate.
+    fn matches_request_filters(&self, set: &EnforcementConditionSet) -> bool {
+        let entry_point_matches = set.entry_points.is_empty()
+            || self
+                .entry_point
+                .as_ref()
+                .is_some_and(|entry_point| set.entry_points.contains(entry_point));
+        let machine_tier_matches = set.machine_tiers.is_empty()
+            || self
+                .machine_tier
+                .is_some_and(|tier| set.machine_tiers.iter().any(|c| c == tier));
+        let build_rule_matches = set.build_rules.is_empty()
+            || self
+                .build_rule
+                .is_some_and(|rule| set.build_rules.iter().any(|c| c == rule));
+        let identity_regex_matches = set.client_identity_regexes.is_empty()
+            || self.identities.iter().any(|identity| {
+                let identity = identity.to_string();
+                set.client_identity_regexes
+                    .iter()
+                    .any(|re| re.is_match(&identity))
+            });
+        let is_agent_matches = set.is_agent.is_none_or(|want| want == self.is_agent);
+
+        entry_point_matches
+            && machine_tier_matches
+            && build_rule_matches
+            && identity_regex_matches
+            && is_agent_matches
+            && (!set.require_client_request_flag || self.server_side_tenting)
+    }
+}
+
 /// Apply the request-local portion of `enforcement_condition_sets`.
 ///
 /// This is intentionally split from restriction ACL matching: request metadata
@@ -901,54 +968,12 @@ pub(crate) fn pre_filter_condition_sets<'a>(
     ctx: &CoreContext,
     condition_sets: &'a [EnforcementConditionSet],
 ) -> PreFilterResult<'a> {
-    let client_entry_point = ctx
-        .metadata()
-        .client_request_info()
-        .map(|cri| cri.entry_point.to_string());
-    let server_side_tenting = ctx.session().server_side_tenting();
-    let client_machine_tier = ctx.metadata().machine_tier();
-    let server_build_rule = server_build_rule();
-    let caller_is_agent = ctx.metadata().likely_an_agent();
-
+    let request = RequestFacts::new(ctx);
     let candidates = condition_sets
         .iter()
         .filter(|set| {
-            if !condition_set_has_active_filter(set) {
-                return false;
-            }
-
-            if set.always_enabled {
-                return true;
-            }
-
-            let entry_point_matches = set.entry_points.is_empty()
-                || client_entry_point.as_ref().is_some_and(|entry_point| {
-                    set.entry_points
-                        .iter()
-                        .any(|candidate| candidate == entry_point)
-                });
-
-            let machine_tier_matches = set.machine_tiers.is_empty()
-                || client_machine_tier
-                    .is_some_and(|tier| set.machine_tiers.iter().any(|c| c == tier));
-
-            let build_rule_matches = set.build_rules.is_empty()
-                || server_build_rule.is_some_and(|rule| set.build_rules.iter().any(|c| c == rule));
-            let identity_regex_matches = set.client_identity_regexes.is_empty()
-                || ctx.metadata().identities().iter().any(|identity| {
-                    let identity_str = identity.to_string();
-                    set.client_identity_regexes
-                        .iter()
-                        .any(|re| re.is_match(&identity_str))
-                });
-            let is_agent_matches = set.is_agent.is_none_or(|want| want == caller_is_agent);
-
-            entry_point_matches
-                && machine_tier_matches
-                && build_rule_matches
-                && identity_regex_matches
-                && is_agent_matches
-                && (!set.require_client_request_flag || server_side_tenting)
+            condition_set_has_active_filter(set)
+                && (set.always_enabled || request.matches_request_filters(set))
         })
         .collect::<Vec<_>>();
 
