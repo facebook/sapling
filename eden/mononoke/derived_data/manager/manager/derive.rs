@@ -158,6 +158,7 @@ impl DerivedDataManager {
     /// the derivation of `heads` to complete, and derive them.
     /// The derivation will be batched. Unless otherwise configured here with `override_batch_size`, the
     /// batch_size will be read from the configuration for this derived data type.
+    /// Batches can span merge commits and preserve topological order.
     /// Dependent types will be derived ahead of time.
     /// Return how many changesets were actually derived to derive the heads.
     pub async fn derive_heads<Derivable>(
@@ -209,6 +210,9 @@ impl DerivedDataManager {
                 let derivation_ctx = self.derivation_context(rederivation);
                 let batch_size =
                     override_batch_size.unwrap_or(derivation_ctx.batch_size::<Derivable>());
+                if batch_size == 0 {
+                    return Err(anyhow!("derivation batch size must be greater than zero").into());
+                }
                 let rederivation = derivation_ctx.rederivation.clone();
 
                 let mut gap_slices: Vec<Vec<ChangesetId>> = Vec::new();
@@ -265,18 +269,20 @@ impl DerivedDataManager {
                         // No gaps — stream current slices (which fill the
                         // deepest gap), then process accumulated slices
                         // from earlier iterations in reverse order.
-                        let mut slices_stream = std::pin::pin!(slices_stream);
-                        while let Some(batch) = slices_stream.try_next().await? {
-                            count += batch.len() as u64;
-                            self.derive_exactly_batch::<Derivable>(
-                                &ctx,
-                                batch,
-                                rederivation.clone(),
+                        let batches_stream = slices_stream
+                            .chain(stream::iter(gap_slices.into_iter().rev().map(Ok)))
+                            // Segment boundaries need not force a blob and mapping flush.
+                            // Combine them into bounded batches, preserving their order.
+                            .map_ok(|slice| stream::iter(slice.into_iter().map(Ok::<_, Error>)))
+                            .try_flatten()
+                            .try_chunks(
+                                batch_size
+                                    .try_into()
+                                    .context("derivation batch size exceeds usize")?,
                             )
-                            .await?;
-                        }
-                        gap_slices.reverse();
-                        for batch in gap_slices {
+                            .map_err(|error| error.1);
+                        let mut batches_stream = std::pin::pin!(batches_stream);
+                        while let Some(batch) = batches_stream.try_next().await? {
                             count += batch.len() as u64;
                             self.derive_exactly_batch::<Derivable>(
                                 &ctx,
