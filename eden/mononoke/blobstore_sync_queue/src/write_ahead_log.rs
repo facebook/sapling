@@ -497,6 +497,7 @@ impl SqlShardedConstruct for SqlBlobstoreWalBuilder {
                     free_connections: 1,
                     max_delay: Duration::from_secs(5),
                     max_threshold: DEL_CHUNK,
+                    cap_batch_at_threshold: false,
                 }),
                 Arc::new(RendezVousStats::new("wal_delete".to_owned())),
             ),

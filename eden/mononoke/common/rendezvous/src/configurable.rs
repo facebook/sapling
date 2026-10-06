@@ -23,6 +23,7 @@ use crate::RendezVousOptions;
 /// Further parameters define what we do when these are exhausted:
 /// - max_threshold: number of keys after which we'll dispatch a full-size batch.
 /// - max_delay: controls how long we wait before dispatching a small batch.
+/// - cap_batch_at_threshold: whether a batch that reached max_threshold stops accepting keys.
 ///
 /// Note that if a batch departs when either of those criteria are met, it will not count against
 /// the count of free connections: free connections are just connections not subject to batching,
@@ -33,6 +34,7 @@ pub struct ConfigurableRendezVousController {
     semaphore: Arc<Semaphore>,
     max_delay: Duration,
     max_threshold: usize,
+    cap_batch_at_threshold: bool,
 }
 
 impl ConfigurableRendezVousController {
@@ -41,6 +43,7 @@ impl ConfigurableRendezVousController {
             semaphore: Arc::new(Semaphore::new(opts.free_connections)),
             max_delay: opts.max_delay,
             max_threshold: opts.max_threshold,
+            cap_batch_at_threshold: opts.cap_batch_at_threshold,
         }
     }
 }
@@ -60,5 +63,9 @@ impl RendezVousController for ConfigurableRendezVousController {
 
     fn early_dispatch_threshold(&self) -> usize {
         self.max_threshold
+    }
+
+    fn cap_batch_at_threshold(&self) -> bool {
+        self.cap_batch_at_threshold
     }
 }

@@ -29,6 +29,7 @@ struct MockController {
     arrive: Arc<Notify>,
     depart: Arc<Notify>,
     threshold: usize,
+    cap_batch_at_threshold: bool,
 }
 
 impl MockController {
@@ -37,6 +38,14 @@ impl MockController {
             arrive: Arc::new(Notify::new()),
             depart: Arc::new(Notify::new()),
             threshold,
+            cap_batch_at_threshold: false,
+        }
+    }
+
+    pub fn new_capped(threshold: usize) -> Self {
+        Self {
+            cap_batch_at_threshold: true,
+            ..Self::new(threshold)
         }
     }
 
@@ -59,6 +68,10 @@ impl RendezVousController for MockController {
 
     fn early_dispatch_threshold(&self) -> usize {
         self.threshold
+    }
+
+    fn cap_batch_at_threshold(&self) -> bool {
+        self.cap_batch_at_threshold
     }
 }
 
@@ -181,6 +194,39 @@ async fn test_unbatched(fb: FacebookInit) -> Result<(), Error> {
     assert!(futures::poll!(&mut f1).is_pending());
 
     assert_eq!(store.calls(), 1);
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_batch_cap(fb: FacebookInit) -> Result<(), Error> {
+    let store = MockStore::new();
+    let controller = MockController::new_capped(2);
+
+    let rdv = RendezVous::new(controller.clone(), stats());
+
+    let f1 = rdv
+        .dispatch(fb, hashset! { 1 }, || store.callback())
+        .boxed();
+    let f2 = rdv
+        .dispatch(fb, hashset! { 2 }, || store.callback())
+        .boxed();
+
+    // The first batch reached the threshold with f2 and is closed, so f3 starts a new batch
+    // instead of joining it.
+    let mut f3 = rdv
+        .dispatch(fb, hashset! { 3 }, || store.callback())
+        .boxed();
+
+    assert_eq!(f1.await?, hashmap! { 1 => Some(1) });
+    assert_eq!(f2.await?, hashmap! { 2 => Some(2) });
+    assert_eq!(store.calls(), 1);
+
+    // The new batch is still waiting to be released.
+    assert!(futures::poll!(&mut f3).is_pending());
+    controller.release().await;
+    assert_eq!(f3.await?, hashmap! { 3 => Some(3) });
+    assert_eq!(store.calls(), 2);
 
     Ok(())
 }

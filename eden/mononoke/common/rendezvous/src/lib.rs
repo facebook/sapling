@@ -35,6 +35,11 @@ pub struct RendezVousOptions {
 
     /// Number of keys after which we'll dispatch a full-size batch.
     pub max_threshold: usize,
+
+    /// Whether a batch stops accepting keys once it reaches `max_threshold`.
+    /// Otherwise keys keep joining a batch until its query actually starts,
+    /// so a burst of requests can end up as one very large query.
+    pub cap_batch_at_threshold: bool,
 }
 
 impl Default for RendezVousOptions {
@@ -43,6 +48,7 @@ impl Default for RendezVousOptions {
             free_connections: 5,
             max_delay: Duration::from_millis(5),
             max_threshold: 50,
+            cap_batch_at_threshold: false,
         }
     }
 }
@@ -53,6 +59,7 @@ impl RendezVousOptions {
             free_connections: 0,
             max_delay: Duration::from_millis(0),
             max_threshold: 0,
+            cap_batch_at_threshold: false,
         }
     }
 }

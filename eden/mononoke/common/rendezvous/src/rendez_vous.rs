@@ -44,12 +44,22 @@ pub trait RendezVousController: Send + Sync + 'static {
     /// If our number of queued keys exceeds this threshold, then we'll dispatch the query even if
     /// wait_for_dispatch hasn't returned yet.
     fn early_dispatch_threshold(&self) -> usize;
+
+    /// If true, a batch that has reached early_dispatch_threshold stops accepting keys and later
+    /// callers start a new batch. Otherwise keys keep joining the batch until its query starts.
+    fn cap_batch_at_threshold(&self) -> bool {
+        false
+    }
 }
+
+/// The keys of a batch. They are taken when the batch's query starts, after the batch has been
+/// removed from staging, so a batch that is in staging always has keys.
+type BatchKeys<K> = Arc<Mutex<Option<HashSet<K>>>>;
 
 struct RendezVousInner<K, V, C> {
     staging: Mutex<
         Option<(
-            HashSet<K>,
+            BatchKeys<K>,
             Shared<BoxFuture<'static, Result<Arc<HashMap<K, V>>, SharedError>>>,
             Arc<Notify>,
         )>,
@@ -100,6 +110,29 @@ impl<K, V, C> RendezVous<K, V, C> {
     }
 }
 
+impl<K, V, C> RendezVousInner<K, V, C>
+where
+    K: Eq + Hash,
+{
+    /// Takes the keys of a batch so that its query can run. Callers arriving from now on start
+    /// a new batch.
+    fn take_batch_keys(&self, batch_keys: &BatchKeys<K>) -> HashSet<K> {
+        let mut staging = self.staging.lock().expect("Poisoned lock");
+        let still_staged = matches!(
+            &*staging,
+            Some((staged, _, _)) if Arc::ptr_eq(staged, batch_keys)
+        );
+        if still_staged {
+            *staging = None;
+        }
+        batch_keys
+            .lock()
+            .expect("Poisoned lock")
+            .take()
+            .expect("Batch keys cannot be empty if a task was dispatched")
+    }
+}
+
 impl<K, V, C> RendezVous<K, V, C>
 where
     K: Clone + Eq + Hash + Send + Sync + 'static,
@@ -142,15 +175,17 @@ where
 
         let mut guard = self.inner.staging.lock().expect("Poisoned lock");
 
-        let fut = match &mut *guard {
+        let (fut, close_batch) = match &mut *guard {
             guard @ None => {
                 let inner = self.inner.clone();
                 let f1 = f0();
 
                 let notify = Arc::new(Notify::new());
+                let batch_keys: BatchKeys<K> = Arc::new(Mutex::new(Some(keys.clone())));
 
                 let fut = {
                     let notify = notify.clone();
+                    let batch_keys = batch_keys.clone();
 
                     async move {
                         let token = futures::select! {
@@ -165,12 +200,7 @@ where
                         }
 
                         let ret = mononoke::spawn_task(async move {
-                            let (keys, _, _) = inner
-                                .staging
-                                .lock()
-                                .expect("Poisoned lock")
-                                .take()
-                                .expect("Staging cannot be empty if a task was dispatched");
+                            let keys = inner.take_batch_keys(&batch_keys);
 
                             let ret = dispatch_with_stats(fb, f1, keys, &inner.stats).await?;
 
@@ -188,24 +218,37 @@ where
                 .boxed()
                 .shared();
 
-                *guard = Some((keys.clone(), fut.clone(), notify));
+                *guard = Some((batch_keys, fut.clone(), notify));
 
-                fut
+                (fut, false)
             }
-            &mut Some((ref mut staged_keys, ref fut, ref notify)) => {
-                for k in keys.iter().cloned() {
-                    if !staged_keys.insert(k) {
-                        deduplicated += 1;
+            Some((batch_keys, fut, notify)) => {
+                let staged_len = {
+                    let mut staged = batch_keys.lock().expect("Poisoned lock");
+                    let staged_keys = staged.as_mut().expect("A staged batch has keys");
+                    for k in keys.iter().cloned() {
+                        if !staged_keys.insert(k) {
+                            deduplicated += 1;
+                        }
                     }
-                }
+                    staged_keys.len()
+                };
 
-                if staged_keys.len() >= self.inner.controller.early_dispatch_threshold() {
+                let close_batch = if staged_len >= self.inner.controller.early_dispatch_threshold()
+                {
                     notify.notify_one();
-                }
+                    self.inner.controller.cap_batch_at_threshold()
+                } else {
+                    false
+                };
 
-                fut.clone()
+                (fut.clone(), close_batch)
             }
         };
+
+        if close_batch {
+            *guard = None;
+        }
 
         std::mem::drop(guard);
 

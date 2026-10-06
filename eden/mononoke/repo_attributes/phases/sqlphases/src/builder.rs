@@ -164,6 +164,7 @@ mod tests {
             free_connections: 0,
             max_delay: Duration::from_secs(60),
             max_threshold: 3,
+            cap_batch_at_threshold: false,
         });
         store
             .add_public_raw(&ctx, repo_id, vec![ONES_CSID, TWOS_CSID])
@@ -199,6 +200,7 @@ mod tests {
             free_connections: 0,
             max_delay: Duration::from_secs(60),
             max_threshold: 2,
+            cap_batch_at_threshold: false,
         });
         store.add_public_raw(&ctx, repo_a, vec![ONES_CSID]).await?;
         store.add_public_raw(&ctx, repo_b, vec![TWOS_CSID]).await?;
