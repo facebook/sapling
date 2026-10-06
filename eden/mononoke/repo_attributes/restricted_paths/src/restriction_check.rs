@@ -8,6 +8,7 @@
 //! Restriction check helpers that turn restriction lookup results into
 //! authorization results.
 
+use std::cell::OnceCell;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::future::Future;
@@ -997,6 +998,11 @@ struct RequestFacts<'a> {
     machine_tier: Option<&'a str>,
     build_rule: Option<&'static str>,
     identities: &'a MononokeIdentitySet,
+    /// `identities` rendered for regex matching, built the first time a set
+    /// with `client_identity_regexes` is evaluated and then shared by every
+    /// set, so a request evaluated against no identity-filtered set never
+    /// renders them.
+    identity_strings: OnceCell<Vec<String>>,
     is_agent: bool,
 }
 
@@ -1011,6 +1017,7 @@ impl<'a> RequestFacts<'a> {
             machine_tier: metadata.machine_tier(),
             build_rule: server_build_rule(),
             identities: metadata.identities(),
+            identity_strings: OnceCell::new(),
             is_agent: metadata.likely_an_agent(),
         }
     }
@@ -1031,13 +1038,16 @@ impl<'a> RequestFacts<'a> {
                 .build_rule
                 .is_some_and(|rule| matchers.build_rules.iter().any(|c| c == rule));
         let identity_regex_matches = matchers.client_identity_regexes.is_empty()
-            || self.identities.iter().any(|identity| {
-                let identity = identity.to_string();
-                matchers
-                    .client_identity_regexes
-                    .iter()
-                    .any(|re| re.is_match(&identity))
-            });
+            || self
+                .identity_strings
+                .get_or_init(|| self.identities.iter().map(ToString::to_string).collect())
+                .iter()
+                .any(|identity| {
+                    matchers
+                        .client_identity_regexes
+                        .iter()
+                        .any(|re| re.is_match(identity))
+                });
         let is_agent_matches = matchers.is_agent.is_none_or(|want| want == self.is_agent);
 
         entry_point_matches
