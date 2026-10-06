@@ -7,6 +7,7 @@
 
 mod aws_sync;
 mod create_key_list;
+mod delete_from_cas;
 mod list;
 
 use anyhow::Result;
@@ -21,6 +22,7 @@ use create_key_list::RedactionCreateKeyListArgs;
 use create_key_list::RedactionFetchKeyListArgs;
 use create_key_list::RedactionSyncKeyListsFromJsonArgs;
 use create_key_list::RedactionSyncToAwsArgs;
+use delete_from_cas::RedactionDeleteFromCasArgs;
 use list::RedactionListArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
@@ -75,6 +77,8 @@ pub enum RedactionSubcommand {
     FetchKeyList(RedactionFetchKeyListArgs),
     /// Sync all active prod key lists to the AWS shadow blobstore.
     SyncToAws(RedactionSyncToAwsArgs),
+    /// Delete the content of enforced key lists from CAS.
+    DeleteFromCas(RedactionDeleteFromCasArgs),
     /// Internal batch operation used by the AWS sync orchestrator.
     #[clap(hide = true)]
     SyncKeyListsFromJson(RedactionSyncKeyListsFromJsonArgs),
@@ -93,6 +97,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         RedactionSubcommand::SyncToAws(sync_args) => {
             create_key_list::sync_all_key_lists_to_aws(&ctx, &app, sync_args).await?
+        }
+        RedactionSubcommand::DeleteFromCas(delete_args) => {
+            delete_from_cas::delete_from_cas(&ctx, &app, delete_args).await?
         }
         RedactionSubcommand::SyncKeyListsFromJson(sync_args) => {
             create_key_list::sync_key_lists_from_json(&ctx, &app, sync_args).await?

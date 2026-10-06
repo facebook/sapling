@@ -165,7 +165,11 @@ pub async fn fetch_key_list(
     Ok(())
 }
 
-fn active_redaction_key_list_ids(app: &MononokeApp) -> Result<Vec<RedactionKeyListId>> {
+/// Key lists in the prod redaction config, each with whether every config
+/// entry for it is enforced.
+pub(super) fn redaction_config_key_lists(
+    app: &MononokeApp,
+) -> Result<HashMap<RedactionKeyListId, bool>> {
     let config_path = &app
         .repo_configs()
         .common
@@ -178,20 +182,23 @@ fn active_redaction_key_list_ids(app: &MononokeApp) -> Result<Vec<RedactionKeyLi
         .with_context(|| format!("Redaction sets not found at {config_path}"))?
         .get();
 
-    let mut seen = HashSet::new();
-    let mut ids = Vec::new();
-    for redaction in &config.all_redactions {
-        let id = RedactionKeyListId::from_str(&redaction.id).with_context(|| {
-            format!(
-                "Invalid key list id in prod redaction config: {}",
-                redaction.id
-            )
-        })?;
-        if seen.insert(id) {
-            ids.push(id);
-        }
-    }
-    Ok(ids)
+    config
+        .all_redactions
+        .iter()
+        .try_fold(HashMap::new(), |mut key_lists, redaction| {
+            let id = RedactionKeyListId::from_str(&redaction.id).with_context(|| {
+                format!(
+                    "Invalid key list id in prod redaction config: {}",
+                    redaction.id
+                )
+            })?;
+            *key_lists.entry(id).or_insert(true) &= redaction.enforce;
+            Ok(key_lists)
+        })
+}
+
+fn active_redaction_key_list_ids(app: &MononokeApp) -> Result<Vec<RedactionKeyListId>> {
+    Ok(redaction_config_key_lists(app)?.into_keys().collect())
 }
 
 fn print_aws_sync_summary(report: &super::aws_sync::AwsSyncReport) {
