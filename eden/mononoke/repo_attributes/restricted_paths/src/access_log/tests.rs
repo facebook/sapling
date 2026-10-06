@@ -578,26 +578,63 @@ async fn test_shadow_unrestricted_sources_do_not_log_rows(fb: FacebookInit) -> R
     Ok(())
 }
 
-// What it tests: every enforcement decision is logged as
-// `enforcement_decision`, and `access_enforcement_enabled` keeps its legacy
-// values.
+// What it tests: every enforcement decision is logged as `enforcement_decision`
+// with whether an exemption matched, and `access_enforcement_enabled` keeps its
+// legacy values.
 // Expected: `enforced` logs true, `no_condition_matched` and `exempted` log
-// false, and `disabled` / `error` omit `access_enforcement_enabled`.
+// false, and `disabled` / `error` omit `access_enforcement_enabled`;
+// `has_enforcement_exemption` is omitted only for `disabled`.
 #[mononoke::fbinit_test]
 async fn test_enforcement_decision_is_logged(fb: FacebookInit) -> Result<()> {
     let cases = [
-        (EnforcementDecision::Disabled, "disabled", None),
+        (EnforcementDecision::Disabled, "disabled", None, None),
         (
-            EnforcementDecision::NoConditionMatched,
+            EnforcementDecision::NoConditionMatched {
+                exemption_matched: false,
+            },
             "no_condition_matched",
             Some("false"),
+            Some("false"),
         ),
-        (EnforcementDecision::Enforced, "enforced", Some("true")),
-        (EnforcementDecision::Exempted, "exempted", Some("false")),
-        (EnforcementDecision::Error, "error", None),
+        (
+            EnforcementDecision::NoConditionMatched {
+                exemption_matched: true,
+            },
+            "no_condition_matched",
+            Some("false"),
+            Some("true"),
+        ),
+        (
+            EnforcementDecision::Enforced,
+            "enforced",
+            Some("true"),
+            Some("false"),
+        ),
+        (
+            EnforcementDecision::Exempted,
+            "exempted",
+            Some("false"),
+            Some("true"),
+        ),
+        (
+            EnforcementDecision::Error {
+                exemption_matched: true,
+            },
+            "error",
+            None,
+            Some("true"),
+        ),
+        (
+            EnforcementDecision::Error {
+                exemption_matched: false,
+            },
+            "error",
+            None,
+            Some("false"),
+        ),
     ];
 
-    for (decision, expected_decision, expected_enabled) in cases {
+    for (decision, expected_decision, expected_enabled, expected_exemption) in cases {
         let samples = ShadowComparisonFieldFixture::new(
             fb,
             restricted_path_result(false, false, "config_acl", "config/restricted")?,
@@ -635,13 +672,18 @@ async fn test_enforcement_decision_is_logged(fb: FacebookInit) -> Result<()> {
             expected_enabled,
             "{decision:?} should keep the legacy access_enforcement_enabled value",
         );
+        assert_eq!(
+            sample_field(&samples[0], "has_enforcement_exemption").as_deref(),
+            expected_exemption,
+            "{decision:?} should log whether an exemption matched",
+        );
     }
     Ok(())
 }
 
 // What it tests: rows logged outside request enforcement carry no decision.
-// Expected: neither `enforcement_decision` nor `access_enforcement_enabled` is
-// emitted.
+// Expected: none of `enforcement_decision`, `access_enforcement_enabled` or
+// `has_enforcement_exemption` is emitted.
 #[mononoke::fbinit_test]
 async fn test_enforcement_decision_is_omitted_without_enforcement(fb: FacebookInit) -> Result<()> {
     let samples = ShadowComparisonFieldFixture::new(
@@ -667,6 +709,11 @@ async fn test_enforcement_decision_is_omitted_without_enforcement(fb: FacebookIn
         sample_field(&samples[0], "access_enforcement_enabled"),
         None,
         "rows logged outside request enforcement should not carry access_enforcement_enabled",
+    );
+    assert_eq!(
+        sample_field(&samples[0], "has_enforcement_exemption"),
+        None,
+        "rows logged outside request enforcement should not carry has_enforcement_exemption",
     );
     Ok(())
 }

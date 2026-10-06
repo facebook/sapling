@@ -96,20 +96,34 @@ struct EnforcementLogFields {
     /// omitted when enforcement was disabled, failed, or was not evaluated for
     /// the row.
     access_enforcement_enabled: Option<bool>,
+    /// The `has_enforcement_exemption` column: whether an exemption set
+    /// matched the request, omitted when enforcement was disabled (exemptions
+    /// are not evaluated then) or not evaluated for the row.
+    has_enforcement_exemption: Option<bool>,
 }
 
 impl EnforcementLogFields {
     fn new(decision: Option<EnforcementDecision>) -> Self {
         let access_enforcement_enabled = match decision {
             Some(EnforcementDecision::Enforced) => Some(true),
-            Some(EnforcementDecision::NoConditionMatched | EnforcementDecision::Exempted) => {
-                Some(false)
-            }
-            Some(EnforcementDecision::Disabled | EnforcementDecision::Error) | None => None,
+            Some(
+                EnforcementDecision::NoConditionMatched { .. } | EnforcementDecision::Exempted,
+            ) => Some(false),
+            Some(EnforcementDecision::Disabled | EnforcementDecision::Error { .. }) | None => None,
+        };
+        let has_enforcement_exemption = match decision {
+            Some(EnforcementDecision::Enforced) => Some(false),
+            Some(EnforcementDecision::Exempted) => Some(true),
+            Some(
+                EnforcementDecision::NoConditionMatched { exemption_matched }
+                | EnforcementDecision::Error { exemption_matched },
+            ) => Some(exemption_matched),
+            Some(EnforcementDecision::Disabled) | None => None,
         };
         Self {
             enforcement_decision: decision,
             access_enforcement_enabled,
+            has_enforcement_exemption,
         }
     }
 }
@@ -1243,6 +1257,9 @@ fn log_access_to_scuba(
     }
     if let Some(access_enforcement_enabled) = enforcement.access_enforcement_enabled {
         scuba.add("access_enforcement_enabled", access_enforcement_enabled);
+    }
+    if let Some(has_enforcement_exemption) = enforcement.has_enforcement_exemption {
+        scuba.add("has_enforcement_exemption", has_enforcement_exemption);
     }
 
     scuba.log();

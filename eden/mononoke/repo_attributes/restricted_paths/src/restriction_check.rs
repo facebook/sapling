@@ -99,14 +99,18 @@ impl AccessEnforcementOutcome {
 /// enforcement was never evaluated or failed to evaluate, and carries no
 /// denial details. Its `snake_case` variant name is the value of the
 /// `enforcement_decision` access-log column.
+///
+/// Every evaluated decision records whether an enforcement exemption set
+/// matched the request, including when that did not change the outcome (no
+/// condition matched, or a source failed).
 #[derive(Clone, Copy, Debug, Eq, PartialEq, strum::AsRefStr)]
 #[strum(serialize_all = "snake_case")]
 pub(crate) enum EnforcementDecision {
     /// Enforcement is off for the repo: the kill switch is off or no
-    /// enforcement condition sets are configured.
+    /// enforcement condition sets are configured. Exemptions are not evaluated.
     Disabled,
     /// No enforcement condition set matched the access.
-    NoConditionMatched,
+    NoConditionMatched { exemption_matched: bool },
     /// An enforcement condition set matched the access, no exemption set did,
     /// and it was enforced.
     Enforced,
@@ -116,16 +120,25 @@ pub(crate) enum EnforcementDecision {
     /// Evaluating enforcement failed, so the access failed closed. Only
     /// logged in the `Shadow` and `Both` modes: in the other modes a failed
     /// source read writes no access-log row.
-    Error,
+    Error { exemption_matched: bool },
 }
 
 impl EnforcementDecision {
-    pub(crate) fn from_outcome(outcome: &Result<AccessEnforcementOutcome>) -> Self {
+    /// The logged decision for an evaluated access. `exemption_matched` is
+    /// whether an exemption set matched the request: it is recorded for
+    /// `NoConditionMatched` and `Error`, and implied by the outcome otherwise
+    /// (an `Enforced` outcome means no exemption matched).
+    pub(crate) fn from_outcome(
+        outcome: &Result<AccessEnforcementOutcome>,
+        exemption_matched: bool,
+    ) -> Self {
         match outcome {
-            Ok(AccessEnforcementOutcome::NotEnforced) => Self::NoConditionMatched,
+            Ok(AccessEnforcementOutcome::NotEnforced) => {
+                Self::NoConditionMatched { exemption_matched }
+            }
             Ok(AccessEnforcementOutcome::Enforced { .. }) => Self::Enforced,
             Ok(AccessEnforcementOutcome::Exempted) => Self::Exempted,
-            Err(_) => Self::Error,
+            Err(_) => Self::Error { exemption_matched },
         }
     }
 }

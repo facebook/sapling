@@ -926,6 +926,7 @@ where
             exemption_matched: false,
         }
     };
+    let exemption_matched = pre_filter.exemption_matched;
     let fetches = source_fetches_for_access(
         source_options,
         &pre_filter.conditions,
@@ -973,7 +974,7 @@ where
         restricted_paths.clone(),
         access_data,
         effective_mode,
-        EnforcementDecision::from_outcome(&enforcement_outcome),
+        EnforcementDecision::from_outcome(&enforcement_outcome, exemption_matched),
         fetches
             .logging_config
             .then(|| handles.config.clone())

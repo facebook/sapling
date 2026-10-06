@@ -26,6 +26,7 @@ use permission_checker::MononokeIdentitySet;
 
 use super::AccessEnforcementOutcome;
 use super::AuthorizationCheckResult;
+use super::EnforcementDecision;
 use super::PathRestrictionCheckResult;
 use super::SharedFetchHandle;
 use super::SourceRestrictionSummary;
@@ -471,6 +472,64 @@ async fn test_absent_rollout_group_never_allowlists(fb: FacebookInit) -> Result<
         "caller has neither ACL access nor an applicable allowlist",
     );
     Ok(())
+}
+
+// What it tests: the logged enforcement decision for every enforcement result,
+// with and without a matching exemption.
+// Expected: the decision carries whether an exemption matched for
+// `no_condition_matched` and `error`, and the exempted outcome maps to
+// `Exempted`.
+#[mononoke::test]
+fn test_enforcement_decision_from_outcome() {
+    let cases = [
+        (
+            Ok(AccessEnforcementOutcome::NotEnforced),
+            false,
+            EnforcementDecision::NoConditionMatched {
+                exemption_matched: false,
+            },
+        ),
+        (
+            Ok(AccessEnforcementOutcome::NotEnforced),
+            true,
+            EnforcementDecision::NoConditionMatched {
+                exemption_matched: true,
+            },
+        ),
+        (
+            Ok(AccessEnforcementOutcome::Enforced {
+                denial_permission_request_group: None,
+            }),
+            false,
+            EnforcementDecision::Enforced,
+        ),
+        (
+            Ok(AccessEnforcementOutcome::Exempted),
+            true,
+            EnforcementDecision::Exempted,
+        ),
+        (
+            Err(anyhow::anyhow!("source failed")),
+            false,
+            EnforcementDecision::Error {
+                exemption_matched: false,
+            },
+        ),
+        (
+            Err(anyhow::anyhow!("source failed")),
+            true,
+            EnforcementDecision::Error {
+                exemption_matched: true,
+            },
+        ),
+    ];
+    for (outcome, exemption_matched, expected) in cases {
+        assert_eq!(
+            EnforcementDecision::from_outcome(&outcome, exemption_matched),
+            expected,
+            "outcome {outcome:?} with exemption_matched={exemption_matched}",
+        );
+    }
 }
 
 fn path_restriction_check() -> Result<PathRestrictionCheckResult> {
