@@ -6,8 +6,8 @@
  */
 
 .commit .smart-actions-button {
+  /* No fade, like `.goto-button` in CommitTreeList.css. */
   opacity: 0;
-  transition: opacity 0.1s;
 }
 
 .commit:hover .smart-actions-button {

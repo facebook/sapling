@@ -26,6 +26,15 @@
 .commit-tree-root {
   margin-top: calc(2px + var(--halfpad));
 }
+/*
+ * A smartlog can have thousands of rows: skip style, layout, and paint for the ones off screen.
+ * Only the smartlog: off-screen rows report placeholder geometry, which views that measure every
+ * row (like the absorb editor's drag targets) can't use.
+ */
+.commit-tree-root .render-dag-row-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 36px;
+}
 .commit-tree-stack-actions {
   display: flex;
   flex-direction: row;
@@ -322,8 +331,9 @@
 
 .goto-button,
 .open-commit-info-button {
+  /* No fade: an animating element gets its own compositor layer, and scrolling the tree under a
+     still pointer passes over every row. Opacity rather than visibility keeps them focusable. */
   opacity: 0;
-  transition: opacity 0.1s;
 }
 
 .commit:hover .goto-button,
