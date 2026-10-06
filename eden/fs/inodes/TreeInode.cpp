@@ -3247,15 +3247,24 @@ ImmediateFuture<Unit> TreeInode::rename(
   // Once we finish the loads, we have to re-run all the rename() logic.
   // Other renames or unlinks may have occurred in the meantime, so all of the
   // validation above has to be redone.
+  //
+  // Hold the loaded InodePtr(s) alive until the retried rename() completes.
+  // Once InodeMap::shutdown() has begun, an unreferenced inode is unloaded as
+  // soon as its pointer count reaches zero; dropping the pointer the load just
+  // delivered would let the inode be unloaded before the retry reacquires the
+  // locks, so the retry would reload and drop it again, livelocking the rename
+  // against shutdown.
   auto onLoadFinished = [self = inodePtrFromThis(),
                          nameCopy = name.copy(),
                          destParent,
                          destNameCopy = destName.copy(),
                          invalidate,
                          noReplace,
-                         context = context.copy()](auto&&) mutable {
-    return self->rename(
-        nameCopy, destParent, destNameCopy, invalidate, context, noReplace);
+                         context = context.copy()](InodePtr loaded) mutable {
+    return self
+        ->rename(
+            nameCopy, destParent, destNameCopy, invalidate, context, noReplace)
+        .ensure([loaded = std::move(loaded)] {});
   };
 
   if (needSrc && needDest) {
@@ -3264,8 +3273,10 @@ ImmediateFuture<Unit> TreeInode::rename(
 
     return std::move(srcFuture).thenValue(
         [destFuture = std::move(destFuture),
-         onLoadFinished = std::move(onLoadFinished)](auto&&) mutable {
-          return std::move(destFuture).thenValue(std::move(onLoadFinished));
+         onLoadFinished = std::move(onLoadFinished)](InodePtr src) mutable {
+          return std::move(destFuture)
+              .thenValue(std::move(onLoadFinished))
+              .ensure([src = std::move(src)] {});
         });
   } else if (needSrc) {
     return getOrLoadChild(name, context).thenValue(std::move(onLoadFinished));
