@@ -76,6 +76,25 @@ export type DiffId = string;
  */
 export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSummary'];
 
+/**
+ * Summaries from a fetch, or the error that kept some from arriving.
+ *
+ * `diffIds`, when the provider knows it, is every diff the summaries answer for, including any the
+ * response left out. `failures`, from a provider that tracks failures per diff, is its complete
+ * current set of diffs whose newest fetch failed, grouped by error; it replaces whatever was known
+ * before. Without it, an error speaks for every diff until the next summaries arrive.
+ */
+export type DiffSummariesResult<S extends DiffSummary = DiffSummary> = (
+  | {value: Map<DiffId, S>; error?: undefined; diffIds?: Array<DiffId>}
+  | {value?: undefined; error: Error}
+) & {failures?: Array<DiffSummaryFailure>};
+
+/**
+ * Diffs that failed with the same error. Grouped because the serializer does not share references:
+ * a batch's error, repeated once per diff, would cross the wire once per diff, stack and all.
+ */
+export type DiffSummaryFailure = {error: Error; diffIds: Array<DiffId>};
+
 export type DiffCommentReaction = {
   name: string;
   reaction:
@@ -954,6 +973,7 @@ export const allConfigNames = [
   'isl.sl-progress-enabled',
   'isl.use-sl-graphql',
   'isl.use-in-process-graphql',
+  'isl.diff-summaries-batch-size',
   'github.preferred_submit_command',
   'isl.open-file-cmd',
   'isl.generated-files-regex',
@@ -1258,7 +1278,7 @@ export type ServerToClientMessage =
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedAvatars'; avatars: Map<string, string>; authors: Array<string>}
-  | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'fetchedDiffSummaries'; summaries: DiffSummariesResult}
   | {type: 'fetchedDiffComments'; diffId: DiffId; comments: Result<Array<DiffComment>>}
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}

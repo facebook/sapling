@@ -8,7 +8,9 @@
 import type {
   DiffId,
   DiffSignalSummary,
+  DiffSummariesResult,
   DiffSummary,
+  DiffSummaryFailure,
   Hash,
   PageVisibility,
   Result,
@@ -19,7 +21,7 @@ import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import {atom} from 'jotai';
 import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
-import {firstLine, nullthrows} from 'shared/utils';
+import {firstLine} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
 import {
@@ -76,16 +78,22 @@ export const diffSummary = atomFamilyWeak((diffId: DiffId | undefined) =>
     if (diffId == null) {
       return {value: undefined};
     }
-    const all = get(allDiffSummaries);
-    if (all == null) {
-      return {value: undefined};
-    }
-    if (all.error) {
-      return {error: all.error};
-    }
-    return {value: all.value?.get(diffId)};
+    return summaryOrFetchError(get(allDiffSummaries), diffId);
   }),
 );
+
+/** A diff's last known summary, or the fetch error if there is none to show. */
+function summaryOrFetchError(
+  all: DiffSummariesState,
+  diffId: DiffId,
+): Result<DiffSummary | undefined> {
+  const summary = all.value?.get(diffId);
+  const error = all.failedDiffs != null ? all.failedDiffs.get(diffId) : all.error;
+  if (summary == null && error != null) {
+    return {error};
+  }
+  return {value: summary};
+}
 
 /**
  * Whether a DiffSignalSummary represents actionable (failed or warning) signals.
@@ -117,22 +125,77 @@ export function hasDiffActionableSignals(diffId: DiffId): boolean {
 export const branchingDiffInfos = atomFamilyWeak((branchName: string) =>
   atom<Result<DiffSummary | undefined>>(get => {
     const all = get(allDiffSummaries);
-    if (all == null) {
-      return {value: undefined};
-    }
-    if (all.error) {
-      return {error: all.error};
-    }
-    const idMap = get(diffIdsByBranchName);
-    const idForBranchName = idMap.get(branchName);
+    const idForBranchName = get(diffIdsByBranchName).get(branchName);
     if (idForBranchName) {
-      return {value: all.value?.get(idForBranchName)};
+      return summaryOrFetchError(all, idForBranchName);
+    }
+    if (all.error != null) {
+      return {error: all.error};
     }
     return {value: undefined};
   }),
 );
 
-export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({value: null});
+/**
+ * Unlike a `Result`, holds summaries and an error at once. A fetch can land in parts, so an error
+ * speaks for the part that failed and does not discard summaries already shown.
+ */
+export type DiffSummariesState = {
+  value: Map<DiffId, DiffSummary> | null;
+  /** For the top-level banner: every distinct failure still outstanding, combined. */
+  error?: Error;
+  /** Each failing diff with its own error. Without it, `error` speaks for every diff. */
+  failedDiffs?: ReadonlyMap<DiffId, Error>;
+};
+
+/**
+ * Merges summaries into what is known. A provider that tracks failures per diff sends its whole
+ * current set with every result, which replaces what was known; ordering overlapping fetches is its
+ * job, since only it knows which fetch is newest. A result without `failures` gets the handling from
+ * before batching: an error replaces every summary, and the next summaries replace the error.
+ */
+export function applyDiffSummariesResult(
+  existing: DiffSummariesState,
+  result: DiffSummariesResult,
+): DiffSummariesState {
+  if (result.failures == null) {
+    if (result.error) {
+      return {value: null, error: result.error};
+    }
+    if (existing.error != null || existing.value == null) {
+      return {value: result.value};
+    }
+    return {value: new Map([...existing.value, ...result.value])};
+  }
+  const value = result.error
+    ? existing.value
+    : new Map([...(existing.value ?? []), ...result.value]);
+  if (result.failures.length === 0) {
+    return {value};
+  }
+  const failedDiffs = new Map(
+    result.failures.flatMap(({error, diffIds}) => diffIds.map(diffId => [diffId, error] as const)),
+  );
+  const combined = combineFetchErrors(result.failures);
+  // Every result arrives with new `Error` objects, and the banner logs each one it is handed.
+  const error = existing.error?.message === combined.message ? existing.error : combined;
+  return {value, error, failedDiffs};
+}
+
+/**
+ * One error for the banner. A single distinct failure is shown as is; otherwise every distinct
+ * message goes into one, since the banner matches on the message to pick what to show. Sorted, so
+ * the same failures always produce the same message.
+ */
+function combineFetchErrors(failures: Array<DiffSummaryFailure>): Error {
+  const byMessage = new Map(failures.map(({error}) => [error.message, error]));
+  if (byMessage.size === 1) {
+    return [...byMessage.values()][0];
+  }
+  return new Error(`Failed to fetch diff summaries: ${[...byMessage.keys()].sort().join('; ')}`);
+}
+
+export const allDiffSummaries = atom<DiffSummariesState>({value: null});
 export const diffIdsByBranchName = atom<Map<string, DiffId>>(new Map());
 
 registerDisposable(
@@ -152,26 +215,7 @@ registerDisposable(
       return map;
     });
 
-    writeAtom(allDiffSummaries, existing => {
-      if (existing.error) {
-        // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?
-        // Right now, this will reset all other diffs to "loading" instead of error
-        // Probably, if all diffs fail to fetch, so will individual diffs.
-        return event.summaries;
-      }
-
-      if (event.summaries.error || existing.value == null) {
-        return event.summaries;
-      }
-
-      // merge old values with newly fetched ones
-      return {
-        value: new Map([
-          ...nullthrows(existing.value).entries(),
-          ...event.summaries.value.entries(),
-        ]),
-      };
-    });
+    writeAtom(allDiffSummaries, existing => applyDiffSummariesResult(existing, event.summaries));
   }),
   import.meta.hot,
 );
