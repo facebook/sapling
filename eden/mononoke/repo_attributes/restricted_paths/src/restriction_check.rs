@@ -80,8 +80,10 @@ impl AccessEnforcementOutcome {
 ///
 /// Unlike [`AccessEnforcementOutcome`], this also covers accesses where
 /// enforcement was never evaluated or failed to evaluate, and carries no
-/// denial details.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// denial details. Its `snake_case` variant name is the value of the
+/// `enforcement_decision` access-log column.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, strum::AsRefStr)]
+#[strum(serialize_all = "snake_case")]
 pub(crate) enum EnforcementDecision {
     /// Enforcement is off for the repo: the kill switch is off or no
     /// enforcement condition sets are configured.
@@ -90,7 +92,9 @@ pub(crate) enum EnforcementDecision {
     NoConditionMatched,
     /// An enforcement condition set matched the access.
     Enforced,
-    /// Evaluating enforcement failed, so the access failed closed.
+    /// Evaluating enforcement failed, so the access failed closed. Only
+    /// logged in the `Shadow` and `Both` modes: in the other modes a failed
+    /// source read writes no access-log row.
     Error,
 }
 

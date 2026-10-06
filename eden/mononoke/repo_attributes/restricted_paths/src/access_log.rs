@@ -21,6 +21,7 @@ use mononoke_types::RepositoryId;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
+use scuba_ext::ScubaValue;
 use serde_json::Value;
 use serde_json::json;
 
@@ -87,6 +88,9 @@ struct RestrictedPathLogData<'a> {
 /// from the enforcement decision here.
 #[derive(Debug)]
 struct EnforcementLogFields {
+    /// The `enforcement_decision` column, set on every row logged from request
+    /// enforcement.
+    enforcement_decision: Option<EnforcementDecision>,
     /// The legacy `access_enforcement_enabled` column: `true` when enforced,
     /// `false` when no condition matched, and omitted when enforcement was
     /// disabled, failed, or was not evaluated for the row.
@@ -101,8 +105,15 @@ impl EnforcementLogFields {
             Some(EnforcementDecision::Disabled | EnforcementDecision::Error) | None => None,
         };
         Self {
+            enforcement_decision: decision,
             access_enforcement_enabled,
         }
+    }
+}
+
+impl From<EnforcementDecision> for ScubaValue {
+    fn from(decision: EnforcementDecision) -> Self {
+        ScubaValue::from(decision.as_ref())
     }
 }
 
@@ -1224,6 +1235,9 @@ fn log_access_to_scuba(
         source_comparison.add_to_scuba(&mut scuba);
     }
     let enforcement = EnforcementLogFields::new(log_data.enforcement_decision);
+    if let Some(enforcement_decision) = enforcement.enforcement_decision {
+        scuba.add("enforcement_decision", enforcement_decision);
+    }
     if let Some(access_enforcement_enabled) = enforcement.access_enforcement_enabled {
         scuba.add("access_enforcement_enabled", access_enforcement_enabled);
     }

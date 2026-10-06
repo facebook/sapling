@@ -28,10 +28,12 @@ use serde_json::json;
 
 use super::RestrictedPathAccessData;
 use super::log_source_results_to_scuba;
+use super::log_source_results_to_scuba_with_enforcement;
 use super::restriction_check_result_for_source_results;
 use crate::ManifestType;
 use crate::RestrictedManifestId;
 use crate::restriction_check::AuthorizationCheckResult;
+use crate::restriction_check::EnforcementDecision;
 use crate::restriction_check::ManifestRestrictionCheckResult;
 use crate::restriction_check::PathRestrictionCheckResult;
 use crate::restriction_check::SourceRestrictionCheck;
@@ -573,6 +575,97 @@ async fn test_shadow_unrestricted_sources_do_not_log_rows(fb: FacebookInit) -> R
     .log_with(log_source_results_to_scuba)?;
 
     assert_eq!(samples, Vec::<serde_json::Map<String, Value>>::new());
+    Ok(())
+}
+
+// What it tests: every enforcement decision is logged as `enforcement_decision`,
+// and `access_enforcement_enabled` keeps its legacy values.
+// Expected: `enforced` logs true, `no_condition_matched` logs false, and
+// `disabled` / `error` omit `access_enforcement_enabled`.
+#[mononoke::fbinit_test]
+async fn test_enforcement_decision_is_logged(fb: FacebookInit) -> Result<()> {
+    let cases = [
+        (EnforcementDecision::Disabled, "disabled", None),
+        (
+            EnforcementDecision::NoConditionMatched,
+            "no_condition_matched",
+            Some("false"),
+        ),
+        (EnforcementDecision::Enforced, "enforced", Some("true")),
+        (EnforcementDecision::Error, "error", None),
+    ];
+
+    for (decision, expected_decision, expected_enabled) in cases {
+        let samples = ShadowComparisonFieldFixture::new(
+            fb,
+            restricted_path_result(false, false, "config_acl", "config/restricted")?,
+            Some(restricted_path_result(
+                false,
+                false,
+                "config_acl",
+                "config/restricted",
+            )?),
+            full_path_access_data()?,
+        )?
+        .log_with(
+            |ctx, repo_id, config, acl_manifest, mode, access_data, scuba| {
+                log_source_results_to_scuba_with_enforcement(
+                    ctx,
+                    repo_id,
+                    config,
+                    acl_manifest,
+                    mode,
+                    Some(decision),
+                    access_data,
+                    scuba,
+                )
+            },
+        )?;
+
+        assert_eq!(samples.len(), 1, "{decision:?} should log one row");
+        assert_eq!(
+            sample_field(&samples[0], "enforcement_decision").as_deref(),
+            Some(expected_decision),
+            "{decision:?} should be logged as {expected_decision}",
+        );
+        assert_eq!(
+            sample_field(&samples[0], "access_enforcement_enabled").as_deref(),
+            expected_enabled,
+            "{decision:?} should keep the legacy access_enforcement_enabled value",
+        );
+    }
+    Ok(())
+}
+
+// What it tests: rows logged outside request enforcement carry no decision.
+// Expected: neither `enforcement_decision` nor `access_enforcement_enabled` is
+// emitted.
+#[mononoke::fbinit_test]
+async fn test_enforcement_decision_is_omitted_without_enforcement(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        restricted_path_result(false, false, "config_acl", "config/restricted")?,
+        Some(restricted_path_result(
+            false,
+            false,
+            "config_acl",
+            "config/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1, "a restricted access should log one row");
+    assert_eq!(
+        sample_field(&samples[0], "enforcement_decision"),
+        None,
+        "rows logged outside request enforcement should not carry a decision",
+    );
+    assert_eq!(
+        sample_field(&samples[0], "access_enforcement_enabled"),
+        None,
+        "rows logged outside request enforcement should not carry access_enforcement_enabled",
+    );
     Ok(())
 }
 
