@@ -6,22 +6,31 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use anyhow::Result;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
+use changesets_creation::save_changesets;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use derived_data_manager::BonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
+use futures::FutureExt;
 use futures::TryStreamExt;
 use itertools::Itertools;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::with_just_knobs_async;
 use manifest::ManifestOps;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::SubtreeChange;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
@@ -47,6 +56,82 @@ struct TestRepo(
     FilestoreConfig,
     RepoIdentity,
 );
+
+#[mononoke::fbinit_test]
+async fn test_batch_subtree_copy_from_unpersisted_source(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let source = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("Source/File", "content")
+        .commit()
+        .await?;
+    let mut copy = CreateCommitContext::new(&ctx, &repo, vec![source])
+        .create_commit_object()
+        .await?;
+    copy.subtree_changes.insert(
+        MPath::new("Destination")?,
+        SubtreeChange::copy(MPath::new("Source")?, source),
+    );
+    let copy = copy.freeze()?;
+    let copy_id = copy.get_changeset_id();
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([
+            (
+                "scm/mononoke:enable_subtree_changes".to_owned(),
+                KnobVal::Bool(true),
+            ),
+            (
+                "scm/mononoke:enable_manifest_altering_subtree_changes".to_owned(),
+                KnobVal::Bool(true),
+            ),
+        ])),
+        save_changesets(&ctx, &repo, vec![copy.clone()]).boxed(),
+    )
+    .await?;
+
+    let manager = repo.repo_derived_data().manager();
+    let derivation_ctx = manager.derivation_context(None);
+    assert!(
+        RootCaseConflictSkeletonManifestId::fetch(&ctx, &derivation_ctx, source)
+            .await?
+            .is_none()
+    );
+    manager
+        .derive_exactly_batch::<RootCaseConflictSkeletonManifestId>(
+            &ctx,
+            vec![source, copy_id],
+            None,
+        )
+        .await?;
+    let derived = manager
+        .fetch_derived_batch::<RootCaseConflictSkeletonManifestId>(
+            &ctx,
+            vec![source, copy_id],
+            None,
+        )
+        .await?;
+
+    // A separate derivation can resolve the source through its persisted mapping.
+    let expected = RootCaseConflictSkeletonManifestId::derive_single(
+        &ctx,
+        &derivation_ctx,
+        copy,
+        vec![derived[&source].clone()],
+        None,
+    )
+    .await?;
+    assert_eq!(derived[&copy_id], expected);
+    assert_all_leaves(
+        &ctx,
+        &repo,
+        copy_id,
+        &[
+            "source/Source/file/File",
+            "destination/Destination/file/File",
+        ],
+    )
+    .await
+}
 
 const A_FILES: &[&str] = &[
     "DiR1/subdir1/subsubdir1/file1",

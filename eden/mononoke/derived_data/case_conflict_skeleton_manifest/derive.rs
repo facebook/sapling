@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -29,6 +30,7 @@ use manifest::derive_manifest;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::CaseConflictSkeletonManifestId;
+use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrieMap;
@@ -52,6 +54,7 @@ async fn get_ccsm_path_changes(bcs: &BonsaiChangeset) -> Vec<(NonRootMPath, Opti
 async fn get_ccsm_subtree_changes(
     ctx: &CoreContext,
     derivation_context: &DerivationContext,
+    known: Option<&HashMap<ChangesetId, RootCaseConflictSkeletonManifestId>>,
     bcs: &BonsaiChangeset,
 ) -> Result<Vec<ManifestParentReplacement<CaseConflictSkeletonManifest, ()>>> {
     let copy_sources = bcs
@@ -72,7 +75,9 @@ async fn get_ccsm_subtree_changes(
             let blobstore = derivation_context.blobstore().clone();
             async move {
                 let from_cssm = derivation_context
-                    .fetch_dependency::<RootCaseConflictSkeletonManifestId>(&ctx, from_cs_id)
+                    .fetch_unknown_dependency::<RootCaseConflictSkeletonManifestId>(
+                        &ctx, known, from_cs_id,
+                    )
                     .await?
                     .into_inner_id()
                     .load(&ctx, &blobstore)
@@ -177,10 +182,11 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootCaseConflictSkeletonManifestId>,
+    known: Option<&HashMap<ChangesetId, RootCaseConflictSkeletonManifestId>>,
 ) -> Result<RootCaseConflictSkeletonManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let changes = get_ccsm_path_changes(&bonsai).await;
-    let subtree_changes = get_ccsm_subtree_changes(ctx, derivation_ctx, &bonsai).await?;
+    let subtree_changes = get_ccsm_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
 
     let parents = stream::iter(parents)
         .map(|parent| async move { parent.0.load(ctx, blobstore).await })
