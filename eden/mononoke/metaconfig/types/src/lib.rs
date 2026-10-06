@@ -2569,9 +2569,9 @@ pub struct EnforcementConditionSet {
     pub matchers: RequestMatchers,
 }
 
-/// Request-metadata matchers of an enforcement condition set. All non-empty
-/// fields must match (AND); `is_agent: None` does not filter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Request-metadata matchers of an enforcement condition or exemption set.
+/// All non-empty fields must match (AND); `is_agent: None` does not filter.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RequestMatchers {
     /// Client entry points to match, in their `ClientEntryPoint` display form
     /// (e.g. "scs", "eden_api").
@@ -2602,6 +2602,41 @@ impl RequestMatchers {
             || !self.build_rules.is_empty()
             || !self.client_identity_regexes.is_empty()
             || self.is_agent.is_some()
+    }
+}
+
+/// A set of request-metadata matchers that switches path ACL enforcement off
+/// for accesses it matches, overriding every matching
+/// [`EnforcementConditionSet`].
+///
+/// An exemption only changes whether an access is enforced, never whether the
+/// caller is authorized. Unlike a condition set it has no `always_enabled`,
+/// `require_client_request_flag` or `restriction_acls`: those would exempt
+/// every access, let a client switch its own enforcement off, or exempt a
+/// whole multi-tent access when only one of its tents matched.
+///
+/// An exemption always has at least one matcher: one without would match, and
+/// so exempt, every access.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnforcementExemptionSet {
+    matchers: RequestMatchers,
+}
+
+impl EnforcementExemptionSet {
+    /// An exemption that applies to requests matching `matchers`, which must
+    /// filter on at least one dimension.
+    pub fn new(matchers: RequestMatchers) -> Result<Self> {
+        if !matchers.has_matcher() {
+            bail!(
+                "exemptions must set at least one of `entry_points`, `machine_tiers`, `build_rules`, `client_identity_regexes` or `is_agent`"
+            );
+        }
+        Ok(Self { matchers })
+    }
+
+    /// The request-metadata matchers the exemption applies to.
+    pub fn matchers(&self) -> &RequestMatchers {
+        &self.matchers
     }
 }
 
@@ -2680,6 +2715,10 @@ pub struct RestrictedPathsConfig {
     pub acl_file_name: String,
     /// Condition sets for conditional enforcement. OR across sets, AND within.
     pub enforcement_condition_sets: Vec<EnforcementConditionSet>,
+    /// Sets that switch enforcement off for accesses they match, overriding
+    /// every matching condition set (including `always_enabled` ones). OR
+    /// across sets, AND within.
+    pub enforcement_exemption_sets: Vec<EnforcementExemptionSet>,
     /// Master kill switch for path ACL enforcement.
     /// Defaults to `false` so a repo with no explicit value gets no enforcement.
     pub enforcement_enabled: bool,
@@ -2701,6 +2740,7 @@ impl Default for RestrictedPathsConfig {
             admin_bypass_group: None,
             acl_file_name: DEFAULT_ACL_FILE_NAME.to_string(),
             enforcement_condition_sets: Vec::new(),
+            enforcement_exemption_sets: Vec::new(),
             enforcement_enabled: false,
             acl_manifest_mode: AclManifestMode::Disabled,
             denial_message: None,
@@ -2820,6 +2860,27 @@ mod tests {
 
     fn mp(s: &str) -> MPath {
         MPath::new(s.as_bytes()).unwrap()
+    }
+
+    // What it tests: an exemption set must filter on at least one request
+    // dimension.
+    // Expected: empty matchers are rejected, and a single matcher is accepted.
+    #[mononoke::test]
+    fn test_enforcement_exemption_set_requires_a_matcher() -> Result<()> {
+        assert!(
+            EnforcementExemptionSet::new(RequestMatchers::default()).is_err(),
+            "an exemption without a matcher would exempt every access"
+        );
+        let exemption = EnforcementExemptionSet::new(RequestMatchers {
+            is_agent: Some(true),
+            ..Default::default()
+        })?;
+        assert_eq!(
+            exemption.matchers().is_agent,
+            Some(true),
+            "an exemption with a matcher should keep it"
+        );
+        Ok(())
     }
 
     #[mononoke::test]
