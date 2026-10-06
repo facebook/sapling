@@ -1,5 +1,8 @@
 ---
-oncalls: ['scm_client_infra']
+name: code-quality
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
 ---
 
 # Code Quality
