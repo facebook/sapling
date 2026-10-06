@@ -221,6 +221,24 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         limit: usize,
     ) -> Result<Vec<LongRunningRequestEntry>>;
 
+    /// List `ready` requests with `ready_at` older than `ready_before`,
+    /// ordered by `ready_at` ascending (oldest first), up to `limit` rows.
+    ///
+    /// These are the requests that drive the `queue.<repo>.age_s.ready`
+    /// worker stats: the stat reports `now - min(ready_at)`, so any row
+    /// returned here with `ready_at` older than `now - threshold` would trip
+    /// an alert thresholding on that stat. If `exclude_backfill` is true,
+    /// derived data backfill request types are excluded, matching the worker
+    /// stats loop which passes `exclude_backfill=true`.
+    async fn list_old_ready_requests(
+        &self,
+        ctx: &CoreContext,
+        repo_filter: &QueueRepoFilter,
+        ready_before: &Timestamp,
+        limit: usize,
+        exclude_backfill: bool,
+    ) -> Result<Vec<LongRunningRequestEntry>>;
+
     /// Mark the given requests as `failed`. Only rows still in the `ready`
     /// state are affected; the guard keeps this safe to run concurrently with
     /// other queue activity and idempotent on re-runs. Returns the number of

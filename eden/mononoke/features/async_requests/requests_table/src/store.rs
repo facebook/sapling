@@ -909,6 +909,249 @@ mononoke_queries! {
         LIMIT {limit}")
     }
 
+    read ListOldReadyRequestsForRepos(ready_before: Timestamp, limit: usize, >list repo_ids: RepositoryId) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND repo_id IN {repo_ids} AND ready_at < {ready_before}
+        ORDER BY ready_at ASC
+        LIMIT {limit}"
+    }
+
+    read ListOldReadyRequestsForAllRepos(ready_before: Timestamp, limit: usize) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND ready_at < {ready_before}
+        ORDER BY ready_at ASC
+        LIMIT {limit}"
+    }
+
+    read ListOldReadyRequestsForReposExcludingTypes(ready_before: Timestamp, limit: usize, >list repo_ids: RepositoryId >list excluded_types: RequestType) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND repo_id IN {repo_ids} AND ready_at < {ready_before}
+        AND request_type NOT IN {excluded_types}
+        ORDER BY ready_at ASC
+        LIMIT {limit}"
+    }
+
+    read ListOldReadyRequestsForAllReposExcludingTypes(ready_before: Timestamp, limit: usize, >list excluded_types: RequestType) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND ready_at < {ready_before}
+        AND request_type NOT IN {excluded_types}
+        ORDER BY ready_at ASC
+        LIMIT {limit}"
+    }
+
+    read ListOldReadyRequestsExcludingRepos(ready_before: Timestamp, limit: usize, >list excluded_repo_ids: RepositoryId) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND (repo_id IS NULL OR repo_id NOT IN {excluded_repo_ids}) AND ready_at < {ready_before}
+        ORDER BY ready_at ASC
+        LIMIT {limit}"
+    }
+
+    read ListOldReadyRequestsExcludingReposExcludingTypes(ready_before: Timestamp, limit: usize, >list excluded_repo_ids: RepositoryId >list excluded_types: RequestType) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+        Option<String>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id,
+            created_by
+        FROM long_running_request_queue
+        WHERE status = 'ready' AND (repo_id IS NULL OR repo_id NOT IN {excluded_repo_ids}) AND ready_at < {ready_before}
+        AND request_type NOT IN {excluded_types}
+        ORDER BY ready_at ASC
+        LIMIT {limit}"
+    }
+
     read GetQueueLengthForRepos(>list repo_ids: RepositoryId) -> (
         RequestStatus, u64
     ) {
@@ -1774,6 +2017,95 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         .map(row_to_entry)
         .collect();
         Ok(entries)
+    }
+
+    async fn list_old_ready_requests(
+        &self,
+        ctx: &CoreContext,
+        repo_filter: &QueueRepoFilter,
+        ready_before: &Timestamp,
+        limit: usize,
+        exclude_backfill: bool,
+    ) -> Result<Vec<LongRunningRequestEntry>> {
+        // Same four types excluded by the worker stats queries, passed as
+        // bound params (rather than SQL string literals) so the comparison
+        // matches the stored column type on both MySQL and SQLite.
+        let backfill_types: Vec<RequestType> = [
+            "derive_boundaries",
+            "derive_slice",
+            "derive_backfill",
+            "derive_backfill_repo",
+        ]
+        .into_iter()
+        .map(|s| RequestType(s.to_string()))
+        .collect();
+        let rows = match (repo_filter, exclude_backfill) {
+            (QueueRepoFilter::Only(repos), _) if repos.is_empty() => return Ok(vec![]),
+            (QueueRepoFilter::Only(repos), false) => {
+                ListOldReadyRequestsForRepos::query(
+                    &self.connections.read_connection,
+                    ctx.sql_query_telemetry(),
+                    ready_before,
+                    &limit,
+                    repos,
+                )
+                .await
+            }
+            (QueueRepoFilter::Only(repos), true) => {
+                ListOldReadyRequestsForReposExcludingTypes::query(
+                    &self.connections.read_connection,
+                    ctx.sql_query_telemetry(),
+                    ready_before,
+                    &limit,
+                    repos,
+                    &backfill_types,
+                )
+                .await
+            }
+            (QueueRepoFilter::Except(repos), _) if repos.is_empty() => {
+                if exclude_backfill {
+                    ListOldReadyRequestsForAllReposExcludingTypes::query(
+                        &self.connections.read_connection,
+                        ctx.sql_query_telemetry(),
+                        ready_before,
+                        &limit,
+                        &backfill_types,
+                    )
+                    .await
+                } else {
+                    ListOldReadyRequestsForAllRepos::query(
+                        &self.connections.read_connection,
+                        ctx.sql_query_telemetry(),
+                        ready_before,
+                        &limit,
+                    )
+                    .await
+                }
+            }
+            (QueueRepoFilter::Except(excluded), false) => {
+                ListOldReadyRequestsExcludingRepos::query(
+                    &self.connections.read_connection,
+                    ctx.sql_query_telemetry(),
+                    ready_before,
+                    &limit,
+                    excluded,
+                )
+                .await
+            }
+            (QueueRepoFilter::Except(excluded), true) => {
+                ListOldReadyRequestsExcludingReposExcludingTypes::query(
+                    &self.connections.read_connection,
+                    ctx.sql_query_telemetry(),
+                    ready_before,
+                    &limit,
+                    excluded,
+                    &backfill_types,
+                )
+                .await
+            }
+        }
+        .context("listing old ready requests")?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
     }
 
     async fn mark_ready_requests_failed(&self, ctx: &CoreContext, ids: &[RowId]) -> Result<u64> {
@@ -3543,6 +3875,150 @@ mod test {
             .await?;
         assert_eq!(abandoned.len(), 1);
         assert_eq!(abandoned[0].0, id);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_list_old_ready_requests(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+
+        let repo5 = RepositoryId::new(5);
+        let repo6 = RepositoryId::new(6);
+        let megarepo = RequestType("megarepo_sync_changeset".to_string());
+        let backfill = RequestType("derive_backfill".to_string());
+
+        for (ty, repo) in [
+            (&megarepo, Some(&repo5)),
+            (&backfill, Some(&repo5)),
+            (&megarepo, Some(&repo6)),
+            // A repo-less row: repo exclusion must not drop NULL repo_ids.
+            (&megarepo, None),
+        ] {
+            queue
+                .add_request(&ctx, ty, repo, &BlobstoreKey("key".to_string()), None)
+                .await?;
+        }
+
+        // Claim all four and mark them ready.
+        for _ in 0..4 {
+            let entry = queue
+                .claim_and_get_new_request(
+                    &ctx,
+                    &ClaimedBy("me".to_string()),
+                    &QueueRepoFilter::Except(vec![]),
+                    &QueueRequestTypeFilter::All,
+                )
+                .await?
+                .expect("expected a new request to claim");
+            let req_id = RequestId(entry.id, entry.request_type);
+            queue
+                .mark_ready(&ctx, &req_id, BlobstoreKey("result".to_string()))
+                .await?;
+        }
+
+        // A cutoff in the future matches all ready requests.
+        let future = Timestamp::from_timestamp_secs(Timestamp::now().timestamp_seconds() + 3600);
+        let all = queue
+            .list_old_ready_requests(&ctx, &QueueRepoFilter::Except(vec![]), &future, 100, false)
+            .await?;
+        assert_eq!(all.len(), 4, "future cutoff should match all ready");
+
+        // A cutoff in the distant past matches none.
+        let past = Timestamp::from_timestamp_secs(1);
+        let none = queue
+            .list_old_ready_requests(&ctx, &QueueRepoFilter::Except(vec![]), &past, 100, false)
+            .await?;
+        assert!(none.is_empty(), "past cutoff should match none");
+
+        // Repo filtering.
+        let repo5_only = queue
+            .list_old_ready_requests(
+                &ctx,
+                &QueueRepoFilter::Only(vec![repo5]),
+                &future,
+                100,
+                false,
+            )
+            .await?;
+        assert_eq!(repo5_only.len(), 2);
+
+        let repo5_excluded = queue
+            .list_old_ready_requests(
+                &ctx,
+                &QueueRepoFilter::Except(vec![repo5]),
+                &future,
+                100,
+                false,
+            )
+            .await?;
+        assert_eq!(repo5_excluded.len(), 2);
+        assert!(
+            repo5_excluded
+                .iter()
+                .all(|entry| entry.repo_id != Some(repo5)),
+            "excluded repo must not appear, NULL repo_id must be kept"
+        );
+        assert!(
+            repo5_excluded.iter().any(|entry| entry.repo_id.is_none()),
+            "NULL repo_id rows must survive repo exclusion"
+        );
+
+        // LIMIT must apply after repo exclusion: with two non-excluded rows a
+        // limit of 1 still returns exactly one of them (an in-memory filter
+        // after LIMIT could return zero here).
+        let excluded_limited = queue
+            .list_old_ready_requests(
+                &ctx,
+                &QueueRepoFilter::Except(vec![repo5]),
+                &future,
+                1,
+                false,
+            )
+            .await?;
+        assert_eq!(excluded_limited.len(), 1);
+        assert_ne!(excluded_limited[0].repo_id, Some(repo5));
+
+        // Repo exclusion composes with backfill exclusion.
+        let excluded_no_backfill = queue
+            .list_old_ready_requests(
+                &ctx,
+                &QueueRepoFilter::Except(vec![repo5]),
+                &future,
+                100,
+                true,
+            )
+            .await?;
+        assert_eq!(excluded_no_backfill.len(), 2);
+        assert!(
+            excluded_no_backfill
+                .iter()
+                .all(|entry| entry.request_type != backfill && entry.repo_id != Some(repo5)),
+        );
+
+        let empty_only = queue
+            .list_old_ready_requests(&ctx, &QueueRepoFilter::Only(vec![]), &future, 100, false)
+            .await?;
+        assert!(empty_only.is_empty());
+
+        // Backfill exclusion.
+        let no_backfill = queue
+            .list_old_ready_requests(&ctx, &QueueRepoFilter::Except(vec![]), &future, 100, true)
+            .await?;
+        assert_eq!(no_backfill.len(), 3);
+        assert!(
+            no_backfill
+                .iter()
+                .all(|entry| entry.request_type != backfill),
+            "backfill types should be excluded"
+        );
+
+        // Limit applies.
+        let limited = queue
+            .list_old_ready_requests(&ctx, &QueueRepoFilter::Except(vec![]), &future, 1, false)
+            .await?;
+        assert_eq!(limited.len(), 1);
 
         Ok(())
     }

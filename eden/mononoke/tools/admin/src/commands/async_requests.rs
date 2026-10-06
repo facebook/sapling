@@ -8,6 +8,7 @@
 pub(crate) mod abort;
 mod fail_dead_ready;
 mod list;
+mod list_old_ready;
 mod requeue;
 mod show;
 mod show_megarepo_sync_target_config;
@@ -28,6 +29,7 @@ use submit::AsyncRequestsSubmitArgs;
 use crate::commands::async_requests::abort::AsyncRequestsAbortArgs;
 use crate::commands::async_requests::fail_dead_ready::AsyncRequestsFailDeadReadyRequestsArgs;
 use crate::commands::async_requests::list::AsyncRequestsListArgs;
+use crate::commands::async_requests::list_old_ready::AsyncRequestsListOldReadyArgs;
 use crate::commands::async_requests::requeue::AsyncRequestsRequeueArgs;
 use crate::commands::async_requests::show::AsyncRequestsShowArgs;
 use crate::commands::async_requests::show_megarepo_sync_target_config::AsyncRequestsShowMegarepoSyncTargetConfigArgs;
@@ -45,6 +47,9 @@ pub enum AsyncRequestsSubcommand {
     /// Lists asynchronous requests (by default the ones active
     /// now or updated within last 5 mins).
     List(AsyncRequestsListArgs),
+    /// Lists `ready` requests older than a threshold: the ones that would
+    /// trip the `queue.<repo>.age_s.ready` alerts.
+    ListOldReady(AsyncRequestsListOldReadyArgs),
     /// Marks "dead" ready requests as failed: those whose params blob is
     /// missing from the blobstore (i.e. `show` fails with "Missing blob"),
     /// and, with `--older-than-days`, those that have sat uncollected in
@@ -79,6 +84,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .await
                 .context("acquiring the async requests queue")?;
             list::list_requests(list_args, ctx, queue).await?
+        }
+        AsyncRequestsSubcommand::ListOldReady(list_old_ready_args) => {
+            let repo_ids = match list_old_ready_args.repo.as_repo_arg() {
+                Some(repo_arg) => Some(vec![app.repo_id(repo_arg)?]),
+                None => None,
+            };
+            let queue = async_requests_client::build(fb, &app, repo_ids)
+                .await
+                .context("acquiring the async requests queue")?;
+            list_old_ready::list_old_ready_requests(list_old_ready_args, ctx, queue).await?
         }
         AsyncRequestsSubcommand::FailDeadReadyRequests(fail_dead_ready_args) => {
             let queue = async_requests_client::build(fb, &app, None)

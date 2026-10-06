@@ -768,6 +768,31 @@ impl AsyncMethodRequestQueue {
             .context("marking requests as failed")
     }
 
+    /// List `ready` requests with `ready_at` older than `ready_before`,
+    /// ordered oldest first, up to `limit` rows. These are the requests that
+    /// drive the `queue.<repo>.age_s.ready` worker stat (`now - min(ready_at)`),
+    /// so rows older than `now - alert_threshold` would trip an alert on that
+    /// stat. Backfill request types are excluded when `exclude_backfill` is
+    /// true, matching the worker stats loop.
+    pub async fn list_old_ready_requests(
+        &self,
+        ctx: &CoreContext,
+        ready_before: &Timestamp,
+        limit: usize,
+        exclude_backfill: bool,
+    ) -> Result<Vec<LongRunningRequestEntry>, Error> {
+        self.table
+            .list_old_ready_requests(
+                ctx,
+                &self.repo_filter,
+                ready_before,
+                limit,
+                exclude_backfill,
+            )
+            .await
+            .context("listing old ready requests")
+    }
+
     pub async fn get_request_by_id(
         &self,
         ctx: &CoreContext,
