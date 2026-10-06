@@ -25,18 +25,18 @@ import {appliedCommitTreeSearchFilter, commitTreeSearchFilter} from './CommitTre
 import {Center, LargeSpinner} from './ComponentUtils';
 import {EmptyState} from './EmptyState';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
-import {isHighlightedCommit} from './HighlightedCommits';
+import {highlightedCommits} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
-import {latestCommitMessageTitle} from './codeReview/CodeReviewInfo';
+import {latestCommitTitles} from './codeReview/CodeReviewInfo';
 import {
   makeCheckedOutElsewhereVirtualCommit,
   YOU_ARE_HERE_VIRTUAL_COMMIT,
 } from './dag/virtualCommit';
 import {T, t} from './i18n';
-import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
+import {localStorageBackedAtom, useAtomHas, useAtomSelect} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {inlineProgressByHash, useRunOperation} from './operationsState';
+import {useInlineProgress, useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {hideIrrelevantCwdStacks, isIrrelevantToCwd, repoRelativeCwd} from './repositoryData';
 import {commitTreeWidth} from './responsive';
@@ -137,7 +137,7 @@ const renderSubsetUnionSelection = atom(get => {
       if (commit.isYouAreHere || commit.isCheckedOutElsewhere) {
         return true;
       }
-      const renderedTitle = get(latestCommitMessageTitle(commit.hash));
+      const renderedTitle = get(latestCommitTitles).get(commit.hash) ?? '';
       const searchable = [
         renderedTitle,
         commit.diffId ?? '',
@@ -273,7 +273,7 @@ function useExtraCommitRowProps(info: DagCommitInfo): React.HTMLAttributes<HTMLD
 }
 
 function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {
-  const inlineProgress = useAtomValue(inlineProgressByHash(info.hash));
+  const inlineProgress = useInlineProgress(info.hash);
   const setPosition = useSetAtom(youAreHerePosition);
   const anchorRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -407,15 +407,10 @@ function CheckedOutElsewhereGlyph({info}: {info: DagCommitInfo}) {
   );
 }
 
-const dagHasChildren = atomFamilyWeak((key: string) => {
-  return atom(get => {
-    const dag = get(dagWithPreviews);
-    return dag.children(key).size > 0;
-  });
-});
-
 function DagCommitBody({info}: {info: DagCommitInfo}) {
-  const hasChildren = useAtomValue(dagHasChildren(info.hash));
+  const hasChildren = useAtomSelect(dagWithPreviews, dag => dag.children(info.hash).size > 0, [
+    info.hash,
+  ]);
   return (
     <Commit
       commit={info}
@@ -426,32 +421,22 @@ function DagCommitBody({info}: {info: DagCommitInfo}) {
   );
 }
 
-const dagHasParents = atomFamilyWeak((key: string) => {
-  return atom(get => {
-    const dag = get(dagWithPreviews);
-    return dag.parents(key).size > 0;
-  });
-});
-
-const dagIsDraftStackRoot = atomFamilyWeak((key: string) => {
-  return atom(get => {
-    const dag = get(dagWithPreviews);
-    return dag.draft(dag.parents(key)).size === 0;
-  });
-});
-
 function MaybeFetchingAdditionalCommitsRow({hash}: {hash: Hash}) {
-  const hasParents = useAtomValue(dagHasParents(hash));
+  const hasParents = useAtomSelect(dagWithPreviews, dag => dag.parents(hash).size > 0, [hash]);
   return hasParents ? null : <FetchingAdditionalCommitsRow />;
 }
 
 function MaybeStackActions({hash}: {hash: Hash}) {
-  const isDraftStackRoot = useAtomValue(dagIsDraftStackRoot(hash));
+  const isDraftStackRoot = useAtomSelect(
+    dagWithPreviews,
+    dag => dag.draft(dag.parents(hash)).size === 0,
+    [hash],
+  );
   return isDraftStackRoot ? <StackActions hash={hash} /> : null;
 }
 
 function HighlightedGlyph({info}: {info: DagCommitInfo}) {
-  const highlighted = useAtomValue(isHighlightedCommit(info.hash));
+  const highlighted = useAtomHas(highlightedCommits, info.hash);
 
   const highlightCircle = highlighted ? (
     <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />

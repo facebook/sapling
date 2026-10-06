@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Dag} from './dag/dag';
 import type {Hash} from './types';
 
 import {Button} from 'isl-components/Button';
@@ -27,48 +28,45 @@ import {succeedableRevset} from './types';
  * children and the latest successor to rebase them onto, or null if the button
  * should not be shown.
  */
-export const orphanedChildrenForCommit = atomFamilyWeak((hash: Hash) =>
-  atom(get => {
-    const dag = get(dagWithPreviews);
-    const commit = dag.get(hash);
-    if (commit == null || commit.successorInfo == null) {
-      return null;
-    }
+function orphanedChildrenForCommit(dag: Dag, hash: Hash) {
+  const commit = dag.get(hash);
+  if (commit == null || commit.successorInfo == null) {
+    return null;
+  }
 
-    const successorType = commit.successorInfo.type;
+  const successorType = commit.successorInfo.type;
 
-    // Follow the successor chain to find the latest non-obsolete successor.
-    const successors = dag.followSuccessors(hash);
-    // followSuccessors returns a set; remove the original hash to get just successors.
-    const successorHashes = successors
-      .toHashes()
-      .toArray()
-      .filter(h => h !== hash);
-    if (successorHashes.length === 0) {
-      return null;
-    }
+  // Follow the successor chain to find the latest non-obsolete successor.
+  const successors = dag.followSuccessors(hash);
+  // followSuccessors returns a set; remove the original hash to get just successors.
+  const successorHashes = successors
+    .toHashes()
+    .toArray()
+    .filter(h => h !== hash);
+  if (successorHashes.length === 0) {
+    return null;
+  }
 
-    // Pick the first successor. If it's not in the DAG or is itself obsolete, bail out.
-    const successorHash = successorHashes[0];
-    const successorCommit = dag.get(successorHash);
-    if (successorCommit == null || successorCommit.successorInfo != null) {
-      return null;
-    }
+  // Pick the first successor. If it's not in the DAG or is itself obsolete, bail out.
+  const successorHash = successorHashes[0];
+  const successorCommit = dag.get(successorHash);
+  if (successorCommit == null || successorCommit.successorInfo != null) {
+    return null;
+  }
 
-    // Find non-obsolete children of this obsolete commit.
-    const children = dag.children(hash);
-    const nonObsoleteChildren = dag.nonObsolete(children);
-    if (nonObsoleteChildren.size === 0) {
-      return null;
-    }
+  // Find non-obsolete children of this obsolete commit.
+  const children = dag.children(hash);
+  const nonObsoleteChildren = dag.nonObsolete(children);
+  if (nonObsoleteChildren.size === 0) {
+    return null;
+  }
 
-    return {
-      orphanedChildren: nonObsoleteChildren.toHashes().toArray(),
-      successorHash,
-      isLanded: successorType === 'land' || successorType === 'pushrebase',
-    };
-  }),
-);
+  return {
+    orphanedChildren: nonObsoleteChildren.toHashes().toArray(),
+    successorHash,
+    isLanded: successorType === 'land' || successorType === 'pushrebase',
+  };
+}
 
 /**
  * For a given stack root hash, aggregates all orphaned children across all
@@ -86,7 +84,7 @@ export const orphanedChildrenForStack = atomFamilyWeak((hash: Hash) =>
     const allSuccessors: Hash[] = [];
 
     for (const h of stackHashes) {
-      const info = get(orphanedChildrenForCommit(h));
+      const info = orphanedChildrenForCommit(dag, h);
       if (info != null) {
         for (const child of info.orphanedChildren) {
           rebaseEntries.push({

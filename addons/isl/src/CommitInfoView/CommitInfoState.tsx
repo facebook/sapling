@@ -300,6 +300,11 @@ export const unsavedFieldsBeingEdited = atomFamilyWeak((hashOrHead: Hash | 'head
 
 export const hasUnsavedEditedCommitMessage = atomFamilyWeak((hashOrHead: Hash | 'head') => {
   return atom(get => {
+    // Every smartlog row asks this. Answering from the edited message alone, when there is none,
+    // keeps the rows from depending on the schema and the whole commit message chain.
+    if (hashOrHead !== 'head' && Object.keys(get(editedCommitMessages(hashOrHead))).length === 0) {
+      return false;
+    }
     const beingEdited = get(unsavedFieldsBeingEdited(hashOrHead));
     if (Object.values(beingEdited).some(Boolean)) {
       // Some fields are being edited, let's look more closely to see if anything is actually different.

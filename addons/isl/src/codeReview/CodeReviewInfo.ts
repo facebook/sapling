@@ -6,6 +6,7 @@
  */
 
 import type {
+  CommitInfo,
   DiffId,
   DiffSignalSummary,
   DiffSummariesResult,
@@ -45,7 +46,7 @@ import {messageSyncingEnabledState} from '../messageSyncing';
 import platform from '../platform';
 import {browserPageVisibility, combinePageVisibility} from '../platformVisibility';
 import {dagWithPreviews} from '../previews';
-import {commitByHash, repositoryInfo} from '../serverAPIState';
+import {commitByHash, latestDag, repositoryInfo} from '../serverAPIState';
 import {registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 
@@ -88,11 +89,16 @@ function summaryOrFetchError(
   diffId: DiffId,
 ): Result<DiffSummary | undefined> {
   const summary = all.value?.get(diffId);
-  const error = all.failedDiffs != null ? all.failedDiffs.get(diffId) : all.error;
+  const error = diffFetchError(all, diffId);
   if (summary == null && error != null) {
     return {error};
   }
   return {value: summary};
+}
+
+/** The error that speaks for one diff: its own if failures are tracked per diff, else the fetch's. */
+export function diffFetchError(all: DiffSummariesState, diffId: DiffId): Error | undefined {
+  return all.failedDiffs != null ? all.failedDiffs.get(diffId) : all.error;
 }
 
 /**
@@ -262,43 +268,53 @@ export const latestCommitMessage = atomFamilyWeak((hash: Hash | 'head') =>
       }
       return ['', ''];
     }
-    const commit = get(commitByHash(hash));
-    const preview = get(dagWithPreviews).get(hash);
-
-    if (
-      preview != null &&
-      (preview.title !== commit?.title || preview.description !== commit?.description)
-    ) {
-      return [preview.title, preview.description];
-    }
-
-    if (!commit) {
-      return ['', ''];
-    }
-
-    const syncEnabled = get(messageSyncingEnabledState);
-
-    let remoteTitle = commit.title;
-    let remoteDescription = commit.description;
-    if (syncEnabled && commit.diffId) {
-      // use the diff's commit message instead of the local one, if available
-      const summary = get(diffSummary(commit.diffId));
-      if (summary?.value) {
-        remoteTitle = summary.value.title;
-        remoteDescription = summary.value.commitMessage;
-      }
-    }
-
-    return [remoteTitle, remoteDescription];
+    return latestMessageFor(get(commitByHash(hash)), get(dagWithPreviews).get(hash), diffId =>
+      get(messageSyncingEnabledState) ? get(diffSummary(diffId)).value : undefined,
+    );
   }),
 );
 
-export const latestCommitMessageTitle = atomFamilyWeak((hashOrHead: Hash | 'head') =>
-  atom(get => {
-    const [title] = get(latestCommitMessage(hashOrHead));
-    return title;
-  }),
-);
+/** `latestCommitMessage` for a commit, from the local commit, its preview, and its diff. */
+function latestMessageFor(
+  commit: CommitInfo | undefined,
+  preview: CommitInfo | undefined,
+  syncedSummary: (diffId: DiffId) => DiffSummary | undefined,
+): [title: string, description: string] {
+  if (
+    preview != null &&
+    (preview.title !== commit?.title || preview.description !== commit?.description)
+  ) {
+    return [preview.title, preview.description];
+  }
+  if (!commit) {
+    return ['', ''];
+  }
+  // use the diff's commit message instead of the local one, if available
+  const summary = commit.diffId ? syncedSummary(commit.diffId) : undefined;
+  return summary ? [summary.title, summary.commitMessage] : [commit.title, commit.description];
+}
+
+/**
+ * Every commit's title from `latestCommitMessage`, computed together for the smartlog rows. One
+ * derived atom per row would make each write to the dag walk thousands of dependents.
+ */
+export const latestCommitTitles = atom(get => {
+  const previews = get(dagWithPreviews);
+  const latest = get(latestDag);
+  const syncedSummary = get(messageSyncingEnabledState)
+    ? (diffId: DiffId) => get(allDiffSummaries).value?.get(diffId)
+    : () => undefined;
+  const titles = new Map<Hash, string>();
+  for (const preview of previews.values()) {
+    titles.set(preview.hash, latestMessageFor(latest.get(preview.hash), preview, syncedSummary)[0]);
+  }
+  for (const commit of latest.values()) {
+    if (!titles.has(commit.hash)) {
+      titles.set(commit.hash, latestMessageFor(commit, undefined, syncedSummary)[0]);
+    }
+  }
+  return titles;
+});
 
 export const latestCommitMessageFields = atomFamilyWeak((hashOrHead: Hash | 'head') =>
   atom(get => {

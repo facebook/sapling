@@ -9,13 +9,8 @@ import type {CommitInfo, Hash} from './types';
 
 import {atom, useSetAtom} from 'jotai';
 import {useEffect, useState} from 'react';
-import {atomFamilyWeak} from './jotaiUtils';
 
 export const highlightedCommits = atom<Set<Hash>>(new Set<Hash>());
-
-export const isHighlightedCommit = atomFamilyWeak((hash: Hash) =>
-  atom(get => get(highlightedCommits).has(hash)),
-);
 
 export function HighlightCommitsWhileHovering({
   toHighlight,

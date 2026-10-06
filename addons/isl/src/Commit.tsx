@@ -9,7 +9,7 @@ import type {JSX, ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DagCommitInfo} from './dag/dag';
-import type {CommitInfo, SuccessorInfo, WorktreeEntry} from './types';
+import type {CommitInfo, MergeConflicts, SuccessorInfo, WorktreeEntry} from './types';
 import {succeedableRevset, WarningCheckResult} from './types';
 
 import {Button} from 'isl-components/Button';
@@ -17,7 +17,7 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tag} from 'isl-components/Tag';
 import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtomValue, useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import React, {memo, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -48,7 +48,7 @@ import {
   branchingDiffInfos,
   codeReviewProvider,
   diffSummary,
-  latestCommitMessageTitle,
+  latestCommitTitles,
 } from './codeReview/CodeReviewInfo';
 import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {submitAsDraft} from './codeReview/DraftCheckbox';
@@ -60,10 +60,11 @@ import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {IrrelevantCwdIcon} from './icons/IrrelevantCwdIcon';
 import {
-  atomFamilyWeak,
   configBackedAtom,
   localStorageBackedAtom,
   readAtom,
+  useAtomGet,
+  useAtomSelect,
   writeAtom,
 } from './jotaiUtils';
 import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
@@ -75,9 +76,9 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import {RemoveWorktreeOperation} from './operations/RemoveWorktreeOperation';
 import {RenameWorktreeOperation} from './operations/RenameWorktreeOperation';
 import {
-  inlineProgressByHash,
   operationBeingPreviewed,
   runOperation,
+  useInlineProgress,
   useRunOperation,
   useRunPreviewedOperation,
 } from './operationsState';
@@ -146,19 +147,16 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
   return false;
 }
 
-const commitLabelForCommit = atomFamilyWeak((hash: string) =>
-  atom(get => {
-    const conflicts = get(mergeConflicts);
-    const {localShort, incomingShort} = CONFLICT_SIDE_LABELS;
-    const hashes = conflicts?.hashes;
-    if (hash === hashes?.other) {
-      return incomingShort;
-    } else if (hash === hashes?.local) {
-      return localShort;
-    }
-    return null;
-  }),
-);
+function commitLabelForCommit(conflicts: MergeConflicts | undefined, hash: string): string | null {
+  const {localShort, incomingShort} = CONFLICT_SIDE_LABELS;
+  const hashes = conflicts?.hashes;
+  if (hash === hashes?.other) {
+    return incomingShort;
+  } else if (hash === hashes?.local) {
+    return localShort;
+  }
+  return null;
+}
 
 export const Commit = memo(
   ({
@@ -180,7 +178,7 @@ export const Commit = memo(
     const runOperation = useRunOperation();
     const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
 
-    const inlineProgress = useAtomValue(inlineProgressByHash(commit.hash));
+    const inlineProgress = useInlineProgress(commit.hash);
 
     const {isSelected, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
     const actionsPrevented = previewPreventsActions(previewType);
@@ -191,9 +189,13 @@ export const Commit = memo(
 
     const treeWidth = useAtomValue(commitTreeWidth);
 
-    const title = useAtomValue(latestCommitMessageTitle(commit.hash));
+    const title = useAtomGet(latestCommitTitles, commit.hash) ?? '';
 
-    const commitLabel = useAtomValue(commitLabelForCommit(commit.hash));
+    const commitLabel = useAtomSelect(
+      mergeConflicts,
+      conflicts => commitLabelForCommit(conflicts, commit.hash),
+      [commit.hash],
+    );
 
     const clipboardCopy = (text: string, url?: string) =>
       copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));

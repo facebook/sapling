@@ -9,12 +9,11 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {Operation} from './operations/Operation';
 import type {Disposable, Hash, ProgressStep, ServerToClientMessage} from './types';
 
-import {atom} from 'jotai';
 import {useCallback} from 'react';
 import {defer} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {tracker} from './analytics';
-import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
+import {readAtom, useAtomSelect, writeAtom} from './jotaiUtils';
 import {atomResetOnCwdChange} from './repositoryData';
 import {Timer} from './timer';
 import {registerCleanup, registerDisposable, short} from './utils';
@@ -295,17 +294,15 @@ export const queuedOperationsErrorAtom = atomResetOnCwdChange<
   | undefined
 >(undefined);
 
-export const inlineProgressByHash = atomFamilyWeak((hash: Hash) =>
-  atom(get => {
-    const info = get(operationList);
-    const inlineProgress = info.currentOperation?.inlineProgress;
-    if (inlineProgress == null) {
-      return undefined;
-    }
-    const shortHash = short(hash); // progress messages come indexed by short hash
-    return inlineProgress.get(shortHash);
-  }),
-);
+/** The running operation's progress message for `hash`, if it reports one. */
+export function useInlineProgress(hash: Hash): string | undefined {
+  return useAtomSelect(
+    operationList,
+    // progress messages come indexed by short hash
+    list => list.currentOperation?.inlineProgress?.get(short(hash)),
+    [hash],
+  );
+}
 
 export const operationBeingPreviewed = atomResetOnCwdChange<Operation | undefined>(undefined);
 

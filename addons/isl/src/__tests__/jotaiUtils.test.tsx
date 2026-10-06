@@ -25,6 +25,7 @@ import {
   readAtom,
   useAtomGet,
   useAtomHas,
+  useAtomSelect,
   writeAtom,
 } from '../jotaiUtils';
 
@@ -319,6 +320,69 @@ describe('useAtomGet and useAtomSet', () => {
     expect(findRerender({insertMap: [['b', 5]]})).toEqual(['b']);
     expect(findRerender({replaceSet})).toEqual(['c']);
     expect(findRerender({insertMap: [['b', 5]], replaceSet})).toEqual(['b', 'c']);
+  });
+});
+
+describe('useAtomSelect', () => {
+  // A derived atom per row is a dependent Jotai walks on every write to the shared atom, which made
+  // writes cost seconds with thousands of rows. Rows must subscribe as listeners instead.
+  it('subscribes rows as listeners, not as dependent atoms', () => {
+    const sizes = atom(new Map([['a', 1]]));
+    const store = createStore();
+    function Row({k}: {k: string}) {
+      const size = useAtomSelect(sizes, map => map.get(k) ?? 0, [k]);
+      return <span>{size}</span>;
+    }
+    render(
+      <Provider store={store}>
+        {['a', 'b', 'c'].map(k => (
+          <Row k={k} key={k} />
+        ))}
+      </Provider>,
+    );
+
+    const mounted = store.dev_get_mounted?.(sizes);
+    // A subscribed atom counts among its own dependents.
+    expect([...(mounted?.t ?? [])].filter(dependent => dependent !== sizes)).toEqual([]);
+    expect(mounted?.l.size).toBe(3);
+  });
+
+  it('re-renders when the selected value or a dependency changes', () => {
+    const counts = atom(new Map([['a', 1]]));
+    const store = createStore();
+    const renders: Array<string> = [];
+    function Row({k, scale}: {k: string; scale: number}) {
+      const value = useAtomSelect(counts, map => (map.get(k) ?? 0) * scale, [k, scale]);
+      renders.push(`${k}=${value}`);
+      return <span>{value}</span>;
+    }
+    const {rerender} = render(
+      <Provider store={store}>
+        <Row k="a" scale={1} />
+      </Provider>,
+    );
+    renders.length = 0;
+
+    act(() =>
+      store.set(
+        counts,
+        new Map([
+          ['a', 1],
+          ['b', 2],
+        ]),
+      ),
+    );
+    expect(renders).toEqual([]);
+
+    act(() => store.set(counts, new Map([['a', 3]])));
+    expect(renders).toEqual(['a=3']);
+
+    rerender(
+      <Provider store={store}>
+        <Row k="a" scale={2} />
+      </Provider>,
+    );
+    expect(renders.at(-1)).toBe('a=6');
   });
 });
 

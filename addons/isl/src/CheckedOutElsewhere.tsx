@@ -86,10 +86,7 @@ export const otherWorktreeCheckoutsByHash = atom(get => {
   return get(allOtherWorktreeCheckoutsByHash);
 });
 
-/**
- * The sibling worktree(s) currently checked out at this commit, if any.
- * Analogous to `isHighlightedCommit` in `HighlightedCommits.tsx`.
- */
+/** The sibling worktree(s) currently checked out at this commit, if any. */
 export const isCheckedOutElsewhere = atomFamilyWeak((hash: Hash) =>
   atom(get => get(otherWorktreeCheckoutsByHash).get(hash)),
 );

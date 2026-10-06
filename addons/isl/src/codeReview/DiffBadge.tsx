@@ -22,14 +22,20 @@ import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {IconStack} from '../icons/IconStack';
-import {atomFamilyWeak, atomLoadableWithRefresh, configBackedAtom, useAtomGet} from '../jotaiUtils';
+import {
+  atomFamilyWeak,
+  atomLoadableWithRefresh,
+  configBackedAtom,
+  useAtomGet,
+  useAtomSelect,
+} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import {inMergeConflicts, repositoryInfo} from '../serverAPIState';
 import {copyAndShowToast} from '../toast';
 import {exactRevset} from '../types';
 import {showConfirmation} from '../useModal';
-import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
+import {allDiffSummaries, codeReviewProvider, diffFetchError, diffSummary} from './CodeReviewInfo';
 import './DiffBadge.css';
 import css from './DiffBadge.module.css';
 import {submitAsDraft} from './DraftCheckbox';
@@ -130,17 +136,19 @@ function DiffInfoInner({
   provider: UICodeReviewProvider;
   hideActions: boolean;
 }) {
-  const diffInfoResult = useAtomValue(diffSummary(diffId));
+  // Select this diff's summary and error separately: both keep their identity across updates that
+  // don't touch them, where a combined `Result` would be new on every fetch.
+  const info = useAtomSelect(allDiffSummaries, all => all.value?.get(diffId), [diffId]);
+  const fetchError = useAtomSelect(allDiffSummaries, all => diffFetchError(all, diffId), [diffId]);
   const syncStatus = useAtomGet(syncStatusAtom, commit.hash);
   const startTestsEnabled = useFeatureFlagSync(Internal.featureFlags?.StartTestsButton);
   const isInMergeConflicts = useAtomValue(inMergeConflicts);
-  if (diffInfoResult.error) {
+  if (info == null && fetchError != null) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }
-  if (diffInfoResult?.value == null) {
+  if (info == null) {
     return <DiffSpinner diffId={diffId} provider={provider} />;
   }
-  const info = diffInfoResult.value;
   const shouldHideActions = hideActions || provider.isDiffClosed(info);
   // deferredTestingInfo is fb-only (phabricator). Use 'in' check to avoid OSS type errors.
   const deferredTestingInfo:

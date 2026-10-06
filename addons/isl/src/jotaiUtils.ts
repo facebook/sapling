@@ -10,9 +10,10 @@ import type {Json} from 'shared/typeUtils';
 import type {Platform} from './platform';
 import type {ConfigName, LocalStorageName, SettableConfigName} from './types';
 
-import {atom, getDefaultStore, useAtomValue} from 'jotai';
+import {atom, getDefaultStore, useStore} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {useMemo} from 'react';
+import type {DependencyList} from 'react';
+import {useCallback, useRef, useSyncExternalStore} from 'react';
 import {RateLimiter} from 'shared/RateLimiter';
 import {isPromise} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
@@ -481,43 +482,55 @@ export function localStorageBackedAtomFamily<K extends string, T extends Json | 
   });
 }
 
-function setDebugLabelForDerivedAtom<A extends Atom<unknown>>(
-  original: Atom<unknown>,
-  derived: A,
-  key: unknown,
-): A {
-  derived.debugLabel = `${original.debugLabel ?? original.toString()}:${key}`;
-  return derived;
+/**
+ * `selector(useAtomValue(sourceAtom))`, re-rendering only when the selected value changes.
+ *
+ * Subscribes as a listener instead of through a derived atom. Every derived atom is a dependent
+ * that Jotai walks on each write to its sources, so one derived atom per smartlog row (tens of
+ * thousands across the row components) made a single smartlog update cost seconds. Prefer this to
+ * `atomFamilyWeak` for values read once per row. `selector` runs again whenever `sourceAtom`
+ * changes, so keep it cheap and pure, with everything it closes over in `deps`.
+ */
+export function useAtomSelect<S, T>(
+  sourceAtom: Atom<S>,
+  selector: (source: S) => T,
+  deps: DependencyList,
+): T {
+  const store = useStore();
+  const subscribe = useCallback(
+    (onChange: () => void) => store.sub(sourceAtom, onChange),
+    [store, sourceAtom],
+  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const select = useCallback(selector, deps);
+  // useSyncExternalStore requires an unchanged snapshot while nothing changed, and selectors may
+  // build a new object on every call.
+  const last = useRef<{source: S; select: (source: S) => T; value: T} | null>(null);
+  const getSnapshot = () => {
+    const source = store.get(sourceAtom);
+    const cached = last.current;
+    if (cached != null && Object.is(cached.source, source) && cached.select === select) {
+      return cached.value;
+    }
+    const value = select(source);
+    last.current = {source, select, value};
+    return value;
+  };
+  return useSyncExternalStore(subscribe, getSnapshot);
 }
 
 /**
  * Similar to `useAtomValue(mapAtom).get(key)` but avoids re-render if the map
  * is changed but the `get(key)` does not change.
- *
- * This might be an appealing alternative to `atomFamilyWeak` in some cases.
- * The `atomFamilyWeak` keeps caching state within itself and it has
- * undesirable memory overhead regardless of settings. This function makes
- * the hook own the caching state so states can be released cleanly on unmount.
  */
-export function useAtomGet<K, V>(
-  mapAtom: Atom<{get(k: K): V | undefined}>,
-  key: K,
-): Awaited<V | undefined> {
-  const derivedAtom = useMemo(() => {
-    const derived = atom(get => get(mapAtom).get(key));
-    return setDebugLabelForDerivedAtom(mapAtom, derived, key);
-  }, [key, mapAtom]);
-  return useAtomValue(derivedAtom);
+export function useAtomGet<K, V>(mapAtom: Atom<{get(k: K): V | undefined}>, key: K): V | undefined {
+  return useAtomSelect(mapAtom, map => map.get(key), [key]);
 }
 
 /**
  * Similar to `useAtomValue(setAtom).has(key)` but avoids re-render if the set
  * is changed but the `has(key)` does not change.
- *
- * This might be an appealing alternative to `atomFamilyWeak`. See `useAtomGet`
- * for explanation.
  */
-export function useAtomHas<K>(setAtom: Atom<{has(k: K): boolean}>, key: K): Awaited<boolean> {
-  const derivedAtom = useMemo(() => atom(get => get(setAtom).has(key)), [key, setAtom]);
-  return useAtomValue(derivedAtom);
+export function useAtomHas<K>(setAtom: Atom<{has(k: K): boolean}>, key: K): boolean {
+  return useAtomSelect(setAtom, set => set.has(key), [key]);
 }
