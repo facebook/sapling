@@ -17,6 +17,7 @@ context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/conte
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 in_memory_commit_graph_storage = { version = "0.1.0", path = "../in_memory_commit_graph_storage" }
 itertools = "0.15.0"
+justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 rand = "0.10.3"

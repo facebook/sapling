@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -12,7 +14,9 @@ use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::EdgeType;
 use commit_graph_types::frontier::ChangesetFrontier;
+use commit_graph_types::storage::P1_LINEAR_PREFETCH_STEPS;
 use commit_graph_types::storage::Prefetch;
+use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::Future;
 use futures::future;
@@ -22,9 +26,32 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_ext::stream::FbStreamExt;
 use mononoke_types::ChangesetId;
+use mononoke_types::FIRST_GENERATION;
 use mononoke_types::Generation;
 
 use crate::CommitGraphOps;
+
+/// Number of runs of head generations for which the common frontier is
+/// lowered concurrently ahead of the stream.
+const LOWER_COMMON_CONCURRENCY: usize = 32;
+
+/// Maximum number of heads whose chains are prefetched, and of head
+/// generations the common frontier is lowered to, ahead of the stream.
+/// The stream deals with any beyond these as it reaches them.
+const MAX_PREPARED_HEADS: usize = 1024;
+
+/// Bound on the changesets held in total by the copies of the common
+/// frontier kept for head generations, based on the size of the common
+/// frontier.  Each copy also keeps every changeset the descent has passed
+/// below its target.
+const LOWER_COMMON_MAX_CHANGESETS: usize = 1 << 20;
+
+/// Number of first-parent steps prefetched below every head ahead of the
+/// stream.  Heads are usually short stacks of draft commits, so this covers
+/// most of them at a fraction of the rows a full-length prefetch would
+/// return, and longer chains fall back to the stream's own prefetch as it
+/// walks them.
+const HEAD_CHAIN_PREFETCH_STEPS: u64 = 32;
 
 /// Builder for a reverse topologically ordered stream of changesets that
 /// are ancestors of any set of changesets (heads). This builder allows customizing
@@ -116,12 +143,97 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
         self
     }
 
+    /// Lowers copies of the common frontier to the generation of every head
+    /// ahead of the stream, so that it can swap them in when it reaches
+    /// those generations instead of lowering the frontier there itself.
+    /// Lowering there is where the stream otherwise misses the cache once
+    /// or twice per head, one head after another.
+    ///
+    /// The head generations are split into contiguous runs.  One frontier is
+    /// first lowered through the first generation of each run, since every
+    /// run would otherwise repeat that descent, and the runs then lower their
+    /// copy from generation to generation concurrently.  The first-parent
+    /// chain below each lowered frontier is prefetched too, down to the next
+    /// head generation, because the stream walks down it one generation at a
+    /// time while it is inside a stack of commits.
+    async fn lower_common_to_head_generations(
+        commit_graph: &CommitGraphOps<E>,
+        ctx: &CoreContext,
+        heads: &ChangesetFrontier,
+        common: &ChangesetFrontier,
+    ) -> Result<HashMap<Generation, ChangesetFrontier>> {
+        if common.is_empty() || heads.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        // The stream lowers the frontier itself for any head generations
+        // beyond the ones kept here.
+        let common_size: usize = common.values().map(HashSet::len).sum();
+        let max_generations =
+            MAX_PREPARED_HEADS.min(LOWER_COMMON_MAX_CHANGESETS / common_size.max(1));
+        let generations: Vec<Generation> =
+            heads.keys().rev().take(max_generations).copied().collect();
+        if generations.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let run_len = generations.len().div_ceil(LOWER_COMMON_CONCURRENCY);
+
+        let mut frontier = common.clone();
+        let mut runs = Vec::with_capacity(LOWER_COMMON_CONCURRENCY);
+        for run in generations.chunks(run_len) {
+            commit_graph
+                .lower_frontier_incrementally(ctx, &mut frontier, run[0])
+                .await?;
+            runs.push((run.to_vec(), frontier.clone()));
+        }
+
+        stream::iter(runs)
+            .map(|(run, mut frontier)| async move {
+                let mut lowered = Vec::with_capacity(run.len());
+                for (index, generation) in run.iter().enumerate() {
+                    if index > 0 {
+                        commit_graph
+                            .lower_frontier_incrementally(ctx, &mut frontier, *generation)
+                            .await?;
+                    }
+                    // Lowering to a next generation that is within the linear
+                    // prefetch distance prefetches the chain by itself.
+                    let next = run.get(index + 1).copied();
+                    let next_is_near = next.is_some_and(|next| {
+                        generation.value() - next.value() <= P1_LINEAR_PREFETCH_STEPS
+                    });
+                    if !next_is_near && let Some((_, cs_ids)) = frontier.last_key_value() {
+                        let chain_start: Vec<_> = cs_ids.iter().copied().collect();
+                        commit_graph
+                            .storage
+                            .prefetch_many_edges(
+                                ctx,
+                                &chain_start,
+                                PrefetchTarget::LinearAncestors {
+                                    generation: next.unwrap_or(FIRST_GENERATION),
+                                    steps: P1_LINEAR_PREFETCH_STEPS,
+                                },
+                            )
+                            .await?;
+                    }
+                    lowered.push((*generation, frontier.clone()));
+                }
+                anyhow::Ok(lowered)
+            })
+            .buffer_unordered(LOWER_COMMON_CONCURRENCY)
+            .try_concat()
+            .await
+            .map(|lowered| lowered.into_iter().collect())
+    }
+
     pub async fn build(self) -> Result<BoxStream<'static, Result<ChangesetId>>> {
         struct AncestorsStreamState<E: EdgeType> {
             commit_graph: Arc<CommitGraphOps<E>>,
             ctx: CoreContext,
             heads: ChangesetFrontier,
             common: ChangesetFrontier,
+            prefetch_common: bool,
+            common_at_head_generations: HashMap<Generation, ChangesetFrontier>,
             descendants_of: Option<(ChangesetId, Generation)>,
             property: Box<
                 dyn Fn(ChangesetId) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>
@@ -159,10 +271,43 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
             None => None,
         };
 
+        let prefetch = justknobs::eval(
+            "scm/mononoke:commit_graph_pull_optimizations",
+            None,
+            Some(self.commit_graph.storage.repo_name()),
+        );
+
+        let mut head_ids = heads.clone();
+        head_ids.truncate(MAX_PREPARED_HEADS);
         let (heads, common) = futures::try_join!(
             self.commit_graph.frontier(&self.ctx, heads),
             self.commit_graph.frontier(&self.ctx, self.common)
         )?;
+
+        let common_at_head_generations = if prefetch {
+            // The stream walks down the first-parent chains of all the heads,
+            // so warm them all at once rather than one head at a time as the
+            // traversal reaches each of them.
+            let (_, common_at_head_generations) = futures::try_join!(
+                self.commit_graph.storage.prefetch_many_edges(
+                    &self.ctx,
+                    &head_ids,
+                    PrefetchTarget::LinearAncestors {
+                        generation: FIRST_GENERATION,
+                        steps: HEAD_CHAIN_PREFETCH_STEPS,
+                    },
+                ),
+                Self::lower_common_to_head_generations(
+                    &self.commit_graph,
+                    &self.ctx,
+                    &heads,
+                    &common
+                ),
+            )?;
+            common_at_head_generations
+        } else {
+            HashMap::new()
+        };
 
         Ok(stream::try_unfold(
             Box::new(AncestorsStreamState {
@@ -170,6 +315,8 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
                 ctx: self.ctx,
                 heads,
                 common,
+                prefetch_common: prefetch,
+                common_at_head_generations,
                 descendants_of,
                 property: self.property,
             }),
@@ -179,12 +326,22 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
                     ctx,
                     heads,
                     common,
+                    prefetch_common,
+                    common_at_head_generations,
                     descendants_of,
                     property,
                 } = &mut *state;
 
                 if let Some((generation, cs_ids)) = heads.pop_last() {
-                    commit_graph.lower_frontier(ctx, common, generation).await?;
+                    if let Some(lowered) = common_at_head_generations.remove(&generation) {
+                        *common = lowered;
+                    } else if *prefetch_common {
+                        commit_graph
+                            .lower_frontier_incrementally(ctx, common, generation)
+                            .await?;
+                    } else {
+                        commit_graph.lower_frontier(ctx, common, generation).await?;
+                    }
 
                     let mut cs_ids_not_excluded = vec![];
                     for cs_id in cs_ids {

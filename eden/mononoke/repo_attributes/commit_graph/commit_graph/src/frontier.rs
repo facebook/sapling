@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::ops::Bound;
+
 use anyhow::Result;
 use anyhow::anyhow;
 use borrowed::borrowed;
@@ -12,6 +15,7 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::EdgeType;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
+use commit_graph_types::storage::P1_LINEAR_PREFETCH_STEPS;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
@@ -185,22 +189,94 @@ impl<E: EdgeType> CommitGraphOps<E> {
         frontier: &mut ChangesetFrontier,
         target_generation: Generation,
     ) -> Result<()> {
+        self.lower_frontier_impl(ctx, frontier, target_generation, false)
+            .await
+    }
+
+    /// Same as `lower_frontier`, for callers that will keep lowering the same
+    /// frontier in small steps afterwards (e.g. one generation at a time
+    /// while streaming ancestors).
+    ///
+    /// Small steps prefetch along first parents so that the steps that follow
+    /// are cache hits.  Large steps still prefetch the exact skip tree path,
+    /// which is what the skew binary traversal visits.
+    pub(crate) async fn lower_frontier_incrementally(
+        &self,
+        ctx: &CoreContext,
+        frontier: &mut ChangesetFrontier,
+        target_generation: Generation,
+    ) -> Result<()> {
+        self.lower_frontier_impl(ctx, frontier, target_generation, true)
+            .await
+    }
+
+    async fn lower_frontier_impl(
+        &self,
+        ctx: &CoreContext,
+        frontier: &mut ChangesetFrontier,
+        target_generation: Generation,
+        incremental: bool,
+    ) -> Result<()> {
+        let prefetch_from = |generation: Generation| {
+            if incremental
+                && generation.value() - target_generation.value() <= P1_LINEAR_PREFETCH_STEPS
+            {
+                Prefetch::for_p1_linear_traversal()
+            } else {
+                Prefetch::for_exact_skip_tree_traversal(target_generation)
+            }
+        };
+
+        let batch_prefetch = justknobs::eval(
+            "scm/mononoke:commit_graph_pull_optimizations",
+            None,
+            Some(self.storage.repo_name()),
+        );
+        let mut above_target_count = 0;
+        let mut batched = HashSet::new();
+
         loop {
             tokio::task::consume_budget().await;
 
-            match frontier.last_key_value() {
+            let generation = match frontier.last_key_value() {
                 None => return Ok(()),
                 Some((generation, _)) if *generation <= target_generation => {
                     return Ok(());
                 }
-                _ => {}
+                Some((generation, _)) => *generation,
+            };
+
+            // Whenever the frontier holds more changesets above the target
+            // than it did before the previous step, prefetch the descent of
+            // the ones not prefetched this way before, all at once.  Below a
+            // merge of unrelated histories the frontier holds many changesets
+            // at different generations, and lowering them one generation at
+            // a time would otherwise miss the cache once for each.
+            if batch_prefetch {
+                let above_target =
+                    frontier.range((Bound::Excluded(target_generation), Bound::Unbounded));
+                let count: usize = above_target.clone().map(|(_, cs_ids)| cs_ids.len()).sum();
+                if count > 1 && count > above_target_count {
+                    let cs_ids: Vec<_> = above_target
+                        .flat_map(|(_, cs_ids)| cs_ids.iter().copied())
+                        .filter(|cs_id| batched.insert(*cs_id))
+                        .collect();
+                    if !cs_ids.is_empty() {
+                        self.storage
+                            .fetch_many_edges(ctx, &cs_ids, prefetch_from(generation))
+                            .await?;
+                    }
+                }
+                above_target_count = count;
             }
+
+            let prefetch = prefetch_from(generation);
 
             self.lower_frontier_step(
                 ctx,
                 frontier,
                 move |node| future::ready(Ok(node.generation::<E>() < target_generation)),
-                Prefetch::for_exact_skip_tree_traversal(target_generation),
+                prefetch,
             )
             .watched()
             .await?;
