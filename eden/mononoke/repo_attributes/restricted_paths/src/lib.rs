@@ -40,6 +40,7 @@ use thiserror::Error;
 
 pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 use crate::access_log::log_access_to_restricted_path;
+use crate::restriction_check::AccessEnforcementOutcome;
 pub use crate::restriction_check::ManifestRestrictionCheckResult;
 pub use crate::restriction_check::PathRestrictionCheckResult;
 pub use crate::restriction_check::PermissionRequestGroup;
@@ -964,7 +965,7 @@ where
         enforcement_outcome
             .as_ref()
             .ok()
-            .map(|outcome| outcome.access_enforcement_enabled),
+            .map(|outcome| matches!(outcome, AccessEnforcementOutcome::Enforced { .. })),
         fetches
             .logging_config
             .then(|| handles.config.clone())
@@ -975,15 +976,17 @@ where
             .flatten(),
     );
 
-    let enforcement_outcome = enforcement_outcome?;
-
-    if let Some(permission_request_group) = enforcement_outcome.denial_permission_request_group {
-        Err(authorization_error(
+    match enforcement_outcome? {
+        AccessEnforcementOutcome::Enforced {
+            denial_permission_request_group: Some(permission_request_group),
+        } => Err(authorization_error(
             permission_request_group,
             config.denial_message.clone(),
-        ))
-    } else {
-        Ok(())
+        )),
+        AccessEnforcementOutcome::NotEnforced
+        | AccessEnforcementOutcome::Enforced {
+            denial_permission_request_group: None,
+        } => Ok(()),
     }
 }
 
@@ -1149,16 +1152,13 @@ async fn enforce_with_source_handles<'a, T>(
     handles: &SourceHandles<T>,
     pre_filter_result: PreFilterResult<'a>,
     missing_source_error: anyhow::Error,
-) -> Result<restriction_check::AccessEnforcementOutcome>
+) -> Result<AccessEnforcementOutcome>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
     let (candidates, pre_filter_variant) = match pre_filter_result {
         PreFilterResult::NoMatch => {
-            return Ok(restriction_check::AccessEnforcementOutcome {
-                access_enforcement_enabled: false,
-                denial_permission_request_group: None,
-            });
+            return Ok(AccessEnforcementOutcome::NotEnforced);
         }
         PreFilterResult::DefiniteMatch { candidates } => {
             (candidates, restriction_check::PreFilterVariant::Definite)

@@ -24,6 +24,7 @@ use permission_checker::InternalAclProvider;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 
+use super::AccessEnforcementOutcome;
 use super::AuthorizationCheckResult;
 use super::PathRestrictionCheckResult;
 use super::SharedFetchHandle;
@@ -83,8 +84,8 @@ async fn test_source_enforcement_outcome_denial_permission_request_group_is_dete
         super::source_enforcement_outcome(&handle, &[], &super::PreFilterVariant::Definite).await?;
 
     assert_eq!(
-        outcome.denial_permission_request_group,
-        Some(MononokeIdentity::from_str("REPO_REGION:a_acl")?)
+        outcome.denial_permission_request_group(),
+        Some(&MononokeIdentity::from_str("REPO_REGION:a_acl")?)
     );
     Ok(())
 }
@@ -98,21 +99,17 @@ async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics
     let permission_request_group = MononokeIdentity::from_str("REPO_REGION:deny_acl")?;
     let denied = super::authoritative_sources_enforcement_outcome(vec![
         Err(anyhow::anyhow!("source failed")),
-        Ok(super::AccessEnforcementOutcome {
-            access_enforcement_enabled: true,
+        Ok(AccessEnforcementOutcome::Enforced {
             denial_permission_request_group: Some(permission_request_group.clone()),
         }),
     ])?;
     assert_eq!(
-        denied.denial_permission_request_group,
-        Some(permission_request_group)
+        denied.denial_permission_request_group(),
+        Some(&permission_request_group)
     );
 
     let no_denial = super::authoritative_sources_enforcement_outcome(vec![
-        Ok(super::AccessEnforcementOutcome {
-            access_enforcement_enabled: false,
-            denial_permission_request_group: None,
-        }),
+        Ok(AccessEnforcementOutcome::NotEnforced),
         Err(anyhow::anyhow!("source failed")),
     ]);
     assert!(no_denial.is_err());

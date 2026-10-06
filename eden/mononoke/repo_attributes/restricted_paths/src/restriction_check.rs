@@ -25,6 +25,7 @@ use futures::TryStreamExt;
 use futures::future::BoxFuture;
 use futures::future::Shared;
 use futures::stream;
+use itertools::Itertools;
 use metaconfig_types::EnforcementConditionSet;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
@@ -48,10 +49,31 @@ mod tests;
 /// Identity users should request for access to a restricted path.
 pub type PermissionRequestGroup = MononokeIdentity;
 
+/// Whether an access is enforced, and if so whether it is denied.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct AccessEnforcementOutcome {
-    pub(crate) access_enforcement_enabled: bool,
-    pub(crate) denial_permission_request_group: Option<PermissionRequestGroup>,
+pub(crate) enum AccessEnforcementOutcome {
+    /// No enforcement condition set matched the access, so it is allowed
+    /// whatever the caller's authorization.
+    NotEnforced,
+    /// An enforcement condition set matched the access. The permission request
+    /// group is present when the caller is unauthorized and the access must be
+    /// denied, and absent when the caller is authorized.
+    Enforced {
+        denial_permission_request_group: Option<PermissionRequestGroup>,
+    },
+}
+
+impl AccessEnforcementOutcome {
+    /// The group a denied caller should request access to, if the access is
+    /// denied.
+    pub(crate) fn denial_permission_request_group(&self) -> Option<&PermissionRequestGroup> {
+        match self {
+            Self::NotEnforced => None,
+            Self::Enforced {
+                denial_permission_request_group,
+            } => denial_permission_request_group.as_ref(),
+        }
+    }
 }
 
 /// Source to use for path-side restriction checks.
@@ -1031,12 +1053,11 @@ pub(crate) fn condition_sets_match_restriction_acls(
 
 /// Evaluate one authoritative source for enforcement outcome.
 ///
-/// Returns `access_enforcement_enabled = true` when the source matches the
-/// active enforcement condition sets. A denial permission request group is
-/// present only when a matching restriction denies the caller. Returns
-/// `access_enforcement_enabled = false` when the fetched source does not match
-/// restriction-ACL-scoped condition sets. Returns `Err(_)` when fetching or
-/// evaluating the source fails.
+/// Returns `Enforced` when the source matches the active enforcement condition
+/// sets, with a denial permission request group only when a matching
+/// restriction denies the caller. Returns `NotEnforced` when the fetched source
+/// does not match restriction-ACL-scoped condition sets. Returns `Err(_)` when
+/// fetching or evaluating the source fails.
 pub(crate) async fn source_enforcement_outcome<'a, T>(
     handle: &SharedFetchHandle<T>,
     candidates: &[&'a EnforcementConditionSet],
@@ -1059,10 +1080,7 @@ where
     };
 
     if !any_match {
-        return Ok(AccessEnforcementOutcome {
-            access_enforcement_enabled: false,
-            denial_permission_request_group: None,
-        });
+        return Ok(AccessEnforcementOutcome::NotEnforced);
     }
 
     let denial_permission_request_group = result
@@ -1075,8 +1093,7 @@ where
         .min_by(|left, right| compare_denied_checks(*left, *right))
         .map(|check| check.permission_request_group().clone());
 
-    Ok(AccessEnforcementOutcome {
-        access_enforcement_enabled: true,
+    Ok(AccessEnforcementOutcome::Enforced {
         denial_permission_request_group,
     })
 }
@@ -1088,35 +1105,23 @@ where
 pub(crate) fn authoritative_sources_enforcement_outcome(
     source_outcomes: Vec<Result<AccessEnforcementOutcome>>,
 ) -> Result<AccessEnforcementOutcome> {
-    let mut first_error = None;
-    let mut access_enforcement_enabled = false;
+    let (outcomes, errors): (Vec<_>, Vec<_>) = source_outcomes.into_iter().partition_result();
+    let enforced = outcomes
+        .iter()
+        .any(|outcome| matches!(outcome, AccessEnforcementOutcome::Enforced { .. }));
 
-    for source_outcome in source_outcomes {
-        match source_outcome {
-            Ok(outcome) => {
-                if let Some(permission_request_group) = outcome.denial_permission_request_group {
-                    debug_assert!(outcome.access_enforcement_enabled);
-                    return Ok(AccessEnforcementOutcome {
-                        access_enforcement_enabled: true,
-                        denial_permission_request_group: Some(permission_request_group),
-                    });
-                }
-                access_enforcement_enabled |= outcome.access_enforcement_enabled;
-            }
-            Err(err) if first_error.is_none() => {
-                first_error = Some(err);
-            }
-            Err(_) => {}
-        }
+    if let Some(denial) = outcomes
+        .into_iter()
+        .find(|outcome| outcome.denial_permission_request_group().is_some())
+    {
+        return Ok(denial);
     }
-
-    if let Some(err) = first_error {
-        Err(err)
-    } else {
-        Ok(AccessEnforcementOutcome {
-            access_enforcement_enabled,
+    match errors.into_iter().next() {
+        Some(error) => Err(error),
+        None if enforced => Ok(AccessEnforcementOutcome::Enforced {
             denial_permission_request_group: None,
-        })
+        }),
+        None => Ok(AccessEnforcementOutcome::NotEnforced),
     }
 }
 
