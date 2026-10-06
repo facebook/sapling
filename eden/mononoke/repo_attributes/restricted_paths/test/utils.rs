@@ -35,6 +35,7 @@ use mercurial_types::HgAugmentedManifestId;
 use metaconfig_types::AclManifestMode;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::EnforcementConditionSet;
+use metaconfig_types::EnforcementExemptionSet;
 use metaconfig_types::PathRestrictionMetadata;
 use metaconfig_types::RequestMatchers;
 use metaconfig_types::RestrictedPathsConfig;
@@ -95,6 +96,8 @@ pub struct RestrictedPathsTestData {
     /// For each scenario, a new repo is built with those condition sets and
     /// access APIs are called to verify whether enforcement is triggered.
     enforcement_scenarios: Vec<(Vec<EnforcementConditionSet>, bool)>,
+    /// Exemption sets written into every scenario repo's config.
+    enforcement_exemption_sets: Vec<EnforcementExemptionSet>,
     /// Config-backed restrictions written into `RestrictedPathsConfig.path_acls`.
     config_restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     /// When true, every config restricted path is marked `read_only` in its
@@ -129,6 +132,7 @@ pub struct RestrictedPathsTestDataBuilder {
     /// The test will run for each scenario, applying the condition sets and
     /// verifying if enforcement is or isn't triggered as expected.
     enforcement_scenarios: Vec<(Vec<EnforcementConditionSet>, bool)>,
+    enforcement_exemption_sets: Vec<EnforcementExemptionSet>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -362,7 +366,17 @@ impl RestrictedPathsTestDataBuilder {
             expected_manifest_entries: None,
             expected_scuba_logs: None,
             enforcement_scenarios: vec![],
+            enforcement_exemption_sets: vec![],
         }
+    }
+
+    /// Configure `enforcement_exemption_sets` on every scenario repo.
+    pub fn with_enforcement_exemption_sets(
+        mut self,
+        enforcement_exemption_sets: Vec<EnforcementExemptionSet>,
+    ) -> Self {
+        self.enforcement_exemption_sets = enforcement_exemption_sets;
+        self
     }
 
     pub fn with_restricted_paths(
@@ -562,6 +576,7 @@ impl RestrictedPathsTestDataBuilder {
             expected_manifest_entries: self.expected_manifest_entries,
             expected_scuba_logs: self.expected_scuba_logs,
             enforcement_scenarios: self.enforcement_scenarios,
+            enforcement_exemption_sets: self.enforcement_exemption_sets,
             config_restricted_paths: self.config_restricted_paths,
             config_paths_read_only: self.config_paths_read_only,
             acl_manifest_restricted_paths: self.acl_manifest_restricted_paths,
@@ -1070,6 +1085,7 @@ impl RestrictedPathsTestData {
             acls,
             log_path.clone(),
             enforcement_condition_sets,
+            &self.enforcement_exemption_sets,
         )
         .await?;
 
@@ -1294,6 +1310,7 @@ async fn setup_test_repo(
     acls: Acls,
     log_file_path: std::path::PathBuf,
     enforcement_condition_sets: &[EnforcementConditionSet],
+    enforcement_exemption_sets: &[EnforcementExemptionSet],
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
     let use_manifest_id_cache = true;
@@ -1335,6 +1352,7 @@ async fn setup_test_repo(
         tooling_allowlist_group,
         acl_manifest_mode,
         enforcement_condition_sets: enforcement_condition_sets.to_vec(),
+        enforcement_exemption_sets: enforcement_exemption_sets.to_vec(),
         enforcement_enabled: !enforcement_condition_sets.is_empty(),
         ..Default::default()
     };

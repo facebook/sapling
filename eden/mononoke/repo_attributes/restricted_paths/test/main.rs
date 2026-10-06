@@ -15,6 +15,9 @@ use justknobs::test_helpers::JustKnobsInMemory;
 use justknobs::test_helpers::KnobVal;
 use justknobs::test_helpers::with_just_knobs_async;
 use metaconfig_types::AclManifestMode;
+use metaconfig_types::ComparableRegex;
+use metaconfig_types::EnforcementExemptionSet;
+use metaconfig_types::RequestMatchers;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -572,6 +575,97 @@ async fn test_enforcement_condition_set_always_enabled(fb: FacebookInit) -> Resu
         .await?;
 
     assert!(was_denied);
+    Ok(())
+}
+
+// What it tests: an exemption set matching the caller, with an
+// always-enabled condition set.
+// Expected: unauthorized access is allowed, because the exemption switches
+// enforcement off even for `always_enabled` conditions.
+#[mononoke::fbinit_test]
+async fn test_enforcement_exemption_with_always_enabled_condition(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_enforcement_exemption_sets(vec![EnforcementExemptionSet::new(RequestMatchers {
+            client_identity_regexes: vec![ComparableRegex::new("^USER:myusername0$")?],
+            ..Default::default()
+        })?])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_always_enabled(true)
+                .build()],
+        )
+        .await?;
+
+    // FIXME(T291224709): apply exemption sets during enforcement, then assert
+    // that this access is allowed (`!was_denied`).
+    assert!(
+        was_denied,
+        "the access stays denied until exemption sets are applied"
+    );
+    Ok(())
+}
+
+// What it tests: an exemption set is evaluated with AND semantics across its
+// filters, like a condition set.
+// Expected: unauthorized access is still denied when only some of the
+// exemption's filters match the caller.
+#[mononoke::fbinit_test]
+async fn test_enforcement_exemption_partial_match_does_not_exempt(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_enforcement_exemption_sets(vec![EnforcementExemptionSet::new(RequestMatchers {
+            machine_tiers: vec!["nonexistent_tier".to_string()],
+            client_identity_regexes: vec![ComparableRegex::new("^USER:myusername0$")?],
+            ..Default::default()
+        })?])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_always_enabled(true)
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "an exemption whose machine tier does not match should not exempt"
+    );
+    Ok(())
+}
+
+// What it tests: an exemption set that does not match the caller.
+// Expected: unauthorized access is denied as if no exemption were configured.
+#[mononoke::fbinit_test]
+async fn test_enforcement_exemption_non_matching_caller(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let was_denied = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(vec![(NonRootMPath::new("restricted/dir")?, restricted_acl)])
+        .with_enforcement_exemption_sets(vec![EnforcementExemptionSet::new(RequestMatchers {
+            client_identity_regexes: vec![ComparableRegex::new("^USER:someone_else$")?],
+            ..Default::default()
+        })?])
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[EnforcementConditionSetBuilder::new()
+                .with_always_enabled(true)
+                .build()],
+        )
+        .await?;
+
+    assert!(
+        was_denied,
+        "a non-matching exemption should not allow the access"
+    );
     Ok(())
 }
 
