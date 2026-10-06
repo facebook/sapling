@@ -7,6 +7,8 @@
 
 use std::future::Future;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -17,6 +19,14 @@ use futures::channel::oneshot;
 use futures::future::Shared;
 use mononoke_macros::mononoke;
 use parking_lot::Mutex;
+
+/// How long a failed build is remembered before a caller is allowed to retry.
+///
+/// Without this a repo that fails deterministically, from a bad config or a
+/// missing ACL, is rebuilt on every request for as long as traffic keeps
+/// arriving. The window bounds that to one build per slot, while staying short
+/// enough that a transient failure does not strand a repo for long.
+const FAILED_BUILD_TTL: Duration = Duration::from_secs(10);
 
 /// The result of one build, handed to every caller waiting on it.
 ///
@@ -63,6 +73,13 @@ enum SlotState<R> {
     Building(SharedBuild<R>),
     /// Built, and available to serve.
     Ready(Arc<R>),
+    /// A build failed recently. Kept rather than dropped back to `Empty` so
+    /// the next caller is served the failure instead of starting another
+    /// build; `retry_after` is when that stops.
+    Failed {
+        error: Arc<Error>,
+        retry_after: Instant,
+    },
 }
 
 /// What [`RepoSlot::claim_build`] decided the caller should do.
@@ -71,6 +88,8 @@ enum Claim<R> {
     Ready(Arc<R>),
     /// Someone else is already building this repo.
     Wait(SharedBuild<R>),
+    /// A recent build failed and the retry window has not elapsed.
+    Failed(Arc<Error>),
     /// This caller won the race: run the build, report it through the
     /// completion handle, then wait on the shared handle like everyone else.
     Start(BuildCompletion<R>, SharedBuild<R>),
@@ -105,7 +124,7 @@ impl<R> RepoSlot<R> {
     /// The built repo, or `None` if this slot has not been built.
     pub fn loaded(&self) -> Option<Arc<R>> {
         match &**self.state.load() {
-            SlotState::Empty | SlotState::Building(_) => None,
+            SlotState::Empty | SlotState::Building(_) | SlotState::Failed { .. } => None,
             SlotState::Ready(repo) => Some(Arc::clone(repo)),
         }
     }
@@ -116,7 +135,12 @@ impl<R> RepoSlot<R> {
         match &**self.state.load() {
             SlotState::Ready(repo) => Some(Claim::Ready(Arc::clone(repo))),
             SlotState::Building(pending) => Some(Claim::Wait(pending.clone())),
-            SlotState::Empty => None,
+            SlotState::Failed { error, retry_after } if Instant::now() < *retry_after => {
+                Some(Claim::Failed(Arc::clone(error)))
+            }
+            // An elapsed failure is retryable, which needs a writer to claim,
+            // exactly like `Empty`.
+            SlotState::Empty | SlotState::Failed { .. } => None,
         }
     }
 
@@ -171,12 +195,34 @@ impl<R> RepoSlot<R> {
     fn apply_outcome(&self, outcome: &BuildOutcome<R>) {
         let next = match outcome {
             Ok(repo) => SlotState::Ready(Arc::clone(repo)),
-            // Back to `Empty` so the next caller retries rather than inheriting
-            // this failure.
-            Err(_) => SlotState::Empty,
+            // TODO(lmvasquezg): a repo that never builds is invisible beyond
+            // the error each caller happens to see, so it looks like a slow
+            // repo rather than a broken one. Needs a counter here and an alert
+            // on it before any service builds lazily. The counter cannot live
+            // in this crate, which has no stats dependency and should keep it
+            // that way; `mononoke_app` already has `define_stats!`, so the
+            // outcome has to surface to the caller that owns the loader.
+            Err(error) => SlotState::Failed {
+                error: Arc::clone(error),
+                retry_after: Instant::now() + FAILED_BUILD_TTL,
+            },
         };
         let _transition = self.transition.lock();
         self.state.store(Arc::new(next));
+    }
+
+    /// Brings a cached failure's retry window forward to now, so a test can
+    /// observe the retry without sleeping out the real one.
+    #[cfg(test)]
+    fn expire_cached_failure(&self) {
+        let _transition = self.transition.lock();
+        let SlotState::Failed { error, .. } = &**self.state.load() else {
+            return;
+        };
+        self.state.store(Arc::new(SlotState::Failed {
+            error: Arc::clone(error),
+            retry_after: Instant::now(),
+        }));
     }
 
     /// The built repo, building it with `build` if this is the first caller to
@@ -194,6 +240,13 @@ impl<R> RepoSlot<R> {
     {
         let pending = match self.claim_build() {
             Claim::Ready(repo) => return Ok(repo),
+            Claim::Failed(error) => {
+                return Err(anyhow!(
+                    "Not retrying build of repo {} yet, it failed within the last {}s: {error:#}",
+                    self.name,
+                    FAILED_BUILD_TTL.as_secs()
+                ));
+            }
             Claim::Wait(pending) => pending,
             Claim::Start(completion, pending) => {
                 // Detached rather than driven by the caller's future: a caller
@@ -429,7 +482,7 @@ mod tests {
     }
 
     #[mononoke::test]
-    async fn test_failed_build_is_reported_and_retried() {
+    async fn test_a_failed_build_is_reported_then_cached() {
         let repo_slot = Arc::new(RepoSlot::empty("foo".to_string()));
 
         let err = repo_slot.get_or_build(failing_build).await.unwrap_err();
@@ -437,10 +490,30 @@ mod tests {
             err.to_string().contains("Failed to build repo foo"),
             "unexpected error: {err:#}"
         );
-
-        // The slot is left retryable rather than poisoned.
         assert!(repo_slot.loaded().is_none());
+
+        // The next caller is served the failure rather than starting a second
+        // build. `never_built` panics if reached, so this pins that the build
+        // does not run again, not merely that the call still errors.
+        let err = repo_slot.get_or_build(never_built).await.unwrap_err();
+        assert!(
+            err.to_string().contains("Not retrying build of repo foo"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[mononoke::test]
+    async fn test_a_cached_failure_stops_holding_the_slot_once_it_expires() {
+        let repo_slot = Arc::new(RepoSlot::empty("foo".to_string()));
+
         assert!(repo_slot.get_or_build(failing_build).await.is_err());
+        repo_slot.expire_cached_failure();
+
+        let repo = repo_slot
+            .get_or_build(|_| async { Ok(42) })
+            .await
+            .expect("an expired failure must let the next caller build");
+        assert_eq!(*repo, 42);
     }
 
     #[mononoke::test]
@@ -455,6 +528,10 @@ mod tests {
 
         // The point of the test: a dying build must release the slot. Left
         // mid-build it would wedge the repo for the life of the process.
+        // Releasing it into the retry window rather than straight back to
+        // `Empty` still satisfies that; what must not happen is a wedge that
+        // outlives the window.
+        repo_slot.expire_cached_failure();
         let repo = repo_slot
             .get_or_build(|_| async { Ok(42) })
             .await
