@@ -549,9 +549,20 @@ modified.
 
 Expected:
 - Default flags and `--merge`: if the goto keeps the project's revision, keep
-the change. If the goto updates it, refuse before changing anything.
-- `--check`: if anything is dirty, refuse before changing anything.
+the change. If the goto updates it and the change is not committed, treat the
+project as a conflicting project (see below). If the goto updates it and the
+change is a local commit, refuse before changing anything.
+- `--check`: for a local commit, refuse before changing anything. Sapling sees
+the commit. For an uncommitted change, work like the default flags. Sapling
+can't see the change.
 - `--clean`: throw away the change and check out the target.
+
+A conflicting project is a project where Git refuses the checkout because of a
+change in the project. The checkout is not atomic. goto first moves `.` and the
+manifests HEAD to the target. Then Git checks out each project. A conflicting
+project stays at its source revision and keeps its change. The other projects
+move to the target. At the end, goto reports all conflicting projects in one
+error.
 
 The problems from the clean tests (`static.xml` not rewritten, `main` moved
 back) show up here too. We do not mark them again.
@@ -559,10 +570,10 @@ back) show up here too. We do not mark them again.
 Uncommitted change in `vendor/a/sub/c`. The goto updates the revision of
 this project.
 
-Default flags. Expected: refuse before changing anything.
-(bad: Sapling can't see the change, so it does not refuse. Git refuses
-halfway. By then `.` and `main` have already moved to `$REV_AFTER_BUMP_B`.
-`vendor/a/sub/c` stays at `C2_REV`.)
+Default flags. Expected: `vendor/a/sub/c` is a conflicting project. `.` and
+`main` move to `$REV_AFTER_BUMP_B`. `vendor/a/sub/c` stays at `C2_REV` and keeps
+the change. goto reports that `vendor/a/sub/c` failed.
+(bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -588,9 +599,9 @@ clean=False, updatecheck="noconflict"
    M README
   sl status: M vendor/a/sub/c
 
-`--check`. Expected: refuse before changing anything.
-(bad: `sl status` is empty, so the check passes. Then it fails halfway, same as
-the default flags.)
+`--check`. Expected: `sl status` is empty, so the check passes. Then the result
+is the same as for the default flags.
+(bad: same as the default flags.)
 clean=False, updatecheck="abort"
 
   $ reset_workspace
@@ -616,8 +627,8 @@ clean=False, updatecheck="abort"
    M README
   sl status: M vendor/a/sub/c
 
-`--merge`. Expected: refuse before changing anything.
-(bad: it fails halfway, same as the default flags.)
+`--merge`. Expected: the same result as the default flags.
+(bad: same as the default flags.)
 clean=False, updatecheck="none"
 
   $ reset_workspace
@@ -683,8 +694,8 @@ clean=False, updatecheck="noconflict"
    M README
   vendor/a/sub/c: C_REV
 
-`--check`. Expected: refuse before changing anything.
-(bad: `sl status` is empty, so it does not refuse. The change is kept.)
+`--check`. Expected: `sl status` is empty, so the check passes. Keep the
+change.
 clean=False, updatecheck="abort"
 
   $ reset_workspace
@@ -1515,9 +1526,9 @@ removes its file at the end.
 
 Expected: the same rules as for untracked files in Sapling's own tree.
 - If the target has no file at the untracked path: every flag keeps the file.
-- If the target adds a file at that path: the default flags, `--check` and
-`--merge` refuse before changing anything. `--clean` replaces the file with the
-target's file.
+- If the target adds a file at that path: for the default flags, `--check` and
+`--merge`, the project is a conflicting project, as in the dirty project tests.
+`--clean` replaces the file with the target's file.
 The problems from the clean tests show up here too. We do not mark them again.
 
 Untracked file in `vendor/a/sub/c`. The goto updates the revision of this
@@ -1726,9 +1737,10 @@ the two new hashes. So the tests rename them with an extra `sed`.
   $ REV_AFTER_ADD_C=$(git -C .repo/manifests rev-parse HEAD)
   $ git -C .repo/manifests branch add-c
 
-Default flags. Expected: refuse before changing anything.
-(bad: goto does not refuse. Git refuses halfway. By then `.` and `main` have
-already moved to `$REV_AFTER_ADD_C`. `vendor/a/sub/c` stays at `C2_REV`.)
+Default flags. Expected: `vendor/a/sub/c` is a conflicting project. `.` and
+`main` move to `$REV_AFTER_ADD_C`. `vendor/a/sub/c` stays at `C2_REV` and keeps
+the file. goto reports that `vendor/a/sub/c` failed.
+(bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -1758,9 +1770,9 @@ clean=False, updatecheck="noconflict"
   untracked
   $ rm vendor/a/sub/c/added
 
-`--check`. Expected: refuse before changing anything.
-(bad: `sl status` does not show the file. So the check passes. Then it fails
-halfway, same as the default flags.)
+`--check`. Expected: `sl status` does not show the file, so the check passes.
+Then the result is the same as for the default flags.
+(bad: same as the default flags.)
 clean=False, updatecheck="abort"
 
   $ reset_workspace
@@ -1790,8 +1802,8 @@ clean=False, updatecheck="abort"
   untracked
   $ rm vendor/a/sub/c/added
 
-`--merge`. Expected: refuse before changing anything.
-(bad: it fails halfway, same as the default flags.)
+`--merge`. Expected: the same result as the default flags.
+(bad: same as the default flags.)
 clean=False, updatecheck="none"
 
   $ reset_workspace
