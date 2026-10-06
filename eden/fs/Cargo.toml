@@ -153,6 +153,7 @@ members = [
   "cli_rs/edenfs-client",
   "cli_rs/edenfs-commands",
   "cli_rs/edenfs-config",
+  "cli_rs/edenfs-core",
   "cli_rs/edenfs-error",
   "cli_rs/edenfs-remove",
   "cli_rs/edenfs-saved-state",
