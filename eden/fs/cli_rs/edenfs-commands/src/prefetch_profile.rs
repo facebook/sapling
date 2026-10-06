@@ -19,6 +19,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::checkout::CheckoutPrefetchExt;
 use edenfs_client::checkout::PrefetchProfilesResult;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::utils::expand_path_or_cwd;
