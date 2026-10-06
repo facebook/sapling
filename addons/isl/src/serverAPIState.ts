@@ -394,10 +394,23 @@ function filterBookmarks(
 
   return {
     ...commit,
-    remoteBookmarks: commit.remoteBookmarks.filter(bookmarkFilter),
-    bookmarks: commit.bookmarks.filter(bookmarkFilter),
-    stableCommitMetadata: commit.stableCommitMetadata?.filter(b => !hiddenBookmarks.has(b.value)),
+    remoteBookmarks: filterOrReuse(commit.remoteBookmarks, bookmarkFilter),
+    bookmarks: filterOrReuse(commit.bookmarks, bookmarkFilter),
+    stableCommitMetadata:
+      commit.stableCommitMetadata == null
+        ? commit.stableCommitMetadata
+        : filterOrReuse(commit.stableCommitMetadata, b => !hiddenBookmarks.has(b.value)),
   };
+}
+
+/**
+ * `items.filter(keep)`, but `items` itself when nothing is filtered out. The dag is rebuilt on every
+ * smartlog fetch, and a fresh array makes the commit unequal to its previous version, which
+ * re-renders its row.
+ */
+function filterOrReuse<T>(items: ReadonlyArray<T>, keep: (item: T) => boolean): ReadonlyArray<T> {
+  const kept = items.filter(keep);
+  return kept.length === items.length ? items : kept;
 }
 
 export const commitFetchError = atom(get => {

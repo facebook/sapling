@@ -35,6 +35,36 @@ import {arrayFromHashes, HashSet} from './set';
  * - Mutation related queries like obsolete().
  * - High-level operations like rebase(), cleanup().
  */
+const withGrandparentsCache = new WeakMap<
+  ReadonlyArray<Hash>,
+  WeakMap<ReadonlyArray<Hash>, ReadonlyArray<Hash>>
+>();
+
+/**
+ * `[...parents, ...grandparents]`, but the same array for the same inputs. The dag is rebuilt on
+ * every smartlog fetch, and a fresh array makes every commit unequal to its previous version,
+ * which re-renders every row.
+ */
+function withGrandparents(
+  parents: ReadonlyArray<Hash>,
+  grandparents: ReadonlyArray<Hash>,
+): ReadonlyArray<Hash> {
+  if (grandparents.length === 0) {
+    return parents;
+  }
+  let byGrandparents = withGrandparentsCache.get(parents);
+  if (byGrandparents == null) {
+    byGrandparents = new WeakMap();
+    withGrandparentsCache.set(parents, byGrandparents);
+  }
+  let combined = byGrandparents.get(grandparents);
+  if (combined == null) {
+    combined = [...parents, ...grandparents];
+    byGrandparents.set(grandparents, combined);
+  }
+  return combined;
+}
+
 export class Dag extends SelfUpdate<CommitDagRecord> {
   constructor(record?: CommitDagRecord) {
     super(record ?? EMPTY_DAG_RECORD);
@@ -71,7 +101,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         // The seqNumber is the same for all `commits` so the order does not matter.
         .set('seqNumber', c.seqNumber ?? seqNumber)
         // Extend `parents` for dagwalkerForRendering to properly connect public commits
-        .set('parents', [...c.parents, ...c.grandparents])
+        .set('parents', withGrandparents(c.parents, c.grandparents))
         // Assign `ancestors` for dagWalkerForRendering to connect public commits properly
         .set('ancestors', c.grandparents.length > 0 ? List(c.grandparents) : c.ancestors),
     );
