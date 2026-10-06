@@ -41,6 +41,7 @@ use thiserror::Error;
 pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 use crate::access_log::log_access_to_restricted_path;
 use crate::restriction_check::AccessEnforcementOutcome;
+use crate::restriction_check::EnforcementDecision;
 pub use crate::restriction_check::ManifestRestrictionCheckResult;
 pub use crate::restriction_check::PathRestrictionCheckResult;
 pub use crate::restriction_check::PermissionRequestGroup;
@@ -930,7 +931,7 @@ where
             restricted_paths.clone(),
             access_data,
             effective_mode,
-            None,
+            EnforcementDecision::Disabled,
             fetches
                 .logging_config
                 .then(|| handles.config.clone())
@@ -962,10 +963,7 @@ where
         restricted_paths.clone(),
         access_data,
         effective_mode,
-        enforcement_outcome
-            .as_ref()
-            .ok()
-            .map(|outcome| matches!(outcome, AccessEnforcementOutcome::Enforced { .. })),
+        EnforcementDecision::from_outcome(&enforcement_outcome),
         fetches
             .logging_config
             .then(|| handles.config.clone())

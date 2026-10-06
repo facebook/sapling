@@ -76,6 +76,34 @@ impl AccessEnforcementOutcome {
     }
 }
 
+/// How enforcement was decided for an access, as recorded in the access log.
+///
+/// Unlike [`AccessEnforcementOutcome`], this also covers accesses where
+/// enforcement was never evaluated or failed to evaluate, and carries no
+/// denial details.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum EnforcementDecision {
+    /// Enforcement is off for the repo: the kill switch is off or no
+    /// enforcement condition sets are configured.
+    Disabled,
+    /// No enforcement condition set matched the access.
+    NoConditionMatched,
+    /// An enforcement condition set matched the access.
+    Enforced,
+    /// Evaluating enforcement failed, so the access failed closed.
+    Error,
+}
+
+impl EnforcementDecision {
+    pub(crate) fn from_outcome(outcome: &Result<AccessEnforcementOutcome>) -> Self {
+        match outcome {
+            Ok(AccessEnforcementOutcome::NotEnforced) => Self::NoConditionMatched,
+            Ok(AccessEnforcementOutcome::Enforced { .. }) => Self::Enforced,
+            Err(_) => Self::Error,
+        }
+    }
+}
+
 /// Source to use for path-side restriction checks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum PathRestrictionSource {
