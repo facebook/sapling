@@ -2324,87 +2324,82 @@ def goto(
                 if git.isgitformat(repo):
                     git.submodulecheckout(target, force=force)
                 repo.setparents(target.node())
-                return ret
         except rusterror.CheckoutConflictsError as ex:
             abort_on_conflicts(ex.args[0])
+    else:
+        repo.ui.log("checkout_info", python_checkout="python")
 
-    repo.ui.log("checkout_info", python_checkout="python")
-
-    _logupdatedistance(repo.ui, repo, node)
-    _prefetchlazychildren(repo, node)
-
-    if (
-        edenfs.requirement in repo.requirements
-        or git.DOTGIT_REQUIREMENT in repo.requirements
-    ):
-        from . import eden_update
-
-        return eden_update.update(
-            repo,
-            node,
-            force=force,
-            labels=labels,
-            updatecheck=updatecheck,
-        )
-
-    # If we're doing the initial checkout from null, let's use the new fancier
-    # nativecheckout, since it has more efficient fetch mechanics.
-    # git backend only supports nativecheckout at present.
-    isclonecheckout = repo["."].node() == nullid
-
-    if (
-        repo.ui.configbool("experimental", "nativecheckout")
-        or (repo.ui.configbool("clone", "nativecheckout") and isclonecheckout)
-        or git.isgitstore(repo)
-    ):
-        wc = repo[None]
+        _logupdatedistance(repo.ui, repo, node)
+        _prefetchlazychildren(repo, node)
 
         if (
-            not isclonecheckout
-            and (force or updatecheck != "noconflict")
-            and (wc.dirty(missing=True) or mergestate.read(repo).active())
+            edenfs.requirement in repo.requirements
+            or git.DOTGIT_REQUIREMENT in repo.requirements
         ):
-            fallbackcheckout = (
-                "Working copy is dirty and --clean specified - not supported yet"
+            from . import eden_update
+
+            ret = eden_update.update(
+                repo,
+                node,
+                force=force,
+                labels=labels,
+                updatecheck=updatecheck,
             )
-        elif not hasattr(repo.fileslog, "filestore"):
-            fallbackcheckout = "Repo does not have remotefilelog"
         else:
-            fallbackcheckout = None
+            # If we're doing the initial checkout from null, let's use the new fancier
+            # nativecheckout, since it has more efficient fetch mechanics.
+            # git backend only supports nativecheckout at present.
+            isclonecheckout = repo["."].node() == nullid
+            did_native_checkout = False
 
-        if fallbackcheckout:
-            repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
-        else:
-            # If the user is attempting to checkout for the first time, let's assume
-            # they don't have any pending changes and let's do a force checkout.
-            # This makes it much faster, by skipping the entire "check for unknown
-            # files" and "check for conflicts" code paths, and makes it so they
-            # aren't blocked by pending files and have to purge+clone over and over.
-            if isclonecheckout:
-                force = True
+            if (
+                repo.ui.configbool("experimental", "nativecheckout")
+                or (repo.ui.configbool("clone", "nativecheckout") and isclonecheckout)
+                or git.isgitstore(repo)
+            ):
+                wc = repo[None]
 
-            p1 = wc.parents()[0]
-            p2 = repo[node]
+                if (
+                    not isclonecheckout
+                    and (force or updatecheck != "noconflict")
+                    and (wc.dirty(missing=True) or mergestate.read(repo).active())
+                ):
+                    fallbackcheckout = "Working copy is dirty and --clean specified - not supported yet"
+                elif not hasattr(repo.fileslog, "filestore"):
+                    fallbackcheckout = "Repo does not have remotefilelog"
+                else:
+                    fallbackcheckout = None
 
-            with repo.wlock():
-                ret = donativecheckout(
+                if fallbackcheckout:
+                    repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
+                else:
+                    # If the user is attempting to checkout for the first time, let's assume
+                    # they don't have any pending changes and let's do a force checkout.
+                    # This makes it much faster, by skipping the entire "check for unknown
+                    # files" and "check for conflicts" code paths, and makes it so they
+                    # aren't blocked by pending files and have to purge+clone over and over.
+                    if isclonecheckout:
+                        force = True
+
+                    p1 = wc.parents()[0]
+                    p2 = repo[node]
+
+                    with repo.wlock():
+                        ret = donativecheckout(repo, p1, p2, force, wc)
+                        if git.isgitformat(repo):
+                            git.submodulecheckout(p2, force=force)
+                    did_native_checkout = True
+
+            if not did_native_checkout:
+                ret = _update(
                     repo,
-                    p1,
-                    p2,
-                    force,
-                    wc,
+                    node,
+                    force=force,
+                    labels=labels,
+                    updatecheck=updatecheck,
                 )
-                if git.isgitformat(repo):
-                    git.submodulecheckout(p2, force=force)
-                return ret
 
-    return _update(
-        repo,
-        node,
-        force=force,
-        labels=labels,
-        updatecheck=updatecheck,
-    )
+    return ret
 
 
 def merge(
