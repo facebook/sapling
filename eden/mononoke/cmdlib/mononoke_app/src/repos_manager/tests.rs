@@ -26,7 +26,9 @@ use metaconfig_types::CommitIdentityScheme::GIT;
 use metaconfig_types::CommitIdentityScheme::HG;
 use metaconfig_types::CommitIdentityScheme::UNKNOWN;
 use metaconfig_types::CommonConfig;
+use metaconfig_types::LazyLoadingConfig;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::ShardedService;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
@@ -46,6 +48,7 @@ use tokio::sync::Notify;
 use super::MononokeConfigUpdateReceiver;
 use super::ReconcileTrigger;
 use super::apply_generation;
+use super::lazy_for_service;
 use super::memoized_spec_hash;
 use super::reconcile_loop;
 use super::repo_names_from_manifest;
@@ -709,4 +712,73 @@ async fn test_receiver_manifest_change_is_picked_up() {
         .await
         .unwrap();
     assert_eq!(**map.load(), names_of(&[("a", GIT), ("c", HG)]));
+}
+
+/// A repo config whose only interesting field is its lazy loading config.
+fn repo_config_with(lazy_loading_config: Option<LazyLoadingConfig>) -> RepoConfig {
+    RepoConfig {
+        lazy_loading_config,
+        ..Default::default()
+    }
+}
+
+#[mononoke::test]
+fn test_no_lazy_loading_config_is_eager() {
+    let repo_config = repo_config_with(None);
+
+    assert!(!lazy_for_service(
+        &repo_config,
+        Some(ShardedService::MononokeGitServer)
+    ));
+    assert!(!lazy_for_service(&repo_config, None));
+}
+
+#[mononoke::test]
+fn test_lazy_only_for_the_service_it_names() {
+    let repo_config = repo_config_with(Some(LazyLoadingConfig {
+        sharded: HashMap::from([(ShardedService::MononokeGitServer, true)]),
+        unsharded: false,
+    }));
+
+    assert!(lazy_for_service(
+        &repo_config,
+        Some(ShardedService::MononokeGitServer)
+    ));
+    // A service with no entry has no opinion, which is eager rather than
+    // inheriting the answer given to another service.
+    assert!(!lazy_for_service(
+        &repo_config,
+        Some(ShardedService::SourceControlService)
+    ));
+    assert!(!lazy_for_service(&repo_config, None));
+}
+
+#[mononoke::test]
+fn test_explicit_false_is_eager() {
+    let repo_config = repo_config_with(Some(LazyLoadingConfig {
+        sharded: HashMap::from([(ShardedService::MononokeGitServer, false)]),
+        unsharded: false,
+    }));
+
+    assert!(!lazy_for_service(
+        &repo_config,
+        Some(ShardedService::MononokeGitServer)
+    ));
+    assert!(!lazy_for_service(&repo_config, None));
+}
+
+#[mononoke::test]
+fn test_unsharded_is_independent_of_the_sharded_map() {
+    let repo_config = repo_config_with(Some(LazyLoadingConfig {
+        sharded: HashMap::from([(ShardedService::MononokeGitServer, false)]),
+        unsharded: true,
+    }));
+
+    // A task with no service identity reads `unsharded` and nothing else, so
+    // an eager sharded entry does not hold it back.
+    assert!(lazy_for_service(&repo_config, None));
+    assert!(!lazy_for_service(
+        &repo_config,
+        Some(ShardedService::MononokeGitServer)
+    ));
 }

@@ -75,8 +75,9 @@ fn repos_manager_concurrency() -> Result<usize> {
 define_stats! {
     prefix = "mononoke.app";
     completion_duration_secs: timeseries(Average, Sum, Count),
-    // Deep-shard repo load failures (config load or facet build) via add_repo,
-    // the chokepoint every deep-shard load funnels through.
+    // Repo load failures (config load or facet build): at
+    // assignment via add_repo or add_repo_for_service, or on first request via
+    // ConfigDefinedRepoLoader for a repo assigned unbuilt.
     add_repo_failed: timeseries(Sum, Count),
     reconcile_applied: timeseries(Average, Sum, Count),
     reconcile_dropped: timeseries(Average, Sum, Count),
@@ -117,6 +118,23 @@ pub struct MononokeReposManager<Repo> {
     reconcile_loop_handle: Option<JoinHandle<()>>,
 }
 
+/// Whether `service` should defer building this repo until its first request.
+///
+/// Anything short of an explicit `true` is eager. Lazy is opt-in per repo
+/// rather than a default with exclusions, because a repo slow enough to load
+/// is one worth having resident before a request arrives, and that is exactly
+/// the population an "everything except" default would catch.
+fn lazy_for_service(repo_config: &RepoConfig, service: Option<ShardedService>) -> bool {
+    let Some(lazy_loading_config) = repo_config.lazy_loading_config.as_ref() else {
+        return false;
+    };
+
+    match service {
+        Some(service) => lazy_loading_config.sharded.get(&service) == Some(&true),
+        None => lazy_loading_config.unsharded,
+    }
+}
+
 /// Captures no manager on purpose: the collection holding this is itself held
 /// by the manager, so a reference back would be a cycle.
 ///
@@ -143,14 +161,17 @@ where
         async move {
             // get_or_load_repo_config subscribes the per-repo ConfigHandle
             // internally.
-            let mut repo_config = configs.get_or_load_repo_config(&repo_name)?;
+            let mut repo_config = configs
+                .get_or_load_repo_config(&repo_name)
+                .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
             if redaction_disabled {
                 repo_config.redaction = Redaction::Disabled;
             }
             let common_config = configs.repo_configs().common.clone();
             let repo = repo_factory
                 .build(repo_name, repo_config, common_config)
-                .await?;
+                .await
+                .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
             anyhow::Ok(repo)
         }
         .boxed()
@@ -302,22 +323,12 @@ impl<Repo> MononokeReposManager<Repo> {
 
     /// Register a repo as assigned to this service without building it.
     ///
-    /// The repo id comes straight from the tier manifest rather than from a
-    /// resolved config, so an assigned repo costs no config parse and no
-    /// configerator subscription until something actually asks for it.
+    /// The repo id comes from the tier manifest rather than from the resolved
+    /// config, so this needs no `RepoFactory` and no second parse.
     ///
-    /// # DO NOT BUILD ON THIS YET
-    ///
-    /// Scaffolding for the in-progress inexpensive-repos work (lazy repo
-    /// loading). It has **no callers on purpose**, and calling it today does
-    /// not get you a lazily-loaded repo: nothing builds an unbuilt repo yet,
-    /// and `Mononoke::repo` resolves through `get_by_name`, which reports an
-    /// unbuilt slot as absent. A repo registered this way is therefore
-    /// permanently invisible to every caller, not deferred.
-    ///
-    /// If you are about to call this in new code - **stop and talk to
-    /// lmvasquezg first**. This applies to coding agents as much as to people.
-    /// [`Self::add_repo`] is the supported way to add a repo.
+    /// Prefer [`Self::add_repo_for_service`], which decides between this and
+    /// [`Self::add_repo`] from the repo's config. Reaching for this directly
+    /// opts a repo into lazy loading whatever its config says.
     pub fn add_lazy_repo(&self, repo_name: &str) -> Result<()> {
         let manifest = self
             .configs
@@ -331,6 +342,32 @@ impl<Repo> MononokeReposManager<Repo> {
                 format!("add_lazy_repo: repo {repo_name} is not in the tier manifest")
             })?;
         self.repos.add_placeholder(repo_name, entry.repo_id);
+        Ok(())
+    }
+
+    /// Register a repo that has just been assigned to `service`, building it
+    /// now unless its config defers the build to the repo's first request.
+    ///
+    /// Resolving the config here means the eager path resolves it twice, but
+    /// `get_or_load_repo_config` serves the second from its cache.
+    pub async fn add_repo_for_service(
+        &self,
+        repo_name: &str,
+        service: Option<ShardedService>,
+    ) -> Result<()>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_config = self
+            .repo_config(repo_name)
+            .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
+        if lazy_for_service(&repo_config, service) {
+            return self
+                .add_lazy_repo(repo_name)
+                .inspect_err(|_| STATS::add_repo_failed.add_value(1));
+        }
+
+        self.add_repo(repo_name).await?;
         Ok(())
     }
 

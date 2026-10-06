@@ -229,7 +229,7 @@ impl GitRepos {
 
     /// Builds the repo first if it was assigned without being built.
     pub(crate) async fn get(&self, repo_name: &str) -> Result<Option<Arc<Repo>>> {
-        if !justknobs::eval("scm/mononoke:enable_git_server_lazy_repo_build", None, None) {
+        if !lazy_repo_build_enabled() {
             return Ok(self.repo_mgr.repos().get_by_name(repo_name));
         }
         self.repo_mgr.repos().get(repo_name).await
@@ -238,6 +238,12 @@ impl GitRepos {
     pub(crate) fn repo_configs(&self) -> Arc<RepoConfigs> {
         self.repo_mgr.configs().repo_configs()
     }
+}
+
+/// Whether an unbuilt repo may be built on its first request. `setup` reads
+/// this too: with it off nothing builds a placeholder, so none may be created.
+pub(crate) fn lazy_repo_build_enabled() -> bool {
+    justknobs::eval("scm/mononoke:enable_git_server_lazy_repo_build", None, None)
 }
 
 /// Construct a memory-based health check for ShardManager.
