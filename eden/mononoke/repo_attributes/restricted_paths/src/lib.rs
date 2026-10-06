@@ -46,6 +46,7 @@ pub use crate::restriction_check::ManifestRestrictionCheckResult;
 pub use crate::restriction_check::PathRestrictionCheckResult;
 pub use crate::restriction_check::PermissionRequestGroup;
 use crate::restriction_check::PreFilterResult;
+use crate::restriction_check::PreFilteredRequest;
 pub use crate::restriction_check::RestrictionCheckResult;
 use crate::restriction_check::SharedFetchHandle;
 use crate::restriction_check::SourceRestrictionCheck;
@@ -682,8 +683,11 @@ impl RestrictedPaths {
 /// This function:
 /// 1. Spawns any source fetches needed by logging or enforcement
 /// 2. Spawns logging as a fire-and-forget task when logging is enabled
-/// 3. Checks whether enforcement is enabled for a matching condition set
-/// 4. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
+/// 3. Checks whether a condition set matches the access and no exemption set
+///    matches the request
+/// 4. If so AND the user lacks authorization, returns
+///    `RestrictedPathsError::AuthorizationError`; an exempted access that fails
+///    to read a restriction source returns that source error
 ///
 /// # Returns
 /// * `Ok(())` if access is allowed or enforcement is disabled
@@ -768,8 +772,11 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
 /// This function:
 /// 1. Spawns any source fetches needed by logging or enforcement
 /// 2. Spawns logging as a fire-and-forget task when logging is enabled
-/// 3. Checks whether enforcement is enabled for a matching condition set
-/// 4. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
+/// 3. Checks whether a condition set matches the access and no exemption set
+///    matches the request
+/// 4. If so AND the user lacks authorization, returns
+///    `RestrictedPathsError::AuthorizationError`; an exempted access that fails
+///    to read a restriction source returns that source error
 ///
 /// # Returns
 /// * `Ok(())` if access is allowed or enforcement is disabled
@@ -911,14 +918,17 @@ where
         return Ok(());
     }
 
-    let pre_filter_result = if enforcement_enabled {
+    let pre_filter = if enforcement_enabled {
         restriction_check::pre_filter_request(ctx, config)
     } else {
-        PreFilterResult::NoMatch
+        PreFilteredRequest {
+            conditions: PreFilterResult::NoMatch,
+            exemption_matched: false,
+        }
     };
     let fetches = source_fetches_for_access(
         source_options,
-        &pre_filter_result,
+        &pre_filter.conditions,
         effective_mode,
         config_source_may_restrict,
         acl_manifest_available,
@@ -948,7 +958,7 @@ where
         fetches.enforcement_config,
         fetches.enforcement_acl_manifest,
         &handles,
-        pre_filter_result,
+        pre_filter,
         missing_authoritative_source_error(
             access_type,
             effective_mode,
@@ -984,7 +994,8 @@ where
         AccessEnforcementOutcome::NotEnforced
         | AccessEnforcementOutcome::Enforced {
             denial_permission_request_group: None,
-        } => Ok(()),
+        }
+        | AccessEnforcementOutcome::Exempted => Ok(()),
     }
 }
 
@@ -1148,13 +1159,14 @@ async fn enforce_with_source_handles<'a, T>(
     fetch_config: bool,
     fetch_acl_manifest: bool,
     handles: &SourceHandles<T>,
-    pre_filter_result: PreFilterResult<'a>,
+    pre_filter: PreFilteredRequest<'a>,
     missing_source_error: anyhow::Error,
 ) -> Result<AccessEnforcementOutcome>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
-    let (candidates, pre_filter_variant) = match pre_filter_result {
+    let exemption_matched = pre_filter.exemption_matched;
+    let (candidates, pre_filter_variant) = match pre_filter.conditions {
         PreFilterResult::NoMatch => {
             return Ok(AccessEnforcementOutcome::NotEnforced);
         }
@@ -1176,7 +1188,17 @@ where
         source_outcomes.push(Err(missing_source_error));
     }
 
+    if exemption_matched && let Some(first_error) = source_outcomes.iter().position(Result::is_err)
+    {
+        // An exempted request that could not read every source fails with the
+        // first source error rather than a denial: it would not have been
+        // enforced had the read succeeded, so an authorization error would
+        // send the caller to request an ACL they don't need.
+        return source_outcomes.swap_remove(first_error);
+    }
+
     restriction_check::authoritative_sources_enforcement_outcome(source_outcomes)
+        .map(|outcome| outcome.exempt_if(exemption_matched))
 }
 
 #[cfg(test)]
@@ -1192,9 +1214,78 @@ mod tests {
     use permission_checker::dummy::DummyAclProvider;
 
     use super::*;
+    use crate::restriction_check::AuthorizationCheckResult;
     use crate::test_utils::RestrictedPathsConfigBuilder;
     use crate::test_utils::build_test_restricted_paths_with_dummy_acl_provider as build_test_restricted_paths;
     use crate::test_utils::build_test_restricted_paths_with_options;
+
+    // What it tests: a matching exemption does not apply when a source fails.
+    // Expected: the first source error is returned, both when the other
+    // source denies and when it also fails, so an exempted request fails
+    // closed with the source error rather than an authorization error. Without
+    // an exemption the denial still wins over the error.
+    #[mononoke::test]
+    async fn test_enforcement_exemption_returns_source_error() -> Result<()> {
+        let error = enforce_with_results(
+            Ok(vec![denied_check()?]),
+            Err(anyhow::anyhow!("AclManifest source failed")),
+            true,
+        )
+        .await
+        .err()
+        .context("an exempted request with a failed source should return an error")?;
+        assert!(
+            format!("{error:#}").contains("AclManifest source failed"),
+            "the source error should be returned instead of the denial: {error:#}",
+        );
+
+        let error = enforce_with_results(
+            Err(anyhow::anyhow!("config source failed")),
+            Err(anyhow::anyhow!("AclManifest source failed")),
+            true,
+        )
+        .await
+        .err()
+        .context("an exemption must not turn a failed lookup into an allow")?;
+        assert!(
+            format!("{error:#}").contains("config source failed"),
+            "the first source's error (config) should be returned: {error:#}",
+        );
+
+        assert_eq!(
+            enforce_with_results(
+                Ok(vec![denied_check()?]),
+                Err(anyhow::anyhow!("AclManifest source failed")),
+                false,
+            )
+            .await?
+            .denial_permission_request_group(),
+            Some(&MononokeIdentity::from_str("REPO_REGION:denied")?),
+            "without an exemption the denial should still win over the source error",
+        );
+        Ok(())
+    }
+
+    // What it tests: enforcement with both authoritative sources read
+    // successfully, with and without a matching exemption.
+    // Expected: the denial is returned without an exemption, and the access is
+    // exempted with one.
+    #[mononoke::test]
+    async fn test_enforcement_exemption_applies_when_sources_succeed() -> Result<()> {
+        assert_eq!(
+            enforce_with_results(Ok(vec![denied_check()?]), Ok(vec![]), false)
+                .await?
+                .denial_permission_request_group(),
+            Some(&MononokeIdentity::from_str("REPO_REGION:denied")?),
+            "without an exemption the unauthorized access should be denied",
+        );
+        assert_eq!(
+            enforce_with_results(Ok(vec![denied_check()?]), Ok(vec![]), true).await?,
+            AccessEnforcementOutcome::Exempted,
+            "a matching exemption should exempt the enforced access",
+        );
+        Ok(())
+    }
 
     // What it tests: `denial_message` is appended to the error text on its own line.
     // Expected: no message keeps the base text unchanged.
@@ -1418,6 +1509,46 @@ mod tests {
         assert_eq!(lookup.len(), 1);
         assert_eq!(lookup[0].repo_region_acl, "SERVICE_IDENTITY:restricted_acl");
         Ok(())
+    }
+
+    /// Runs enforcement over both authoritative sources with the given source
+    /// results and a definite pre-filter match, so enforcement only depends on
+    /// the source results and the exemption.
+    async fn enforce_with_results(
+        config_result: Result<Vec<PathRestrictionCheckResult>>,
+        acl_manifest_result: Result<Vec<PathRestrictionCheckResult>>,
+        exemption_matched: bool,
+    ) -> Result<AccessEnforcementOutcome> {
+        let handles = SourceHandles {
+            config: Some(SharedFetchHandle::from_result(config_result)),
+            acl_manifest: Some(SharedFetchHandle::from_result(acl_manifest_result)),
+        };
+        enforce_with_source_handles(
+            true,
+            true,
+            &handles,
+            PreFilteredRequest {
+                conditions: PreFilterResult::DefiniteMatch { candidates: vec![] },
+                exemption_matched,
+            },
+            anyhow::anyhow!("missing source"),
+        )
+        .await
+    }
+
+    /// A source check for `restricted` that denies the caller.
+    fn denied_check() -> Result<PathRestrictionCheckResult> {
+        let denied_acl = MononokeIdentity::from_str("REPO_REGION:denied")?;
+        Ok(PathRestrictionCheckResult::new(
+            PathRestrictionInfo {
+                restriction_root: NonRootMPath::new("restricted")?,
+                repo_region_acl: denied_acl.to_string(),
+                permission_request_group: denied_acl.clone(),
+                rollout_allowlist_group: None,
+            },
+            AuthorizationCheckResult::new(false, false, false, false),
+            denied_acl,
+        ))
     }
 
     fn assert_error_chain_contains(err: &anyhow::Error, needle: &str) {

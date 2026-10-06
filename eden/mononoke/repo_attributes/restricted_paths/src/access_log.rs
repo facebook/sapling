@@ -92,8 +92,9 @@ struct EnforcementLogFields {
     /// enforcement.
     enforcement_decision: Option<EnforcementDecision>,
     /// The legacy `access_enforcement_enabled` column: `true` when enforced,
-    /// `false` when no condition matched, and omitted when enforcement was
-    /// disabled, failed, or was not evaluated for the row.
+    /// `false` when no condition matched or the access was exempted, and
+    /// omitted when enforcement was disabled, failed, or was not evaluated for
+    /// the row.
     access_enforcement_enabled: Option<bool>,
 }
 
@@ -101,7 +102,9 @@ impl EnforcementLogFields {
     fn new(decision: Option<EnforcementDecision>) -> Self {
         let access_enforcement_enabled = match decision {
             Some(EnforcementDecision::Enforced) => Some(true),
-            Some(EnforcementDecision::NoConditionMatched) => Some(false),
+            Some(EnforcementDecision::NoConditionMatched | EnforcementDecision::Exempted) => {
+                Some(false)
+            }
             Some(EnforcementDecision::Disabled | EnforcementDecision::Error) | None => None,
         };
         Self {

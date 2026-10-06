@@ -64,14 +64,28 @@ pub(crate) enum AccessEnforcementOutcome {
     Enforced {
         denial_permission_request_group: Option<PermissionRequestGroup>,
     },
+    /// An enforcement condition set matched the access, but so did an
+    /// enforcement exemption set, so the access is allowed whatever the
+    /// caller's authorization.
+    Exempted,
 }
 
 impl AccessEnforcementOutcome {
+    /// Apply a matching enforcement exemption to an outcome computed from
+    /// successfully read sources: an enforced access becomes exempted, and
+    /// every other outcome is unchanged.
+    pub(crate) fn exempt_if(self, exemption_matched: bool) -> Self {
+        match self {
+            Self::Enforced { .. } if exemption_matched => Self::Exempted,
+            Self::NotEnforced | Self::Enforced { .. } | Self::Exempted => self,
+        }
+    }
+
     /// The group a denied caller should request access to, if the access is
     /// denied.
     pub(crate) fn denial_permission_request_group(&self) -> Option<&PermissionRequestGroup> {
         match self {
-            Self::NotEnforced => None,
+            Self::NotEnforced | Self::Exempted => None,
             Self::Enforced {
                 denial_permission_request_group,
             } => denial_permission_request_group.as_ref(),
@@ -93,8 +107,12 @@ pub(crate) enum EnforcementDecision {
     Disabled,
     /// No enforcement condition set matched the access.
     NoConditionMatched,
-    /// An enforcement condition set matched the access.
+    /// An enforcement condition set matched the access, no exemption set did,
+    /// and it was enforced.
     Enforced,
+    /// An enforcement condition set and an enforcement exemption set both
+    /// matched the access, so it was not enforced.
+    Exempted,
     /// Evaluating enforcement failed, so the access failed closed. Only
     /// logged in the `Shadow` and `Both` modes: in the other modes a failed
     /// source read writes no access-log row.
@@ -106,6 +124,7 @@ impl EnforcementDecision {
         match outcome {
             Ok(AccessEnforcementOutcome::NotEnforced) => Self::NoConditionMatched,
             Ok(AccessEnforcementOutcome::Enforced { .. }) => Self::Enforced,
+            Ok(AccessEnforcementOutcome::Exempted) => Self::Exempted,
             Err(_) => Self::Error,
         }
     }
@@ -948,13 +967,30 @@ pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
     check_manifest_restriction_infos(ctx, restricted_paths, restriction_info).await
 }
 
-/// Evaluate a repo's enforcement condition sets against the request metadata,
-/// before any restriction data is fetched.
+/// Request-local result of evaluating a repo's enforcement condition and
+/// exemption sets, before any restriction data is fetched.
+pub(crate) struct PreFilteredRequest<'a> {
+    /// Condition sets that can still match this access.
+    pub(crate) conditions: PreFilterResult<'a>,
+    /// Whether an exemption set matches this request. Exemptions only have
+    /// request-local filters, so this is final before any fetch.
+    pub(crate) exemption_matched: bool,
+}
+
+/// Evaluate a repo's enforcement condition and exemption sets against the
+/// request metadata, before any restriction data is fetched.
 pub(crate) fn pre_filter_request<'a>(
     ctx: &CoreContext,
     config: &'a RestrictedPathsConfig,
-) -> PreFilterResult<'a> {
-    pre_filter_condition_sets(&RequestFacts::new(ctx), &config.enforcement_condition_sets)
+) -> PreFilteredRequest<'a> {
+    let request = RequestFacts::new(ctx);
+    PreFilteredRequest {
+        conditions: pre_filter_condition_sets(&request, &config.enforcement_condition_sets),
+        exemption_matched: config
+            .enforcement_exemption_sets
+            .iter()
+            .any(|set| request.matches(set.matchers())),
+    }
 }
 
 /// Apply the request-local portion of `enforcement_condition_sets`.
@@ -987,11 +1023,11 @@ fn pre_filter_condition_sets<'a>(
     }
 }
 
-/// Request metadata that the request-local filters of an enforcement
-/// condition set are matched against.
+/// Request metadata that the request-local filters of enforcement condition
+/// and exemption sets are matched against.
 ///
-/// Built once per access so every condition set is evaluated against the same
-/// snapshot of the request.
+/// Built once per access so every set is evaluated against the same snapshot
+/// of the request.
 struct RequestFacts<'a> {
     entry_point: Option<String>,
     server_side_tenting: bool,
@@ -1159,9 +1195,11 @@ pub(crate) fn authoritative_sources_enforcement_outcome(
     source_outcomes: Vec<Result<AccessEnforcementOutcome>>,
 ) -> Result<AccessEnforcementOutcome> {
     let (outcomes, errors): (Vec<_>, Vec<_>) = source_outcomes.into_iter().partition_result();
-    let enforced = outcomes
-        .iter()
-        .any(|outcome| matches!(outcome, AccessEnforcementOutcome::Enforced { .. }));
+    // Exemptions apply after aggregation, so no single source is exempted.
+    let enforced = outcomes.iter().any(|outcome| match outcome {
+        AccessEnforcementOutcome::Enforced { .. } => true,
+        AccessEnforcementOutcome::NotEnforced | AccessEnforcementOutcome::Exempted => false,
+    });
 
     if let Some(denial) = outcomes
         .into_iter()

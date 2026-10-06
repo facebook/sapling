@@ -578,10 +578,11 @@ async fn test_shadow_unrestricted_sources_do_not_log_rows(fb: FacebookInit) -> R
     Ok(())
 }
 
-// What it tests: every enforcement decision is logged as `enforcement_decision`,
-// and `access_enforcement_enabled` keeps its legacy values.
-// Expected: `enforced` logs true, `no_condition_matched` logs false, and
-// `disabled` / `error` omit `access_enforcement_enabled`.
+// What it tests: every enforcement decision is logged as
+// `enforcement_decision`, and `access_enforcement_enabled` keeps its legacy
+// values.
+// Expected: `enforced` logs true, `no_condition_matched` and `exempted` log
+// false, and `disabled` / `error` omit `access_enforcement_enabled`.
 #[mononoke::fbinit_test]
 async fn test_enforcement_decision_is_logged(fb: FacebookInit) -> Result<()> {
     let cases = [
@@ -592,6 +593,7 @@ async fn test_enforcement_decision_is_logged(fb: FacebookInit) -> Result<()> {
             Some("false"),
         ),
         (EnforcementDecision::Enforced, "enforced", Some("true")),
+        (EnforcementDecision::Exempted, "exempted", Some("false")),
         (EnforcementDecision::Error, "error", None),
     ];
 

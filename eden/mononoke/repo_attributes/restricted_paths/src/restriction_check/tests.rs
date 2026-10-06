@@ -90,6 +90,52 @@ async fn test_source_enforcement_outcome_denial_permission_request_group_is_dete
     Ok(())
 }
 
+// What it tests: a matching exemption only changes an enforced outcome.
+// Expected: enforced outcomes (denied or allowed) become `Exempted`, while
+// `NotEnforced` is unchanged and nothing changes when no exemption matched.
+#[mononoke::test]
+fn test_access_enforcement_outcome_exempt_if() -> Result<()> {
+    let denial_group = MononokeIdentity::from_str("REPO_REGION:deny_acl")?;
+    let denied = AccessEnforcementOutcome::Enforced {
+        denial_permission_request_group: Some(denial_group),
+    };
+    let allowed = AccessEnforcementOutcome::Enforced {
+        denial_permission_request_group: None,
+    };
+
+    assert_eq!(
+        denied.clone().exempt_if(true),
+        AccessEnforcementOutcome::Exempted,
+        "an exemption should exempt an enforced denial",
+    );
+    assert_eq!(
+        allowed.clone().exempt_if(true),
+        AccessEnforcementOutcome::Exempted,
+        "an exemption should exempt an enforced, authorized access",
+    );
+    assert_eq!(
+        AccessEnforcementOutcome::NotEnforced.exempt_if(true),
+        AccessEnforcementOutcome::NotEnforced,
+        "an exemption should not change an access no condition matched",
+    );
+    assert_eq!(
+        denied.clone().exempt_if(false),
+        denied,
+        "without an exemption an enforced denial should be unchanged",
+    );
+    assert_eq!(
+        allowed.clone().exempt_if(false),
+        allowed,
+        "without an exemption an enforced allow should be unchanged",
+    );
+    assert_eq!(
+        AccessEnforcementOutcome::Exempted.denial_permission_request_group(),
+        None,
+        "an exempted access should carry no denial",
+    );
+    Ok(())
+}
+
 // What it tests: authoritative source aggregation keeps deny-over-error
 // semantics after carrying the permission request group through the denial.
 // Expected: any denial wins over sibling source errors, while a no-deny error

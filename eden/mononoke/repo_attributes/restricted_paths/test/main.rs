@@ -601,12 +601,7 @@ async fn test_enforcement_exemption_with_always_enabled_condition(fb: FacebookIn
         )
         .await?;
 
-    // FIXME(T291224709): apply exemption sets during enforcement, then assert
-    // that this access is allowed (`!was_denied`).
-    assert!(
-        was_denied,
-        "the access stays denied until exemption sets are applied"
-    );
+    assert!(!was_denied, "a matching exemption should allow the access");
     Ok(())
 }
 
