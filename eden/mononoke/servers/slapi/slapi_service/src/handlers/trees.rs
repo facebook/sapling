@@ -548,8 +548,8 @@ fn record_augmented_manifest_outcomes(built: &[UploadTreeAugmented]) {
 
 /// Build augmented manifests for the trees one request stored.
 ///
-/// Nothing here is persisted, so a build failure must not fail an upload that
-/// otherwise succeeded.
+/// The trees themselves are already stored, so a failure here must not fail
+/// the upload.
 async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     repo: &HgRepoContext<R>,
     trees: Vec<HgManifestEnvelope>,
@@ -563,8 +563,9 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     STATS::upload_augmented_manifests_attempted.add_value(trees.len() as i64);
     STATS::upload_augmented_manifests_batch_trees
         .add_value(trees.len() as i64, (repo_name.clone(),));
-    // The build runs before the response stream ends, so this is time the
-    // client waits on top of storing the trees.
+    // Runs before the response stream ends, so this is time the client waits
+    // on top of storing the trees. With the store knob on it includes writing
+    // the envelopes, which the metric name predates.
     let started = Instant::now();
     let result = repo
         .build_and_store_augmented_manifests_for_uploaded_trees(trees)

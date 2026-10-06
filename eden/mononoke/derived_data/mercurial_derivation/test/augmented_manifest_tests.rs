@@ -43,6 +43,7 @@ use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_derivation::upload_augmented_manifest::UploadTreeBuildError;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
+use mercurial_derivation::upload_augmented_manifest::store_uploaded_tree_envelopes;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
@@ -5374,7 +5375,7 @@ async fn build_one_uploaded_tree(
         "hgmanifest.sha1.",
     ));
     // A batch of one, so every child directory is resolved from the blobstore.
-    build_augmented_manifests_for_uploaded_trees(
+    let built = build_augmented_manifests_for_uploaded_trees(
         ctx,
         &denying,
         repo.restricted_paths().config_based(),
@@ -5382,6 +5383,9 @@ async fn build_one_uploaded_tree(
     )
     .await
     .with_context(|| format!("building uploaded tree {tree_id}"))?;
+    // As the store knob does: later builds resolve this tree as an
+    // out-of-batch child.
+    store_uploaded_tree_envelopes(ctx, overlay, &built).await?;
     Ok(())
 }
 
@@ -5416,18 +5420,28 @@ async fn assert_upload_path_matches_derivation(
     )
     .await?;
 
-    // Build via the upload path into an overlay, so the canonical derivation
-    // below cannot mask a divergence by overwriting the same keys.
-    let overlay: Arc<dyn KeyedBlobstore> =
-        Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
-
     let mut uploaded = Vec::with_capacity(build_order.len());
     for path in build_order {
-        let tree_id = tree_id_at_path(ctx, repo, child_manifest, path).await?;
+        uploaded.push(tree_id_at_path(ctx, repo, child_manifest, path).await?);
+    }
+
+    // Build via the upload path into an overlay, so the canonical derivation
+    // below cannot mask a divergence by overwriting the same keys. Producer F
+    // (`derive_hg_augmented_manifest_with_hg_changeset`, on in tests) already
+    // stored these envelopes underneath, so hide them: the overlay must only
+    // ever hold what the upload path wrote.
+    let hidden_inner = DenyGetKeyedBlobstore::missing(
+        repo.repo_blobstore().clone(),
+        uploaded
+            .iter()
+            .map(|id| HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key()),
+    );
+    let overlay: Arc<dyn KeyedBlobstore> = Arc::new(MemWritesKeyedBlobstore::new(hidden_inner));
+
+    for tree_id in &uploaded {
         // A failure here means `build_order` did not list this tree's children
         // before it; the error names the input that was missing.
-        build_one_uploaded_tree(ctx, repo, &overlay, tree_id).await?;
-        uploaded.push(tree_id);
+        build_one_uploaded_tree(ctx, repo, &overlay, *tree_id).await?;
     }
 
     let mut via_upload = HashMap::new();
@@ -5901,8 +5915,16 @@ async fn assert_batch_upload_matches_derivation(
     }
     uploaded.sort_by_key(|id| id.into_nodehash());
 
-    let overlay: Arc<dyn KeyedBlobstore> =
-        Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    // Producer F (`derive_hg_augmented_manifest_with_hg_changeset`, on in
+    // tests) already stored these envelopes underneath, so hide them: the
+    // overlay must only ever hold what the upload path wrote.
+    let hidden_inner = DenyGetKeyedBlobstore::missing(
+        repo.repo_blobstore().clone(),
+        uploaded
+            .iter()
+            .map(|id| HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key()),
+    );
+    let overlay: Arc<dyn KeyedBlobstore> = Arc::new(MemWritesKeyedBlobstore::new(hidden_inner));
     let outcomes = build_augmented_manifests_for_uploaded_trees(
         ctx,
         &overlay,
@@ -5915,6 +5937,14 @@ async fn assert_batch_upload_matches_derivation(
         uploaded.len(),
         "every tree in the batch should have been built"
     );
+    for id in &uploaded {
+        let key = HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key();
+        assert!(
+            overlay.get(ctx, &key).await?.is_none(),
+            "the build should leave storing {id}'s envelope to store_uploaded_tree_envelopes",
+        );
+    }
+    store_uploaded_tree_envelopes(ctx, &overlay, &outcomes).await?;
 
     let mut via_upload = HashMap::new();
     for id in &uploaded {

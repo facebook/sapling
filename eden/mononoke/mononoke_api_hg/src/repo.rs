@@ -43,6 +43,7 @@ use futures_util::try_join;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::upload_augmented_manifest::UploadTreeAugmented;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
+use mercurial_derivation::upload_augmented_manifest::store_uploaded_tree_envelopes;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStoreRef;
 use mercurial_types::HgChangesetId;
@@ -415,15 +416,16 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     }
 
     /// Build the augmented manifest envelopes for a batch of already-stored
-    /// trees, so they exist before the changeset that references them is
-    /// uploaded.
+    /// trees and, when the store knob is on, store them so they exist before
+    /// the changeset that references them is uploaded.
     ///
     /// A tree whose child is neither in the batch nor already derived is an
     /// error: the batch builds completely or not at all.
     ///
     /// Until `scm/mononoke:store_augmented_manifests_at_tree_upload` is on for
-    /// the repo, every put lands in a `MemWritesBlobstore` overlay that dies
-    /// with this call.
+    /// the repo, no envelope is written, and the build's own writes (large
+    /// directory shards, ACL nodes) land in a `MemWritesBlobstore` overlay that
+    /// dies with this call.
     ///
     /// Once it is on the writes are permanent: the key is the hg manifest id
     /// alone and the put is if-absent, so a wrong envelope cannot be corrected
@@ -448,13 +450,17 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         };
         let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo_blobstore);
         let restricted_paths = self.repo().restricted_paths_arc();
-        build_augmented_manifests_for_uploaded_trees(
+        let built = build_augmented_manifests_for_uploaded_trees(
             self.ctx(),
             &blobstore,
             restricted_paths.config_based(),
             trees,
         )
-        .await
+        .await?;
+        if store {
+            store_uploaded_tree_envelopes(self.ctx(), &blobstore, &built).await?;
+        }
+        Ok(built)
     }
 
     /// Store HgChangeset. The function also generates bonsai changeset and stores all necessary mappings.

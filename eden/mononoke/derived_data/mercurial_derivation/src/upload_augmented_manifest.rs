@@ -55,6 +55,7 @@ const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
 /// Each tree build fans out its own child lookups, so this multiplies with
 /// `MAX_CONCURRENT_CHILD_LOOKUPS`.
 const MAX_CONCURRENT_TREE_BUILDS: usize = 10;
+const MAX_CONCURRENT_ENVELOPE_STORES: usize = 100;
 
 /// Why an uploaded batch could not be built.
 #[derive(Debug, Error)]
@@ -110,6 +111,8 @@ pub struct UploadTreeAugmented {
     /// Its height in the batch: 0 for a tree containing nothing else in the
     /// batch, otherwise one above its highest child.
     pub level: usize,
+    /// Written only by `store_uploaded_tree_envelopes`.
+    pub envelope: HgAugmentedManifestEnvelope,
 }
 
 struct ChildNode {
@@ -239,9 +242,13 @@ struct AugmentedTree {
     level: usize,
 }
 
-/// Build and store an augmented manifest for every uploaded tree, each as soon
-/// as the batch trees it contains are built. A child neither in the batch nor
-/// already derived fails the whole batch.
+/// Build an augmented manifest for every uploaded tree, each as soon as the
+/// batch trees it contains are built. A child neither in the batch nor already
+/// derived fails the whole batch.
+///
+/// No envelope is stored: a parent needs only its children's built nodes, so
+/// writing each envelope here would put a blobstore round trip on the path to
+/// every parent. `store_uploaded_tree_envelopes` writes them afterwards.
 pub async fn build_augmented_manifests_for_uploaded_trees(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -280,7 +287,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                     .iter()
                     .map(|child| (child.node_id, &child.tree))
                     .collect();
-                let result = build_uploaded_tree(
+                let (result, envelope) = build_uploaded_tree(
                     ctx,
                     blobstore,
                     restricted_paths,
@@ -309,6 +316,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                         node_id: tree.node_id,
                         acl: result.acl.clone(),
                         level,
+                        envelope,
                     });
                 anyhow::Ok(Some(Arc::new(AugmentedTree {
                     node_id: tree.node_id,
@@ -332,7 +340,28 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
         .context("the uploaded batch contains a cycle")
 }
 
-/// Build and store the augmented manifest for one uploaded tree.
+/// Store the envelopes `build_augmented_manifests_for_uploaded_trees` built,
+/// all at once and in no order, so a write that fails can leave a stored
+/// envelope whose batch child is not stored.
+pub async fn store_uploaded_tree_envelopes(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    built: &[UploadTreeAugmented],
+) -> Result<()> {
+    // Materialised before the stream for the same reason as the leaf futures
+    // in `build_uploaded_tree`: inlined, the closure is not higher-ranked and
+    // callers cannot prove `Send`.
+    let stores: Vec<_> = built
+        .iter()
+        .map(|tree| tree.envelope.clone().store(ctx, blobstore))
+        .collect();
+    stream::iter(stores)
+        .buffer_unordered(MAX_CONCURRENT_ENVELOPE_STORES)
+        .try_for_each(|_| future::ok(()))
+        .await
+}
+
+/// Build the augmented manifest for one uploaded tree, without storing it.
 ///
 /// Subentries are built from the uploaded manifest alone, so no `HgManifest`
 /// blob is read. The per-changeset derivation instead splices unchanged runs
@@ -345,7 +374,7 @@ async fn build_uploaded_tree(
     restricted_paths: &RestrictedPathsConfigBased,
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
-) -> Result<BuiltTree> {
+) -> Result<(BuiltTree, HgAugmentedManifestEnvelope)> {
     // The parent's leaves depend on nothing below, so they load while the
     // children and the ACL node do rather than after them.
     let ((children, acl), reusable) = future::try_join(
@@ -434,23 +463,19 @@ async fn build_uploaded_tree(
         .clone()
         .compute_content_addressed_digest(ctx, blobstore)
         .await?;
-    let treenode = HgAugmentedManifestEnvelope {
+    let envelope = HgAugmentedManifestEnvelope {
         augmented_manifest_id,
         augmented_manifest_size,
         augmented_manifest,
-    }
-    .store(ctx, blobstore)
-    .await?
-    .into_nodehash();
-
+    };
     let directory = HgAugmentedDirectoryNode {
-        treenode,
-        augmented_manifest_id,
-        augmented_manifest_size,
+        treenode: envelope.augmented_manifest.hg_node_id,
+        augmented_manifest_id: envelope.augmented_manifest_id,
+        augmented_manifest_size: envelope.augmented_manifest_size,
         acl_manifest_directory_id: acl_overlay,
     };
 
-    Ok(BuiltTree { directory, acl })
+    Ok((BuiltTree { directory, acl }, envelope))
 }
 
 /// The tree-upload twin of `build_augmented_file_leaf`. Clients upload content
