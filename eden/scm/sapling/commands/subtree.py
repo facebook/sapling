@@ -12,7 +12,6 @@ from typing import List
 from .. import (
     cloneuri,
     cmdutil,
-    context,
     error,
     hg,
     match as matchmod,
@@ -49,7 +48,6 @@ from ..utils.subtreeutil import (
 from .cmdtable import command
 
 MAX_SUBTREE_COPY_FILE_COUNT = 10_000
-COPY_REUSE_TREE = False
 
 MERGE_BASE_STRATEGIES = [
     # Walk only the from‑path’s history when searching for a merge base.
@@ -740,13 +738,10 @@ def _docopy(ui, repo, *args, **opts):
     subtreeutil.validate_path_overlap(from_paths, to_paths)
     subtreeutil.validate_source_commit(ui, from_ctx, "copy")
 
-    if COPY_REUSE_TREE:
-        _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
-    else:
-        matcher = _compute_filter_matcher(repo, to_ctx, filter_path)
-        _do_normal_copy(
-            repo, from_ctx, to_ctx, from_paths, to_paths, opts, filter_matcher=matcher
-        )
+    matcher = _compute_filter_matcher(repo, to_ctx, filter_path)
+    _do_normal_copy(
+        repo, from_ctx, to_ctx, from_paths, to_paths, opts, filter_matcher=matcher
+    )
 
 
 def _compute_filter_matcher(repo, ctx, filter_path=None):
@@ -766,41 +761,6 @@ def _compute_filter_matcher(repo, ctx, filter_path=None):
             matcher = filter_matcher
 
     return matcher
-
-
-def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
-    user = opts.get("user")
-    date = opts.get("date")
-    text = cmdutil.logmessage(repo, opts)
-
-    extra = {}
-    extra.update(
-        gen_branch_info(
-            repo, from_ctx.hex(), from_paths, to_paths, BranchType.SHALLOW_COPY
-        )
-    )
-
-    summaryfooter = subtreeutil.gen_copy_commit_msg(from_ctx, from_paths, to_paths)
-    editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
-    editor = cmdutil.getcommiteditor(
-        editform=editform, summaryfooter=summaryfooter, **opts
-    )
-
-    newctx = context.subtreecopyctx(
-        repo,
-        from_ctx,
-        to_ctx,
-        from_paths,
-        to_paths,
-        text=text,
-        user=user,
-        date=date,
-        extra=extra,
-        editor=editor,
-    )
-
-    newid = repo.commitctx(newctx)
-    hg.update(repo, newid)
 
 
 def _do_normal_copy(
