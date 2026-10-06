@@ -21,4 +21,5 @@ define_stats! {
     per_changeset_manifests_count: timeseries(Rate, Average, Sum),
     per_changeset_filelogs_count: timeseries(Rate, Average, Sum),
     per_changeset_content_blobs_count: timeseries(Rate, Average, Sum),
+    rejected_shallow_subtree_copy: timeseries(Rate, Sum),
 }

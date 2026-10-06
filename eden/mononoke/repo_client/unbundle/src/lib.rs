@@ -55,6 +55,7 @@ pub use response::UnbundlePushRebaseResponse;
 pub use response::UnbundlePushResponse;
 pub use response::UnbundleResponse;
 use restricted_paths::RestrictedPathsArc;
+pub use upload_changesets::ShallowSubtreeCopyRejected;
 pub use upload_changesets::upload_changeset;
 
 pub trait Repo = CommitGraphArc

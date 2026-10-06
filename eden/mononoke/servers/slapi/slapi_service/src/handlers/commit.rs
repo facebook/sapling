@@ -123,6 +123,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::context::ServerContext;
+use crate::errors::MononokeErrorExt;
 use crate::errors::SaplingRemoteApiServiceError;
 use crate::handlers::git_objects::fetch_git_object;
 use crate::utils::build_counter;
@@ -563,7 +564,11 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
 
         let stored = repo
             .store_hg_changesets(changesets_data, mutation_data)
-            .await?;
+            .await
+            .map_err(|e| match e {
+                MononokeError::InvalidRequest(_) => e.into_http_error("invalid changeset upload"),
+                e => HttpError::e500(e),
+            })?;
 
         // Safe to derive now: with bonsai=None, store_hg_changesets already wrote
         // the mapping (via CreateChangeset), so no conflicting hg id is re-derived.

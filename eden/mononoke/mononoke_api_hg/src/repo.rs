@@ -75,6 +75,7 @@ use repo_update_logger::CommitInfo;
 use repo_update_logger::log_new_commits;
 use restricted_paths::RestrictedPathsArc;
 use tracing::debug;
+use unbundle::ShallowSubtreeCopyRejected;
 use unbundle::upload_changeset;
 
 use super::HgFileContext;
@@ -485,7 +486,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 bonsai,
             )
             .await
-            .map_err(MononokeError::from)?;
+            .map_err(|e| match e.downcast_ref::<ShallowSubtreeCopyRejected>() {
+                Some(rejected) => MononokeError::InvalidRequest(rejected.to_string()),
+                None => MononokeError::from(e),
+            })?;
         }
         let mut results = Vec::new();
         let mut hg_changesets = HashSet::new();
