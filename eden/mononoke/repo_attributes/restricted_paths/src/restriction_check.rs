@@ -28,6 +28,7 @@ use futures::stream;
 use itertools::Itertools;
 use metaconfig_types::EnforcementConditionSet;
 use metaconfig_types::RequestMatchers;
+use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -946,6 +947,15 @@ pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
     check_manifest_restriction_infos(ctx, restricted_paths, restriction_info).await
 }
 
+/// Evaluate a repo's enforcement condition sets against the request metadata,
+/// before any restriction data is fetched.
+pub(crate) fn pre_filter_request<'a>(
+    ctx: &CoreContext,
+    config: &'a RestrictedPathsConfig,
+) -> PreFilterResult<'a> {
+    pre_filter_condition_sets(&RequestFacts::new(ctx), &config.enforcement_condition_sets)
+}
+
 /// Apply the request-local portion of `enforcement_condition_sets`.
 ///
 /// This is intentionally split from restriction ACL matching: request metadata
@@ -953,11 +963,10 @@ pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
 /// be compared after the accessed restricted roots are known. Splitting the
 /// checks lets enforcement avoid unnecessary fetches for requests that cannot
 /// match any condition set while keeping restriction-scoped enforcement precise.
-pub(crate) fn pre_filter_condition_sets<'a>(
-    ctx: &CoreContext,
+fn pre_filter_condition_sets<'a>(
+    request: &RequestFacts<'_>,
     condition_sets: &'a [EnforcementConditionSet],
 ) -> PreFilterResult<'a> {
-    let request = RequestFacts::new(ctx);
     let candidates = condition_sets
         .iter()
         .filter(|set| {

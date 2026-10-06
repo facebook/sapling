@@ -912,7 +912,7 @@ where
     }
 
     let pre_filter_result = if enforcement_enabled {
-        restriction_check::pre_filter_condition_sets(ctx, &config.enforcement_condition_sets)
+        restriction_check::pre_filter_request(ctx, config)
     } else {
         PreFilterResult::NoMatch
     };
