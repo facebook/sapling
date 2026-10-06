@@ -1853,18 +1853,32 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   if (auto nfsServer = serverState_->getNfsServer()) {
     // The sockets belong to the NFS EventBase, so they are set up there.
     auto* nfsEventBase = nfsServer->getEventBase();
+    const bool useUnixSocket =
+        serverState_->getEdenConfig()->useUnixSocket.getValue();
 #ifndef _WIN32
     if (doingTakeover && takeoverData.mountdServerSocket.has_value()) {
       XLOG(DBG7, "Initializing mountd from existing socket");
+      bool mountdIsUnix = false;
       runInEventBaseThreadAndRethrow(nfsEventBase, [&] {
         nfsServer->initialize(
             std::move(takeoverData.mountdServerSocket.value()));
+        mountdIsUnix = nfsServer->getMountdAddr().getFamily() == AF_UNIX;
       });
+      // Mounts follow the running mountd's transport, so a changed
+      // nfs:use-uds takes effect at the next full restart, not here.
+      if (mountdIsUnix != useUnixSocket) {
+        XLOGF(
+            INFO,
+            "nfs:use-uds is {} but the inherited mountd is {}; mounts stay {} until the next full restart",
+            useUnixSocket,
+            mountdIsUnix ? "unix" : "tcp",
+            mountdIsUnix ? "unix" : "tcp");
+      }
     } else {
 #endif
       XLOG(DBG7, "Initializing mountd from scratch");
       std::optional<AbsolutePath> unixSocketPath;
-      if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
+      if (useUnixSocket) {
         unixSocketPath = edenDir_.getMountdSocketPath();
       }
       runInEventBaseThreadAndRethrow(nfsEventBase, [&] {

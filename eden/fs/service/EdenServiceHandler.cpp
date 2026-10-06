@@ -74,6 +74,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
+#include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/nfs/Nfsd3.h"
 #ifdef _WIN32
 #include "eden/fs/notifications/Notifier.h"
@@ -1017,6 +1018,16 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
 #ifdef __linux__
       if (auto* fuseChannel = dynamic_cast<FuseChannel*>(fsChannel)) {
         info.fuseTransport() = fuseChannel->getTransportName();
+      }
+#endif
+#ifndef _WIN32
+      if (dynamic_cast<Nfsd3*>(fsChannel) != nullptr) {
+        // Every NFS mount shares the running mountd's transport.
+        if (auto& nfsServer = server_->getServerState()->getNfsServer()) {
+          info.nfsTransport() =
+              nfsServer->getMountdAddr().getFamily() == AF_UNIX ? "unix"
+                                                                : "tcp";
+        }
       }
 #endif
     }

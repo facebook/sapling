@@ -2867,10 +2867,11 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
           // the listening one is the one we wanna register. So we need to
           // transfer that socket to be able to register it.
         } else {
+          // The kernel requires a checkout's mountd and nfsd sockets to be
+          // of the same type, so follow the running mountd rather than
+          // nfs:use-uds, which only applies when a mountd is created.
           std::optional<AbsolutePath> unixSocketPath;
-          if (mount->getServerState()
-                  ->getEdenConfig()
-                  ->useUnixSocket.getValue()) {
+          if (nfsServer->getMountdAddr().getFamily() == AF_UNIX) {
             unixSocketPath = mount->getCheckoutConfig()->getClientDirectory() +
                 kNfsdSocketName;
             XLOGF(

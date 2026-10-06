@@ -728,6 +728,44 @@ class FuseTransportMismatchTest(unittest.TestCase):
             mismatches,
         )
 
+    def test_nfs_mounts_follow_use_uds(self) -> None:
+        instance = self.make_instance(
+            {"nfs.use-uds": True, "nfs.restart-on-transport-mismatch": True},
+            {},
+        )
+        instance._mounts = {
+            Path("/mnt/eden"): config_mod.ListMountInfo(
+                path=Path("/mnt/eden"),
+                data_dir=Path("/eden/client/mnt/eden"),
+                state=None,
+                configured=True,
+                backing_repo=None,
+                fs_channel_type="nfs3",
+                nfs_transport="tcp",
+            )
+        }
+
+        self.assertEqual(
+            [
+                config_mod.TransportMismatch(
+                    mount=Path("/mnt/eden"),
+                    active_transport="tcp",
+                    desired_transport="unix",
+                    channel="nfs",
+                )
+            ],
+            config_mod.get_nfs_transport_mismatches(instance),
+        )
+        with patch("sys.platform", "darwin"):
+            self.assertEqual(
+                config_mod.get_nfs_transport_mismatches(instance),
+                config_mod.get_transport_mismatches(instance),
+            )
+
+        instance._config["nfs.restart-on-transport-mismatch"] = False
+        with patch("sys.platform", "darwin"):
+            self.assertEqual([], config_mod.get_transport_mismatches(instance))
+
     @patch("os.uname")
     def test_disallowed_kernel_desires_devfuse(self, mock_uname: MagicMock) -> None:
         FakeUname = namedtuple("FakeUname", ["release"])

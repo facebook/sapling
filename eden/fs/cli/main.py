@@ -494,10 +494,9 @@ class ListCmd(Subcmd):
 
             transport_str = ""
             if verbose and mount_info.fs_channel_type is not None:
-                if mount_info.fuse_transport is not None:
-                    transport_str = (
-                        f" ({mount_info.fs_channel_type}, {mount_info.fuse_transport})"
-                    )
+                transport = mount_info.fuse_transport or mount_info.nfs_transport
+                if transport is not None:
+                    transport_str = f" ({mount_info.fs_channel_type}, {transport})"
                 else:
                     transport_str = f" ({mount_info.fs_channel_type})"
 
@@ -2944,8 +2943,15 @@ class RestartCmd(Subcmd):
         return normalized, is_default_config_dir
 
     @staticmethod
-    def _get_fuse_transport_mismatch_direction(
-        transport_mismatches: Sequence[config_mod.FuseTransportMismatch],
+    def _get_transport_mismatch_channel(
+        transport_mismatches: Sequence[config_mod.TransportMismatch],
+    ) -> str:
+        channels = {mismatch.channel for mismatch in transport_mismatches}
+        return next(iter(channels)) if len(channels) == 1 else "mixed"
+
+    @staticmethod
+    def _get_transport_mismatch_direction(
+        transport_mismatches: Sequence[config_mod.TransportMismatch],
     ) -> str:
         def get_transport_name(transports: Set[str]) -> str:
             if len(transports) == 1:
@@ -2972,21 +2978,18 @@ class RestartCmd(Subcmd):
             )
             telemetry_sample.add_string("eden_dir", eden_dir_normalized)
             telemetry_sample.add_bool("is_default_config_dir", is_default_config_dir)
-            if config_mod.is_fuse_transport_mismatch_restart_enabled(instance):
-                transport_mismatches = config_mod.get_fuse_transport_mismatches(
-                    instance
-                )
-            else:
-                transport_mismatches = []
+            transport_mismatches = config_mod.get_transport_mismatches(instance)
 
             if transport_mismatches:
-                telemetry_sample.add_string("reason", "fuse_transport_mismatch")
+                channel = self._get_transport_mismatch_channel(transport_mismatches)
+                reason = f"{channel}_transport_mismatch"
+                telemetry_sample.add_string("reason", reason)
                 telemetry_sample.add_string(
                     "transport_name",
-                    self._get_fuse_transport_mismatch_direction(transport_mismatches),
+                    self._get_transport_mismatch_direction(transport_mismatches),
                 )
                 print(
-                    "FUSE transport config changed; performing a full restart instead of graceful restart."
+                    f"{channel.upper()} transport config changed; performing a full restart instead of graceful restart."
                 )
                 for mismatch in transport_mismatches:
                     print(
@@ -2996,7 +2999,7 @@ class RestartCmd(Subcmd):
                 edenfs_pid = health.pid
                 if edenfs_pid is None:
                     telemetry_sample.fail(
-                        "FUSE transport mismatch required full restart, but EdenFS was not running"
+                        "Transport mismatch required a full restart, but EdenFS was not running"
                     )
                     return self._start(instance)
 
@@ -3010,11 +3013,11 @@ class RestartCmd(Subcmd):
                 instance.log_sample(
                     "full_restart",
                     success=status == 0,
-                    triggered_by="fuse_transport_mismatch",
+                    triggered_by=reason,
                 )
                 if status != 0:
                     telemetry_sample.fail(
-                        "FUSE transport mismatch fallback full restart failed"
+                        "Transport mismatch fallback full restart failed"
                     )
                 return status
 

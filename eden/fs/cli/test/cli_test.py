@@ -286,6 +286,49 @@ class RestartTest(unittest.TestCase):
             telemetry_sample.strings["transport_name"],
         )
 
+    def test_graceful_restart_falls_back_on_nfs_transport_mismatch(self) -> None:
+        restart_cmd = self.make_restart_cmd()
+        telemetry_logger = self.make_telemetry_logger()
+        instance = MagicMock()
+        instance.state_dir = Path("/home/test/.eden")
+        instance.get_telemetry_logger.return_value = telemetry_logger
+        instance.check_health.return_value = MagicMock(pid=1234)
+        mismatch = config_mod.TransportMismatch(
+            mount=Path("/mnt/eden"),
+            active_transport="tcp",
+            desired_transport="unix",
+            channel="nfs",
+        )
+
+        with (
+            patch.object(
+                config_mod,
+                "is_fuse_transport_mismatch_restart_enabled",
+                return_value=False,
+            ),
+            patch.object(
+                config_mod,
+                "is_nfs_transport_mismatch_restart_enabled",
+                return_value=True,
+            ),
+            patch.object(
+                config_mod,
+                "get_nfs_transport_mismatches",
+                return_value=[mismatch],
+            ),
+            patch.object(restart_cmd, "_full_restart", return_value=0),
+        ):
+            self.assertEqual(0, restart_cmd._graceful_restart(instance))
+
+        instance.log_sample.assert_called_once_with(
+            "full_restart",
+            success=True,
+            triggered_by="nfs_transport_mismatch",
+        )
+        telemetry_sample = telemetry_logger.samples[0]
+        self.assertEqual("nfs_transport_mismatch", telemetry_sample.strings["reason"])
+        self.assertEqual("tcp_to_unix", telemetry_sample.strings["transport_name"])
+
     def test_graceful_restart_skips_transport_check_when_disabled(self) -> None:
         restart_cmd = self.make_restart_cmd()
         telemetry_logger = self.make_telemetry_logger()
@@ -297,6 +340,11 @@ class RestartTest(unittest.TestCase):
             patch.object(
                 config_mod,
                 "is_fuse_transport_mismatch_restart_enabled",
+                return_value=False,
+            ),
+            patch.object(
+                config_mod,
+                "is_nfs_transport_mismatch_restart_enabled",
                 return_value=False,
             ),
             patch.object(

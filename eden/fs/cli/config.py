@@ -241,6 +241,7 @@ class ListMountInfo(typing.NamedTuple):
     backing_repo: Optional[Path]
     fs_channel_type: Optional[str] = None
     fuse_transport: Optional[str] = None
+    nfs_transport: Optional[str] = None
     visible_in_daemon_namespace: Optional[bool] = None
 
     def to_json_dict(self) -> Dict[str, Any]:
@@ -263,6 +264,8 @@ class ListMountInfo(typing.NamedTuple):
             d["fs_channel_type"] = self.fs_channel_type
         if self.fuse_transport is not None:
             d["fuse_transport"] = self.fuse_transport
+        if self.nfs_transport is not None:
+            d["nfs_transport"] = self.nfs_transport
         if self.visible_in_daemon_namespace is not None:
             d["visible_in_daemon_namespace"] = self.visible_in_daemon_namespace
         return d
@@ -664,6 +667,7 @@ class EdenInstance(AbstractEdenInstance):
                 backing_repo=backing_repo,
                 fs_channel_type=thrift_mount.fsChannelType,
                 fuse_transport=thrift_mount.fuseTransport,
+                nfs_transport=thrift_mount.nfsTransport,
                 visible_in_daemon_namespace=thrift_mount.visibleInDaemonNamespace,
             )
 
@@ -1865,11 +1869,24 @@ _DEFAULT_FUSE_IO_URING_KERNEL_RELEASE_REGEX = r"^6\.13\."
 FUSE_TRANSPORT_DEVFUSE = "devfuse"
 FUSE_TRANSPORT_IO_URING = "io_uring"
 
+_NFS_USE_UDS = "nfs.use-uds"
+_NFS_RESTART_ON_TRANSPORT_MISMATCH = "nfs.restart-on-transport-mismatch"
 
-class FuseTransportMismatch(typing.NamedTuple):
+NFS_TRANSPORT_TCP = "tcp"
+NFS_TRANSPORT_UNIX = "unix"
+
+
+class TransportMismatch(typing.NamedTuple):
+    """A mount whose channel transport differs from the configured one."""
+
     mount: Path
     active_transport: str
     desired_transport: str
+    # "fuse" or "nfs"
+    channel: str = "fuse"
+
+
+FuseTransportMismatch = TransportMismatch
 
 
 def is_fuse_transport_mismatch_restart_enabled(
@@ -1930,6 +1947,55 @@ def get_fuse_transport_mismatches(
                     desired_transport=desired_transport,
                 )
             )
+    return mismatches
+
+
+def is_nfs_transport_mismatch_restart_enabled(
+    instance: AbstractEdenInstance,
+) -> bool:
+    return sys.platform != "win32" and instance.get_config_bool(
+        _NFS_RESTART_ON_TRANSPORT_MISMATCH, default=False
+    )
+
+
+def get_desired_nfs_transport(instance: AbstractEdenInstance) -> str:
+    if instance.get_config_bool(_NFS_USE_UDS, default=False):
+        return NFS_TRANSPORT_UNIX
+    return NFS_TRANSPORT_TCP
+
+
+def get_nfs_transport_mismatches(
+    instance: AbstractEdenInstance,
+) -> List[TransportMismatch]:
+    """NFS mounts whose transport differs from nfs.use-uds.
+
+    A running daemon keeps the transport its mountd was created with, so
+    after the setting changes every NFS mount mismatches until a full
+    restart.
+    """
+    desired_transport = get_desired_nfs_transport(instance)
+    return [
+        TransportMismatch(
+            mount=mount_info.path,
+            active_transport=mount_info.nfs_transport,
+            desired_transport=desired_transport,
+            channel="nfs",
+        )
+        for mount_info in instance.get_mounts().values()
+        if mount_info.nfs_transport is not None
+        and mount_info.nfs_transport != desired_transport
+    ]
+
+
+def get_transport_mismatches(
+    instance: AbstractEdenInstance,
+) -> List[TransportMismatch]:
+    """Mismatches of every channel whose restart-on-mismatch flag is on."""
+    mismatches: List[TransportMismatch] = []
+    if is_fuse_transport_mismatch_restart_enabled(instance):
+        mismatches.extend(get_fuse_transport_mismatches(instance))
+    if is_nfs_transport_mismatch_restart_enabled(instance):
+        mismatches.extend(get_nfs_transport_mismatches(instance))
     return mismatches
 
 
