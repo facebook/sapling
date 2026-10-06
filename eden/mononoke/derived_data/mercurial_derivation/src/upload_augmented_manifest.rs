@@ -224,34 +224,6 @@ struct ChildSources<'a> {
     siblings: &'a HashMap<HgNodeHash, &'a BuiltTree>,
 }
 
-/// Build and store the augmented manifest for one uploaded tree. Every
-/// directory inside it must already be derived; a missing one is an error.
-pub async fn build_augmented_manifest_for_uploaded_tree(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn KeyedBlobstore>,
-    restricted_paths: &RestrictedPathsConfigBased,
-    envelope: &HgManifestEnvelope,
-) -> Result<BuiltTree> {
-    // A batch of one, so every child directory is external by construction.
-    let batch = UploadedTreeBatch::parse(vec![envelope.clone()])?;
-    let (tree, children) = batch
-        .trees
-        .first()
-        .zip(batch.children.first())
-        .context("a batch of one uploaded tree has one tree to build")?;
-    build_uploaded_tree(
-        ctx,
-        blobstore,
-        restricted_paths,
-        &tree.manifest,
-        ChildSources {
-            children,
-            siblings: &HashMap::new(),
-        },
-    )
-    .await
-}
-
 /// A node of the build traversal. The traversal starts from a single node, so
 /// `Root` stands above the batch's top trees.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]

@@ -41,9 +41,7 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest;
-use mercurial_derivation::upload_augmented_manifest::BuiltTree;
 use mercurial_derivation::upload_augmented_manifest::UploadTreeBuildError;
-use mercurial_derivation::upload_augmented_manifest::build_augmented_manifest_for_uploaded_tree;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
@@ -5369,20 +5367,22 @@ async fn build_one_uploaded_tree(
     repo: &Repo,
     overlay: &Arc<dyn KeyedBlobstore>,
     tree_id: HgManifestId,
-) -> Result<BuiltTree> {
+) -> Result<()> {
     let envelope = fetch_manifest_envelope(ctx, repo.repo_blobstore(), tree_id).await?;
     let denying: Arc<dyn KeyedBlobstore> = Arc::new(DenyGetKeyedBlobstore::new_denying_prefix(
         overlay.clone(),
         "hgmanifest.sha1.",
     ));
-    build_augmented_manifest_for_uploaded_tree(
+    // A batch of one, so every child directory is resolved from the blobstore.
+    build_augmented_manifests_for_uploaded_trees(
         ctx,
         &denying,
         repo.restricted_paths().config_based(),
-        &envelope,
+        vec![envelope],
     )
     .await
-    .with_context(|| format!("building uploaded tree {tree_id}"))
+    .with_context(|| format!("building uploaded tree {tree_id}"))?;
+    Ok(())
 }
 
 /// Build each of `build_order` through the tree-upload path, one tree at a
@@ -5390,8 +5390,8 @@ async fn build_one_uploaded_tree(
 /// per-changeset derivation produces for the same tree.
 ///
 /// `build_order` is spelled out by the caller rather than computed. A
-/// single-tree builder needs every directory inside the tree already derived,
-/// and making that dependency explicit is the point: the paths are listed
+/// one-tree batch needs every directory inside the tree already derived, and
+/// making that dependency explicit is the point: the paths are listed
 /// children-first, and `""` is the root.
 async fn assert_upload_path_matches_derivation(
     ctx: &CoreContext,
@@ -5619,15 +5619,9 @@ async fn test_upload_path_reuses_unchanged_file_leaves(fb: FacebookInit) -> Resu
         DenyGetKeyedBlobstore::new_denying_prefix(overlay.clone(), "hgfilenode.sha1."),
     );
     let wide = tree_id_at_path(&ctx, &repo, child_manifest, "wide").await?;
-    let envelope = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), wide).await?;
-    build_augmented_manifest_for_uploaded_tree(
-        &ctx,
-        &no_file_reads,
-        restricted_paths_config,
-        &envelope,
-    )
-    .await
-    .context("wide/ must build from the parent's leaves without reading any file blob")?;
+    build_one_uploaded_tree(&ctx, &repo, &no_file_reads, wide)
+        .await
+        .context("wide/ must build from the parent's leaves without reading any file blob")?;
 
     Ok(())
 }
@@ -5659,21 +5653,15 @@ async fn test_upload_path_fails_on_missing_content_metadata(fb: FacebookInit) ->
 
     let manifest = hg_manifest_id_of(&ctx, &repo, commit).await?;
     let tree = tree_id_at_path(&ctx, &repo, manifest, "src/deep").await?;
-    let envelope = fetch_manifest_envelope(&ctx, repo.repo_blobstore(), tree).await?;
     let without_metadata: Arc<dyn KeyedBlobstore> = Arc::new(DenyGetKeyedBlobstore::missing(
         MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()),
         [metadata_key],
     ));
 
-    let err = build_augmented_manifest_for_uploaded_tree(
-        &ctx,
-        &without_metadata,
-        repo.restricted_paths().config_based(),
-        &envelope,
-    )
-    .await
-    .err()
-    .context("a file with no content metadata must fail the build")?;
+    let err = build_one_uploaded_tree(&ctx, &repo, &without_metadata, tree)
+        .await
+        .err()
+        .context("a file with no content metadata must fail the build")?;
     assert!(
         format!("{err:#}").contains(&format!("missing content metadata for {content_id}")),
         "the error must name the content, got: {err:#}"
@@ -5882,8 +5870,8 @@ async fn uploaded_trees_for(
 /// entry point orders them itself and produces the same bytes as the
 /// per-changeset derivation.
 ///
-/// Why it matters: the single-tree builder requires its children to exist
-/// already, so ordering is the batch layer's whole job. Feeding it hash order
+/// Why it matters: a one-tree batch requires its children to exist already,
+/// so ordering is the batch layer's whole job. Feeding it hash order
 /// means the fixture cannot accidentally be in dependency order.
 async fn assert_batch_upload_matches_derivation(
     ctx: &CoreContext,
