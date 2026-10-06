@@ -26,6 +26,7 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 blame = { version = "0.1.0", path = "blame" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
+changeset_info = { version = "0.1.0", path = "changeset_info" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 fastlog = { version = "0.1.0", path = "fastlog" }

@@ -776,7 +776,7 @@ impl DerivedDataManager {
                 }
                 for parent in bonsai.parents() {
                     if !seen.contains(&parent) {
-                        ancestors.insert(csid.clone(), parent);
+                        ancestors.entry(parent).or_insert(csid);
                     }
                     heads.remove(&parent);
                 }
@@ -787,7 +787,7 @@ impl DerivedDataManager {
             // Dependency checks: all ancestors should have this derived
             // data type derived
             stream::iter(ancestors)
-            .map(|(child, csid)| {
+            .map(|(csid, child)| {
                 derivation_ctx_ref
                     .fetch_dependency::<Derivable>(ctx, csid)
                     .map_err(move |err| {

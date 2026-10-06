@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use blame::RootBlameV3;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
+use changeset_info::ChangesetInfo;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
@@ -175,4 +176,90 @@ async fn test_xdb_mapping_batches(fb: FacebookInit) -> Result<()> {
 #[mononoke::fbinit_test]
 async fn test_xdb_mapping_batches_disabled(fb: FacebookInit) -> Result<()> {
     check_xdb_mapping_batches(fb, false).await
+}
+
+#[mononoke::fbinit_test]
+async fn test_batch_checks_every_external_merge_parent(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    for parent_count in [2, 3] {
+        for missing_parent in 0..parent_count {
+            let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+            let mut parents = Vec::new();
+            for index in 0..parent_count {
+                parents.push(
+                    CreateCommitContext::new_root(&ctx, &repo)
+                        .add_file(format!("parent{index}").as_str(), "content")
+                        .commit()
+                        .await?,
+                );
+            }
+            let merge = CreateCommitContext::new(&ctx, &repo, parents.clone())
+                .commit()
+                .await?;
+            let manager = repo.repo_derived_data().manager();
+            let available = parents
+                .iter()
+                .enumerate()
+                .filter_map(|(index, csid)| (index != missing_parent).then_some(*csid))
+                .collect();
+            manager
+                .derive_exactly_batch::<ChangesetInfo>(&ctx, available, None)
+                .await?;
+
+            // ChangesetInfo does not read parents itself, so this tests the manager.
+            let error = manager
+                .derive_exactly_batch::<ChangesetInfo>(&ctx, vec![merge], None)
+                .await
+                .expect_err("every external merge parent must already be derived");
+            assert!(format!("{error:#}").contains(&parents[missing_parent].to_string()));
+            assert!(
+                manager
+                    .fetch_derived::<ChangesetInfo>(&ctx, merge, None)
+                    .await?
+                    .is_none()
+            );
+
+            manager
+                .derive_exactly_batch::<ChangesetInfo>(
+                    &ctx,
+                    vec![parents[missing_parent], merge],
+                    None,
+                )
+                .await?;
+        }
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_batch_rejects_parent_after_child(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let first = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("first", "content")
+        .commit()
+        .await?;
+    let second = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("second", "content")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![first, second])
+        .commit()
+        .await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<ChangesetInfo>(&ctx, vec![first, second], None)
+        .await?;
+
+    for late_parent in [first, second] {
+        let error = manager
+            .derive_exactly_batch::<ChangesetInfo>(&ctx, vec![merge, late_parent], None)
+            .await
+            .expect_err("a persisted parent must still precede its child within a batch");
+        assert!(format!("{error:#}").contains("batch not in topological order"));
+    }
+    manager
+        .derive_exactly_batch::<ChangesetInfo>(&ctx, vec![first, second, merge], None)
+        .await?;
+    Ok(())
 }
