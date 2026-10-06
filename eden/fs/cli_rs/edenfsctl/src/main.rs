@@ -27,6 +27,12 @@ use fbinit::FacebookInit;
 use testutil::failpoint;
 use tracing_subscriber::filter::EnvFilter;
 
+#[cfg(fbcode_build)]
+use crate::error_report::ErrorReport;
+
+#[cfg(fbcode_build)]
+mod error_report;
+
 #[cfg(not(fbcode_build))]
 // For non-fbcode builds, CliUsageSample is not defined. Let's give it a dummy
 // value so we can pass CliUsageSample through wrapper_main() and fallback().
@@ -101,7 +107,11 @@ fn python_fallback() -> Result<Command> {
     Err(anyhow!("unable to locate fallback binary"))
 }
 
-fn fallback(reason: Option<&clap::Error>) -> Result<i32> {
+#[cfg_attr(
+    not(fbcode_build),
+    expect(unused_variables, reason = "only fbcode builds log telemetry")
+)]
+fn fallback(reason: Option<&clap::Error>, telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFS_LOG").is_ok() {
         setup_logging();
     }
@@ -123,9 +133,17 @@ fn fallback(reason: Option<&clap::Error>) -> Result<i32> {
     // Python cannot tell a dev build from a release one, so hand it our
     // decision instead of letting it log where we would not.
     #[cfg(fbcode_build)]
-    if telemetry_disabled() {
+    let error_report = if telemetry_disabled() {
         cmd.env("EDENFS_NO_TELEMETRY", "1");
-    }
+        None
+    } else {
+        ErrorReport::attach(&mut cmd)
+            .inspect_err(|error| tracing::debug!(?error, "no error report for Python"))
+            .ok()
+    };
+
+    #[cfg(fbcode_build)]
+    telemetry_sample.set_rust_command(false);
 
     tracing::debug!("Falling back to {:?}", cmd);
 
@@ -133,8 +151,16 @@ fn fallback(reason: Option<&clap::Error>) -> Result<i32> {
     let status = cmd
         .status()
         .with_context(|| format!("failed to execute: {cmd:?}"))?;
+    let code = status.code().unwrap_or(1);
 
-    Ok(status.code().unwrap_or(1))
+    #[cfg(fbcode_build)]
+    if code != 0
+        && let Some(error_report) = error_report
+    {
+        error_report.record(telemetry_sample);
+    }
+
+    Ok(code)
 }
 
 /// Setup tracing logging. If we are in development mode, we use the fancier logger, otherwise a
@@ -185,7 +211,7 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
             Err(e) => e.exit(),
         }
     } else if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
-        fallback(None)
+        fallback(None, telemetry_sample)
     } else {
         match edenfs_commands::MainCommand::try_parse() {
             // The command is defined in Rust, but check whether it's "enabled"
@@ -199,7 +225,7 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
                     }
                     rust_main(cmd)
                 } else {
-                    match fallback(None) {
+                    match fallback(None, telemetry_sample) {
                         // If the Python version of edenfsctl exited with a
                         // parse error, we should see if the Rust version
                         // exists. This helps prevent cases where rollouts
@@ -220,11 +246,7 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
                         }
                         res => {
                             #[cfg(fbcode_build)]
-                            {
-                                telemetry_sample.set_rust_fallback(false);
-                                // mark the command is triggered as a Python command
-                                telemetry_sample.set_rust_command(false);
-                            }
+                            telemetry_sample.set_rust_fallback(false);
                             res
                         }
                     }
@@ -249,13 +271,13 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
                     if should_use_rust_help(std::env::args(), &None, &None).unwrap_or(false) {
                         e.exit()
                     } else {
-                        fallback(Some(&e))
+                        fallback(Some(&e), telemetry_sample)
                     }
                 } else if e.kind() == clap::error::ErrorKind::UnknownArgument
                     || e.kind() == clap::error::ErrorKind::InvalidSubcommand
                 {
                     // Failed to parse the command. We should try to fallback to Python.
-                    fallback(Some(&e))
+                    fallback(Some(&e), telemetry_sample)
                 } else {
                     // Rust command exists, but encountered a different parsing error. Print the error
                     e.print().ok();
