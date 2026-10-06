@@ -13,9 +13,11 @@ use std::time::Duration;
 use anyhow::Error;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
+use bookmarks::Bookmarks;
 use bookmarks::Freshness;
 use cas_client::CasClient;
 use changesets_uploader::CasChangesetsUploader;
@@ -42,6 +44,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
+use mutable_counters::validate_counter_name;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
@@ -99,6 +102,9 @@ pub struct Repo {
 
     #[facet]
     pub bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
 }
 
 #[derive(Parser)]
@@ -350,10 +356,37 @@ pub fn loop_over_log_entries<'a>(
     scuba_sample: &'a MononokeScubaSampleBuilder,
     batch_size: u64,
 ) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a {
+    loop_over_log_entries_until(
+        ctx,
+        bookmarks,
+        start_id,
+        loop_forever,
+        scuba_sample,
+        batch_size,
+        || true,
+    )
+}
+
+pub fn loop_over_log_entries_until<'a, F>(
+    ctx: &'a CoreContext,
+    bookmarks: Arc<dyn BookmarkUpdateLog>,
+    start_id: BookmarkUpdateLogId,
+    loop_forever: bool,
+    scuba_sample: &'a MononokeScubaSampleBuilder,
+    batch_size: u64,
+    should_continue: F,
+) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a
+where
+    F: Fn() -> bool + Clone + 'a,
+{
     stream::try_unfold(Some(start_id), {
         move |maybe_id| {
             cloned!(ctx, bookmarks);
+            let should_continue = should_continue.clone();
             async move {
+                if !should_continue() {
+                    return Ok(None);
+                }
                 match maybe_id {
                     Some(current_id) => {
                         let entries = bookmarks
@@ -417,6 +450,30 @@ impl LatestReplayedSyncCounter {
             .set_counter(ctx, &self.counter_name, value, None)
             .await
     }
+
+    fn for_bookmark(
+        source_repo: &Repo,
+        base_counter_name: &str,
+        bookmark: &BookmarkKey,
+    ) -> Result<Self, Error> {
+        Self::new(
+            source_repo,
+            format_cas_bookmark_counter(base_counter_name, bookmark)?,
+        )
+    }
+}
+
+fn format_cas_bookmark_counter(
+    base_counter_name: &str,
+    bookmark: &BookmarkKey,
+) -> Result<String, Error> {
+    let counter_name = format!(
+        "{base_counter_name}-by-bookmark-v1-{}-{}",
+        bookmark.category(),
+        bookmark.as_str(),
+    );
+    validate_counter_name(&counter_name)?;
+    Ok(counter_name)
 }
 
 #[fbinit::main]
