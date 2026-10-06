@@ -601,15 +601,10 @@ class changectx(basectx):
 
     def files(self):
         files = self._changeset.files
-        if not files:
-            # The following cases does not provide "files" in commit message,
-            # run diff to get it:
-            # - git repo
-            # - subtree shallow copy
-            if git.isgitformat(self._repo) or subtreeutil.contains_shallow_copy(
-                self._repo, self.node()
-            ):
-                files = self.visiblefiles(force=True)
+        if not files and git.isgitformat(self._repo):
+            # git commits do not provide "files" in the commit message, run
+            # diff to get it
+            files = self.visiblefiles(force=True)
         return files
 
     def visiblefiles(self, force=False):

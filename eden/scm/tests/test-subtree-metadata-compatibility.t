@@ -120,3 +120,38 @@ disable the new subtree key and make sure inspect command works for existing met
       }
     ]
   }
+
+legacy shallow copy metadata ("copies") is ignored
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ sl go -q $A
+  $ mkdir bar
+  $ cp foo/x bar/x
+  $ sl add -q bar/x
+  $ sl dbsh << 'EOS'
+  > import json
+  > metadata = [{"copies": [{"from_commit": "d908813f0f7c9078810e26aad1e37bdb32013d4b", "from_path": "foo", "to_path": "bar"}], "v": 1}]
+  > repo.commit("legacy shallow copy", extra={"test_subtree": json.dumps(metadata, separators=(",", ":"))})
+  > EOS
+  $ sl log -r . -T '{desc}\n{files}\n'
+  legacy shallow copy
+  bar/x
+  $ sl log -r . -T '{subtree_copies}\n'
+  $ sl subtree inspect
+  no subtree metadata found for commit bc254fa92aa3
+  $ echo bbb >> bar/x
+  $ sl amend
+  $ sl log -r . -T '{files}\n'
+  bar/x
+  $ sl subtree copy -r $A --from-path foo --to-path baz -m "deep copy"
+  copying foo to baz
+  $ sl fold --from .^
+  2 changesets folded
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl log -r . -T '{extras % "{extra}\n"}'
+  amend_source=bc254fa92aa38bbdec88f9cb33d1d18b8768e91f
+  branch=default
+  test_subtree=[{"deepcopies":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"baz"}],"v":1}]
