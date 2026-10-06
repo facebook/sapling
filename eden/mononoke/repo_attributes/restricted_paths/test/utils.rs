@@ -36,6 +36,7 @@ use metaconfig_types::AclManifestMode;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::EnforcementConditionSet;
 use metaconfig_types::PathRestrictionMetadata;
+use metaconfig_types::RequestMatchers;
 use metaconfig_types::RestrictedPathsConfig;
 use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
 use metadata::Metadata;
@@ -1184,16 +1185,18 @@ impl EnforcementConditionSetBuilder {
     pub(crate) fn build(self) -> EnforcementConditionSet {
         EnforcementConditionSet {
             always_enabled: self.always_enabled,
-            entry_points: self.entry_points,
             require_client_request_flag: self.require_client_request_flag,
             restriction_acls: self.restriction_acls,
-            machine_tiers: self.machine_tiers,
-            // `build_rules` matches on the server's own `build_info` build rule,
-            // which can't be set from a unit test (it's a link-time constant), so
-            // tests leave it empty. Coverage lives in the `.t` integration test.
-            build_rules: Vec::new(),
-            client_identity_regexes: self.client_identity_regexes,
-            is_agent: self.is_agent,
+            matchers: RequestMatchers {
+                entry_points: self.entry_points,
+                machine_tiers: self.machine_tiers,
+                // `build_rules` matches on the server's own `build_info` build rule,
+                // which can't be set from a unit test (it's a link-time constant), so
+                // tests leave it empty. Coverage lives in the `.t` integration test.
+                build_rules: Vec::new(),
+                client_identity_regexes: self.client_identity_regexes,
+                is_agent: self.is_agent,
+            },
         }
     }
 }

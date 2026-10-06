@@ -2553,12 +2553,9 @@ impl AclManifestMode {
 /// Multiple sets are evaluated with OR semantics.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnforcementConditionSet {
-    /// If true, this set always matches — skips entry_points and
+    /// If true, this set always matches — skips the request matchers and
     /// require_client_request_flag checks.
     pub always_enabled: bool,
-    /// Client entry points that trigger enforcement (e.g. "ScsServer", "EdenApi").
-    /// Empty = match all entry points.
-    pub entry_points: Vec<String>,
     /// Temporary: if true, client must send server_side_tenting=true in metadata.
     /// Used during the initial rollout stage so clients can opt in to enforcement
     /// and disable it if it causes issues. Should be removed once rollout is complete.
@@ -2568,13 +2565,25 @@ pub struct EnforcementConditionSet {
     /// Non-empty = match only when the access result's `restriction_acls`
     /// overlaps this list.
     pub restriction_acls: Vec<MononokeIdentity>,
-    /// Machine tiers (MACHINE_TIER identity values) that trigger enforcement.
+    /// Request-metadata matchers that trigger enforcement.
+    pub matchers: RequestMatchers,
+}
+
+/// Request-metadata matchers of an enforcement condition set. All non-empty
+/// fields must match (AND); `is_agent: None` does not filter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RequestMatchers {
+    /// Client entry points to match, in their `ClientEntryPoint` display form
+    /// (e.g. "scs", "eden_api").
+    /// Empty = don't filter on this dimension.
+    pub entry_points: Vec<String>,
+    /// Caller machine tiers (MACHINE_TIER identity values) to match.
     /// Empty = don't filter on this dimension.
     pub machine_tiers: Vec<String>,
-    /// Server build rules (the running binary's `build_info` build rule) that
-    /// trigger enforcement. Empty = don't filter on this dimension. Match = the
-    /// server's own build_rule (the value `add_common_server_data` logs to scuba)
-    /// appears in this list.
+    /// Server build rules (the running binary's `build_info` build rule) to
+    /// match. Empty = don't filter on this dimension. Match = the server's own
+    /// build_rule (the value `add_common_server_data` logs to scuba) appears in
+    /// this list.
     pub build_rules: Vec<String>,
     /// Regexes evaluated against each caller identity's `"TYPE:value"` form.
     /// Empty = don't filter on this dimension. Substring semantics
@@ -2583,6 +2592,17 @@ pub struct EnforcementConditionSet {
     /// `None` = don't filter on this dimension; `Some(want)` = match only callers
     /// whose `Metadata::likely_an_agent()` equals `want`.
     pub is_agent: Option<bool>,
+}
+
+impl RequestMatchers {
+    /// Whether any matcher filters on anything at all.
+    pub fn has_matcher(&self) -> bool {
+        !self.entry_points.is_empty()
+            || !self.machine_tiers.is_empty()
+            || !self.build_rules.is_empty()
+            || !self.client_identity_regexes.is_empty()
+            || self.is_agent.is_some()
+    }
 }
 
 /// Parse a bare AMP group name into a `GROUP:` identity.

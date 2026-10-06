@@ -71,6 +71,7 @@ use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RemoteDiffConfig;
+use metaconfig_types::RequestMatchers;
 use metaconfig_types::RestrictedPathsConfig;
 use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
 use metaconfig_types::ServiceWriteRestrictions;
@@ -116,6 +117,7 @@ use repos::RawDirectoryBranchClusterConfig;
 use repos::RawDirectoryBranchClusterFixedCluster;
 use repos::RawDirectoryBranchClusterFixedConfig;
 use repos::RawEligibilityCheck;
+use repos::RawEnforcementConditionSet;
 use repos::RawGitBundleURIConfig;
 use repos::RawGitConcurrencyParams;
 use repos::RawGitConfigs;
@@ -1482,30 +1484,17 @@ impl Convert for RawRestrictedPathsConfig {
             .map(|raw| {
                 Ok::<_, anyhow::Error>(EnforcementConditionSet {
                     always_enabled: raw.always_enabled.unwrap_or(false),
-                    entry_points: raw.entry_points.unwrap_or_default(),
                     require_client_request_flag: raw.require_client_request_flag.unwrap_or(false),
                     restriction_acls: raw
                         .restriction_acls
-                        .unwrap_or_default()
-                        .into_iter()
+                        .iter()
+                        .flatten()
                         .map(|s| {
-                            MononokeIdentity::from_str(&s)
+                            MononokeIdentity::from_str(s)
                                 .with_context(|| format!("parsing restriction_acl `{s}`"))
                         })
                         .collect::<Result<Vec<_>>>()?,
-                    machine_tiers: raw.machine_tiers.unwrap_or_default(),
-                    build_rules: raw.build_rules.unwrap_or_default(),
-                    client_identity_regexes: raw
-                        .client_identity_regexes
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|pattern| {
-                            ComparableRegex::new(&pattern).with_context(|| {
-                                format!("parsing client_identity_regex `{pattern}`")
-                            })
-                        })
-                        .collect::<Result<Vec<_>>>()?,
-                    is_agent: raw.is_agent,
+                    matchers: convert_request_matchers(raw)?,
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -1525,6 +1514,25 @@ impl Convert for RawRestrictedPathsConfig {
             denial_message: self.denial_message,
         })
     }
+}
+
+/// Convert the request-metadata matchers of a raw enforcement condition set.
+fn convert_request_matchers(raw: RawEnforcementConditionSet) -> Result<RequestMatchers> {
+    Ok(RequestMatchers {
+        entry_points: raw.entry_points.unwrap_or_default(),
+        machine_tiers: raw.machine_tiers.unwrap_or_default(),
+        build_rules: raw.build_rules.unwrap_or_default(),
+        client_identity_regexes: raw
+            .client_identity_regexes
+            .unwrap_or_default()
+            .into_iter()
+            .map(|pattern| {
+                ComparableRegex::new(&pattern)
+                    .with_context(|| format!("parsing client_identity_regex `{pattern}`"))
+            })
+            .collect::<Result<Vec<_>>>()?,
+        is_agent: raw.is_agent,
+    })
 }
 
 fn convert_manifest_id_store_config(
@@ -1575,7 +1583,6 @@ fn positive_config_value(field_name: &str, value: Option<i64>, default: u64) -> 
 mod tests {
     use mononoke_macros::mononoke;
     use repos::RawDerivationPipelineConfig;
-    use repos::RawEnforcementConditionSet;
 
     use super::*;
 
@@ -1783,7 +1790,9 @@ mod tests {
         raw.enforcement_condition_sets = Some(vec![raw_set]);
         let cfg: RestrictedPathsConfig = raw.convert().unwrap();
         assert_eq!(cfg.enforcement_condition_sets.len(), 1);
-        let regexes = &cfg.enforcement_condition_sets[0].client_identity_regexes;
+        let regexes = &cfg.enforcement_condition_sets[0]
+            .matchers
+            .client_identity_regexes;
         assert_eq!(regexes.len(), 1, "expected exactly one compiled regex");
         assert_eq!(regexes[0].as_str(), "^USER:foo$");
         assert!(
@@ -1812,9 +1821,15 @@ mod tests {
         raw.enforcement_condition_sets = Some(raw_sets);
         let cfg: RestrictedPathsConfig = raw.convert().unwrap();
         assert_eq!(cfg.enforcement_condition_sets.len(), 3);
-        assert_eq!(cfg.enforcement_condition_sets[0].is_agent, Some(true));
-        assert_eq!(cfg.enforcement_condition_sets[1].is_agent, Some(false));
-        assert_eq!(cfg.enforcement_condition_sets[2].is_agent, None);
+        assert_eq!(
+            cfg.enforcement_condition_sets[0].matchers.is_agent,
+            Some(true)
+        );
+        assert_eq!(
+            cfg.enforcement_condition_sets[1].matchers.is_agent,
+            Some(false)
+        );
+        assert_eq!(cfg.enforcement_condition_sets[2].matchers.is_agent, None);
     }
 
     #[mononoke::test]

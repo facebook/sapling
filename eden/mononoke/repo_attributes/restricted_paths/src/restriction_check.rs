@@ -27,6 +27,7 @@ use futures::future::Shared;
 use futures::stream;
 use itertools::Itertools;
 use metaconfig_types::EnforcementConditionSet;
+use metaconfig_types::RequestMatchers;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -945,6 +946,37 @@ pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
     check_manifest_restriction_infos(ctx, restricted_paths, restriction_info).await
 }
 
+/// Apply the request-local portion of `enforcement_condition_sets`.
+///
+/// This is intentionally split from restriction ACL matching: request metadata
+/// is available before fetching restrictions, but `restriction_acls` can only
+/// be compared after the accessed restricted roots are known. Splitting the
+/// checks lets enforcement avoid unnecessary fetches for requests that cannot
+/// match any condition set while keeping restriction-scoped enforcement precise.
+pub(crate) fn pre_filter_condition_sets<'a>(
+    ctx: &CoreContext,
+    condition_sets: &'a [EnforcementConditionSet],
+) -> PreFilterResult<'a> {
+    let request = RequestFacts::new(ctx);
+    let candidates = condition_sets
+        .iter()
+        .filter(|set| {
+            condition_set_has_active_filter(set)
+                && (set.always_enabled || request.matches_condition_set(set))
+        })
+        .collect::<Vec<_>>();
+
+    if candidates.is_empty() {
+        return PreFilterResult::NoMatch;
+    }
+
+    if candidates.iter().any(|set| set.always_enabled) {
+        PreFilterResult::DefiniteMatch { candidates }
+    } else {
+        PreFilterResult::NeedsFetch { candidates }
+    }
+}
+
 /// Request metadata that the request-local filters of an enforcement
 /// condition set are matched against.
 ///
@@ -974,83 +1006,53 @@ impl<'a> RequestFacts<'a> {
         }
     }
 
-    /// Whether every non-empty request-local filter of `set` matches this
-    /// request.
-    ///
-    /// Only covers the filters that can be decided from request metadata:
-    /// `always_enabled` and `restriction_acls` are the caller's to evaluate.
-    fn matches_request_filters(&self, set: &EnforcementConditionSet) -> bool {
-        let entry_point_matches = set.entry_points.is_empty()
+    /// Whether every non-empty matcher in `matchers` matches this request.
+    fn matches(&self, matchers: &RequestMatchers) -> bool {
+        let entry_point_matches = matchers.entry_points.is_empty()
             || self
                 .entry_point
                 .as_ref()
-                .is_some_and(|entry_point| set.entry_points.contains(entry_point));
-        let machine_tier_matches = set.machine_tiers.is_empty()
+                .is_some_and(|entry_point| matchers.entry_points.contains(entry_point));
+        let machine_tier_matches = matchers.machine_tiers.is_empty()
             || self
                 .machine_tier
-                .is_some_and(|tier| set.machine_tiers.iter().any(|c| c == tier));
-        let build_rule_matches = set.build_rules.is_empty()
+                .is_some_and(|tier| matchers.machine_tiers.iter().any(|c| c == tier));
+        let build_rule_matches = matchers.build_rules.is_empty()
             || self
                 .build_rule
-                .is_some_and(|rule| set.build_rules.iter().any(|c| c == rule));
-        let identity_regex_matches = set.client_identity_regexes.is_empty()
+                .is_some_and(|rule| matchers.build_rules.iter().any(|c| c == rule));
+        let identity_regex_matches = matchers.client_identity_regexes.is_empty()
             || self.identities.iter().any(|identity| {
                 let identity = identity.to_string();
-                set.client_identity_regexes
+                matchers
+                    .client_identity_regexes
                     .iter()
                     .any(|re| re.is_match(&identity))
             });
-        let is_agent_matches = set.is_agent.is_none_or(|want| want == self.is_agent);
+        let is_agent_matches = matchers.is_agent.is_none_or(|want| want == self.is_agent);
 
         entry_point_matches
             && machine_tier_matches
             && build_rule_matches
             && identity_regex_matches
             && is_agent_matches
+    }
+
+    /// Whether the request-local filters of `set` match this request: its
+    /// request matchers and `require_client_request_flag`.
+    ///
+    /// `always_enabled` and `restriction_acls` are the caller's to evaluate.
+    fn matches_condition_set(&self, set: &EnforcementConditionSet) -> bool {
+        self.matches(&set.matchers)
             && (!set.require_client_request_flag || self.server_side_tenting)
-    }
-}
-
-/// Apply the request-local portion of `enforcement_condition_sets`.
-///
-/// This is intentionally split from restriction ACL matching: request metadata
-/// is available before fetching restrictions, but `restriction_acls` can only
-/// be compared after the accessed restricted roots are known. Splitting the
-/// checks lets enforcement avoid unnecessary fetches for requests that cannot
-/// match any condition set while keeping restriction-scoped enforcement precise.
-pub(crate) fn pre_filter_condition_sets<'a>(
-    ctx: &CoreContext,
-    condition_sets: &'a [EnforcementConditionSet],
-) -> PreFilterResult<'a> {
-    let request = RequestFacts::new(ctx);
-    let candidates = condition_sets
-        .iter()
-        .filter(|set| {
-            condition_set_has_active_filter(set)
-                && (set.always_enabled || request.matches_request_filters(set))
-        })
-        .collect::<Vec<_>>();
-
-    if candidates.is_empty() {
-        return PreFilterResult::NoMatch;
-    }
-
-    if candidates.iter().any(|set| set.always_enabled) {
-        PreFilterResult::DefiniteMatch { candidates }
-    } else {
-        PreFilterResult::NeedsFetch { candidates }
     }
 }
 
 fn condition_set_has_active_filter(set: &EnforcementConditionSet) -> bool {
     set.always_enabled
-        || !set.entry_points.is_empty()
         || set.require_client_request_flag
         || !set.restriction_acls.is_empty()
-        || !set.machine_tiers.is_empty()
-        || !set.build_rules.is_empty()
-        || !set.client_identity_regexes.is_empty()
-        || set.is_agent.is_some()
+        || set.matchers.has_matcher()
 }
 
 /// The build rule of the running server binary (the Buck target it was built
