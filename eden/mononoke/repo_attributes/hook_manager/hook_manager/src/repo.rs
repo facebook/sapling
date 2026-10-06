@@ -329,7 +329,7 @@ impl HookRepo {
             .clone();
         sk_mf
             .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
-            .try_filter_map(|(path, entry)| async move {
+            .map_ok(|(path, entry)| async move {
                 match entry {
                     Entry::Tree(tree_id) => {
                         let tree = tree_id.load(ctx, &self.repo_blobstore).await?;
@@ -342,6 +342,8 @@ impl HookRepo {
                     _ => Ok(None),
                 }
             })
+            .try_buffer_unordered(100)
+            .try_filter_map(future::ok)
             .try_collect()
             .await
     }
