@@ -768,6 +768,20 @@ impl AsyncMethodRequestQueue {
             .context("marking requests as failed")
     }
 
+    /// Mark the given requests as `polled`, but only those still in the
+    /// `ready` state with a stored result. Returns the number of rows
+    /// actually updated.
+    pub async fn mark_requests_polled(
+        &self,
+        ctx: &CoreContext,
+        ids: &[RowId],
+    ) -> Result<u64, Error> {
+        self.table
+            .mark_ready_requests_polled(ctx, ids)
+            .await
+            .context("marking requests as polled")
+    }
+
     /// List `ready` requests with `ready_at` older than `ready_before`,
     /// ordered oldest first, up to `limit` rows. These are the requests that
     /// drive the `queue.<repo>.age_s.ready` worker stat (`now - min(ready_at)`),

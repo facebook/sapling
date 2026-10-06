@@ -7,6 +7,7 @@
 
 pub(crate) mod abort;
 mod fail_dead_ready;
+mod gc_old_ready;
 mod list;
 mod list_old_ready;
 mod requeue;
@@ -28,6 +29,7 @@ use submit::AsyncRequestsSubmitArgs;
 
 use crate::commands::async_requests::abort::AsyncRequestsAbortArgs;
 use crate::commands::async_requests::fail_dead_ready::AsyncRequestsFailDeadReadyRequestsArgs;
+use crate::commands::async_requests::gc_old_ready::AsyncRequestsGcOldReadyArgs;
 use crate::commands::async_requests::list::AsyncRequestsListArgs;
 use crate::commands::async_requests::list_old_ready::AsyncRequestsListOldReadyArgs;
 use crate::commands::async_requests::requeue::AsyncRequestsRequeueArgs;
@@ -50,6 +52,8 @@ pub enum AsyncRequestsSubcommand {
     /// Lists `ready` requests older than a threshold: the ones that would
     /// trip the `queue.<repo>.age_s.ready` alerts.
     ListOldReady(AsyncRequestsListOldReadyArgs),
+    /// Marks orphaned `ready` requests of known-benign types as `polled`.
+    GcOldReady(AsyncRequestsGcOldReadyArgs),
     /// Marks "dead" ready requests as failed: those whose params blob is
     /// missing from the blobstore (i.e. `show` fails with "Missing blob"),
     /// and, with `--older-than-days`, those that have sat uncollected in
@@ -94,6 +98,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .await
                 .context("acquiring the async requests queue")?;
             list_old_ready::list_old_ready_requests(list_old_ready_args, ctx, queue).await?
+        }
+        AsyncRequestsSubcommand::GcOldReady(gc_old_ready_args) => {
+            let repo_ids = match gc_old_ready_args.repo.as_repo_arg() {
+                Some(repo_arg) => Some(vec![app.repo_id(repo_arg)?]),
+                None => None,
+            };
+            let queue = async_requests_client::build(fb, &app, repo_ids)
+                .await
+                .context("acquiring the async requests queue")?;
+            gc_old_ready::gc_old_ready_requests(gc_old_ready_args, ctx, queue).await?
         }
         AsyncRequestsSubcommand::FailDeadReadyRequests(fail_dead_ready_args) => {
             let queue = async_requests_client::build(fb, &app, None)

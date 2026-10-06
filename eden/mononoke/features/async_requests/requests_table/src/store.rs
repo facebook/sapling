@@ -642,6 +642,15 @@ mononoke_queries! {
         "
     }
 
+    write MarkReadyRequestsPolled(polled_at: Timestamp, >list ids: RowId) {
+        none,
+        "
+        UPDATE long_running_request_queue
+        SET status = 'polled', polled_at = {polled_at}
+        WHERE status = 'ready' AND result_blobstore_key IS NOT NULL AND id IN {ids}
+        "
+    }
+
     write MarkRequestAsNewForRetry(id: RowId, request_type: RequestType, num_retries: u8) {
         none,
         "
@@ -2120,6 +2129,21 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         )
         .await
         .context("marking ready requests as failed")?;
+        Ok(res.affected_rows())
+    }
+
+    async fn mark_ready_requests_polled(&self, ctx: &CoreContext, ids: &[RowId]) -> Result<u64> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let res = MarkReadyRequestsPolled::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &Timestamp::now(),
+            ids,
+        )
+        .await
+        .context("marking ready requests as polled")?;
         Ok(res.affected_rows())
     }
 
@@ -4019,6 +4043,95 @@ mod test {
             .list_old_ready_requests(&ctx, &QueueRepoFilter::Except(vec![]), &future, 1, false)
             .await?;
         assert_eq!(limited.len(), 1);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_mark_ready_requests_polled(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let ty = RequestType("megarepo_sync_changeset".to_string());
+
+        // One row per state: new, inprogress, ready (with result), and a
+        // ready row without a result (simulating corruption via test_mark).
+        let new_id = queue
+            .add_request(&ctx, &ty, None, &BlobstoreKey("key".to_string()), None)
+            .await?;
+        let inprogress_id = queue
+            .add_request(&ctx, &ty, None, &BlobstoreKey("key".to_string()), None)
+            .await?;
+        let ready_id = queue
+            .add_request(&ctx, &ty, None, &BlobstoreKey("key".to_string()), None)
+            .await?;
+        let resultless_id = queue
+            .add_request(&ctx, &ty, None, &BlobstoreKey("key".to_string()), None)
+            .await?;
+
+        for id in [&inprogress_id, &ready_id] {
+            let entry = queue.test_get_request_entry_by_id(&ctx, id).await?.unwrap();
+            queue
+                .mark_in_progress(
+                    &ctx,
+                    &RequestId(entry.id, entry.request_type),
+                    &ClaimedBy("me".to_string()),
+                )
+                .await?;
+        }
+        let entry = queue
+            .test_get_request_entry_by_id(&ctx, &ready_id)
+            .await?
+            .unwrap();
+        queue
+            .mark_ready(
+                &ctx,
+                &RequestId(entry.id, entry.request_type),
+                BlobstoreKey("result".to_string()),
+            )
+            .await?;
+        queue
+            .test_mark(&ctx, &resultless_id, RequestStatus::Ready)
+            .await?;
+
+        // Empty input is a no-op.
+        assert_eq!(queue.mark_ready_requests_polled(&ctx, &[]).await?, 0);
+
+        // Only the ready row with a stored result is flipped.
+        let marked = queue
+            .mark_ready_requests_polled(
+                &ctx,
+                &[
+                    new_id.clone(),
+                    inprogress_id.clone(),
+                    ready_id.clone(),
+                    resultless_id.clone(),
+                ],
+            )
+            .await?;
+        assert_eq!(marked, 1);
+
+        let entry = queue
+            .test_get_request_entry_by_id(&ctx, &ready_id)
+            .await?
+            .unwrap();
+        assert_eq!(entry.status, RequestStatus::Polled);
+        assert!(entry.polled_at.is_some());
+
+        // Everything else is untouched, and re-running is a no-op.
+        for (id, status) in [
+            (&new_id, RequestStatus::New),
+            (&inprogress_id, RequestStatus::InProgress),
+            (&resultless_id, RequestStatus::Ready),
+        ] {
+            let entry = queue.test_get_request_entry_by_id(&ctx, id).await?.unwrap();
+            assert_eq!(entry.status, status);
+        }
+        assert_eq!(
+            queue
+                .mark_ready_requests_polled(&ctx, std::slice::from_ref(&ready_id))
+                .await?,
+            0
+        );
 
         Ok(())
     }

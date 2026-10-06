@@ -245,6 +245,13 @@ pub trait LongRunningRequestsQueue: Send + Sync {
     /// rows actually updated.
     async fn mark_ready_requests_failed(&self, ctx: &CoreContext, ids: &[RowId]) -> Result<u64>;
 
+    /// Mark the given requests as `polled`, as if the client had collected
+    /// their results. Only rows still in the `ready` state *with a stored
+    /// result blob* are affected; the guards keep this safe to run
+    /// concurrently with other queue activity and idempotent on re-runs.
+    /// Returns the number of rows actually updated.
+    async fn mark_ready_requests_polled(&self, ctx: &CoreContext, ids: &[RowId]) -> Result<u64>;
+
     /// Retrieve stats on the queue, filtered by repo.
     /// If `exclude_backfill` is true, derived data backfill request types
     /// (derive_boundaries, derive_slice, derive_backfill, derive_backfill_repo)
