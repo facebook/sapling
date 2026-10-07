@@ -483,6 +483,56 @@ TEST_F(FuseChannelTest, testInitNegotiatesIoUringOnlyOnAllowedKernel) {
       static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
 }
 
+TEST_F(FuseChannelTest, transportNameDuringInitialization) {
+  auto channel = createChannel(
+      /*numThreads=*/2,
+      /*fuseMaxPages=*/0,
+      /*useIoUring=*/true,
+      /*ioUringKernelReleaseRegex=*/"^" + getRunningKernelReleaseForTest());
+  if (folly::StringPiece{channel->getDesiredTransportName()} !=
+      kIoUringFuseTransportName) {
+    GTEST_SKIP()
+        << "FUSE io_uring transport is not available in this test environment";
+  }
+
+  std::atomic<bool> keepPolling{true};
+  std::atomic<const char*> observedName{nullptr};
+  std::thread statusThread{[&] {
+    // Do not synchronize initialization with this reader: listMounts() can
+    // query the name without waiting for the FUSE INIT handshake to finish.
+    while (keepPolling.load(std::memory_order_relaxed)) {
+      observedName.store(
+          channel->getTransportName(), std::memory_order_release);
+    }
+  }};
+  SCOPE_EXIT {
+    keepPolling.store(false, std::memory_order_relaxed);
+    statusThread.join();
+  };
+  const auto waitForName = [&](const char* expected) {
+    const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+      const auto* name = observedName.load(std::memory_order_acquire);
+      if (name && folly::StringPiece{name} == expected) {
+        return true;
+      }
+      std::this_thread::yield();
+    }
+    return false;
+  };
+  ASSERT_TRUE(waitForName(kDevFuseTransportName));
+
+  performInit(
+      channel.get(),
+      FUSE_KERNEL_VERSION,
+      FUSE_KERNEL_MINOR_VERSION,
+      0,
+      FUSE_INIT_EXT,
+      static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
+
+  ASSERT_TRUE(waitForName(kIoUringFuseTransportName));
+}
+
 TEST_F(FuseChannelTest, testInitDoesNotNegotiateIoUringOnDisallowedKernel) {
   auto channel = createChannel(
       /*numThreads=*/2,
@@ -574,6 +624,7 @@ TEST_F(FuseChannelTest, testInitFallsBackToDevFuseWhenQueuesDoNotFit) {
       static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
 
   EXPECT_FALSE(channel->usesIoUringTransport());
+  EXPECT_STREQ(kDevFuseTransportName, channel->getTransportName());
 
   channel->takeoverStop();
   auto stopData = std::move(completeFuture).get(kTimeout);
@@ -620,6 +671,7 @@ TEST_F(FuseChannelTest, testInitNegotiatesIoUringWhenQueuesArePreCreated) {
       static_cast<uint32_t>(FUSE_OVER_IO_URING >> 32));
 
   EXPECT_TRUE(channel->usesIoUringTransport());
+  EXPECT_STREQ(kIoUringFuseTransportName, channel->getTransportName());
 
   channel->takeoverStop();
   auto stopData = std::move(completeFuture).get(kTimeout);
@@ -639,6 +691,7 @@ TEST_F(FuseChannelTest, testTakeoverKeepsDevFuseWithoutNegotiatedIoUring) {
   auto completeFuture = channel->initializeFromTakeover(connInfo);
 
   EXPECT_FALSE(channel->usesIoUringTransport());
+  EXPECT_STREQ(kDevFuseTransportName, channel->getTransportName());
 
   channel->takeoverStop();
   auto stopData = std::move(completeFuture).get(kTimeout);
@@ -658,6 +711,7 @@ TEST_F(FuseChannelTest, testTakeoverRestoresNegotiatedIoUringTransport) {
   auto completeFuture = channel->initializeFromTakeover(connInfo);
 
   EXPECT_TRUE(channel->usesIoUringTransport());
+  EXPECT_STREQ(kIoUringFuseTransportName, channel->getTransportName());
 
   channel->takeoverStop();
   auto stopData = std::move(completeFuture).get(kTimeout);

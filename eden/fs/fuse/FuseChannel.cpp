@@ -1079,6 +1079,7 @@ FuseChannel::FuseChannel(
       busyPoll_{busyPoll},
       fuseDevice_(std::move(fuseDevice)),
       transport_(std::make_unique<DevFuseTransport>()),
+      transportName_{transport_->getName()},
       invalidationQueue_{
           numInvalidationThreads_,
           [this](InvalidationEntry& entry) { sendInvalidation(entry); },
@@ -1126,7 +1127,7 @@ FuseChannel::~FuseChannel() {
 }
 
 const char* FuseChannel::getTransportName() const {
-  return transport_ ? transport_->getName() : "unknown";
+  return transportName_.load(std::memory_order_relaxed);
 }
 
 const char* FuseChannel::getDesiredTransportName() const {
@@ -1251,6 +1252,7 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     // has proven itself on fresh mounts.
     transport_ = std::make_unique<IoUringFuseTransport>(
         ioUringQueueDepth_, ioUringDisableIoWait_, ioUringSkipSelfWakeup_);
+    transportName_.store(transport_->getName(), std::memory_order_relaxed);
   }
   updateEffectiveWorkerThreadCount();
   dispatcher_->initConnection(connInfo);
@@ -2131,6 +2133,7 @@ void FuseChannel::readInitPacket() {
               ioUringQueueDepth_,
               ioUringDisableIoWait_,
               ioUringSkipSelfWakeup_);
+    transportName_.store(transport_->getName(), std::memory_order_relaxed);
   }
   updateEffectiveWorkerThreadCount();
 

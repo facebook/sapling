@@ -18,6 +18,7 @@
 #include <gtest/gtest_prod.h>
 #include <stdlib.h>
 #include <array>
+#include <atomic>
 #include <iosfwd>
 #include <memory>
 #include <optional>
@@ -1131,6 +1132,11 @@ class FuseChannel final : public FsChannel {
    */
   folly::File fuseDevice_;
   std::unique_ptr<FuseTransport> transport_;
+
+  // Diagnostic snapshot for readers that can run while initialization replaces
+  // transport_. Transport names must have static lifetime. This publishes only
+  // the name, not access to the transport or its initialization state.
+  std::atomic<const char*> transportName_;
 
   /*
    * Mutable state that is accessed from the worker threads.
