@@ -1058,12 +1058,6 @@ async fn test_create_changeset_file_type_explicit_override(fb: FacebookInit) -> 
     Ok(())
 }
 
-/// FIXME: BUG! This did classify `d/x` in the second commit of a stack as a no-op file
-/// change (rejecting the stack in Check mode and dropping the change in Fix mode) when the
-/// first commit replaced directory `d` with a file, implicitly deleting `d/x`, but it should
-/// have treated it as a real change: `is_noop_file_change` looks the exact path up in the
-/// stack's content tree, where `d/x` was pruned away, and falls back to the parents, where
-/// `d/x` has the same content.  This test pins the current behaviour; the next diff fixes it.
 #[mononoke::fbinit_test]
 async fn test_create_commit_stack_noop_check_file_readded_after_dir_replaced(
     fb: FacebookInit,
@@ -1106,20 +1100,18 @@ async fn test_create_commit_stack_noop_check_file_readded_after_dir_replaced(
         },
     ];
 
-    // FIXME: BUG! Check mode rejects the stack although `d/x` is a real change in C2.
-    let result = create_changeset_stack(&repo, changes_stack.clone(), vec![base]).await;
-    assert!(matches!(
-        result,
-        Err(MononokeError::InvalidRequest(ref msg))
-            if msg.starts_with("Found no-op file change at path 'd/x'")
-    ));
-
-    // FIXME: BUG! Fix mode drops `d/x` from C2, so the created commit does not contain it.
-    let created = create_changeset_stack_fix_request(&repo, changes_stack, vec![base]).await?;
+    // `d/x` in C2 is a real change (C1 implicitly deleted it), so Check mode accepts
+    // the stack and C2 re-adds the file.
+    let created = create_changeset_stack(&repo, changes_stack.clone(), vec![base]).await?;
     assert_eq!(created.len(), 2);
     assert!(created[0].path_with_content("d").await?.is_file().await?);
     assert!(!created[0].path_with_content("d/x").await?.exists().await?);
-    assert!(!created[1].path_with_content("d/x").await?.exists().await?);
+    assert!(created[1].path_with_content("d/x").await?.is_file().await?);
+
+    // Fix mode keeps the change as well.
+    let created = create_changeset_stack_fix_request(&repo, changes_stack, vec![base]).await?;
+    assert_eq!(created.len(), 2);
+    assert!(created[1].path_with_content("d/x").await?.is_file().await?);
 
     Ok(())
 }

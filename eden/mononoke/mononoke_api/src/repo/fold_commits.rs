@@ -44,10 +44,10 @@ use crate::MononokeError;
 use crate::MononokeRepo;
 use crate::RepoContext;
 use crate::RestrictedPathsPolicy;
-use crate::file::FileId;
 use crate::path::MononokePathPrefixes;
 use crate::repo::create_changeset::CreateChangeType;
 use crate::repo::create_changeset::CreatedChangeset;
+use crate::repo::create_changeset::StackContentChange;
 use crate::repo::create_changeset::is_prefix_changed;
 use crate::repo::create_changeset::lookup_file_types_from_parents;
 use crate::repo::create_changeset::verify_deleted_files_existed_in_a_parent;
@@ -514,20 +514,24 @@ impl<R: MononokeRepo> RepoContext<R> {
 
             // Build stack content changes for noop check (content_ids from the folded stack)
             // We need to track what content exists at each path after the stack is processed
-            let stack_content_changes: PathTree<Option<FileId>> = {
-                let mut tree: PathTree<Option<FileId>> = PathTree::default();
+            let stack_content_changes: PathTree<StackContentChange> = {
+                let mut tree: PathTree<StackContentChange> = PathTree::default();
                 // Add content from working_tree (the accumulated state of the folded stack)
                 for (mpath, state) in working_tree.clone().into_iter() {
                     match state {
                         Some(CreateChange::Tracked(file, _))
                         | Some(CreateChange::Untracked(file)) => {
-                            tree.insert_and_prune(mpath, file.content_id());
+                            tree.insert_and_prune(
+                                mpath,
+                                file.content_id()
+                                    .map_or(StackContentChange::None, StackContentChange::Change),
+                            );
                         }
                         Some(CreateChange::Deletion) | Some(CreateChange::UntrackedDeletion) => {
-                            tree.insert(mpath, None);
+                            tree.insert(mpath, StackContentChange::Deletion);
                         }
                         None => {
-                            tree.insert(mpath, None);
+                            tree.insert(mpath, StackContentChange::None);
                         }
                     }
                 }
