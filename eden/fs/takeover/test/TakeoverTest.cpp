@@ -6,9 +6,11 @@
  */
 
 #include <folly/Exception.h>
+#include <folly/ScopeGuard.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/io/IOBufQueue.h>
+#include <folly/portability/GFlags.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
@@ -20,6 +22,8 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/takeover/TakeoverServer.h"
+
+DECLARE_int64(maximumChunkSize);
 
 using namespace facebook::eden;
 using folly::EventBase;
@@ -33,6 +37,8 @@ using ::testing::ElementsAreArray;
 using namespace std::chrono_literals;
 
 namespace {
+constexpr int64_t kTestChunkSize = 64 * 1024;
+
 /**
  * A TakeoverHandler that returns the TakeoverData object passed to its
  * constructor.
@@ -589,6 +595,42 @@ TEST(Takeover, manyMounts) {
     auto& fuseChannelData = std::get<FuseChannelData>(mountInfo.channelInfo);
     checkExpectedFile(fuseChannelData.fd.fd(), expectedFusePath);
   }
+}
+
+TEST(Takeover, chunksSerializedInodeMap) {
+  const auto originalChunkSize = FLAGS_maximumChunkSize;
+  SCOPE_EXIT {
+    FLAGS_maximumChunkSize = originalChunkSize;
+  };
+  FLAGS_maximumChunkSize = kTestChunkSize;
+
+  SerializedInodeMap inodeMap;
+  constexpr int64_t numInodes = 1024;
+  for (int64_t i = 0; i < numInodes; ++i) {
+    SerializedInodeMapEntry entry;
+    entry.inodeNumber() = i;
+    entry.name() = folly::to<string>(
+        "example_inode_name______________choose_a_big_name______________", i);
+    entry.hash() = folly::to<string>(
+        "example_inode_hash______________choose_a_big_hash______________", i);
+    inodeMap.unloadedInodes()->emplace_back(std::move(entry));
+  }
+  TakeoverData data;
+  data.mountPoints.emplace_back(
+      canonicalPath("/mount"),
+      canonicalPath("/state"),
+      FuseChannelData{folly::File{}, fuse_init_out{}},
+      std::move(inodeMap));
+
+  UnixSocket::Message message;
+  data.serialize(kSupportedCapabilities, message);
+  EXPECT_GT(message.data.countChainElements(), 1);
+  EXPECT_GT(message.data.computeChainDataLength(), kTestChunkSize);
+  const auto* chunk = &message.data;
+  do {
+    EXPECT_LE(chunk->length(), kTestChunkSize);
+    chunk = chunk->next();
+  } while (chunk != &message.data);
 }
 
 TEST(Takeover, manyInodes) {
