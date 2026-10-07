@@ -175,6 +175,7 @@ TEST_F(EdenConfigTest, defaultTest) {
   EXPECT_EQ(
       edenConfig->daemonEnvironment.getValue(), std::vector<std::string>{});
   EXPECT_EQ(edenConfig->prefetchBlobBatchSize.getValue(), 4096);
+  EXPECT_TRUE(edenConfig->overlayUseWal.getValue());
   EXPECT_FALSE(edenConfig->enableCgroupFileCacheReclaim.getValue());
   EXPECT_EQ(
       10ULL * 1024 * 1024 * 1024,
