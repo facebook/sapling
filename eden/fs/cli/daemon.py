@@ -647,6 +647,28 @@ def _extract_daemon_error(startup_log_content: str) -> Optional[str]:
     return None
 
 
+def _new_startup_log(instance: EdenInstance) -> Path:
+    """Rotate the earlier startup logs. Return the log path for this start."""
+    startup_log = instance.state_dir / daemon_util.STARTUP_LOG_FILENAME
+    # TODO: make the retention count configurable
+    _rotate_startup_log(startup_log, keep=5)
+    return startup_log
+
+
+def _read_startup_log(startup_log: Path, start_time: float) -> Optional[str]:
+    """Return the startup log content if the log changed at or after `start_time`.
+
+    Return None if the log is older, missing, or unreadable. An older log is
+    the output of an earlier start. It stays if the rotation failed.
+    """
+    try:
+        if startup_log.exists() and startup_log.stat().st_mtime >= start_time:
+            return startup_log.read_text()
+    except OSError as e:
+        print_stderr(f"warning: failed to read startup log: {e}")
+    return None
+
+
 def _systemctl_start_or_reload(
     instance: EdenInstance,
     systemd_env: Dict[str, str],
@@ -659,12 +681,9 @@ def _systemctl_start_or_reload(
     else:
         action = "start"
 
-    # Rotate old startup logs before launching so we only capture output
-    # from this invocation.  systemd uses StandardOutput=file: which appends,
-    # so stale content would otherwise leak into the CLI output.
-    # TODO: make the retention count configurable
-    startup_log = instance.state_dir / daemon_util.SYSTEMD_STARTUP_LOG_FILENAME
-    _rotate_startup_log(startup_log, keep=5)
+    # systemd appends to the startup log (StandardOutput=file:). Without the
+    # rotation, output of earlier starts goes into the CLI output.
+    startup_log = _new_startup_log(instance)
 
     start_time = time.time()
     result = subprocess.run(
@@ -676,15 +695,9 @@ def _systemctl_start_or_reload(
     rc = result.returncode
 
     # Display the daemon's startup output captured by systemd (StandardOutput=file:).
-    # Only read if created after we invoked systemctl, to avoid showing stale content
-    # from a previous run if log rotation failed.
-    startup_log_content: Optional[str] = None
-    try:
-        if startup_log.exists() and startup_log.stat().st_mtime >= start_time:
-            startup_log_content = startup_log.read_text()
-            sys.stderr.write(startup_log_content)
-    except OSError as e:
-        print_stderr(f"warning: failed to read startup log: {e}")
+    startup_log_content = _read_startup_log(startup_log, start_time)
+    if startup_log_content:
+        sys.stderr.write(startup_log_content)
 
     sample_kwargs: Dict[str, Union[bool, int, str]] = {
         "action": action,

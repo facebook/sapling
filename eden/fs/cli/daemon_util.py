@@ -25,7 +25,7 @@ RESTART_SENTINEL_NAME_PREFIX = ".edenfs_restart_armed."
 # Serializes restart sentinel changes with deliberate SIGKILL. Keep in step
 # with kRestartSentinelLockName in eden/fs/service/EdenStateDir.cpp.
 RESTART_SENTINEL_LOCK_NAME = ".edenfs_restart.lock"
-SYSTEMD_STARTUP_LOG_FILENAME = ".edenfs_startup.log"
+STARTUP_LOG_FILENAME = ".edenfs_startup.log"
 
 
 class DaemonBinaryNotFound(Exception):
