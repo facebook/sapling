@@ -28,6 +28,26 @@
   ['main', 'linked']
   [False, True]
 
+Linked worktrees use the main checkout's repo config and store.
+
+  $ cd ../repo
+  $ cat >> .git/sl/config << 'EOF'
+  > [test]
+  > shared = main
+  > EOF
+  $ echo b > b
+  $ sl commit -qAm b
+  $ sl amend -qm b2
+  $ sl config test.shared
+  main
+  $ sl log -r 'obsolete()' --hidden -T '{desc}\n'
+  b
+
+  $ cd ../linked
+  $ sl config test.shared
+  [1]
+  $ sl log -r 'obsolete()' --hidden -T '{desc}\n'
+
 Other operations remain limited to EdenFS-backed repositories.
 
   $ sl worktree add ../another
