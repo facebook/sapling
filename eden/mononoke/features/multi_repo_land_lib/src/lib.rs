@@ -16,6 +16,7 @@ mod scribe;
 
 pub use crate::manifest_commit::LAND_SERVICE_IDENTITY;
 pub use crate::manifest_commit::RECONCILER_SERVICE_IDENTITY;
+pub use crate::manifest_commit::build_manifest_commit;
 pub use crate::manifest_commit::create_manifest_commit;
 pub use crate::manifest_commit::is_service_identity;
 pub use crate::repin::CasBaseline;
@@ -24,6 +25,7 @@ pub use crate::repin::PreparedManifestCommit;
 pub use crate::repin::RepinOptions;
 pub use crate::repin::RepinOutcome;
 pub use crate::repin::prepare_manifest_commit;
+pub use crate::repin::prepare_manifest_commits;
 pub use crate::repin::repin_manifest_branch;
 pub use crate::repo_provider::RepoProvider;
 pub use crate::resolve::ResolveEntry;

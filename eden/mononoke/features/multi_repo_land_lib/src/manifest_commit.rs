@@ -14,6 +14,7 @@ use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::stream;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -52,6 +53,32 @@ pub async fn create_manifest_commit(
     service_identity: &str,
     message: Option<String>,
 ) -> Result<ChangesetId> {
+    let bcs = build_manifest_commit(
+        ctx,
+        repo,
+        parent,
+        manifest_path,
+        manifest_content,
+        service_identity,
+        message,
+    )
+    .await?;
+    let cs_id = bcs.get_changeset_id();
+    save_changesets(ctx, repo, vec![bcs]).await?;
+    Ok(cs_id)
+}
+
+/// Store the manifest content and build the commit, without saving it. A
+/// caller preparing many commits saves them in one `save_changesets`.
+pub async fn build_manifest_commit(
+    ctx: &CoreContext,
+    repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
+    parent: ChangesetId,
+    manifest_path: &NonRootMPath,
+    manifest_content: Bytes,
+    service_identity: &str,
+    message: Option<String>,
+) -> Result<BonsaiChangeset> {
     let size = manifest_content.len() as u64;
 
     let metadata = filestore::store(
@@ -93,9 +120,5 @@ pub async fn create_manifest_commit(
         subtree_changes: Default::default(),
     };
 
-    let bcs = bcs_mut.freeze()?;
-    let cs_id = bcs.get_changeset_id();
-    save_changesets(ctx, repo, vec![bcs]).await?;
-
-    Ok(cs_id)
+    bcs_mut.freeze()
 }

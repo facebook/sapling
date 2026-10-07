@@ -49,6 +49,7 @@ use multi_repo_land_lib::bulk_read_git_sha1s;
 use multi_repo_land_lib::create_manifest_commit;
 use multi_repo_land_lib::log_scribe_bookmark_update;
 use multi_repo_land_lib::prepare_manifest_commit;
+use multi_repo_land_lib::prepare_manifest_commits;
 use multi_repo_land_lib::repin_manifest_branch;
 use multi_repo_land_lib::resolve_bookmarks_cross_repo;
 use phases::Phases;
@@ -437,6 +438,87 @@ async fn test_prepare_manifest_commit_default_parent(fb: FacebookInit) -> Result
         "mapped git commit id should be a 20-byte SHA1",
     );
 
+    Ok(())
+}
+
+/// Several branches prepared at once come back in spec order, each saved and
+/// parented on its own head; a spec that cannot resolve fails the whole batch.
+#[mononoke::fbinit_test]
+async fn test_prepare_manifest_commits_keeps_spec_order(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let manifest_path = NonRootMPath::new("static/static.xml")?;
+
+    let mut heads = Vec::new();
+    let mut bms = Vec::new();
+    for name in ["c", "a", "b"] {
+        let head = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", name)
+            .commit()
+            .await?;
+        bms.push(bookmark(&ctx, &repo, name).create_publishing(head).await?);
+        heads.push(head);
+    }
+    let specs: Vec<ManifestCommitSpec<'_>> = bms
+        .iter()
+        .zip(&heads)
+        .map(|(bm, head)| ManifestCommitSpec {
+            bookmark: bm,
+            manifest_path: &manifest_path,
+            content: Bytes::from(format!("<manifest name=\"{bm}\"/>")),
+            service_identity: "svc",
+            message: None,
+            parent_override: None,
+            baseline: CasBaseline::GeneratedFrom(*head),
+        })
+        .collect();
+
+    let prepared = prepare_manifest_commits(&ctx, &repo, specs, 2).await?;
+
+    assert_eq!(prepared.len(), 3);
+    for (i, (result, head)) in prepared.iter().zip(&heads).enumerate() {
+        assert_eq!(result.old_cs, *head, "result {i} keeps its spec's baseline");
+        let bcs = result.new_cs.load(&ctx, repo.repo_blobstore()).await?;
+        assert_eq!(
+            bcs.parents().collect::<Vec<_>>(),
+            vec![*head],
+            "result {i} is parented on its own head"
+        );
+        assert_eq!(result.mapped_git.oid().as_ref().len(), 20);
+    }
+
+    let missing = BookmarkKey::new("missing")?;
+    let err = prepare_manifest_commits(
+        &ctx,
+        &repo,
+        vec![
+            ManifestCommitSpec {
+                bookmark: &bms[0],
+                manifest_path: &manifest_path,
+                content: Bytes::from("<manifest/>"),
+                service_identity: "svc",
+                message: None,
+                parent_override: None,
+                baseline: CasBaseline::GeneratedFrom(heads[0]),
+            },
+            ManifestCommitSpec {
+                bookmark: &missing,
+                manifest_path: &manifest_path,
+                content: Bytes::from("<manifest/>"),
+                service_identity: "svc",
+                message: None,
+                parent_override: None,
+                baseline: CasBaseline::CurrentHead,
+            },
+        ],
+        2,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        format!("{err:#}").contains("manifest bookmark not found"),
+        "an unresolvable spec fails the batch: {err:#}"
+    );
     Ok(())
 }
 

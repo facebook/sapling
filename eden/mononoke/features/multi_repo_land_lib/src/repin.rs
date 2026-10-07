@@ -18,14 +18,19 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use bytes::Bytes;
+use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use dbbookmarks::store::SqlBookmarksRef;
 use derivation_queue_thrift::DerivationPriority;
 use filestore::FilestoreConfigRef;
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use git_types::MappedGitCommitId;
 use metaconfig_types::RepoConfigRef;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use multi_repo_bookmarks_transaction::MultiRepoBookmarksTransaction;
@@ -36,7 +41,7 @@ use repo_identity::RepoIdentityRef;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
-use crate::manifest_commit::create_manifest_commit;
+use crate::manifest_commit::build_manifest_commit;
 use crate::scribe::log_scribe_bookmark_update;
 
 /// A manifest commit prepared for one branch, ready for the caller's transaction.
@@ -100,44 +105,121 @@ where
         + CommitGraphWriterRef
         + RepoDerivedDataRef,
 {
-    let old_cs = match spec.baseline {
-        CasBaseline::GeneratedFrom(head) => head,
-        CasBaseline::CurrentHead => repo
-            .bookmarks()
-            .get(ctx.clone(), spec.bookmark, Freshness::MostRecent)
-            .await?
-            .ok_or_else(|| {
-                anyhow!(
-                    "manifest bookmark not found: {} in repo {}",
-                    spec.bookmark,
-                    repo.repo_identity().name()
-                )
-            })?,
-    };
+    prepare_manifest_commits(ctx, repo, vec![spec], 1)
+        .await?
+        .pop()
+        .ok_or_else(|| anyhow!("prepare_manifest_commits returned nothing for one spec"))
+}
 
-    let parent = spec.parent_override.unwrap_or(old_cs);
+struct OwnedSpec {
+    bookmark: BookmarkKey,
+    manifest_path: NonRootMPath,
+    content: Bytes,
+    service_identity: String,
+    message: Option<String>,
+    parent_override: Option<ChangesetId>,
+    baseline: CasBaseline,
+}
 
-    let new_cs = create_manifest_commit(
-        ctx,
-        repo,
-        parent,
-        spec.manifest_path,
-        spec.content,
-        spec.service_identity,
-        spec.message,
-    )
-    .await?;
+/// Generated commits per `save_changesets` call.
+const SAVE_CHUNK: usize = 100;
 
-    let mapped_git = repo
-        .repo_derived_data()
-        .derive::<MappedGitCommitId>(ctx, new_cs, DerivationPriority::LOW)
+/// [`prepare_manifest_commit`] for many branches at once: content and commits
+/// are built `concurrency` at a time, every commit is saved in ONE
+/// `save_changesets` (one commit-graph write instead of one per branch), then
+/// git identities are derived `concurrency` at a time. Results are in `specs`
+/// order.
+pub async fn prepare_manifest_commits<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    specs: Vec<ManifestCommitSpec<'_>>,
+    concurrency: usize,
+) -> Result<Vec<PreparedManifestCommit>>
+where
+    R: RepoIdentityRef
+        + BookmarksRef
+        + RepoBlobstoreRef
+        + FilestoreConfigRef
+        + CommitGraphRef
+        + CommitGraphWriterRef
+        + RepoDerivedDataRef,
+{
+    let concurrency = concurrency.max(1);
+    // Owned copies: a borrowed spec inside the buffered futures makes the
+    // closure higher-ranked over its lifetime, which the Thrift service's
+    // `Send` bound rejects.
+    let specs: Vec<OwnedSpec> = specs
+        .into_iter()
+        .map(|spec| OwnedSpec {
+            bookmark: spec.bookmark.clone(),
+            manifest_path: spec.manifest_path.clone(),
+            content: spec.content,
+            service_identity: spec.service_identity.to_string(),
+            message: spec.message,
+            parent_override: spec.parent_override,
+            baseline: spec.baseline,
+        })
+        .collect();
+    let built: Vec<(ChangesetId, BonsaiChangeset)> = stream::iter(specs)
+        .map(|spec| async move {
+            let old_cs = match spec.baseline {
+                CasBaseline::GeneratedFrom(head) => head,
+                CasBaseline::CurrentHead => repo
+                    .bookmarks()
+                    .get(ctx.clone(), &spec.bookmark, Freshness::MostRecent)
+                    .await?
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "manifest bookmark not found: {} in repo {}",
+                            spec.bookmark,
+                            repo.repo_identity().name()
+                        )
+                    })?,
+            };
+            let parent = spec.parent_override.unwrap_or(old_cs);
+            let bcs = build_manifest_commit(
+                ctx,
+                repo,
+                parent,
+                &spec.manifest_path,
+                spec.content,
+                &spec.service_identity,
+                spec.message,
+            )
+            .await?;
+            anyhow::Ok((old_cs, bcs))
+        })
+        .buffered(concurrency)
+        .try_collect()
         .await?;
 
-    Ok(PreparedManifestCommit {
-        old_cs,
-        new_cs,
-        mapped_git,
-    })
+    // `save_changesets` writes every bonsai's blob at once; chunking keeps that
+    // burst bounded while still writing the graph a chunk at a time.
+    for chunk in built.chunks(SAVE_CHUNK) {
+        save_changesets(
+            ctx,
+            repo,
+            chunk.iter().map(|(_, bcs)| bcs.clone()).collect(),
+        )
+        .await?;
+    }
+
+    stream::iter(built)
+        .map(|(old_cs, bcs)| async move {
+            let new_cs = bcs.get_changeset_id();
+            let mapped_git = repo
+                .repo_derived_data()
+                .derive::<MappedGitCommitId>(ctx, new_cs, DerivationPriority::LOW)
+                .await?;
+            anyhow::Ok(PreparedManifestCommit {
+                old_cs,
+                new_cs,
+                mapped_git,
+            })
+        })
+        .buffered(concurrency)
+        .try_collect()
+        .await
 }
 
 /// Options for a single-branch re-pin.
