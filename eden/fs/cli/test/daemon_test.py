@@ -516,7 +516,7 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         call.assert_called_once()
-        self.assertIn("read-only file system", print_stderr.call_args.args[0])
+        self.assertIn("read-only file system", print_stderr.call_args_list[0].args[0])
 
     def test_start_under_systemd_fails_on_an_unwritable_args_file(self) -> None:
         instance: MagicMock = MagicMock(spec=EdenInstance)
@@ -546,7 +546,9 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
                 )
             self.assertFalse(stale.exists())
 
-        self.assertIn("will not be auto-restarted", print_stderr.call_args.args[0])
+        self.assertIn(
+            "will not be auto-restarted", print_stderr.call_args_list[0].args[0]
+        )
 
     def test_start_warns_when_a_stale_args_file_survives(self) -> None:
         instance: MagicMock = MagicMock(spec=EdenInstance)
@@ -568,7 +570,7 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
         surviving.unlink.assert_called_once_with(missing_ok=True)
         self.assertIn(
             "may be auto-restarted from an earlier start's command",
-            print_stderr.call_args.args[0],
+            print_stderr.call_args_list[0].args[0],
         )
 
     def test_start_skips_the_args_file_when_privhelper_restart_is_off(self) -> None:

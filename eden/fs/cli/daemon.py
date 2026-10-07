@@ -667,6 +667,11 @@ def _read_startup_log(startup_log: Path, start_time: float) -> Optional[str]:
     return None
 
 
+_STARTUP_NOTICE = (
+    "Starting EdenFS. The startup output will show when the start is complete."
+)
+
+
 def _launch_daemon(
     instance: EdenInstance, cmd: List[str], env: Dict[str, str]
 ) -> Tuple[int, Optional[str]]:
@@ -689,6 +694,7 @@ def _launch_daemon(
     except OSError as e:
         print_stderr(f"warning: failed to open the startup log: {e}")
         return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=env), None
+    print_stderr(_STARTUP_NOTICE)
     with log_file:
         exit_code = subprocess.call(
             cmd, stdin=subprocess.DEVNULL, stderr=log_file, env=env
@@ -718,6 +724,7 @@ def _systemctl_start_or_reload(
     # rotation, output of earlier starts goes into the CLI output.
     startup_log = _new_startup_log(instance)
 
+    print_stderr(_STARTUP_NOTICE)
     start_time = time.time()
     result = subprocess.run(
         ["systemctl", "--user", action, unit],

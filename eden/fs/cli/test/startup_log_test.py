@@ -87,7 +87,9 @@ class StartupLogTest(unittest.TestCase):
                     rc = daemon._systemctl_start_or_reload(instance, {}, False)
 
                 self.assertEqual(rc, 0)
-                self.assertEqual(stderr.getvalue(), content or "")
+                self.assertEqual(
+                    stderr.getvalue(), f"{daemon._STARTUP_NOTICE}\n{content or ''}"
+                )
 
 
 class LaunchDaemonTest(unittest.TestCase):
@@ -104,7 +106,7 @@ class LaunchDaemonTest(unittest.TestCase):
                     instance, ["/bin/sh", "-c", script], {}
                 )
             log = (instance.state_dir / daemon_util.STARTUP_LOG_FILENAME).read_text()
-        self.assertEqual(stderr.getvalue(), log)
+        self.assertEqual(stderr.getvalue(), f"{daemon._STARTUP_NOTICE}\n{log}")
         return exit_code, error, log
 
     def test_failure_returns_the_daemon_error(self) -> None:
