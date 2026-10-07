@@ -39,6 +39,7 @@ cpp_binary(
         "//eden/fs/service:startup_logger",
         "//eden/fs/service:startup_status_subscriber",
         "//eden/fs/service:thrift-streaming-cpp2-services",
+        "//folly:scope_guard",
         "//folly/init:init",
         "//folly/io/async:async_signal_handler",
         "//folly/logging:init",

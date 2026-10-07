@@ -4,20 +4,23 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
-
 import contextlib
 import os
 import signal
+import subprocess
 import sys
 import time
+import unittest
 from pathlib import Path
 from typing import Callable, List, Optional
 
 from eden.fs.cli import proc_utils as proc_utils_mod
 from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until
+from eden.thrift.client import create_thrift_client, EdenNotRunningError
+from thrift.python.exceptions import TransportError
 
+from .lib.edenclient import can_run_fake_edenfs
 from .lib.find_executables import FindExe
 from .lib.pexpect import (
     pexpect_spawn,
@@ -26,13 +29,96 @@ from .lib.pexpect import (
     wait_for_pexpect_process,
 )
 from .lib.service_test_case import service_test, ServiceTestCaseBase
-from .lib.testcase import eden_test, EdenTestCase
+from .lib.testcase import eden_test, EdenTestCase, IntegrationTestCase
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
 SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN = 0
 SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
 SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
+
+
+@unittest.skipIf(not can_run_fake_edenfs(), "unable to run fake_edenfs")
+class FakeEdenFSShutdownTest(IntegrationTestCase):
+    def _assert_clean_shutdown(self, *, use_signal: bool) -> None:
+        eden_dir = self.make_test_dir("eden")
+        etc_eden_dir = self.make_test_dir("etc_eden")
+        home_dir = self.make_test_dir("home")
+        clean_shutdown_file = eden_dir / "clean_shutdown"
+        command = [
+            FindExe.FAKE_EDENFS,
+            "--foreground",
+            "--configPath",
+            str(home_dir / ".edenrc"),
+            "--edenDir",
+            str(eden_dir),
+            "--etcEdenDir",
+            str(etc_eden_dir),
+            "--cleanShutdownFile",
+            str(clean_shutdown_file),
+            "--edenfs",
+        ]
+        with (
+            (self.tmp_dir / "stdout").open(
+                "w+", encoding="utf-8", errors="replace"
+            ) as stdout,
+            (self.tmp_dir / "stderr").open(
+                "w+", encoding="utf-8", errors="replace"
+            ) as stderr,
+        ):
+            process = subprocess.Popen(
+                command, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr
+            )
+            try:
+
+                def ready() -> bool | None:
+                    self.assertIsNone(
+                        process.poll(), "fake_edenfs exited during startup"
+                    )
+                    try:
+                        with create_thrift_client(
+                            str(eden_dir), timeout=1, socket_init_timeout=1
+                        ) as client:
+                            self.assertEqual(client.getPid(), process.pid)
+                            return True
+                    except EdenNotRunningError:
+                        return None
+
+                poll_until(ready, timeout=60)
+                with create_thrift_client(
+                    str(eden_dir), timeout=5, socket_init_timeout=5
+                ) as client:
+                    self.assertEqual(client.getPid(), process.pid)
+                    if use_signal:
+                        process.send_signal(signal.SIGTERM)
+                    else:
+                        # Shutdown may close the connection before replying.
+                        with contextlib.suppress(TransportError):
+                            client.initiateShutdown("shutdown regression test")
+                    process.wait(timeout=30)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=30)
+                stdout.seek(0)
+                stderr.seek(0)
+                output = stdout.read() + stderr.read()
+                print(f"fake_edenfs exit status: {process.returncode}", file=sys.stderr)
+                print(output, file=sys.stderr)
+
+        self.assertEqual(process.returncode, 0)
+        self.assertNotIn("WARNING: ThreadSanitizer:", output)
+        self.assertNotIn("SUMMARY: ThreadSanitizer:", output)
+        self.assertTrue(clean_shutdown_file.exists())
+
+    def test_rpc_shutdown_with_open_connection(self) -> None:
+        self._assert_clean_shutdown(use_signal=False)
+
+    @unittest.skipIf(
+        sys.platform == "win32", "Windows SIGTERM terminates without signal handlers"
+    )
+    def test_sigterm_shutdown_with_open_connection(self) -> None:
+        self._assert_clean_shutdown(use_signal=True)
 
 
 class StopTestBase(ServiceTestCaseBase):

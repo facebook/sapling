@@ -627,7 +627,9 @@ python_integration_test(
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",
+        "//eden/fs/py/eden/thrift:client",
         "//eden/integration/lib:lib",
+        "//thrift/lib/python:types",
     ],
 )
 

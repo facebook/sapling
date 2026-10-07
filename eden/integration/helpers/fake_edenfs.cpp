@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/ScopeGuard.h>
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/logging/Init.h>
@@ -279,13 +280,18 @@ void FakeEdenServer::run(
 
   // Run the thrift server
   server_.setup();
-  if (FLAGS_failDuringStartup) {
-    startupLogger.exitUnsuccessfully(
-        1,
-        "Started successfully, but reporting failure because --failDuringStartup was specified");
+  {
+    SCOPE_EXIT {
+      server_.cleanUp();
+    };
+    if (FLAGS_failDuringStartup) {
+      startupLogger.exitUnsuccessfully(
+          1,
+          "Started successfully, but reporting failure because --failDuringStartup was specified");
+    }
+    startupLogger.success(97);
+    eventBase_->loopForever();
   }
-  startupLogger.success(97);
-  eventBase_->loopForever();
 
   reportCleanShutdown();
 }
