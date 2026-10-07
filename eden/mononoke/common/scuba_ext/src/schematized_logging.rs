@@ -126,6 +126,7 @@ pub struct CommonMetadata {
     pub unverified_forwarded_identities: Vec<String>,
     pub forwarded_cats_verifier: Option<String>,
     pub forwarded_cats_token_verifiers: Vec<String>,
+    pub upstream_client_id: Option<String>,
     pub source_hostname: Option<String>,
     pub client_ip: Option<String>,
     pub unix_username: Option<String>,
@@ -175,6 +176,7 @@ impl CommonMetadata {
                 .forwarded_cats_token_verifiers()
                 .map(|ids| ids.iter().map(|i| i.to_string()).collect())
                 .unwrap_or_default(),
+            upstream_client_id: metadata.upstream_client_id().map(str::to_owned),
             fetch_from_cas_attempted: metadata.fetch_from_cas_attempted(),
             ..Default::default()
         };

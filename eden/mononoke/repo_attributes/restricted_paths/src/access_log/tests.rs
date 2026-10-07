@@ -107,6 +107,16 @@ impl<T: SourceRestrictionCheck> ShadowComparisonFieldFixture<T> {
         Self { ctx, ..self }
     }
 
+    fn with_upstream_client_id(self, client_id: &str) -> Self {
+        let mut metadata = Metadata::default();
+        metadata.add_upstream_client_id(client_id.to_string());
+        let session = SessionContainer::builder(self.fb)
+            .metadata(Arc::new(metadata))
+            .build();
+        let ctx = session.new_context(MononokeScubaSampleBuilder::with_discard());
+        Self { ctx, ..self }
+    }
+
     fn log_with(
         self,
         log_results: impl FnOnce(
@@ -822,6 +832,55 @@ async fn test_non_default_client_path_acl_compatibility_is_logged(fb: FacebookIn
             Some(expected.to_string()),
         );
     }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_client_id_is_logged_when_present(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        restricted_path_result(false, false, "config_acl", "config/restricted")?,
+        Some(restricted_path_result(
+            true,
+            true,
+            "acl_manifest_acl",
+            "acl_manifest/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .with_upstream_client_id("SomeSCMQueryCaller")
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1);
+    assert_eq!(
+        sample_field(&samples[0], "client_id"),
+        Some("SomeSCMQueryCaller".to_string()),
+        "row should carry the caller-declared client_id"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_client_id_is_omitted_when_absent(fb: FacebookInit) -> Result<()> {
+    let samples = ShadowComparisonFieldFixture::new(
+        fb,
+        restricted_path_result(false, false, "config_acl", "config/restricted")?,
+        Some(restricted_path_result(
+            true,
+            true,
+            "acl_manifest_acl",
+            "acl_manifest/restricted",
+        )?),
+        full_path_access_data()?,
+    )?
+    .log_with(log_source_results_to_scuba)?;
+
+    assert_eq!(samples.len(), 1);
+    assert_eq!(
+        sample_field(&samples[0], "client_id"),
+        None,
+        "row should omit client_id when the request did not declare one"
+    );
     Ok(())
 }
 

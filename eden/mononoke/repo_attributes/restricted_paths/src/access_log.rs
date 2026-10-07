@@ -1009,6 +1009,9 @@ mod schematized_logger {
         if !data.forwarded_cats_token_verifiers.is_empty() {
             logger.set_forwarded_cats_token_verifiers(data.forwarded_cats_token_verifiers.clone());
         }
+        if let Some(ref client_id) = data.upstream_client_id {
+            logger.set_client_id(client_id.clone());
+        }
 
         if let Some(ref hostname) = data.source_hostname {
             logger.set_source_hostname(hostname.clone());
@@ -1187,6 +1190,7 @@ fn log_access_to_scuba(
         "client_path_acl_compatibility",
         ctx.metadata().client_path_acl_compatibility().as_str(),
     );
+    scuba.add_opt("client_id", ctx.metadata().upstream_client_id());
 
     if let Some(user_agent) = ctx.metadata().user_agent() {
         scuba.add("http_user_agent", user_agent);
