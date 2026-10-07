@@ -147,6 +147,8 @@
     "scm/mononoke:fail_closed_on_repo_config_parse_error": false
   },
   "ints": {
+    "scm/mononoke:sslv2_active_window_days": 0,
+    "scm/mononoke:sslv2_reconcile_max_repins_per_sweep": 50,
     "scm/mononoke:scs_rebase_stack_max_commits": 1000,
     "scm/mononoke:scs_rebase_stack_max_paths": 100000,
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
