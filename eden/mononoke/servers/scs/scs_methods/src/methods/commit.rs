@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::future::Future;
 use std::sync::Arc;
 
 use borrowed::borrowed;
@@ -18,6 +19,7 @@ use context::CoreContext;
 use futures::pin_mut;
 use futures::stream;
 use futures::stream::BoxStream;
+use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -256,6 +258,35 @@ impl CommitFileDiffsResponseElement {
             },
         }
     }
+}
+
+/// Filter enumerated find-files paths by per-path visibility, keeping at
+/// most `limit` visible paths and recording an omission for each denied
+/// path dropped from the page.
+///
+/// Recording happens downstream of the concurrency buffer, so buffered
+/// lookahead past `limit` is dropped without counting.
+fn filter_visible_paths<S, F, Fut>(
+    paths: S,
+    limit: usize,
+    policy: &RestrictedPathsPolicy,
+    check: F,
+) -> impl Stream<Item = Result<String, MononokeError>> + Send
+where
+    S: Stream<Item = Result<MPath, MononokeError>> + Send,
+    F: FnMut(MPath) -> Fut + Send,
+    Fut: Future<Output = Result<Option<String>, MononokeError>> + Send,
+{
+    paths
+        .map_ok(check)
+        .try_buffered(50)
+        .try_filter_map(move |kept| {
+            if kept.is_none() {
+                policy.record_omission();
+            }
+            futures::future::ready(Ok(kept))
+        })
+        .take(limit)
 }
 
 impl SourceControlServiceImpl {
@@ -1030,29 +1061,18 @@ impl SourceControlServiceImpl {
             )
             .await?;
         let files: Vec<String> = if partial {
-            path_stream
-                .map_ok(|path| {
-                    cloned!(changeset);
-                    async move {
-                        match changeset.check_path_visibility(&path).await {
-                            Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
-                            Ok(PathVisibility::Denied) => Ok(None),
-                            Err(e) => Err(e),
-                        }
+            filter_visible_paths(path_stream, limit, &policy, |path| {
+                let changeset = changeset.clone();
+                async move {
+                    match changeset.check_path_visibility(&path).await {
+                        Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
+                        Ok(PathVisibility::Denied) => Ok(None),
+                        Err(e) => Err(e),
                     }
-                })
-                .try_buffered(50)
-                .try_filter_map(|kept| {
-                    // Downstream of the buffer, so buffered lookahead past
-                    // `take(limit)` is dropped without counting.
-                    if kept.is_none() {
-                        policy.record_omission();
-                    }
-                    futures::future::ready(Ok(kept))
-                })
-                .take(limit)
-                .try_collect()
-                .await?
+                }
+            })
+            .try_collect()
+            .await?
         } else {
             path_stream
                 .take(limit)
@@ -1131,28 +1151,17 @@ impl SourceControlServiceImpl {
             )
             .await?;
             let filtered: BoxStream<'_, Result<String, MononokeError>> = if partial {
-                path_stream
-                    .map_ok(|path| {
-                        cloned!(changeset);
-                        async move {
-                            match changeset.check_path_visibility(&path).await {
-                                Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
-                                Ok(PathVisibility::Denied) => Ok(None),
-                                Err(e) => Err(e),
-                            }
+                filter_visible_paths(path_stream, limit, &policy, |path| {
+                    let changeset = changeset.clone();
+                    async move {
+                        match changeset.check_path_visibility(&path).await {
+                            Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
+                            Ok(PathVisibility::Denied) => Ok(None),
+                            Err(e) => Err(e),
                         }
-                    })
-                    .try_buffered(50)
-                    .try_filter_map(|kept| {
-                        // Downstream of the buffer, so buffered lookahead
-                        // past `take(limit)` is dropped without counting.
-                        if kept.is_none() {
-                            policy.record_omission();
-                        }
-                        futures::future::ready(Ok(kept))
-                    })
-                    .take(limit)
-                    .boxed()
+                    }
+                })
+                .boxed()
             } else {
                 path_stream
                     .map_ok(|path| path.to_string())
@@ -2069,5 +2078,92 @@ mod run_as_tests {
             ..Default::default()
         }]);
         assert!(run_as_identities(run_as).is_err());
+    }
+}
+
+#[cfg(test)]
+mod find_files_filter_tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
+
+    use futures::stream;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn counting_policy() -> RestrictedPathsPolicy {
+        RestrictedPathsPolicy::SkipAndCount(Arc::new(AtomicUsize::new(0)))
+    }
+
+    fn numbered_paths(n: usize) -> Vec<MPath> {
+        (0..n)
+            .map(|i| MPath::try_from(format!("file{i:03}").as_str()))
+            .collect::<Result<Vec<_>, _>>()
+            .expect("test paths are valid")
+    }
+
+    #[mononoke::test]
+    async fn buffered_lookahead_past_limit_is_not_counted() {
+        // The visible head path resolves slowly while 60 denied paths
+        // complete immediately behind it: every denial finishes before
+        // `take(1)` is satisfied, but none is walked, so none counts.
+        // Recording inside the buffered future would count all 60.
+        let paths = numbered_paths(61);
+        let policy = counting_policy();
+        let files: Vec<String> = filter_visible_paths(
+            stream::iter(paths.into_iter().map(Ok)),
+            1,
+            &policy,
+            |path| async move {
+                if path.to_string() == "file000" {
+                    for _ in 0..100 {
+                        tokio::task::yield_now().await;
+                    }
+                    Ok(Some(path.to_string()))
+                } else {
+                    Ok(None)
+                }
+            },
+        )
+        .try_collect()
+        .await
+        .expect("filtering succeeds");
+        assert_eq!(files, vec!["file000".to_string()]);
+        assert_eq!(policy.omitted_count(), Some(0));
+    }
+
+    #[mononoke::test]
+    async fn walked_denials_are_counted_exactly() {
+        // Alternating denied/visible prefix with slow visible items, then
+        // denied lookahead: the three walked denials count, the trailing
+        // un-yielded completions do not.
+        let paths = numbered_paths(66);
+        let policy = counting_policy();
+        let files: Vec<String> = filter_visible_paths(
+            stream::iter(paths.into_iter().map(Ok)),
+            3,
+            &policy,
+            |path| async move {
+                let n: usize = path
+                    .to_string()
+                    .strip_prefix("file")
+                    .expect("numbered test path")
+                    .parse()
+                    .expect("numbered test path");
+                if n < 6 && n % 2 == 1 {
+                    for _ in 0..100 {
+                        tokio::task::yield_now().await;
+                    }
+                    Ok(Some(path.to_string()))
+                } else {
+                    Ok(None)
+                }
+            },
+        )
+        .try_collect()
+        .await
+        .expect("filtering succeeds");
+        assert_eq!(files.len(), 3);
+        assert_eq!(policy.omitted_count(), Some(3));
     }
 }
