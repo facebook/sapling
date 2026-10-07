@@ -4,7 +4,7 @@ oncall("scm_server_treehugger")
 
 rust_library(
     name = "repo_spec_writer",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob(["src/**/*.rs", "test_data/**"]),
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],

@@ -14,6 +14,8 @@
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use repos::RawCommitIdentityScheme;
+use repos::RepoSpec;
 use repos::TShirtSize;
 use sha2::Digest;
 use sha2::Sha256;
@@ -34,6 +36,22 @@ impl RepoSpecDir {
         match self {
             Self::Git => "git",
             Self::Hg => "hg",
+        }
+    }
+
+    /// The directory a spec with this commit identity scheme lives under. The
+    /// single source for the scheme -> directory rule: both the file path a
+    /// writer chooses and the `config_path` its index entry records derive
+    /// from here, so the two cannot disagree. Only GIT and HG have a tree
+    /// (`_IDENTITY_SUBDIR` in generate_repo_index.py); any other scheme is an
+    /// error naming the scheme.
+    pub fn for_scheme(scheme: RawCommitIdentityScheme) -> Result<Self> {
+        match scheme {
+            RawCommitIdentityScheme::GIT => Ok(Self::Git),
+            RawCommitIdentityScheme::HG => Ok(Self::Hg),
+            other => Err(anyhow!(
+                "unsupported default_commit_identity_scheme {other:?}: only GIT and HG have a per-repo directory"
+            )),
         }
     }
 }
@@ -62,56 +80,139 @@ pub fn make_repo_spec_file_path(repo_name: &str, dir: RepoSpecDir) -> String {
     )
 }
 
-/// Returns the tier list for a new RepoSpec-based repo, as static string slices.
-/// Every repo is on `gitimport`, `gitimport_content`, `scs`, and
-/// `backfill_worker` — the last because mononoke_backfill_worker
+/// Configerator config path of the `RepoSpec` template for new Git repos:
+/// configerator/source/scm/mononoke/repos/common/default_git_repo_spec.cconf.
+/// Read by SCS `create_repos` (embeds the template into every new repo) and
+/// by `mononoke_admin git-source-of-truth cleanup-stale-reserved` (reads its
+/// storage name).
+pub const DEFAULT_GIT_REPO_SPEC_PATH: &str = "scm/mononoke/repos/common/default_git_repo_spec";
+
+/// Configerator source path of the same file, for Configo transactions that
+/// edit it. Same formula as [`make_repo_spec_file_path`].
+pub fn default_git_repo_spec_file_path() -> String {
+    format!("source/{DEFAULT_GIT_REPO_SPEC_PATH}.cconf")
+}
+
+/// Apply the one tier rule that stays in Rust on top of the template's base
+/// tier list: any repo whose name contains `aosp/` (including nested forms like
+/// `oculus/aosp/...`) is also served by `aosp_multi_repo_land`, so
+/// multi_repo_land_service can serve it. Purely additive; never removes or
+/// reorders a base entry; never adds a second `aosp_multi_repo_land`.
+///
+/// The base list comes from the template and must include `backfill_worker`,
+/// or on-demand backfill loads silently break; nothing in Rust enforces its
+/// presence (the template is reviewed in configerator; `repos/repo_spec.ctest`
+/// checks its tiers resolve but does not pin `backfill_worker` specifically):
+/// mononoke_backfill_worker
 /// (`fbcode/eden/mononoke/backfill_worker`) accepts ALL repos via
 /// `QueueRepoFilter::Except(vec![])` and loads them on-demand when a backfill
 /// request arrives. Without this entry the per-repo manifest path doesn't
 /// surface the repo, the on-demand load fails, and the worker silently drops
 /// backfills for it (the legacy QRD path used to populate this transitively
 /// via the scs tier composer; the RepoSpec path requires explicit listing).
-/// Repos whose name contains the `aosp/` substring are additionally placed in
-/// the `aosp_multi_repo_land` tier so multi_repo_land_service can serve them.
-/// This catches both top-level AOSP repos like `aosp/platform/...` and nested
-/// ones like `oculus/aosp/vendor/oculus`.
-pub fn tier_list_for_repo_spec(repo_name: &str) -> Vec<&'static str> {
-    if repo_name.contains("aosp/") {
-        vec![
-            "gitimport",
-            "gitimport_content",
-            "scs",
-            "backfill_worker",
-            "aosp_multi_repo_land",
-        ]
-    } else {
-        vec!["gitimport", "gitimport_content", "scs", "backfill_worker"]
+pub fn tier_list_for_repo_spec(base: &[String], repo_name: &str) -> Vec<String> {
+    let mut tiers: Vec<String> = base.to_vec();
+    if repo_name.contains("aosp/") && !tiers.iter().any(|t| t == "aosp_multi_repo_land") {
+        tiers.push("aosp_multi_repo_land".to_string());
     }
+    tiers
 }
 
 /// One entry in `repo_index.cinc`. Mirrors the Python dict shape that
 /// `generate_repo_index.py` writes; field naming matches the dict keys
 /// emitted by [`append_to_repo_index`].
+///
+/// `non_exhaustive` on purpose: outside this crate an entry can only be
+/// built via [`RepoIndexEntry::from_repo_spec`]. Hand-built entries are how
+/// repo_index.cinc drifted from the specs before (readonly on 770 specs,
+/// hipster_acl on one).
+#[non_exhaustive]
 pub struct RepoIndexEntry {
     pub config_path: String,
     pub repo_id: i32,
-    pub tiers: Vec<&'static str>,
+    pub tiers: Vec<String>,
     pub is_deep_sharded: bool,
     pub t_shirt_size: TShirtSize,
+    pub default_commit_identity_scheme: RawCommitIdentityScheme,
     pub hipster_acl: String,
-    /// Must match the `RepoSpec` written in the same transaction; nothing
-    /// else keeps the two in step.
+    pub enabled: bool,
     pub readonly: bool,
     pub enable_git_bundle_uri: Option<bool>,
+    /// Sparse walker/storage keys consumed by detectors/walker_scrub.detector.cconf.
+    /// All three are `None` unless scrub or validate is enabled, mirroring
+    /// `extract_walker_and_storage` in generate_repo_index.py.
+    pub walker_scrub_enabled: Option<bool>,
+    pub walker_validate_enabled: Option<bool>,
+    pub storage_config_key: Option<String>,
+}
+
+impl RepoIndexEntry {
+    /// The index entry for `spec`, derived from the spec alone. This is the
+    /// invariant that keeps repo_index.cinc and the per-repo .cconf in step:
+    /// everything written here must be semantically what
+    /// generate_repo_index.py extracts from the same file: same fields, same
+    /// values. Surface form of enums differs on purpose (symbolic
+    /// `TShirtSize.X` / `RawCommitIdentityScheme.X` here; Configo-emitted files
+    /// carry the int literal) and the two compare equal in configerator's
+    /// thrift Python; `repo_spec_processing.cinc` reads them with `==`.
+    /// Nothing may come from the creation request or a constant.
+    pub fn from_repo_spec(spec: &RepoSpec) -> Result<Self> {
+        let dir = RepoSpecDir::for_scheme(spec.default_commit_identity_scheme)
+            .with_context(|| format!("repo {}", spec.repo_name))?;
+        let cfg = spec.repo_config.as_ref();
+        let is_deep_sharded = cfg
+            .and_then(|c| c.deep_sharding_config.as_ref())
+            .is_some_and(|s| s.status.values().any(|v| *v));
+        let (walker_scrub_enabled, walker_validate_enabled, storage_config_key) =
+            match cfg.and_then(|c| c.walker_config.as_ref()) {
+                Some(w) if w.scrub_enabled || w.validate_enabled => (
+                    Some(w.scrub_enabled),
+                    Some(w.validate_enabled),
+                    cfg.and_then(|c| c.storage_config.clone()),
+                ),
+                _ => (None, None, None),
+            };
+        Ok(Self {
+            config_path: make_repo_spec_config_path(&spec.repo_name, dir),
+            repo_id: spec.repo_id,
+            tiers: spec.tiers.clone(),
+            is_deep_sharded,
+            t_shirt_size: spec.t_shirt_size,
+            default_commit_identity_scheme: spec.default_commit_identity_scheme,
+            hipster_acl: spec.hipster_acl.clone(),
+            enabled: spec.enabled,
+            readonly: spec.readonly,
+            enable_git_bundle_uri: spec.enable_git_bundle_uri,
+            walker_scrub_enabled,
+            walker_validate_enabled,
+            storage_config_key,
+        })
+    }
 }
 
 pub fn format_python_bool(val: bool) -> &'static str {
     if val { "True" } else { "False" }
 }
 
-pub fn format_python_list(items: &[&str]) -> String {
-    let quoted: Vec<String> = items.iter().map(|s| format!("\"{s}\"")).collect();
+pub fn format_python_list(items: &[String]) -> String {
+    let quoted: Vec<String> = items
+        .iter()
+        .map(|s| format!("\"{}\"", escape_python_string(s)))
+        .collect();
     format!("[{}]", quoted.join(", "))
+}
+
+/// Only GIT and HG: these are the schemes `_IDENTITY_SUBDIR` in
+/// generate_repo_index.py maps to a directory. BONSAI has no entry there, so an
+/// index entry carrying it could never be regenerated; refuse to write one.
+pub fn format_commit_identity_scheme_python(s: RawCommitIdentityScheme) -> Result<&'static str> {
+    match s {
+        RawCommitIdentityScheme::HG => Ok("RawCommitIdentityScheme.HG"),
+        RawCommitIdentityScheme::GIT => Ok("RawCommitIdentityScheme.GIT"),
+        other => Err(anyhow!(
+            "unexpected RawCommitIdentityScheme variant: {other:?}"
+        )),
+    }
 }
 
 pub fn format_tshirt_size_python(size: TShirtSize) -> Result<&'static str> {
@@ -150,6 +251,10 @@ pub fn append_to_repo_index(
     for (repo_name, entry) in new_entries {
         let t_shirt_size_str = format_tshirt_size_python(entry.t_shirt_size)
             .with_context(|| format!("formatting t_shirt_size for repo {repo_name}"))?;
+        let scheme_str = format_commit_identity_scheme_python(entry.default_commit_identity_scheme)
+            .with_context(|| {
+                format!("formatting default_commit_identity_scheme for repo {repo_name}")
+            })?;
         let mut entry_str = format!(
             r#"
     "{}": {{
@@ -158,9 +263,9 @@ pub fn append_to_repo_index(
         "tiers": {},
         "is_deep_sharded": {},
         "t_shirt_size": {},
-        "default_commit_identity_scheme": RawCommitIdentityScheme.GIT,
+        "default_commit_identity_scheme": {},
         "hipster_acl": "{}",
-        "enabled": True,
+        "enabled": {},
         "readonly": {},"#,
             escape_python_string(repo_name),
             escape_python_string(&entry.config_path),
@@ -168,13 +273,29 @@ pub fn append_to_repo_index(
             format_python_list(&entry.tiers),
             format_python_bool(entry.is_deep_sharded),
             t_shirt_size_str,
+            scheme_str,
             escape_python_string(&entry.hipster_acl),
+            format_python_bool(entry.enabled),
             format_python_bool(entry.readonly),
         );
         if let Some(bundle_uri) = entry.enable_git_bundle_uri {
             entry_str.push_str(&format!(
                 "\n        \"enable_git_bundle_uri\": {},",
                 format_python_bool(bundle_uri)
+            ));
+        }
+        // Sparse, same as generate_index_content in generate_repo_index.py:
+        // a False scrub/validate flag is omitted, not written as False.
+        if entry.walker_scrub_enabled == Some(true) {
+            entry_str.push_str("\n        \"walker_scrub_enabled\": True,");
+        }
+        if entry.walker_validate_enabled == Some(true) {
+            entry_str.push_str("\n        \"walker_validate_enabled\": True,");
+        }
+        if let Some(key) = &entry.storage_config_key {
+            entry_str.push_str(&format!(
+                "\n        \"storage_config_key\": \"{}\",",
+                escape_python_string(key)
             ));
         }
         entry_str.push_str("\n    },");
@@ -186,235 +307,4 @@ pub fn append_to_repo_index(
 }
 
 #[cfg(test)]
-mod tests {
-    use mononoke_macros::mononoke;
-
-    use super::*;
-
-    #[mononoke::test]
-    fn config_path_uses_sha256_hash_dir() {
-        // Must match the actual on-disk file: repos/git/04/aosp_..._wasp_proc.cconf
-        let path =
-            make_repo_spec_config_path("aosp/platform/vendor/qcom/wasp_proc", RepoSpecDir::Git);
-        assert_eq!(
-            path, "scm/mononoke/repos/git/04/aosp_platform_vendor_qcom_wasp_proc",
-            "hash_dir for aosp/platform/vendor/qcom/wasp_proc must be 04 to match production file"
-        );
-    }
-
-    #[mononoke::test]
-    fn config_path_for_osmeta_matches_production() {
-        // Must match the actual on-disk file: repos/git/07/osmeta_external_androidx-media.cconf
-        let path = make_repo_spec_config_path("osmeta/external/androidx-media", RepoSpecDir::Git);
-        assert_eq!(
-            path, "scm/mononoke/repos/git/07/osmeta_external_androidx-media",
-            "hash_dir for osmeta/external/androidx-media must be 07 to match production file"
-        );
-    }
-
-    #[mononoke::test]
-    fn config_path_for_hg_repo_matches_production() {
-        // Must match the actual on-disk file: repos/hg/e0/scs-configerator_test.cconf.
-        // Built under RepoSpecDir::Git this would resolve to repos/git/e0/..., which
-        // does not exist — the bug this parameter exists to prevent.
-        let path = make_repo_spec_config_path("scs-configerator_test", RepoSpecDir::Hg);
-        assert_eq!(
-            path, "scm/mononoke/repos/hg/e0/scs-configerator_test",
-            "hash_dir for scs-configerator_test must be e0 to match production file"
-        );
-    }
-
-    #[mononoke::test]
-    fn hg_and_git_differ_only_in_directory_segment() {
-        // The sharding scheme is identical across both trees; only the
-        // git/hg segment changes. Verified against all 10k production repos.
-        let git = make_repo_spec_config_path("chromium_test", RepoSpecDir::Git);
-        let hg = make_repo_spec_config_path("chromium_test", RepoSpecDir::Hg);
-        assert_eq!(git, "scm/mononoke/repos/git/d8/chromium_test");
-        assert_eq!(hg, "scm/mononoke/repos/hg/d8/chromium_test");
-    }
-
-    #[mononoke::test]
-    fn file_path_wraps_with_source_and_cconf() {
-        let path = make_repo_spec_file_path("manus/next-agent-webapp", RepoSpecDir::Git);
-        assert!(path.starts_with("source/scm/mononoke/repos/git/"));
-        assert!(path.ends_with("/manus_next-agent-webapp.cconf"));
-    }
-
-    #[mononoke::test]
-    fn file_path_for_hg_repo_uses_hg_directory() {
-        let path = make_repo_spec_file_path("hyper_repo_test", RepoSpecDir::Hg);
-        assert_eq!(
-            path,
-            "source/scm/mononoke/repos/hg/24/hyper_repo_test.cconf"
-        );
-    }
-
-    #[mononoke::test]
-    fn tier_list_aosp_includes_multi_repo_land() {
-        let tiers = tier_list_for_repo_spec("aosp/platform/external/lldb-utils");
-        assert_eq!(
-            tiers,
-            vec![
-                "gitimport",
-                "gitimport_content",
-                "scs",
-                "backfill_worker",
-                "aosp_multi_repo_land"
-            ]
-        );
-    }
-
-    #[mononoke::test]
-    fn tier_list_non_aosp_excludes_multi_repo_land() {
-        let tiers = tier_list_for_repo_spec("manus/next-agent-webapp");
-        assert_eq!(
-            tiers,
-            vec!["gitimport", "gitimport_content", "scs", "backfill_worker"]
-        );
-    }
-
-    #[mononoke::test]
-    fn tier_list_nested_aosp_includes_multi_repo_land() {
-        let tiers = tier_list_for_repo_spec("oculus/aosp/vendor/oculus");
-        assert!(
-            tiers.contains(&"aosp_multi_repo_land"),
-            "repos with aosp/ as a substring (e.g. oculus/aosp/vendor/oculus) must be on the aosp_multi_repo_land tier"
-        );
-    }
-
-    #[mononoke::test]
-    fn tier_list_always_includes_backfill_worker() {
-        // Both aosp and non-aosp repos must surface in backfill_worker_manifest
-        // — see the doc comment on tier_list_for_repo_spec for why omission
-        // here silently breaks on-demand backfill loads.
-        for repo_name in [
-            "manus/next-agent-webapp",
-            "aosp/platform/external/lldb-utils",
-            "oculus/aosp/vendor/oculus",
-            "fbsource/edenfs",
-        ] {
-            assert!(
-                tier_list_for_repo_spec(repo_name).contains(&"backfill_worker"),
-                "tier list for {repo_name} must include backfill_worker"
-            );
-        }
-    }
-
-    #[mononoke::test]
-    fn python_bool_formatting() {
-        assert_eq!(format_python_bool(true), "True");
-        assert_eq!(format_python_bool(false), "False");
-    }
-
-    #[mononoke::test]
-    fn python_list_quotes_each_item() {
-        assert_eq!(format_python_list(&["a", "b", "c"]), r#"["a", "b", "c"]"#);
-        assert_eq!(format_python_list(&[]), "[]");
-    }
-
-    #[mononoke::test]
-    fn python_string_escape_handles_quote_and_backslash() {
-        // Backslash must be escaped first so the escaped quote's leading
-        // backslash isn't itself escaped.
-        assert_eq!(escape_python_string(r#"a"b"#), r#"a\"b"#);
-        assert_eq!(escape_python_string(r#"a\b"#), r#"a\\b"#);
-        assert_eq!(escape_python_string(r#"a\"b"#), r#"a\\\"b"#);
-    }
-
-    #[mononoke::test]
-    fn append_to_repo_index_preserves_trailing_brace() {
-        let current = "REPOS = {\n    \"existing\": {\"repo_id\": 1},\n}\n";
-        let entry = RepoIndexEntry {
-            config_path: "scm/mononoke/repos/git/aa/new_repo".to_string(),
-            repo_id: 42,
-            tiers: vec!["scs", "gitimport"],
-            is_deep_sharded: true,
-            t_shirt_size: TShirtSize::SMALL,
-            hipster_acl: "repos/git/new/repo".to_string(),
-            readonly: false,
-            enable_git_bundle_uri: None,
-        };
-        let updated = append_to_repo_index(current, &[("new/repo".to_string(), entry)]).unwrap();
-        assert!(updated.ends_with("\n}\n"), "must end with closing brace");
-        assert!(
-            updated.contains("\"new/repo\""),
-            "must contain new entry key"
-        );
-        assert!(updated.contains("\"repo_id\": 42"));
-        assert!(
-            updated.contains("\"existing\""),
-            "must preserve existing entry"
-        );
-    }
-
-    #[mononoke::test]
-    fn append_to_repo_index_emits_bundle_uri_when_set() {
-        let current = "REPOS = {\n}\n";
-        let entry = RepoIndexEntry {
-            config_path: "scm/mononoke/repos/git/aa/r".to_string(),
-            repo_id: 1,
-            tiers: vec!["scs"],
-            is_deep_sharded: true,
-            t_shirt_size: TShirtSize::SMALL,
-            hipster_acl: "a".to_string(),
-            readonly: false,
-            enable_git_bundle_uri: Some(false),
-        };
-        let updated = append_to_repo_index(current, &[("r".to_string(), entry)]).unwrap();
-        assert!(updated.contains("\"enable_git_bundle_uri\": False"));
-    }
-
-    #[mononoke::test]
-    fn append_to_repo_index_omits_bundle_uri_when_none() {
-        let current = "REPOS = {\n}\n";
-        let entry = RepoIndexEntry {
-            config_path: "scm/mononoke/repos/git/aa/r".to_string(),
-            repo_id: 1,
-            tiers: vec!["scs"],
-            is_deep_sharded: true,
-            t_shirt_size: TShirtSize::SMALL,
-            hipster_acl: "a".to_string(),
-            readonly: false,
-            enable_git_bundle_uri: None,
-        };
-        let updated = append_to_repo_index(current, &[("r".to_string(), entry)]).unwrap();
-        assert!(!updated.contains("enable_git_bundle_uri"));
-    }
-
-    #[mononoke::test]
-    fn append_to_repo_index_emits_the_requested_readonly() {
-        let entry_with = |readonly| RepoIndexEntry {
-            config_path: "scm/mononoke/repos/git/aa/r".to_string(),
-            repo_id: 1,
-            tiers: vec!["scs"],
-            is_deep_sharded: true,
-            t_shirt_size: TShirtSize::SMALL,
-            hipster_acl: "a".to_string(),
-            readonly,
-            enable_git_bundle_uri: None,
-        };
-
-        let readonly =
-            append_to_repo_index("REPOS = {\n}\n", &[("r".to_string(), entry_with(true))]).unwrap();
-        assert!(
-            readonly.contains("\"readonly\": True"),
-            "read-only repo must be read-only in the index: {readonly}"
-        );
-
-        let writable =
-            append_to_repo_index("REPOS = {\n}\n", &[("r".to_string(), entry_with(false))])
-                .unwrap();
-        assert!(
-            writable.contains("\"readonly\": False"),
-            "the default stays writable: {writable}"
-        );
-    }
-
-    #[mononoke::test]
-    fn append_to_repo_index_rejects_malformed_input() {
-        // No `\n}` closing brace
-        let result = append_to_repo_index("not a dict", &[]);
-        assert!(result.is_err());
-    }
-}
+mod tests;
