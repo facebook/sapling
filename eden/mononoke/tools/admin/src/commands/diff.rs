@@ -18,6 +18,7 @@ use mononoke_api::ChangesetFileOrdering;
 use mononoke_api::ChangesetId;
 use mononoke_api::CopyInfo;
 use mononoke_api::Repo;
+use mononoke_api::RestrictedPathsPolicy;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
@@ -142,6 +143,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             diff_items,
             ordering,
             args.limit,
+            &RestrictedPathsPolicy::Strict,
         )
         .timed()
         .await;

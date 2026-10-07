@@ -954,12 +954,17 @@ impl SourceControlServiceImpl {
             }
         };
 
+        // Under Strict, denials fail the whole request; under SkipAndCount,
+        // entries denied by restricted-path enforcement are omitted or
+        // downgraded, and counted in the shared counter.
+        let policy = RestrictedPathsPolicy::for_scs_request();
         let result = commit_compare::operations::commit_compare(
             &ctx,
             &repo,
             base_changeset,
             other_changeset,
             &params,
+            &policy,
         )
         .await
         .map_err(|e| match e.downcast::<MononokeError>() {
@@ -967,7 +972,14 @@ impl SourceControlServiceImpl {
             Err(e) => scs_errors::internal_error(format!("{e:#}")).into(),
         })?;
 
-        Ok(result.response)
+        policy.set_partial_if_omitted(&ctx);
+
+        // Local path: stamp the verdict from the same count that set the
+        // context flag. Remote path returns early above with diff_service's
+        // own verdict untouched.
+        let mut response = result.response;
+        response.partial_info = super::partial_response_info(policy.omitted_count());
+        Ok(response)
     }
 
     /// Returns files that match the criteria

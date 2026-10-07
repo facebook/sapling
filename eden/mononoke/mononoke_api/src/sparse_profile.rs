@@ -44,6 +44,7 @@ use crate::ChangesetFileOrdering;
 use crate::ChangesetPathContentContext;
 use crate::MononokeRepo;
 use crate::PathEntry;
+use crate::RestrictedPathsPolicy;
 use crate::errors::MononokeError;
 
 // This struct contains matchers which will be consulted in various scenarios
@@ -394,7 +395,14 @@ async fn get_bonsai_size_change<R: MononokeRepo>(
 ) -> Result<Vec<BonsaiSizeChange>> {
     let diff_items = btreeset! { ChangesetDiffItem::FILES };
     let diff = current
-        .diff_unordered(other, true, false, None, diff_items)
+        .diff_unordered(
+            other,
+            true,
+            false,
+            None,
+            diff_items,
+            &RestrictedPathsPolicy::Strict,
+        )
         .await?;
     let res = stream::iter(diff)
         .map(|diff| async move {

@@ -21,6 +21,7 @@ use mononoke_api::ChangesetDiffItem;
 use mononoke_api::ChangesetFileOrdering;
 use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
+use mononoke_api::RestrictedPathsPolicy;
 use mononoke_types::path::MPath;
 use source_control as source_control_thrift;
 
@@ -58,15 +59,34 @@ pub fn unordered_max_paths() -> Result<usize> {
 ///
 /// If `other_changeset` is `None`, the function will attempt to find the
 /// parent changeset using `find_commit_compare_parent`.
+///
+/// How restricted-path denials are handled is governed by `policy`:
+/// `Strict` fails the whole diff on any denial; `SkipAndCount` omits or
+/// downgrades denied entries per the per-side absent rule, counting them
+/// in the shared counter.
+///
+/// Limit semantics: filtering happens before the page budget, so denied
+/// entries never consume `limit`/`max_paths` and an all-denied page still
+/// advances. A partial page may therefore contain fewer visible entries
+/// than the limit without implying the end of the diff.
 pub async fn commit_compare<R: crate::Repo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,
     base_changeset: ChangesetContext<R>,
     other_changeset: Option<ChangesetContext<R>>,
     params: &source_control_thrift::CommitCompareParams,
+    policy: &RestrictedPathsPolicy,
 ) -> Result<CommitCompareResult> {
-    commit_compare_with_generation_logging(ctx, repo, base_changeset, other_changeset, params, true)
-        .await
+    commit_compare_with_generation_logging(
+        ctx,
+        repo,
+        base_changeset,
+        other_changeset,
+        params,
+        true,
+        policy,
+    )
+    .await
 }
 
 /// Variant that lets internal paging emit generation telemetry only once.
@@ -77,6 +97,7 @@ pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
     other_changeset: Option<ChangesetContext<R>>,
     params: &source_control_thrift::CommitCompareParams,
     log_generation_difference: bool,
+    policy: &RestrictedPathsPolicy,
 ) -> Result<CommitCompareResult> {
     add_mutable_renames(&mut base_changeset, params).await?;
 
@@ -140,6 +161,7 @@ pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
                             diff_items,
                             ChangesetFileOrdering::Unordered,
                             Some(max_paths + 1),
+                            policy,
                         )
                         .watched()
                         .await?
@@ -151,6 +173,7 @@ pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
                             diff_items,
                             ChangesetFileOrdering::Unordered,
                             Some(max_paths + 1),
+                            policy,
                         )
                         .watched()
                         .await?
@@ -215,6 +238,7 @@ pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
                             diff_items,
                             ChangesetFileOrdering::Ordered { after },
                             Some(limit),
+                            policy,
                         )
                         .await?
                 }
@@ -225,6 +249,7 @@ pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
                             diff_items,
                             ChangesetFileOrdering::Ordered { after },
                             Some(limit),
+                            policy,
                         )
                         .await?
                 }
@@ -343,7 +368,15 @@ mod tests {
                 "scm/mononoke:commit_compare_unordered_max_paths".to_string() => KnobVal::Int(5),
             }),
             async {
-                commit_compare(repo_ctx.ctx(), &repo_ctx, base_cs, Some(other_cs), &params).await
+                commit_compare(
+                    repo_ctx.ctx(),
+                    &repo_ctx,
+                    base_cs,
+                    Some(other_cs),
+                    &params,
+                    &RestrictedPathsPolicy::Strict,
+                )
+                .await
             }
             .boxed(),
         )
@@ -372,7 +405,15 @@ mod tests {
                 "scm/mononoke:commit_compare_unordered_max_paths".to_string() => KnobVal::Int(5),
             }),
             async {
-                commit_compare(repo_ctx.ctx(), &repo_ctx, base_cs, Some(other_cs), &params).await
+                commit_compare(
+                    repo_ctx.ctx(),
+                    &repo_ctx,
+                    base_cs,
+                    Some(other_cs),
+                    &params,
+                    &RestrictedPathsPolicy::Strict,
+                )
+                .await
             }
             .boxed(),
         )
@@ -404,6 +445,7 @@ mod tests {
                         btreeset! { ChangesetDiffItem::FILES },
                         ChangesetFileOrdering::Unordered,
                         Some(max_paths + 1),
+                        &RestrictedPathsPolicy::Strict,
                     )
                     .await
             }
@@ -429,7 +471,7 @@ mod tests {
                 "scm/mononoke:commit_compare_unordered_max_paths".to_string() => KnobVal::Int(max_paths as i64),
             }),
             async {
-                commit_compare(repo_ctx2.ctx(), &repo_ctx2, base_cs2, Some(other_cs2), &params)
+                commit_compare(repo_ctx2.ctx(), &repo_ctx2, base_cs2, Some(other_cs2), &params, &RestrictedPathsPolicy::Strict)
                     .await
             }
             .boxed(),
@@ -477,7 +519,15 @@ mod tests {
             async {
                 // Pass None as other_changeset to trigger the diff_root path.
                 // find_commit_compare_parent returns None for root commits.
-                commit_compare(repo_ctx.ctx(), &repo_ctx, base_cs, None, &params).await
+                commit_compare(
+                    repo_ctx.ctx(),
+                    &repo_ctx,
+                    base_cs,
+                    None,
+                    &params,
+                    &RestrictedPathsPolicy::Strict,
+                )
+                .await
             }
             .boxed(),
         )

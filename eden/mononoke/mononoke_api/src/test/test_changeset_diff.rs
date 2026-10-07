@@ -40,6 +40,7 @@ use crate::CoreContext;
 use crate::HgChangesetId;
 use crate::Mononoke;
 use crate::RepoContext;
+use crate::RestrictedPathsPolicy;
 use crate::repo::MononokeRepo;
 use crate::repo::Repo;
 
@@ -77,6 +78,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
             false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -135,6 +137,7 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
             false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -212,6 +215,7 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
             false, /* include_subtree_copies */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -302,6 +306,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
             false,
             None,
             btreeset! {ChangesetDiffItem::TREES},
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     diff.sort_by(|a, b| a.path().cmp(b.path()));
@@ -348,6 +353,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
             false,
             None,
             btreeset! {ChangesetDiffItem::TREES},
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     diff.sort_by(|a, b| a.path().cmp(b.path()));
@@ -459,6 +465,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -474,6 +481,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             Some(8),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list[..8]);
@@ -488,6 +496,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
                 after: Some(file_list[7].try_into()?),
             },
             Some(8),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list[8..16]);
@@ -502,6 +511,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
                 after: Some(file_list[15].try_into()?),
             },
             Some(8),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list[16..]);
@@ -543,6 +553,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -562,6 +573,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES, ChangesetDiffItem::TREES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -582,6 +594,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::TREES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -606,6 +619,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             Some(3),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -623,6 +637,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
                 after: Some(filtered_changed_files_list[2].try_into()?),
             },
             Some(3),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -669,6 +684,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             None, /* limit */
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list);
@@ -680,6 +696,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             Some(8),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list[..8]);
@@ -692,6 +709,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
                 after: Some(file_list[7].try_into()?),
             },
             Some(8),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list[8..16]);
@@ -704,6 +722,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
                 after: Some(file_list[15].try_into()?),
             },
             Some(8),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&diff, &file_list[16..]);
@@ -720,6 +739,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             Some(3),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -732,6 +752,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES, ChangesetDiffItem::TREES},
             ChangesetFileOrdering::Ordered { after: None },
             None, /* limit */
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -748,6 +769,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::TREES},
             ChangesetFileOrdering::Ordered { after: None },
             None, /* limit */
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -775,6 +797,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             None,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
 
@@ -860,6 +883,7 @@ async fn lfs_change_paths(
             None,
             None,
             usize::MAX,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?
         .into_iter()
@@ -1202,6 +1226,7 @@ async fn diff_files_only(
             btreeset! {ChangesetDiffItem::FILES},
             ordering,
             None,
+            &RestrictedPathsPolicy::Strict,
         )
         .await?)
 }
@@ -1534,6 +1559,7 @@ async fn test_diff_ordered_renormalize_pagination_uses_supplement_cursor(
             btreeset! {ChangesetDiffItem::FILES},
             ChangesetFileOrdering::Ordered { after: None },
             Some(2),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&page1, &["a", "b"]);
@@ -1554,6 +1580,7 @@ async fn test_diff_ordered_renormalize_pagination_uses_supplement_cursor(
                 after: Some(page1_last),
             },
             Some(2),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&page2, &["c", "d"]);
@@ -1574,6 +1601,7 @@ async fn test_diff_ordered_renormalize_pagination_uses_supplement_cursor(
                 after: Some(page2_last),
             },
             Some(2),
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     check_diff_paths(&page3, &["e"]);
@@ -1746,6 +1774,7 @@ async fn diff_test_run(
             btreeset! { ChangesetDiffItem::TREES, ChangesetDiffItem::FILES },
             ordering,
             None, /* limit */
+            &RestrictedPathsPolicy::Strict,
         )
         .await?;
     Ok(diff.iter().map(diff_test_key).collect())

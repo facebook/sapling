@@ -1486,7 +1486,12 @@ struct CommitCompareOrderedParams {
   // to continue diffing after a previous ordered request reached
   // its limit.
   1: optional Path after_path;
-  // Limit the number of returned paths to this many.
+  // Limit the number of returned paths to this many. Paths omitted by
+  // partial responses (restricted-path denials) never consume this budget:
+  // pages are filled up to the limit with visible entries. The end of
+  // pagination is signaled by the absence of `last_path` in the response
+  // (feed it back as `after_path` to continue), even if a page holds
+  // fewer entries than the limit or is empty.
   2: i64 limit;
 }
 
