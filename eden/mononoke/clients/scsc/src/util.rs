@@ -19,7 +19,6 @@ pub(crate) fn plural<'a, T: PrimInt>(n: T, single: &'a str, plural: &'a str) -> 
 
 /// Whether a `partial_info` verdict says partial. This is the signal scsc
 /// reads.
-#[expect(dead_code, reason = "wired up by the method slices stacked on top")]
 pub(crate) fn is_partial_verdict(
     partial_info: &Option<scs_client_raw::thrift::PartialResponseInfo>,
 ) -> bool {
@@ -29,7 +28,6 @@ pub(crate) fn is_partial_verdict(
 /// Print the partial-response note to stderr. Always stderr so stdout
 /// (including `--json`) stays machine-readable. Call once, after rendering
 /// output succeeds.
-#[expect(dead_code, reason = "wired up by the method slices stacked on top")]
 pub(crate) fn print_partial_note() {
     eprintln!("note: response is partial: some paths were omitted due to restricted-path access");
 }
