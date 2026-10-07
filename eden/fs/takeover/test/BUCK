@@ -17,6 +17,7 @@ cpp_unittest(
         "//eden/fs/takeover:serialization-cpp2-types",
         "//eden/fs/takeover:takeover",
         "//folly:exception",
+        "//folly:portability",
         "//folly:scope_guard",
         "//folly/futures:core",
         "//folly/io:iobuf",
