@@ -14,7 +14,10 @@ mod repo_provider;
 mod resolve;
 mod scribe;
 
+pub use crate::manifest_commit::LAND_SERVICE_IDENTITY;
+pub use crate::manifest_commit::RECONCILER_SERVICE_IDENTITY;
 pub use crate::manifest_commit::create_manifest_commit;
+pub use crate::manifest_commit::is_service_identity;
 pub use crate::repin::CasBaseline;
 pub use crate::repin::ManifestCommitSpec;
 pub use crate::repin::PreparedManifestCommit;

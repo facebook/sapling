@@ -25,6 +25,16 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::sorted_vector_map;
 
+/// Author and committer of every commit the land service writes.
+pub const LAND_SERVICE_IDENTITY: &str = "multi_repo_land";
+/// Author and committer of every commit the reconciler writes.
+pub const RECONCILER_SERVICE_IDENTITY: &str = "manifest_reconciler";
+
+/// Whether `author` is one of the two services that regenerate manifests.
+pub fn is_service_identity(author: &str) -> bool {
+    author == LAND_SERVICE_IDENTITY || author == RECONCILER_SERVICE_IDENTITY
+}
+
 /// Create (and store) a commit that updates the manifest file on top of `parent`.
 /// No bookmark is moved — the caller does that in its atomic transaction.
 pub async fn create_manifest_commit(
