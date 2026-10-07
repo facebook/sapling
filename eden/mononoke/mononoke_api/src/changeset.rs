@@ -1108,14 +1108,19 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **paths which exist**.
+    ///
+    /// How restricted-path denials are handled is governed by `policy`:
+    /// `Strict` fails the stream on any denial, `SkipAndCount` skips
+    /// denied paths and counts them in the shared counter.
     pub async fn paths_with_history<T: Iterator<Item = MPath>>(
         &self,
         paths: T,
+        policy: &RestrictedPathsPolicy,
     ) -> Result<
         impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>> + use<R, T>,
         MononokeError,
     > {
-        Ok(self
+        let stream = self
             .root_unode_manifest_id()
             .await?
             .manifest_unode_id()
@@ -1134,7 +1139,13 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         entry,
                     )
                 }
-            }))
+            });
+        match policy {
+            RestrictedPathsPolicy::Strict => Ok(stream.left_stream()),
+            RestrictedPathsPolicy::SkipAndCount(omitted) => {
+                Ok(skip_restricted_denials(stream, omitted.clone()).right_stream())
+            }
+        }
     }
 
     /// Returns a stream of path content contexts for a set of paths.
@@ -1271,14 +1282,25 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **deleted paths which have existed previously**.
+    ///
+    /// How restricted-path denials are handled is governed by `policy`:
+    /// `Strict` fails the stream on any denial, `SkipAndCount` skips
+    /// denied paths and counts them in the shared counter.
     pub async fn deleted_paths(
         &self,
         paths: impl Iterator<Item = MPath> + 'static,
+        policy: &RestrictedPathsPolicy,
     ) -> Result<
         impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>> + '_,
         MononokeError,
     > {
-        Ok(self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths))
+        let stream = self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths);
+        match policy {
+            RestrictedPathsPolicy::Strict => Ok(stream.left_stream()),
+            RestrictedPathsPolicy::SkipAndCount(omitted) => {
+                Ok(skip_restricted_denials(stream, omitted.clone()).right_stream())
+            }
+        }
     }
 }
 

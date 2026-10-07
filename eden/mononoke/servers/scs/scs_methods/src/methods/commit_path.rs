@@ -680,7 +680,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitMultiplePathLastChangedParams,
     ) -> Result<thrift::CommitMultiplePathLastChangedResponse, scs_errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let mut paths = HashSet::with_capacity(params.paths.len());
         for path in params.paths {
             let strpath = path.as_str();
@@ -689,9 +689,11 @@ impl SourceControlServiceImpl {
             paths.insert(mpath);
         }
 
-        let path_last_modified = changeset
-            .paths_with_history(paths.iter().cloned())
-            .await?
+        let policy = RestrictedPathsPolicy::for_scs_request();
+        let history_stream = changeset
+            .paths_with_history(paths.iter().cloned(), &policy)
+            .await?;
+        let path_last_modified = history_stream
             .map_ok(|context| async move {
                 let context_path = context.path().clone();
                 let last_modified = context.last_modified().await?;
@@ -707,9 +709,8 @@ impl SourceControlServiceImpl {
 
         paths.retain(|path| !path_last_modified.contains_key(path));
 
-        let path_last_deleted = changeset
-            .deleted_paths(paths.into_iter())
-            .await?
+        let deleted_stream = changeset.deleted_paths(paths.into_iter(), &policy).await?;
+        let path_last_deleted = deleted_stream
             .map_ok(|context| async move {
                 let context_path = context.path().clone();
                 let last_deleted = context.last_deleted().await?;
@@ -757,8 +758,11 @@ impl SourceControlServiceImpl {
             })
             .collect();
 
+        policy.set_partial_if_omitted(&ctx);
+
         Ok(thrift::CommitMultiplePathLastChangedResponse {
             path_last_change,
+            partial_info: super::partial_response_info(policy.omitted_count()),
             ..Default::default()
         })
     }

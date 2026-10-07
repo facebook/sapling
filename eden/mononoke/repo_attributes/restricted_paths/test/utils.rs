@@ -965,7 +965,10 @@ impl RestrictedPathsTestData {
             Err(e) => return Err(e.into()),
         }
 
-        match cs_ctx.paths_with_history(paths.iter().cloned()).await {
+        match cs_ctx
+            .paths_with_history(paths.iter().cloned(), &RestrictedPathsPolicy::Strict)
+            .await
+        {
             Ok(stream) => {
                 let results: Vec<Result<(), MononokeError>> = stream
                     .map(|r| async move {
