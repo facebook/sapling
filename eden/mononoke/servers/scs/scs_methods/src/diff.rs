@@ -302,6 +302,15 @@ impl<'a> DiffRouter<'a> {
             .commit_compare(ctx, commit_id, params)
             .await
             .map_err(convert_diff_service_error)?;
+        // Propagate diff_service's verdict so the remote route sets the
+        // same flag (and `nocache`) as the local path.
+        if response
+            .partial_info
+            .as_ref()
+            .is_some_and(|info| info.partial)
+        {
+            ctx.set_partial_response();
+        }
 
         Ok(response)
     }
