@@ -43,6 +43,7 @@ use crate::CreateInfo;
 use crate::MononokeError;
 use crate::MononokeRepo;
 use crate::RepoContext;
+use crate::RestrictedPathsPolicy;
 use crate::file::FileId;
 use crate::path::MononokePathPrefixes;
 use crate::repo::create_changeset::CreateChangeType;
@@ -162,7 +163,7 @@ async fn build_initial_tree_entries<R: MononokeRepo>(
     }
 
     let path_contexts = base_ctx
-        .paths_with_content(paths_to_check.into_iter())
+        .paths_with_content(paths_to_check.into_iter(), &RestrictedPathsPolicy::Strict)
         .await?;
 
     futures::pin_mut!(path_contexts);

@@ -13,6 +13,8 @@ use std::fmt::Display;
 use std::future::Future;
 use std::ops::Bound;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use acl_regions::AclRegionsRef;
 use anyhow::anyhow;
@@ -112,6 +114,7 @@ use crate::repo::RepoWithBubble;
 use crate::restricted_paths::PathAccessInfo;
 use crate::restricted_paths::RestrictedChangeGroup;
 use crate::restricted_paths::RestrictedPathsChangesInfo;
+use crate::restricted_paths::RestrictedPathsPolicy;
 use crate::specifiers::ChangesetId;
 use crate::specifiers::GitSha1;
 use crate::specifiers::HgChangesetId;
@@ -287,6 +290,25 @@ impl<R: RepoIdentityRef> fmt::Debug for ChangesetContext<R> {
 
 fn to_vec1<X>(maybe_vec: Option<Vec<X>>) -> Option<Vec1<X>> {
     maybe_vec.and_then(|v| Vec1::try_from_vec(v).ok())
+}
+
+/// Map a fallible stream item into an optional, counting restricted-path
+/// denials and dropping those items. All other errors still fail the
+/// stream.
+fn skip_restricted_denials<S, T>(
+    stream: S,
+    omitted: Arc<AtomicUsize>,
+) -> impl Stream<Item = Result<T, MononokeError>>
+where
+    S: Stream<Item = Result<T, MononokeError>>,
+{
+    stream.filter_map(move |res| match res {
+        Err(e) if e.is_restricted_path_denial() => {
+            omitted.fetch_add(1, Ordering::Relaxed);
+            futures::future::ready(None)
+        }
+        res => futures::future::ready(Some(res)),
+    })
 }
 
 impl<R> ChangesetContext<R> {
@@ -1119,16 +1141,21 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **paths which exist**.
+    ///
+    /// How restricted-path denials are handled is governed by `policy`:
+    /// `Strict` fails the stream on any denial, `SkipAndCount` skips
+    /// denied paths and counts them in the shared counter.
     pub async fn paths_with_content<T: Iterator<Item = MPath>>(
         &self,
         paths: T,
+        policy: &RestrictedPathsPolicy,
     ) -> Result<
         impl Stream<Item = Result<ChangesetPathContentContext<R>, MononokeError>> + use<R, T>,
         MononokeError,
     > {
         let root_id = self.root_content_manifest_id().await?;
 
-        Ok(root_id
+        let stream = root_id
             .find_entries(
                 self.ctx().clone(),
                 self.repo_ctx().repo().repo_blobstore().clone(),
@@ -1148,7 +1175,13 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         .await
                     }
                 }
-            }))
+            });
+        match policy {
+            RestrictedPathsPolicy::Strict => Ok(stream.left_stream()),
+            RestrictedPathsPolicy::SkipAndCount(omitted) => {
+                Ok(skip_restricted_denials(stream, omitted.clone()).right_stream())
+            }
+        }
     }
 
     /// Returns a stream of path contexts for a set of paths.

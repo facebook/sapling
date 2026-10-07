@@ -47,6 +47,7 @@ pub struct LoggingContainer {
     scribe: Scribe,
     override_sampling: Arc<AtomicBool>,
     nocache_thriftcache: Arc<AtomicBool>,
+    partial_response: Arc<AtomicBool>,
 }
 
 impl LoggingContainer {
@@ -64,6 +65,7 @@ impl LoggingContainer {
             scribe,
             override_sampling: Arc::new(AtomicBool::new(false)),
             nocache_thriftcache: Arc::new(AtomicBool::new(false)),
+            partial_response: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -81,6 +83,7 @@ impl LoggingContainer {
             scribe: self.scribe.clone(),
             override_sampling: self.override_sampling.clone(),
             nocache_thriftcache: self.nocache_thriftcache.clone(),
+            partial_response: self.partial_response.clone(),
         }
     }
 
@@ -116,6 +119,7 @@ impl LoggingContainer {
             scribe: self.scribe.clone(),
             override_sampling: self.override_sampling.clone(),
             nocache_thriftcache: self.nocache_thriftcache.clone(),
+            partial_response: self.partial_response.clone(),
         }
     }
 
@@ -133,5 +137,13 @@ impl LoggingContainer {
 
     pub fn set_nocache_thriftcache(&self) {
         self.nocache_thriftcache.store(true, Ordering::Relaxed);
+    }
+
+    pub fn partial_response(&self) -> bool {
+        self.partial_response.load(Ordering::Relaxed)
+    }
+
+    pub fn set_partial_response(&self) {
+        self.partial_response.store(true, Ordering::Relaxed);
     }
 }

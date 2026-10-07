@@ -25,6 +25,7 @@ use maplit::btreeset;
 use mononoke_api::ChangesetPathHistoryOptions;
 use mononoke_api::MononokeError;
 use mononoke_api::PathEntry;
+use mononoke_api::RestrictedPathsPolicy;
 use mononoke_types::blame_v2::BlameParentIndex;
 use mononoke_types::path::MPath;
 use source_control as thrift;
@@ -112,7 +113,7 @@ impl SourceControlServiceImpl {
         }
 
         let result = changeset
-            .paths_with_content(paths.into_iter())
+            .paths_with_content(paths.into_iter(), &RestrictedPathsPolicy::Strict)
             .await?
             .map_ok(|context| async move {
                 let context_path = context.path().to_string();

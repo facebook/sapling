@@ -170,6 +170,14 @@ impl CoreContext {
         self.logging.set_nocache_thriftcache();
     }
 
+    pub fn partial_response(&self) -> bool {
+        self.logging.partial_response()
+    }
+
+    pub fn set_partial_response(&self) {
+        self.logging.set_partial_response();
+    }
+
     pub fn sql_query_telemetry(&self) -> SqlQueryTelemetry {
         let fb = self.fb.clone();
         let metadata = self.metadata();

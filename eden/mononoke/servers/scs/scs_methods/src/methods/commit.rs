@@ -43,6 +43,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RateLimitOutcome;
 use mononoke_api::Repo;
+use mononoke_api::RestrictedPathsPolicy;
 use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupExactBehaviour;
@@ -502,7 +503,10 @@ impl SourceControlServiceImpl {
         let (base_path_contexts, other_path_contexts, subtree_source_path_contexts) = try_join!(
             async {
                 let base_commit_paths = base_commit
-                    .paths_with_content(base_commit_paths.into_iter())
+                    .paths_with_content(
+                        base_commit_paths.into_iter(),
+                        &RestrictedPathsPolicy::Strict,
+                    )
                     .await?;
                 let base_commit_contexts = base_commit_paths
                     .map_ok(|path_context| (path_context.path().clone(), path_context))
@@ -515,7 +519,10 @@ impl SourceControlServiceImpl {
                     None => Ok(HashMap::new()),
                     Some(other_commit) => {
                         let other_commit_paths = other_commit
-                            .paths_with_content(other_commit_paths.into_iter())
+                            .paths_with_content(
+                                other_commit_paths.into_iter(),
+                                &RestrictedPathsPolicy::Strict,
+                            )
                             .await?;
                         let other_commit_contexts = other_commit_paths
                             .map_ok(|path_context| (path_context.path().clone(), path_context))
@@ -537,7 +544,7 @@ impl SourceControlServiceImpl {
                         .context("invalid target commit id")?;
                     if let Some(changeset) = repo.changeset(changeset_specifier).await? {
                         let path_contexts = changeset
-                            .paths_with_content(paths.into_iter())
+                            .paths_with_content(paths.into_iter(), &RestrictedPathsPolicy::Strict)
                             .await?
                             .map_ok(|path_context| (path_context.path().clone(), path_context))
                             .try_collect::<HashMap<_, _>>()

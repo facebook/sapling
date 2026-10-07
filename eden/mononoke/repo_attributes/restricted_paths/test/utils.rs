@@ -44,6 +44,7 @@ use metadata::Metadata;
 use mononoke_api::MononokeError;
 use mononoke_api::Repo as TestRepo;
 use mononoke_api::RepoContext;
+use mononoke_api::RestrictedPathsPolicy;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::ChangesetId;
@@ -942,7 +943,10 @@ impl RestrictedPathsTestData {
             .map(|path| MPath::from(path.clone()))
             .collect::<BTreeSet<_>>();
 
-        match cs_ctx.paths_with_content(paths.clone().into_iter()).await {
+        match cs_ctx
+            .paths_with_content(paths.clone().into_iter(), &RestrictedPathsPolicy::Strict)
+            .await
+        {
             Ok(stream) => {
                 let results: Vec<Result<_, MononokeError>> = stream.collect().await;
                 for result in results {

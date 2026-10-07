@@ -62,6 +62,7 @@ use crate::file::FileId;
 use crate::file::FileType;
 use crate::path::MononokePathPrefixes;
 use crate::repo::RepoContext;
+use crate::restricted_paths::RestrictedPathsPolicy;
 use crate::specifiers::ChangesetSpecifier;
 
 #[derive(Clone, Debug)]
@@ -499,7 +500,7 @@ pub(crate) async fn lookup_file_types_from_parents<R: MononokeRepo>(
             .collect();
 
         let path_contexts = parent_ctx
-            .paths_with_content(paths_to_query.into_iter())
+            .paths_with_content(paths_to_query.into_iter(), &RestrictedPathsPolicy::Strict)
             .await?;
 
         pin_mut!(path_contexts);

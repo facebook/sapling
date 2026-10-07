@@ -117,6 +117,15 @@ pub enum MononokeError {
     BookmarkMoveAlreadyProcessed,
 }
 
+impl MononokeError {
+    /// True only for restricted-path denials (spawn_enforce_restricted_path_access).
+    /// Repo-auth denials (`AuthorizationError`) and everything else fail the whole
+    /// request; only this variant is safe to convert into a per-item skip.
+    pub fn is_restricted_path_denial(&self) -> bool {
+        matches!(self, MononokeError::RestrictedPathsAuthorizationError(_))
+    }
+}
+
 impl From<Error> for MononokeError {
     fn from(e: Error) -> Self {
         match has_redaction_root_cause(&e) {
