@@ -14,6 +14,7 @@ use bookmarks::BookmarkKind;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
@@ -68,4 +69,33 @@ pub async fn log_scribe_bookmark_update<R>(
             }
         }
     }
+}
+
+/// Log a bookmark update whose newly public commits the caller already
+/// knows, so nothing is discovered from phases after the move.
+pub async fn log_scribe_bookmark_update_with_known_commits<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    info: &BookmarkInfo,
+    commits: &[BonsaiChangeset],
+) where
+    R: RepoIdentityRef
+        + RepoConfigRef
+        + BonsaiGitMappingRef
+        + BonsaiGlobalrevMappingRef
+        + CommitGraphRef
+        + Sync,
+{
+    log_bookmark_operation(ctx, repo, info).await;
+    let commit_infos: Vec<CommitInfo> = commits
+        .iter()
+        .map(|bcs| CommitInfo::new(bcs, None))
+        .collect();
+    log_new_commits(
+        ctx,
+        repo,
+        Some((&info.bookmark_name, BookmarkKind::Publishing)),
+        commit_infos,
+    )
+    .await;
 }

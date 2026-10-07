@@ -34,3 +34,4 @@ pub use crate::resolve::bulk_read_bookmarks;
 pub use crate::resolve::bulk_read_git_sha1s;
 pub use crate::resolve::resolve_bookmarks_cross_repo;
 pub use crate::scribe::log_scribe_bookmark_update;
+pub use crate::scribe::log_scribe_bookmark_update_with_known_commits;
