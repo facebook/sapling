@@ -9,3 +9,5 @@ mod transaction;
 
 pub use transaction::MultiRepoBookmarksTransaction;
 pub use transaction::MultiRepoBookmarksTransactionResult;
+#[doc(hidden)]
+pub use transaction::retry_commit_loop;

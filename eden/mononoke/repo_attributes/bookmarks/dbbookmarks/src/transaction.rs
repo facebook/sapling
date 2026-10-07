@@ -124,6 +124,34 @@ mononoke_queries! {
          (id, repo_id, name, category, from_changeset_id, to_changeset_id, reason, timestamp)
          VALUES {values}"
     }
+
+    pub read SelectBookmarksForUpdate(
+        repo_id: RepositoryId,
+        >list names: BookmarkName
+    ) -> (BookmarkName, BookmarkCategory, ChangesetId, BookmarkKind) {
+        mysql("SELECT name, category, changeset_id, hg_kind
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name IN {names}
+         FOR UPDATE")
+        sqlite("SELECT name, category, changeset_id, hg_kind
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name IN {names}")
+    }
+
+    // Only for rows the caller has locked and CAS-checked in the same transaction.
+    pub write MoveLockedBookmarks(
+        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, category: BookmarkCategory, changeset_id: ChangesetId, kind: BookmarkKind)
+    ) {
+        none,
+        mysql("INSERT INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind)
+         VALUES {values}
+         ON DUPLICATE KEY UPDATE log_id = VALUES(log_id), changeset_id = VALUES(changeset_id)")
+        sqlite("INSERT INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind)
+         VALUES {values}
+         ON CONFLICT(repo_id, name, category) DO UPDATE SET log_id = excluded.log_id, changeset_id = excluded.changeset_id")
+    }
 }
 
 struct NewUpdateLogEntry {

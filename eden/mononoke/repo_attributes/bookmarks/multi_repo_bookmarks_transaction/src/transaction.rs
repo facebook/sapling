@@ -11,8 +11,10 @@ use std::future::Future;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateReason;
@@ -21,6 +23,8 @@ use dbbookmarks::transaction::AddBookmarkLog;
 use dbbookmarks::transaction::DeleteBookmarkIf;
 use dbbookmarks::transaction::FindMaxBookmarkLogId;
 use dbbookmarks::transaction::InsertBookmarks;
+use dbbookmarks::transaction::MoveLockedBookmarks;
+use dbbookmarks::transaction::SelectBookmarksForUpdate;
 use dbbookmarks::transaction::UpdateBookmark;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -39,15 +43,63 @@ define_stats! {
     attempt_count: timeseries(Rate, Average, Sum),
 }
 
+/// Updates per locked-read + upsert pair; bounds statement size.
+const UPDATE_CHUNK: usize = 100;
+/// Log rows per insert statement.
+const LOG_CHUNK: usize = 200;
+
+/// A compare-and-set move; the only op kind that runs in chunks.
+struct UpdateOp {
+    repo_id: RepositoryId,
+    bookmark: BookmarkKey,
+    old_cs_id: ChangesetId,
+    new_cs_id: ChangesetId,
+    reason: BookmarkUpdateReason,
+}
+
+impl UpdateOp {
+    fn chunk_key(&self) -> (RepositoryId, BookmarkCategory) {
+        (self.repo_id, *self.bookmark.category())
+    }
+
+    fn push_log(&self, log: &mut TransactionLog) -> u64 {
+        log.push(
+            self.repo_id,
+            &self.bookmark,
+            Some(self.old_cs_id),
+            Some(self.new_cs_id),
+            self.reason,
+        )
+    }
+
+    /// One CAS update; `LogicError` when the row is missing, moved or not publishing.
+    async fn execute(
+        &self,
+        txn: SqlTransaction,
+        log: &mut TransactionLog,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        let log_id = self.push_log(log);
+        let (txn, result) = UpdateBookmark::query_with_transaction(
+            txn,
+            &self.repo_id,
+            &Some(log_id),
+            self.bookmark.name(),
+            self.bookmark.category(),
+            &self.old_cs_id,
+            &self.new_cs_id,
+            BookmarkKind::ALL_PUBLISHING,
+        )
+        .await?;
+        if result.affected_rows() != 1 {
+            return Err(BookmarkTransactionError::LogicError);
+        }
+        Ok(txn)
+    }
+}
+
 /// A bookmark operation to be executed atomically in a multi-repo transaction.
 enum BookmarkOp {
-    Update {
-        repo_id: RepositoryId,
-        bookmark: BookmarkKey,
-        old_cs_id: ChangesetId,
-        new_cs_id: ChangesetId,
-        reason: BookmarkUpdateReason,
-    },
+    Update(UpdateOp),
     Create {
         repo_id: RepositoryId,
         bookmark: BookmarkKey,
@@ -65,17 +117,15 @@ enum BookmarkOp {
 impl BookmarkOp {
     fn repo_id(&self) -> RepositoryId {
         match self {
-            Self::Update { repo_id, .. }
-            | Self::Create { repo_id, .. }
-            | Self::Delete { repo_id, .. } => *repo_id,
+            Self::Update(update) => update.repo_id,
+            Self::Create { repo_id, .. } | Self::Delete { repo_id, .. } => *repo_id,
         }
     }
 
     fn bookmark(&self) -> &BookmarkKey {
         match self {
-            Self::Update { bookmark, .. }
-            | Self::Create { bookmark, .. }
-            | Self::Delete { bookmark, .. } => bookmark,
+            Self::Update(update) => &update.bookmark,
+            Self::Create { bookmark, .. } | Self::Delete { bookmark, .. } => bookmark,
         }
     }
 
@@ -89,36 +139,7 @@ impl BookmarkOp {
         log: &mut TransactionLog,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         match self {
-            Self::Update {
-                repo_id,
-                bookmark,
-                old_cs_id,
-                new_cs_id,
-                reason,
-            } => {
-                let log_id = log.push(
-                    *repo_id,
-                    bookmark,
-                    Some(*old_cs_id),
-                    Some(*new_cs_id),
-                    *reason,
-                );
-                let (txn, result) = UpdateBookmark::query_with_transaction(
-                    txn,
-                    repo_id,
-                    &Some(log_id),
-                    bookmark.name(),
-                    bookmark.category(),
-                    old_cs_id,
-                    new_cs_id,
-                    BookmarkKind::ALL_PUBLISHING,
-                )
-                .await?;
-                if result.affected_rows() != 1 {
-                    return Err(BookmarkTransactionError::LogicError);
-                }
-                Ok(txn)
-            }
+            Self::Update(update) => update.execute(txn, log).await,
             Self::Create {
                 repo_id,
                 bookmark,
@@ -213,17 +234,22 @@ impl TransactionLog {
     /// Write all accumulated log entries into the SQL transaction.
     async fn write(self, mut txn: SqlTransaction) -> Result<SqlTransaction> {
         let timestamp = Timestamp::now();
-        for entry in &self.entries {
-            let data = [(
-                &entry.id,
-                &entry.repo_id,
-                entry.bookmark.name(),
-                entry.bookmark.category(),
-                &entry.old,
-                &entry.new,
-                &entry.reason,
-                &timestamp,
-            )];
+        for chunk in self.entries.chunks(LOG_CHUNK) {
+            let data: Vec<_> = chunk
+                .iter()
+                .map(|entry| {
+                    (
+                        &entry.id,
+                        &entry.repo_id,
+                        entry.bookmark.name(),
+                        entry.bookmark.category(),
+                        &entry.old,
+                        &entry.new,
+                        &entry.reason,
+                        &timestamp,
+                    )
+                })
+                .collect();
             txn = AddBookmarkLog::query_with_transaction(txn, &data[..])
                 .await?
                 .0;
@@ -290,13 +316,13 @@ impl MultiRepoBookmarksTransaction {
         old_cs_id: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
-        self.push(BookmarkOp::Update {
+        self.push(BookmarkOp::Update(UpdateOp {
             repo_id,
             bookmark: bookmark.clone(),
             old_cs_id,
             new_cs_id,
             reason,
-        })
+        }))
     }
 
     pub fn create(
@@ -419,14 +445,12 @@ async fn attempt_commit(
     // is retried rather than being flattened into a fatal one.
     let txn = run_transaction_hooks(ctx, txn, hooks).await?;
 
-    let (mut txn, next_log_ids) = find_next_log_ids(txn, &repo_ids)
+    let (txn, next_log_ids) = find_next_log_ids(txn, &repo_ids)
         .await
         .map_err(BookmarkTransactionError::Other)?;
     let mut log = TransactionLog::new(next_log_ids);
 
-    for op in ops {
-        txn = op.execute(txn, &mut log).await?;
-    }
+    let txn = execute_ops(txn, ops, &mut log).await?;
 
     let txn = log
         .write(txn)
@@ -438,11 +462,135 @@ async fn attempt_commit(
     Ok(MultiRepoBookmarksTransactionResult::Success)
 }
 
+/// A run of consecutive updates to one repo and category takes two statements
+/// per chunk instead of one round trip per bookmark; everything else runs one
+/// op at a time as before. Log ids stay in op order either way.
+async fn execute_ops(
+    mut txn: SqlTransaction,
+    ops: &[BookmarkOp],
+    log: &mut TransactionLog,
+) -> Result<SqlTransaction, BookmarkTransactionError> {
+    let mut rest = ops;
+    while let Some((first, _)) = rest.split_first() {
+        let run_len = match first {
+            BookmarkOp::Update(first) => rest
+                .iter()
+                .map_while(|op| match op {
+                    BookmarkOp::Update(update) if update.chunk_key() == first.chunk_key() => {
+                        Some(())
+                    }
+                    _ => None,
+                })
+                .count(),
+            BookmarkOp::Create { .. } | BookmarkOp::Delete { .. } => 1,
+        };
+        let (run, tail) = rest.split_at(run_len);
+        let updates: Vec<&UpdateOp> = run
+            .iter()
+            .filter_map(|op| match op {
+                BookmarkOp::Update(update) => Some(update),
+                BookmarkOp::Create { .. } | BookmarkOp::Delete { .. } => None,
+            })
+            .collect();
+        if updates.len() > 1 {
+            for chunk in updates.chunks(UPDATE_CHUNK) {
+                txn = execute_update_chunk(txn, chunk, log).await?;
+            }
+        } else {
+            for op in run {
+                txn = op.execute(txn, log).await?;
+            }
+        }
+        rest = tail;
+    }
+    Ok(txn)
+}
+
+/// Lock the chunk's rows, check every CAS in the application, then move them
+/// in one statement. The same predicate as the per-row `UpdateBookmark`: a
+/// missing row, a moved head or a non-publishing kind is a `LogicError`. Rows
+/// are looked up by name alone and written back under the category they are
+/// stored with; the key's category only breaks a tie between stored rows.
+async fn execute_update_chunk(
+    txn: SqlTransaction,
+    chunk: &[&UpdateOp],
+    log: &mut TransactionLog,
+) -> Result<SqlTransaction, BookmarkTransactionError> {
+    let repo_id = chunk
+        .first()
+        .map(|update| update.repo_id)
+        .ok_or_else(|| BookmarkTransactionError::Other(anyhow!("empty update chunk")))?;
+    let mut seen: HashSet<&BookmarkName> = HashSet::new();
+    for update in chunk {
+        if !seen.insert(update.bookmark.name()) {
+            return Err(BookmarkTransactionError::Other(anyhow!(
+                "bookmark {} appears twice in one update chunk",
+                update.bookmark
+            )));
+        }
+    }
+    let log_ids: Vec<u64> = chunk.iter().map(|update| update.push_log(log)).collect();
+    let names: Vec<BookmarkName> = chunk
+        .iter()
+        .map(|update| update.bookmark.name().clone())
+        .collect();
+    let (txn, rows) =
+        SelectBookmarksForUpdate::query_with_transaction(txn, &repo_id, &names[..]).await?;
+    let mut current: HashMap<BookmarkName, Vec<(BookmarkCategory, ChangesetId, BookmarkKind)>> =
+        HashMap::new();
+    for (name, category, cs_id, kind) in rows {
+        current
+            .entry(name)
+            .or_default()
+            .push((category, cs_id, kind));
+    }
+
+    let mut values = Vec::with_capacity(chunk.len());
+    for (update, log_id) in chunk.iter().zip(log_ids) {
+        let stored = current
+            .get(update.bookmark.name())
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        let row = match stored {
+            [row] => Some(row),
+            _ => stored
+                .iter()
+                .find(|(category, ..)| category == update.bookmark.category()),
+        };
+        match row {
+            Some((category, cs_id, kind))
+                if *cs_id == update.old_cs_id && BookmarkKind::ALL_PUBLISHING.contains(kind) =>
+            {
+                values.push((
+                    repo_id,
+                    Some(log_id),
+                    update.bookmark.name().clone(),
+                    *category,
+                    update.new_cs_id,
+                    *kind,
+                ));
+            }
+            _ => return Err(BookmarkTransactionError::LogicError),
+        }
+    }
+    let refs: Vec<_> = values
+        .iter()
+        .map(|(repo_id, log_id, name, category, cs_id, kind)| {
+            (repo_id, log_id, name, category, cs_id, kind)
+        })
+        .collect();
+    // Rows are locked and checked above, so the affected count carries no
+    // information here (MySQL reports 2 per updated row).
+    let (txn, _) = MoveLockedBookmarks::query_with_transaction(txn, &refs[..]).await?;
+    Ok(txn)
+}
+
 /// Execute `do_attempt` with retry-on-transient-error semantics.
 ///
 /// Generic over the attempt closure so unit tests can drive the retry
 /// machinery directly without needing a SQL fault-injection hook.
-async fn retry_commit_loop<F, Fut>(
+#[doc(hidden)]
+pub async fn retry_commit_loop<F, Fut>(
     ctx: &CoreContext,
     max_attempts: u64,
     mut do_attempt: F,
@@ -523,620 +671,4 @@ async fn find_next_log_ids(
         next_ids.insert(repo_id, next_id);
     }
     Ok((txn, next_ids))
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
-
-    use bookmarks::BookmarkKey;
-    use bookmarks::BookmarkUpdateLog;
-    use bookmarks::BookmarkUpdateLogId;
-    use bookmarks::BookmarkUpdateReason;
-    use bookmarks::Bookmarks;
-    use bookmarks::Freshness;
-    use context::CoreContext;
-    use dbbookmarks::SqlBookmarksBuilder;
-    use dbbookmarks::store::SqlBookmarks;
-    use fbinit::FacebookInit;
-    use futures::future::FutureExt;
-    use futures::stream::TryStreamExt;
-    use mononoke_macros::mononoke;
-    use mononoke_types::RepositoryId;
-    use mononoke_types_mocks::changesetid::ONES_CSID;
-    use mononoke_types_mocks::changesetid::THREES_CSID;
-    use mononoke_types_mocks::changesetid::TWOS_CSID;
-    use sql_construct::SqlConstruct;
-
-    use super::*;
-
-    /// Test fixture providing two repos that share the same underlying DB.
-    struct TwoRepoFixture {
-        ctx: CoreContext,
-        conn: Connection,
-        repo_id_1: RepositoryId,
-        repo_id_2: RepositoryId,
-        bookmarks_1: SqlBookmarks,
-        bookmarks_2: SqlBookmarks,
-    }
-
-    impl TwoRepoFixture {
-        fn new(fb: FacebookInit) -> Result<Self> {
-            let ctx = CoreContext::test_mock(fb);
-            let repo_id_1 = RepositoryId::new(1);
-            let repo_id_2 = RepositoryId::new(2);
-            let builder = SqlBookmarksBuilder::with_sqlite_in_memory()?;
-            let bookmarks_1 = builder.clone().with_repo_id(repo_id_1);
-            let bookmarks_2 = builder.with_repo_id(repo_id_2);
-            let conn = bookmarks_1.write_connection().clone();
-            Ok(Self {
-                ctx,
-                conn,
-                repo_id_1,
-                repo_id_2,
-                bookmarks_1,
-                bookmarks_2,
-            })
-        }
-
-        fn multi_txn(&self) -> MultiRepoBookmarksTransaction {
-            MultiRepoBookmarksTransaction::new(self.ctx.clone(), self.conn.clone())
-        }
-
-        /// Create a bookmark in the given repo via a standard single-repo transaction.
-        async fn set_bookmark(
-            &self,
-            bookmarks: &SqlBookmarks,
-            key: &BookmarkKey,
-            cs_id: ChangesetId,
-        ) -> Result<()> {
-            let mut txn = bookmarks.create_transaction(self.ctx.clone());
-            txn.force_set(key, cs_id, BookmarkUpdateReason::TestMove)?;
-            assert!(txn.commit().await.unwrap().is_some());
-            Ok(())
-        }
-
-        /// Read a bookmark value from the given repo.
-        async fn get_bookmark(
-            &self,
-            bookmarks: &SqlBookmarks,
-            key: &BookmarkKey,
-        ) -> Result<Option<ChangesetId>> {
-            bookmarks
-                .get(self.ctx.clone(), key, Freshness::MostRecent)
-                .await
-        }
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_multi_repo_update_success(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-        f.set_bookmark(&f.bookmarks_2, &bookmark, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.update(
-            f.repo_id_2,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        let result = txn.commit().await?;
-        assert!(result.is_success());
-
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(TWOS_CSID)
-        );
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_2, &bookmark).await?,
-            Some(TWOS_CSID)
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_cas_failure_rolls_back_all(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-        f.set_bookmark(&f.bookmarks_2, &bookmark, ONES_CSID).await?;
-
-        // R1: correct old value, R2: wrong old value (THREES instead of ONES)
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.update(
-            f.repo_id_2,
-            &bookmark,
-            TWOS_CSID,
-            THREES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        let result = txn.commit().await?;
-        assert!(!result.is_success());
-
-        // Both should be unchanged
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(ONES_CSID)
-        );
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_2, &bookmark).await?,
-            Some(ONES_CSID)
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_rejects_duplicate_bookmark_in_same_repo(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        let result = txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        );
-        assert!(result.is_err());
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_same_bookmark_name_different_repos(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.update(
-            f.repo_id_2,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        // Both accepted — different repo IDs
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_update_log_written_for_all_repos(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-        f.set_bookmark(&f.bookmarks_2, &bookmark, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.update(
-            f.repo_id_2,
-            &bookmark,
-            THREES_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        assert!(txn.commit().await?.is_success());
-
-        // Each repo's log has 2 entries: the force_set then the multi-repo update.
-        let log_1: Vec<_> = f
-            .bookmarks_1
-            .read_next_bookmark_log_entries(
-                f.ctx.clone(),
-                BookmarkUpdateLogId(0),
-                10,
-                Freshness::MostRecent,
-            )
-            .try_collect()
-            .await?;
-        assert_eq!(log_1.len(), 2);
-        assert_eq!(log_1[1].from_changeset_id, Some(ONES_CSID));
-        assert_eq!(log_1[1].to_changeset_id, Some(TWOS_CSID));
-        assert_eq!(log_1[1].repo_id, f.repo_id_1);
-
-        let log_2: Vec<_> = f
-            .bookmarks_2
-            .read_next_bookmark_log_entries(
-                f.ctx.clone(),
-                BookmarkUpdateLogId(0),
-                10,
-                Freshness::MostRecent,
-            )
-            .try_collect()
-            .await?;
-        assert_eq!(log_2.len(), 2);
-        assert_eq!(log_2[1].from_changeset_id, Some(ONES_CSID));
-        assert_eq!(log_2[1].to_changeset_id, Some(THREES_CSID));
-        assert_eq!(log_2[1].repo_id, f.repo_id_2);
-
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_mixed_create_update_delete(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let master = BookmarkKey::new("master")?;
-        let release = BookmarkKey::new("release")?;
-        let feature = BookmarkKey::new("feature")?;
-
-        f.set_bookmark(&f.bookmarks_1, &master, ONES_CSID).await?;
-        f.set_bookmark(&f.bookmarks_2, &release, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &master,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.create(
-            f.repo_id_2,
-            &feature,
-            THREES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.delete(
-            f.repo_id_2,
-            &release,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        assert!(txn.commit().await?.is_success());
-
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &master).await?,
-            Some(TWOS_CSID)
-        );
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_2, &feature).await?,
-            Some(THREES_CSID)
-        );
-        assert_eq!(f.get_bookmark(&f.bookmarks_2, &release).await?, None);
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_create_failure_rolls_back(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-        f.set_bookmark(&f.bookmarks_2, &bookmark, ONES_CSID).await?;
-
-        // Update R1 + create R2 "master" (already exists) => should roll back both
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.create(
-            f.repo_id_2,
-            &bookmark,
-            THREES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        assert!(!txn.commit().await?.is_success());
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(ONES_CSID)
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_retry_on_retryable_error(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let attempts = std::cell::Cell::new(0u64);
-
-        let result = retry_commit_loop(&ctx, 5, || {
-            attempts.set(attempts.get() + 1);
-            let attempt = attempts.get();
-            async move {
-                if attempt == 1 {
-                    Err(BookmarkTransactionError::RetryableError(anyhow!(
-                        "simulated transient failure"
-                    )))
-                } else {
-                    Ok(MultiRepoBookmarksTransactionResult::Success)
-                }
-            }
-        })
-        .await?;
-
-        assert!(result.is_success());
-        assert_eq!(attempts.get(), 2, "should succeed on second attempt");
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_retryable_error_exhausted(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let attempts = std::cell::Cell::new(0u64);
-
-        let result = retry_commit_loop(&ctx, 3, || {
-            attempts.set(attempts.get() + 1);
-            async move {
-                Err::<MultiRepoBookmarksTransactionResult, _>(
-                    BookmarkTransactionError::RetryableError(anyhow!(
-                        "simulated permanent transient failure"
-                    )),
-                )
-            }
-        })
-        .await;
-
-        let err = match result {
-            Ok(_) => panic!("expected Err after exhausting retries"),
-            Err(e) => e,
-        };
-        assert_eq!(
-            attempts.get(),
-            3,
-            "should attempt exactly max_attempts times"
-        );
-        let err_msg = format!("{err:#}");
-        assert!(
-            err_msg.contains("exhausted 3 retry attempts"),
-            "error should describe exhaustion: {err_msg}"
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_other_error_not_retried(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let attempts = std::cell::Cell::new(0u64);
-
-        let result = retry_commit_loop(&ctx, 5, || {
-            attempts.set(attempts.get() + 1);
-            async move {
-                Err::<MultiRepoBookmarksTransactionResult, _>(BookmarkTransactionError::Other(
-                    anyhow!("non-retryable infrastructure failure"),
-                ))
-            }
-        })
-        .await;
-
-        assert!(result.is_err(), "Other error must propagate");
-        assert_eq!(attempts.get(), 1, "Other error must not retry");
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_logic_error_translates_to_cas_failure(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let attempts = std::cell::Cell::new(0u64);
-
-        let result = retry_commit_loop(&ctx, 5, || {
-            attempts.set(attempts.get() + 1);
-            async move {
-                Err::<MultiRepoBookmarksTransactionResult, _>(BookmarkTransactionError::LogicError)
-            }
-        })
-        .await?;
-
-        assert!(!result.is_success(), "LogicError should map to CasFailure");
-        assert_eq!(attempts.get(), 1, "LogicError must not retry");
-        Ok(())
-    }
-
-    /// A hook that counts its invocations and fails the first `fail_first`
-    /// attempts, so tests can observe both re-runs and failure handling.
-    fn counting_hook(fail_first: usize) -> (BookmarkTransactionHook, Arc<AtomicUsize>) {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let counter = calls.clone();
-        let hook: BookmarkTransactionHook = Arc::new(move |_ctx, txn| {
-            let seen = counter.fetch_add(1, Ordering::SeqCst);
-            async move {
-                if seen < fail_first {
-                    Err(BookmarkTransactionError::RetryableError(anyhow!(
-                        "simulated transient hook failure"
-                    )))
-                } else {
-                    Ok(txn)
-                }
-            }
-            .boxed()
-        });
-        (hook, calls)
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_commit_with_hooks_runs_hook_and_moves_bookmarks(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        let (hook, calls) = counting_hook(0);
-        let result = txn.commit_with_hooks(vec![hook]).await?;
-
-        assert!(result.is_success());
-        assert_eq!(calls.load(Ordering::SeqCst), 1, "hook should run once");
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(TWOS_CSID),
-            "bookmark should move when the hook succeeds",
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_hook_failure_aborts_the_bookmark_move(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        // Fails on every attempt, so the retry budget is exhausted.
-        let (hook, calls) = counting_hook(usize::MAX);
-        let result = txn.commit_with_hooks(vec![hook]).await;
-
-        assert!(result.is_err(), "a failing hook must fail the commit");
-        assert!(
-            calls.load(Ordering::SeqCst) > 1,
-            "a retryable hook failure should be retried",
-        );
-        // The hook shares the bookmark move's transaction, so aborting it must
-        // leave the bookmark where it was.
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(ONES_CSID),
-            "bookmark must not move when the hook fails",
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_hooks_rerun_on_each_attempt(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        let (hook, calls) = counting_hook(1);
-        let result = txn.commit_with_hooks(vec![hook]).await?;
-
-        assert!(result.is_success());
-        // This is why hook writes must be idempotent.
-        assert_eq!(
-            calls.load(Ordering::SeqCst),
-            2,
-            "hook should run again on the retried attempt",
-        );
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(TWOS_CSID),
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_hook_logic_error_is_not_reported_as_a_cas_failure(
-        fb: FacebookInit,
-    ) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-        let bookmark = BookmarkKey::new("master")?;
-        f.set_bookmark(&f.bookmarks_1, &bookmark, ONES_CSID).await?;
-
-        let mut txn = f.multi_txn();
-        txn.update(
-            f.repo_id_1,
-            &bookmark,
-            TWOS_CSID,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-
-        // A buggy hook claiming a CAS failure must not be laundered into
-        // `CasFailure`, which the caller reads as "someone else won the race"
-        // and retries against a fault that never clears.
-        let hook: BookmarkTransactionHook =
-            Arc::new(|_ctx, _txn| async { Err(BookmarkTransactionError::LogicError) }.boxed());
-        let result = txn.commit_with_hooks(vec![hook]).await;
-
-        let err = match result {
-            Err(err) => err,
-            Ok(_) => panic!("a hook reporting LogicError must fail the commit"),
-        };
-        assert!(
-            format!("{err:#}").contains("only bookmark writes can do"),
-            "the error should name the real problem, got: {err:#}",
-        );
-        assert_eq!(
-            f.get_bookmark(&f.bookmarks_1, &bookmark).await?,
-            Some(ONES_CSID),
-            "bookmark must not move",
-        );
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_hooks_not_run_when_there_are_no_ops(fb: FacebookInit) -> Result<()> {
-        let f = TwoRepoFixture::new(fb)?;
-
-        let (hook, calls) = counting_hook(0);
-        let result = f.multi_txn().commit_with_hooks(vec![hook]).await?;
-
-        assert!(result.is_success());
-        assert_eq!(
-            calls.load(Ordering::SeqCst),
-            0,
-            "no bookmark moved, so there is nothing for a hook to record",
-        );
-        Ok(())
-    }
 }

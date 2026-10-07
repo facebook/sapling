@@ -1,4 +1,5 @@
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
 
 oncall("scm_server_treehugger")
 
@@ -6,14 +7,6 @@ rust_library(
     name = "multi_repo_bookmarks_transaction",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "."},
-    test_deps = [
-        "fbsource//third-party/rust:futures",
-        "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
-        "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/stats:stats",
@@ -22,6 +15,26 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "multi_repo_bookmarks_transaction_test",
+    srcs = glob(["test/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
+        "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
+        "//eden/mononoke/repo_attributes/bookmarks/multi_repo_bookmarks_transaction:multi_repo_bookmarks_transaction",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
