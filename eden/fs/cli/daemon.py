@@ -495,15 +495,13 @@ def _start_edenfs_service(
         launch_env = eden_env
         use_systemd_cgroup = False
 
-    creation_flags = 0
-
     maybe_edensparse_migration(instance, EdensparseMigrationStep.PRE_EDEN_START)
-    exit_code = subprocess.call(
-        cmd, stdin=subprocess.DEVNULL, env=launch_env, creationflags=creation_flags
-    )
+    exit_code, daemon_error = _launch_daemon(instance, cmd, launch_env)
     maybe_edensparse_migration(instance, EdensparseMigrationStep.POST_EDEN_START)
     if exit_code != 0:
-        error_report.record(f"edenfs daemon startup exited with status {exit_code}")
+        error_report.record(
+            daemon_error or f"edenfs daemon startup exited with status {exit_code}"
+        )
 
     if use_systemd_cgroup:
         instance.log_sample(
@@ -667,6 +665,41 @@ def _read_startup_log(startup_log: Path, start_time: float) -> Optional[str]:
     except OSError as e:
         print_stderr(f"warning: failed to read startup log: {e}")
     return None
+
+
+def _launch_daemon(
+    instance: EdenInstance, cmd: List[str], env: Dict[str, str]
+) -> Tuple[int, Optional[str]]:
+    """Run the daemon launch command.
+
+    Outside Windows, the command writes its stderr to the startup log. The log
+    shows on stderr when the command exits. Return the exit code. On failure,
+    also return the daemon error from the log.
+    """
+    if sys.platform == "win32":
+        return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=env), None
+
+    startup_log = _new_startup_log(instance)
+    start_time = time.time()
+    try:
+        instance.state_dir.mkdir(parents=True, exist_ok=True)
+        # Use a file, not a pipe. The privhelper inherits this stderr and can
+        # keep a pipe open after the daemon command exits.
+        log_file = open(startup_log, "wb")
+    except OSError as e:
+        print_stderr(f"warning: failed to open the startup log: {e}")
+        return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=env), None
+    with log_file:
+        exit_code = subprocess.call(
+            cmd, stdin=subprocess.DEVNULL, stderr=log_file, env=env
+        )
+
+    content = _read_startup_log(startup_log, start_time)
+    if content:
+        sys.stderr.write(content)
+    if exit_code == 0 or not content:
+        return exit_code, None
+    return exit_code, _extract_daemon_error(content)
 
 
 def _systemctl_start_or_reload(

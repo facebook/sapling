@@ -17,6 +17,14 @@ from eden.fs.cli import daemon, daemon_util
 from eden.fs.cli.config import EdenInstance
 
 
+STARTUP_OUTPUT = (
+    "I1006 early XLOG noise\n"
+    "Starting edenfs 20261006-090124, pid 86162, session_id 1706489688\n"
+    "error starting EdenFS: another instance of Eden appears to be running\n"
+)
+DAEMON_ERROR = "error starting EdenFS: another instance of Eden appears to be running"
+
+
 class StartupLogTest(unittest.TestCase):
     def test_new_startup_log_rotates_the_earlier_log(self) -> None:
         instance: MagicMock = MagicMock(spec=EdenInstance)
@@ -80,3 +88,56 @@ class StartupLogTest(unittest.TestCase):
 
                 self.assertEqual(rc, 0)
                 self.assertEqual(stderr.getvalue(), content or "")
+
+
+class LaunchDaemonTest(unittest.TestCase):
+    def launch(self, script: str) -> tuple[int, str | None, str]:
+        """Run `script` as the daemon launch command.
+
+        Return the exit code, the daemon error and the stderr text.
+        """
+        instance: MagicMock = MagicMock(spec=EdenInstance)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            instance.state_dir = Path(temp_dir)
+            with patch.object(daemon.sys, "stderr", io.StringIO()) as stderr:
+                exit_code, error = daemon._launch_daemon(
+                    instance, ["/bin/sh", "-c", script], {}
+                )
+            log = (instance.state_dir / daemon_util.STARTUP_LOG_FILENAME).read_text()
+        self.assertEqual(stderr.getvalue(), log)
+        return exit_code, error, log
+
+    def test_failure_returns_the_daemon_error(self) -> None:
+        exit_code, error, log = self.launch(
+            f"printf '{STARTUP_OUTPUT}' >&2; echo stdout line; exit 1"
+        )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(error, DAEMON_ERROR)
+        self.assertEqual(log, STARTUP_OUTPUT)
+
+    def test_success_returns_no_error(self) -> None:
+        exit_code, error, log = self.launch(f"printf '{STARTUP_OUTPUT}' >&2")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIsNone(error)
+        self.assertEqual(log, STARTUP_OUTPUT)
+
+    def test_launch_without_a_startup_log(self) -> None:
+        instance: MagicMock = MagicMock(spec=EdenInstance)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            instance.state_dir = Path(temp_dir)
+            with (
+                patch.object(
+                    daemon, "open", side_effect=OSError("disk full"), create=True
+                ),
+                patch.object(daemon, "print_stderr") as print_stderr,
+            ):
+                result = daemon._launch_daemon(
+                    instance, ["/bin/sh", "-c", "exit 3"], {}
+                )
+
+        self.assertEqual(result, (3, None))
+        print_stderr.assert_called_once_with(
+            "warning: failed to open the startup log: disk full"
+        )
