@@ -218,6 +218,8 @@ async fn make_file_diff_request(
 
 /// Given the paths and sizes of files to diff returns the stream of renderable
 /// structs. The sizes are used to avoid hitting size limit when doing batch requests.
+/// A batch whose response was partial records it on the client, so the caller
+/// can emit a single note after rendering succeeds.
 pub(crate) fn diff_files<T: IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>>(
     connection: &ScsClient,
     commit: thrift::CommitSpecifier,

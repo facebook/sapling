@@ -12,6 +12,8 @@ use std::iter::once;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -182,6 +184,7 @@ fn build_from_tier_name_via_sr(
 
     Ok(ScsClient {
         client,
+        partial_response: Arc::new(AtomicBool::new(false)),
         correlator: Some(correlator),
     })
 }
@@ -236,6 +239,7 @@ fn build_from_tier_name_via_x2p(
 
     Ok(ScsClient {
         client,
+        partial_response: Arc::new(AtomicBool::new(false)),
         correlator: Some(correlator),
     })
 }
@@ -363,6 +367,7 @@ impl ScsClientHostBuilder {
         let client = build_SourceControlService_client(builder)?;
         Ok(ScsClient {
             client,
+            partial_response: Arc::new(AtomicBool::new(false)),
             correlator: Some(correlator),
         })
     }
@@ -383,6 +388,7 @@ impl ScsClientHostBuilder {
 #[derive(Clone)]
 pub struct ScsClient {
     client: Arc<dyn SourceControlService + Sync>,
+    partial_response: Arc<AtomicBool>,
     correlator: Option<String>,
 }
 
@@ -390,6 +396,18 @@ impl ScsClient {
     /// Return the correlator for this scsclient.
     pub fn get_client_corrrelator(&self) -> Option<String> {
         self.correlator.clone()
+    }
+
+    /// Record that a response seen by this client carried the
+    /// partial-response signal. Never reset: a client serves one invocation,
+    /// and any partial response taints its output.
+    pub fn note_partial(&self) {
+        self.partial_response.store(true, Ordering::Relaxed);
+    }
+
+    /// Whether any response seen by this client was partial.
+    pub fn is_partial(&self) -> bool {
+        self.partial_response.load(Ordering::Relaxed)
     }
 }
 
