@@ -1085,6 +1085,7 @@ fn log_result<T: AddScubaResponse>(
 
     scuba.add_future_stats(stats);
     scuba.add("status", status);
+    scuba.add("partial_response", ctx.partial_response());
     if let Some(error) = error {
         scuba.add("error", error.as_str());
     }
@@ -1278,6 +1279,7 @@ fn log_stream_complete(
 
     scuba.add_try_stream_stats(&combined_stats);
     scuba.add("status", status);
+    scuba.add("partial_response", ctx.partial_response());
     if let Some(error) = error {
         scuba.add("error", error.as_str());
     }
@@ -1457,8 +1459,12 @@ macro_rules! impl_thrift_methods {
                     let result: Result<$ok_type, $err_type> = handler.await;
 
                     // If the method set the nocache flag (due to non-KCB identity types),
-                    // propagate it to the ThriftCache response header.
-                    if ctx.nocache_thriftcache() {
+                    // or the response was partial, propagate it to the ThriftCache
+                    // response header. A partial response must not be served from
+                    // cache to an entitled caller (who would silently receive
+                    // incomplete data); the exact verdict travels in the typed
+                    // response instead.
+                    if ctx.nocache_thriftcache() || ctx.partial_response() {
                         let _ = req_ctxt.set_header("nocache", "1");
                     }
 
@@ -1542,8 +1548,12 @@ macro_rules! impl_thrift_stream_methods {
                     let result: Result<$ok_type, $err_type> = handler.await;
 
                     // If the method set the nocache flag (due to non-KCB identity types),
-                    // propagate it to the ThriftCache response header.
-                    if ctx.nocache_thriftcache() {
+                    // or the response was partial, propagate it to the ThriftCache
+                    // response header. A partial response must not be served from
+                    // cache to an entitled caller (who would silently receive
+                    // incomplete data); the exact verdict travels in the typed
+                    // response instead.
+                    if ctx.nocache_thriftcache() || ctx.partial_response() {
                         let _ = req_ctxt.set_header("nocache", "1");
                     }
 

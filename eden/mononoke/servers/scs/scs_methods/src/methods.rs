@@ -27,6 +27,23 @@ pub(crate) mod megarepo;
 pub(crate) mod repo;
 pub(crate) mod tree;
 
+/// Partial-response verdict for a unary method, from the method's total
+/// omitted-restricted count. `Some` carrying the exact signal when partial
+/// responses are allowed for this request (`None`, field unset, when not).
+/// The caller sets `nocache: 1` from the same flag, so a cached partial can
+/// never be served to an entitled caller.
+pub(crate) fn partial_response_info(
+    omitted_restricted_paths_count: Option<usize>,
+) -> Option<thrift::PartialResponseInfo> {
+    omitted_restricted_paths_count.map(|omitted_restricted_paths_count| {
+        thrift::PartialResponseInfo {
+            partial: omitted_restricted_paths_count > 0,
+            omitted_restricted_paths_count: Some(omitted_restricted_paths_count as i64),
+            ..Default::default()
+        }
+    })
+}
+
 impl SourceControlServiceImpl {
     pub(crate) async fn list_repos(
         &self,
@@ -70,5 +87,27 @@ impl SourceControlServiceImpl {
             exists,
             ..Default::default()
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_partial_response_info() {
+        // Not allowed: no field.
+        assert!(partial_response_info(None).is_none());
+        // Allowed: always populated; `partial` iff count is positive,
+        // agreeing with the `nocache` decision (set iff count positive) by
+        // construction.
+        let complete = partial_response_info(Some(0)).expect("populated when allowed");
+        assert!(!complete.partial);
+        assert_eq!(complete.omitted_restricted_paths_count, Some(0));
+        let partial = partial_response_info(Some(3)).expect("populated when allowed");
+        assert!(partial.partial);
+        assert_eq!(partial.omitted_restricted_paths_count, Some(3));
     }
 }
