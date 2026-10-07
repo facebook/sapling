@@ -2874,6 +2874,122 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_mkscratch_recovery_avoids_atfork_callbacks() {
+        const CHILD_MODE: &str = "EDEN_MKSCRATCH_ATFORK_TEST";
+        const READY: &[u8] = b"mkscratch atfork observer ready\n";
+        const CALLED: &[u8] = b"mkscratch atfork observer called\n";
+        const DONE: &[u8] = b"mkscratch atfork observer done\n";
+
+        fn write_marker(marker: &[u8]) {
+            // SAFETY: The static bytes remain valid, write is async-signal-safe,
+            // and failure exits without unwinding across the callback's C ABI.
+            unsafe {
+                if libc::write(libc::STDERR_FILENO, marker.as_ptr().cast(), marker.len())
+                    != marker.len() as isize
+                {
+                    libc::_exit(101);
+                }
+            }
+        }
+
+        extern "C" fn observe_fork() {
+            write_marker(CALLED);
+        }
+
+        if let Ok(mode) = std::env::var(CHILD_MODE) {
+            // SAFETY: Only this isolated subprocess registers the static,
+            // async-signal-safe callback and changes its own alarm.
+            unsafe {
+                libc::alarm(30);
+                assert_eq!(libc::pthread_atfork(None, None, Some(observe_fork)), 0);
+            }
+            let (release, wait) = std::sync::mpsc::channel::<()>();
+            let worker = std::thread::spawn(move || wait.recv());
+            write_marker(READY);
+            match mode.as_str() {
+                "control" => {
+                    // SAFETY: The child only calls async-signal-safe _exit;
+                    // the parent waits for this exact child, retrying EINTR.
+                    unsafe {
+                        let pid = libc::fork();
+                        assert!(pid >= 0);
+                        if pid == 0 {
+                            libc::_exit(0);
+                        }
+                        let mut status = 0;
+                        loop {
+                            let waited = libc::waitpid(pid, &mut status, 0);
+                            if waited == -1
+                                && std::io::Error::last_os_error().kind() == ErrorKind::Interrupted
+                            {
+                                continue;
+                            }
+                            assert_eq!(waited, pid);
+                            assert_eq!(status, 0);
+                            break;
+                        }
+                    }
+                }
+                "recovery" => {
+                    let output = Redirection::retry_mkscratch_after_reap(
+                        Path::new("/bin/sh"),
+                        &["-c", "printf '/tmp/scratch\\n'; printf warning >&2"].map(OsStr::new),
+                    )
+                    .expect("recovery should retain the command output");
+                    assert!(output.status.success());
+                    assert_eq!(output.stdout, b"/tmp/scratch\n");
+                    assert_eq!(output.stderr, b"warning");
+                }
+                _ => panic!("unexpected atfork test mode: {mode}"),
+            }
+            drop(release);
+            assert!(worker.join().unwrap().is_err());
+            write_marker(DONE);
+            std::process::exit(0);
+        }
+
+        for mode in ["control", "recovery"] {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "redirect::tests::test_mkscratch_recovery_avoids_atfork_callbacks",
+                    "--nocapture",
+                ])
+                .env(CHILD_MODE, mode)
+                .output()
+                .unwrap();
+            assert!(output.status.success(), "{mode}: {output:?}");
+            for marker in [READY, DONE] {
+                assert!(
+                    output.stderr.windows(marker.len()).any(|w| w == marker),
+                    "{mode}: missing observer checkpoint: {output:?}",
+                );
+            }
+            let called = output.stderr.windows(CALLED.len()).any(|w| w == CALLED);
+            // FIXME: Only the control should invoke atfork callbacks once the
+            // recovery launcher uses spawn instead of fork.
+            assert!(called, "{mode}: {output:?}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_mkscratch_recovery_drains_both_output_pipes() {
+        let output = Redirection::retry_mkscratch_after_reap(
+            Path::new("/bin/sh"),
+            &[
+                "-c",
+                "i=0; while [ \"$i\" -lt 16384 ]; do printf 'stdout\\n'; printf 'stderr\\n' >&2; i=$((i+1)); done",
+            ].map(OsStr::new),
+        )
+        .expect("both output pipes must be drained without deadlocking");
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"stdout\n".repeat(16384));
+        assert_eq!(output.stderr, b"stderr\n".repeat(16384));
+    }
+
     #[test]
     fn test_apply_symlink() {
         // The symlink creation will fail if we try to create a symlink where there's an existing
