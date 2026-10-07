@@ -52,6 +52,15 @@ pub enum TType {
     Float = 19,
 }
 
+/// Semantic key category used by protocols whose map representation depends
+/// on more than the wire-level [`TType`].
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum MapKeyType {
+    String,
+    Enum,
+    Other,
+}
+
 impl TryFrom<i8> for TType {
     type Error = anyhow::Error;
 
@@ -117,6 +126,7 @@ impl From<TType> for &'static str {
 // Get the ttype for a given type
 pub trait GetTType {
     const TTYPE: TType;
+    const MAP_KEY_TYPE: MapKeyType = MapKeyType::Other;
 }
 
 impl GetTType for () {
@@ -173,6 +183,7 @@ impl GetTType for OrderedFloat<f32> {
 
 impl GetTType for String {
     const TTYPE: TType = TType::String;
+    const MAP_KEY_TYPE: MapKeyType = MapKeyType::String;
 }
 
 impl GetTType for Bytes {
@@ -223,6 +234,7 @@ where
     T: GetTType,
 {
     const TTYPE: TType = <T as GetTType>::TTYPE;
+    const MAP_KEY_TYPE: MapKeyType = <T as GetTType>::MAP_KEY_TYPE;
 }
 
 impl<T> GetTType for Arc<T>
@@ -230,4 +242,5 @@ where
     T: GetTType,
 {
     const TTYPE: TType = <T as GetTType>::TTYPE;
+    const MAP_KEY_TYPE: MapKeyType = <T as GetTType>::MAP_KEY_TYPE;
 }

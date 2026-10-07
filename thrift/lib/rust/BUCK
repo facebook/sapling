@@ -62,6 +62,7 @@ fb_xplat_rust_library(
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:ghost",
+        "fbsource//third-party/rust:json5",
         "fbsource//third-party/rust:memchr",
         "fbsource//third-party/rust:num-derive",
         "fbsource//third-party/rust:num-traits",

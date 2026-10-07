@@ -21,5 +21,6 @@ mod compact;
 mod consts;
 mod defaults;
 mod exceptions;
+mod json5;
 mod proptest;
 mod simplejson;

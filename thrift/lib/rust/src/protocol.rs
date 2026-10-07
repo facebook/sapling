@@ -17,6 +17,7 @@
 use anyhow::bail;
 
 use crate::Result;
+use crate::ThriftEnum;
 use crate::binary_type::CopyFromBuf;
 use crate::binary_type::Discard;
 use crate::bufext::BufMutExt;
@@ -28,6 +29,7 @@ use crate::framing::FramingEncodedFinal;
 use crate::thrift_protocol::MessageType;
 use crate::thrift_protocol::ProtocolID;
 use crate::ttype::GetTType;
+use crate::ttype::MapKeyType;
 use crate::ttype::TType;
 
 /// The maximum recursive depth the skip() function will traverse
@@ -207,6 +209,15 @@ pub trait ProtocolWriter {
     fn write_field_end(&mut self);
     fn write_field_stop(&mut self);
     fn write_map_begin(&mut self, key_type: TType, value_type: TType, size: usize);
+    fn write_map_begin_with_key_type(
+        &mut self,
+        key_type: TType,
+        value_type: TType,
+        size: usize,
+        _map_key_type: MapKeyType,
+    ) {
+        self.write_map_begin(key_type, value_type, size)
+    }
     fn write_map_key_begin(&mut self);
     fn write_map_value_begin(&mut self);
     fn write_map_end(&mut self);
@@ -220,6 +231,12 @@ pub trait ProtocolWriter {
     fn write_byte(&mut self, value: i8);
     fn write_i16(&mut self, value: i16);
     fn write_i32(&mut self, value: i32);
+    fn write_enum<E>(&mut self, value: &E)
+    where
+        E: ThriftEnum + 'static,
+    {
+        self.write_i32(value.inner_value())
+    }
     fn write_i64(&mut self, value: i64);
     fn write_double(&mut self, value: f64);
     fn write_float(&mut self, value: f32);
@@ -339,6 +356,12 @@ pub trait ProtocolReader {
     fn read_i16(&mut self) -> Result<i16>;
 
     fn read_i32(&mut self) -> Result<i32>;
+    fn read_enum<E>(&mut self) -> Result<E>
+    where
+        E: ThriftEnum + 'static,
+    {
+        E::from_inner_value(self.read_i32()?)
+    }
 
     fn read_i64(&mut self) -> Result<i64>;
 

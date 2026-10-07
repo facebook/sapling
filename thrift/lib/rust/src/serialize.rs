@@ -262,7 +262,12 @@ where
     V: Serialize<P>,
 {
     fn rs_thrift_write(&self, p: &mut P) {
-        p.write_map_begin(crate::TType::Byte, V::TTYPE, self.len());
+        p.write_map_begin_with_key_type(
+            crate::TType::Byte,
+            V::TTYPE,
+            self.len(),
+            crate::MapKeyType::Other,
+        );
         for (k, v) in self.iter() {
             p.write_map_key_begin();
             k.rs_thrift_write(p);
@@ -280,7 +285,7 @@ where
     K: Serialize<P>,
 {
     fn rs_thrift_write(&self, p: &mut P) {
-        p.write_map_begin(K::TTYPE, crate::TType::Byte, self.len());
+        p.write_map_begin_with_key_type(K::TTYPE, crate::TType::Byte, self.len(), K::MAP_KEY_TYPE);
         for (k, v) in self.iter() {
             p.write_map_key_begin();
             k.rs_thrift_write(p);
@@ -313,7 +318,7 @@ where
     S: std::hash::BuildHasher,
 {
     fn rs_thrift_write(&self, p: &mut P) {
-        p.write_map_begin(K::TTYPE, crate::TType::Byte, self.len());
+        p.write_map_begin_with_key_type(K::TTYPE, crate::TType::Byte, self.len(), K::MAP_KEY_TYPE);
         for (k, v) in self.iter() {
             p.write_map_key_begin();
             k.rs_thrift_write(p);
@@ -332,7 +337,12 @@ where
     S: std::hash::BuildHasher,
 {
     fn rs_thrift_write(&self, p: &mut P) {
-        p.write_map_begin(crate::TType::Byte, V::TTYPE, self.len());
+        p.write_map_begin_with_key_type(
+            crate::TType::Byte,
+            V::TTYPE,
+            self.len(),
+            crate::MapKeyType::Other,
+        );
         for (k, v) in self.iter() {
             p.write_map_key_begin();
             k.rs_thrift_write(p);
@@ -400,7 +410,7 @@ where
     V: Serialize<P>,
 {
     fn rs_thrift_write(&self, p: &mut P) {
-        p.write_map_begin(K::TTYPE, V::TTYPE, self.len());
+        p.write_map_begin_with_key_type(K::TTYPE, V::TTYPE, self.len(), K::MAP_KEY_TYPE);
         for (k, v) in self.iter() {
             p.write_map_key_begin();
             k.rs_thrift_write(p);
@@ -421,7 +431,7 @@ where
     S: std::hash::BuildHasher,
 {
     fn rs_thrift_write(&self, p: &mut P) {
-        p.write_map_begin(K::TTYPE, V::TTYPE, self.len());
+        p.write_map_begin_with_key_type(K::TTYPE, V::TTYPE, self.len(), K::MAP_KEY_TYPE);
         for (k, v) in self.iter() {
             p.write_map_key_begin();
             k.rs_thrift_write(p);
