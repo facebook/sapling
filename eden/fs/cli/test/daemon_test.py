@@ -360,7 +360,6 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
                 daemon, "_sanitize_unit_name", return_value="edenfs_test.scope"
             ),
             patch.object(daemon, "maybe_edensparse_migration"),
-            patch.object(daemon, "_set_edenfs_slice_oomd_avoid"),
             patch.object(daemon.subprocess, "call", return_value=0) as call,
         ):
             self.assertEqual(daemon._start_edenfs_service(instance), 0)
