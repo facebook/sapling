@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use auth_consts::AUTH_SET;
+use auth_consts::INTERN_CONTROLLER;
 use auth_consts::ONCALL;
 use auth_consts::ONCALL_GROUP_TYPE;
 use auth_consts::REPO;
@@ -535,6 +536,7 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
                 (AUTH_SET, "coding_crewmates"),
                 (AUTH_SET, "svcscm_read_all"),
                 (AUTH_SET, "svnuser"),
+                (INTERN_CONTROLLER, "XInternGraphGraphQLController"),
                 (SERVICE_IDENTITY, "aosp_megarepo_service_identity"),
                 (SERVICE_IDENTITY, "gitremoteimport"),
                 (SERVICE_IDENTITY, "scm_service_identity"),

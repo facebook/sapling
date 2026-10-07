@@ -296,6 +296,26 @@ fn test_initial_acl_grants_include_coding_crewmates_read() {
     );
 }
 
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_initial_acl_grants_include_intern_graphql_controller_read() {
+    // Phabricator diff pages read the repo through the intern GraphQL
+    // controller with no user identity attached; without this grant every
+    // `jf submit` against a fresh repo fails on the metadata read.
+    let grants = initial_acl_grants("some_hipster_group");
+    let read = grants
+        .iter()
+        .find(|g| g.action == "read")
+        .expect("initial_acl_grants must contain a read action");
+    assert!(
+        read.entry_changes.iter().any(|e| {
+            e.entry.id_type == INTERN_CONTROLLER
+                && e.entry.id_data == "XInternGraphGraphQLController"
+        }),
+        "initial_acl_grants read action must grant INTERN_CONTROLLER:XInternGraphGraphQLController",
+    );
+}
+
 #[mononoke::test]
 fn test_to_repo_spec_tshirt_size_mapping() {
     assert_eq!(
