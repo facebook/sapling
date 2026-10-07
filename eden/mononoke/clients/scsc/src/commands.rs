@@ -36,7 +36,7 @@ base_app::subcommands! {
     mod prepare_commits if "SCSC_WRITES_ENABLED";
     mod rebase_stack if "SCSC_WRITES_ENABLED";
     mod pushrebase_history;
-    mod restricted_paths if "SCSC_ADMIN_ENABLED";
+    mod restricted_paths;
     mod git_mutation_history;
     mod hg_mutation_history;
     mod repo_exists;
