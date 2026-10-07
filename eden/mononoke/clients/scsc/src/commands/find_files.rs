@@ -123,8 +123,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .commit_find_files(&commit_specifier, &params)
             .await
             .map_err(|e| e.handle_selection_error(&commit_specifier.repo))?;
-        app.target
+        let files_partial = crate::util::is_partial_verdict(&response.partial_info);
+        let result = app
+            .target
             .render_one(&args, FileListOutput(response.files))
-            .await
+            .await;
+        if result.is_ok() && files_partial {
+            crate::util::print_partial_note();
+        }
+        result
     }
 }

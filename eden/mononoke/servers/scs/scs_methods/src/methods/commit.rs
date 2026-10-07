@@ -1018,21 +1018,53 @@ impl SourceControlServiceImpl {
             None => ChangesetFileOrdering::Unordered,
         };
 
-        let files = changeset
+        let policy = RestrictedPathsPolicy::for_scs_request();
+        let partial = !matches!(policy, RestrictedPathsPolicy::Strict);
+
+        let path_stream = changeset
             .find_files(
                 prefixes,
                 params.basenames,
                 params.basename_suffixes,
                 ordering,
             )
-            .await?
-            .take(limit)
-            .map_ok(|path| path.to_string())
-            .try_collect()
             .await?;
+        let files: Vec<String> = if partial {
+            path_stream
+                .map_ok(|path| {
+                    cloned!(changeset);
+                    async move {
+                        match changeset.check_path_visibility(&path).await {
+                            Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
+                            Ok(PathVisibility::Denied) => Ok(None),
+                            Err(e) => Err(e),
+                        }
+                    }
+                })
+                .try_buffered(50)
+                .try_filter_map(|kept| {
+                    // Downstream of the buffer, so buffered lookahead past
+                    // `take(limit)` is dropped without counting.
+                    if kept.is_none() {
+                        policy.record_omission();
+                    }
+                    futures::future::ready(Ok(kept))
+                })
+                .take(limit)
+                .try_collect()
+                .await?
+        } else {
+            path_stream
+                .take(limit)
+                .map_ok(|path| path.to_string())
+                .try_collect()
+                .await?
+        };
+        policy.set_partial_if_omitted(&ctx);
 
         Ok(thrift::CommitFindFilesResponse {
             files,
+            partial_info: super::partial_response_info(policy.omitted_count()),
             ..Default::default()
         })
     }
