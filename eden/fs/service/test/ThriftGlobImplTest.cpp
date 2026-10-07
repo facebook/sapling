@@ -5,15 +5,24 @@
  * GNU General Public License version 2.
  */
 
+#include "eden/fs/service/ThriftGlobImpl.h"
+
 #include <fb303/ServiceData.h>
+#include <folly/Portability.h>
+#include <folly/Range.h>
 #include <folly/coro/GtestHelpers.h>
 #include <folly/coro/Task.h>
+#include <folly/executors/ManualExecutor.h>
 #include <gtest/gtest.h>
 #include <cstddef>
 #include <memory>
+#include <thread>
+
+#if FOLLY_SANITIZE_THREAD
+#include <sanitizer/tsan_interface.h>
+#endif
 
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -46,6 +55,42 @@ std::vector<std::string> getMatchingFiles(const Glob& result) {
     matchingFiles.emplace_back(path.asString());
   }
   return matchingFiles;
+}
+
+TEST(ThriftGlobPrefetchTest, releasesLocksBeforeResumingOnAnotherThread) {
+  constexpr folly::StringPiece kFileName{"file.txt"};
+  constexpr folly::StringPiece kContents{"contents"};
+  FakeTreeBuilder builder;
+  builder.setFile(kFileName, kContents);
+  TestMount mount{builder};
+  auto serverState = createTestServerState();
+  PrefetchParams params;
+  params.returnPrefetchedFiles() = true;
+  ThriftGlobImpl globber{params};
+  auto runGlob = [&]() -> folly::coro::Task<std::unique_ptr<Glob>> {
+    co_return co_await globber.glob(
+        mount.getEdenMount(),
+        serverState,
+        {kFileName.str()},
+        ObjectFetchContext::getNullContext());
+  };
+  folly::ManualExecutor executor;
+  auto result = folly::coro::co_withExecutor(&executor, runGlob()).start();
+
+  // The root is already loaded, so the first suspension reschedules the
+  // prefetch batch. Complete it on another thread, as a thread pool can do.
+  ASSERT_EQ(executor.step(), 1);
+  ASSERT_FALSE(result.isReady());
+  std::thread([&] { executor.drain(); }).join();
+  ASSERT_TRUE(result.isReady());
+  const std::vector<std::string> expectedFiles{kFileName.str()};
+  EXPECT_EQ(expectedFiles, getMatchingFiles(*std::move(result).get()));
+
+#if FOLLY_SANITIZE_THREAD
+  // A read lock held across the suspension is released on the worker, leaving
+  // stale ownership on this thread even after the glob has completed.
+  __tsan_check_no_mutexes_held();
+#endif
 }
 
 class ThriftGlobImplTest : public ::testing::Test {

@@ -266,8 +266,11 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   // Prefetch blobs in parallel batches
   if (fileBlobsToPrefetch) {
     auto store = edenMount->getObjectStore();
-    auto blobs = fileBlobsToPrefetch->rlock();
-    auto range = folly::Range{blobs->data(), blobs->size()};
+    // All glob tasks have finished writing the list. Own its storage locally
+    // so the batch ranges stay valid without holding a lock across co_await.
+    std::vector<ObjectId> blobs;
+    std::swap(blobs, *fileBlobsToPrefetch->wlock());
+    auto range = folly::Range{blobs.data(), blobs.size()};
 
     std::vector<folly::coro::Task<void>> prefetchTasks;
     while (range.size() > prefetchBlobBatchSize) {

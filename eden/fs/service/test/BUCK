@@ -93,8 +93,11 @@ cpp_unittest(
         "//eden/fs/testharness:test_server_state",
         "//eden/fs/utils:matcher",
         "//fb303:service_data",
+        "//folly:portability",
+        "//folly:range",
         "//folly/coro:gtest_helpers",
         "//folly/coro:task",
+        "//folly/executors:manual_executor",
     ],
 )
 
