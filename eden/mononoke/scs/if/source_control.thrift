@@ -2523,7 +2523,8 @@ union RepoUpdateSubmoduleExpansionResult {
 /// Scuba (streams). The field is populated only when the
 /// `scs_enable_partial_responses` killswitch is on; its absence means
 /// the server does not support partial responses, or they are not
-/// allowed for this request.
+/// allowed for this request. For diffs, both sides of an entry are
+/// counted separately: one omitted entry can contribute 2 to the count.
 struct PartialResponseInfo {
   1: bool partial;
   2: optional i64 omitted_restricted_paths_count;
@@ -2593,6 +2594,8 @@ struct CommitLookupPushrebaseHistoryResponse {
 struct CommitFindFilesResponse {
   /// The files that match.
   1: list<string> files;
+  /// Partial-response verdict. See PartialResponseInfo.
+  2: optional PartialResponseInfo partial_info;
 }
 
 struct CommitFindFilesStreamResponse {}
