@@ -50,3 +50,40 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: SetArgs) -> Result<()
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
+    use test_repo_factory::TestRepoFactory;
+
+    use super::*;
+
+    fn set_args(value: i64, prev_value: Option<i64>) -> SetArgs {
+        SetArgs {
+            counter_name: "foo".to_string(),
+            value,
+            prev_value,
+        }
+    }
+
+    /// FIXME: BUG! This did return `Ok(())` (exit status 0) when `set --prev-value` found a
+    /// different previous value and left the counter untouched, but should have returned an
+    /// error so that callers can see the compare-and-set did not happen.
+    #[mononoke::fbinit_test]
+    async fn test_set_with_mismatched_prev_value_fails(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+        set(&ctx, &repo, set_args(7, None)).await?;
+        set(&ctx, &repo, set_args(10, Some(7))).await?;
+
+        let result = set(&ctx, &repo, set_args(12, Some(8))).await;
+        // FIXME: BUG! The mismatch is only printed; the command still succeeds.
+        assert!(result.is_ok());
+        assert_eq!(
+            repo.mutable_counters().get_counter(&ctx, "foo").await?,
+            Some(10)
+        );
+        Ok(())
+    }
+}
