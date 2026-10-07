@@ -107,6 +107,7 @@
     "scm/mononoke:allow_bare_author_unixname": true,
     "scm/mononoke:lock_users_directory": false,
     "scm/mononoke:restrict_user_directories_resolve_unixname_from_employee_service": false,
+    "scm/mononoke:verify_integrity_resolve_unixname_from_fbid": false,
     "scm/mononoke:per_bookmark_locking": true,
     "scm/mononoke:per_bookmark_locking_shadow": false,
     "scm/mononoke:use_blame_v3": false,
