@@ -21,7 +21,8 @@ Validate if we can update an existing counter
 
 Validate if we get an error trying to update an existing counter with incorrect previous value
   $ mononoke_admin mutable-counters -R repo set foo 12 --prev-value 8
-  Value of foo in repo repo(Id: 0) was NOT set to 12. The previous value of the counter did not match Some(8)
+  Error: Value of foo in repo repo(Id: 0) was NOT set to 12. The previous value of the counter did not match Some(8)
+  [1]
 
 Validate if all the new added counters are present
   $ mononoke_admin mutable-counters -R repo list

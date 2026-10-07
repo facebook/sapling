@@ -6,6 +6,7 @@
  */
 
 use anyhow::Result;
+use anyhow::bail;
 use clap::Args;
 use context::CoreContext;
 use mutable_counters::MutableCountersRef;
@@ -39,13 +40,13 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: SetArgs) -> Result<()
             name, repo_name, repo_id, set_args.value
         );
     } else {
-        println!(
+        bail!(
             "Value of {} in repo {}(Id: {}) was NOT set to {}. The previous value of the counter did not match {:?}",
             name,
             repo_name,
             repo_id,
             set_args.value,
-            set_args.prev_value.clone()
+            set_args.prev_value
         );
     }
     Ok(())
@@ -67,9 +68,8 @@ mod tests {
         }
     }
 
-    /// FIXME: BUG! This did return `Ok(())` (exit status 0) when `set --prev-value` found a
-    /// different previous value and left the counter untouched, but should have returned an
-    /// error so that callers can see the compare-and-set did not happen.
+    /// `set --prev-value` with a previous value that does not match fails the command and leaves
+    /// the counter untouched.
     #[mononoke::fbinit_test]
     async fn test_set_with_mismatched_prev_value_fails(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
@@ -77,9 +77,10 @@ mod tests {
         set(&ctx, &repo, set_args(7, None)).await?;
         set(&ctx, &repo, set_args(10, Some(7))).await?;
 
-        let result = set(&ctx, &repo, set_args(12, Some(8))).await;
-        // FIXME: BUG! The mismatch is only printed; the command still succeeds.
-        assert!(result.is_ok());
+        let err = set(&ctx, &repo, set_args(12, Some(8)))
+            .await
+            .expect_err("a mismatched previous value must fail the command");
+        assert!(err.to_string().contains("did not match Some(8)"), "{err}");
         assert_eq!(
             repo.mutable_counters().get_counter(&ctx, "foo").await?,
             Some(10)
