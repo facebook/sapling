@@ -24,6 +24,7 @@ use anyhow::bail;
 use fbthrift::GetUri;
 use fbthrift::binary_protocol;
 use fbthrift::compact_protocol;
+use fbthrift::json5_protocol;
 use fbthrift::simplejson_protocol;
 use itertools::Itertools;
 use protocol::StandardProtocol;
@@ -37,9 +38,11 @@ pub struct AnyRegistry {
 
 pub trait SerializeRef = binary_protocol::SerializeRef
     + compact_protocol::SerializeRef
+    + json5_protocol::SerializeRef
     + simplejson_protocol::SerializeRef;
 pub trait DeserializeSlice = binary_protocol::DeserializeSlice
     + compact_protocol::DeserializeSlice
+    + json5_protocol::DeserializeSlice
     + simplejson_protocol::DeserializeSlice;
 
 struct AnySerDeser {
@@ -157,6 +160,7 @@ fn serialize<T: SerializeRef>(obj: &T, protocol: StandardProtocol) -> Result<Vec
     match protocol {
         StandardProtocol::Binary => Ok(binary_protocol::serialize(obj).to_vec()),
         StandardProtocol::Compact => Ok(compact_protocol::serialize(obj).to_vec()),
+        StandardProtocol::Json5 => Ok(json5_protocol::serialize_ref(obj).to_vec()),
         StandardProtocol::SimpleJson => Ok(simplejson_protocol::serialize(obj).to_vec()),
         unsupported => Err(anyhow!("Unsupported protocol: {:?}", unsupported)),
     }
@@ -166,6 +170,7 @@ fn deserialize<T: DeserializeSlice>(data: &[u8], protocol: StandardProtocol) -> 
     match protocol {
         StandardProtocol::Binary => binary_protocol::deserialize(data),
         StandardProtocol::Compact => compact_protocol::deserialize(data),
+        StandardProtocol::Json5 => json5_protocol::deserialize_slice(data),
         StandardProtocol::SimpleJson => simplejson_protocol::deserialize(data),
         unsupported => Err(anyhow!("Unsupported protocol: {:?}", unsupported)),
     }
@@ -191,6 +196,7 @@ mod tests {
         vec![
             StandardProtocol::Binary,
             StandardProtocol::Compact,
+            StandardProtocol::Json5,
             StandardProtocol::SimpleJson,
         ]
     }
@@ -288,7 +294,9 @@ mod tests {
         let uri = Some(struct_map_string_i32::uri().to_owned());
         let compact = "1b018546416e7377657220746f2074686520556c74696d617465205175657374696f6e206f66204c6966652c2074686520556e6976657273652c20616e642045766572797468696e672e5400";
         let binary = "0d00010b080000000100000046416e7377657220746f2074686520556c74696d617465205175657374696f6e206f66204c6966652c2074686520556e6976657273652c20616e642045766572797468696e672e0000002a00";
-        let json = "{\"field_1\":{\"Answer to the Ultimate Question of Life, the Universe, and Everything.\":42}}";
+        let simple_json = "{\"field_1\":{\"Answer to the Ultimate Question of Life, the Universe, and Everything.\":42}}";
+        let json5_input = "{field_1:{'Answer to the Ultimate Question of Life, the Universe, and Everything.':42}}";
+        let json5_output = simple_json;
 
         let val = any::Any {
             r#type: uri.clone(),
@@ -325,7 +333,7 @@ mod tests {
         let val = any::Any {
             r#type: uri.clone(),
             protocol: Some(StandardProtocol::SimpleJson),
-            data: json.as_bytes().to_vec(),
+            data: simple_json.as_bytes().to_vec(),
             ..Default::default()
         };
         let any = registry.load(&val)?;
@@ -334,9 +342,27 @@ mod tests {
             .map_err(|_| anyhow::Error::msg("bad any cast"))?;
         assert_eq!(*val, get_test_object());
         assert_eq!(
-            json,
+            simple_json,
             std::str::from_utf8(
                 &registry.store(val as Box<dyn std::any::Any>, StandardProtocol::SimpleJson)?
+            )?
+        );
+
+        let val = any::Any {
+            r#type: uri.clone(),
+            protocol: Some(StandardProtocol::Json5),
+            data: json5_input.as_bytes().to_vec(),
+            ..Default::default()
+        };
+        let any = registry.load(&val)?;
+        let val = any
+            .downcast::<struct_map_string_i32>()
+            .map_err(|_| anyhow::Error::msg("bad any cast"))?;
+        assert_eq!(*val, get_test_object());
+        assert_eq!(
+            json5_output,
+            std::str::from_utf8(
+                &registry.store(val as Box<dyn std::any::Any>, StandardProtocol::Json5)?
             )?
         );
 

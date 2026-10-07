@@ -16,6 +16,7 @@
 
 use fbthrift::binary_protocol;
 use fbthrift::compact_protocol;
+use fbthrift::json5_protocol;
 use fbthrift::simplejson_protocol;
 use standard::StandardProtocol;
 use type_rep::ProtocolUnion;
@@ -29,6 +30,7 @@ pub trait SerializableToAny:
     + fbthrift::GetTypeNameType
     + fbthrift::GetTType
     + compact_protocol::SerializeRef
+    + json5_protocol::SerializeRef
     + simplejson_protocol::SerializeRef
 {
 }
@@ -38,6 +40,7 @@ impl<T> SerializableToAny for T where
         + fbthrift::GetTypeNameType
         + fbthrift::GetTType
         + compact_protocol::SerializeRef
+        + json5_protocol::SerializeRef
         + simplejson_protocol::SerializeRef
 {
 }
@@ -51,11 +54,22 @@ pub fn serialize<T: SerializableToAny>(object: &T) -> any::Any {
     }
 }
 
+/// Serializes a typed value into a Thrift Any using the SimpleJSON protocol.
 pub fn serialize_json<T: SerializableToAny>(object: &T) -> any::Any {
     any::Any {
         r#type: <T as GetThriftAnyType>::get_thrift_any_type(),
         protocol: ProtocolUnion::standard(StandardProtocol::SimpleJson),
         data: simplejson_protocol::serialize(object).to_vec(),
+        ..Default::default()
+    }
+}
+
+/// Serializes a typed value into a Thrift Any using the JSON5 protocol.
+pub fn serialize_json5<T: SerializableToAny>(object: &T) -> any::Any {
+    any::Any {
+        r#type: <T as GetThriftAnyType>::get_thrift_any_type(),
+        protocol: ProtocolUnion::standard(StandardProtocol::Json5),
+        data: json5_protocol::serialize_ref(object).to_vec(),
         ..Default::default()
     }
 }
@@ -69,9 +83,11 @@ pub trait SerializableThriftObject:
     + fbthrift::GetTypeNameType
     + binary_protocol::DeserializeSlice
     + compact_protocol::DeserializeSlice
+    + json5_protocol::DeserializeSlice
     + simplejson_protocol::DeserializeSlice
     + binary_protocol::SerializeRef
     + compact_protocol::SerializeRef
+    + json5_protocol::SerializeRef
     + simplejson_protocol::SerializeRef
 {
 }
@@ -84,9 +100,32 @@ impl<T> SerializableThriftObject for T where
         + fbthrift::GetTypeNameType
         + binary_protocol::DeserializeSlice
         + compact_protocol::DeserializeSlice
+        + json5_protocol::DeserializeSlice
         + simplejson_protocol::DeserializeSlice
         + binary_protocol::SerializeRef
         + compact_protocol::SerializeRef
+        + json5_protocol::SerializeRef
         + simplejson_protocol::SerializeRef
 {
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json5_any_uses_the_json5_protocol_id_and_encoding() {
+        let value = test_structs::SimpleEnum::VARIANT2;
+
+        let packed = serialize_json5(&value);
+
+        assert!(matches!(
+            packed.protocol,
+            ProtocolUnion::standard(StandardProtocol::Json5)
+        ));
+        assert_eq!(packed.data, br#""VARIANT2 (2)""#);
+        let decoded: test_structs::SimpleEnum =
+            crate::deserialize(&packed).expect("JSON5 Any must round-trip");
+        assert_eq!(decoded, value);
+    }
 }

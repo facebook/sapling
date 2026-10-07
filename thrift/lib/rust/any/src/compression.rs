@@ -16,6 +16,7 @@
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use standard::StandardProtocol;
 use type_rep::ProtocolUnion;
 
@@ -34,6 +35,12 @@ pub fn compress_any(any: &Any) -> Result<Any> {
     if is_compressed(any) {
         return Ok(any.clone());
     }
+    if !matches!(
+        any.protocol,
+        ProtocolUnion::standard(StandardProtocol::Compact)
+    ) {
+        bail!("legacy Any compression only supports the Compact protocol");
+    }
     let mut compressed = any.clone();
     compressed.protocol = ProtocolUnion::custom(COMPRESSED_COMPACT_PROTOCOL.to_string());
     compressed.data =
@@ -43,6 +50,15 @@ pub fn compress_any(any: &Any) -> Result<Any> {
 }
 
 pub fn decompress_any(any: &Any) -> Result<Any> {
+    if !is_compressed(any) {
+        if matches!(
+            any.protocol,
+            ProtocolUnion::standard(StandardProtocol::Compact)
+        ) {
+            return Ok(any.clone());
+        }
+        bail!("legacy Any decompression only supports the Compact protocol");
+    }
     let mut decompressed = any.clone();
     decompressed.protocol = ProtocolUnion::standard(StandardProtocol::Compact);
     decompressed.data =
@@ -68,5 +84,39 @@ mod tests {
         assert!(!is_compressed(&decompressed));
         assert_eq!(any, decompressed);
         Ok(())
+    }
+
+    #[test]
+    fn test_rejects_non_compact_protocol() {
+        let any = Any {
+            protocol: ProtocolUnion::standard(StandardProtocol::Json5),
+            data: b"{}".to_vec(),
+            ..Default::default()
+        };
+
+        assert!(compress_any(&any).is_err());
+    }
+
+    #[test]
+    fn test_preserves_uncompressed_compact_payload() -> Result<()> {
+        let any = Any {
+            protocol: ProtocolUnion::standard(StandardProtocol::Compact),
+            data: b"hello world".to_vec(),
+            ..Default::default()
+        };
+
+        assert_eq!(decompress_any(&any)?, any);
+        Ok(())
+    }
+
+    #[test]
+    fn test_rejects_uncompressed_non_compact_payload() {
+        let any = Any {
+            protocol: ProtocolUnion::standard(StandardProtocol::Json5),
+            data: b"{}".to_vec(),
+            ..Default::default()
+        };
+
+        assert!(decompress_any(&any).is_err());
     }
 }

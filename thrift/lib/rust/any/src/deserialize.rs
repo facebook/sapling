@@ -19,6 +19,7 @@ use anyhow::Result;
 use anyhow::bail;
 use fbthrift::binary_protocol;
 use fbthrift::compact_protocol;
+use fbthrift::json5_protocol;
 use fbthrift::simplejson_protocol;
 use standard::ByteBuffer;
 use standard::StandardProtocol;
@@ -37,6 +38,7 @@ pub trait DeserializableFromAny:
     + fbthrift::GetTType
     + compact_protocol::DeserializeSlice
     + binary_protocol::DeserializeSlice
+    + json5_protocol::DeserializeSlice
     + simplejson_protocol::DeserializeSlice
 {
 }
@@ -46,6 +48,7 @@ impl<T> DeserializableFromAny for T where
         + fbthrift::GetTType
         + compact_protocol::DeserializeSlice
         + binary_protocol::DeserializeSlice
+        + json5_protocol::DeserializeSlice
         + simplejson_protocol::DeserializeSlice
 {
 }
@@ -95,6 +98,7 @@ where
     match standard_protocol {
         StandardProtocol::Compact => compact_protocol::deserialize(data),
         StandardProtocol::Binary => binary_protocol::deserialize(data),
+        StandardProtocol::Json5 => json5_protocol::deserialize_slice(data),
         StandardProtocol::SimpleJson => simplejson_protocol::deserialize(data),
         _ => bail!(AnyError::UnsupportedStandardThriftProtocol(
             standard_protocol
