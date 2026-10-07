@@ -245,18 +245,16 @@
 
   $ hg whereami
   db39bf064f102b6fdfa0f641cb08860a450f16af
-  $ tree
+  $ find . -name '.*' ! -name . -prune -o -print | sort
   .
-  |-- A
-  |-- B
-  |-- C
-  `-- new_dir
-      `-- new_repo
-          |-- file1
-          `-- file2_repo
-              `-- file2
-  
-  3 directories, 5 files
+  ./A
+  ./B
+  ./C
+  ./new_dir
+  ./new_dir/new_repo
+  ./new_dir/new_repo/file1
+  ./new_dir/new_repo/file2_repo
+  ./new_dir/new_repo/file2_repo/file2
 
 
 
