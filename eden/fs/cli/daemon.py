@@ -26,7 +26,7 @@ from eden.fs.cli.util import (
     maybe_edensparse_migration,
 )
 
-from . import configutil, daemon_util, proc_utils as proc_utils_mod
+from . import configutil, daemon_util, error_report, proc_utils as proc_utils_mod
 from .config import EdenInstance
 from .util import get_pid_using_lockfile, poll_until, print_stderr, ShutdownError
 
@@ -472,6 +472,9 @@ def _start_edenfs_service(
             print_stderr(
                 f"error: failed to write the daemon args file: {args_file_error}"
             )
+            error_report.record(
+                f"failed to write the daemon args file: {args_file_error}"
+            )
             return 1
         return _systemctl_start_or_reload(instance, systemd_env, takeover)
 
@@ -499,6 +502,8 @@ def _start_edenfs_service(
         cmd, stdin=subprocess.DEVNULL, env=launch_env, creationflags=creation_flags
     )
     maybe_edensparse_migration(instance, EdensparseMigrationStep.POST_EDEN_START)
+    if exit_code != 0:
+        error_report.record(f"edenfs daemon startup exited with status {exit_code}")
 
     if use_systemd_cgroup:
         instance.log_sample(
@@ -694,10 +699,14 @@ def _systemctl_start_or_reload(
         # Always check the startup log for daemon errors independently of
         # systemctl stderr — systemctl's generic "Job failed" message doesn't
         # contain the actual daemon error (e.g. "error starting EdenFS: ...").
+        daemon_error = None
         if startup_log_content:
             daemon_error = _extract_daemon_error(startup_log_content)
             if daemon_error:
                 sample_kwargs["daemon_startup_log"] = daemon_error
+        error_report.record(
+            daemon_error or result.stderr or f"systemctl {action} {unit} failed"
+        )
     instance.log_sample("systemctl_action", **sample_kwargs)
     return rc
 

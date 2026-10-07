@@ -17,7 +17,8 @@ use anyhow::Result;
 use edenfs_telemetry::cli_usage::CliUsageSample;
 use tempfile::TempPath;
 
-/// The environment variable with the report path.
+/// The environment variable with the report path. Keep this name the same as
+/// `ERROR_REPORT_ENV` in `eden/fs/cli/error_report.py`.
 const ERROR_REPORT_ENV: &str = "EDENFSCTL_ERROR_REPORT";
 
 /// The maximum number of bytes to read from a report.

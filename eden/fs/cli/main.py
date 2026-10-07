@@ -170,6 +170,7 @@ from . import (
     daemon_util,
     debug as debug_mod,
     doctor as doctor_mod,
+    error_report,
     filesystem as fs_mod,
     mtab,
     prefetch as prefetch_mod,
@@ -2698,6 +2699,11 @@ RESTART_MODE_GRACEFUL = "graceful"
 RESTART_MODE_FORCE = "force"
 
 
+def _fail_restart(telemetry_sample: TelemetrySample, message: str) -> None:
+    telemetry_sample.fail(message)
+    error_report.record(message)
+
+
 @subcmd("restart", "Restart the EdenFS service")
 class RestartCmd(Subcmd):
     # pyre-fixme[13]: Attribute `args` is never initialized.
@@ -2864,6 +2870,10 @@ class RestartCmd(Subcmd):
                 print(
                     "Use `eden restart --force` if you want to forcibly restart the current daemon"
                 )
+                error_report.record(
+                    f"edenfs daemon is not healthy (status {health.status.name}) "
+                    "and --force was not given"
+                )
                 return 4
             return self._force_restart(instance, edenfs_pid, stop_timeout)
 
@@ -2877,7 +2887,9 @@ class RestartCmd(Subcmd):
             print(
                 "The daemon is not running after failed graceful restart, starting it"
             )
-            telemetry_sample.fail("EdenFS was not running after graceful restart")
+            _fail_restart(
+                telemetry_sample, "EdenFS was not running after graceful restart"
+            )
             return self._start(instance)
 
         print(
@@ -2892,8 +2904,9 @@ class RestartCmd(Subcmd):
             # want to wait for a reasonable time before we force
             # kill the process (if it is stuck somewhere)
             wait_for_instance_healthy(instance, 600)
-            telemetry_sample.fail(
-                "Graceful restart failed, and old EdenFS process resumed"
+            _fail_restart(
+                telemetry_sample,
+                "Graceful restart failed, and old EdenFS process resumed",
             )
             print(
                 "error: failed to perform graceful restart. The old "
@@ -2916,15 +2929,17 @@ class RestartCmd(Subcmd):
             # continue on with the restart
             pass
         if self._finish_restart(instance) == 0:
-            telemetry_sample.fail(
+            _fail_restart(
+                telemetry_sample,
                 "EdenFS was not healthy after graceful restart; performed a "
-                "hard restart"
+                "hard restart",
             )
             return 2
         else:
-            telemetry_sample.fail(
+            _fail_restart(
+                telemetry_sample,
                 "EdenFS was not healthy after graceful restart, and we failed "
-                "to restart it"
+                "to restart it",
             )
             return 3
 
@@ -2998,8 +3013,9 @@ class RestartCmd(Subcmd):
                 health = instance.check_health()
                 edenfs_pid = health.pid
                 if edenfs_pid is None:
-                    telemetry_sample.fail(
-                        "Transport mismatch required a full restart, but EdenFS was not running"
+                    _fail_restart(
+                        telemetry_sample,
+                        "Transport mismatch required a full restart, but EdenFS was not running",
                     )
                     return self._start(instance)
 
@@ -3016,8 +3032,9 @@ class RestartCmd(Subcmd):
                     triggered_by=reason,
                 )
                 if status != 0:
-                    telemetry_sample.fail(
-                        "Transport mismatch fallback full restart failed"
+                    _fail_restart(
+                        telemetry_sample,
+                        "Transport mismatch fallback full restart failed",
                     )
                 return status
 
@@ -3150,6 +3167,7 @@ re-open these files after EdenFS is restarted.
         )
         if exit_code != 0:
             print("Failed to start edenfs daemon!", file=sys.stderr)
+            error_report.record("Failed to start edenfs daemon during restart")
             return exit_code
 
         print()
@@ -3515,6 +3533,7 @@ def set_working_directory(args: argparse.Namespace) -> Optional[int]:
         os.chdir(args.checkout_dir)
     except OSError as e:
         print(f"Unable to change to checkout directory: {e}", file=sys.stderr)
+        error_report.record(f"Unable to change to checkout directory: {e}", e)
         return EX_OSFILE
 
 
@@ -3537,6 +3556,7 @@ def check_for_stale_working_directory() -> Optional[int]:
             f"error: unable to determine current working directory: {ex}",
             file=sys.stderr,
         )
+        error_report.record(f"unable to determine current working directory: {ex}", ex)
         return EX_OSFILE
 
     # See if we can figure out what the current working directory should be
@@ -3560,6 +3580,7 @@ mount point from a previous edenfs daemon instance.
 Please run "cd / && cd -" to update your shell's working directory."""
     if not can_continue:
         print(f"Error: {msg}", file=sys.stderr)
+        error_report.record(msg)
         return EX_OSFILE
 
     print(f"Warning: {msg}", file=sys.stderr)
@@ -3597,12 +3618,15 @@ async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) 
         return result
     except subcmd_mod.CmdError as ex:
         print(f"error: {ex}", file=sys.stderr)
+        error_report.record(str(ex), ex)
         return EX_SOFTWARE
     except daemon_util.DaemonBinaryNotFound as ex:
         print(f"error: {ex}", file=sys.stderr)
+        error_report.record(str(ex), ex)
         return EX_UNAVAILABLE
     except config_mod.UsageError as ex:
         print(f"error: {ex}", file=sys.stderr)
+        error_report.record(str(ex), ex)
         return EX_USAGE
 
 
@@ -3615,6 +3639,18 @@ except AttributeError:
 
 
 def main() -> int:
+    error_report.init()
+    try:
+        ret = _main()
+    except Exception as ex:
+        error_report.record(str(ex), ex)
+        error_report.write(1)
+        raise
+    error_report.write(ret)
+    return ret
+
+
+def _main() -> int:
     # Ensure stdout/stderr use UTF-8 encoding. On Windows, Python defaults to
     # the system code page (e.g. cp1252) which cannot encode non-Latin paths.
     # This matches Sapling's utf8_mode=1 pre-initialization (python.rs).

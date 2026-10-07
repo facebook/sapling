@@ -14,6 +14,7 @@ python_unittest(
     },
     deps = [
         "fbsource//third-party/pypi/toml:toml",
+        "//eden/fs/cli:error_report",
         "//eden/fs/cli:lib",
         "//eden/fs/cli:main_lib",
         "//eden/fs/cli:mp",

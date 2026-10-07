@@ -88,6 +88,7 @@ python_library(
     ],
     deps = [
         ":constants",
+        ":error_report",
         ":lib",
         ":telemetry",
         ":trace",
@@ -101,6 +102,13 @@ python_library(
         "//fb303/thrift:fb303_core-python-types",
         "//thrift/lib/python:types",
         "//thrift/lib/python:types/exceptions",
+    ],
+)
+
+python_library(
+    name = "error_report",
+    srcs = [
+        "error_report.py",
     ],
 )
 
@@ -184,6 +192,7 @@ python_library(
         "fbsource//third-party/pypi/filelock:filelock",
         "fbsource//third-party/pypi/psutil:psutil",
         "fbsource//third-party/pypi/toml:toml",
+        ":error_report",
         ":hostname",
         ":mp",
         ":proc_utils",
