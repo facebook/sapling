@@ -136,8 +136,8 @@ def matchoutput(cmd, regexp, ignorestatus=False):
         if e.errno != errno.ENOENT:
             raise
         ret = -1
-    ret = p.wait()
-    s = p.stdout.read()
+    s, _ = p.communicate()
+    ret = p.returncode
     return (ignorestatus or not ret) and r.search(s)
 
 
