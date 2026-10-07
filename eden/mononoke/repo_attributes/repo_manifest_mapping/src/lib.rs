@@ -92,10 +92,10 @@ pub trait RepoManifestMapping: Send + Sync {
     /// optionally advancing that manifest branch's tailer watermark in the SAME
     /// transaction.
     ///
-    /// Runs a delete-then-bulk-insert (+ optional watermark set) as one
-    /// transaction. The `edges` batch is treated as a set — duplicate edges are
-    /// de-duplicated, not rejected (a manifest may list the same repo+branch via
-    /// multiple paths). Idempotent under replay.
+    /// Runs a delete-then-bulk-insert (+ optional watermark set, + optional
+    /// activity stamp) as one transaction. The `edges` batch is treated as a set
+    /// — duplicate edges are de-duplicated, not rejected (a manifest may list the
+    /// same repo+branch via multiple paths). Idempotent under replay.
     async fn replace_membership(
         &self,
         ctx: &CoreContext,
@@ -103,10 +103,23 @@ pub trait RepoManifestMapping: Send + Sync {
         manifest_branch: &ManifestBranch,
         edges: &[MembershipEdge],
         watermark: Option<i64>,
+        activity: Option<i64>,
     ) -> Result<()>;
 
+    /// Fan-out read joined with each manifest branch's `last_landed_at` (unix
+    /// seconds; `None` when never stamped). Same order and dedup contract as
+    /// [`Self::manifest_branches_for_repo`].
+    async fn manifest_branches_for_repo_with_activity(
+        &self,
+        ctx: &CoreContext,
+        repo_name: &RepoName,
+        repo_branch: &RepoBranch,
+        staleness: Staleness,
+    ) -> Result<Vec<(RepositoryId, ManifestBranch, Option<i64>)>>;
+
     /// Every manifest branch this repo has a watermark for, i.e. everything the
-    /// tailer has seen. The scope a periodic reconcile sweep runs over.
+    /// tailer has seen, least recently moved first. The scope a periodic
+    /// reconcile sweep runs over.
     async fn list_manifest_branches(
         &self,
         ctx: &CoreContext,
@@ -133,13 +146,26 @@ pub trait RepoManifestMapping: Send + Sync {
         staleness: Staleness,
     ) -> Result<Option<i64>>;
 
-    /// Set (upsert) the tailer watermark for one manifest branch.
+    /// Set (upsert) the tailer watermark for one manifest branch. Leaves
+    /// `last_landed_at` untouched.
     async fn set_branch_watermark(
         &self,
         ctx: &CoreContext,
         manifest_repo_id: RepositoryId,
         manifest_branch: &ManifestBranch,
         log_id: i64,
+    ) -> Result<()>;
+
+    /// Record activity on a manifest branch at `last_landed_at` (unix seconds).
+    /// Monotone: an earlier timestamp never lowers a later one, so writers may
+    /// interleave in any order. Creates the watermark row (at `log_id` 0) if
+    /// the tailer has not projected the branch yet.
+    async fn set_branch_activity(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
+        last_landed_at: i64,
     ) -> Result<()>;
 }
 
@@ -188,7 +214,18 @@ impl RepoManifestMapping for UnconfiguredRepoManifestMapping {
         _manifest_branch: &ManifestBranch,
         _edges: &[MembershipEdge],
         _watermark: Option<i64>,
+        _activity: Option<i64>,
     ) -> Result<()> {
+        self.error()
+    }
+
+    async fn manifest_branches_for_repo_with_activity(
+        &self,
+        _ctx: &CoreContext,
+        _repo_name: &RepoName,
+        _repo_branch: &RepoBranch,
+        _staleness: Staleness,
+    ) -> Result<Vec<(RepositoryId, ManifestBranch, Option<i64>)>> {
         self.error()
     }
 
@@ -226,6 +263,16 @@ impl RepoManifestMapping for UnconfiguredRepoManifestMapping {
         _manifest_repo_id: RepositoryId,
         _manifest_branch: &ManifestBranch,
         _log_id: i64,
+    ) -> Result<()> {
+        self.error()
+    }
+
+    async fn set_branch_activity(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_repo_id: RepositoryId,
+        _manifest_branch: &ManifestBranch,
+        _last_landed_at: i64,
     ) -> Result<()> {
         self.error()
     }
@@ -265,8 +312,19 @@ impl RepoManifestMapping for NoopRepoManifestMapping {
         _manifest_branch: &ManifestBranch,
         _edges: &[MembershipEdge],
         _watermark: Option<i64>,
+        _activity: Option<i64>,
     ) -> Result<()> {
         Ok(())
+    }
+
+    async fn manifest_branches_for_repo_with_activity(
+        &self,
+        _ctx: &CoreContext,
+        _repo_name: &RepoName,
+        _repo_branch: &RepoBranch,
+        _staleness: Staleness,
+    ) -> Result<Vec<(RepositoryId, ManifestBranch, Option<i64>)>> {
+        Ok(Vec::new())
     }
 
     async fn list_manifest_branches(
@@ -306,16 +364,43 @@ impl RepoManifestMapping for NoopRepoManifestMapping {
     ) -> Result<()> {
         Ok(())
     }
+
+    async fn set_branch_activity(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_repo_id: RepositoryId,
+        _manifest_branch: &ManifestBranch,
+        _last_landed_at: i64,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// A full stored row: the member repo edge together with its owning
 /// `(manifest_repo_id, manifest_branch)` context.
 type StoredRow = (RepositoryId, ManifestBranch, RepoName, RepoBranch);
 
+#[derive(Default, Clone, Copy)]
+struct WatermarkRow {
+    log_id: i64,
+    last_landed_at: Option<i64>,
+}
+
 #[derive(Default)]
 struct TestState {
     rows: HashSet<StoredRow>,
-    watermarks: HashMap<(RepositoryId, ManifestBranch), i64>,
+    watermarks: HashMap<(RepositoryId, ManifestBranch), WatermarkRow>,
+}
+
+impl TestState {
+    fn set_log_id(&mut self, key: (RepositoryId, ManifestBranch), log_id: i64) {
+        self.watermarks.entry(key).or_default().log_id = log_id;
+    }
+
+    fn stamp(&mut self, key: (RepositoryId, ManifestBranch), last_landed_at: i64) {
+        let row = self.watermarks.entry(key).or_default();
+        row.last_landed_at = Some(row.last_landed_at.unwrap_or(0).max(last_landed_at));
+    }
 }
 
 /// An in-memory double that mirrors the SQL store's observable semantics
@@ -387,6 +472,7 @@ impl RepoManifestMapping for TestRepoManifestMapping {
         manifest_branch: &ManifestBranch,
         edges: &[MembershipEdge],
         watermark: Option<i64>,
+        activity: Option<i64>,
     ) -> Result<()> {
         let mut state = self.state.lock().expect("poisoned lock");
         state
@@ -401,11 +487,39 @@ impl RepoManifestMapping for TestRepoManifestMapping {
             ));
         }
         if let Some(log_id) = watermark {
-            state
-                .watermarks
-                .insert((manifest_repo_id, manifest_branch.clone()), log_id);
+            state.set_log_id((manifest_repo_id, manifest_branch.clone()), log_id);
+        }
+        if let Some(last_landed_at) = activity {
+            state.stamp((manifest_repo_id, manifest_branch.clone()), last_landed_at);
         }
         Ok(())
+    }
+
+    async fn manifest_branches_for_repo_with_activity(
+        &self,
+        _ctx: &CoreContext,
+        repo_name: &RepoName,
+        repo_branch: &RepoBranch,
+        _staleness: Staleness,
+    ) -> Result<Vec<(RepositoryId, ManifestBranch, Option<i64>)>> {
+        let state = self.state.lock().expect("poisoned lock");
+        let mut result: Vec<(RepositoryId, ManifestBranch, Option<i64>)> = state
+            .rows
+            .iter()
+            .filter(|(_, _, rn, rb)| rn == repo_name && rb == repo_branch)
+            .map(|(repo_id, manifest_branch, _, _)| (*repo_id, manifest_branch.clone()))
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|(repo_id, manifest_branch)| {
+                let last_landed_at = state
+                    .watermarks
+                    .get(&(repo_id, manifest_branch.clone()))
+                    .and_then(|row| row.last_landed_at);
+                (repo_id, manifest_branch, last_landed_at)
+            })
+            .collect();
+        result.sort();
+        Ok(result)
     }
 
     async fn list_manifest_branches(
@@ -415,14 +529,14 @@ impl RepoManifestMapping for TestRepoManifestMapping {
         _staleness: Staleness,
     ) -> Result<Vec<ManifestBranch>> {
         let state = self.state.lock().expect("poisoned lock");
-        let mut branches: Vec<ManifestBranch> = state
+        let mut rows: Vec<(i64, ManifestBranch)> = state
             .watermarks
-            .keys()
-            .filter(|(repo_id, _)| *repo_id == manifest_repo_id)
-            .map(|(_, branch)| branch.clone())
+            .iter()
+            .filter(|((repo_id, _), _)| *repo_id == manifest_repo_id)
+            .map(|((_, branch), row)| (row.log_id, branch.clone()))
             .collect();
-        branches.sort();
-        Ok(branches)
+        rows.sort();
+        Ok(rows.into_iter().map(|(_, branch)| branch).collect())
     }
 
     async fn get_branch_watermark(
@@ -436,7 +550,7 @@ impl RepoManifestMapping for TestRepoManifestMapping {
         Ok(state
             .watermarks
             .get(&(manifest_repo_id, manifest_branch.clone()))
-            .copied())
+            .map(|row| row.log_id))
     }
 
     async fn get_read_cursor(
@@ -450,7 +564,7 @@ impl RepoManifestMapping for TestRepoManifestMapping {
             .watermarks
             .iter()
             .filter(|((repo_id, _), _)| *repo_id == manifest_repo_id)
-            .map(|(_, log_id)| *log_id)
+            .map(|(_, row)| row.log_id)
             .max())
     }
 
@@ -462,9 +576,19 @@ impl RepoManifestMapping for TestRepoManifestMapping {
         log_id: i64,
     ) -> Result<()> {
         let mut state = self.state.lock().expect("poisoned lock");
-        state
-            .watermarks
-            .insert((manifest_repo_id, manifest_branch.clone()), log_id);
+        state.set_log_id((manifest_repo_id, manifest_branch.clone()), log_id);
+        Ok(())
+    }
+
+    async fn set_branch_activity(
+        &self,
+        _ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
+        last_landed_at: i64,
+    ) -> Result<()> {
+        let mut state = self.state.lock().expect("poisoned lock");
+        state.stamp((manifest_repo_id, manifest_branch.clone()), last_landed_at);
         Ok(())
     }
 }

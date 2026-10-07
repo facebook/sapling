@@ -64,6 +64,7 @@ async fn test_insert_and_reverse_lookup(fb: FacebookInit) -> Result<()> {
                 edge("platform/art", "aosp-main"),
             ],
             None,
+            None,
         )
         .await?;
 
@@ -101,6 +102,7 @@ async fn test_members_for_manifest_branch(fb: FacebookInit) -> Result<()> {
                 edge("platform/build", "aosp-main"),
                 edge("platform/art", "aosp-dev"),
             ],
+            None,
             None,
         )
         .await?;
@@ -144,6 +146,7 @@ async fn test_reverse_read_idempotent_replace(fb: FacebookInit) -> Result<()> {
             &mb("main"),
             &[edge("platform/build", "aosp-main")],
             None,
+            None,
         )
         .await?;
     store
@@ -152,6 +155,7 @@ async fn test_reverse_read_idempotent_replace(fb: FacebookInit) -> Result<()> {
             aosp,
             &mb("main"),
             &[edge("platform/build", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -186,6 +190,7 @@ async fn test_negative_wrong_repo_branch(fb: FacebookInit) -> Result<()> {
             aosp,
             &mb("main"),
             &[edge("platform/build", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -231,14 +236,14 @@ async fn test_replace_membership_idempotent(fb: FacebookInit) -> Result<()> {
     ];
 
     store
-        .replace_membership(&ctx, aosp, &mb("main"), &edges, None)
+        .replace_membership(&ctx, aosp, &mb("main"), &edges, None, None)
         .await?;
     let first = store
         .members_for_manifest_branch(&ctx, aosp, &mb("main"), Staleness::MostRecent)
         .await?;
 
     store
-        .replace_membership(&ctx, aosp, &mb("main"), &edges, None)
+        .replace_membership(&ctx, aosp, &mb("main"), &edges, None, None)
         .await?;
     let second = store
         .members_for_manifest_branch(&ctx, aosp, &mb("main"), Staleness::MostRecent)
@@ -270,6 +275,7 @@ async fn test_replace_membership_replaces(fb: FacebookInit) -> Result<()> {
                 edge("platform/art", "aosp-main"),
             ],
             None,
+            None,
         )
         .await?;
     store
@@ -278,6 +284,7 @@ async fn test_replace_membership_replaces(fb: FacebookInit) -> Result<()> {
             aosp,
             &mb("main"),
             &[edge("platform/frameworks", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -335,6 +342,7 @@ async fn test_case_sensitivity(fb: FacebookInit) -> Result<()> {
             &mb("Foo"),
             &[edge("platform/build", "aosp-main")],
             None,
+            None,
         )
         .await?;
     store
@@ -343,6 +351,7 @@ async fn test_case_sensitivity(fb: FacebookInit) -> Result<()> {
             aosp,
             &mb("foo"),
             &[edge("platform/art", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -369,6 +378,7 @@ async fn test_case_sensitivity(fb: FacebookInit) -> Result<()> {
             aosp,
             &mb("main"),
             &[edge("Platform", "aosp-main"), edge("platform", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -412,6 +422,7 @@ async fn test_manifest_repo_id_scoping(fb: FacebookInit) -> Result<()> {
             &mb("main"),
             &[edge("platform/build", "aosp-main")],
             None,
+            None,
         )
         .await?;
     store
@@ -420,6 +431,7 @@ async fn test_manifest_repo_id_scoping(fb: FacebookInit) -> Result<()> {
             zephyr,
             &mb("main"),
             &[edge("zephyr/hal", "main")],
+            None,
             None,
         )
         .await?;
@@ -445,6 +457,7 @@ async fn test_manifest_repo_id_scoping(fb: FacebookInit) -> Result<()> {
             aosp,
             &mb("main"),
             &[edge("platform/art", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -481,6 +494,7 @@ async fn test_reverse_read_fans_out_across_manifest_repos(fb: FacebookInit) -> R
             &mb("main"),
             &[edge("shared/common", "stable")],
             None,
+            None,
         )
         .await?;
     store
@@ -489,6 +503,7 @@ async fn test_reverse_read_fans_out_across_manifest_repos(fb: FacebookInit) -> R
             zephyr,
             &mb("release"),
             &[edge("shared/common", "stable")],
+            None,
             None,
         )
         .await?;
@@ -557,6 +572,7 @@ async fn test_watermark(fb: FacebookInit) -> Result<()> {
             &mb("main"),
             &[edge("platform/build", "aosp-main")],
             Some(200),
+            None,
         )
         .await?;
     assert_eq!(
@@ -731,6 +747,7 @@ async fn test_replace_membership_dedups_duplicate_edges(fb: FacebookInit) -> Res
                 edge("platform/art", "aosp-main"),
             ],
             Some(5),
+            None,
         )
         .await?;
 
@@ -745,6 +762,7 @@ async fn test_replace_membership_dedups_duplicate_edges(fb: FacebookInit) -> Res
             &mb("main"),
             &[dup.clone(), dup.clone()],
             Some(9),
+            None,
         )
         .await?;
 
@@ -786,11 +804,12 @@ async fn test_replace_membership_empty_clears(fb: FacebookInit) -> Result<()> {
                 edge("platform/art", "aosp-main"),
             ],
             Some(5),
+            None,
         )
         .await?;
 
     store
-        .replace_membership(&ctx, aosp, &mb("main"), &[], Some(6))
+        .replace_membership(&ctx, aosp, &mb("main"), &[], Some(6), None)
         .await?;
 
     assert!(
@@ -837,7 +856,7 @@ async fn test_replace_membership_large_batch_chunks(fb: FacebookInit) -> Result<
         .collect();
 
     store
-        .replace_membership(&ctx, aosp, &mb("main"), &edges, Some(1))
+        .replace_membership(&ctx, aosp, &mb("main"), &edges, Some(1), None)
         .await?;
 
     let members = store
@@ -869,6 +888,7 @@ async fn test_replace_membership_none_watermark_preserved(fb: FacebookInit) -> R
             aosp,
             &mb("main"),
             &[edge("platform/build", "aosp-main")],
+            None,
             None,
         )
         .await?;
@@ -915,6 +935,7 @@ async fn test_sql_and_test_double_parity(fb: FacebookInit) -> Result<()> {
                     edge("platform/build", "aosp-main"),
                 ],
                 Some(11),
+                None,
             )
             .await?;
         store
@@ -923,6 +944,7 @@ async fn test_sql_and_test_double_parity(fb: FacebookInit) -> Result<()> {
                 zephyr,
                 &mb("main"),
                 &[edge("platform/build", "aosp-main")],
+                None,
                 None,
             )
             .await?;
@@ -986,6 +1008,7 @@ async fn test_noop_double(fb: FacebookInit) -> Result<()> {
         &mb("main"),
         &[edge("platform/build", "aosp-main")],
         Some(1),
+        None,
     )
     .await?;
     noop.set_branch_watermark(&ctx, aosp, &mb("main"), 42)
@@ -1079,4 +1102,301 @@ fn tags_keep_their_namespace() {
 fn keying_is_idempotent() {
     let once = RepoBranch::from_ref_name("refs/heads/oculus-14.0");
     assert_eq!(RepoBranch::from_ref_name(&once.0), once);
+}
+
+// 17. Activity survives every watermark write. The tailer's upsert (direct or
+//     inside a replace) must never clear `last_landed_at`, which only the
+//     activity writers set.
+#[mononoke::fbinit_test]
+async fn test_watermark_writes_preserve_activity(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let store = new_store()?;
+    let aosp = rid(1);
+    let member = edge("platform/build", "aosp-main");
+
+    store
+        .replace_membership(
+            &ctx,
+            aosp,
+            &mb("main"),
+            std::slice::from_ref(&member),
+            Some(1),
+            None,
+        )
+        .await?;
+    store
+        .set_branch_activity(&ctx, aosp, &mb("main"), 1_000)
+        .await?;
+
+    store
+        .set_branch_watermark(&ctx, aosp, &mb("main"), 2)
+        .await?;
+    store
+        .replace_membership(
+            &ctx,
+            aosp,
+            &mb("main"),
+            std::slice::from_ref(&member),
+            Some(3),
+            None,
+        )
+        .await?;
+
+    assert_eq!(
+        store
+            .get_branch_watermark(&ctx, aosp, &mb("main"), Staleness::MostRecent)
+            .await?,
+        Some(3)
+    );
+    assert_eq!(
+        store
+            .manifest_branches_for_repo_with_activity(
+                &ctx,
+                &member.repo_name,
+                &member.repo_branch,
+                Staleness::MostRecent,
+            )
+            .await?,
+        vec![(aosp, mb("main"), Some(1_000))],
+        "watermark upserts left the activity stamp in place"
+    );
+    Ok(())
+}
+
+/// The single manifest branch's activity for a member pinned by exactly one branch.
+async fn activity(
+    store: &dyn RepoManifestMapping,
+    ctx: &CoreContext,
+    member: &MembershipEdge,
+) -> Result<Option<i64>> {
+    let rows = store
+        .manifest_branches_for_repo_with_activity(
+            ctx,
+            &member.repo_name,
+            &member.repo_branch,
+            Staleness::MostRecent,
+        )
+        .await?;
+    assert_eq!(rows.len(), 1, "member must be pinned by exactly one branch");
+    Ok(rows[0].2)
+}
+
+// 18. Activity is monotone: a late-arriving older stamp (lagging tailer, seed
+//     running behind the land service) never rewinds a newer one, whichever
+//     writer it comes through.
+#[mononoke::fbinit_test]
+async fn test_activity_is_monotone(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let store = new_store()?;
+    let aosp = rid(1);
+    let member = edge("platform/build", "aosp-main");
+    store
+        .replace_membership(
+            &ctx,
+            aosp,
+            &mb("main"),
+            std::slice::from_ref(&member),
+            Some(1),
+            Some(500),
+        )
+        .await?;
+    assert_eq!(activity(&store, &ctx, &member).await?, Some(500));
+
+    store
+        .set_branch_activity(&ctx, aosp, &mb("main"), 300)
+        .await?;
+    assert_eq!(
+        activity(&store, &ctx, &member).await?,
+        Some(500),
+        "older direct stamp ignored"
+    );
+
+    store
+        .replace_membership(
+            &ctx,
+            aosp,
+            &mb("main"),
+            std::slice::from_ref(&member),
+            Some(2),
+            Some(400),
+        )
+        .await?;
+    assert_eq!(
+        activity(&store, &ctx, &member).await?,
+        Some(500),
+        "older stamp inside a replace ignored"
+    );
+
+    store
+        .set_branch_activity(&ctx, aosp, &mb("main"), 900)
+        .await?;
+    assert_eq!(activity(&store, &ctx, &member).await?, Some(900));
+    Ok(())
+}
+
+// 19. Stamping a branch the tailer has not projected creates its watermark row
+//     at log_id 0, so the stamp is not lost and the read cursor does not move.
+#[mononoke::fbinit_test]
+async fn test_activity_before_projection(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let store = new_store()?;
+    let aosp = rid(1);
+    let member = edge("platform/build", "aosp-main");
+
+    store
+        .replace_membership(
+            &ctx,
+            aosp,
+            &mb("main"),
+            std::slice::from_ref(&member),
+            Some(40),
+            None,
+        )
+        .await?;
+    store
+        .set_branch_activity(&ctx, aosp, &mb("provisional"), 777)
+        .await?;
+
+    assert_eq!(
+        store
+            .get_branch_watermark(&ctx, aosp, &mb("provisional"), Staleness::MostRecent)
+            .await?,
+        Some(0)
+    );
+    assert_eq!(
+        store
+            .get_read_cursor(&ctx, aosp, Staleness::MostRecent)
+            .await?,
+        Some(40),
+        "placeholder row does not advance the read cursor"
+    );
+
+    // First projection replaces the placeholder and keeps the stamp.
+    store
+        .replace_membership(
+            &ctx,
+            aosp,
+            &mb("provisional"),
+            std::slice::from_ref(&member),
+            Some(41),
+            None,
+        )
+        .await?;
+    assert_eq!(
+        store
+            .manifest_branches_for_repo_with_activity(
+                &ctx,
+                &member.repo_name,
+                &member.repo_branch,
+                Staleness::MostRecent,
+            )
+            .await?,
+        vec![
+            (aosp, mb("main"), None),
+            (aosp, mb("provisional"), Some(777)),
+        ],
+        "unstamped branch reads None, stamped branch keeps its stamp"
+    );
+    Ok(())
+}
+
+// 20. The Test double mirrors the SQL store for the activity surface too.
+#[mononoke::fbinit_test]
+async fn test_activity_sql_and_test_double_parity(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let sql = new_store()?;
+    let mem = TestRepoManifestMapping::new();
+    let aosp = rid(1);
+    let member = edge("platform/build", "aosp-main");
+
+    for store in [&sql as &dyn RepoManifestMapping, &mem] {
+        store
+            .replace_membership(
+                &ctx,
+                aosp,
+                &mb("a"),
+                std::slice::from_ref(&member),
+                Some(1),
+                Some(100),
+            )
+            .await?;
+        store
+            .replace_membership(
+                &ctx,
+                aosp,
+                &mb("b"),
+                std::slice::from_ref(&member),
+                Some(2),
+                None,
+            )
+            .await?;
+        store.set_branch_activity(&ctx, aosp, &mb("a"), 50).await?;
+        store.set_branch_activity(&ctx, aosp, &mb("c"), 300).await?;
+        store.set_branch_watermark(&ctx, aosp, &mb("a"), 3).await?;
+    }
+
+    let expected = vec![(aosp, mb("a"), Some(100)), (aosp, mb("b"), None)];
+    for store in [&sql as &dyn RepoManifestMapping, &mem] {
+        assert_eq!(
+            store
+                .manifest_branches_for_repo_with_activity(
+                    &ctx,
+                    &member.repo_name,
+                    &member.repo_branch,
+                    Staleness::MostRecent,
+                )
+                .await?,
+            expected
+        );
+        assert_eq!(
+            store
+                .get_branch_watermark(&ctx, aosp, &mb("a"), Staleness::MostRecent)
+                .await?,
+            Some(3)
+        );
+        assert_eq!(
+            store
+                .get_branch_watermark(&ctx, aosp, &mb("c"), Staleness::MostRecent)
+                .await?,
+            Some(0)
+        );
+        let mut branches = store
+            .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+            .await?;
+        branches.sort();
+        assert_eq!(branches, vec![mb("a"), mb("b"), mb("c")]);
+    }
+    Ok(())
+}
+
+// 21. The branch listing is ordered by watermark, oldest bookmark move first:
+//     a budgeted consumer that stops early must resume with what it skipped.
+#[mononoke::fbinit_test]
+async fn test_list_manifest_branches_is_oldest_move_first(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let sql = new_store()?;
+    let mem = TestRepoManifestMapping::new();
+    let aosp = rid(1);
+    for store in [&sql as &dyn RepoManifestMapping, &mem] {
+        store.set_branch_watermark(&ctx, aosp, &mb("a"), 30).await?;
+        store.set_branch_watermark(&ctx, aosp, &mb("b"), 10).await?;
+        store.set_branch_watermark(&ctx, aosp, &mb("c"), 20).await?;
+        store.set_branch_watermark(&ctx, aosp, &mb("d"), 10).await?;
+        assert_eq!(
+            store
+                .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+                .await?,
+            vec![mb("b"), mb("d"), mb("c"), mb("a")],
+            "ordered by log_id, then name"
+        );
+        // A later move sends the branch to the back.
+        store.set_branch_watermark(&ctx, aosp, &mb("b"), 40).await?;
+        assert_eq!(
+            store
+                .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+                .await?,
+            vec![mb("d"), mb("c"), mb("a"), mb("b")]
+        );
+    }
+    Ok(())
 }

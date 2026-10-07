@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS `manifest_watermark` (
   `repo_id` INTEGER NOT NULL,
   `manifest_branch` VARBINARY(255) NOT NULL,
   `log_id` BIGINT NOT NULL,
+  -- Unix seconds of the branch's last non-service bookmark move or named land; NULL = never.
+  -- Writers only ever raise it, so stale readers and replays cannot rewind it.
+  `last_landed_at` BIGINT NULL,
   PRIMARY KEY (`repo_id`, `manifest_branch`)
 );
 -- Serves `GetReadCursor` (`ORDER BY log_id DESC LIMIT 1`) without a filesort.
--- Must stay NON-UNIQUE: `SetBranchWatermark` is a `REPLACE INTO`, which deletes unique-key conflicts.
 CREATE INDEX IF NOT EXISTS `read_cursor_idx` ON `manifest_watermark` (`repo_id`, `log_id`);

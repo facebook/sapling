@@ -109,8 +109,10 @@ mononoke_queries! {
 
     // Every manifest branch the tailer has seen. Read from the watermark table, not
     // the edge table: one row per branch there versus hundreds of thousands here.
+    // Oldest bookmark move first (served by `read_cursor_idx`), so a budgeted
+    // consumer that stops early resumes with the branches it has not reached.
     read ListManifestBranches(repo_id: RepositoryId) -> (ManifestBranch,) {
-        "SELECT manifest_branch FROM manifest_watermark WHERE repo_id = {repo_id}"
+        "SELECT manifest_branch FROM manifest_watermark WHERE repo_id = {repo_id} ORDER BY log_id ASC, manifest_branch ASC"
     }
 
     // Unconditional per-branch upsert, deliberately NOT a compare-and-swap.
@@ -118,9 +120,35 @@ mononoke_queries! {
     // transaction as the membership replace (see `replace_membership`), and the
     // owning tailer is a single-leader singleton. Add a CAS guard only if a
     // future concurrent writer needs it.
+    // Not `REPLACE INTO`: that would delete the row and with it `last_landed_at`.
     write SetBranchWatermark(repo_id: RepositoryId, manifest_branch: ManifestBranch, log_id: i64) {
         none,
-        "REPLACE INTO manifest_watermark (repo_id, manifest_branch, log_id) VALUES ({repo_id}, {manifest_branch}, {log_id})"
+        mysql("INSERT INTO manifest_watermark (repo_id, manifest_branch, log_id) VALUES ({repo_id}, {manifest_branch}, {log_id}) ON DUPLICATE KEY UPDATE log_id = {log_id}")
+        sqlite("INSERT INTO manifest_watermark (repo_id, manifest_branch, log_id) VALUES ({repo_id}, {manifest_branch}, {log_id}) ON CONFLICT(repo_id, manifest_branch) DO UPDATE SET log_id = excluded.log_id")
+    }
+
+    // Monotone: three writers (tailer, land service, seed) interleave freely, so
+    // only a later timestamp wins. A branch stamped before the tailer has
+    // projected it gets a placeholder watermark of 0, which the first projection
+    // overwrites.
+    write SetBranchActivity(repo_id: RepositoryId, manifest_branch: ManifestBranch, last_landed_at: i64) {
+        none,
+        mysql("INSERT INTO manifest_watermark (repo_id, manifest_branch, log_id, last_landed_at) VALUES ({repo_id}, {manifest_branch}, 0, {last_landed_at}) ON DUPLICATE KEY UPDATE last_landed_at = GREATEST(COALESCE(last_landed_at, 0), {last_landed_at})")
+        sqlite("INSERT INTO manifest_watermark (repo_id, manifest_branch, log_id, last_landed_at) VALUES ({repo_id}, {manifest_branch}, 0, {last_landed_at}) ON CONFLICT(repo_id, manifest_branch) DO UPDATE SET last_landed_at = MAX(COALESCE(last_landed_at, 0), excluded.last_landed_at)")
+    }
+
+    // Fan-out read joined with each branch's activity; NULL when the branch has
+    // no watermark row or was never stamped. Same order contract as the plain read.
+    read GetManifestBranchesForRepoWithActivity(
+        repo_name: RepoName,
+        repo_branch: RepoBranch,
+    ) -> (RepositoryId, ManifestBranch, Option<i64>) {
+        "SELECT m.manifest_repo_id, m.manifest_branch, w.last_landed_at
+         FROM repo_manifest_mapping m
+         LEFT JOIN manifest_watermark w
+           ON w.repo_id = m.manifest_repo_id AND w.manifest_branch = m.manifest_branch
+         WHERE m.repo_name = {repo_name} AND m.repo_branch = {repo_branch}
+         ORDER BY m.manifest_repo_id, m.manifest_branch"
     }
 }
 
@@ -217,6 +245,28 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         Ok(rows)
     }
 
+    async fn manifest_branches_for_repo_with_activity(
+        &self,
+        ctx: &CoreContext,
+        repo_name: &RepoName,
+        repo_branch: &RepoBranch,
+        staleness: Staleness,
+    ) -> Result<Vec<(RepositoryId, ManifestBranch, Option<i64>)>> {
+        let rows = GetManifestBranchesForRepoWithActivity::query(
+            self.get_connection(staleness),
+            ctx.sql_query_telemetry(),
+            repo_name,
+            repo_branch,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure fetching manifest branches with activity for repo {repo_name} branch {repo_branch}"
+            )
+        })?;
+        Ok(rows)
+    }
+
     async fn members_for_manifest_branch(
         &self,
         ctx: &CoreContext,
@@ -249,6 +299,7 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         manifest_branch: &ManifestBranch,
         edges: &[MembershipEdge],
         watermark: Option<i64>,
+        activity: Option<i64>,
     ) -> Result<()> {
         // De-duplicate the batch: membership is a SET, and a real manifest can
         // legitimately list the same (repo_name, repo_branch) more than once (e.g.
@@ -328,6 +379,22 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
                     .with_context(|| {
                         format!(
                             "Failed to set watermark for manifest repo {manifest_repo_id} branch {manifest_branch} while replacing membership"
+                        )
+                    })?;
+                    txn = txn_;
+                }
+
+                if let Some(last_landed_at) = activity {
+                    let (txn_, _) = SetBranchActivity::query_with_transaction(
+                        txn,
+                        &manifest_repo_id,
+                        manifest_branch,
+                        &last_landed_at,
+                    )
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Failed to stamp activity for manifest repo {manifest_repo_id} branch {manifest_branch} while replacing membership"
                         )
                     })?;
                     txn = txn_;
@@ -427,6 +494,29 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
         .with_context(|| {
             format!(
                 "Failed to set watermark for manifest repo {manifest_repo_id} branch {manifest_branch} to {log_id}"
+            )
+        })?;
+        Ok(())
+    }
+
+    async fn set_branch_activity(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        manifest_branch: &ManifestBranch,
+        last_landed_at: i64,
+    ) -> Result<()> {
+        SetBranchActivity::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &manifest_repo_id,
+            manifest_branch,
+            &last_landed_at,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to stamp activity for manifest repo {manifest_repo_id} branch {manifest_branch} at {last_landed_at}"
             )
         })?;
         Ok(())
