@@ -41,6 +41,7 @@ use mononoke_api::FingerprintVersion;
 use mononoke_api::MetadataDiff;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
+use mononoke_api::PathVisibility;
 use mononoke_api::RateLimitOutcome;
 use mononoke_api::Repo;
 use mononoke_api::RestrictedPathsPolicy;
@@ -500,35 +501,36 @@ impl SourceControlServiceImpl {
             ));
         }
 
+        // One policy for the whole request: all three resolutions share its
+        // omission counter. Under Strict, denials fail the whole request and
+        // the assembly below never sees a denied side.
+        let policy = RestrictedPathsPolicy::for_scs_request();
+        // The subtree branch moves its policy into a coroutine; the other
+        // branches only borrow.
+        let subtree_policy = policy.clone();
         let (base_path_contexts, other_path_contexts, subtree_source_path_contexts) = try_join!(
             async {
-                let base_commit_paths = base_commit
-                    .paths_with_content(
-                        base_commit_paths.into_iter(),
-                        &RestrictedPathsPolicy::Strict,
-                    )
+                let stream = base_commit
+                    .paths_with_content(base_commit_paths.into_iter(), &policy)
                     .await?;
-                let base_commit_contexts = base_commit_paths
+                let base_commit_contexts = stream
                     .map_ok(|path_context| (path_context.path().clone(), path_context))
                     .try_collect::<HashMap<_, _>>()
-                    .await?;
-                Ok::<_, scs_errors::ServiceError>(base_commit_contexts)
+                    .await;
+                Ok::<_, scs_errors::ServiceError>(base_commit_contexts?)
             },
             async {
                 match &other_commit {
                     None => Ok(HashMap::new()),
                     Some(other_commit) => {
-                        let other_commit_paths = other_commit
-                            .paths_with_content(
-                                other_commit_paths.into_iter(),
-                                &RestrictedPathsPolicy::Strict,
-                            )
+                        let stream = other_commit
+                            .paths_with_content(other_commit_paths.into_iter(), &policy)
                             .await?;
-                        let other_commit_contexts = other_commit_paths
+                        let other_commit_contexts = stream
                             .map_ok(|path_context| (path_context.path().clone(), path_context))
                             .try_collect::<HashMap<_, _>>()
-                            .await?;
-                        Ok::<_, scs_errors::ServiceError>(other_commit_contexts)
+                            .await;
+                        Ok::<_, scs_errors::ServiceError>(other_commit_contexts?)
                     }
                 }
             },
@@ -538,20 +540,24 @@ impl SourceControlServiceImpl {
                         .into_iter()
                         .map(Ok::<_, scs_errors::ServiceError>),
                 )
-                .try_filter_map(|(commit_id, paths)| async move {
-                    let changeset_specifier = ChangesetSpecifier::from_request(&commit_id)
-                        .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
-                        .context("invalid target commit id")?;
-                    if let Some(changeset) = repo.changeset(changeset_specifier).await? {
-                        let path_contexts = changeset
-                            .paths_with_content(paths.into_iter(), &RestrictedPathsPolicy::Strict)
-                            .await?
-                            .map_ok(|path_context| (path_context.path().clone(), path_context))
-                            .try_collect::<HashMap<_, _>>()
-                            .await?;
-                        Ok(Some((commit_id.clone(), (changeset, path_contexts))))
-                    } else {
-                        Ok::<_, scs_errors::ServiceError>(None)
+                .try_filter_map(|(commit_id, paths)| {
+                    let policy = subtree_policy.clone();
+                    async move {
+                        let changeset_specifier = ChangesetSpecifier::from_request(&commit_id)
+                            .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
+                            .context("invalid target commit id")?;
+                        if let Some(changeset) = repo.changeset(changeset_specifier).await? {
+                            let stream = changeset
+                                .paths_with_content(paths.into_iter(), &policy)
+                                .await?;
+                            let path_contexts = stream
+                                .map_ok(|path_context| (path_context.path().clone(), path_context))
+                                .try_collect::<HashMap<_, _>>()
+                                .await;
+                            Ok(Some((commit_id.clone(), (changeset, path_contexts?))))
+                        } else {
+                            Ok::<_, scs_errors::ServiceError>(None)
+                        }
                     }
                 })
                 .try_collect::<HashMap<_, _>>()
@@ -559,8 +565,14 @@ impl SourceControlServiceImpl {
             }
         )?;
 
-        let items = paths
-            .into_iter()
+        // Assemble one diff item per requested pair. A requested path missing
+        // from the batch map is either genuinely absent (the "not found"
+        // error) or a restricted-path denial (that side becomes None). The
+        // singular re-check runs the same visibility check, so the
+        // classification is exact; it only runs for missing paths, i.e.
+        // rarely. Pairs resolve concurrently with bounded parallelism, in
+        // input order.
+        let items = stream::iter(paths)
             .map(
                 |(
                     base_path,
@@ -570,58 +582,141 @@ impl SourceControlServiceImpl {
                     copy_info,
                     placeholder,
                 )| {
-                    let base_context = match base_path.as_ref() {
-                        Some(base_path) => {
-                            Some(base_path_contexts.get(base_path).ok_or_else(|| {
-                                scs_errors::invalid_request(format!(
-                                    "{base_path} not found in {commit:?}"
-                                ))
-                            })?)
-                        }
-                        None => None,
-                    };
+                    let base_path_contexts = &base_path_contexts;
+                    let other_path_contexts = &other_path_contexts;
+                    let subtree_source_path_contexts = &subtree_source_path_contexts;
+                    let base_commit = &base_commit;
+                    let other_commit = &other_commit;
+                    let commit = &commit;
+                    async move {
+                        let item = async {
+                        let (base_context, base_denied) = match base_path.as_ref() {
+                            Some(base_path) => match base_path_contexts.get(base_path) {
+                                Some(context) => (Some(context.clone()), false),
+                                None => match base_commit
+                                    .check_path_visibility(base_path)
+                                    .await?
+                                {
+                                    PathVisibility::Present(_) => {
+                                        return Err(scs_errors::invalid_request(format!(
+                                            "{base_path} not found in {commit:?}"
+                                        ))
+                                        .into());
+                                    }
+                                    PathVisibility::Denied => (None, true),
+                                },
+                            },
+                            None => (None, false),
+                        };
 
-                    let other_context = match (source_commit_id, other_path.as_ref()) {
-                        (Some(source_commit_id), Some(other_path)) => {
-                            Some(subtree_source_path_contexts.get(&source_commit_id).ok_or_else(|| {
-                                scs_errors::internal_error(format!("subtree source {source_commit_id:?} not found"))
-                            })?.1.get(other_path).ok_or_else(|| {
-                                scs_errors::invalid_request(format!("subtree source path {other_path:?} not found in {source_commit_id:?}"))
-                            })?)
-                        }
-                        (None, Some(other_path)) => {
-                            Some(other_path_contexts.get(other_path).ok_or_else(|| {
-                                scs_errors::invalid_request(format!(
-                                    "{other_path} not found in {other_commit:?}"
-                                ))
-                            })?)
-                        }
-                        _ => None,
-                    };
+                        let (other_context, other_denied) = match (
+                            source_commit_id.as_ref(),
+                            other_path.as_ref(),
+                        ) {
+                            (Some(source_commit_id), Some(other_path)) => {
+                                match subtree_source_path_contexts.get(source_commit_id) {
+                                    Some((source_changeset, contexts)) => {
+                                        match contexts.get(other_path) {
+                                            Some(context) => (Some(context.clone()), false),
+                                            None => match source_changeset
+                                                .check_path_visibility(other_path)
+                                                .await?
+                                            {
+                                                PathVisibility::Present(_) => {
+                                                    return Err(scs_errors::invalid_request(format!(
+                                                        "subtree source path {other_path:?} not found in {source_commit_id:?}"
+                                                    ))
+                                                    .into());
+                                                }
+                                                PathVisibility::Denied => (None, true),
+                                            },
+                                        }
+                                    }
+                                    None => {
+                                        return Err(scs_errors::internal_error(format!(
+                                            "subtree source {source_commit_id:?} not found"
+                                        ))
+                                        .into());
+                                    }
+                                }
+                            }
+                            (None, Some(other_path)) => {
+                                match other_path_contexts.get(other_path) {
+                                    Some(context) => (Some(context.clone()), false),
+                                    None => {
+                                        let Some(other_commit) = other_commit.as_ref() else {
+                                            return Err(scs_errors::internal_error(
+                                                "other path requested without other commit",
+                                            )
+                                            .into());
+                                        };
+                                        match other_commit
+                                            .check_path_visibility(other_path)
+                                            .await?
+                                        {
+                                            PathVisibility::Present(_) => {
+                                                return Err(scs_errors::invalid_request(format!(
+                                                    "{other_path} not found in {other_commit:?}"
+                                                ))
+                                                .into());
+                                            }
+                                            PathVisibility::Denied => (None, true),
+                                        }
+                                    }
+                                }
+                            }
+                            _ => (None, false),
+                        };
 
-                    let path = base_path
-                        .or(replacement_path.clone())
-                        .or(other_path)
-                        .ok_or_else(|| {
-                            scs_errors::invalid_request("at least one path must be provided")
-                        })?
-                        .clone();
+                        if base_context.is_none()
+                            && other_context.is_none()
+                            && (base_denied || other_denied)
+                        {
+                            // Nothing visible on either side: omit the pair.
+                            // The omission count above records it.
+                            return Ok(None);
+                        }
 
-                    let path_diff_context = ChangesetPathDiffContext::new_file(
-                        base_commit.clone(),
-                        path,
-                        base_context.cloned(),
-                        other_context.cloned(),
-                        copy_info,
-                        replacement_path,
-                    )?;
-                    Ok(CommitFileDiffsItem {
-                        path_diff_context,
-                        placeholder,
-                    })
+                        // A denied side carries no provenance: drop copy info
+                        // rather than leaking the hidden side's path through it.
+                        let copy_info =
+                            if (base_denied || other_denied) && copy_info != CopyInfo::None {
+                                CopyInfo::None
+                            } else {
+                                copy_info
+                            };
+
+                        let path = base_path
+                            .or(replacement_path.clone())
+                            .or(other_path)
+                            .ok_or_else(|| {
+                                scs_errors::invalid_request("at least one path must be provided")
+                            })?
+                            .clone();
+
+                        let path_diff_context = ChangesetPathDiffContext::new_file(
+                            base_commit.clone(),
+                            path,
+                            base_context,
+                            other_context,
+                            copy_info,
+                            replacement_path,
+                        )?;
+                        Ok::<_, scs_errors::ServiceError>(Some(CommitFileDiffsItem {
+                            path_diff_context,
+                            placeholder,
+                        }))
+                        };
+                        item.await
+                    }
                 },
             )
-            .collect::<Result<Vec<_>, scs_errors::ServiceError>>()?;
+            .buffered(50)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
 
         // Check the total file size limit
         let total_input_size = stream::iter(items.iter())
@@ -680,9 +775,12 @@ impl SourceControlServiceImpl {
             .try_collect()
             .await?;
 
+        policy.set_partial_if_omitted(&ctx);
+
         Ok(thrift::CommitFileDiffsResponse {
             path_diffs,
             stopped_at_pair,
+            partial_info: super::partial_response_info(policy.omitted_count()),
             ..Default::default()
         })
     }

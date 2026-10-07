@@ -292,6 +292,15 @@ fn to_vec1<X>(maybe_vec: Option<Vec<X>>) -> Option<Vec1<X>> {
     maybe_vec.and_then(|v| Vec1::try_from_vec(v).ok())
 }
 
+/// How a requested path resolved under partial-response semantics.
+pub enum PathVisibility<R> {
+    /// Caller is entitled: content context for the visible side.
+    Present(ChangesetPathContentContext<R>),
+    /// Restricted-path denial: the side becomes None and the caller sets
+    /// the partial-response flag.
+    Denied,
+}
+
 /// Map a fallible stream item into an optional, counting restricted-path
 /// denials and dropping those items. All other errors still fail the
 /// stream.
@@ -1058,6 +1067,18 @@ where
                 .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
         )
         .await
+    }
+
+    /// How a requested path resolved under partial-response semantics.
+    pub async fn check_path_visibility(
+        &self,
+        path: &MPath,
+    ) -> Result<PathVisibility<R>, MononokeError> {
+        match self.path_with_content(path.clone()).await {
+            Ok(ctx) => Ok(PathVisibility::Present(ctx)),
+            Err(e) if e.is_restricted_path_denial() => Ok(PathVisibility::Denied),
+            Err(e) => Err(e),
+        }
     }
 }
 

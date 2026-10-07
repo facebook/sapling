@@ -55,6 +55,7 @@ pub use crate::changeset::ChangesetHistoryOptions;
 pub use crate::changeset::ChangesetLinearHistoryOptions;
 pub use crate::changeset::FingerprintVersion;
 pub use crate::changeset::Generation;
+pub use crate::changeset::PathVisibility;
 pub use crate::changeset_path::ChangesetPathContentContext;
 pub use crate::changeset_path::ChangesetPathHistoryOptions;
 pub use crate::changeset_path::PathEntry;
