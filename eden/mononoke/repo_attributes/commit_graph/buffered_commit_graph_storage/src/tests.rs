@@ -49,10 +49,6 @@ where
 
 impl_commit_graph_tests!(run_test);
 
-/// FIXME: BUG! This did resolve a full-length prefix of a changeset that exists in both
-/// the in-memory and the persistent layer to `Multiple([B, B])`, because `find_by_prefix`
-/// concatenates the matches of both layers without deduplicating them, but it should have
-/// resolved it to `Single(B)`, as a single storage holding the union of both layers does.
 #[mononoke::fbinit_test]
 async fn test_find_by_prefix_dedups_changeset_in_both_layers(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -68,10 +64,6 @@ async fn test_find_by_prefix_dedups_changeset_in_both_layers(fb: FacebookInit) -
 
     let prefix = ChangesetIdPrefix::from_bytes(b.as_ref())?;
     let resolved = storage.find_by_prefix(&ctx, prefix, 10).await?;
-    // FIXME: BUG! The changeset is reported once per layer.
-    assert_eq!(
-        resolved,
-        ChangesetIdsResolvedFromPrefix::Multiple(vec![b, b])
-    );
+    assert_eq!(resolved, ChangesetIdsResolvedFromPrefix::Single(b));
     Ok(())
 }

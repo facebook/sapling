@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -167,6 +168,8 @@ impl CommitGraphStorage for MemWritesCommitGraphStorage {
                         .to_vec()
                         .into_iter()
                         .chain(persistent_matches.to_vec())
+                        .collect::<BTreeSet<_>>()
+                        .into_iter()
                         .collect(),
                     limit,
                 ))
