@@ -66,15 +66,12 @@ def get_test_env_and_deps(suffix = ""):
             "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
-            "HG_REAL_BIN": "//eden/scm:hg",
         })
     elif read_bool("fbcode", "mode_win_enabled", False):
         suffix = get_oss_suffix()
         env_to_target.update({
             "EDENFS_CHECK_WINDOWS_RENAME": "//eden/integration/helpers:check_windows_rename",
             "EDENFS_READ_REPARSE_BUFFER": "//eden/integration/helpers:read_reparse_buffer",
-            "EDEN_HG_BINARY": "//eden/scm:hg",
-            "HG_REAL_BIN": "//eden/scm:hg",
         })
     else:
         env_to_target.update({
@@ -83,7 +80,6 @@ def get_test_env_and_deps(suffix = ""):
             "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
-            "HG_REAL_BIN": "//eden/scm:hg",
         })
 
     env_to_target.update({
@@ -112,6 +108,12 @@ def get_test_env_and_deps(suffix = ""):
     envs["EDENFS_SERVER_PATH"] = "$(exe_target %s)" % edenfs
     deps.append(edenfs)
     deps.append("//eden/integration/helpers:tsan_suppressions")
+
+    hg = "//eden/scm/tests:sl_with_sanitizer_env"
+    envs["HG_REAL_BIN"] = "$(exe_target %s)" % hg
+    if read_bool("fbcode", "mode_win_enabled", False):
+        envs["EDEN_HG_BINARY"] = envs["HG_REAL_BIN"]
+    deps.append(hg)
 
     # This one needs to be $(exe_target) since it's a command_alias.
     edenfsctl = "//eden/fs/cli_rs:edenfsctl-run{}".format(suffix)

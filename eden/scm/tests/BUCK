@@ -63,6 +63,12 @@ buck_command_alias(
     exe = "//eden/scm:hg_test",
 )
 
+buck_command_alias(
+    name = "sl_with_sanitizer_env",
+    env = get_hg_test_sanitizer_env(),
+    exe = "//eden/scm:hg",
+)
+
 python_binary(
     name = "run_tests_py_eden",
     srcs = RUN_TEST_PY_FILES + ["edenfs.py"],
