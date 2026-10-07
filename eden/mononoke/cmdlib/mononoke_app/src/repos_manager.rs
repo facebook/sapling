@@ -168,10 +168,16 @@ where
                 repo_config.redaction = Redaction::Disabled;
             }
             let common_config = configs.repo_configs().common.clone();
+            let start = Instant::now();
             let repo = repo_factory
-                .build(repo_name, repo_config, common_config)
+                .build(repo_name.clone(), repo_config, common_config)
                 .await
                 .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
+            info!(
+                "Built repo on first request: {} in {:?}",
+                repo_name,
+                start.elapsed()
+            );
             anyhow::Ok(repo)
         }
         .boxed()
