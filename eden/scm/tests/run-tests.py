@@ -220,9 +220,8 @@ def checksocketfamily(name, port=20058):
     if family is None:
         return False
     try:
-        s = socket.socket(family, socket.SOCK_STREAM)
-        s.bind(("localhost", port))
-        s.close()
+        with socket.socket(family, socket.SOCK_STREAM) as s:
+            s.bind(("localhost", port))
         return True
     except socket.error as exc:
         if exc.errno == errno.EADDRINUSE:
@@ -246,9 +245,8 @@ def checkportisavailable(port):
     else:
         family = socket.AF_INET
     try:
-        s = socket.socket(family, socket.SOCK_STREAM)
-        s.bind(("localhost", port))
-        s.close()
+        with socket.socket(family, socket.SOCK_STREAM) as s:
+            s.bind(("localhost", port))
         return True
     except socket.error as exc:
         # pyrefly: ignore [missing-attribute]
