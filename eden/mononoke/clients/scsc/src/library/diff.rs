@@ -182,6 +182,9 @@ async fn make_file_diff_request(
     };
 
     let response = connection.commit_file_diffs(commit, &params).await?;
+    if crate::util::is_partial_verdict(&response.partial_info) {
+        connection.note_partial();
+    }
     let diffs: Vec<_> = response
         .path_diffs
         .into_iter()
