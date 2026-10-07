@@ -178,6 +178,14 @@ impl CoreContext {
         self.logging.set_partial_response();
     }
 
+    pub fn potential_partial_response(&self) -> bool {
+        self.logging.potential_partial_response()
+    }
+
+    pub fn set_potential_partial_response(&self) {
+        self.logging.set_potential_partial_response();
+    }
+
     pub fn sql_query_telemetry(&self) -> SqlQueryTelemetry {
         let fb = self.fb.clone();
         let metadata = self.metadata();

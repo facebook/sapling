@@ -48,6 +48,7 @@ pub struct LoggingContainer {
     override_sampling: Arc<AtomicBool>,
     nocache_thriftcache: Arc<AtomicBool>,
     partial_response: Arc<AtomicBool>,
+    potential_partial_response: Arc<AtomicBool>,
 }
 
 impl LoggingContainer {
@@ -66,6 +67,7 @@ impl LoggingContainer {
             override_sampling: Arc::new(AtomicBool::new(false)),
             nocache_thriftcache: Arc::new(AtomicBool::new(false)),
             partial_response: Arc::new(AtomicBool::new(false)),
+            potential_partial_response: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -84,6 +86,7 @@ impl LoggingContainer {
             override_sampling: self.override_sampling.clone(),
             nocache_thriftcache: self.nocache_thriftcache.clone(),
             partial_response: self.partial_response.clone(),
+            potential_partial_response: self.potential_partial_response.clone(),
         }
     }
 
@@ -120,6 +123,7 @@ impl LoggingContainer {
             override_sampling: self.override_sampling.clone(),
             nocache_thriftcache: self.nocache_thriftcache.clone(),
             partial_response: self.partial_response.clone(),
+            potential_partial_response: self.potential_partial_response.clone(),
         }
     }
 
@@ -145,5 +149,14 @@ impl LoggingContainer {
 
     pub fn set_partial_response(&self) {
         self.partial_response.store(true, Ordering::Relaxed);
+    }
+
+    pub fn potential_partial_response(&self) -> bool {
+        self.potential_partial_response.load(Ordering::Relaxed)
+    }
+
+    pub fn set_potential_partial_response(&self) {
+        self.potential_partial_response
+            .store(true, Ordering::Relaxed);
     }
 }

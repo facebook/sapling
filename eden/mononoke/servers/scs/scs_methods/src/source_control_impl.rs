@@ -1086,6 +1086,10 @@ fn log_result<T: AddScubaResponse>(
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     scuba.add("partial_response", ctx.partial_response());
+    scuba.add(
+        "potential_partial_response",
+        ctx.potential_partial_response(),
+    );
     if let Some(error) = error {
         scuba.add("error", error.as_str());
     }
@@ -1280,6 +1284,10 @@ fn log_stream_complete(
     scuba.add_try_stream_stats(&combined_stats);
     scuba.add("status", status);
     scuba.add("partial_response", ctx.partial_response());
+    scuba.add(
+        "potential_partial_response",
+        ctx.potential_partial_response(),
+    );
     if let Some(error) = error {
         scuba.add("error", error.as_str());
     }
@@ -1552,11 +1560,16 @@ macro_rules! impl_thrift_stream_methods {
                     // response header. A partial response must not be served from
                     // cache to an entitled caller (who would silently receive
                     // incomplete data); the exact verdict travels in the typed
-                    // response instead.
-                    if ctx.nocache_thriftcache() || ctx.partial_response() {
+                    // response instead. Streaming verdicts are unknowable when the
+                    // initial response goes out (items are produced lazily), so when
+                    // filtering is active the potential flag sets `nocache` up front,
+                    // pessimistically; the exact verdict arrives on the terminal item.
+                    if ctx.nocache_thriftcache()
+                        || ctx.partial_response()
+                        || ctx.potential_partial_response()
+                    {
                         let _ = req_ctxt.set_header("nocache", "1");
                     }
-
                     result
                 };
                 Box::pin(fut)

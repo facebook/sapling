@@ -1075,17 +1075,63 @@ impl SourceControlServiceImpl {
             None => ChangesetFileOrdering::Unordered,
         };
 
+        // When partial responses are not allowed, the first denial fails
+        // the whole request. When allowed, denied paths are filtered
+        // (counting omissions) and the exact verdict is reported on a
+        // terminal item; up front we can only set `nocache`,
+        // pessimistically, since items are produced lazily.
+        let policy = RestrictedPathsPolicy::for_scs_request();
+        let partial = !matches!(policy, RestrictedPathsPolicy::Strict);
+        if partial {
+            ctx.set_potential_partial_response();
+        }
+        let checker = changeset.clone();
+
         let files_stream = (async_stream::stream! {
-            let s = changeset
+            // Owned by the generator so the filter closures below can
+            // borrow them for the whole block.
+            let policy = policy.clone();
+            let checker = checker.clone();
+            let path_stream = changeset
             .find_files(
                 prefixes,
                 params.basenames,
                 params.basename_suffixes,
                 ordering,
             )
-            .await?
-            .take(limit)
-            .map_ok(|path| path.to_string())
+            .await?;
+            // Bounded, order-preserving concurrency so `after` pagination
+            // keeps working while checks overlap. The budget applies
+            // after filtering, so denied paths never shrink a page: a
+            // short (or empty) non-terminal page still means the walk is
+            // exhausted, and `after` resumes past every enumerated path.
+            let filtered: BoxStream<'_, Result<String, MononokeError>> = if partial {
+                path_stream
+                    .map_ok(|path| {
+                        let policy = policy.clone();
+                        let checker = checker.clone();
+                        async move {
+                            match checker.check_path_visibility(&path).await {
+                                Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
+                                Ok(PathVisibility::Denied) => {
+                                    policy.record_omission();
+                                    Ok(None)
+                                }
+                                Err(e) => Err(e),
+                            }
+                        }
+                    })
+                    .try_buffered(50)
+                    .try_filter_map(|kept| futures::future::ready(Ok(kept)))
+                    .take(limit)
+                    .boxed()
+            } else {
+                path_stream
+                    .map_ok(|path| path.to_string())
+                    .take(limit)
+                    .boxed()
+            };
+            let s = filtered
             .try_chunks(1000)
             .map_ok(|files| thrift::CommitFindFilesStreamItem {
                 files,
@@ -1095,6 +1141,18 @@ impl SourceControlServiceImpl {
             pin_mut!(s);
             while let Some(value) = s.next().await {
                 yield value;
+            }
+            if partial {
+                // Terminal verdict item carrying the exact signal.
+                // `try_chunks` never yields empty chunks, so an empty file
+                // list unambiguously marks this item as terminal; clients
+                // that do not read the verdict just see an extra empty item.
+                policy.set_partial_if_omitted(&ctx);
+                yield Ok(thrift::CommitFindFilesStreamItem {
+                    files: vec![],
+                    partial_info: super::partial_response_info(policy.omitted_count()),
+                    ..Default::default()
+                });
             }
         })
         .boxed();

@@ -2603,7 +2603,10 @@ struct CommitFindFilesStreamItem {
   /// Partial-response verdict, set only on the terminal item.
   /// The server appends a final item carrying this (with an empty file
   /// list) when the stream filtered restricted paths; its absence on the
-  /// last item means a complete stream. See PartialResponseInfo.
+  /// last item means a complete stream. The end of pagination is signaled
+  /// by a short (or empty) non-terminal page: consume pages
+  /// with `after` until one returns fewer than `limit` files. See
+  /// PartialResponseInfo.
   2: optional PartialResponseInfo partial_info;
 }
 

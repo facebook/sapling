@@ -6,6 +6,9 @@
  */
 
 use std::io::Write;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -97,10 +100,24 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .await
             .map_err(|e| e.handle_selection_error(&commit_specifier.repo))?;
 
+        // The terminal item carries the exact verdict (an empty file list
+        // marks it; rendering it prints nothing). Observe it while the
+        // stream is consumed.
+        let terminal_partial = Arc::new(AtomicBool::new(false));
+        let observed = terminal_partial.clone();
         let response = response_stream
-            .map_ok(|entry| FileListOutput(entry.files))
+            .map_ok(move |entry| {
+                if crate::util::is_partial_verdict(&entry.partial_info) {
+                    observed.store(true, Ordering::Relaxed);
+                }
+                FileListOutput(entry.files)
+            })
             .map_err(Into::into);
-        app.target.render(&args, response).await
+        let result = app.target.render(&args, response).await;
+        if result.is_ok() && terminal_partial.load(Ordering::Relaxed) {
+            crate::util::print_partial_note();
+        }
+        result
     } else {
         let response = conn
             .commit_find_files(&commit_specifier, &params)
