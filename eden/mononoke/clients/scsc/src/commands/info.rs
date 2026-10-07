@@ -284,7 +284,6 @@ async fn multiple_path_info(
         .await
         .map_err(|e| e.handle_selection_error(&commit.repo))?;
 
-    // Capture before `path_info` moves into the output below.
     let info_partial = crate::util::is_partial_verdict(&response.partial_info);
     let output = stream::iter(response.path_info).map(move |(path, commit_info)| {
         match (commit_info.r#type, commit_info.info) {

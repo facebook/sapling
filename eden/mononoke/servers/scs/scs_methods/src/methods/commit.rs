@@ -1117,13 +1117,11 @@ impl SourceControlServiceImpl {
         if partial {
             ctx.set_potential_partial_response();
         }
-        let checker = changeset.clone();
 
         let files_stream = (async_stream::stream! {
             // Owned by the generator so the filter closures below can
-            // borrow them for the whole block.
+            // borrow it for the whole block.
             let policy = policy.clone();
-            let checker = checker.clone();
             let path_stream = changeset
             .find_files(
                 prefixes,
@@ -1132,29 +1130,27 @@ impl SourceControlServiceImpl {
                 ordering,
             )
             .await?;
-            // Bounded, order-preserving concurrency so `after` pagination
-            // keeps working while checks overlap. The budget applies
-            // after filtering, so denied paths never shrink a page: a
-            // short (or empty) non-terminal page still means the walk is
-            // exhausted, and `after` resumes past every enumerated path.
             let filtered: BoxStream<'_, Result<String, MononokeError>> = if partial {
                 path_stream
                     .map_ok(|path| {
-                        let policy = policy.clone();
-                        let checker = checker.clone();
+                        cloned!(changeset);
                         async move {
-                            match checker.check_path_visibility(&path).await {
+                            match changeset.check_path_visibility(&path).await {
                                 Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
-                                Ok(PathVisibility::Denied) => {
-                                    policy.record_omission();
-                                    Ok(None)
-                                }
+                                Ok(PathVisibility::Denied) => Ok(None),
                                 Err(e) => Err(e),
                             }
                         }
                     })
                     .try_buffered(50)
-                    .try_filter_map(|kept| futures::future::ready(Ok(kept)))
+                    .try_filter_map(|kept| {
+                        // Downstream of the buffer, so buffered lookahead
+                        // past `take(limit)` is dropped without counting.
+                        if kept.is_none() {
+                            policy.record_omission();
+                        }
+                        futures::future::ready(Ok(kept))
+                    })
                     .take(limit)
                     .boxed()
             } else {

@@ -326,7 +326,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .split('/')
             .cmp(compare_file_path(b).split('/'))
     });
-    // Capture before `diff_files` moves into the output below.
     let compare_partial = crate::util::is_partial_verdict(&response.partial_info);
 
     if args.paths_only {
