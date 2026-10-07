@@ -2510,6 +2510,20 @@ union RepoUpdateSubmoduleExpansionResult {
   2: MegarepoAsynchronousRequestError error;
 }
 
+/// Partial-response signal: when the server omits entries due to
+/// restricted-path denials instead of failing the request, it sets this
+/// field so typed clients get an exact verdict. `partial` is true iff
+/// entries were omitted; `omitted_restricted_paths_count` carries the count
+/// when known up front (unary) and is absent when the count lives only in
+/// Scuba (streams). The field is populated only when the
+/// `scs_enable_partial_responses` killswitch is on; its absence means
+/// the server does not support partial responses, or they are not
+/// allowed for this request.
+struct PartialResponseInfo {
+  1: bool partial;
+  2: optional i64 omitted_restricted_paths_count;
+}
+
 struct CommitCompareResponse {
   /// List of the files that are different between commits with their metadata
   /// Can be used for subsequent `commit_path_diff` calls for file-level diffs.
@@ -2524,6 +2538,8 @@ struct CommitCompareResponse {
   /// This is the last path that was produced, suitable for passing into
   /// the `after_path` parameter of a subsequent ordered request.
   4: optional Path last_path;
+  /// Partial-response verdict. See PartialResponseInfo.
+  5: optional PartialResponseInfo partial_info;
 }
 
 struct CommitFileDiffsResponseElement {
@@ -2542,6 +2558,8 @@ struct CommitFileDiffsResponse {
   1: list<CommitFileDiffsResponseElement> path_diffs;
   /// The first pair for which a diff was not returned. Start next request from this pair if you want to resume.
   2: optional CommitFileDiffsStoppedAtPair stopped_at_pair;
+  /// Partial-response verdict. See PartialResponseInfo.
+  3: optional PartialResponseInfo partial_info;
 }
 
 struct CommitLookupResponse {
@@ -2577,6 +2595,11 @@ struct CommitFindFilesStreamResponse {}
 struct CommitFindFilesStreamItem {
   /// The files that match.
   1: list<string> files;
+  /// Partial-response verdict, set only on the terminal item.
+  /// The server appends a final item carrying this (with an empty file
+  /// list) when the stream filtered restricted paths; its absence on the
+  /// last item means a complete stream. See PartialResponseInfo.
+  2: optional PartialResponseInfo partial_info;
 }
 
 struct CommitHistoryResponse {
@@ -2739,6 +2762,8 @@ struct CommitMultiplePathInfoResponse {
   ///
   /// Note: requested paths that do not exist are omitted from the map.
   1: map<Path, CommitPathInfoResponse> path_info;
+  /// Partial-response verdict. See PartialResponseInfo.
+  2: optional PartialResponseInfo partial_info;
 }
 
 struct CommitPathBlameResponse {
@@ -2779,6 +2804,8 @@ struct CommitMultiplePathLastChangedResponse {
   ///
   /// Requested paths that have never existed are omitted.
   1: map<Path, CommitPathLastChange> path_last_change;
+  /// Partial-response verdict. See PartialResponseInfo.
+  2: optional PartialResponseInfo partial_info;
 }
 
 struct CommitRestrictedPathsAccessResponse {
