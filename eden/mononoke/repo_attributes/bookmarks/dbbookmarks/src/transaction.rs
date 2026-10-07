@@ -34,6 +34,7 @@ use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
 use crate::store::SelectBookmark;
+use crate::store::SelectBookmarkForUpdate;
 
 const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 10;
 
@@ -209,6 +210,46 @@ impl<'a> TransactionLogUpdates<'a> {
     }
 }
 
+/// Check a fully-applied mirror batch for divergence. Only a replica that
+/// stopped exactly at the batch's last move can be checked against that
+/// move's changeset: if it sits at that log id but a different changeset,
+/// it diverged, so fail hard instead of reporting success. A replica whose
+/// log id is past the batch already applied later moves, so its changeset
+/// is expected to differ and comparing it would report a false divergence.
+fn check_mirror_replay_divergence(
+    current: &[(ChangesetId, Option<u64>)],
+    moves: &[MirrorBookmarkMove],
+) -> Result<(), BookmarkTransactionError> {
+    if let (Some(row), Some(last_move)) = (current.first(), moves.last()) {
+        if row.1 == Some(last_move.log_id) && row.0 != last_move.new {
+            return Err(BookmarkTransactionError::LogicError);
+        }
+    }
+    Ok(())
+}
+
+/// Decide a lost bookmark-creation INSERT: a concurrent bookmark creation
+/// committed while this batch was in flight (the pessimistic lock cannot
+/// serialize creations because there is no row to lock). `fresh` is the bookmark row
+/// re-read after the failed INSERT. Returns `Ok` when the winner applied
+/// the whole batch, so the caller skips it as a replay; a batch that is
+/// still unapplied, or applied with a different changeset, is a genuine
+/// divergence and returns `LogicError`.
+fn check_lost_insert_replay(
+    fresh: &[(ChangesetId, Option<u64>)],
+    moves: &[MirrorBookmarkMove],
+) -> Result<(), BookmarkTransactionError> {
+    let fresh_log_id = fresh.first().and_then(|row| row.1);
+    let any_unapplied = match fresh_log_id {
+        Some(id) => moves.iter().any(|m| m.log_id > id),
+        None => true,
+    };
+    if any_unapplied {
+        return Err(BookmarkTransactionError::LogicError);
+    }
+    check_mirror_replay_divergence(fresh, moves)
+}
+
 impl SqlBookmarksTransactionPayload {
     fn new(repo_id: RepositoryId) -> Self {
         SqlBookmarksTransactionPayload {
@@ -342,7 +383,15 @@ impl SqlBookmarksTransactionPayload {
     /// Shadow replicas are read only and this path is their only writer, so the
     /// log id stored on the bookmark is always a source log id.
     ///
-    /// 1. Read the bookmark's current changeset and log id.
+    /// 1. Read the bookmark's current changeset and log id with a pessimistic
+    ///    lock (modern_sync mirror path only). When the row already exists,
+    ///    the lock serializes concurrent replays of one chain: a replay that
+    ///    arrives while another commits waits, then reads the winner's commit
+    ///    and reports AlreadyProcessed instead of losing the compare-and-swap
+    ///    below. Bookmark creation has no row to lock, so concurrent bookmark
+    ///    creations can both reach the INSERT in step 3; the loser re-reads
+    ///    there and treats a fully-applied batch as a replay instead of a
+    ///    divergence.
     /// 2. Drop the moves whose log id the replica already stored. Because the
     ///    moves are ordered, the rest form a suffix. If none remain, the replica
     ///    already applied the whole chain, so return `AlreadyProcessed` and let
@@ -354,7 +403,10 @@ impl SqlBookmarksTransactionPayload {
     ///    old changeset to the last move's new changeset, tagged with the last
     ///    move's log id. The CAS also enforces that the replica sits exactly at
     ///    the first unseen move's old changeset; if it does not, the replica has
-    ///    diverged, so return `LogicError`.
+    ///    diverged, so return `LogicError`. When the first unseen move is a
+    ///    create, INSERT the bookmark instead; a lost INSERT re-reads the row
+    ///    and applies the step-2 decision rather than failing outright (see
+    ///    step 1).
     /// 4. Insert one bookmarks_update_log row per applied move, reusing each
     ///    move's source id, changesets, and reason.
     ///
@@ -368,7 +420,7 @@ impl SqlBookmarksTransactionPayload {
         let mut first_applied_id: Option<u64> = None;
         let mut any_applied = false;
         for (bookmark, create_kind, moves) in self.mirror_batches.iter() {
-            let (txn_, current) = SelectBookmark::query_with_transaction(
+            let (txn_, current) = SelectBookmarkForUpdate::query_with_transaction(
                 txn,
                 &self.repo_id,
                 bookmark.name(),
@@ -385,23 +437,12 @@ impl SqlBookmarksTransactionPayload {
             let (first_unapplied, last) = match (unapplied.first(), unapplied.last()) {
                 (Some(first), Some(last)) => (*first, *last),
                 // The replica already applied this batch (a lost-ack replay),
-                // so skip it. Only a replica that stopped at this batch's last
-                // move can be checked against that move's changeset: if the
-                // replica sits at that log id but a different changeset, it
-                // diverged, so fail hard instead of reporting success. A
-                // replica whose log id is past the batch already applied later
-                // moves, so its changeset is expected to differ and comparing
-                // it would report a false divergence. If every batch turns out
-                // already applied, the transaction returns AlreadyProcessed
-                // below and the caller advances its checkpoint.
+                // so skip it after checking for divergence. If every batch
+                // turns out already applied, the transaction returns
+                // AlreadyProcessed below and the caller advances its
+                // checkpoint.
                 _ => {
-                    if let Some(last_move) = moves.last() {
-                        if current_log_id == Some(last_move.log_id)
-                            && current.first().map(|row| row.0) != Some(last_move.new)
-                        {
-                            return Err(BookmarkTransactionError::LogicError);
-                        }
-                    }
+                    check_mirror_replay_divergence(&current, moves)?;
                     continue;
                 }
             };
@@ -430,10 +471,8 @@ impl SqlBookmarksTransactionPayload {
                 }
                 None => {
                     // The first unseen move is a create (its `old` is None),
-                    // which only happens at repo genesis. INSERT OR IGNORE
-                    // affects one row only if the bookmark is absent; zero rows
-                    // means it already exists, so the replica diverged and we
-                    // fail hard.
+                    // which happens when the bookmark has no row yet. INSERT
+                    // OR IGNORE affects one row only if the bookmark is absent.
                     let create_log_id = Some(last.log_id);
                     let data = [(
                         &self.repo_id,
@@ -447,7 +486,23 @@ impl SqlBookmarksTransactionPayload {
                         InsertBookmarks::query_with_transaction(txn, &data[..]).await?;
                     txn = txn_;
                     if result.affected_rows() != 1 {
-                        return Err(BookmarkTransactionError::LogicError);
+                        // Zero rows means the bookmark already exists. Usually
+                        // that is a concurrent bookmark creation that committed
+                        // first: the pessimistic lock above cannot serialize
+                        // creations because there is no row to lock.
+                        // Re-read and re-apply the already-applied check; only
+                        // a batch that is still unapplied, or applied with a
+                        // different changeset, is a genuine divergence.
+                        let (txn_, fresh) = SelectBookmarkForUpdate::query_with_transaction(
+                            txn,
+                            &self.repo_id,
+                            bookmark.name(),
+                            bookmark.category(),
+                        )
+                        .await?;
+                        txn = txn_;
+                        check_lost_insert_replay(&fresh, moves)?;
+                        continue;
                     }
                 }
             }
@@ -930,4 +985,81 @@ pub(crate) async fn insert_bookmarks(
         .collect::<Vec<_>>();
     InsertBookmarks::query(conn, ctx.sql_query_telemetry(), rows.as_slice()).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use mononoke_macros::mononoke;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
+
+    use super::*;
+
+    fn bookmark_creation_moves() -> Vec<MirrorBookmarkMove> {
+        vec![
+            MirrorBookmarkMove {
+                log_id: 1,
+                old: None,
+                new: ONES_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+            MirrorBookmarkMove {
+                log_id: 2,
+                old: Some(ONES_CSID),
+                new: TWOS_CSID,
+                reason: BookmarkUpdateReason::TestMove,
+            },
+        ]
+    }
+
+    #[mononoke::test]
+    fn lost_insert_replay_of_fully_applied_batch_is_ok() {
+        // The winner applied the whole batch. The loser skips it as a replay.
+        let fresh = vec![(TWOS_CSID, Some(2))];
+        check_lost_insert_replay(&fresh, &bookmark_creation_moves())
+            .expect("a fully-applied batch must be treated as a replay");
+    }
+
+    #[mononoke::test]
+    fn lost_insert_replay_past_batch_is_ok() {
+        // The winner applied this batch and moved on. The loser's changeset
+        // is expected to differ, so it must not count as divergence.
+        let fresh = vec![(THREES_CSID, Some(3))];
+        check_lost_insert_replay(&fresh, &bookmark_creation_moves())
+            .expect("a batch applied plus later moves must be treated as a replay");
+    }
+
+    #[mononoke::test]
+    fn lost_insert_replay_of_partial_prefix_fails() {
+        // The winner applied only the first move (a retry regrouped the
+        // batch). The rest is still unapplied, so this is not a replay.
+        let fresh = vec![(ONES_CSID, Some(1))];
+        assert!(matches!(
+            check_lost_insert_replay(&fresh, &bookmark_creation_moves()),
+            Err(BookmarkTransactionError::LogicError)
+        ));
+    }
+
+    #[mononoke::test]
+    fn lost_insert_replay_with_diverged_changeset_fails() {
+        // The replica sits at this batch's last log id but a different
+        // changeset: genuine divergence.
+        let fresh = vec![(THREES_CSID, Some(2))];
+        assert!(matches!(
+            check_lost_insert_replay(&fresh, &bookmark_creation_moves()),
+            Err(BookmarkTransactionError::LogicError)
+        ));
+    }
+
+    #[mononoke::test]
+    fn lost_insert_replay_with_missing_row_fails() {
+        // The row vanished between the INSERT and the re-read. Nothing is
+        // applied, so this cannot be a replay.
+        let fresh: Vec<(ChangesetId, Option<u64>)> = vec![];
+        assert!(matches!(
+            check_lost_insert_replay(&fresh, &bookmark_creation_moves()),
+            Err(BookmarkTransactionError::LogicError)
+        ));
+    }
 }

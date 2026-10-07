@@ -692,6 +692,125 @@ async fn test_mirror_batch_replay_of_applied_prefix(fb: FacebookInit) {
 }
 
 #[mononoke::fbinit_test]
+async fn test_mirror_batch_concurrent_duplicate_replays(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let key = create_bookmark_name("book");
+
+    // Pre-create the bookmark so the racing batches take the update branch
+    // (their first unseen move has `old` set), the path the pessimistic lock
+    // covers. Concurrent bookmark creations serialize differently: the loser
+    // of the INSERT re-reads and treats a fully-applied batch as a replay
+    // (see store_mirror_batches).
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.mirror_batch(
+        &key,
+        BookmarkKind::PullDefaultPublishing,
+        vec![MirrorBookmarkMove {
+            log_id: 1,
+            old: None,
+            new: ONES_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        }],
+    )
+    .unwrap();
+    assert!(txn.commit().await.unwrap().is_some());
+
+    let moves = vec![
+        MirrorBookmarkMove {
+            log_id: 2,
+            old: Some(ONES_CSID),
+            new: TWOS_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        },
+        MirrorBookmarkMove {
+            log_id: 3,
+            old: Some(TWOS_CSID),
+            new: THREES_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        },
+    ];
+
+    // Two concurrent replays of the identical chain: a retry racing the
+    // attempt it replaces. One wins; the other must report AlreadyProcessed,
+    // never a logic error (a silent None). This pins the serialized outcome
+    // only: the single SQLite connection runs the two commits one after
+    // another, and SQLite uses the plain SELECT anyway, so it cannot
+    // exercise MySQL's row-lock concurrency. On MySQL the pessimistic lock in
+    // store_mirror_batches serializes the two and the loser reads the
+    // winner's commit. No MySQL-backed fixture exists for these tests.
+    let mut txn_a = bookmarks.create_transaction(ctx.clone());
+    txn_a
+        .mirror_batch(&key, BookmarkKind::PullDefaultPublishing, moves.clone())
+        .unwrap();
+    let mut txn_b = bookmarks.create_transaction(ctx.clone());
+    txn_b
+        .mirror_batch(&key, BookmarkKind::PullDefaultPublishing, moves)
+        .unwrap();
+    let (res_a, res_b) = futures::join!(txn_a.commit(), txn_b.commit());
+
+    let mut saw_success = false;
+    let mut saw_already_processed = false;
+    for res in [res_a, res_b] {
+        match res {
+            Ok(Some(_)) => saw_success = true,
+            Err(err) if err.is::<BookmarkMoveAlreadyProcessed>() => {
+                saw_already_processed = true;
+            }
+            other => panic!("unexpected concurrent replay outcome: {other:?}"),
+        }
+    }
+    assert!(saw_success && saw_already_processed);
+}
+
+#[mononoke::fbinit_test]
+async fn test_mirror_batch_concurrent_bookmark_creations(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_repo_id(REPO_ZERO);
+    let key = create_bookmark_name("book");
+
+    // No pre-create: the first move (old = None) takes the bookmark-creation
+    // INSERT branch, the path concurrent bookmark creations race on.
+    let moves = vec![
+        MirrorBookmarkMove {
+            log_id: 1,
+            old: None,
+            new: ONES_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        },
+        MirrorBookmarkMove {
+            log_id: 2,
+            old: Some(ONES_CSID),
+            new: TWOS_CSID,
+            reason: BookmarkUpdateReason::TestMove,
+        },
+    ];
+
+    // Two duplicate bookmark-creation batches. The winner creates the bookmark; the
+    // loser must report AlreadyProcessed, never a logic error. This pins
+    // the outcome only: SQLite runs the two commits one after another, so
+    // the loser reads the winner's commit and takes the already-applied
+    // path. Only truly concurrent transactions (MySQL) can lose the INSERT;
+    // that re-check decision is covered by unit tests in transaction.rs.
+    let mut txn_a = bookmarks.create_transaction(ctx.clone());
+    txn_a
+        .mirror_batch(&key, BookmarkKind::PullDefaultPublishing, moves.clone())
+        .unwrap();
+    assert!(txn_a.commit().await.unwrap().is_some());
+
+    let mut txn_b = bookmarks.create_transaction(ctx.clone());
+    txn_b
+        .mirror_batch(&key, BookmarkKind::PullDefaultPublishing, moves)
+        .unwrap();
+    let err = txn_b.commit().await.unwrap_err();
+    assert!(err.is::<BookmarkMoveAlreadyProcessed>());
+}
+
+#[mononoke::fbinit_test]
 async fn test_mirror_batch_diverged_replica_logic_error(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()

@@ -67,6 +67,29 @@ mononoke_queries! {
          LIMIT 1"
     }
 
+    // Pessimistic bookmark lock for the modern_sync mirror path only. When
+    // the row already exists, two concurrent replays of one chain serialize
+    // here: the loser waits for the winner's commit, then reads the applied
+    // state and reports AlreadyProcessed instead of losing the
+    // compare-and-swap. Bookmark creation has no row to lock, so the
+    // mirror path re-checks after a lost INSERT instead (see
+    // store_mirror_batches). SQLite serializes writers on its own and
+    // rejects FOR UPDATE, so it keeps the plain SELECT.
+    pub(crate) read SelectBookmarkForUpdate(repo_id: RepositoryId, name: BookmarkName, category: BookmarkCategory) -> (ChangesetId, Option<u64>) {
+        mysql("SELECT changeset_id, log_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name = {name}
+           AND category = {category}
+         LIMIT 1 FOR UPDATE")
+        sqlite("SELECT changeset_id, log_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name = {name}
+           AND category = {category}
+         LIMIT 1")
+    }
+
     read SelectAll(
         repo_id: RepositoryId,
         limit: u64,
