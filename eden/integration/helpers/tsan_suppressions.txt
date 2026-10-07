@@ -1,0 +1,2 @@
+# async_runtime's process-lifetime Tokio pool retains its last finished worker.
+thread:async_runtime::spawn_blocking

@@ -4,15 +4,141 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import os
 import pathlib
 import subprocess
+import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 from eden.fs.service.eden.thrift_types import MountInfo, MountState
 
 from .lib import edenclient, testcase
+
+
+class DebuggerStartupTest(unittest.TestCase):
+    base_dir: pathlib.Path
+    eden: edenclient.EdenFS
+    wrapper: str
+    binary: str
+
+    def setUp(self) -> None:
+        super().setUp()
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.base_dir = pathlib.Path(temp_dir.name)
+        self.eden = edenclient.EdenFS(base_dir=self.base_dir)
+        self.wrapper = str(self.base_dir / "daemon-wrapper")
+        self.binary = os.path.abspath(sys.executable)
+
+    def _capture_spawn(
+        self, environment: dict[str, str]
+    ) -> tuple[list[str], dict[str, str]]:
+        with (
+            mock.patch.dict(os.environ, environment, clear=True),
+            mock.patch.dict(edenclient.FindExe.__dict__, {"EDEN_DAEMON": self.wrapper}),
+            mock.patch.object(
+                edenclient.FindExe,
+                "get_edenfsctl_env",
+                return_value=("edenfsctl", {"TSAN_OPTIONS": "ambient-options"}),
+            ),
+            mock.patch.object(self.eden, "get_extra_daemon_args", return_value=[]),
+            mock.patch.object(
+                edenclient.subprocess,
+                "Popen",
+                side_effect=RuntimeError("captured launch"),
+            ) as popen,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "captured launch"):
+                self.eden.spawn_nowait()
+        return popen.call_args.args[0], popen.call_args.kwargs["env"]
+
+    def test_debugger_loads_native_daemon(self) -> None:
+        binary = str(self.base_dir / "daemon build" / "edenfs")
+        command, _ = self._capture_spawn(
+            {"EDEN_GDB": "1", "EDENFS_SERVER_BINARY": binary}
+        )
+        self.assertEqual(command[command.index("--daemon-binary") + 1], binary)
+        self.assertIn("--gdb", command)
+
+    def test_debugger_sets_sanitizer_environment_before_running(self) -> None:
+        options = (
+            "halt_on_error=1:second_deadlock_stack=1:"
+            'suppressions="/daemon policy,revision:1/tsan.txt"'
+        )
+        command, environment = self._capture_spawn(
+            {
+                "EDEN_GDB": "1",
+                "EDENFS_SERVER_BINARY": self.binary,
+                "EDENFS_DAEMON_TSAN_OPTIONS": options,
+            }
+        )
+        setting = f"--gdb-arg=set environment TSAN_OPTIONS={options}"
+        self.assertIn(setting, command)
+        self.assertLess(command.index(setting), command.index("--gdb-arg=run"))
+        self.assertEqual(environment["TSAN_OPTIONS"], "ambient-options")
+
+    def test_debugger_without_sanitizer_policy_preserves_ambient_options(self) -> None:
+        command, environment = self._capture_spawn(
+            {
+                "EDEN_GDB": "1",
+                "EDENFS_SERVER_BINARY": self.binary,
+                "EDENFS_DAEMON_TSAN_OPTIONS": "",
+            }
+        )
+        self.assertFalse(any("set environment" in arg for arg in command))
+        self.assertEqual(environment["TSAN_OPTIONS"], "ambient-options")
+
+    def test_ordinary_startup_keeps_daemon_wrapper(self) -> None:
+        command, environment = self._capture_spawn(
+            {
+                "EDENFS_SERVER_BINARY": self.binary,
+                "EDENFS_DAEMON_TSAN_OPTIONS": "halt_on_error=1",
+            }
+        )
+        self.assertEqual(command[command.index("--daemon-binary") + 1], self.wrapper)
+        self.assertNotIn("--gdb", command)
+        self.assertEqual(environment["TSAN_OPTIONS"], "ambient-options")
+
+    def test_debugger_without_buck_metadata_uses_existing_daemon(self) -> None:
+        command, _ = self._capture_spawn({"EDEN_GDB": "1"})
+        self.assertEqual(command[command.index("--daemon-binary") + 1], self.wrapper)
+        self.assertFalse(any("set environment" in arg for arg in command))
+
+    def test_debugger_quits_after_exit_notification(self) -> None:
+        command, _ = self._capture_spawn({"EDEN_GDB": "1"})
+        prefix = "--gdb-arg=python "
+        script = next(arg[len(prefix) :] for arg in command if arg.startswith(prefix))
+        notifying = False
+        executed: list[str] = []
+        queued = []
+
+        def execute(command: str) -> None:
+            self.assertFalse(notifying, "cannot quit GDB during exit notification")
+            executed.append(command)
+
+        gdb = mock.Mock()
+        gdb.execute.side_effect = execute
+        gdb.post_event.side_effect = queued.append
+        exec(script, {"gdb": gdb})
+        handler = gdb.events.exited.connect.call_args.args[0]
+
+        for event in (SimpleNamespace(exit_code=1), SimpleNamespace()):
+            notifying = True
+            handler(event)
+            notifying = False
+            self.assertEqual(queued, [])
+            self.assertEqual(executed, [])
+
+        notifying = True
+        handler(SimpleNamespace(exit_code=0))
+        notifying = False
+        self.assertEqual(executed, [])
+        self.assertEqual(len(queued), 1)
+        queued.pop()()
+        self.assertEqual(executed, ["quit"])
 
 
 class FuseTransportVerificationTest(unittest.TestCase):

@@ -493,7 +493,7 @@ class EdenFS:
 
         return extra_daemon_args
 
-    def spawn_nowait(
+    def spawn_nowait(  # noqa: C901
         self,
         gdb: bool = False,
         takeover: bool = False,
@@ -507,8 +507,15 @@ class EdenFS:
         if self._process is not None:
             raise Exception("cannot start an already-running eden client")
 
+        use_gdb = bool(os.environ.get("EDEN_GDB"))
+        daemon_binary = FindExe.EDEN_DAEMON
+        if use_gdb:
+            # GDB needs the native executable, not Buck's environment wrapper.
+            daemon_binary = os.path.abspath(
+                os.environ.get("EDENFS_SERVER_BINARY", daemon_binary)
+            )
         args, env = self.get_edenfsctl_cmd_env(
-            "daemon", "--daemon-binary", FindExe.EDEN_DAEMON, "--foreground"
+            "daemon", "--daemon-binary", daemon_binary, "--foreground"
         )
 
         if extra_env is not None:
@@ -527,24 +534,26 @@ class EdenFS:
 
         # If the EDEN_GDB environment variable is set, run eden inside gdb
         # so a developer can debug crashes
-        if os.environ.get("EDEN_GDB"):
+        if use_gdb:
             gdb_exit_handler = (
                 "python gdb.events.exited.connect("
                 "lambda event: "
-                'gdb.execute("quit") if getattr(event, "exit_code", None) == 0 '
+                'gdb.post_event(lambda: gdb.execute("quit")) '
+                'if getattr(event, "exit_code", None) == 0 '
                 "else False"
                 ")"
             )
             gdb_args = [
                 # Register a handler to exit gdb if the program finishes
-                # successfully.
-                # Start the program immediately when gdb starts
+                # successfully. Queue the quit until exit notification finishes.
                 "-ex",
                 gdb_exit_handler,
-                # Start the program immediately when gdb starts
-                "-ex",
-                "run",
             ]
+            tsan_options = os.environ.get("EDENFS_DAEMON_TSAN_OPTIONS")
+            if tsan_options:
+                gdb_args.extend(["-ex", f"set environment TSAN_OPTIONS={tsan_options}"])
+            # Start the program after applying the daemon-only environment.
+            gdb_args.extend(["-ex", "run"])
             args.append("--gdb")
             for arg in gdb_args:
                 args.append("--gdb-arg=" + arg)

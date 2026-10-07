@@ -1,6 +1,32 @@
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
+load("@fbsource//tools/build_defs:selects.bzl", "selects")
+load("//eden:defs.bzl", "DAEMON_TSAN_OPTIONS")
 
 oncall("scm_client_infra")
+
+export_file(
+    name = "tsan_suppressions",
+    src = "tsan_suppressions.txt",
+)
+
+DAEMON_SANITIZER_ENV = selects.apply(
+    DAEMON_TSAN_OPTIONS,
+    lambda options: {"TSAN_OPTIONS": options} if options else {},
+)
+
+buck_command_alias(
+    name = "edenfs_with_sanitizer_env",
+    env = DAEMON_SANITIZER_ENV,
+    exe = "//eden/fs/service:edenfs",
+)
+
+buck_command_alias(
+    name = "edenfs-oss_with_sanitizer_env",
+    env = DAEMON_SANITIZER_ENV,
+    exe = "//eden/fs/service:edenfs-oss",
+)
 
 cpp_binary(
     name = "fake_edenfs",
