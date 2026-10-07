@@ -983,8 +983,12 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
             .context("Expected a colon between struct key and value")?;
 
         // Did we find a field we know about?
-        if let Ok(idx) = fields.binary_search_by_key(&field_name.as_str(), |f| f.name) {
-            let field = &fields[idx];
+        let known_field = fields
+            .binary_search_by_key(&field_name.as_str(), |field| field.name)
+            .ok()
+            .map(|index| &fields[index])
+            .or_else(|| fields.iter().find(|field| field.name == field_name));
+        if let Some(field) = known_field {
             if !self.check_null() {
                 return Ok((fieldfn(field.name.as_bytes()), field.ttype, field.id));
             }

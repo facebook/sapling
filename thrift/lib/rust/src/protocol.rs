@@ -139,8 +139,8 @@ fn skip_inner<P: ProtocolReader + ?Sized>(
                         break;
                     }
                 }
+                p.read_map_end()?;
             }
-            p.read_map_end()?;
         }
         TType::Set => {
             let (elem_type, len) = p.read_set_begin_unchecked()?;
@@ -159,8 +159,8 @@ fn skip_inner<P: ProtocolReader + ?Sized>(
                         break;
                     }
                 }
+                p.read_set_end()?;
             }
-            p.read_set_end()?;
         }
         TType::List => {
             let (elem_type, len) = p.read_list_begin_unchecked()?;
@@ -179,8 +179,8 @@ fn skip_inner<P: ProtocolReader + ?Sized>(
                         break;
                     }
                 }
+                p.read_list_end()?;
             }
-            p.read_list_end()?;
         }
         TType::UTF8 => {
             p.read_string()?;

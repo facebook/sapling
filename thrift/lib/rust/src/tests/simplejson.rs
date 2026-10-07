@@ -24,6 +24,8 @@ use super::BOOL_VALUES;
 use super::DOUBLE_VALUES;
 use super::INT64_VALUES;
 use crate::Deserialize;
+use crate::Field;
+use crate::ProtocolReader;
 use crate::ProtocolWriter;
 use crate::SimpleJsonProtocol;
 use crate::simplejson_protocol;
@@ -239,6 +241,26 @@ fn read_json_value() {
         "struct": {"": null, "x": false},
     });
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn reads_fields_from_unsorted_metadata() {
+    static FIELDS: &[Field] = &[
+        Field::new("Success", TType::String, 0),
+        Field::new("b", TType::Struct, 2),
+        Field::new("f", TType::Struct, 1),
+        Field::new("s", TType::Struct, 3),
+    ];
+    let mut de = SimpleJsonProtocolDeserializer::new(&br#"{"f":{}}"#[..]);
+
+    de.read_struct_begin(|_| ()).expect("struct begins");
+    let (name, field_type, field_id) = de
+        .read_field_begin(|value| String::from_utf8_lossy(value).into_owned(), FIELDS)
+        .expect("known field");
+
+    assert_eq!(name, "f");
+    assert_eq!(field_type, TType::Struct);
+    assert_eq!(field_id, 1);
 }
 
 #[test]

@@ -22,13 +22,13 @@ use fbthrift::Serialize;
 use fbthrift::TType;
 use fbthrift::json5_protocol;
 use fbthrift_test_if::Basic;
+use fbthrift_test_if::Containers;
 use fbthrift_test_if::En;
 use fbthrift_test_if::MainStruct;
 use fbthrift_test_if::Small;
 use fbthrift_test_if::SubStruct;
 use fbthrift_test_if::Un;
 use fbthrift_test_if::UnOne;
-
 struct UnionMap(Vec<(Un, i32)>);
 
 impl GetTType for UnionMap {
@@ -91,6 +91,31 @@ fn generated_struct_round_trips_with_canonical_shapes() {
         encoded,
         "{\"foo\":\"foo\",\"m\":{\"a\":1,\"b\":2},\"bar\":\"bar\",\"s\":{\"optDef\":\"optional\",\"req_def\":\"required\",\"key_map\":[{\"key\":{\"num\":10,\"two\":2},\"value\":1}],\"bin\":{\"base64url\":\"aGVsbG8A\"}},\"l\":[{\"num\":2,\"two\":10}],\"u\":{\"un1\":{\"one\":7}},\"e\":\"TWO (2)\",\"int_keys\":[{\"key\":2,\"value\":2},{\"key\":10,\"value\":1}]}"
     );
+}
+
+#[test]
+fn generated_struct_round_trips_nested_empty_collections() {
+    let value = Containers {
+        m: BTreeMap::new(),
+        l: Vec::new(),
+        ..Default::default()
+    };
+
+    let encoded = json5_protocol::serialize_ref(&value);
+    let decoded: Containers =
+        json5_protocol::deserialize(&encoded).expect("nested empty collections must round-trip");
+
+    assert_eq!(encoded, r#"{"m":{},"l":[]}"#);
+    assert_eq!(decoded, value);
+}
+
+#[test]
+fn generated_struct_skips_unknown_empty_collections() {
+    let decoded: Basic =
+        json5_protocol::deserialize("{unknown_list: [], unknown_map: {}, b: true}")
+            .expect("unknown empty collections must be skipped");
+
+    assert!(decoded.b);
 }
 
 #[test]
