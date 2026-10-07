@@ -126,16 +126,12 @@ Clean stage after amend
   $ echo 2 >> some
   $ sl amend
   $ sl status
-# FIXME: the git index still holds the pre-amend tree; it should be clean.
   $ git status --porcelain
-  MM some
 
   $ echo 3 >> some
   $ sl --config experimental.git-index-fast-path=false amend
   $ sl status
-# FIXME: same with the index fast path disabled.
   $ git status --porcelain
-  MM some
 
 Clean stage after uncommit
 
@@ -145,9 +141,8 @@ Clean stage after uncommit
   $ sl revert --all -q --no-backup
   $ sl status
   ? e
-# FIXME: the git index still holds the uncommitted tree; it should say "?? e".
   $ git status --porcelain
-  A  e
+  ?? e
   $ rm e
 
 Clean stage after absorb
@@ -159,6 +154,4 @@ Clean stage after absorb
   $ printf '1\n2 edited\n' > f
   $ sl absorb -qa
   $ sl status
-# FIXME: the git index still holds the pre-absorb tree; it should be clean.
   $ git status --porcelain
-  MM f

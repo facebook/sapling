@@ -1841,6 +1841,13 @@ class localrepository:
             draftheads = list(repo.dageval(lambda: heads - public()))
             cl._visibleheads.heads = draftheads
 
+            # Write a dirty dirstate as part of the transaction, before the
+            # metalog is written and exported (ex. to git refs), so working
+            # copy clients such as EdenFS or the git index see the parent
+            # change first.
+            if not tr.lockfree and not repo.dirstate.pendingparentchange():
+                repo.dirstate.write(tr)
+
             # Flush changelog before flushing metalog.
             _flushchangelog(repo)
 
