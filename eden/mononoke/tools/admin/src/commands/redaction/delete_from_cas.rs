@@ -7,6 +7,7 @@
 
 use std::collections::BTreeSet;
 use std::collections::HashSet;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -38,6 +39,8 @@ use super::create_key_list::redaction_config_key_lists;
 const FETCH_CONCURRENCY: usize = 100;
 const CAS_BATCH_SIZE: usize = 500;
 const CAS_CONCURRENCY: usize = 4;
+const VERIFY_ATTEMPTS: u32 = 5;
+const VERIFY_BACKOFF: Duration = Duration::from_secs(2);
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("key-lists").args(&["key_list_ids", "all_enforced"]).required(true)))]
@@ -211,7 +214,7 @@ async fn delete_digests(
         .try_for_each_concurrent(CAS_CONCURRENCY, |chunk| client.delete_blobs(chunk))
         .await?;
 
-    let still_present = present_digests(client, &present).await?;
+    let still_present = still_present_after_delete(client, &present).await?;
     if !still_present.is_empty() {
         bail!(
             "{} files are still present in CAS after deleting them: {}",
@@ -224,6 +227,23 @@ async fn delete_digests(
         present.len()
     );
     Ok(())
+}
+
+/// A lookup issued right after the delete can still report a deleted digest as
+/// present, so only digests that stay present across several lookups count.
+async fn still_present_after_delete(
+    client: &impl CasClient,
+    deleted: &[MononokeDigest],
+) -> Result<Vec<MononokeDigest>> {
+    let mut still_present = present_digests(client, deleted).await?;
+    for attempt in 1..VERIFY_ATTEMPTS {
+        if still_present.is_empty() {
+            break;
+        }
+        tokio::time::sleep(VERIFY_BACKOFF * attempt).await;
+        still_present = present_digests(client, &still_present).await?;
+    }
+    Ok(still_present)
 }
 
 async fn present_digests(
