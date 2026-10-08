@@ -71,6 +71,7 @@ pub struct Metadata {
     upstream_client_id: Option<String>,
     user_agent: Option<String>,
     client_path_acl_compatibility: ClientPathAclCompatibility,
+    partial_responses_opt_in: bool,
 }
 
 impl Metadata {
@@ -123,6 +124,7 @@ impl Metadata {
             upstream_client_id: None,
             user_agent: None,
             client_path_acl_compatibility: ClientPathAclCompatibility::Absent,
+            partial_responses_opt_in: false,
         }
     }
 
@@ -456,6 +458,15 @@ impl Metadata {
 
     pub fn client_path_acl_compatibility(&self) -> ClientPathAclCompatibility {
         self.client_path_acl_compatibility
+    }
+
+    pub fn add_partial_responses_opt_in(&mut self, partial_responses_opt_in: bool) -> &mut Self {
+        self.partial_responses_opt_in = partial_responses_opt_in;
+        self
+    }
+
+    pub fn partial_responses_opt_in(&self) -> bool {
+        self.partial_responses_opt_in
     }
 
     pub fn machine_tier(&self) -> Option<&str> {
