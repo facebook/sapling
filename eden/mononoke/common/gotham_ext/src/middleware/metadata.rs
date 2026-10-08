@@ -29,6 +29,7 @@ use metadata::Metadata;
 use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
+use permission_checker::merge_identity_sets;
 use tracing::error;
 
 use super::Middleware;
@@ -174,7 +175,15 @@ impl Middleware for MetadataMiddleware {
                 match (maybe_cat_idents, maybe_tls_or_proxied_idents) {
                     (None, None) => None,
                     (Some(cat_idents), Some(tls_or_proxied_idents)) => {
-                        Some(cat_idents.union(&tls_or_proxied_idents).cloned().collect())
+                        if justknobs::eval(
+                            "scm/mononoke:enable_merge_identity_set_attributes",
+                            None,
+                            None,
+                        ) {
+                            Some(merge_identity_sets(cat_idents, tls_or_proxied_idents))
+                        } else {
+                            Some(cat_idents.union(&tls_or_proxied_idents).cloned().collect())
+                        }
                     }
                     (Some(cat_idents), None) => Some(cat_idents),
                     (None, Some(tls_or_proxied_idents)) => Some(tls_or_proxied_idents),

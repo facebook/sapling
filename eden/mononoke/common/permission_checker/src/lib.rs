@@ -30,6 +30,7 @@ pub use identity::MononokeIdentity;
 pub use identity::MononokeIdentitySet;
 pub use identity::MononokeIdentitySetExt;
 pub use identity::TenantInfo;
+pub use identity::merge_identity_sets;
 pub use internal::Acl;
 pub use internal::Acls;
 pub use internal::InternalAclProvider;

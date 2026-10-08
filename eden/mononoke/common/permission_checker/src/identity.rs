@@ -165,6 +165,28 @@ impl From<AuthenticatedIdentity> for MononokeIdentity {
     }
 }
 
+pub fn merge_identity_sets(
+    mut identities: MononokeIdentitySet,
+    other: MononokeIdentitySet,
+) -> MononokeIdentitySet {
+    for identity in other {
+        match identities.take(&identity) {
+            Some(mut existing) => {
+                for attribute in identity.0.attributes {
+                    if !existing.0.attributes.contains(&attribute) {
+                        existing.0.attributes.push(attribute);
+                    }
+                }
+                identities.insert(existing);
+            }
+            None => {
+                identities.insert(identity);
+            }
+        }
+    }
+    identities
+}
+
 impl fmt::Display for MononokeIdentity {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}:{}", self.id_type(), self.id_data())
