@@ -236,6 +236,7 @@ impl<S: Subscriber> Layer<S> for DynLayer<S> {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::sync::Mutex;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
 
@@ -243,6 +244,10 @@ mod tests {
     use tracing_subscriber::layer::SubscriberExt;
 
     use super::*;
+
+    // Callsite interest combines all live subscribers, even thread-local ones.
+    // Keep each test's subscribers isolated until they have been dropped.
+    static SUBSCRIBER_LOCK: Mutex<()> = Mutex::new(());
 
     struct CountingLayer(Arc<AtomicUsize>);
 
@@ -267,6 +272,7 @@ mod tests {
 
     #[test]
     fn test_dispatches_to_all_layers() {
+        let _guard = SUBSCRIBER_LOCK.lock().unwrap();
         let c1 = Arc::new(AtomicUsize::new(0));
         let c2 = Arc::new(AtomicUsize::new(0));
 
@@ -289,6 +295,7 @@ mod tests {
     /// fully disabled — `enabled()` is never called on the hot path.
     #[test]
     fn test_never_callsite_interest_skips_enabled() {
+        let _guard = SUBSCRIBER_LOCK.lock().unwrap();
         struct RejectAll(Arc<AtomicUsize>);
 
         impl<S: Subscriber> Filter<S> for RejectAll {
@@ -326,6 +333,7 @@ mod tests {
 
     #[test]
     fn test_independent_filters() {
+        let _guard = SUBSCRIBER_LOCK.lock().unwrap();
         let c_info = Arc::new(AtomicUsize::new(0));
         let c_all = Arc::new(AtomicUsize::new(0));
 
