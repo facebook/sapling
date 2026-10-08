@@ -7,11 +7,13 @@
 
 use std::collections::HashSet;
 use std::slice::from_ref;
+use std::sync::Arc;
 
 use anyhow::Error;
 use bonsai_p4_mapping::BonsaiP4Mapping;
 use bonsai_p4_mapping::BonsaiP4MappingEntry;
 use bonsai_p4_mapping::BonsaisOrP4ChangelistIds;
+use bonsai_p4_mapping::CachingBonsaiP4Mapping;
 use bonsai_p4_mapping::SqlBonsaiP4MappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -232,6 +234,74 @@ async fn test_bulk_import_from_bonsai(fb: FacebookInit) -> Result<(), Error> {
             imported.get_changeset_id(),
             P4_CHANGELIST_TWO
         )]
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mapping = Arc::new(SqlBonsaiP4MappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO));
+    let caching = CachingBonsaiP4Mapping::new_test(mapping.clone());
+
+    let store = caching
+        .cachelib()
+        .mock_store()
+        .expect("new_test gives us a MockStore");
+
+    let e0 = BonsaiP4MappingEntry::new(bonsai::ONES_CSID, P4_CHANGELIST_ONE);
+    let e1 = BonsaiP4MappingEntry::new(bonsai::TWOS_CSID, P4_CHANGELIST_TWO);
+    mapping.bulk_import(&ctx, &[e0, e1]).await?;
+
+    // First lookup misses the cache, reads SQL and fills the cache.
+    assert_eq!(
+        caching
+            .get_p4_changelist_id_from_bonsai(&ctx, bonsai::ONES_CSID)
+            .await?,
+        Some(P4_CHANGELIST_ONE)
+    );
+    assert_eq!(store.stats().gets, 1);
+    assert_eq!(store.stats().hits, 0);
+    assert_eq!(store.stats().sets, 1);
+
+    // Second lookup is served from the cache.
+    assert_eq!(
+        caching
+            .get_p4_changelist_id_from_bonsai(&ctx, bonsai::ONES_CSID)
+            .await?,
+        Some(P4_CHANGELIST_ONE)
+    );
+    assert_eq!(store.stats().gets, 2);
+    assert_eq!(store.stats().hits, 1);
+    assert_eq!(store.stats().sets, 1);
+
+    // Both directions resolve through the cache.
+    assert_eq!(
+        caching
+            .get_p4_changelist_id_from_bonsai(&ctx, bonsai::TWOS_CSID)
+            .await?,
+        Some(P4_CHANGELIST_TWO)
+    );
+    assert_eq!(
+        caching
+            .get_bonsai_from_p4_changelist_id(&ctx, P4_CHANGELIST_ONE)
+            .await?,
+        Some(bonsai::ONES_CSID)
+    );
+    assert_eq!(
+        caching
+            .get_bonsai_from_p4_changelist_id(&ctx, P4_CHANGELIST_TWO)
+            .await?,
+        Some(bonsai::TWOS_CSID)
+    );
+
+    // A changelist that was never imported is not invented by the cache.
+    assert_eq!(
+        caching
+            .get_bonsai_from_p4_changelist_id(&ctx, P4_CHANGELIST_FOUR)
+            .await?,
+        None
     );
 
     Ok(())

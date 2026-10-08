@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod caching;
 mod sql;
 
 use anyhow::Error;
@@ -15,6 +16,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::P4ChangelistId;
 use mononoke_types::RepositoryId;
 
+pub use crate::caching::CachingBonsaiP4Mapping;
 pub use crate::sql::SqlBonsaiP4Mapping;
 pub use crate::sql::SqlBonsaiP4MappingBuilder;
 

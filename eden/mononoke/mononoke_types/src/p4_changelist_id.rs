@@ -36,6 +36,7 @@ const P4_CHANGELIST_EXTRA: &str = "convert_revision";
 /// abandoned pending changelists and obliterated changelists both leave holes.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct P4ChangelistId(u64);
 
 impl P4ChangelistId {
