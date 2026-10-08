@@ -111,6 +111,7 @@ const FORWARDED_UNVERIFIED_CATS_HEADER: &str = "raw_customer_cats";
 const FORWARDED_UNVERIFIED_CATS_VERIFIER_HEADER: &str = "customer_cats_verifier_service_identity";
 const ALWAYS_LOG_HEADER: &str = "always_log";
 const SCS_PATH_ACL_COMPATIBLE_HEADER: &str = "scs_path_acl_compatible";
+const SCS_PARTIAL_RESPONSES_OPT_IN_HEADER: &str = "scs_partial_responses_opt_in";
 const PER_REQUEST_READ_QPS: usize = 4000;
 const PER_REQUEST_WRITE_QPS: usize = 4000;
 
@@ -381,6 +382,8 @@ impl SourceControlServiceImpl {
         metadata.add_client_path_acl_compatibility(classify_client_path_acl_compatibility(
             req_ctxt.header_as_bytes(SCS_PATH_ACL_COMPATIBLE_HEADER),
         ));
+        metadata
+            .add_partial_responses_opt_in(header(SCS_PARTIAL_RESPONSES_OPT_IN_HEADER)?.is_some());
 
         let client_info: Option<ClientInfo> = header(CLIENT_INFO_HEADER)?
             .as_ref()
