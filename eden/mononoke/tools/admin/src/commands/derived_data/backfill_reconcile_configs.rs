@@ -26,6 +26,14 @@
 //! reviewless landing of these `RepoSpec` configs is only authorized for the SCS
 //! service identity in the repos `AUTOMATION_ACL`, not for a human running this
 //! CLI.)
+//!
+//! Every run also reports drift between the fleet and the create_repos template
+//! `scm/mononoke/repos/common/default_git_repo_spec` (the `RepoSpec` that SCS
+//! `create_repos` copies into every new Git repo): derived-data types enabled on
+//! at least half the Git repos that the template lacks. The template is never
+//! edited implicitly; `--enable-for-new-repos <types>` names what to add, and with
+//! `--apply` that edit becomes its own review diff, created after the fleet
+//! batches.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -38,6 +46,7 @@ use enabled_derived_data_types::EnabledDerivedDataTypesRef;
 use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::ConfigArgs;
 use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 
@@ -82,6 +91,15 @@ pub(super) struct BackfillReconcileConfigsArgs {
     /// landed).
     #[clap(long)]
     dump_repo_config: Option<i32>,
+
+    /// Also add these derived-data types (by name, e.g. `fastlog_v2`) to the
+    /// new-repo template `scm/mononoke/repos/common/default_git_repo_spec`,
+    /// as its own review diff created after the fleet batches. Explicit on
+    /// purpose: the enablement table says which existing repos were
+    /// backfilled, not what a new repo should get. Superseded types (GDM v2
+    /// once the template selects v3) are refused.
+    #[clap(long, value_delimiter = ',', value_parser = DerivableType::from_name)]
+    enable_for_new_repos: Vec<DerivableType>,
 }
 
 /// The per-repo facts reconciliation needs: what it's called, which commit
@@ -269,20 +287,74 @@ pub(super) async fn backfill_reconcile_configs(
         );
     }
 
-    let pending = work.pending;
-    if pending.is_empty() {
-        println!("Nothing to reconcile: all enabled types are already present in config.");
-        return Ok(());
+    // New-repo template: the drift line on every run; plan lines when the flag
+    // is set.
+    let template = load_template_for_drift(app);
+    let config_source = app.args::<ConfigArgs>()?.config_path();
+    if let Some(t) = template.as_ref() {
+        let d = template_drift(&repo_configs, t);
+        if !d.lacking.is_empty() {
+            println!(
+                "new-repo template drift (template: {DEFAULT_GIT_REPO_SPEC_PATH_STR}; \
+                 fleet: {} git repos from {config_source}):",
+                d.git_total
+            );
+            for (ty, n) in &d.lacking {
+                println!(
+                    "  lacks `{}` (enabled on {n} of {} git repos); \
+                     pass --enable-for-new-repos {} to add it",
+                    ty.name(),
+                    d.git_total,
+                    ty.name()
+                );
+            }
+        }
     }
 
+    let pending = work.pending;
     let batches: Vec<&[PendingReconcile]> = pending.chunks(args.batch_size.max(1)).collect();
+    if pending.is_empty() {
+        println!(
+            "Nothing to reconcile for existing repos: all enabled types are already present in config."
+        );
+    } else if !args.apply {
+        print_plan(&batches);
+    }
+
+    let template_plan = if args.enable_for_new_repos.is_empty() {
+        Vec::new()
+    } else {
+        let t = template.as_ref().ok_or_else(|| {
+            anyhow::anyhow!(
+                "new-repo template not loadable from {config_source}; \
+                 refusing --enable-for-new-repos"
+            )
+        })?;
+        plan_template_edits(t, &args.enable_for_new_repos)?
+    };
+    if let Some(t) = template.as_ref() {
+        for item in &template_plan {
+            match item {
+                TemplatePlanItem::Add(ty) => println!(
+                    "template: add `{}` to config `{}`",
+                    ty.name(),
+                    t.enabled_config_name
+                ),
+                TemplatePlanItem::AlreadyPresent(ty) => {
+                    println!("template already has `{}`; nothing to do", ty.name())
+                }
+            }
+        }
+    }
 
     if !args.apply {
-        print_plan(&batches);
-        println!(
-            "\nDry run: no configerator changes were made. Re-run with --apply \
-             to create review diff(s)."
-        );
+        // Only worth saying when a re-run with --apply would do something.
+        if !pending.is_empty() || template_plan.iter().any(TemplatePlanItem::is_add) {
+            println!(
+                "\nDry run: no configerator changes were made. Re-run with --apply \
+                 to create review diff(s)."
+            );
+        }
         return Ok(());
     }
 
@@ -290,7 +362,16 @@ pub(super) async fn backfill_reconcile_configs(
     // reviewers are added on top.
     let mut reviewers: BTreeSet<String> = args.reviewers.iter().cloned().collect();
     reviewers.insert("#mononoke".to_string());
-    apply_batches(ctx, &batches, &reviewers, args.derivation_batch_size).await
+    if !pending.is_empty() {
+        apply_batches(ctx, &batches, &reviewers, args.derivation_batch_size).await?;
+    }
+    if template_plan.iter().any(TemplatePlanItem::is_add) {
+        match apply_template(ctx, &template_plan, &reviewers, args.derivation_batch_size).await? {
+            Some(diff) => println!("Created review diff {diff} for the new-repo template."),
+            None => println!("template: no effective edits; no diff created."),
+        }
+    }
+    Ok(())
 }
 
 fn print_plan(batches: &[&[PendingReconcile]]) {
@@ -312,6 +393,244 @@ fn print_plan(batches: &[&[PendingReconcile]]) {
             );
         }
     }
+}
+
+/// The new-repo template reduced to what drift and the flag path need. Built
+/// from the raw `repos::RepoSpec` inside `mod fb` (the raw types are
+/// fbcode-only deps); kept here so the rules are unit-testable everywhere.
+/// Only constructed from `mod fb` and `mod tests`, hence the allow below.
+#[cfg_attr(not(fbcode_build), allow(dead_code))]
+pub(crate) struct TemplateDriftInput {
+    /// The template's own enabled variant name (`default` today). The flag
+    /// path edits only this variant.
+    pub(crate) enabled_config_name: String,
+    pub(crate) types: BTreeSet<DerivableType>,
+    pub(crate) git_delta_manifest_version: Option<i16>,
+}
+
+/// Version selector at or below which GDM v2 is the live format. The parser
+/// accepts None (V2), 2 and 3 today (metaconfig/parser/src/convert/repo.rs);
+/// "newer than v2" stays correct when a v4 arrives.
+const GDM_V2_VERSION: i16 = 2;
+
+/// First half of a two-place pin with `FORBIDDEN_NEW_REPO_DERIVED_TYPES` in
+/// configerator `repos/repo_spec.ctest`; change both together. Mirrors
+/// `ensure_required_tuning`'s version selector: once the template selects
+/// something newer than GDM v2, GDM v2 is superseded there and is neither
+/// drift nor writable by `--enable-for-new-repos`.
+pub(crate) fn superseded_in_template(ty: DerivableType, t: &TemplateDriftInput) -> bool {
+    matches!(ty, DerivableType::GitDeltaManifestsV2)
+        && t.git_delta_manifest_version
+            .is_some_and(|v| v > GDM_V2_VERSION)
+}
+
+/// What the fleet has that the new-repo template lacks.
+pub(crate) struct TemplateDrift {
+    pub(crate) git_total: usize,
+    /// Types in the enabled config of at least half the GIT repos, absent from
+    /// the template and not superseded there. Sorted by type name.
+    pub(crate) lacking: Vec<(DerivableType, usize)>,
+}
+
+pub(crate) fn template_drift(
+    repo_configs: &BTreeMap<RepositoryId, RepoReconcileInfo>,
+    template: &TemplateDriftInput,
+) -> TemplateDrift {
+    let mut git_total = 0usize;
+    let mut counts: BTreeMap<&'static str, (DerivableType, usize)> = BTreeMap::new();
+    for info in repo_configs.values() {
+        if info.commit_identity_scheme != CommitIdentityScheme::GIT {
+            continue;
+        }
+        git_total += 1;
+        let ddc = &info.derived_data_config;
+        let Some(active) = ddc.available_configs.get(&ddc.enabled_config_name) else {
+            continue;
+        };
+        for ty in &active.types {
+            counts.entry(ty.name()).or_insert((*ty, 0)).1 += 1;
+        }
+    }
+    let lacking = counts
+        .into_values()
+        .filter(|(ty, n)| {
+            if git_total == 0 || *n * 2 < git_total || template.types.contains(ty) {
+                return false;
+            }
+            if superseded_in_template(*ty, template) {
+                tracing::debug!(
+                    "new-repo template drift: `{}` is on {n} of {git_total} git repos \
+                     but superseded on the template; not reported",
+                    ty.name()
+                );
+                return false;
+            }
+            true
+        })
+        .collect();
+    TemplateDrift { git_total, lacking }
+}
+
+/// What `--enable-for-new-repos` would do to the template, per type.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum TemplatePlanItem {
+    Add(DerivableType),
+    AlreadyPresent(DerivableType),
+}
+
+impl TemplatePlanItem {
+    pub(crate) fn is_add(&self) -> bool {
+        matches!(self, Self::Add(_))
+    }
+}
+
+/// The single classification both the dry run and `--apply` consume, so the
+/// two cannot disagree. A superseded type is a usage error, before any
+/// Configo call.
+pub(crate) fn plan_template_edits(
+    template: &TemplateDriftInput,
+    types: &[DerivableType],
+) -> Result<Vec<TemplatePlanItem>> {
+    // A name repeated on the command line is one request, not two.
+    let mut seen = BTreeSet::new();
+    types
+        .iter()
+        .filter(|ty| seen.insert(**ty))
+        .map(|ty| {
+            if superseded_in_template(*ty, template) {
+                anyhow::bail!(
+                    "`{}` is superseded on the new-repo template \
+                     (git_delta_manifest_version={:?}); refusing. If you really need it, \
+                     edit the template and FORBIDDEN_NEW_REPO_DERIVED_TYPES in \
+                     repos/repo_spec.ctest by hand.",
+                    ty.name(),
+                    template.git_delta_manifest_version,
+                );
+            }
+            Ok(if template.types.contains(ty) {
+                TemplatePlanItem::AlreadyPresent(*ty)
+            } else {
+                TemplatePlanItem::Add(*ty)
+            })
+        })
+        .collect()
+}
+
+#[cfg_attr(not(fbcode_build), allow(dead_code))]
+fn names(types: &[DerivableType]) -> String {
+    types
+        .iter()
+        .map(|t| format!("`{}`", t.name()))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Title of the template's review diff. One file is edited, so unlike the
+/// fleet batches it needs no size-limit bypass.
+#[cfg_attr(not(fbcode_build), allow(dead_code))]
+pub(crate) fn template_review_diff_title(added: &[DerivableType]) -> String {
+    format!(
+        "[mononoke]: Enable {} for new Git repos (create_repos template)",
+        names(added)
+    )
+}
+
+#[cfg_attr(not(fbcode_build), allow(dead_code))]
+pub(crate) fn template_review_diff_summary(
+    added: &[DerivableType],
+    enabled_config_name: &str,
+) -> String {
+    format!(
+        "Enables {} for newly created Git repos.\n\
+         \n\
+         Edits `scm/mononoke/repos/common/default_git_repo_spec`, the RepoSpec template that \
+         SCS `create_repos` copies into every new Git repo. It is not a repo: never indexed, \
+         never in a manifest, never served. The type(s) are added to its enabled derived-data \
+         config `{}`; existing repos are not touched by this diff (see the fleet batches \
+         created by the same run).",
+        names(added),
+        enabled_config_name,
+    )
+}
+
+#[cfg_attr(not(fbcode_build), allow(dead_code))]
+pub(crate) fn template_review_diff_test_plan() -> String {
+    "Created by `mononoke_admin derived-data backfill-reconcile-configs \
+     --enable-for-new-repos ... --apply`.\n\
+     \n\
+     - Configerator's `prepare` compiled the template and its dependent ctest server-side \
+     before this diff was published; the policy pins in `repos/repo_spec.ctest` \
+     (required/forbidden types, single variant, GDM v3 tuning) passed.\n\
+     - The tool is idempotent: a type already in the template is reported and skipped."
+        .to_string()
+}
+
+/// The template's own pending entry. `enabled_config_name` comes from the
+/// template itself, so the flag path can only ever edit the variant Mononoke
+/// reads; editing a variant that is not the enabled one is impossible by
+/// construction.
+#[cfg_attr(not(fbcode_build), allow(dead_code))]
+pub(crate) fn template_pending_reconcile(
+    repo_id: i32,
+    repo_name: &str,
+    enabled_config_name: &str,
+    ty: DerivableType,
+) -> PendingReconcile {
+    PendingReconcile {
+        repo_id: RepositoryId::new(repo_id),
+        repo_name: repo_name.to_string(),
+        derived_data_type: ty,
+        enabled_config_name: enabled_config_name.to_string(),
+        commit_identity_scheme: CommitIdentityScheme::GIT,
+    }
+}
+
+/// Configerator path of the new-repo template. Duplicates
+/// `repo_spec_writer::DEFAULT_GIT_REPO_SPEC_PATH` because that crate is an
+/// fbcode-only dependency of this binary (tools/admin/BUCK) and the drift
+/// header is printed from unconditional code;
+/// `template_path_matches_repo_spec_writer` pins the two equal.
+pub(crate) const DEFAULT_GIT_REPO_SPEC_PATH_STR: &str =
+    "scm/mononoke/repos/common/default_git_repo_spec";
+
+#[cfg(fbcode_build)]
+fn load_template_for_drift(app: &MononokeApp) -> Option<TemplateDriftInput> {
+    match fb::load_template(app) {
+        Ok(t) => Some(t),
+        Err(e) => {
+            println!("warning: new-repo template drift check skipped: {e:#}");
+            None
+        }
+    }
+}
+
+#[cfg(not(fbcode_build))]
+fn load_template_for_drift(_app: &MononokeApp) -> Option<TemplateDriftInput> {
+    // Same prefix as the fbcode variant so one expectation covers both builds.
+    println!("warning: new-repo template drift check skipped: not available in non-fbcode builds");
+    None
+}
+
+#[cfg(fbcode_build)]
+async fn apply_template(
+    ctx: &CoreContext,
+    plan: &[TemplatePlanItem],
+    reviewers: &BTreeSet<String>,
+    derivation_batch_size: i64,
+) -> Result<Option<String>> {
+    fb::apply_template(ctx, plan, reviewers, derivation_batch_size).await
+}
+
+#[cfg(not(fbcode_build))]
+async fn apply_template(
+    _ctx: &CoreContext,
+    _plan: &[TemplatePlanItem],
+    _reviewers: &BTreeSet<String>,
+    _derivation_batch_size: i64,
+) -> Result<Option<String>> {
+    Err(anyhow::Error::msg(
+        "configo is not available in non-fbcode builds; --apply cannot create config diffs",
+    ))
 }
 
 #[cfg(fbcode_build)]
@@ -382,20 +701,32 @@ mod fb {
     use configo::ConfigoClient;
     use configo_thrift_srclients::make_ConfigoService_srclient;
     use context::CoreContext;
+    use metaconfig_parser::configerator_repo_spec_handle;
     use metaconfig_types::CommitIdentityScheme;
+    use mononoke_app::MononokeApp;
+    use mononoke_types::DerivableType;
+    use repo_spec_writer::DEFAULT_GIT_REPO_SPEC_PATH;
     use repo_spec_writer::RepoSpecDir;
+    use repo_spec_writer::default_git_repo_spec_file_path;
     use repo_spec_writer::make_repo_spec_file_path;
     use repos::RawDerivedDataTypesConfig;
     use repos::RepoSpec;
 
     use super::PendingReconcile;
+    use super::TemplateDriftInput;
+    use super::TemplatePlanItem;
+    use super::superseded_in_template;
+    use super::template_pending_reconcile;
+    use super::template_review_diff_summary;
+    use super::template_review_diff_test_plan;
+    use super::template_review_diff_title;
 
     const REPO_SPEC_THRIFT_TYPE: &str = "RepoSpec";
     const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
     // Configerator prepare compiles the edited configs server-side; allow ample time.
     const PREPARE_TIMEOUT: Duration = Duration::from_secs(600);
     // i16 selector on RawDerivedDataTypesConfig.git_delta_manifest_version; 3 => V3.
-    const GDMV3_VERSION: i16 = 3;
+    const GDM_V3_VERSION: i16 = 3;
 
     /// Which RepoSpec tree this repo's `.cconf` lives in.
     ///
@@ -535,6 +866,18 @@ mod fb {
         )
     }
 
+    /// The review path publishes a Phabricator diff, whose author must resolve
+    /// to an employee FBID. The `scm_server_infra` service identity does not, so
+    /// stamp the diff with the unixname of the human running this CLI instead.
+    fn review_author() -> Result<String> {
+        std::env::var("USER").map_err(|_| {
+            anyhow!(
+                "cannot determine your unixname from $USER to author the review diff; \
+                 set USER to your unixname and re-run"
+            )
+        })
+    }
+
     /// Create one peer-review configerator diff covering every repo in `batch`.
     ///
     /// One `managed_transaction`: for each repo read its `RepoSpec` `.cconf`, add
@@ -599,15 +942,7 @@ mod fb {
             return Ok(None);
         }
 
-        // The review path publishes a Phabricator diff, whose author must resolve
-        // to an employee FBID. The `scm_server_infra` service identity does not, so
-        // stamp the diff with the unixname of the human running this CLI instead.
-        let author = std::env::var("USER").map_err(|_| {
-            anyhow!(
-                "cannot determine your unixname from $USER to author the review diff; \
-                 set USER to your unixname and re-run"
-            )
-        })?;
+        let author = review_author()?;
         let mutation = txn
             .prepare_mutation_request()?
             .add_author(author)
@@ -619,6 +954,134 @@ mod fb {
             .review(reviewers.clone(), review_diff_test_plan(&edited))
             .await?;
         tracing::debug!("created review diff {} for reconcile batch", diff);
+        Ok(Some(diff))
+    }
+
+    /// Raw RepoSpec -> the reduced drift input. Reused on the Configo-fetched
+    /// copy inside `apply_template`. Unknown type names are warned and skipped.
+    pub(super) fn reduce_template(spec: &RepoSpec) -> Result<TemplateDriftInput> {
+        let ddc = spec
+            .repo_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("new-repo template has no repo_config"))?
+            .derived_data_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("new-repo template has no derived_data_config"))?;
+        let name = ddc
+            .enabled_config_name
+            .as_ref()
+            .ok_or_else(|| anyhow!("new-repo template has no enabled_config_name"))?;
+        let cfg = ddc
+            .available_configs
+            .as_ref()
+            .and_then(|m| m.get(name))
+            .ok_or_else(|| {
+                anyhow!("new-repo template enabled config `{name}` is not in available_configs")
+            })?;
+        let mut types = BTreeSet::new();
+        for raw in &cfg.types {
+            match DerivableType::from_name(raw) {
+                Ok(t) => {
+                    types.insert(t);
+                }
+                Err(_) => tracing::warn!(
+                    "new-repo template lists unknown derived-data type `{raw}`; ignored"
+                ),
+            }
+        }
+        Ok(TemplateDriftInput {
+            enabled_config_name: name.clone(),
+            types,
+            git_delta_manifest_version: cfg.git_delta_manifest_version,
+        })
+    }
+
+    /// The template as this CLI's config store sees it (live, canary-aware).
+    pub(super) fn load_template(app: &MononokeApp) -> Result<TemplateDriftInput> {
+        let spec =
+            configerator_repo_spec_handle(DEFAULT_GIT_REPO_SPEC_PATH, app.config_store())?.get();
+        reduce_template(&spec)
+    }
+
+    /// Create the one peer-review configerator diff that edits the new-repo
+    /// template. Same transaction shape as `create_review_diff`, for one file.
+    /// Returns the diff id, or `None` when nothing needed adding.
+    pub(super) async fn apply_template(
+        ctx: &CoreContext,
+        plan: &[TemplatePlanItem],
+        reviewers: &BTreeSet<String>,
+        derivation_batch_size: i64,
+    ) -> Result<Option<String>> {
+        let configo_client =
+            ConfigoClient::with_client(ctx.fb, make_ConfigoService_srclient!(ctx.fb)?);
+        let mut txn = configo_client.managed_transaction();
+        let template_path = default_git_repo_spec_file_path();
+        // Read pins the CAS version; clone out and drop the handle before
+        // mutating (same caveat as `create_review_diff`).
+        let template: RepoSpec = {
+            let handle = txn
+                .get_thrift_object::<RepoSpec>(template_path.clone())
+                .await?;
+            handle.clone()
+        };
+        // The ConfigStore copy and the Configo (trunk) copy can differ; re-check
+        // the copy we are about to write. `fetched` also carries the enabled
+        // variant name we edit.
+        let fetched = reduce_template(&template)?;
+        let (template_repo_id, template_repo_name) = (template.repo_id, template.repo_name.clone());
+        let mut spec = template;
+        let mut added = Vec::new();
+        for item in plan {
+            let TemplatePlanItem::Add(ty) = item else {
+                continue;
+            };
+            if superseded_in_template(*ty, &fetched) {
+                bail!(
+                    "`{}` is superseded on the new-repo template as fetched from Configo; refusing",
+                    ty.name()
+                );
+            }
+            let p = template_pending_reconcile(
+                template_repo_id,
+                &template_repo_name,
+                &fetched.enabled_config_name,
+                *ty,
+            );
+            match apply_type_to_repo_spec(spec.clone(), &p, derivation_batch_size)? {
+                Some(updated) => {
+                    spec = updated;
+                    added.push(*ty);
+                }
+                None => println!("template already has `{}`; nothing to do", ty.name()),
+            }
+        }
+        if added.is_empty() {
+            return Ok(None);
+        }
+        txn.set_thrift_object(
+            spec,
+            template_path,
+            REPO_SPEC_THRIFT_TYPE.to_string(),
+            REPO_SPEC_THRIFT_PATH.to_string(),
+            None,
+        );
+        let author = review_author()?;
+        // Until the old template file is deleted from configerator, the Configo
+        // prepare step rejects this write by a parity test in
+        // repos/repo_spec.ctest; that is expected for now and surfaces here.
+        let mutation = txn
+            .prepare_mutation_request()?
+            .add_author(author)
+            .add_commit_message(
+                template_review_diff_title(&added),
+                template_review_diff_summary(&added, &fetched.enabled_config_name),
+            )
+            .prepare(PREPARE_TIMEOUT)
+            .await?;
+        let diff = mutation
+            .review(reviewers.clone(), template_review_diff_test_plan())
+            .await?;
+        tracing::debug!("created review diff {} for the new-repo template", diff);
         Ok(Some(diff))
     }
 
@@ -698,7 +1161,7 @@ mod fb {
                     p.enabled_config_name,
                 );
             }
-            cfg.git_delta_manifest_version = Some(GDMV3_VERSION);
+            cfg.git_delta_manifest_version = Some(GDM_V3_VERSION);
         }
 
         cfg.derivation_batch_sizes
@@ -710,204 +1173,4 @@ mod fb {
 }
 
 #[cfg(test)]
-mod tests {
-    use maplit::hashmap;
-    use metaconfig_types::DerivedDataTypesConfig;
-    use mononoke_macros::mononoke;
-
-    use super::*;
-
-    fn ddc_with(config_name: &str, types: &[DerivableType]) -> DerivedDataConfig {
-        DerivedDataConfig {
-            enabled_config_name: config_name.to_string(),
-            available_configs: hashmap! {
-                config_name.to_string() => DerivedDataTypesConfig {
-                    types: types.iter().copied().collect(),
-                    ..Default::default()
-                },
-            },
-            ..Default::default()
-        }
-    }
-
-    /// A git repo's reconcile info (the common case in tests).
-    fn info(repo_name: &str, config_name: &str, types: &[DerivableType]) -> RepoReconcileInfo {
-        RepoReconcileInfo {
-            repo_name: repo_name.to_string(),
-            commit_identity_scheme: CommitIdentityScheme::GIT,
-            derived_data_config: ddc_with(config_name, types),
-        }
-    }
-
-    #[mononoke::test]
-    fn pending_when_type_not_in_active_config() {
-        let repo_id = RepositoryId::new(1);
-        let configs = hashmap! {
-            repo_id => info("repo1", "default", &[DerivableType::ContentManifests]),
-        }
-        .into_iter()
-        .collect();
-
-        let work = compute_work_list(
-            vec![(repo_id, DerivableType::GitDeltaManifestsV3)],
-            &configs,
-        );
-        assert_eq!(work.pending.len(), 1);
-        assert_eq!(work.pending[0].repo_id, repo_id);
-        assert_eq!(work.pending[0].repo_name, "repo1");
-        assert_eq!(
-            work.pending[0].derived_data_type,
-            DerivableType::GitDeltaManifestsV3
-        );
-        assert_eq!(work.pending[0].enabled_config_name, "default");
-    }
-
-    #[mononoke::test]
-    fn hg_repo_carries_its_hg_identity_scheme() {
-        // Regression test: reconcile used to build every path via the git-only
-        // `make_repo_spec_file_path`, so an hg repo's edit was aimed at
-        // `repos/git/e0/scs-configerator_test.cconf` — which does not exist, and
-        // the whole batch failed with "No config entry found". The scheme has to
-        // survive into PendingReconcile for `repo_spec_dir_for` to pick repos/hg/.
-        let repo_id = RepositoryId::new(403);
-        let configs = hashmap! {
-            repo_id => RepoReconcileInfo {
-                repo_name: "scs-configerator_test".to_string(),
-                commit_identity_scheme: CommitIdentityScheme::HG,
-                derived_data_config: ddc_with("default", &[DerivableType::ContentManifests]),
-            },
-        }
-        .into_iter()
-        .collect();
-
-        let work = compute_work_list(
-            vec![(repo_id, DerivableType::SkeletonManifestsV2)],
-            &configs,
-        );
-        assert_eq!(work.pending.len(), 1);
-        assert_eq!(
-            work.pending[0].commit_identity_scheme,
-            CommitIdentityScheme::HG,
-            "hg repo must not be reconciled as if it were a git repo",
-        );
-    }
-
-    #[cfg(fbcode_build)]
-    #[mononoke::test]
-    fn repo_spec_dir_follows_commit_identity_scheme() {
-        use repo_spec_writer::RepoSpecDir;
-        use repo_spec_writer::make_repo_spec_file_path;
-
-        let pending = |scheme| super::PendingReconcile {
-            repo_id: RepositoryId::new(403),
-            repo_name: "scs-configerator_test".to_string(),
-            derived_data_type: DerivableType::ContentManifests,
-            enabled_config_name: "default".to_string(),
-            commit_identity_scheme: scheme,
-        };
-
-        let hg = pending(CommitIdentityScheme::HG);
-        let hg_dir = super::fb::repo_spec_dir_for(&hg).unwrap();
-        assert_eq!(hg_dir, RepoSpecDir::Hg);
-        assert_eq!(
-            make_repo_spec_file_path(&hg.repo_name, hg_dir),
-            "source/scm/mononoke/repos/hg/e0/scs-configerator_test.cconf",
-        );
-
-        let git = pending(CommitIdentityScheme::GIT);
-        assert_eq!(
-            super::fb::repo_spec_dir_for(&git).unwrap(),
-            RepoSpecDir::Git
-        );
-
-        // No RepoSpec tree exists for these, so guessing would target the wrong file.
-        for scheme in [CommitIdentityScheme::BONSAI, CommitIdentityScheme::UNKNOWN] {
-            assert!(
-                super::fb::repo_spec_dir_for(&pending(scheme.clone())).is_err(),
-                "{scheme:?} must not resolve to a RepoSpec directory",
-            );
-        }
-    }
-
-    #[mononoke::test]
-    fn skipped_when_type_already_in_active_config() {
-        let repo_id = RepositoryId::new(1);
-        let configs = hashmap! {
-            repo_id => info("repo1", "default", &[DerivableType::GitDeltaManifestsV3]),
-        }
-        .into_iter()
-        .collect();
-
-        let work = compute_work_list(
-            vec![(repo_id, DerivableType::GitDeltaManifestsV3)],
-            &configs,
-        );
-        assert!(
-            work.pending.is_empty(),
-            "already-enabled type must not be pending"
-        );
-        assert_eq!(work.already_in_config, 1);
-    }
-
-    #[mononoke::test]
-    fn skipped_when_repo_not_in_configs() {
-        let configs: BTreeMap<RepositoryId, RepoReconcileInfo> = BTreeMap::new();
-        let work = compute_work_list(
-            vec![(RepositoryId::new(7), DerivableType::GitDeltaManifestsV3)],
-            &configs,
-        );
-        assert!(
-            work.pending.is_empty(),
-            "row for unknown repo must be skipped"
-        );
-        assert_eq!(work.repo_not_found, vec![RepositoryId::new(7)]);
-    }
-
-    #[mononoke::test]
-    fn pending_when_active_config_name_missing_from_available() {
-        // enabled_config_name points at a config not present in available_configs:
-        // the type is certainly not enabled there, so it is pending.
-        let repo_id = RepositoryId::new(3);
-        let mut repo3 = info("repo3", "default", &[]);
-        repo3.derived_data_config.enabled_config_name = "nonexistent".to_string();
-        let configs = hashmap! { repo_id => repo3 }.into_iter().collect();
-
-        let work = compute_work_list(vec![(repo_id, DerivableType::Unodes)], &configs);
-        assert_eq!(work.pending.len(), 1);
-        assert_eq!(work.pending[0].enabled_config_name, "nonexistent");
-    }
-
-    #[mononoke::test]
-    fn output_is_deterministically_sorted() {
-        let r1 = RepositoryId::new(1);
-        let r2 = RepositoryId::new(2);
-        let configs = hashmap! {
-            r1 => info("repo1", "default", &[]),
-            r2 => info("repo2", "default", &[]),
-        }
-        .into_iter()
-        .collect();
-
-        let work = compute_work_list(
-            vec![
-                (r2, DerivableType::Unodes),
-                (r1, DerivableType::ContentManifests),
-                (r1, DerivableType::Unodes),
-            ],
-            &configs,
-        );
-        let ordered: Vec<_> = work
-            .pending
-            .iter()
-            .map(|p| (p.repo_id, p.derived_data_type))
-            .collect();
-        assert_eq!(
-            ordered,
-            vec![
-                (r1, DerivableType::ContentManifests),
-                (r1, DerivableType::Unodes),
-                (r2, DerivableType::Unodes),
-            ],
-        );
-    }
-}
+mod tests;
