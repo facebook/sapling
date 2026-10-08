@@ -312,6 +312,11 @@ export type WorktreeInfo = {
   sharedRoot: AbsolutePath;
   /** All worktrees in this group, including the current one. */
   worktrees: WorktreeEntry[];
+  /**
+   * Whether `sl worktree add` / `label` / `remove` work in this repo.
+   * Sapling only supports `sl worktree list` outside EdenFS (e.g. native Git repos).
+   */
+  supportsMutation: boolean;
 };
 
 export type WorktreeEntry = {

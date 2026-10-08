@@ -76,13 +76,14 @@ export function simulateWorktreeInfo(
     label?: string;
     node?: string;
   }>,
+  supportsMutation = true,
 ) {
   act(() => {
     simulateMessageFromServer({
       type: 'subscriptionResult',
       kind: 'worktreeInfo',
       subscriptionID: mostRecentSubscriptionIds.worktreeInfo,
-      data: {sharedRoot, worktrees: worktrees as WorktreeEntry[]},
+      data: {sharedRoot, worktrees: worktrees as WorktreeEntry[], supportsMutation},
     });
   });
 }

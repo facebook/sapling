@@ -26,6 +26,7 @@ import {useAutofocusRef} from 'shared/hooks';
 import {basename, guessPathSep, notEmpty, nullthrows} from 'shared/utils';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
+import {worktreeMutationsSupported} from './CheckedOutElsewhere';
 import css from './Commit.module.css';
 import {cloudSyncStateAtom} from './CommitCloud';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
@@ -843,8 +844,10 @@ function CommitLabel({children}: {children?: ReactNode}) {
 /**
  * A label naming a sibling worktree currently checked out (`.`) at this commit,
  * followed by buttons to open, rename, and (for linked worktrees) remove it.
+ * Rename and remove are only shown where the server reports worktree mutations are supported.
  */
 export function CheckedOutElsewhereBadge({wt}: {wt: WorktreeEntry}) {
+  const canMutate = useAtomValue(worktreeMutationsSupported);
   const name =
     wt.label != null && wt.label !== '' ? wt.label : basename(wt.path, guessPathSep(wt.path));
   const hoverTitle = t('Checked out in worktree $name', {replace: {$name: name}});
@@ -861,8 +864,8 @@ export function CheckedOutElsewhereBadge({wt}: {wt: WorktreeEntry}) {
         </Tag>
       </Tooltip>
       <OpenWorktreeButton wt={wt} name={name} />
-      <RenameWorktreeButton wt={wt} name={name} />
-      {wt.role === 'main' ? null : <RemoveWorktreeButton wt={wt} name={name} />}
+      {canMutate && <RenameWorktreeButton wt={wt} name={name} />}
+      {canMutate && wt.role !== 'main' && <RemoveWorktreeButton wt={wt} name={name} />}
     </span>
   );
 }

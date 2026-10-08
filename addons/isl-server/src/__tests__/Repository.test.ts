@@ -703,6 +703,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
           {path: '/path/to/other', role: 'linked', node: 'def456'},
           {path: '/path/to/no-hash', role: 'linked'},
         ],
+        supportsMutation: false,
       };
 
       const ejecaSpy = mockEjeca([]);
@@ -722,6 +723,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
           {path: '/path/to/other', role: 'linked', node: 'def456'},
           {path: '/path/to/other2', role: 'linked', node: 'def456'},
         ],
+        supportsMutation: false,
       };
 
       expect(repo.getOtherWorktreeDotHashes()).toEqual(['def456']);
@@ -1414,6 +1416,7 @@ describe('fetchSubmoduleMap', () => {
           {path: '/repo/main', role: 'main'},
           {path: '/repo/feature', label: 'feature-x', role: 'linked', node: 'bbb'},
         ],
+        supportsMutation: false,
       });
     });
 
@@ -1437,6 +1440,7 @@ describe('fetchSubmoduleMap', () => {
       expect(repo.getWorktreeInfo()).toEqual({
         sharedRoot: '/repo/main',
         worktrees: [{path: '/repo/main', role: 'main'}],
+        supportsMutation: false,
       });
     });
 
@@ -1458,6 +1462,7 @@ describe('fetchSubmoduleMap', () => {
       expect(repo.getWorktreeInfo()).toEqual({
         sharedRoot: '/repo/main',
         worktrees: [{path: '/repo/main', role: 'main'}],
+        supportsMutation: false,
       });
     });
 
@@ -1519,7 +1524,30 @@ describe('fetchSubmoduleMap', () => {
           {path: '/repo/main', role: 'main'},
           {path: '/repo/feature', label: 'feature-x', role: 'linked'},
         ],
+        supportsMutation: false,
       });
+    });
+
+    it('reports worktree mutations as supported only for EdenFS repos', async () => {
+      mockEjeca([
+        [/^sl root --dotdir/, {stdout: '/repo/main/.sl'}],
+        [/^sl root --shared/, {stdout: '/repo/main'}],
+        [/^sl root/, {stdout: '/repo/main'}],
+        [/^sl debugroots/, {stdout: '/repo/main'}],
+        [
+          /^sl --config worktree\.enabled=true worktree list/,
+          {stdout: JSON.stringify([{path: '/repo/main', role: 'main'}])},
+        ],
+      ]);
+
+      const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
+      const edenRepo = new Repository({...info, isEdenFs: true}, ctx);
+      await edenRepo.refreshWorktreeInfo();
+      expect(edenRepo.getWorktreeInfo()?.supportsMutation).toBe(true);
+
+      const gitRepo = new Repository({...info, isEdenFs: false}, ctx);
+      await gitRepo.refreshWorktreeInfo();
+      expect(gitRepo.getWorktreeInfo()?.supportsMutation).toBe(false);
     });
 
     it('leaves worktreeInfo undefined when sharedRoot is unavailable', async () => {

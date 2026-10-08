@@ -1020,6 +1020,7 @@ export class Repository {
           ? {
               sharedRoot,
               worktrees: worktreeEntriesWithNodes,
+              supportsMutation: this.info.isEdenFs,
             }
           : undefined;
       this.worktreeInfo = worktreeInfo;

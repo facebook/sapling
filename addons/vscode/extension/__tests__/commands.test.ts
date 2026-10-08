@@ -365,6 +365,7 @@ describe('worktree commands', () => {
   const worktreeInfoFixture: WorktreeInfo = {
     sharedRoot: repoRoot,
     worktrees: [mainWorktree, siblingWorktree],
+    supportsMutation: true,
   };
 
   const mockRepo = {
