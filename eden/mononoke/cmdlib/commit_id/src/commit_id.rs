@@ -306,3 +306,75 @@ pub async fn resolve_optional_commit_id(
         Ok(None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bonsai_git_mapping::BonsaiGitMapping;
+    use bonsai_git_mapping::BonsaiGitMappingEntry;
+    use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bonsai_hg_mapping::BonsaiHgMappingEntry;
+    use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+    use bookmarks::Bookmarks;
+    use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        bonsai_git_mapping: dyn BonsaiGitMapping,
+
+        #[facet]
+        bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+        #[facet]
+        bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+    }
+
+    /// FIXME: BUG! This did fail to resolve `CommitId::BonsaiId`, `CommitId::HgId` and
+    /// `CommitId::GitSha1` (the values `--bonsai-id`, `--hg-commit-id` and `--git` parse to) with
+    /// "Invalid bonsai changeset id" / "Invalid hg changeset id" / "Invalid git changeset id",
+    /// because `resolve_commit_ids` reinterprets the raw id bytes as a UTF-8 hex string, but
+    /// should have resolved the bonsai id to the changeset with those bytes and the hg and git
+    /// ids through the bonsai-hg and bonsai-git mappings.
+    #[mononoke::fbinit_test]
+    async fn resolve_typed_commit_ids_from_their_bytes(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+        let bcs_id = ChangesetId::from_bytes([0x5a; 32])?;
+        let hg_cs_id = HgChangesetId::from_bytes(&[0x3c; 20])?;
+        let git_sha1 = GitSha1::from_bytes([0x7e; 20])?;
+        repo.bonsai_hg_mapping()
+            .add(&ctx, BonsaiHgMappingEntry { hg_cs_id, bcs_id })
+            .await?;
+        repo.bonsai_git_mapping()
+            .add(&ctx, BonsaiGitMappingEntry { git_sha1, bcs_id })
+            .await?;
+
+        // FIXME: BUG! The 32 raw bytes are parsed as a 64-character hex string.
+        let err = resolve_commit_id(&ctx, &repo, &CommitId::BonsaiId([0x5a; 32]))
+            .await
+            .expect_err("BUG! expected the current failure");
+        assert_eq!(err.to_string(), "Invalid bonsai changeset id");
+        // FIXME: BUG! The 20 raw bytes are parsed as a 40-character hex string.
+        let err = resolve_commit_id(&ctx, &repo, &CommitId::HgId([0x3c; 20]))
+            .await
+            .expect_err("BUG! expected the current failure");
+        assert_eq!(err.to_string(), "Invalid hg changeset id");
+        // FIXME: BUG! The same for a git SHA-1.
+        let err = resolve_commit_id(&ctx, &repo, &CommitId::GitSha1([0x7e; 20]))
+            .await
+            .expect_err("BUG! expected the current failure");
+        assert_eq!(err.to_string(), "Invalid git changeset id");
+
+        Ok(())
+    }
+}

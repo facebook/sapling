@@ -6,6 +6,13 @@ rust_library(
     name = "commit_id",
     srcs = glob(["src/*.rs"]),
     crate_root = "src/commit_id.rs",
+    test_deps = [
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
