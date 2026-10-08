@@ -181,6 +181,55 @@ fn extract_python_supplemental_info(sp: usize) -> Option<SupplementalInfo> {
 
     let code_obj = read_stack(offsets::OFFSET_SP_CODE?)?;
     let line_no = read_stack(offsets::OFFSET_SP_LINE_NO?)?;
+    if !is_plausible_code_and_line(code_obj, line_no) {
+        return None;
+    }
 
     Some([code_obj, line_no])
+}
+
+/// Whether two words read from the stack can be the `code` and `line_no`
+/// locals of `Sapling_PyEvalFrame`.
+///
+/// The unwinder can report a stack pointer for that frame that is not its
+/// own (seen on aarch64), and the words at the probed offsets then belong to
+/// a neighboring frame. The resolver dereferences `code`, so such a pair has
+/// to be dropped here, where nothing may be dereferenced: this runs in the
+/// SIGPROF handler on the sampled thread.
+fn is_plausible_code_and_line(code: usize, line_no: usize) -> bool {
+    // A code object is a heap allocation. The line number is an `int` from
+    // the interpreter, -1 when unknown; a pointer read from the wrong slot is
+    // far outside that range.
+    code >= 0x10000
+        && code.is_multiple_of(std::mem::align_of::<usize>())
+        && (-1..=i32::MAX as isize).contains(&(line_no as isize))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_plausible_code_and_line;
+
+    #[test]
+    fn test_plausible_code_and_line() {
+        let heap = 0x7f00_0000_1000usize;
+        assert!(is_plausible_code_and_line(heap, 12));
+        assert!(
+            is_plausible_code_and_line(heap, -1isize as usize),
+            "unknown line"
+        );
+
+        assert!(!is_plausible_code_and_line(0, 12), "null code");
+        assert!(!is_plausible_code_and_line(heap + 1, 12), "misaligned code");
+        assert!(
+            !is_plausible_code_and_line(heap, -2isize as usize),
+            "negative line"
+        );
+        // The words a wrong stack pointer produced in an aarch64 core dump:
+        // a list object where the code should be, and the address of
+        // `_dl_tlsdesc_return` where the line should be.
+        assert!(!is_plausible_code_and_line(
+            0xfffe_9372_b300,
+            0xfffe_a7d2_39d0
+        ));
+    }
 }

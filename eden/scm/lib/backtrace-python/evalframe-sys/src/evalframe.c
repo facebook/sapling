@@ -248,6 +248,10 @@ static const char* ascii_str_data(PyObject* obj) {
  * `ascii_str_data`. This function might be called without the GIL. It does
  * not allocate, mutate, or DECREF Python objects.
  *
+ * `code` comes off the sampled thread's stack (see backtrace-python) and has
+ * turned out to point at other objects, so it is not trusted to be a code
+ * object until its type says so.
+ *
  * See also `sapling_cext_evalframe_stringify_code_lineno`.
  */
 EXPORT const char* sapling_cext_evalframe_resolve_code_object(
@@ -257,6 +261,9 @@ EXPORT const char* sapling_cext_evalframe_resolve_code_object(
     goto out;
   }
   if (!pfilename) {
+    goto out;
+  }
+  if (!PyCode_Check(code)) {
     goto out;
   }
   const char* name = ascii_str_data(code->co_name);

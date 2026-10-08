@@ -179,6 +179,7 @@ mod tests {
             attr: *const libc::c_char,
         ) -> *mut libc::c_void;
         fn PyTuple_GetItem(tuple: *mut libc::c_void, index: isize) -> *mut libc::c_void;
+        fn PyList_New(len: isize) -> *mut libc::c_void;
     }
 
     const PY_FILE_INPUT: libc::c_int = 257;
@@ -224,6 +225,16 @@ mod tests {
             resolve_first_function("def ascii_name(): pass\n", "ascii.py"),
             Some(("ascii_name".to_string(), "ascii.py".to_string()))
         );
+    }
+
+    #[test]
+    fn test_resolve_code_object_rejects_other_objects() {
+        let rejected = with_gil(|| unsafe {
+            let list = PyList_New(0);
+            let mut filename: *const libc::c_char = ptr::null();
+            resolve_code_object(list, &mut filename).is_null() && filename.is_null()
+        });
+        assert!(rejected, "a list is not a code object, so nothing resolves");
     }
 
     #[test]
