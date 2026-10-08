@@ -59,6 +59,14 @@ pub(super) struct ConnectionArgs {
     /// Serialized Crypto Auth Token (CAT) to use for authentication.
     #[clap(long, global = true, env = "SCSC_CAT")]
     cat: Option<String>,
+    #[clap(long, global = true, conflicts_with = "disable_partial_responses")]
+    /// Ask the server for partial responses to restricted-path denials
+    /// instead of whole-request failures.
+    enable_partial_responses: bool,
+    #[clap(long, global = true)]
+    /// Ask the server to fail restricted-path denials instead of returning
+    /// partial responses.
+    disable_partial_responses: bool,
 }
 
 /// Get the IP address and port for a task handle.
@@ -164,23 +172,35 @@ impl ConnectionArgs {
 
         if let Some(ref host_str) = host {
             if disable_sr {
-                return ScsClientHostBuilder::new()
+                let builder = ScsClientHostBuilder::new()
                     .with_client_correlator(client_correlator_override())
-                    .with_extra_headers(extra_headers_override())
-                    .with_partial_responses_opt_in()
-                    .build_from_host_port(fb, host_str);
+                    .with_extra_headers(extra_headers_override());
+                let builder = if self.enable_partial_responses {
+                    builder.with_partial_responses_opt_in()
+                } else if self.disable_partial_responses {
+                    builder.with_partial_responses_opt_out()
+                } else {
+                    builder
+                };
+                return builder.build_from_host_port(fb, host_str);
             }
         }
 
-        ScsClientBuilder::new(fb, self.client_id.clone())
+        let builder = ScsClientBuilder::new(fb, self.client_id.clone())
             .with_tier(&self.tier)
             .with_repo(repo.map(|r| r.to_string()))
             .with_host_and_port(host)?
             .with_processing_timeout(self.processing_timeout)
             .with_cat(self.cat.clone())
             .with_client_correlator(client_correlator_override())
-            .with_extra_headers(extra_headers_override())
-            .with_partial_responses_opt_in()
-            .build()
+            .with_extra_headers(extra_headers_override());
+        let builder = if self.enable_partial_responses {
+            builder.with_partial_responses_opt_in()
+        } else if self.disable_partial_responses {
+            builder.with_partial_responses_opt_out()
+        } else {
+            builder
+        };
+        builder.build()
     }
 }

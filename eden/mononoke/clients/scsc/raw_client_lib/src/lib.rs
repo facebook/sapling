@@ -34,6 +34,7 @@ use source_control_x2pclients::build_SourceControlService_client;
 pub const SCS_DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 const SCS_PATH_ACL_COMPATIBLE_HEADER: &str = "scs_path_acl_compatible";
 const SCS_PARTIAL_RESPONSES_OPT_IN_HEADER: &str = "scs_partial_responses_opt_in";
+const SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER: &str = "scs_partial_responses_opt_out";
 
 #[cfg(not(target_os = "windows"))]
 const CONN_TIMEOUT_MS: u32 = 5000;
@@ -119,6 +120,16 @@ impl ScsClientBuilder {
     pub fn with_partial_responses_opt_in(mut self) -> Self {
         self.extra_headers.insert(
             SCS_PARTIAL_RESPONSES_OPT_IN_HEADER.to_owned(),
+            "1".to_owned(),
+        );
+        self
+    }
+
+    /// Ask the server to fail restricted-path denials instead of returning
+    /// partial responses.
+    pub fn with_partial_responses_opt_out(mut self) -> Self {
+        self.extra_headers.insert(
+            SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER.to_owned(),
             "1".to_owned(),
         );
         self
@@ -351,6 +362,16 @@ impl ScsClientHostBuilder {
         self
     }
 
+    /// Ask the server to fail restricted-path denials instead of returning
+    /// partial responses.
+    pub fn with_partial_responses_opt_out(mut self) -> Self {
+        self.extra_headers.insert(
+            SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER.to_owned(),
+            "1".to_owned(),
+        );
+        self
+    }
+
     /// Build a scsclient from a `host:port` string.
     #[cfg(not(target_os = "windows"))]
     pub fn build_from_host_port(
@@ -531,6 +552,30 @@ mod tests {
                 .get(SCS_PARTIAL_RESPONSES_OPT_IN_HEADER)
                 .map(String::as_str),
             Some("1"),
+        );
+    }
+
+    #[mononoke::test]
+    fn partial_responses_header_is_opt_out() {
+        let builder = ScsClientHostBuilder::new();
+        assert!(
+            !builder
+                .extra_headers
+                .contains_key(SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER)
+        );
+
+        let builder = builder.with_partial_responses_opt_out();
+        assert_eq!(
+            builder
+                .extra_headers
+                .get(SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER)
+                .map(String::as_str),
+            Some("1"),
+        );
+        assert!(
+            !builder
+                .extra_headers
+                .contains_key(SCS_PARTIAL_RESPONSES_OPT_IN_HEADER)
         );
     }
 }
