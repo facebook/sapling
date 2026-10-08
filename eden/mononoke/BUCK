@@ -42,6 +42,7 @@ rust_binary(
             []
             if rust_oss.is_oss_build()
             else [
+                "//contextprop/rust:contextprop",
                 "//eden/mononoke/features/pushrebase:pushrebase_client",
             ]
         )

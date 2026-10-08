@@ -246,6 +246,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         cats::enable_test_mode();
     }
 
+    // No Thrift ServiceFramework here to register `ContextPropModule`, so the
+    // handlers outbound calls need are installed by hand, before tracing starts.
+    #[cfg(fbcode_build)]
+    contextprop::install_thrift_handlers();
+
     let runtime = app.runtime().clone();
 
     let cslb_config = args.cslb_config.clone();
