@@ -535,7 +535,7 @@ impl SourceControlServiceImpl {
         // One policy for the whole request: all three resolutions share its
         // omission counter. Under Strict, denials fail the whole request and
         // the assembly below never sees a denied side.
-        let policy = RestrictedPathsPolicy::for_scs_request();
+        let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo_name);
         // The subtree branch moves its policy into a coroutine; the other
         // branches only borrow.
         let subtree_policy = policy.clone();
@@ -988,7 +988,7 @@ impl SourceControlServiceImpl {
         // Under Strict, denials fail the whole request; under SkipAndCount,
         // entries denied by restricted-path enforcement are omitted or
         // downgraded, and counted in the shared counter.
-        let policy = RestrictedPathsPolicy::for_scs_request();
+        let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo.name());
         let result = commit_compare::operations::commit_compare(
             &ctx,
             &repo,
@@ -1020,7 +1020,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFindFilesParams,
     ) -> Result<thrift::CommitFindFilesResponse, scs_errors::ServiceError> {
-        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let limit: usize = check_range_and_convert(
             "limit",
             params.limit,
@@ -1049,7 +1049,7 @@ impl SourceControlServiceImpl {
             None => ChangesetFileOrdering::Unordered,
         };
 
-        let policy = RestrictedPathsPolicy::for_scs_request();
+        let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo.name());
         let partial = !matches!(policy, RestrictedPathsPolicy::Strict);
 
         let path_stream = changeset
@@ -1102,7 +1102,7 @@ impl SourceControlServiceImpl {
         ),
         scs_errors::ServiceError,
     > {
-        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let limit: usize = check_range_and_convert("limit", params.limit, 0..=i64::MAX)?;
         let prefixes: Option<Vec<_>> = match &params.prefixes {
             Some(prefixes) => Some(
@@ -1132,7 +1132,7 @@ impl SourceControlServiceImpl {
         // (counting omissions) and the exact verdict is reported on a
         // terminal item; up front we can only set `nocache`,
         // pessimistically, since items are produced lazily.
-        let policy = RestrictedPathsPolicy::for_scs_request();
+        let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo.name());
         let partial = !matches!(policy, RestrictedPathsPolicy::Strict);
         if partial {
             ctx.set_potential_partial_response();

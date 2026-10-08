@@ -103,7 +103,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitMultiplePathInfoParams,
     ) -> Result<thrift::CommitMultiplePathInfoResponse, scs_errors::ServiceError> {
-        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let mut paths = vec![];
         for path in params.paths {
             let strpath = path.as_str();
@@ -112,7 +112,7 @@ impl SourceControlServiceImpl {
             paths.push(mpath);
         }
 
-        let policy = RestrictedPathsPolicy::for_scs_request();
+        let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo.name());
         let stream = changeset
             .paths_with_content(paths.into_iter(), &policy)
             .await?;
@@ -689,7 +689,7 @@ impl SourceControlServiceImpl {
             paths.insert(mpath);
         }
 
-        let policy = RestrictedPathsPolicy::for_scs_request();
+        let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo.name());
         let history_stream = changeset
             .paths_with_history(paths.iter().cloned(), &policy)
             .await?;

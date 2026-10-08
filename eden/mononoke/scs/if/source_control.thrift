@@ -2520,11 +2520,13 @@ union RepoUpdateSubmoduleExpansionResult {
 /// field so typed clients get an exact verdict. `partial` is true iff
 /// entries were omitted; `omitted_restricted_paths_count` carries the count
 /// when known up front (unary) and is absent when the count lives only in
-/// Scuba (streams). The field is populated only when the
-/// `scs_enable_partial_responses` killswitch is on; its absence means
-/// the server does not support partial responses, or they are not
-/// allowed for this request. For diffs, both sides of an entry are
-/// counted separately: one omitted entry can contribute 2 to the count.
+/// Scuba (streams). The field is populated when partial responses are
+/// allowed for the request: the `scs_enable_partial_responses` killswitch
+/// is on for the repo, or the client sent the opt-in request header. Its
+/// absence means the server does not support partial responses, or they
+/// are not allowed for this request. For diffs, both sides of an entry
+/// are counted separately: one omitted entry can contribute 2 to the
+/// count.
 struct PartialResponseInfo {
   1: bool partial;
   2: optional i64 omitted_restricted_paths_count;
