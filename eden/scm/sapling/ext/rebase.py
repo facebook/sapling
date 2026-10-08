@@ -553,7 +553,7 @@ class rebaseruntime:
                 rev for rev, state in self.state.items() if state == revtodo
             }
             precheckrevs.difference_update(self.obsoletenotrebased)
-            if not ui.configbool("experimental", "evolution.allowdivergence"):
+            if not mutation.allow_divergence(ui):
                 precheckrevs.difference_update(
                     repo.revs(
                         "descendants(%ld)", self.obsoletewithoutsuccessorindestination
@@ -598,9 +598,7 @@ class rebaseruntime:
     def _performrebasesubset(self, tr, subset, pos, prog):
         repo, ui = self.repo, self.ui
         sortedrevs = repo.revs("sort(%ld, -topo)", subset)
-        allowdivergence = self.ui.configbool(
-            "experimental", "evolution.allowdivergence"
-        )
+        allowdivergence = mutation.allow_divergence(self.ui)
         if not allowdivergence:
             sortedrevs -= repo.revs(
                 "descendants(%ld) and not %ld",
@@ -2301,15 +2299,13 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped) -> None:
     successors in destination
     """
     # Obsolete node with successors not in dest leads to divergence
-    divergenceok = ui.configbool("experimental", "evolution.allowdivergence")
+    divergenceok = mutation.allow_divergence(ui)
     divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
 
     if divergencebasecandidates and not divergenceok:
         divhashes = (str(repo[r]) for r in divergencebasecandidates)
         msg = _("this rebase will cause divergences from: %s")
-        h = _(
-            "to force the rebase please set experimental.evolution.allowdivergence=True"
-        )
+        h = _("to force the rebase please set mutation.allow-divergence=True")
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
 
 

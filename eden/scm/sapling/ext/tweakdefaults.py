@@ -590,7 +590,7 @@ def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
 
 
 def _checkobsrebasewrapper(orig, repo, ui, *args) -> None:
-    overrides = {("experimental", "evolution.allowdivergence"): True}
+    overrides = {("mutation", "allow-divergence"): True}
     with repo.ui.configoverride(overrides, "tweakdefaults"):
         orig(repo, ui, *args)
 

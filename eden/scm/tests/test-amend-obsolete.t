@@ -96,12 +96,19 @@ The legacy boolean config should remain an effective override:
   $ CODING_AGENT_METADATA=id=test_agent sl amend --config commit.reject-modifying-obsolete=false --config devel.print-metrics=commit.obsolete -m "legacy override amend"
   commit.obsolete.mode_ignored: 1
 
-Explicitly allowing divergence should allow amending obsolete commits:
+Explicitly allowing divergence should allow amending obsolete commits, via
+either the mutation config or its legacy evolution alias:
 
   $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
   0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo e > e
   $ sl add e
+  $ CODING_AGENT_METADATA=id=test_agent sl amend --config mutation.allow-divergence=true -m "allow-divergence amend"
+
+  $ sl go --config checkout.obsolete-mode=ignore 87ce07975dfa
+  0 files updated, 0 files merged, * files removed, 0 files unresolved (glob)
+  $ echo e2 > e2
+  $ sl add e2
   $ CODING_AGENT_METADATA=id=test_agent sl amend --config experimental.evolution.allowdivergence=true -m "allowdivergence amend"
 
 Set up an obsolete commit with one live successor:

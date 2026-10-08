@@ -57,6 +57,17 @@ def enabled(repo):
     return repo.ui.configbool("mutation", "enabled")
 
 
+def allow_divergence(ui):
+    """Whether operations may deliberately create divergent (obsolete) commits.
+
+    ``experimental.evolution.allowdivergence`` is the pre-mutation name, still
+    honored for callers that set it by hand.
+    """
+    return ui.configbool("mutation", "allow-divergence") or ui.configbool(
+        "experimental", "evolution.allowdivergence"
+    )
+
+
 def makemutationstore(repo):
     return mutationstore.mutationstore(repo.svfs.join("mutation"))
 

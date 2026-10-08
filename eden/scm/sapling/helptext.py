@@ -1681,6 +1681,10 @@ Controls recording of commit mutation metadata.
     Set to true to automatically convert obsmarkers to mutation metadata during
     automigration at the start of pull.
 
+``allow-divergence``
+    Set to true to allow operations to deliberately create divergence by
+    rewriting or rebasing onto obsolete commits. (default: False)
+
 ``pager``
 ---------
 
@@ -2048,6 +2052,7 @@ have a definite end point.
 ----------
 
 ``evolution.allowdivergence``
+    Deprecated alias for ``mutation.allow-divergence``; still honored.
     Default to False, when True allow creating divergence when performing
     rebase of obsolete changesets.
 

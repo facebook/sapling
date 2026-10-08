@@ -135,9 +135,9 @@ def _checkobsolete(
         repo.ui.metrics.inc(prefix + "automation_allowed", 1)
         return obsolete_contexts
 
-    # allowdivergence is the established opt-in for operations that
+    # allow-divergence is the established opt-in for operations that
     # deliberately rewrite obsolete commits.
-    if repo.ui.configbool("experimental", "evolution.allowdivergence"):
+    if mutation.allow_divergence(repo.ui):
         repo.ui.metrics.inc(prefix + "config_allowed", 1)
         return obsolete_contexts
 
@@ -286,7 +286,7 @@ def rebasedestcheck(repo, destmap):
     # finds (automation, the divergence opt-in, or a disabled mode).
     if (
         repo.ui.plain()
-        or repo.ui.configbool("experimental", "evolution.allowdivergence")
+        or mutation.allow_divergence(repo.ui)
         or _obsolete_mode(repo, ("rebase", "obsolete-dest-mode")) == "ignore"
     ):
         return
