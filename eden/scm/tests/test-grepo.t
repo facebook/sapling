@@ -706,6 +706,25 @@ clean=False, updatecheck="noconflict"
   vendor/a/sub/c: C_REV
   sl status: M frameworks/b
 
+Recovery from the failed goto above. The test reverts the change in
+`frameworks/b` with Git. Then it runs the same goto again. Expected: goto
+checks out every project at its revision in the target's `static.xml`.
+clean=False, updatecheck="noconflict"
+
+  $ git -C frameworks/b checkout -q -- README
+  $ sl goto $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B_REV
+  vendor/a/sub/c: C_REV
+
 The same goto with `workingcopy.rust-checkout=false`. Expected: the same
 result as the Rust checkout.
 (bad: the error is the raw Git error.)
