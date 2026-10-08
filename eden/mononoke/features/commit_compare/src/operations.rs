@@ -545,4 +545,44 @@ mod tests {
         }
         Ok(())
     }
+
+    /// FIXME: BUG! This did report "unordered diff has 6 entries, exceeding maximum 5" for a
+    /// commit that adds 8 files, but should have said that the diff has more than 5 entries:
+    /// the diff is probed with a limit of `max_paths + 1`, so the number in the message is
+    /// the probe limit, not the size of the diff.
+    #[mononoke::fbinit_test]
+    async fn test_unordered_diff_over_limit_message_does_not_report_probe_limit(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let (repo_ctx, base_cs, other_cs) = setup_repo_with_diff(fb, 8).await?;
+        let params = source_control_thrift::CommitCompareParams::default();
+
+        let err = with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap! {
+                "scm/mononoke:commit_compare_unordered_max_paths".to_string() => KnobVal::Int(5),
+            }),
+            async {
+                commit_compare(
+                    repo_ctx.ctx(),
+                    &repo_ctx,
+                    base_cs,
+                    Some(other_cs),
+                    &params,
+                    &RestrictedPathsPolicy::Strict,
+                )
+                .await
+            }
+            .boxed(),
+        )
+        .await
+        .err()
+        .expect("a diff of 8 entries must be rejected with a limit of 5");
+        let err_str = format!("{err:#}");
+        // FIXME: BUG! The message presents the probe limit (6) as the number of entries.
+        assert!(
+            err_str.contains("unordered diff has 6 entries, exceeding maximum 5"),
+            "got: {err_str}"
+        );
+        Ok(())
+    }
 }
