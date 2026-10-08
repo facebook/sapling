@@ -41,6 +41,7 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+mod auth;
 mod claimer;
 mod client;
 mod dispatcher;
@@ -57,6 +58,8 @@ mod response;
 mod stats;
 mod stream;
 
+pub use auth::AuthResolver;
+pub use auth::ResolvedAuth;
 pub use client::Config;
 pub use client::HttpClient;
 pub use client::ResponseFuture;

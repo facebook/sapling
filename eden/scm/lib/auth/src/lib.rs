@@ -114,12 +114,13 @@ impl AuthGroup {
 }
 
 #[derive(Clone)]
-pub struct AuthSection<'a> {
+pub struct AuthSection {
     groups: Vec<AuthGroup>,
-    config: &'a dyn Config,
+    default_cacerts: Option<PathBuf>,
+    tls_auth_help: String,
 }
 
-impl<'a> AuthSection<'a> {
+impl AuthSection {
     /// Parse the `[auth]` section of a Mercurial config into a map
     /// of grouped auth settings.
     ///
@@ -129,7 +130,7 @@ impl<'a> AuthSection<'a> {
     ///
     /// Values are parsed `Auth` structs containing all of the values
     /// found for the given grouping.
-    pub fn from_config(config: &'a dyn Config) -> Self {
+    pub fn from_config(config: &dyn Config) -> Self {
         // Use an IndexMap to preserve ordering; needed to correctly handle precedence.
         let mut groups = IndexMap::new();
 
@@ -154,7 +155,14 @@ impl<'a> AuthSection<'a> {
             .filter_map(|(group, settings)| AuthGroup::new(group, settings).ok())
             .collect();
 
-        Self { groups, config }
+        Self {
+            groups,
+            default_cacerts: config.must_get("web", "cacerts").ok(),
+            tls_auth_help: config
+                .get("help", "tlsauthhelp")
+                .unwrap_or_default()
+                .to_string(),
+        }
     }
 
     /// Find the best matching auth group for the given URL.
@@ -235,18 +243,17 @@ impl<'a> AuthSection<'a> {
 
             let mut best = best.clone();
             if best.cacerts.is_none() {
-                if let Ok(cacerts) = self.config.must_get("web", "cacerts") {
+                if let Some(cacerts) = &self.default_cacerts {
                     tracing::debug!(%url, ?cacerts, "using web.cacerts bundle");
-                    best.cacerts = Some(cacerts);
+                    best.cacerts = Some(cacerts.clone());
                 }
             }
             Ok(Some(best))
         } else if !missing.is_empty() {
-            let msg = self.config.get("help", "tlsauthhelp").unwrap_or_default();
             Err(MissingCerts {
                 url: url.to_string(),
                 missing,
-                msg: msg.to_string(),
+                msg: self.tls_auth_help.clone(),
             })
         } else {
             Ok(None)

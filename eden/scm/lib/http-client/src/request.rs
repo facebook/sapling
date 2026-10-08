@@ -35,6 +35,7 @@ use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
 
+use crate::AuthResolver;
 use crate::Easy2H;
 use crate::claimer::RequestClaim;
 use crate::claimer::RequestClaimer;
@@ -180,6 +181,7 @@ pub struct Request {
     ctx: RequestContext,
     claimer: RequestClaimer,
     headers: HashMap<String, String>,
+    auth_resolver: Option<AuthResolver>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
     cainfo: Option<PathBuf>,
@@ -277,6 +279,7 @@ impl Request {
             headers: hashmap! {
                 "Expect".to_string() => "".to_string(),
             },
+            auth_resolver: None,
             cert: None,
             key: None,
             cainfo: None,
@@ -419,6 +422,11 @@ impl Request {
     pub fn set_header(&mut self, name: impl ToString, value: impl ToString) -> &mut Self {
         self.headers
             .insert(name.to_string().to_lowercase(), value.to_string());
+        self
+    }
+
+    pub(crate) fn set_auth_resolver(&mut self, auth_resolver: AuthResolver) -> &mut Self {
+        self.auth_resolver = Some(auth_resolver);
         self
     }
 
@@ -796,18 +804,32 @@ impl Request {
         easy.ssl_verify_host(self.verify_tls_host)?;
         easy.ssl_verify_peer(self.verify_tls_cert)?;
 
-        match &self.cert {
+        let resolved_auth = self
+            .auth_resolver
+            .as_ref()
+            .map(AuthResolver::resolve)
+            .transpose()?;
+        let cert = self
+            .cert
+            .as_ref()
+            .or_else(|| resolved_auth.and_then(|auth| auth.cert_path.as_ref()));
+        let key = self
+            .key
+            .as_ref()
+            .or_else(|| resolved_auth.and_then(|auth| auth.key_path.as_ref()));
+
+        match cert {
             Some(cert) if self.convert_cert => {
                 // Convert certificate to PKCS#12 format for platforms that do
                 // not support loading PEM files (notably Windows).
                 tracing::debug!("Converting certificate {:?} to PKCS#12 format", cert);
-                let blob = pem_to_pkcs12(cert, self.key)?;
+                let blob = pem_to_pkcs12(cert, key)?;
                 easy.ssl_cert_type("P12")?;
                 easy.ssl_cert_blob(&blob)?;
             }
             Some(cert) => {
                 easy.ssl_cert(cert)?;
-                if let Some(key) = &self.key {
+                if let Some(key) = key {
                     easy.ssl_key(key)?;
                 }
             }
@@ -847,7 +869,11 @@ impl Request {
             }
         }?;
 
-        if let Some(cainfo) = self.cainfo {
+        let cainfo = self
+            .cainfo
+            .as_ref()
+            .or_else(|| resolved_auth.and_then(|auth| auth.ca_path.as_ref()));
+        if let Some(cainfo) = cainfo {
             easy.cainfo(cainfo)?;
         }
 
@@ -980,8 +1006,10 @@ fn pem_to_pkcs12(
 
 #[cfg(test)]
 mod tests {
+    use std::io;
     use std::sync::Arc;
     use std::sync::atomic::Ordering::Acquire;
+    use std::sync::atomic::Ordering::Relaxed;
 
     use anyhow::Result;
     use futures::TryStreamExt;
@@ -995,6 +1023,7 @@ mod tests {
     use super::*;
     use crate::Config;
     use crate::HttpClient;
+    use crate::ResolvedAuth;
 
     #[test]
     fn test_get() -> Result<()> {
@@ -1029,6 +1058,38 @@ mod tests {
             HeaderValue::from_static("mock")
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_auth_resolver_failure_is_retried_by_later_request() -> Result<()> {
+        let mut server = mockito::Server::new();
+        let mock = server.mock("GET", "/test").with_status(200).create();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let auth_resolver = AuthResolver::new({
+            let calls = calls.clone();
+            move || {
+                if calls.fetch_add(1, Relaxed) == 0 {
+                    Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "certificate is not available yet",
+                    ))
+                } else {
+                    Ok(ResolvedAuth::default())
+                }
+            }
+        });
+        let client = HttpClient::from_config(Config {
+            auth_resolver: Some(auth_resolver),
+            ..Default::default()
+        });
+        let url = Url::parse(&server.url())?.join("test")?;
+
+        assert!(client.get(url.clone()).send().is_err());
+        assert_eq!(client.get(url).send()?.head.status, StatusCode::OK);
+
+        mock.assert();
+        assert_eq!(calls.load(Relaxed), 2);
         Ok(())
     }
 

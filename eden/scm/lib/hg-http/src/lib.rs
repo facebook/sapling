@@ -22,8 +22,10 @@ use clientinfo::ClientInfo;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use hg_metrics::increment_counter;
+use http_client::AuthResolver;
 use http_client::HttpClient;
 use http_client::Request;
+use http_client::ResolvedAuth;
 use http_client::Stats;
 use progress_model::AggregatingProgressBar;
 use progress_model::IoSample;
@@ -136,11 +138,20 @@ pub fn http_config(
 
     if !using_auth_proxy {
         // If we aren't using auth proxy, we need to configure client certs.
-        // Defer attempt to load certs until we know we need them.
-        let auth = AuthSection::from_config(config).best_match_for(url_for_auth)?;
-        (hc.cert_path, hc.key_path, hc.ca_path) = auth
-            .map(|auth| (auth.cert, auth.key, auth.cacerts))
-            .unwrap_or_default();
+        let auth = AuthSection::from_config(config);
+        let url_for_auth = url_for_auth.clone();
+        hc.auth_resolver = Some(AuthResolver::new(
+            move || -> Result<_, auth::MissingCerts> {
+                Ok(auth
+                    .best_match_for(&url_for_auth)?
+                    .map(|auth| ResolvedAuth {
+                        cert_path: auth.cert,
+                        key_path: auth.key,
+                        ca_path: auth.cacerts,
+                    })
+                    .unwrap_or_default())
+            },
+        ));
     }
 
     Ok(hc)
@@ -268,8 +279,13 @@ fn bump_counters(client_id: &str, stats: &Stats) {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+    use std::fs;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering::Relaxed;
 
     use super::*;
+
+    static TEST_ID: AtomicUsize = AtomicUsize::new(0);
 
     #[test]
     fn test_convert_cert_config() {
@@ -282,5 +298,42 @@ mod tests {
 
         hg_config.insert("http.convert-cert", "false");
         assert!(!http_config(&hg_config, &url).unwrap().convert_cert);
+    }
+
+    #[test]
+    fn test_auth_resolution_retries_until_first_success() {
+        let test_dir = std::env::temp_dir().join(format!(
+            "hg-http-auth-resolver-{}-{}",
+            std::process::id(),
+            TEST_ID.fetch_add(1, Relaxed)
+        ));
+        fs::create_dir(&test_dir).unwrap();
+        let cert_path = test_dir.join("client.pem");
+
+        let mut hg_config = BTreeMap::<String, String>::new();
+        hg_config.insert("auth.main.prefix".into(), "example.com".into());
+        hg_config.insert(
+            "auth.main.cert".into(),
+            cert_path.to_string_lossy().into_owned(),
+        );
+
+        let url: Url = "https://example.com".parse().unwrap();
+        let resolver = http_config(&hg_config, &url)
+            .unwrap()
+            .auth_resolver
+            .unwrap();
+
+        assert!(resolver.resolve().is_err());
+
+        fs::write(&cert_path, "certificate").unwrap();
+        let expected = ResolvedAuth {
+            cert_path: Some(cert_path.clone()),
+            ..Default::default()
+        };
+        assert_eq!(resolver.resolve().unwrap(), &expected);
+
+        fs::remove_file(&cert_path).unwrap();
+        assert_eq!(resolver.resolve().unwrap(), &expected);
+        fs::remove_dir(test_dir).unwrap();
     }
 }

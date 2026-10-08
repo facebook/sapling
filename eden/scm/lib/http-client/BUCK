@@ -62,5 +62,6 @@ sl_rust_library(
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/util/try-once-lock:try-once-lock",
     ],
 )
