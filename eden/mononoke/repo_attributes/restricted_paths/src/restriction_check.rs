@@ -1044,6 +1044,7 @@ fn pre_filter_condition_sets<'a>(
 struct RequestFacts<'a> {
     entry_point: Option<String>,
     server_side_tenting: bool,
+    client_partial_responses_flag: bool,
     machine_tier: Option<&'a str>,
     build_rule: Option<&'static str>,
     identities: &'a MononokeIdentitySet,
@@ -1063,6 +1064,8 @@ impl<'a> RequestFacts<'a> {
                 .client_request_info()
                 .map(|cri| cri.entry_point.to_string()),
             server_side_tenting: ctx.session().server_side_tenting(),
+            client_partial_responses_flag: metadata.partial_responses_opt_in()
+                || metadata.partial_responses_opt_out(),
             machine_tier: metadata.machine_tier(),
             build_rule: server_build_rule(),
             identities: metadata.identities(),
@@ -1112,7 +1115,9 @@ impl<'a> RequestFacts<'a> {
     /// `always_enabled` and `restriction_acls` are the caller's to evaluate.
     fn matches_condition_set(&self, set: &EnforcementConditionSet) -> bool {
         self.matches(&set.matchers)
-            && (!set.require_client_request_flag || self.server_side_tenting)
+            && (!set.require_client_request_flag
+                || self.server_side_tenting
+                || self.client_partial_responses_flag)
     }
 }
 

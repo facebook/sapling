@@ -124,6 +124,8 @@ pub struct RestrictedPathsTestDataBuilder {
     repo_regions_config: Vec<(String, Vec<String>)>,
     groups_config: Vec<(String, Vec<String>)>,
     server_side_tenting: bool,
+    partial_responses_opt_in: bool,
+    partial_responses_opt_out: bool,
     client_identity: Option<MononokeIdentity>,
     client_machine_tier_identity: Option<MononokeIdentity>,
     file_path_changes: Vec<(String, Option<String>)>,
@@ -361,6 +363,8 @@ impl RestrictedPathsTestDataBuilder {
             groups_config: vec![],
             repo_regions_config: vec![],
             server_side_tenting: false,
+            partial_responses_opt_in: false,
+            partial_responses_opt_out: false,
             client_identity: None,
             client_machine_tier_identity: None,
             file_path_changes: vec![],
@@ -492,6 +496,16 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
+    pub fn with_partial_responses_opt_in(mut self, partial_responses_opt_in: bool) -> Self {
+        self.partial_responses_opt_in = partial_responses_opt_in;
+        self
+    }
+
+    pub fn with_partial_responses_opt_out(mut self, partial_responses_opt_out: bool) -> Self {
+        self.partial_responses_opt_out = partial_responses_opt_out;
+        self
+    }
+
     pub fn with_file_path_changes(mut self, file_path_changes: Vec<(&str, Option<&str>)>) -> Self {
         self.file_path_changes = file_path_changes
             .into_iter()
@@ -563,6 +577,8 @@ impl RestrictedPathsTestDataBuilder {
             )
             .await;
             md.add_client_info(client_info);
+            md.add_partial_responses_opt_in(self.partial_responses_opt_in);
+            md.add_partial_responses_opt_out(self.partial_responses_opt_out);
             Arc::new(md)
         };
         let session_container = SessionContainer::builder(fb)

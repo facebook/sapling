@@ -2569,7 +2569,9 @@ pub struct EnforcementConditionSet {
     /// If true, this set always matches — skips the request matchers and
     /// require_client_request_flag checks.
     pub always_enabled: bool,
-    /// Temporary: if true, client must send server_side_tenting=true in metadata.
+    /// Temporary: if true, the client must also flag enforcement support:
+    /// server_side_tenting=true in SLAPI request metadata, or either
+    /// partial-responses header on SCS thrift requests.
     /// Used during the initial rollout stage so clients can opt in to enforcement
     /// and disable it if it causes issues. Should be removed once rollout is complete.
     // TODO(T248658346): Remove this field once path ACL enforcement is fully rolled out.

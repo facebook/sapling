@@ -745,6 +745,58 @@ async fn test_enforcement_condition_set_request_flag_and_restriction_acl(
     Ok(())
 }
 
+// What it tests: `require_client_request_flag` satisfied by either
+// partial-responses request header.
+// Expected: unauthorized access is enforced when the client sent the opt-in
+// or the opt-out header, since either declares the client handles
+// enforcement; allowed when neither was sent.
+#[mononoke::fbinit_test]
+async fn test_enforcement_condition_set_partial_responses_headers(fb: FacebookInit) -> Result<()> {
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let restricted_paths = vec![(NonRootMPath::new("restricted/dir")?, restricted_acl.clone())];
+    let condition_set = || {
+        EnforcementConditionSetBuilder::new()
+            .with_require_client_request_flag(true)
+            .with_restriction_acls([restricted_acl.clone()])
+            .build()
+    };
+
+    let was_denied_without_flag = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths.clone())
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[condition_set()],
+        )
+        .await?;
+    let was_denied_with_opt_in = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths.clone())
+        .with_partial_responses_opt_in(true)
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[condition_set()],
+        )
+        .await?;
+    let was_denied_with_opt_out = RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_partial_responses_opt_out(true)
+        .build(fb)
+        .await?
+        .observe_path_enforcement(
+            NonRootMPath::new("restricted/dir/file")?,
+            &[condition_set()],
+        )
+        .await?;
+
+    assert!(!was_denied_without_flag);
+    assert!(was_denied_with_opt_in);
+    assert!(was_denied_with_opt_out);
+    Ok(())
+}
+
 // What it tests: condition set whose `machine_tiers` list contains the caller's
 // MACHINE_TIER identity value.
 // Expected: filter matches, so unauthorized access is enforced.
