@@ -2522,7 +2522,8 @@ union RepoUpdateSubmoduleExpansionResult {
 /// when known up front (unary) and is absent when the count lives only in
 /// Scuba (streams). The field is populated when partial responses are
 /// allowed for the request: the `scs_enable_partial_responses` killswitch
-/// is on for the repo, or the client sent the opt-in request header. Its
+/// is on for the repo, or the client sent the opt-in request header,
+/// unless the client sent the opt-out request header. Its
 /// absence means the server does not support partial responses, or they
 /// are not allowed for this request. For diffs, both sides of an entry
 /// are counted separately: one omitted entry can contribute 2 to the

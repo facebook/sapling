@@ -75,7 +75,9 @@ pub enum RestrictedPathsPolicy {
 
 /// JustKnobs gate for partial SCS responses. A client gets skipping
 /// behavior when the killswitch is on for its repo, or when it sends the
-/// opt-in request header. The killswitch covers SCS path-info,
+/// opt-in request header. A client that sends the opt-out request header
+/// never gets skipping behavior: denials fail the whole request for it,
+/// whatever the killswitch says. The killswitch covers SCS path-info,
 /// last-changed, file-diffs, compare and find-files, plus the
 /// diff-service compare and single-pair diffs behind the remote route.
 /// Switched on repo name for per-repo rollout; when off (the default)
@@ -85,12 +87,17 @@ pub const SCS_ENABLE_PARTIAL_RESPONSES_JK: &str = "scm/mononoke:scs_enable_parti
 impl RestrictedPathsPolicy {
     /// Build the policy for the current SCS (or diff-service) request.
     /// Skipping is allowed when the killswitch is on for the repo or the
-    /// client opted in via the request header. Evaluate ONCE per request
+    /// client opted in via the request header, unless the client opted out:
+    /// an opted-out client gets `Strict` even when the killswitch is on.
+    /// Evaluate ONCE per request
     /// and share the result across every call, so the knob decision cannot
     /// disagree with itself. A missing knob is an error; the knob exists
     /// with default off, and integration tests enable it via
     /// `merge_just_knobs`.
     pub fn for_scs_request(ctx: &CoreContext, repo_name: &str) -> Self {
+        if ctx.metadata().partial_responses_opt_out() {
+            return Self::Strict;
+        }
         let client_opt_in = ctx.metadata().partial_responses_opt_in();
         let knob_on = justknobs::eval(SCS_ENABLE_PARTIAL_RESPONSES_JK, None, Some(repo_name));
         if client_opt_in || knob_on {
@@ -145,15 +152,16 @@ mod tests {
         )]))
     }
 
-    fn ctx_with_opt_in(fb: FacebookInit, opt_in: bool) -> CoreContext {
+    fn ctx_with_opt_flags(fb: FacebookInit, opt_in: bool, opt_out: bool) -> CoreContext {
         let mut metadata = Metadata::default();
         metadata.add_partial_responses_opt_in(opt_in);
+        metadata.add_partial_responses_opt_out(opt_out);
         CoreContext::test_mock(fb).with_overridden_metadata(Arc::new(metadata))
     }
 
     #[mononoke::fbinit_test]
     async fn strict_without_knob_or_opt_in(fb: FacebookInit) -> Result<(), anyhow::Error> {
-        let ctx = ctx_with_opt_in(fb, false);
+        let ctx = ctx_with_opt_flags(fb, false, false);
         with_just_knobs_async(
             knobs(false),
             async move {
@@ -170,7 +178,7 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn opt_in_skips_without_knob(fb: FacebookInit) -> Result<(), anyhow::Error> {
-        let ctx = ctx_with_opt_in(fb, true);
+        let ctx = ctx_with_opt_flags(fb, true, false);
         with_just_knobs_async(
             knobs(false),
             async move {
@@ -185,12 +193,46 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn knob_skips_without_opt_in(fb: FacebookInit) -> Result<(), anyhow::Error> {
-        let ctx = ctx_with_opt_in(fb, false);
+        let ctx = ctx_with_opt_flags(fb, false, false);
         with_just_knobs_async(
             knobs(true),
             async move {
                 let policy = RestrictedPathsPolicy::for_scs_request(&ctx, "repo");
                 assert_eq!(policy.omitted_count(), Some(0));
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn opt_out_is_strict_despite_knob(fb: FacebookInit) -> Result<(), anyhow::Error> {
+        let ctx = ctx_with_opt_flags(fb, false, true);
+        with_just_knobs_async(
+            knobs(true),
+            async move {
+                assert!(matches!(
+                    RestrictedPathsPolicy::for_scs_request(&ctx, "repo"),
+                    RestrictedPathsPolicy::Strict
+                ));
+                Ok(())
+            }
+            .boxed(),
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn opt_out_beats_opt_in(fb: FacebookInit) -> Result<(), anyhow::Error> {
+        let ctx = ctx_with_opt_flags(fb, true, true);
+        with_just_knobs_async(
+            knobs(false),
+            async move {
+                assert!(matches!(
+                    RestrictedPathsPolicy::for_scs_request(&ctx, "repo"),
+                    RestrictedPathsPolicy::Strict
+                ));
                 Ok(())
             }
             .boxed(),
