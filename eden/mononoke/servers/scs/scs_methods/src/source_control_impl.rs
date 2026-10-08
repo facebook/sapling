@@ -112,6 +112,7 @@ const FORWARDED_UNVERIFIED_CATS_VERIFIER_HEADER: &str = "customer_cats_verifier_
 const ALWAYS_LOG_HEADER: &str = "always_log";
 const SCS_PATH_ACL_COMPATIBLE_HEADER: &str = "scs_path_acl_compatible";
 const SCS_PARTIAL_RESPONSES_OPT_IN_HEADER: &str = "scs_partial_responses_opt_in";
+const SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER: &str = "scs_partial_responses_opt_out";
 const PER_REQUEST_READ_QPS: usize = 4000;
 const PER_REQUEST_WRITE_QPS: usize = 4000;
 
@@ -384,6 +385,8 @@ impl SourceControlServiceImpl {
         ));
         metadata
             .add_partial_responses_opt_in(header(SCS_PARTIAL_RESPONSES_OPT_IN_HEADER)?.is_some());
+        metadata
+            .add_partial_responses_opt_out(header(SCS_PARTIAL_RESPONSES_OPT_OUT_HEADER)?.is_some());
 
         let client_info: Option<ClientInfo> = header(CLIENT_INFO_HEADER)?
             .as_ref()
