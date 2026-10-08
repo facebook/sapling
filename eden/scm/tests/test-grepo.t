@@ -573,7 +573,6 @@ this project.
 Default flags. Expected: `vendor/a/sub/c` is a conflicting project. `.` and
 `main` move to `$REV_AFTER_BUMP_B`. `vendor/a/sub/c` stays at `C2_REV` and keeps
 the change. goto reports that `vendor/a/sub/c` failed.
-(bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -581,12 +580,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -601,7 +601,6 @@ clean=False, updatecheck="noconflict"
 
 `--check`. Expected: `sl status` is empty, so the check passes. Then the result
 is the same as for the default flags.
-(bad: same as the default flags.)
 clean=False, updatecheck="abort"
 
   $ reset_workspace
@@ -609,12 +608,13 @@ clean=False, updatecheck="abort"
   $ sl goto --check $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -628,7 +628,6 @@ clean=False, updatecheck="abort"
   sl status: M vendor/a/sub/c
 
 `--merge`. Expected: the same result as the default flags.
-(bad: same as the default flags.)
 clean=False, updatecheck="none"
 
   $ reset_workspace
@@ -636,12 +635,13 @@ clean=False, updatecheck="none"
   $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -680,7 +680,6 @@ Default flags. Expected: `frameworks/b` is a conflicting project. `.` and `main`
 move to `$REV_AFTER_BUMP_A`. `frameworks/b` stays at `B2_REV` and keeps the
 change. `vendor/a/sub/c` moves to `C_REV`. goto reports that `frameworks/b`
 failed.
-(bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -688,12 +687,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
+  abort: could not check out 1 project
+    frameworks/b (B_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
@@ -727,7 +727,6 @@ clean=False, updatecheck="noconflict"
 
 The same goto with `workingcopy.rust-checkout=false`. Expected: the same
 result as the Rust checkout.
-(bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -735,12 +734,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto --config workingcopy.rust-checkout=false $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
+  abort: could not check out 1 project
+    frameworks/b (B_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
@@ -756,8 +756,6 @@ clean=False, updatecheck="noconflict"
 Uncommitted changes in `frameworks/b` and `vendor/a/sub/c`, going to
 `$REV_AFTER_BUMP_A`. Expected: both projects are conflicting projects. goto
 reports both of them in one error.
-(bad: goto reports `vendor/a/sub/c` in a warning and `frameworks/b` in the raw
-Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -766,19 +764,18 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  could not check out vendor/a/sub/c (C_REV):
-    Command exited with code 1
-      git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
-        error: Your local changes to the following files would be overwritten by checkout:
-        	README
-        Please commit your changes or stash them before you switch branches.
-        Aborting
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
+  abort: could not check out 2 projects
+    frameworks/b (B_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+    vendor/a/sub/c (C_REV):
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
@@ -792,6 +789,24 @@ clean=False, updatecheck="noconflict"
    M README
   sl status: M frameworks/b
   sl status: M vendor/a/sub/c
+
+Recovery with the hint from the failed goto above. The test runs the same goto
+again with `--clean`. Expected: goto discards both changes. It checks out every
+project at its revision in the target's `static.xml`.
+clean=True
+
+  $ sl goto --clean $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B_REV
+  vendor/a/sub/c: C_REV
 
 Uncommitted change in `frameworks/b`. The goto keeps the revision of this
 project.
@@ -1434,12 +1449,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -1486,12 +1502,13 @@ clean=False, updatecheck="none"
   $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -1541,12 +1558,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B2_REV
+  abort: could not check out 1 project
+    frameworks/b (B2_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -1593,12 +1611,13 @@ clean=False, updatecheck="none"
   $ sl goto --merge $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B2_REV
+  abort: could not check out 1 project
+    frameworks/b (B2_REV):
       error: Your local changes to the following files would be overwritten by checkout:
       	README
       Please commit your changes or stash them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
   manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
@@ -1858,7 +1877,6 @@ the two new hashes. So the tests rename them with an extra `sed`.
 Default flags. Expected: `vendor/a/sub/c` is a conflicting project. `.` and
 `main` move to `$REV_AFTER_ADD_C`. `vendor/a/sub/c` stays at `C2_REV` and keeps
 the file. goto reports that `vendor/a/sub/c` failed.
-(bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -1866,12 +1884,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C3_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C3_REV):
       error: The following untracked working tree files would be overwritten by checkout:
       	added
       Please move or remove them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
   manifests HEAD: refs/heads/main REV_AFTER_ADD_C
@@ -1890,7 +1909,6 @@ clean=False, updatecheck="noconflict"
 
 `--check`. Expected: `sl status` does not show the file, so the check passes.
 Then the result is the same as for the default flags.
-(bad: same as the default flags.)
 clean=False, updatecheck="abort"
 
   $ reset_workspace
@@ -1898,12 +1916,13 @@ clean=False, updatecheck="abort"
   $ sl goto --check $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C3_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C3_REV):
       error: The following untracked working tree files would be overwritten by checkout:
       	added
       Please move or remove them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
   manifests HEAD: refs/heads/main REV_AFTER_ADD_C
@@ -1921,7 +1940,6 @@ clean=False, updatecheck="abort"
   $ rm vendor/a/sub/c/added
 
 `--merge`. Expected: the same result as the default flags.
-(bad: same as the default flags.)
 clean=False, updatecheck="none"
 
   $ reset_workspace
@@ -1929,12 +1947,13 @@ clean=False, updatecheck="none"
   $ sl goto --merge $REV_AFTER_ADD_C > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
-  abort: Command exited with code 1
-    git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C3_REV
+  abort: could not check out 1 project
+    vendor/a/sub/c (C3_REV):
       error: The following untracked working tree files would be overwritten by checkout:
       	added
       Please move or remove them before you switch branches.
       Aborting
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
   manifests HEAD: refs/heads/main REV_AFTER_ADD_C
