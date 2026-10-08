@@ -406,7 +406,10 @@ def windows_openssl_dir(args):
     if FBSOURCE is None or os.name != "nt":
         return None
 
-    openssl_dirname = "openssl-windows_x64-windows"
+    # Built with vcpkg 001713e802 (`vcpkg install openssl:x64-windows`, OpenSSL
+    # 3.6.5); `packages\openssl_x64-windows` was renamed to this directory and
+    # zipped.
+    openssl_dirname = "openssl3-windows_x64-windows"
     openssl_filename = f"{openssl_dirname}.zip"
     ensure_out_dir(args)
     openssl_dir = OUT / openssl_dirname
@@ -436,7 +439,7 @@ def copy_windows_openssl_dlls(args, dest):
     if openssl_dir is None:
         return
     status(args, "Copying OpenSSL DLLs")
-    for name in ("libeay32.dll", "ssleay32.dll"):
+    for name in ("libcrypto-3-x64.dll", "libssl-3-x64.dll"):
         copy_artifact(openssl_dir / "bin" / name, dest / name)
 
 
