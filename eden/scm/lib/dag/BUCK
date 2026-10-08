@@ -52,6 +52,7 @@ sl_rust_library(
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/dev-logger:dev-logger",
+        "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/renderdag:renderdag",
     ],
     deps = [
