@@ -52,5 +52,5 @@ pub static YEAR_2000: LazyLock<DateTime> = LazyLock::new(|| day_1_utc(2000));
 pub static YEAR_2000_PST: LazyLock<DateTime> = LazyLock::new(|| day_1_tz(2000, PST_OFFSET));
 
 /// 2100-01-01 00:00:00 UTC.
-pub static YEAR_2100: LazyLock<DateTime> = LazyLock::new(|| day_1_utc(2000));
+pub static YEAR_2100: LazyLock<DateTime> = LazyLock::new(|| day_1_utc(2100));
 pub static YEAR_2100_PST: LazyLock<DateTime> = LazyLock::new(|| day_1_tz(2100, PST_OFFSET));
