@@ -131,7 +131,7 @@ impl fmt::Display for CommandError {
         } else {
             self.title.as_str()
         };
-        write!(f, "{}\n  {}\n", title, &self.command)?;
+        write!(f, "{}\n  {}\n", title, self.command)?;
         for line in self.output.lines() {
             write!(f, "    {line}\n")?;
         }
@@ -528,6 +528,39 @@ mod tests {
     // Use `cargo run --example spawn` to manually check the close_fds behavior.
     #[test]
     fn smoke_test_command_still_runs() {
+        #[cfg(windows)]
+        const COMPLETION_MARKER: &str = "SAPLING_SPAWN_EXT_SMOKE_COMPLETED";
+
+        #[cfg(windows)]
+        {
+            const FIXTURE: &str = "SAPLING_SPAWN_EXT_SMOKE_FIXTURE";
+            if std::env::var_os(FIXTURE).as_deref() != Some(std::ffi::OsStr::new("1")) {
+                // avoid_inherit_handles changes process-wide handle flags and
+                // can race with other tests creating child stdio pipes.
+                let output = Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "tests::smoke_test_command_still_runs",
+                        "--nocapture",
+                    ])
+                    .env(FIXTURE, "1")
+                    .output()
+                    .unwrap();
+                // Libtest also exits successfully when the filter matches no tests.
+                assert!(
+                    output.status.success()
+                        && String::from_utf8_lossy(&output.stderr)
+                            .lines()
+                            .any(|line| line == COMPLETION_MARKER),
+                    "isolated smoke test failed: status={}, stdout={:?}, stderr={:?}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr),
+                );
+                return;
+            }
+        }
+
         let dir = tempfile::tempdir().unwrap();
 
         let args = if cfg!(unix) {
@@ -543,7 +576,10 @@ mod tests {
             .unwrap();
         child.wait().unwrap();
 
-        assert_eq!(&std::fs::read(dir.path().join("a")).unwrap()[..3], b"foo")
+        assert_eq!(&std::fs::read(dir.path().join("a")).unwrap()[..3], b"foo");
+
+        #[cfg(windows)]
+        eprintln!("{COMPLETION_MARKER}");
     }
 
     /// The flag itself is invisible to the test process (`creation_flags` is
@@ -565,7 +601,13 @@ mod tests {
             .output()
             .unwrap();
 
-        assert!(output.status.success(), "child should still run");
+        assert!(
+            output.status.success(),
+            "child should still run: status={}, stdout={:?}, stderr={:?}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
         assert_eq!(
             String::from_utf8_lossy(&output.stdout).trim(),
             "foo",
