@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 use std::io::Write;
+use std::mem::size_of;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -21,6 +23,8 @@ use rustc_hash::FxBuildHasher;
 use rustc_hash::FxHashMap;
 use sha1_checked::Digest;
 use thiserror::Error;
+use weight_observer::WeightGuard;
+use weight_observer::WeightObserver;
 use weight_observer::WeightedItem;
 
 use crate::hash_writer::AsyncHashWriter;
@@ -70,12 +74,30 @@ where
     delta_form: DeltaForm,
     /// Mapping from Object Id to index in `object_offset_with_validity`
     object_id_with_index: FxHashMap<ObjectId, usize>,
+    _index_memory_guard: WeightGuard,
 }
 
 impl<T: OwnedAsyncWrite> PackfileWriter<T> {
     /// Create a new packfile writer based on `raw_writer` for writing `count` entries to the Packfile.
-    pub fn new(raw_writer: T, count: u32, concurrency: usize, delta_form: DeltaForm) -> Self {
+    pub fn new(
+        raw_writer: T,
+        count: u32,
+        concurrency: usize,
+        delta_form: DeltaForm,
+        weight_observer: Option<Arc<dyn WeightObserver>>,
+    ) -> Self {
         let hash_writer = AsyncHashWriter::new(raw_writer);
+        let object_offset_with_validity = Vec::with_capacity(count as usize);
+        let object_id_with_index = HashMap::with_capacity_and_hasher(count as usize, FxBuildHasher);
+        let index_memory_weight = object_offset_with_validity
+            .capacity()
+            .saturating_mul(size_of::<(u64, bool)>())
+            .saturating_add(
+                object_id_with_index
+                    .capacity()
+                    .saturating_mul(size_of::<(ObjectId, usize)>()),
+            );
+        let index_memory_guard = WeightGuard::tracked(weight_observer, index_memory_weight);
         Self {
             hash_writer,
             num_entries: 0,
@@ -84,9 +106,10 @@ impl<T: OwnedAsyncWrite> PackfileWriter<T> {
             concurrency,
             // Git uses V2 right now so we do the same
             header_info: Some((Version::V2, count)),
-            object_offset_with_validity: Vec::with_capacity(count as usize),
-            object_id_with_index: HashMap::with_capacity_and_hasher(count as usize, FxBuildHasher),
+            object_offset_with_validity,
+            object_id_with_index,
             delta_form,
+            _index_memory_guard: index_memory_guard,
         }
     }
 

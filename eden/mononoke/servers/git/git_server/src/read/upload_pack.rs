@@ -640,7 +640,7 @@ pub async fn fetch(
                     fetch_request,
                     progress_writer,
                     perf_scuba.clone(),
-                    weight_observer,
+                    weight_observer.clone(),
                 )
                 .await?;
                 perf_scuba.add(MononokeGitScubaKey::NWants, n_wants);
@@ -651,6 +651,7 @@ pub async fn fetch(
                     response_stream.num_objects() as u32,
                     5000,
                     delta_form,
+                    weight_observer,
                 );
                 pack_writer.write(response_stream.items).await?;
                 pack_writer.finish().await?;

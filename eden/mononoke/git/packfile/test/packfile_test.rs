@@ -6,7 +6,11 @@
  */
 
 use std::io::Write;
+use std::mem::size_of;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 
 use bytes::BytesMut;
 use flate2::Compression;
@@ -28,6 +32,28 @@ use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
 use quickcheck::quickcheck;
 use tempfile::NamedTempFile;
+use weight_observer::WeightObserver;
+
+#[derive(Default)]
+struct RecordingWeightObserver {
+    current: AtomicI64,
+}
+
+impl RecordingWeightObserver {
+    fn current(&self) -> i64 {
+        self.current.load(Ordering::Relaxed)
+    }
+}
+
+impl WeightObserver for RecordingWeightObserver {
+    fn on_weight_added(&self, weight: usize) {
+        self.current.fetch_add(weight as i64, Ordering::Relaxed);
+    }
+
+    fn on_weight_removed(&self, weight: usize) {
+        self.current.fetch_sub(weight as i64, Ordering::Relaxed);
+    }
+}
 
 async fn get_objects_stream(
     with_delta: bool,
@@ -136,12 +162,39 @@ fn validate_packfile_item_encoding() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mononoke::test]
+fn validate_packfile_writer_index_memory_tracking() {
+    let count = 10_000;
+    let observer = Arc::new(RecordingWeightObserver::default());
+    let packfile_writer = PackfileWriter::new(
+        Vec::new(),
+        count,
+        100,
+        DeltaForm::RefAndOffset,
+        Some(observer.clone()),
+    );
+    let minimum_expected_weight =
+        count as i64 * (size_of::<(u64, bool)>() + size_of::<(ObjectId, usize)>()) as i64;
+
+    assert!(
+        observer.current() >= minimum_expected_weight,
+        "Tracked weight should include the allocated writer indexes"
+    );
+
+    packfile_writer.into_write();
+    assert_eq!(
+        observer.current(),
+        0,
+        "Tracked writer-index weight should be released with the writer"
+    );
+}
+
 #[mononoke::fbinit_test]
 async fn validate_basic_packfile_generation() -> anyhow::Result<()> {
     let objects_stream = get_objects_stream(false).await?;
     let concurrency = 100;
     let mut packfile_writer =
-        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset, None);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write_unweighted(objects_stream)
@@ -159,7 +212,7 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
     let objects_stream = get_objects_stream(false).await?;
     let concurrency = 100;
     let mut packfile_writer =
-        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset, None);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write_unweighted(objects_stream)
@@ -202,7 +255,7 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
 async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     let concurrency = 100;
     let mut packfile_writer =
-        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset, None);
     // Create Git objects and write them to a packfile one at a time
     let tag_object = object_content_from_owned_object(gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
@@ -285,7 +338,7 @@ async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
     let objects_stream = get_objects_stream(false).await?;
     let concurrency = 100;
     let mut packfile_writer =
-        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset, None);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write_unweighted(objects_stream)
@@ -325,7 +378,7 @@ async fn validate_delta_packfile_generation() -> anyhow::Result<()> {
     let objects_stream = get_objects_stream(true).await?;
     let concurrency = 100;
     let mut packfile_writer =
-        PackfileWriter::new(Vec::new(), 4, concurrency, DeltaForm::OnlyOffset);
+        PackfileWriter::new(Vec::new(), 4, concurrency, DeltaForm::OnlyOffset, None);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write_unweighted(objects_stream)
