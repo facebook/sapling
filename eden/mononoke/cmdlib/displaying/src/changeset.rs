@@ -19,6 +19,7 @@ use mononoke_types::FileChange;
 use mononoke_types::GitLfs;
 use mononoke_types::SubtreeChange;
 use serde::Serialize;
+use serde::Serializer;
 
 #[derive(Serialize)]
 #[serde(tag = "type")]
@@ -87,9 +88,34 @@ pub struct DisplayChangeset {
     pub committer: Option<String>,
     pub committer_date: Option<DateTime>,
     pub message: String,
+    #[serde(serialize_with = "serialize_hg_extra")]
     pub hg_extra: BTreeMap<String, Vec<u8>>,
     pub file_changes: BTreeMap<String, FileChange>,
     pub subtree_changes: BTreeMap<String, DisplaySubtreeChange>,
+}
+
+fn serialize_hg_extra<S: Serializer>(
+    hg_extra: &BTreeMap<String, Vec<u8>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.collect_map(hg_extra.iter().map(|(name, value)| {
+        let value = match std::str::from_utf8(value) {
+            Ok(text) => DisplayHgExtraValue::Text(text),
+            Err(_) => DisplayHgExtraValue::Bytes {
+                hex: hex::encode(value),
+            },
+        };
+        (name, value)
+    }))
+}
+
+/// An hg extra value is text when it is valid UTF-8; otherwise it is raw bytes, rendered as a
+/// sub-struct so that a hex-encoded value is distinguishable from text that happens to be hex.
+#[derive(Serialize)]
+#[serde(untagged)]
+enum DisplayHgExtraValue<'a> {
+    Text(&'a str),
+    Bytes { hex: String },
 }
 
 impl TryFrom<&BonsaiChangeset> for DisplayChangeset {
@@ -224,11 +250,9 @@ mod tests {
         })
     }
 
-    /// FIXME: BUG! This did serialize `hg_extra` values as JSON arrays of byte values
-    /// (`"hg-git-rename-source": [103, 105, 116]`) in `mononoke_admin fetch --json`, but should
-    /// have rendered a value that is valid UTF-8 as a JSON string (`"hg-git-rename-source":
-    /// "git"`) and a value that is not as a `{"hex": "<hex>"}` object, like every other field of
-    /// the JSON output. This test pins the current behaviour; the next diff fixes it.
+    /// `hg_extra` values that are valid UTF-8 are rendered as JSON strings; raw bytes are rendered
+    /// as a `{"hex": "<hex>"}` object, so they are distinguishable from text that happens to be
+    /// hex.
     #[mononoke::test]
     fn hg_extra_json_rendering() -> Result<()> {
         let changeset = display_changeset(BTreeMap::from([
@@ -240,19 +264,11 @@ mod tests {
             ),
         ]))?;
         let json = serde_json::to_value(&changeset)?;
-        // FIXME: BUG! These should be the strings "git" and "1234abcd" and the object
-        // {"hex": "313233ff"}.
-        assert_eq!(
-            json["hg_extra"]["hg-git-rename-source"],
-            serde_json::json!([103, 105, 116])
-        );
-        assert_eq!(
-            json["hg_extra"]["convert_revision"],
-            serde_json::json!([49, 50, 51, 52, 97, 98, 99, 100])
-        );
+        assert_eq!(json["hg_extra"]["hg-git-rename-source"], "git");
+        assert_eq!(json["hg_extra"]["convert_revision"], "1234abcd");
         assert_eq!(
             json["hg_extra"]["transplant_source"],
-            serde_json::json!([49, 50, 51, 255])
+            serde_json::json!({ "hex": "313233ff" })
         );
         Ok(())
     }

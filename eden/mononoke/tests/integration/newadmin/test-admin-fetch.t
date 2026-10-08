@@ -46,12 +46,9 @@ setup configuration
       }
     },
     "hg_extra": {
-      "example_extra": [
-        49,
-        50,
-        51,
-        255
-      ]
+      "example_extra": {
+        "hex": "313233ff"
+      }
     },
     "message": "A",
     "parents": [],
