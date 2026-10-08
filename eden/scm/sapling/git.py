@@ -980,6 +980,12 @@ def submodulecheckout(ctx, match=None, force=False, mctx=None):
         def adjust_submodule_node(node, path) -> Optional[bytes]:
             return node
 
+    from .grepo import GREPO_REQUIREMENT
+
+    # Grepo projects are independent Git repos. A failed project must not stop
+    # the checkout of the other projects.
+    keepgoing = GREPO_REQUIREMENT in ctx.repo().requirements
+    failures = []
     submodules = [submod for submod in parsesubmodules(ctx) if submod.active]
     if match is not None:
         submodules = [submod for submod in submodules if match(submod.path)]
@@ -992,8 +998,21 @@ def submodulecheckout(ctx, match=None, force=False, mctx=None):
             node = adjust_submodule_node(node, submod.path)
             if node is None:
                 continue
-            submod.checkout(node, force=force)
+            try:
+                submod.checkout(node, force=force)
+            except (OSError, error.Abort) as ex:
+                if not keepgoing:
+                    raise
+                failures.append((submod.path, node, ex))
             value += 1
+    if failures:
+        for path, node, ex in failures[1:]:
+            text = ex.strerror if isinstance(ex, OSError) and ex.strerror else str(ex)
+            ui.warn(
+                _("could not check out %s (%s):\n%s\n")
+                % (path, hex(node), textwrap.indent(text.rstrip(), "  "))
+            )
+        raise failures[0][2]
 
 
 @cached

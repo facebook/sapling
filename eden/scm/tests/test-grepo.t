@@ -680,7 +680,6 @@ Default flags. Expected: `frameworks/b` is a conflicting project. `.` and `main`
 move to `$REV_AFTER_BUMP_A`. `frameworks/b` stays at `B2_REV` and keeps the
 change. `vendor/a/sub/c` moves to `C_REV`. goto reports that `frameworks/b`
 failed.
-(bad: goto stops at `frameworks/b`. `vendor/a/sub/c` stays at `C2_REV`.)
 (bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
@@ -704,13 +703,11 @@ clean=False, updatecheck="noconflict"
   vendor/a: A2_REV
   frameworks/b: B2_REV
    M README
-  vendor/a/sub/c: C2_REV
+  vendor/a/sub/c: C_REV
   sl status: M frameworks/b
-  sl status: M vendor/a/sub/c
 
 The same goto with `workingcopy.rust-checkout=false`. Expected: the same
 result as the Rust checkout.
-(bad: goto stops at `frameworks/b`. `vendor/a/sub/c` stays at `C2_REV`.)
 (bad: the error is the raw Git error.)
 clean=False, updatecheck="noconflict"
 
@@ -734,16 +731,14 @@ clean=False, updatecheck="noconflict"
   vendor/a: A2_REV
   frameworks/b: B2_REV
    M README
-  vendor/a/sub/c: C2_REV
+  vendor/a/sub/c: C_REV
   sl status: M frameworks/b
-  sl status: M vendor/a/sub/c
 
 Uncommitted changes in `frameworks/b` and `vendor/a/sub/c`, going to
 `$REV_AFTER_BUMP_A`. Expected: both projects are conflicting projects. goto
 reports both of them in one error.
-(bad: goto stops at `frameworks/b`. It does not try `vendor/a/sub/c`, so it
-does not report it.)
-(bad: the error is the raw Git error.)
+(bad: goto reports `vendor/a/sub/c` in a warning and `frameworks/b` in the raw
+Git error.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -752,6 +747,13 @@ clean=False, updatecheck="noconflict"
   $ sl goto $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
   [255]
   $ map_rev_names < $TESTTMP/goto.out
+  could not check out vendor/a/sub/c (C_REV):
+    Command exited with code 1
+      git --git-dir=$TESTTMP/repodir/vendor/a/sub/c/.git checkout -d --recurse-submodules C_REV
+        error: Your local changes to the following files would be overwritten by checkout:
+        	README
+        Please commit your changes or stash them before you switch branches.
+        Aborting
   abort: Command exited with code 1
     git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
       error: Your local changes to the following files would be overwritten by checkout:
@@ -1509,9 +1511,8 @@ clean=True
 Dirty project `frameworks/b`. The goto keeps the revision of this project.
 
 Default flags. Expected: keep all three changes.
-(bad: goto tries to reset `frameworks/b` to `B2_REV`. Git refuses halfway,
-because of the file change. By then `.` and `main` have already moved.
-`vendor/a/sub/c` stays at `C2_REV`, so Sapling now shows it as modified too.)
+(bad: goto tries to reset `frameworks/b` to `B2_REV`. Git refuses because of
+the file change. By then `.` and `main` have already moved.)
 clean=False, updatecheck="noconflict"
 
   $ reset_workspace
@@ -1536,9 +1537,8 @@ clean=False, updatecheck="noconflict"
   vendor/a: A2_REV
   frameworks/b: B_LOCAL_REV
    M README
-  vendor/a/sub/c: C2_REV
+  vendor/a/sub/c: C_REV
   sl status: M frameworks/b
-  sl status: M vendor/a/sub/c
 
 `--check`. Expected: refuse before changing anything.
 clean=False, updatecheck="abort"
@@ -1589,9 +1589,8 @@ clean=False, updatecheck="none"
   vendor/a: A2_REV
   frameworks/b: B_LOCAL_REV
    M README
-  vendor/a/sub/c: C2_REV
+  vendor/a/sub/c: C_REV
   sl status: M frameworks/b
-  sl status: M vendor/a/sub/c
 
 `--clean`. Expected: throw away all three changes and reset `frameworks/b` to
 `B2_REV`.
