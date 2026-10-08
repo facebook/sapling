@@ -1082,6 +1082,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
             ("ui", "forcemerge"): opts.get("tool", ""),
             ("experimental", "rebaseskipobsolete"): "off",
             ("commit", "modify-obsolete-mode"): "ignore",
+            ("rebase", "obsolete-dest-mode"): "ignore",
         }
         with ui.configoverride(rebaseconfigoverrides, "unshelve"):
             shelvectx = _rebaserestoredcommit(

@@ -573,6 +573,7 @@ class rebaseruntime:
                     [repo[rev] for rev in sorted(precheckrevs)],
                     self.collapsemsg,
                 )
+            rewriteutil.rebasedestcheck(repo, self.destmap)
 
         # Keep track of the active bookmarks in order to reset them later
         self.activebookmark = self.activebookmark or repo._activebookmark
@@ -1558,6 +1559,14 @@ def rebase(ui, repo, templ=None, **opts):
 
         [rebase]
         experimental.inmemorywarning = Using experimental in-memory rebase
+
+      If the destination is based on older versions of commits that the
+      rebased commits are based on, rebase warns that their newer changes will
+      be lost (agents abort instead). Set ``warn``, ``prompt`` or ``abort`` to
+      choose the behavior; any other value disables the check::
+
+        [rebase]
+        obsolete-dest-mode = warn
 
     Returns 0 on success (also when nothing to rebase), 1 if there are
     unresolved conflicts.

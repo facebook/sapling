@@ -273,6 +273,68 @@ def commitcheck(repo, ctx):
     return predecessors, split_successors
 
 
+def rebasedestcheck(repo, destmap):
+    """Guard rebases onto older versions of the moved commits' own ancestry.
+
+    Depending on `rebase.obsolete-dest-mode` and whether the caller is an
+    agent, this warns, prompts, or aborts when a destination's ancestors
+    include predecessors of the draft commits the moved commits are based on.
+    """
+    if not mutation.enabled(repo):
+        return
+    # Skip the ancestry walk entirely when the guard cannot act on what it
+    # finds (automation, the divergence opt-in, or a disabled mode).
+    if (
+        repo.ui.plain()
+        or repo.ui.configbool("experimental", "evolution.allowdivergence")
+        or _obsolete_mode(repo, ("rebase", "obsolete-dest-mode")) == "ignore"
+    ):
+        return
+    rebaseset = list(destmap)
+
+    def finaldest(dest):
+        # A destination that is itself being rebased ends up wherever its own
+        # rebase sends it, so follow the chain to the commit that stays put.
+        # That commit's ancestry is the ancestry the moved roots inherit.
+        seen = set()
+        while dest in destmap and dest not in seen:
+            seen.add(dest)
+            dest = destmap[dest]
+        return dest
+
+    offenders = set()
+    for root in repo.revs("roots(%ld)", rebaseset):
+        dest = finaldest(destmap[root])
+        # A rebase that lands on an obsolete commit gives the moved roots an
+        # old-version parent directly, which the commitcheck guard reports;
+        # leave that warning to it so only one guard fires.
+        if repo[dest].obsolete():
+            continue
+        base = repo.revs("draft() & ::parents(%d)", root)
+        if not base:
+            continue
+        # Transitive on purpose: the stale version is often several rewrites
+        # behind the one in the stack.
+        old = repo.revs("allpredecessors(%ld) - %ld", base, base)
+        offenders.update(repo.revs("(%ld & ::%d) - %ld", old, dest, rebaseset))
+    if not offenders:
+        return
+    _checkobsolete(
+        repo,
+        [repo[rev] for rev in sorted(offenders)],
+        _(
+            "the destination is based on old versions of commits in your stack, "
+            "so the rebased commits will lose their newer changes"
+        ),
+        _(
+            "check out the destination and run '@prog@ restack' to move it onto "
+            "the newer versions first, or use '--keep' to copy the commits onto "
+            "the old versions without hiding them"
+        ),
+        mode_config=("rebase", "obsolete-dest-mode"),
+    )
+
+
 def gotocheck(repo, targets):
     """Guard checkouts of hidden obsolete commits.
 
