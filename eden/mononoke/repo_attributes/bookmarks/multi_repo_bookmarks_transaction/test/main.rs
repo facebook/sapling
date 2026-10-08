@@ -12,7 +12,6 @@ use std::sync::atomic::Ordering;
 use anyhow::Result;
 use anyhow::anyhow;
 use bookmarks::BookmarkKey;
-use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateLog;
