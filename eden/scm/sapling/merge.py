@@ -35,6 +35,7 @@ from . import (
     extensions,
     filemerge,
     git,
+    grepo,
     i18n,
     match as matchmod,
     pathutil,
@@ -2292,12 +2293,16 @@ def goto(
             updatecheck = "none"
         assert updatecheck in ("none", "noconflict")
 
+    if grepo.GREPO_REQUIREMENT in repo.requirements and not force:
+        grepo.checkout_manifest(repo, repo["."], repo[node], force, dry_run=True)
+
     if (
         repo.ui.configbool("workingcopy", "rust-checkout")
         and repo.ui.configbool("checkout", "use-rust")
         and (force or updatecheck != "none")
     ):
         repo.ui.log("checkout_info", python_checkout="rust")
+        source = repo["."]
         target = repo[node]
         try:
             with repo.dirstate.parentchange():
@@ -2322,7 +2327,7 @@ def goto(
                     report_mode="quiet",
                 )
                 if git.isgitformat(repo):
-                    git.submodulecheckout(target, force=force)
+                    _checkout_projects(repo, source, target, force)
                 repo.setparents(target.node())
         except rusterror.CheckoutConflictsError as ex:
             abort_on_conflicts(ex.args[0])
@@ -2387,7 +2392,7 @@ def goto(
                     with repo.wlock():
                         ret = donativecheckout(repo, p1, p2, force, wc)
                         if git.isgitformat(repo):
-                            git.submodulecheckout(p2, force=force)
+                            _checkout_projects(repo, p1, p2, force)
                     did_native_checkout = True
 
             if not did_native_checkout:
@@ -2400,6 +2405,18 @@ def goto(
                 )
 
     return ret
+
+
+def _checkout_projects(repo, source, target, force):
+    """Check out the submodules of `target`.
+
+    In a grepo, check out the manifests before any project. As a result, a
+    failed project leaves the manifests at `target`. Call this only after the
+    main checkout passed the `preupdate` hook and its conflict checks.
+    """
+    if grepo.GREPO_REQUIREMENT in repo.requirements:
+        grepo.checkout_manifest(repo, source, target, force)
+    git.submodulecheckout(target, force=force)
 
 
 def merge(
@@ -2796,12 +2813,9 @@ def _update(
 
     if git.isgitformat(to_repo) and not wc.isinmemory() and not is_crossrepo:
         if branchmerge:
-            ctx = p1
-            mctx = p2
+            git.submodulecheckout(p1, force=force, mctx=p2)
         else:
-            ctx = p2
-            mctx = None
-        git.submodulecheckout(ctx, force=force, mctx=mctx)
+            _checkout_projects(to_repo, p1, p2, force)
 
     if not wc.isinmemory():
         # XXX: extend preupdate hook to support cross repo merge case
