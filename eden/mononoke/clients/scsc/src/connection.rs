@@ -167,6 +167,7 @@ impl ConnectionArgs {
                 return ScsClientHostBuilder::new()
                     .with_client_correlator(client_correlator_override())
                     .with_extra_headers(extra_headers_override())
+                    .with_partial_responses_opt_in()
                     .build_from_host_port(fb, host_str);
             }
         }
@@ -179,6 +180,7 @@ impl ConnectionArgs {
             .with_cat(self.cat.clone())
             .with_client_correlator(client_correlator_override())
             .with_extra_headers(extra_headers_override())
+            .with_partial_responses_opt_in()
             .build()
     }
 }
