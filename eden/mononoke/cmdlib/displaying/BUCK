@@ -5,6 +5,10 @@ oncall("scm_server_treehugger")
 rust_library(
     name = "cmdlib_displaying",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

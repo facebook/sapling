@@ -202,3 +202,58 @@ pub fn display_subtree_change(path: &String, change: &DisplaySubtreeChange) -> S
         ),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn display_changeset(hg_extra: BTreeMap<String, Vec<u8>>) -> Result<DisplayChangeset> {
+        Ok(DisplayChangeset {
+            changeset_id: ChangesetId::from_bytes([1u8; 32])?,
+            parents: vec![],
+            author: "author".to_string(),
+            author_date: DateTime::from_timestamp(0, 0)?,
+            committer: None,
+            committer_date: None,
+            message: "message".to_string(),
+            hg_extra,
+            file_changes: BTreeMap::new(),
+            subtree_changes: BTreeMap::new(),
+        })
+    }
+
+    /// FIXME: BUG! This did serialize `hg_extra` values as JSON arrays of byte values
+    /// (`"hg-git-rename-source": [103, 105, 116]`) in `mononoke_admin fetch --json`, but should
+    /// have rendered a value that is valid UTF-8 as a JSON string (`"hg-git-rename-source":
+    /// "git"`) and a value that is not as a `{"hex": "<hex>"}` object, like every other field of
+    /// the JSON output. This test pins the current behaviour; the next diff fixes it.
+    #[mononoke::test]
+    fn hg_extra_json_rendering() -> Result<()> {
+        let changeset = display_changeset(BTreeMap::from([
+            ("hg-git-rename-source".to_string(), b"git".to_vec()),
+            ("convert_revision".to_string(), b"1234abcd".to_vec()),
+            (
+                "transplant_source".to_string(),
+                vec![0x31, 0x32, 0x33, 0xff],
+            ),
+        ]))?;
+        let json = serde_json::to_value(&changeset)?;
+        // FIXME: BUG! These should be the strings "git" and "1234abcd" and the object
+        // {"hex": "313233ff"}.
+        assert_eq!(
+            json["hg_extra"]["hg-git-rename-source"],
+            serde_json::json!([103, 105, 116])
+        );
+        assert_eq!(
+            json["hg_extra"]["convert_revision"],
+            serde_json::json!([49, 50, 51, 52, 97, 98, 99, 100])
+        );
+        assert_eq!(
+            json["hg_extra"]["transplant_source"],
+            serde_json::json!([49, 50, 51, 255])
+        );
+        Ok(())
+    }
+}
