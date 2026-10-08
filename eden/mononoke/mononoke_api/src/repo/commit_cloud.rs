@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
@@ -33,6 +34,7 @@ use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceSharingData;
 use commit_cloud_types::changeset::CloudChangesetId;
 use commit_graph::CommitGraphRef;
+use context::PerfCounterType;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -207,6 +209,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             .map(|(_, cs_id)| *cs_id)
             .collect::<Vec<ChangesetId>>();
 
+        let frontier_start = Instant::now();
         let public_frontier = repo
             .commit_graph()
             .ancestors_frontier_with(ctx, cs_ids.clone(), |csid| {
@@ -220,6 +223,8 @@ impl<R: MononokeRepo> RepoContext<R> {
                 }
             })
             .await?;
+        ctx.perf_counters()
+            .add_duration_us(PerfCounterType::PhasesSectionUs, frontier_start.elapsed());
 
         let draft_commits_ctx = repo
             .commit_graph()

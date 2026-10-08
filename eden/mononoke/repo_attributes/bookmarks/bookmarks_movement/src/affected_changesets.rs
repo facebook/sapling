@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -21,6 +22,7 @@ use bytes::Bytes;
 use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use context::PerfCounterType;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use derivation_queue_thrift::DerivationPriority;
 use futures::future;
@@ -83,7 +85,8 @@ pub async fn newly_public_changeset_ids<'a>(
     head: ChangesetId,
     base: Option<ChangesetId>,
 ) -> Result<BoxStream<'a, Result<ChangesetId, Error>>> {
-    let public_frontier = repo
+    let frontier_start = Instant::now();
+    let public_frontier: Vec<_> = repo
         .commit_graph()
         .ancestors_frontier_with(ctx, vec![head], |csid| {
             borrowed!(ctx, repo);
@@ -99,6 +102,8 @@ pub async fn newly_public_changeset_ids<'a>(
         .into_iter()
         .chain(base)
         .collect();
+    ctx.perf_counters()
+        .add_duration_us(PerfCounterType::PhasesSectionUs, frontier_start.elapsed());
     Ok(repo
         .commit_graph()
         .ancestors_difference_stream(ctx, vec![head], public_frontier)

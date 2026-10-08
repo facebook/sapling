@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -25,6 +26,7 @@ use bytes::Bytes;
 use cacheblob::MemWritesBlobstore;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use context::PerfCounterType;
 use dag_types::Location;
 use edenapi_types::AnyId;
 use edenapi_types::UploadToken;
@@ -916,14 +918,20 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let classification = async {
             match walked_draft_commits {
                 Some(draft_commits) => anyhow::Ok(DraftClassification::Walked(draft_commits)),
-                None => Ok(DraftClassification::Phases(
-                    stream::iter(missing_commits.clone())
+                None => {
+                    let classify_start = Instant::now();
+                    let public = stream::iter(missing_commits.clone())
                         .chunks(100)
                         .map(|chunk| phases.get_cached_public(&ctx, chunk))
                         .buffered(25)
                         .try_concat()
-                        .await?,
-                )),
+                        .await?;
+                    ctx.perf_counters().add_duration_us(
+                        PerfCounterType::PhasesSectionUs,
+                        classify_start.elapsed(),
+                    );
+                    Ok(DraftClassification::Phases(public))
+                }
             }
         };
 

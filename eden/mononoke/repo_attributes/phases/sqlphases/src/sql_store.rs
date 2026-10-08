@@ -261,6 +261,8 @@ impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
                     let cs_ids: Vec<_> = cs_ids.into_iter().collect();
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::SqlReadsReplica);
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::PhasesDbQueries);
 
                     // NOTE: We only track public phases in the DB.
                     let public = SelectPhases::query(

@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -16,6 +18,7 @@ use ascii::AsciiString;
 use async_trait::async_trait;
 use commit_graph::ArcCommitGraph;
 use context::CoreContext;
+use context::PerfCounterType;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::try_join;
@@ -172,8 +175,11 @@ impl SqlPhases {
 
         // log fetching public heads
         STATS::public_heads_fetched.add_value(1);
+        let mark_start = Instant::now();
         let heads = (self.heads_fetcher)(ctx).await?;
         let freshly_marked = mark_reachable_as_public(ctx, self, &heads, ephemeral_derive).await?;
+        ctx.perf_counters()
+            .add_duration_us(PerfCounterType::PhasesMarkPublicUs, mark_start.elapsed());
 
         // Still do the get_public_raw in case someone else marked the changes as public
         // and thus mark_reachable_as_public did not return them as freshly_marked
@@ -215,7 +221,11 @@ impl Phases for SqlPhases {
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
     ) -> Result<HashSet<ChangesetId>> {
-        self.get_public_derive(ctx, csids, ephemeral_derive).await
+        let start = Instant::now();
+        let commits = csids.len();
+        let public = self.get_public_derive(ctx, csids, ephemeral_derive).await;
+        record_lookup(ctx, commits, start.elapsed());
+        public
     }
 
     async fn get_cached_public(
@@ -223,7 +233,10 @@ impl Phases for SqlPhases {
         ctx: &CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashSet<ChangesetId>> {
-        self.get_public_raw(ctx, &csids).await
+        let start = Instant::now();
+        let public = self.get_public_raw(ctx, &csids).await;
+        record_lookup(ctx, csids.len(), start.elapsed());
+        public
     }
 
     async fn list_all_public(&self, ctx: &CoreContext) -> Result<Vec<ChangesetId>> {
@@ -235,7 +248,11 @@ impl Phases for SqlPhases {
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>> {
-        mark_reachable_as_public(ctx, self, &heads, false).await
+        let start = Instant::now();
+        let marked = mark_reachable_as_public(ctx, self, &heads, false).await;
+        ctx.perf_counters()
+            .add_duration_us(PerfCounterType::PhasesMarkPublicUs, start.elapsed());
+        marked
     }
 
     async fn add_public_with_known_public_ancestors(
@@ -262,6 +279,19 @@ impl Phases for SqlPhases {
     async fn count_all_public(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64, Error> {
         self.phases_store.count_all_public(ctx, id).await
     }
+}
+
+/// Count a phase lookup of `commits` commits that took `elapsed` in the
+/// request's perf counters.
+fn record_lookup(ctx: &CoreContext, commits: usize, elapsed: Duration) {
+    let perf_counters = ctx.perf_counters();
+    perf_counters.increment_counter(PerfCounterType::PhasesLookups);
+    perf_counters.add_to_counter(
+        PerfCounterType::PhasesLookupCommits,
+        i64::try_from(commits).unwrap_or(i64::MAX),
+    );
+    perf_counters.add_duration_us(PerfCounterType::PhasesLookupUs, elapsed);
+    perf_counters.set_max_duration_us(PerfCounterType::PhasesLookupMaxUs, elapsed);
 }
 
 /// Mark all commits reachable from `public_heads` as public

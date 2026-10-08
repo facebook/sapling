@@ -7,6 +7,7 @@
 
 use std::iter;
 use std::sync::Arc;
+use std::time::Duration;
 
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -73,6 +74,8 @@ impl PerfCountersStack {
         pub fn decrement_counter(&self, counter: PerfCounterType);
         pub fn add_to_counter(&self, counter: PerfCounterType, val: i64);
         pub fn set_max_counter(&self, counter: PerfCounterType, val: i64);
+        pub fn add_duration_us(&self, counter: PerfCounterType, duration: Duration);
+        pub fn set_max_duration_us(&self, counter: PerfCounterType, duration: Duration);
     }
 
     pub fn top(&self) -> &PerfCounters {

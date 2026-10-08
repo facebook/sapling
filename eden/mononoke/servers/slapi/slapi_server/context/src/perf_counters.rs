@@ -7,6 +7,7 @@
 
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -94,6 +95,13 @@ define_perf_counters! {
         NumKnown,
         NumKnownRequested,
         NumUnknown,
+        PhasesDbQueries,
+        PhasesLookupCommits,
+        PhasesLookupMaxUs,
+        PhasesLookupUs,
+        PhasesLookups,
+        PhasesMarkPublicUs,
+        PhasesSectionUs,
         SqlReadsMaster,
         SqlReadsReplica,
         SqlWrites,
@@ -106,6 +114,10 @@ define_perf_counters! {
         S3BlobSumDelay,
         S3AccessWait,
     }
+}
+
+fn duration_us(duration: Duration) -> i64 {
+    i64::try_from(duration.as_micros()).unwrap_or(i64::MAX)
 }
 
 enum PerfCounterTypeUpdateFunc {
@@ -188,6 +200,12 @@ impl PerfCounterType {
             | NumKnown
             | NumKnownRequested
             | NumUnknown
+            | PhasesDbQueries
+            | PhasesLookupCommits
+            | PhasesLookupUs
+            | PhasesLookups
+            | PhasesMarkPublicUs
+            | PhasesSectionUs
             | SqlReadsMaster
             | SqlReadsReplica
             | SqlWrites
@@ -205,7 +223,8 @@ impl PerfCounterType {
             | BlobPutsMaxLatency
             | BlobUnlinksMaxLatency
             | BlobGetsMaxSize
-            | BlobPutsMaxSize => PerfCounterTypeUpdateFunc::Max,
+            | BlobPutsMaxSize
+            | PhasesLookupMaxUs => PerfCounterTypeUpdateFunc::Max,
         }
     }
 }
@@ -234,6 +253,16 @@ impl PerfCounters {
     pub fn set_max_counter(&self, counter: PerfCounterType, val: i64) {
         self.get_counter_atomic(counter)
             .fetch_max(val, Ordering::Relaxed);
+    }
+
+    /// Add a duration to a counter that measures microseconds.
+    pub fn add_duration_us(&self, counter: PerfCounterType, duration: Duration) {
+        self.add_to_counter(counter, duration_us(duration));
+    }
+
+    /// Raise a counter that measures microseconds to at least this duration.
+    pub fn set_max_duration_us(&self, counter: PerfCounterType, duration: Duration) {
+        self.set_max_counter(counter, duration_us(duration));
     }
 
     pub fn get_counter(&self, counter: PerfCounterType) -> i64 {
@@ -305,5 +334,28 @@ mod test {
 
         ctrs.set_max_counter(k, 2);
         assert_eq!(ctrs.get_counter(k), 3);
+    }
+
+    #[mononoke::test]
+    fn test_duration_counters() {
+        let ctrs = PerfCounters::default();
+        let sum = PerfCounterType::PhasesLookupUs;
+        let max = PerfCounterType::PhasesLookupMaxUs;
+
+        ctrs.add_duration_us(sum, Duration::from_millis(3));
+        ctrs.add_duration_us(sum, Duration::from_micros(250));
+        assert_eq!(
+            ctrs.get_counter(sum),
+            3_250,
+            "durations add up in microseconds"
+        );
+
+        ctrs.set_max_duration_us(max, Duration::from_millis(2));
+        ctrs.set_max_duration_us(max, Duration::from_millis(1));
+        assert_eq!(
+            ctrs.get_counter(max),
+            2_000,
+            "the max keeps the longest duration"
+        );
     }
 }

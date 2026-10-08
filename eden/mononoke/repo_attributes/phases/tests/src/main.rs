@@ -23,6 +23,7 @@ use cloned::cloned;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::Linear;
@@ -354,6 +355,22 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     assert_eq!(
         get_phases_map().await?,
         [true, true, true, false, true, true, false],
+    );
+
+    let perf_counters = ctx.perf_counters();
+    assert_eq!(
+        perf_counters.get_counter(PerfCounterType::PhasesLookups),
+        3,
+        "each get_public call is one lookup"
+    );
+    assert_eq!(
+        perf_counters.get_counter(PerfCounterType::PhasesLookupCommits),
+        21,
+        "each lookup asks about all seven commits"
+    );
+    assert!(
+        perf_counters.get_counter(PerfCounterType::PhasesDbQueries) > 0,
+        "lookups of commits not cached as public reach the database"
     );
 
     Ok(())

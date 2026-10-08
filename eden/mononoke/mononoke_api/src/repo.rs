@@ -14,6 +14,7 @@ use std::sync::Arc;
 #[cfg(fbcode_build)]
 use std::sync::LazyLock;
 use std::sync::Mutex;
+use std::time::Instant;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
@@ -65,6 +66,7 @@ use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use commit_rate_limit_config::CommitRateLimit;
 use context::CoreContext;
+use context::PerfCounterType;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncData;
@@ -1816,6 +1818,8 @@ impl<R: PhasesRef + CommitGraphRef + Clone> RepoContext<R> {
             return Ok(Default::default());
         }
 
+        let walk_start = Instant::now();
+
         // initialize visited
         let mut visited: HashSet<_> = changesets.iter().cloned().collect();
 
@@ -1868,6 +1872,10 @@ impl<R: PhasesRef + CommitGraphRef + Clone> RepoContext<R> {
             public.extend(new_public);
             draft.extend(new_draft);
         }
+
+        self.ctx
+            .perf_counters()
+            .add_duration_us(PerfCounterType::PhasesSectionUs, walk_start.elapsed());
 
         Ok(Stack {
             draft,
