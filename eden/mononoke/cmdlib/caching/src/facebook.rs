@@ -186,6 +186,12 @@ pub fn init_cachelib_from_settings(
         settings.svnrev_cache_size.unwrap_or(1024),
     )?;
 
+    // Defaults to a very small cache. Jobs that need it can increase its size.
+    cachelib::get_or_create_volatile_pool(
+        "bonsai_p4_mapping",
+        settings.p4_changelist_cache_size.unwrap_or(1024),
+    )?;
+
     cachelib::get_or_create_volatile_pool(
         "phases",
         settings.phases_cache_size.unwrap_or(available_space / 20),

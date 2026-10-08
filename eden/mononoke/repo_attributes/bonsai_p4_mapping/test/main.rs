@@ -24,6 +24,7 @@ use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::p4_changelist_id::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
+use test_repo_factory::TestRepoFactory;
 
 #[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
@@ -304,5 +305,31 @@ async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
         None
     );
 
+    Ok(())
+}
+
+#[facet::container]
+struct P4Repo {
+    #[facet]
+    bonsai_p4_mapping: dyn BonsaiP4Mapping,
+}
+
+/// A repo built by the test repo factory gets a working `BonsaiP4Mapping` facet: the table is
+/// created and the factory builds the store.
+#[mononoke::fbinit_test]
+async fn test_repo_factory_builds_facet(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: P4Repo = TestRepoFactory::new(fb)?.build().await?;
+
+    let entry = BonsaiP4MappingEntry::new(bonsai::ONES_CSID, P4_CHANGELIST_ONE);
+    repo.bonsai_p4_mapping
+        .bulk_import(&ctx, from_ref(&entry))
+        .await?;
+    assert_eq!(
+        repo.bonsai_p4_mapping
+            .get_bonsai_from_p4_changelist_id(&ctx, P4_CHANGELIST_ONE)
+            .await?,
+        Some(bonsai::ONES_CSID)
+    );
     Ok(())
 }

@@ -21,6 +21,8 @@ use bonsai_globalrev_mapping::ArcBonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::SqlBonsaiHgMappingBuilder;
+use bonsai_p4_mapping::ArcBonsaiP4Mapping;
+use bonsai_p4_mapping::SqlBonsaiP4MappingBuilder;
 use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use bonsai_tag_mapping::ArcBonsaiTagMapping;
@@ -312,6 +314,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiP4MappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiSvnrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiTagMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
@@ -557,6 +560,15 @@ impl TestRepoFactory {
         Ok(Arc::new(
             SqlBonsaiGlobalrevMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(RendezVousOptions::for_test(), repo_identity.id()),
+        ))
+    }
+
+    /// Construct Bonsai P4 Mapping using the in-memory metadata
+    /// database.
+    pub fn bonsai_p4_mapping(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcBonsaiP4Mapping> {
+        Ok(Arc::new(
+            SqlBonsaiP4MappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(repo_identity.id()),
         ))
     }
 

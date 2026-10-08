@@ -140,6 +140,10 @@ pub struct CachelibArgs {
     #[clap(long, value_name = "SIZE", hide = true)]
     pub svnrevs_cache_size: Option<usize>,
 
+    /// Override size of the bonsai-p4-changelists mapping cache
+    #[clap(long, value_name = "SIZE", hide = true)]
+    pub p4_changelists_cache_size: Option<usize>,
+
     /// Override size of the phases cache
     #[clap(long, value_name = "SIZE", hide = true)]
     pub phases_cache_size: Option<usize>,
