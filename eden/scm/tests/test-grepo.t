@@ -1943,3 +1943,122 @@ clean=True
   $ git -C vendor/a/sub/c status --porcelain
   $ cat vendor/a/sub/c/added
   added content
+
+`goto` tests: failing `preupdate` hook
+
+Every test starts clean at `$REV_AFTER_BUMP_C`. It sets a `preupdate` hook that
+always fails. Then it runs `sl goto $REV_AFTER_BUMP_B`.
+
+Expected for every flag: the goto aborts and nothing changes. `.`, the manifests
+HEAD, `static.xml` on disk, the manifests index and every project stay at
+`$REV_AFTER_BUMP_C`.
+
+Default flags. Expected: the result above.
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ sl goto --config hooks.preupdate=false $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: preupdate hook exited with status 1
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+
+`--check`. Expected: the result above.
+clean=False, updatecheck="abort"
+
+  $ reset_workspace
+  $ sl goto --check --config hooks.preupdate=false $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: preupdate hook exited with status 1
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+
+`--merge`. Expected: the result above.
+clean=False, updatecheck="none"
+
+  $ reset_workspace
+  $ sl goto --merge --config hooks.preupdate=false $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: preupdate hook exited with status 1
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+
+`--clean`. Expected: the result above.
+clean=True
+
+  $ reset_workspace
+  $ sl goto --clean --config hooks.preupdate=false $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: preupdate hook exited with status 1
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+
+`goto` tests: Rust checkout turned off
+
+Every test starts clean at `$REV_AFTER_BUMP_C`. It sets
+`workingcopy.rust-checkout=false`. Then it runs `sl goto $REV_AFTER_BUMP_B`.
+Without this config, the default flags and `--clean` use the Rust checkout. With
+it, they use the Python checkout.
+
+Expected: the same result as the Rust checkout.
+The problems from the clean tests show up here too. We do not mark them again.
+
+Default flags. Expected: the result above.
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ sl goto --config workingcopy.rust-checkout=false $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
+
+`--clean`. Expected: the result above.
+clean=True
+
+  $ reset_workspace
+  $ sl goto --clean --config workingcopy.rust-checkout=false $REV_AFTER_BUMP_B > $TESTTMP/goto.out 2>&1
+  $ map_rev_names < $TESTTMP/goto.out
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ workspace_state
+  sl_workingcopy_parent: bump frameworks/b
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_REV
