@@ -6,7 +6,8 @@
  */
 
 //! Tests verifying that `create_changeset` blocks unauthorized tampering
-//! with `.slacl` files (code tenting ACLs) via `validate_acl_file_changes`.
+//! with `.slacl` files (code tenting ACLs) via `validate_acl_file_changes`,
+//! while letting members of the repo's admin bypass group through.
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -54,6 +55,9 @@ const RESTRICTED_ACL: &str = "repos/hg/test/=secret_project";
 
 /// The full `REPO_REGION:` identity string for the restricted ACL.
 const RESTRICTED_IDENTITY: &str = "REPO_REGION:repos/hg/test/=secret_project";
+
+/// The admin bypass group configured on every test repo, matching prod.
+const ADMIN_BYPASS_GROUP: &str = "path_acls_admin_bypass";
 
 /// What the test expects from `create_changeset`.
 enum ExpectedOutcome {
@@ -462,6 +466,149 @@ async fn test_acl_merge_modify_slacl_with_maintainer_allowed(fb: FacebookInit) -
     .await
 }
 
+// ---------------------------------------------------------------------------
+// Admin bypass group tests — members of `admin_bypass_group` may change any
+// .slacl, even without maintaining the region's ACL. Non-members are covered
+// by the bypass tests above, which run with the same group configured.
+// ---------------------------------------------------------------------------
+
+/// What it tests: an admin bypass group member who does not maintain the
+/// region ACL deletes an existing `.slacl` in a restricted directory.
+/// Expected: allowed — bypass group membership replaces maintainer access.
+#[mononoke::fbinit_test]
+async fn test_admin_bypass_delete_slacl_in_restricted_dir(fb: FacebookInit) -> Result<()> {
+    let repo = build_secret_restricted_repo(fb).await?;
+    let changes = BTreeMap::from([(MPath::try_from("secret/.slacl")?, CreateChange::Deletion)]);
+
+    run_single_changeset_test(
+        fb,
+        "admin_bypass_user",
+        repo,
+        &[
+            ("secret/.slacl", SLACL_CONTENT),
+            ("secret/data.txt", "sensitive data"),
+        ],
+        changes,
+        "delete .slacl (admin bypass)",
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
+/// What it tests: an admin bypass group member who does not maintain the
+/// region ACL rewrites an existing `.slacl` in a restricted directory.
+/// Expected: allowed — bypass group membership replaces maintainer access.
+#[mononoke::fbinit_test]
+async fn test_admin_bypass_modify_slacl_in_restricted_dir(fb: FacebookInit) -> Result<()> {
+    let repo = build_secret_restricted_repo(fb).await?;
+    let changes = BTreeMap::from([(
+        MPath::try_from("secret/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
+    )]);
+
+    run_single_changeset_test(
+        fb,
+        "admin_bypass_user",
+        repo,
+        &[("secret/.slacl", SLACL_CONTENT)],
+        changes,
+        "modify .slacl (admin bypass)",
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
+/// What it tests: an admin bypass group member who does not maintain the
+/// parent ACL adds a nested `.slacl` under a restricted directory.
+/// Expected: allowed — the inherited restriction is bypassed too.
+#[mononoke::fbinit_test]
+async fn test_admin_bypass_add_nested_slacl_under_restricted(fb: FacebookInit) -> Result<()> {
+    let repo = build_restricted_dir_repo(fb).await?;
+    let changes = BTreeMap::from([(
+        MPath::try_from("restricted/subdir/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
+    )]);
+
+    run_single_changeset_test(
+        fb,
+        "admin_bypass_user",
+        repo,
+        &[
+            ("restricted/.slacl", SLACL_CONTENT),
+            ("restricted/subdir/file.txt", "data"),
+        ],
+        changes,
+        "add nested .slacl (admin bypass)",
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
+/// What it tests: an admin bypass group member creates a stack whose second
+/// changeset deletes `secret/.slacl`.
+/// Expected: allowed — stack validation applies the same bypass.
+#[mononoke::fbinit_test]
+async fn test_admin_bypass_stack_delete_slacl_in_c2(fb: FacebookInit) -> Result<()> {
+    let repo = build_secret_restricted_repo(fb).await?;
+
+    let c1_changes = BTreeMap::from([(
+        MPath::try_from("unrelated.txt")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular("hello"), None),
+    )]);
+    let c2_changes = BTreeMap::from([(MPath::try_from("secret/.slacl")?, CreateChange::Deletion)]);
+
+    run_stack_changeset_test(
+        fb,
+        "admin_bypass_user",
+        repo,
+        &[("secret/.slacl", SLACL_CONTENT)],
+        vec![c1_changes, c2_changes],
+        vec![
+            "stack C1: unrelated change",
+            "stack C2: delete .slacl (admin bypass)",
+        ],
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
+/// What it tests: an admin bypass group member creates a stack that adds a
+/// nested `.slacl` under a restricted directory and modifies it again in the
+/// next changeset.
+/// Expected: allowed — admin bypass group members bypass every `.slacl`
+/// restriction, including the one-change-per-`.slacl`-per-stack rule.
+#[mononoke::fbinit_test]
+async fn test_admin_bypass_stack_add_then_modify_nested_slacl(fb: FacebookInit) -> Result<()> {
+    let repo = build_restricted_dir_repo(fb).await?;
+
+    let c1_changes = BTreeMap::from([(
+        MPath::try_from("restricted/subdir/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT), None),
+    )]);
+    let c2_changes = BTreeMap::from([(
+        MPath::try_from("restricted/subdir/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
+    )]);
+
+    run_stack_changeset_test(
+        fb,
+        "admin_bypass_user",
+        repo,
+        &[("restricted/.slacl", SLACL_CONTENT)],
+        vec![c1_changes, c2_changes],
+        vec![
+            "stack C1: add nested .slacl (admin bypass)",
+            "stack C2: modify nested .slacl (admin bypass)",
+        ],
+        // FIXME(T255927050): admin bypass group members must be allowed through
+        // the stack rule too. It rejects C2 before C2's permission check runs,
+        // so it rejects even callers who pass that check (maintainers and
+        // bypass members); flip to `ExpectedOutcome::Allowed` once fixed.
+        ExpectedOutcome::Blocked("already modified by an earlier changeset in this stack"),
+    )
+    .await
+}
+
 // ---- helpers ----
 
 /// Standard `CreateChangesetChecks` that validates all conditions.
@@ -487,14 +634,17 @@ fn test_create_info(message: &str) -> Result<CreateInfo> {
     })
 }
 
-/// Build an `InternalAclProvider` with two access levels:
+/// Build an `InternalAclProvider` with these callers:
 /// - `maintainer_user`: has both "read" and "maintainers" — can modify .slacl
 /// - `authorized_user`: has only "read" — can read restricted content but
 ///   cannot modify .slacl files (only maintainers can)
 /// - `unauthorized_user`: has neither — cannot read or modify
+/// - `admin_bypass_user`: has neither, but is in [`ADMIN_BYPASS_GROUP`] — can
+///   modify .slacl through the admin bypass
 fn test_acl_provider() -> Arc<dyn permission_checker::AclProvider> {
     let maintainer = MononokeIdentity::from_legacy_type_data("USER", "maintainer_user");
     let reader = MononokeIdentity::from_legacy_type_data("USER", "authorized_user");
+    let admin = MononokeIdentity::from_legacy_type_data("USER", "admin_bypass_user");
 
     let acls = Acls {
         repos: HashMap::new(),
@@ -512,7 +662,9 @@ fn test_acl_provider() -> Arc<dyn permission_checker::AclProvider> {
         },
         tiers: HashMap::new(),
         workspaces: HashMap::new(),
-        groups: HashMap::new(),
+        groups: hashmap! {
+            ADMIN_BYPASS_GROUP.to_string() => Arc::new(MononokeIdentitySet::from([admin])),
+        },
     };
 
     InternalAclProvider::new(acls)
@@ -537,8 +689,8 @@ async fn test_ctx_with_identity(fb: FacebookInit, username: &str) -> Result<cont
     Ok(context::CoreContext::test_mock_session(session))
 }
 
-/// Build a repo with config-based restricted paths and an ACL provider
-/// that only grants `authorized_user` access to the restricted ACL.
+/// Build a repo with config-based restricted paths, [`ADMIN_BYPASS_GROUP`] as
+/// its admin bypass group, and the callers from [`test_acl_provider`].
 ///
 /// The `restricted_dirs` list maps directory paths (e.g. `"secret"`) to the
 /// `MononokeIdentity` for the repo region ACL that protects them.
@@ -550,6 +702,10 @@ async fn build_restricted_repo(
 
     let config = metaconfig_types::RestrictedPathsConfig {
         path_restriction_metadata: super::build_path_restriction_metadata(restricted_dirs)?,
+        admin_bypass_group: Some(MononokeIdentity::from_legacy_type_data(
+            "GROUP",
+            ADMIN_BYPASS_GROUP,
+        )),
         ..Default::default()
     };
 
