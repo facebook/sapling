@@ -10,5 +10,6 @@ pub mod contentid;
 pub mod datetime;
 pub mod globalrev;
 pub mod hash;
+pub mod p4_changelist_id;
 pub mod repo;
 pub mod svnrev;

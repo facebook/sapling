@@ -19,6 +19,7 @@ use crate::datetime::Timestamp;
 use crate::globalrev::Globalrev;
 use crate::hash::Blake2;
 use crate::hash::GitSha1;
+use crate::p4_changelist_id::P4ChangelistId;
 use crate::repo::RepositoryId;
 use crate::svnrev::Svnrev;
 use crate::typed_hash::ChangesetId;
@@ -134,6 +135,24 @@ impl TryFrom<Value> for Svnrev {
 
 impl FromValue for Svnrev {
     type Intermediate = Svnrev;
+}
+
+impl From<P4ChangelistId> for Value {
+    fn from(cl_id: P4ChangelistId) -> Self {
+        Value::UInt(cl_id.id())
+    }
+}
+
+impl TryFrom<Value> for P4ChangelistId {
+    type Error = FromValueError;
+
+    fn try_from(v: Value) -> FromValueResult<Self> {
+        Ok(P4ChangelistId::new(from_value_opt(v)?))
+    }
+}
+
+impl FromValue for P4ChangelistId {
+    type Intermediate = P4ChangelistId;
 }
 
 impl From<Blake2> for Value {

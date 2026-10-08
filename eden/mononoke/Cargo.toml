@@ -407,6 +407,7 @@ members = [
   "repo_attributes/bonsai_hg_mapping/if/clients",
   "repo_attributes/bonsai_hg_mapping/if/mocks",
   "repo_attributes/bonsai_hg_mapping/if/services",
+  "repo_attributes/bonsai_p4_mapping",
   "repo_attributes/bonsai_p4_mapping/if",
   "repo_attributes/bonsai_p4_mapping/if/clients",
   "repo_attributes/bonsai_p4_mapping/if/mocks",
