@@ -183,7 +183,7 @@ pub async fn commit_compare_with_generation_logging<R: crate::Repo>(
             let diff_count = diff.len();
             if diff_count > max_paths {
                 return Err(MononokeError::InvalidRequest(format!(
-                    "commit_compare: unordered diff has {diff_count} entries, exceeding maximum {max_paths}. \
+                    "commit_compare: unordered diff has more than {max_paths} entries. \
                      Use ordered_params with pagination instead.",
                 ))
                 .into());
@@ -387,8 +387,8 @@ mod tests {
             Err(err) => {
                 let err_str = format!("{err:#}");
                 assert!(
-                    err_str.contains("exceeding maximum"),
-                    "expected 'exceeding maximum' in error, got: {err_str}"
+                    err_str.contains("has more than"),
+                    "expected 'has more than' in error, got: {err_str}"
                 );
             }
         }
@@ -538,18 +538,16 @@ mod tests {
             Err(err) => {
                 let err_str = format!("{err:#}");
                 assert!(
-                    err_str.contains("exceeding maximum"),
-                    "expected 'exceeding maximum' in error, got: {err_str}"
+                    err_str.contains("has more than"),
+                    "expected 'has more than' in error, got: {err_str}"
                 );
             }
         }
         Ok(())
     }
 
-    /// FIXME: BUG! This did report "unordered diff has 6 entries, exceeding maximum 5" for a
-    /// commit that adds 8 files, but should have said that the diff has more than 5 entries:
-    /// the diff is probed with a limit of `max_paths + 1`, so the number in the message is
-    /// the probe limit, not the size of the diff.
+    /// The diff is probed with a limit of `max_paths + 1`, so the rejection message cannot
+    /// know the size of the diff; it says that the diff has more than `max_paths` entries.
     #[mononoke::fbinit_test]
     async fn test_unordered_diff_over_limit_message_does_not_report_probe_limit(
         fb: FacebookInit,
@@ -578,11 +576,11 @@ mod tests {
         .err()
         .expect("a diff of 8 entries must be rejected with a limit of 5");
         let err_str = format!("{err:#}");
-        // FIXME: BUG! The message presents the probe limit (6) as the number of entries.
         assert!(
-            err_str.contains("unordered diff has 6 entries, exceeding maximum 5"),
+            err_str.contains("unordered diff has more than 5 entries"),
             "got: {err_str}"
         );
+        assert!(!err_str.contains("6 entries"), "got: {err_str}");
         Ok(())
     }
 }
