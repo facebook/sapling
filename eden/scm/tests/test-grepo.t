@@ -672,6 +672,106 @@ clean=True
   frameworks/b: B2_REV
   vendor/a/sub/c: C_REV
 
+Uncommitted change in `frameworks/b`, going to `$REV_AFTER_BUMP_A`. The goto
+updates the revision of two projects, `frameworks/b` and `vendor/a/sub/c`. Git
+checks out `frameworks/b` first. `vendor/a/sub/c` has no change.
+
+Default flags. Expected: `frameworks/b` is a conflicting project. `.` and `main`
+move to `$REV_AFTER_BUMP_A`. `frameworks/b` stays at `B2_REV` and keeps the
+change. `vendor/a/sub/c` moves to `C_REV`. goto reports that `frameworks/b`
+failed.
+(bad: goto stops at `frameworks/b`. `vendor/a/sub/c` stays at `C2_REV`.)
+(bad: the error is the raw Git error.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl goto $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+   M README
+  vendor/a/sub/c: C2_REV
+  sl status: M frameworks/b
+  sl status: M vendor/a/sub/c
+
+The same goto with `workingcopy.rust-checkout=false`. Expected: the same
+result as the Rust checkout.
+(bad: goto stops at `frameworks/b`. `vendor/a/sub/c` stays at `C2_REV`.)
+(bad: the error is the raw Git error.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl goto --config workingcopy.rust-checkout=false $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+   M README
+  vendor/a/sub/c: C2_REV
+  sl status: M frameworks/b
+  sl status: M vendor/a/sub/c
+
+Uncommitted changes in `frameworks/b` and `vendor/a/sub/c`, going to
+`$REV_AFTER_BUMP_A`. Expected: both projects are conflicting projects. goto
+reports both of them in one error.
+(bad: goto stops at `frameworks/b`. It does not try `vendor/a/sub/c`, so it
+does not report it.)
+(bad: the error is the raw Git error.)
+clean=False, updatecheck="noconflict"
+
+  $ reset_workspace
+  $ echo "uncommitted change" > frameworks/b/README
+  $ echo "uncommitted change" > vendor/a/sub/c/README
+  $ sl goto $REV_AFTER_BUMP_A > $TESTTMP/goto.out 2>&1
+  [255]
+  $ map_rev_names < $TESTTMP/goto.out
+  abort: Command exited with code 1
+    git --git-dir=$TESTTMP/repodir/frameworks/b/.git checkout -d --recurse-submodules B_REV
+      error: Your local changes to the following files would be overwritten by checkout:
+      	README
+      Please commit your changes or stash them before you switch branches.
+      Aborting
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a
+  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests: M  static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+   M README
+  vendor/a/sub/c: C2_REV
+   M README
+  sl status: M frameworks/b
+  sl status: M vendor/a/sub/c
+
 Uncommitted change in `frameworks/b`. The goto keeps the revision of this
 project.
 
