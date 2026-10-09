@@ -510,3 +510,15 @@ struct DeclareEqualToSpecialization {}
 struct AllowCustomDefaultInAllocCtor {
   1: bool legacy_ignore_custom_default;
 }
+
+/**
+ * Allows the unstructured `cpp.allocator` annotation on this union, which
+ * unions otherwise reject.
+ *
+ * Internal and experimental: Thrift's own unit tests use it while support for
+ * `cpp.allocator` unions is incomplete. Do not use it elsewhere; it may change
+ * or go away without notice.
+ */
+@scope.Union
+@thrift.Experimental
+struct InternalExperimentalAllowAllocatorOnUnion {}
