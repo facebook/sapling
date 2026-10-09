@@ -1555,7 +1555,7 @@ impl SqlCommitGraphStorage {
 
             if justknobs::eval(
                 "scm/mononoke:commit_graph_pull_optimizations",
-                None,
+                ctx.client_request_info().map(|c| c.correlator.as_str()),
                 Some(self.repo_identity.name()),
             ) {
                 // The target is a parameter of the query, so batched

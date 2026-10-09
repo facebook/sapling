@@ -273,7 +273,9 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
 
         let prefetch = justknobs::eval(
             "scm/mononoke:commit_graph_pull_optimizations",
-            None,
+            self.ctx
+                .client_request_info()
+                .map(|c| c.correlator.as_str()),
             Some(self.commit_graph.storage.repo_name()),
         );
 

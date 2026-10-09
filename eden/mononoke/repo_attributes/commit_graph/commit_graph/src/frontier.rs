@@ -229,7 +229,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
 
         let batch_prefetch = justknobs::eval(
             "scm/mononoke:commit_graph_pull_optimizations",
-            None,
+            ctx.client_request_info().map(|c| c.correlator.as_str()),
             Some(self.storage.repo_name()),
         );
         let mut above_target_count = 0;

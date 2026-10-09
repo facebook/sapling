@@ -888,7 +888,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         // the commits being returned instead.
         let walk_drafts = !justknobs::eval(
             "scm/mononoke:commit_graph_pull_optimizations",
-            None,
+            ctx.client_request_info().map(|c| c.correlator.as_str()),
             Some(self.repo_ctx().name()),
         );
         let walked_draft_commits = async {
