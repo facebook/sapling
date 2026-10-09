@@ -885,8 +885,8 @@ export default class ServerToClientAPI {
         // would leave the server with nothing recorded to refetch after a submit.
         repo.codeReviewProvider?.triggerDiffSummariesFetch(
           data.diffIds ?? repo.getAllDiffIds(),
-          /* force */ false,
-          /* partial */ data.partial === true,
+          data.force === true,
+          data.partial === true,
         );
         break;
       }

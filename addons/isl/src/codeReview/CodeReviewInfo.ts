@@ -377,6 +377,10 @@ const handleVisibilityChange = () => {
     if (oldValue !== newValue && newValue === 'hidden') {
       clearTrackedCache();
     }
+    if (oldValue !== newValue && newValue === 'focused') {
+      serverAPI.postMessage({type: 'fetchDiffSummaries', force: true});
+      tracker.track('DiffFetchSource', {extras: {source: 'webview_focus'}});
+    }
     return newValue;
   });
 };

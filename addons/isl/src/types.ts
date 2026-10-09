@@ -1112,8 +1112,15 @@ export type ClientToServerMessage =
    * `partial` says `diffIds` names diffs of interest — the commit that just got selected, say —
    * rather than describing every diff on screen. Leave it off if `diffIds` is the whole smartlog;
    * a server that remembers what to refetch later reads the unqualified form as the smartlog.
+   * `force` bypasses fetch debouncing and cached signal counts when a user gesture requires fresh
+   * remote state.
    */
-  | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>; partial?: boolean}
+  | {
+      type: 'fetchDiffSummaries';
+      diffIds?: Array<DiffId>;
+      partial?: boolean;
+      force?: boolean;
+    }
   | {type: 'fetchDiffComments'; diffId: DiffId}
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}

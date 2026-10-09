@@ -274,6 +274,13 @@ describe('ServerToClientAPI diff summary fetches', () => {
     expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D1', 'D2'], true);
   });
 
+  it('passes on a request that forces a fresh diff fetch', async () => {
+    connection.triggerMessage({type: 'fetchDiffSummaries', force: true});
+    await nextTick();
+
+    expect(triggerDiffSummariesFetch).toHaveBeenCalledWith(['D1', 'D2'], true, false);
+  });
+
   it('passes on a request that marks itself partial', async () => {
     connection.triggerMessage({type: 'fetchDiffSummaries', diffIds: ['D2'], partial: true});
     await nextTick();
