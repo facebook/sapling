@@ -26,6 +26,7 @@
 Only selected histories are imported; unrelated Git tips and Mononoke bookmarks survive.
 
   $ incremental "$SELECTED"
+  $ test ! -s "$TESTTMP/phases.log"
   $ mapping_count
   1
   $ bookmark_is heads/master_bookmark "$BASE"
@@ -76,6 +77,7 @@ The union includes a separate release tip and an unselected merge parent's missi
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT count(*) FROM bonsai_git_mapping WHERE lower(hex(git_sha1))='$UNMANAGED'"
   0
   $ sed -n 's/^gitimport_phase phase=\([^ ]*\) duration_ms=[0-9]*$/\1/p' "$TESTTMP/phases.log"
+  main_entered
   startup
   open_repo
   discover_commits
@@ -83,6 +85,10 @@ The union includes a separate release tip and an unselected merge parent's missi
   resolve_refs
   open_managed_repo
   publication
+  async_cleanup
+  runtime_shutdown
+  $ head -1 "$TESTTMP/phases.log"
+  gitimport_phase phase=main_entered duration_ms=0
   $ grep -c gitimport_phase "$TESTTMP/import.log"
   0
   [1]

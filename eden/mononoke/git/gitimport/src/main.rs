@@ -10,12 +10,14 @@ mod repo;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::env::args_os;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -343,15 +345,36 @@ enum GitimportSubcommand {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let started = Instant::now();
+    // Inspect only this opt-in flag before app setup; clap still parses and
+    // validates the complete command line below.
+    let log_import_phases = args_os()
+        .skip(1)
+        .take_while(|arg| arg != "--")
+        .any(|arg| arg == "--log-import-phases");
+    if log_import_phases {
+        write_import_phase("main_entered", 0);
+    }
+    let lifecycle_timing = Arc::new(ImportLifecycleTiming::default());
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(MonitoringAppExtension {})
         .build::<GitimportArgs>()?;
 
     let result = app.run_with_monitoring_and_logging(
-        move |app| async_main(app, started),
+        {
+            let lifecycle_timing = lifecycle_timing.clone();
+            move |app| {
+                let lifecycle_timing = lifecycle_timing.clone();
+                async move {
+                    let result = async_main(app, started, &lifecycle_timing).await;
+                    lifecycle_timing.log_async_cleanup(log_import_phases);
+                    result
+                }
+            }
+        },
         "gitimport",
         AliveService,
     );
+    lifecycle_timing.log_runtime_shutdown(log_import_phases);
 
     if result.is_ok() {
         // Skip C++ singleton teardown which hangs for ~5 minutes due to
@@ -367,16 +390,39 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     result
 }
 
+#[derive(Default)]
+struct ImportLifecycleTiming {
+    async_cleanup_started: OnceLock<Instant>,
+    runtime_shutdown_started: OnceLock<Instant>,
+}
+
+impl ImportLifecycleTiming {
+    fn log_async_cleanup(&self, enabled: bool) {
+        if let Some(mut started) = self.async_cleanup_started.get().copied() {
+            log_import_phase(enabled, "async_cleanup", &mut started);
+            let _ = self.runtime_shutdown_started.set(started);
+        }
+    }
+
+    fn log_runtime_shutdown(&self, enabled: bool) {
+        if let Some(mut started) = self.runtime_shutdown_started.get().copied() {
+            log_import_phase(enabled, "runtime_shutdown", &mut started);
+        }
+    }
+}
+
+fn write_import_phase(phase: &str, duration_ms: u128) {
+    let mut output = io::stdout().lock();
+    let _ = writeln!(
+        output,
+        "gitimport_phase phase={phase} duration_ms={duration_ms}"
+    );
+    let _ = output.flush();
+}
+
 fn log_import_phase(enabled: bool, phase: &str, started: &mut Instant) {
     if enabled {
-        let mut output = io::stdout().lock();
-        let _ = writeln!(
-            output,
-            "gitimport_phase phase={} duration_ms={}",
-            phase,
-            started.elapsed().as_millis()
-        );
-        let _ = output.flush();
+        write_import_phase(phase, started.elapsed().as_millis());
     }
     *started = Instant::now();
 }
@@ -412,7 +458,11 @@ async fn selected_incremental_refs(
     Ok(selected)
 }
 
-async fn async_main(app: MononokeApp, mut phase_started: Instant) -> Result<(), Error> {
+async fn async_main(
+    app: MononokeApp,
+    mut phase_started: Instant,
+    lifecycle_timing: &ImportLifecycleTiming,
+) -> Result<(), Error> {
     let args: GitimportArgs = app.args()?;
     log_import_phase(args.log_import_phases, "startup", &mut phase_started);
     let incremental = matches!(&args.subcommand, GitimportSubcommand::Incremental);
@@ -970,6 +1020,7 @@ async fn async_main(app: MononokeApp, mut phase_started: Instant) -> Result<(), 
         };
     }
     log_import_phase(args.log_import_phases, "publication", &mut phase_started);
+    let _ = lifecycle_timing.async_cleanup_started.set(phase_started);
     Ok(())
 }
 
