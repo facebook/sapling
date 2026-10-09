@@ -5,6 +5,93 @@
       @layer base, components;
     </style>
     <meta charset="utf-8" />
+    <script>
+      // Runs before any module or stylesheet download. Only this entry owns these variables.
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const requestedTheme = params.get('theme');
+        const setting =
+          requestedTheme === 'light' || requestedTheme === 'dark' ? requestedTheme : 'system';
+        const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+        const root = document.documentElement;
+        const roles = [
+          'background-body',
+          'background-card',
+          'background-popover',
+          'background-muted',
+          'background-surface',
+          'text-primary',
+          'icon-primary',
+          'text-secondary',
+          'icon-secondary',
+          'accent',
+          'on-accent',
+          'accent-muted',
+          'text-accent',
+          'icon-accent',
+          'border',
+          'skeleton',
+          'track',
+          'syntax-background',
+          'success',
+          'success-muted',
+          'on-success',
+          'warning',
+          'warning-muted',
+          'on-warning',
+          'error',
+          'on-error',
+        ];
+        const colors = Object.create(null);
+        const serializedColors = params.get('themeColors');
+        if (serializedColors && serializedColors.length <= 8192) {
+          try {
+            const parsed = JSON.parse(serializedColors);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              for (const role of roles) {
+                const value = parsed['--color-' + role];
+                // Accept literal colors only, never substitutions, CSS-wide keywords or declarations.
+                // CSS.supports is the runtime grammar check, not this restricted character filter.
+                if (
+                  typeof value === 'string' &&
+                  value.length <= 128 &&
+                  /^(#[\da-f]+|(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\([\d.e,%+ /-]+\))$/i.test(
+                    value,
+                  ) &&
+                  window.CSS?.supports('color', value)
+                ) {
+                  colors[role] = value;
+                  root.style.setProperty('--agentcloud-' + role, value);
+                }
+              }
+            }
+          } catch {
+            // Malformed palettes retain the old-host fallback without logging launch parameters.
+          }
+        }
+        function applyTheme() {
+          const mode = setting === 'system' ? (media?.matches ? 'dark' : 'light') : setting;
+          root.style.colorScheme = mode;
+          root.style.backgroundColor =
+            colors['background-body'] || (mode === 'dark' ? '#1f1f22' : '#ffffff');
+          root.dataset.agentcloudTheme = mode;
+          return mode;
+        }
+        applyTheme();
+        window.islAgentCloudTheme = {
+          getTheme: applyTheme,
+          getThemeName: () => setting,
+          onDidChangeTheme(callback) {
+            if (setting !== 'system' || !media) {
+              return {dispose() {}};
+            }
+            const handler = () => callback(applyTheme());
+            media.addEventListener('change', handler);
+            return {dispose: () => media.removeEventListener('change', handler)};
+          },
+        };
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
     <title>Interactive Smartlog</title>

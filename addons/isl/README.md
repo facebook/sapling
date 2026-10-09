@@ -256,6 +256,24 @@ Custom platforms can be implemented either by:
 - including platform code in the build process (the VS Code extension does this)
 - adding a new platform to isl-server for use by `run-proxy`'s `--platform` option (Android Studio does this)
 
+### AgentCloud theme handoff
+
+`agentCloud.html` accepts `theme=light|dark` and an optional `themeColors` query parameter:
+JSON with canonical Astryx `--color-*` keys. The host sends concrete colors for the resolved mode
+and reloads the frame when its mode or palette changes. Missing or invalid modes retain the legacy
+system-theme behavior; missing or invalid colors retain the existing mode-specific palette.
+
+The inline head bootstrap validates the bounded palette with the browser's CSS color parser and
+accepts only hex and numeric `rgb`, `rgba`, `hsl`, `hsla`, `oklch`, `oklab`, `lab`, or `lch` values.
+It sets only allowlisted `--agentcloud-*` properties, the root background, and `color-scheme`.
+The loaded platform reuses that theme result and ignores a stale standalone theme preference.
+Other entry points do not run this bootstrap. Semantic colors without an equivalent Astryx role
+(such as the missing-file hue and error-background wash) keep their existing values. Signal badges
+also retain their existing palette because ISL gives all statuses a single shared foreground token.
+
+The host and Sapling-served guest ship separately: an older guest ignores `themeColors`, and an older
+host receives the guest's existing palette fallback until both sides are updated.
+
 ## Syncing repository state
 
 ISL started as a way to automatically re-run `sl status` and `sl smartlog` in a loop.
