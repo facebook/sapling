@@ -5890,28 +5890,48 @@ async fn uploaded_trees_for(
 async fn assert_batch_upload_matches_derivation(
     ctx: &CoreContext,
     repo: &Repo,
-    parent: ChangesetId,
+    parents: &[ChangesetId],
     child: ChangesetId,
     paths: &[&str],
 ) -> Result<()> {
-    let parent_manifest = hg_manifest_id_of(ctx, repo, parent).await?;
     let child_manifest = hg_manifest_id_of(ctx, repo, child).await?;
     let restricted_paths_config = repo.restricted_paths().config_based();
 
-    let parent_root = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
-        ctx,
-        repo.repo_blobstore(),
-        parent_manifest,
-        vec![],
-        &Default::default(),
-        restricted_paths_config,
-        derive_acl_overlay(ctx, repo, parent).await?,
-    )
-    .await?;
+    let mut parent_manifests = Vec::with_capacity(parents.len());
+    let mut parent_roots = Vec::with_capacity(parents.len());
+    for parent in parents {
+        let parent_manifest = hg_manifest_id_of(ctx, repo, *parent).await?;
+        parent_roots.push(
+            derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+                ctx,
+                repo.repo_blobstore(),
+                parent_manifest,
+                vec![],
+                &Default::default(),
+                restricted_paths_config,
+                derive_acl_overlay(ctx, repo, *parent).await?,
+            )
+            .await?,
+        );
+        parent_manifests.push(parent_manifest);
+    }
 
     let mut uploaded = Vec::with_capacity(paths.len());
     for path in paths {
-        uploaded.push(tree_id_at_path(ctx, repo, child_manifest, path).await?);
+        let id = tree_id_at_path(ctx, repo, child_manifest, path).await?;
+        // A tree a parent already has is resolved from its stored envelope, not
+        // uploaded, and hiding that envelope below would break the build.
+        for parent_manifest in &parent_manifests {
+            let in_parent = tree_id_at_path(ctx, repo, *parent_manifest, path)
+                .await
+                .ok();
+            assert_ne!(
+                in_parent,
+                Some(id),
+                "{path:?} is unchanged from a parent, so it would not be uploaded"
+            );
+        }
+        uploaded.push(id);
     }
     uploaded.sort_by_key(|id| id.into_nodehash());
 
@@ -5961,7 +5981,7 @@ async fn assert_batch_upload_matches_derivation(
         ctx,
         repo.repo_blobstore(),
         child_manifest,
-        vec![parent_root],
+        parent_roots,
         &Default::default(),
         restricted_paths_config,
         derive_acl_overlay(ctx, repo, child).await?,
@@ -6006,8 +6026,136 @@ async fn test_batch_upload_augmented_manifests_are_byte_identical(fb: FacebookIn
         .commit()
         .await?;
 
-    assert_batch_upload_matches_derivation(&ctx, &repo, parent, child, &["src/deep", "src", ""])
+    assert_batch_upload_matches_derivation(&ctx, &repo, &[parent], child, &["src/deep", "src", ""])
         .await
+}
+
+/// What it tests: the batch path matches derivation with ACL pointers on, for
+/// a commit that adds an ACL file and one that deletes it.
+///
+/// Why it matters: a child built in the same batch hands its ACL flags to its
+/// parent directly, where a child built alone has them read back from the
+/// blobstore. Production uploads whole trees in one batch, so this is the path
+/// that decides the ACL pointers mapping later relies on, and the one-tree
+/// `.slacl` test never reaches it.
+#[mononoke::fbinit_test]
+async fn test_batch_upload_augmented_manifests_are_byte_identical_with_slacl(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/code/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/code/secret.rs", "fn secret() {}")
+        .add_file("restricted/other/plain.rs", "fn plain() {}")
+        .add_file("public/readme.md", "hello")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("restricted/code/more.rs", "fn more() {}")
+        .add_file(
+            "restricted/other/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n",
+        )
+        .commit()
+        .await?;
+    let grandchild = CreateCommitContext::new(&ctx, &repo, vec![child])
+        .delete_file("restricted/other/.slacl")
+        .commit()
+        .await?;
+
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:add_acl_manifest_pointer".to_string(),
+            KnobVal::Bool(true),
+        )])),
+        async {
+            assert_batch_upload_matches_derivation(
+                &ctx,
+                &repo,
+                &[parent],
+                child,
+                &["restricted/code", "restricted/other", "restricted", ""],
+            )
+            .await?;
+            assert_batch_upload_matches_derivation(
+                &ctx,
+                &repo,
+                &[child],
+                grandchild,
+                &["restricted/other", "restricted", ""],
+            )
+            .await
+        }
+        .boxed(),
+    )
+    .await
+}
+
+/// What it tests: the batch path matches derivation for a merge whose parents
+/// both changed a restricted directory, one of them by adding a second ACL file.
+///
+/// Why it matters: for a merge, derivation may reuse a parent's envelope, and
+/// at the root only a content-derived one, while the upload path always builds
+/// its own under the id the client sent. Every other byte-identity fixture here
+/// has one parent, so nothing shows the two agree on a merge.
+#[mononoke::fbinit_test]
+async fn test_batch_upload_augmented_manifests_are_byte_identical_for_a_merge(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "restricted/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/secret.rs", "fn secret() {}")
+        .add_file("public/readme.md", "hello")
+        .commit()
+        .await?;
+    let p1 = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("restricted/from_p1.rs", "fn p1() {}")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("restricted/from_p2.rs", "fn p2() {}")
+        .add_file(
+            "restricted/inner/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project2\"\n",
+        )
+        .add_file("restricted/inner/deep.rs", "fn deep() {}")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .commit()
+        .await?;
+
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:add_acl_manifest_pointer".to_string(),
+            KnobVal::Bool(true),
+        )])),
+        async {
+            // restricted/inner comes from p2 unchanged, so only the directory
+            // both parents touched and the root are new.
+            assert_batch_upload_matches_derivation(
+                &ctx,
+                &repo,
+                &[p1, p2],
+                merge,
+                &["restricted", ""],
+            )
+            .await
+        }
+        .boxed(),
+    )
+    .await
 }
 
 /// A batch whose trees cannot all be built fails outright, and stores nothing.
