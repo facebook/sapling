@@ -537,6 +537,10 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
+        // Commit-cloud sync uploads drafts here before touching workspace refs.
+        if let Err(err) = repo.repo_ctx().ensure_commit_cloud_writable() {
+            return Err(HttpError::e400(err).into());
+        }
         let changesets = request.changesets;
 
         let ctx = repo.ctx().clone();
@@ -607,6 +611,10 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
+        // Commit-cloud sync uploads drafts here before touching workspace refs.
+        if let Err(err) = repo.repo_ctx().ensure_commit_cloud_writable() {
+            return Err(HttpError::e400(err).into());
+        }
         let query = ectx.query();
         let bubble_id = query.bubble_id.map(BubbleId::new);
         let cs = request.changeset;

@@ -106,6 +106,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         authz
             .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "write")
             .await?;
+        self.ensure_commit_cloud_writable()?;
 
         Ok(self
             .repo()
@@ -367,6 +368,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         authz
             .require_commitcloud_operation(self.ctx(), self.repo(), &mut ctx, "maintainers")
             .await?;
+        self.ensure_commit_cloud_writable()?;
 
         Ok(self.repo().commit_cloud().share_workspace(&ctx).await?)
     }
@@ -383,6 +385,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         authz
             .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "write")
             .await?;
+        self.ensure_commit_cloud_writable()?;
 
         Ok(self
             .repo()
@@ -403,6 +406,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         authz
             .require_commitcloud_operation(self.ctx(), self.repo(), &mut ctx, "write")
             .await?;
+        self.ensure_commit_cloud_writable()?;
 
         Ok(self
             .repo()
@@ -475,6 +479,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         authz
             .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "write")
             .await?;
+        self.ensure_commit_cloud_writable()?;
 
         Ok(self
             .repo()

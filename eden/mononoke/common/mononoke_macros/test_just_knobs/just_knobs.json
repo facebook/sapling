@@ -146,7 +146,8 @@
     "scm/mononoke:use_fastlog_v2": false,
     "scm/mononoke:use_config_reconcile": false,
     "scm/mononoke:tier_repo_names_from_manifest": false,
-    "scm/mononoke:fail_closed_on_repo_config_parse_error": false
+    "scm/mononoke:fail_closed_on_repo_config_parse_error": false,
+    "scm/mononoke:reject_commit_cloud_writes_on_readonly_repos": true
   },
   "ints": {
     "scm/mononoke:sslv2_active_window_days": 0,

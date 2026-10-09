@@ -887,6 +887,29 @@ impl<R: RepoConfigRef> RepoContext<R> {
     }
 }
 
+impl<R: RepoConfigRef + RepoIdentityRef> RepoContext<R> {
+    /// Reject commit-cloud writes on structurally-readonly repos.
+    /// Config flag only, not the dynamic repo lock: drafts must keep
+    /// syncing during a push freeze.
+    pub fn ensure_commit_cloud_writable(&self) -> Result<(), MononokeError> {
+        if !justknobs::eval(
+            "scm/mononoke:reject_commit_cloud_writes_on_readonly_repos",
+            None,
+            Some(self.name()),
+        ) {
+            return Ok(());
+        }
+        if self.config().readonly.is_read_only() {
+            Err(MononokeError::InvalidRequest(format!(
+                "Commit-cloud writes are disabled on readonly repo {} (see scm/mononoke:reject_commit_cloud_writes_on_readonly_repos)",
+                self.config().repoid,
+            )))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 impl<R: MutableRenamesArc> RepoContext<R> {
     pub fn mutable_renames(&self) -> ArcMutableRenames {
         self.repo.mutable_renames_arc()
@@ -2319,6 +2342,10 @@ mod tests {
     use fixtures::Linear;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
+    use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -2365,6 +2392,48 @@ mod tests {
         let maybe_child = try_find_child(&ctx, &repo, ancestor, descendant, 100).await?;
         let child = maybe_child.ok_or_else(|| anyhow!("didn't find child"))?;
         assert_eq!(child, descendant);
+        Ok(())
+    }
+
+    async fn assert_commit_cloud_writable(fb: FacebookInit, knob_on: bool) -> Result<(), Error> {
+        let mut factory = test_repo_factory::TestRepoFactory::new(fb)?;
+        factory.with_config_override(|config| {
+            config.readonly = metaconfig_types::RepoReadOnly::ReadOnly("test".to_string());
+        });
+        let repo: Repo = factory.build().await?;
+        let repo_ctx = RepoContext::new_test(CoreContext::test_mock(fb), Arc::new(repo)).await?;
+        match (repo_ctx.ensure_commit_cloud_writable(), knob_on) {
+            (Err(MononokeError::InvalidRequest(msg)), true)
+                if msg.contains("Commit-cloud writes are disabled")
+                    && msg
+                        .contains("scm/mononoke:reject_commit_cloud_writes_on_readonly_repos") => {}
+            (Ok(()), false) => {}
+            (other, _) => panic!(
+                "knob_on={knob_on}: readonly repo must be rejected iff gate on, got: {other:?}"
+            ),
+        }
+
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let repo_ctx = RepoContext::new_test(CoreContext::test_mock(fb), Arc::new(repo)).await?;
+        assert!(
+            repo_ctx.ensure_commit_cloud_writable().is_ok(),
+            "knob_on={knob_on}: writable repo must always allow commit-cloud writes"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_commit_cloud_rejects_readonly_repo(fb: FacebookInit) -> Result<(), Error> {
+        for knob_on in [true, false] {
+            with_just_knobs_async(
+                JustKnobsInMemory::new(HashMap::from([(
+                    "scm/mononoke:reject_commit_cloud_writes_on_readonly_repos".to_string(),
+                    KnobVal::Bool(knob_on),
+                )])),
+                assert_commit_cloud_writable(fb, knob_on).boxed(),
+            )
+            .await?;
+        }
         Ok(())
     }
 }
