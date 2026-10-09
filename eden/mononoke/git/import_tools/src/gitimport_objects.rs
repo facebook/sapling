@@ -237,10 +237,8 @@ pub fn oid_to_sha1(oid: &gix_hash::oid) -> Result<hash::GitSha1, Error> {
 
 /// Determines which commits to import
 pub struct GitimportTarget {
-    // If both are empty, we'll grab all commits
-    // TODO: The None case is only used by Mononoke - see if we can get the Mononoke team
-    // to let us remove this and just store the ObjectId directly
-    wanted: Option<ObjectId>,
+    // None imports all refs; Some imports only these heads and their missing history.
+    wanted: Option<Vec<ObjectId>>,
     known: HashMap<ObjectId, ChangesetId>,
 }
 
@@ -254,6 +252,18 @@ impl GitimportTarget {
     }
 
     pub fn new(wanted: ObjectId, known: HashMap<ObjectId, ChangesetId>) -> Result<Self, Error> {
+        Self::try_new_with_heads(vec![wanted], known)
+    }
+
+    /// Import the union of these heads' histories, excluding known ancestors.
+    pub fn try_new_with_heads(
+        wanted: Vec<ObjectId>,
+        known: HashMap<ObjectId, ChangesetId>,
+    ) -> Result<Self, Error> {
+        anyhow::ensure!(
+            !wanted.is_empty(),
+            "An import target must contain at least one head"
+        );
         Ok(Self {
             wanted: Some(wanted),
             known,
@@ -266,10 +276,10 @@ impl GitimportTarget {
         &self.known
     }
 
-    /// Returns true if wanted commit is already imported
+    /// Returns true if every wanted commit is already imported.
     pub fn is_already_imported(&self) -> bool {
         if let Some(wanted) = self.wanted.as_ref() {
-            self.known.contains_key(wanted)
+            wanted.iter().all(|commit| self.known.contains_key(commit))
         } else {
             false
         }
@@ -307,7 +317,9 @@ impl GitimportTarget {
     async fn write_filter_list(&self, rev_list: &mut Child) -> Result<(), Error> {
         if let Some(wanted) = self.wanted.as_ref() {
             let mut stdin = rev_list.stdin.take().context("stdin not set up properly")?;
-            stdin.write_all(format!("{wanted}\n").as_bytes()).await?;
+            for commit in wanted {
+                stdin.write_all(format!("{commit}\n").as_bytes()).await?;
+            }
             for commit in self.known.keys() {
                 stdin.write_all(format!("^{commit}\n").as_bytes()).await?;
             }

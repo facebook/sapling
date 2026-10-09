@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+#testcases fullrepo incremental
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-git-lfs.sh"
   $ setup_common_config blob_files
@@ -16,7 +18,16 @@ But it's available on the separate lfs server
   laaaaaaaaaarge file
 
 Git Import
-  $ quiet_grep Uploading -- gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | sort
+#if incremental
+Incremental imports preserve the existing default-branch metadata used by bundle creation.
+  $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch > /dev/null
+  $ IMPORT_MODE=incremental
+  $ IMPORT_ARGS=(--include-refs refs/heads/master_bookmark)
+#else
+  $ IMPORT_MODE=full-repo
+  $ IMPORT_ARGS=()
+#endif
+  $ quiet_grep Uploading -- gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" "${IMPORT_ARGS[@]}" "$IMPORT_MODE" | sort
   [INFO] Uploading LFS large_file sha256:6c54a4de size:20
   [INFO] Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
 We store full file contents for non-LFS file

@@ -10,11 +10,14 @@ mod repo;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -42,6 +45,7 @@ use gix_hash::ObjectId;
 use import_tools::BackfillDerivation;
 use import_tools::BookmarkOperation;
 use import_tools::GitImportLfs;
+use import_tools::GitRef;
 use import_tools::GitRepoReader;
 use import_tools::GitUploader;
 use import_tools::GitimportPreferences;
@@ -65,6 +69,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
 use mononoke_api::RepoContext;
+use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -160,6 +165,9 @@ enum LfsServerUrlFormatArg {
 /// Mononoke Git Importer
 #[derive(Parser)]
 struct GitimportArgs {
+    /// Emit bounded phase names and elapsed milliseconds for import profiling.
+    #[clap(long)]
+    log_import_phases: bool,
     #[clap(long)]
     derive_hg: bool,
     /// This is used to suppress the printing of the potentially really long git Reference -> BonzaiID mapping.
@@ -310,6 +318,9 @@ struct GitimportArgs {
 enum GitimportSubcommand {
     /// Import all of the commits in this repo
     FullRepo,
+    /// Import missing history of the exact --include-refs selection, then reconcile
+    /// those refs. Does not update HEAD or support bookmark cleanup/reupload.
+    Incremental,
     /// Import all commits between <GIT_FROM> and <GIT_TO>
     GitRange {
         git_from: String,
@@ -331,11 +342,16 @@ enum GitimportSubcommand {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
+    let started = Instant::now();
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(MonitoringAppExtension {})
         .build::<GitimportArgs>()?;
 
-    let result = app.run_with_monitoring_and_logging(async_main, "gitimport", AliveService);
+    let result = app.run_with_monitoring_and_logging(
+        move |app| async_main(app, started),
+        "gitimport",
+        AliveService,
+    );
 
     if result.is_ok() {
         // Skip C++ singleton teardown which hangs for ~5 minutes due to
@@ -351,8 +367,71 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     result
 }
 
-async fn async_main(app: MononokeApp) -> Result<(), Error> {
+fn log_import_phase(enabled: bool, phase: &str, started: &mut Instant) {
+    if enabled {
+        let mut output = io::stdout().lock();
+        let _ = writeln!(
+            output,
+            "gitimport_phase phase={} duration_ms={}",
+            phase,
+            started.elapsed().as_millis()
+        );
+        let _ = output.flush();
+    }
+    *started = Instant::now();
+}
+
+async fn selected_incremental_refs(
+    path: &Path,
+    prefs: &GitimportPreferences,
+    include_refs: &[String],
+) -> Result<BTreeMap<GitRef, ObjectId>, Error> {
+    let refs = import_tools::read_git_refs(path, prefs).await?;
+    let selected = refs
+        .into_iter()
+        .filter(|(git_ref, _)| {
+            include_refs
+                .iter()
+                .any(|name| name.as_bytes() == git_ref.name)
+        })
+        .collect::<BTreeMap<_, _>>();
+    for name in include_refs {
+        let git_ref = selected
+            .keys()
+            .find(|git_ref| git_ref.name == name.as_bytes())
+            .with_context(|| format!("Selected ref does not exist: {name}"))?;
+        anyhow::ensure!(
+            !git_ref.metadata.target.is_content(),
+            "Incremental import does not support content ref {name}"
+        );
+        anyhow::ensure!(
+            !is_internal_only_ref(&git_ref.name) && name != "refs/heads/HEAD",
+            "Incremental import does not support internal ref {name}"
+        );
+    }
+    Ok(selected)
+}
+
+async fn async_main(app: MononokeApp, mut phase_started: Instant) -> Result<(), Error> {
     let args: GitimportArgs = app.args()?;
+    log_import_phase(args.log_import_phases, "startup", &mut phase_started);
+    let incremental = matches!(&args.subcommand, GitimportSubcommand::Incremental);
+    if incremental {
+        anyhow::ensure!(
+            !args.include_refs.is_empty(),
+            "Incremental import requires --include-refs"
+        );
+        anyhow::ensure!(
+            !args.cleanup_mononoke_bookmarks && !args.reupload_commits,
+            "Incremental import does not support bookmark cleanup or reupload"
+        );
+        anyhow::ensure!(
+            args.include_refs
+                .iter()
+                .all(|name| !args.exclude_refs.contains(name)),
+            "Incremental import cannot include and exclude the same ref"
+        );
+    }
 
     let ctx = {
         let mut metadata = metadata::Metadata::default();
@@ -392,6 +471,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     };
 
     let repo: Repo = app.open_repo(&args.repo_args).await?;
+    log_import_phase(args.log_import_phases, "open_repo", &mut phase_started);
     info!(
         "using repo \"{}\" repoid {:?}",
         repo.repo_identity().name(),
@@ -492,8 +572,23 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     let uploader = Arc::new(import_direct::DirectUploader::new(repo.clone(), reupload));
     let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
+    let incremental_refs = if incremental {
+        Some(selected_incremental_refs(path, &prefs, &args.include_refs).await?)
+    } else {
+        None
+    };
     let target = match args.subcommand {
         GitimportSubcommand::FullRepo => GitimportTarget::full(),
+        GitimportSubcommand::Incremental => {
+            let commits = incremental_refs
+                .as_ref()
+                .context("Incremental refs must be resolved before importing")?
+                .values()
+                .copied()
+                .collect::<Vec<_>>();
+            import_direct::missing_for_commits(&commits, &ctx, &repo, &prefs.git_command_path, path)
+                .await?
+        }
         GitimportSubcommand::GitRange { git_from, git_to } => {
             let from = git_from.parse()?;
             let to = git_to.parse()?;
@@ -544,17 +639,37 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             return Ok(());
         }
     };
+    log_import_phase(
+        args.log_import_phases,
+        "discover_commits",
+        &mut phase_started,
+    );
 
-    let gitimport_result: LinkedHashMap<_, _> =
+    let mut gitimport_result: LinkedHashMap<_, _> =
         import_tools::gitimport(&ctx, path, uploader.clone(), &target, &prefs)
             .await
             .context("gitimport failed")?;
+    log_import_phase(
+        args.log_import_phases,
+        "import_contents",
+        &mut phase_started,
+    );
+    if let Some(refs) = &incremental_refs {
+        let commits = refs.values().copied().collect::<Vec<_>>();
+        gitimport_result.extend(uploader.preload_uploaded_commits(&ctx, &commits).await?);
+        for commit in commits {
+            anyhow::ensure!(
+                gitimport_result.contains_key(&commit),
+                "Selected ref target was not imported: {commit}"
+            );
+        }
+    }
     if args.derive_hg {
         derive_hg(&ctx, &repo, gitimport_result.iter())
             .await
             .context("derive_hg failed")?;
     }
-    if !args.skip_head_symref {
+    if !args.skip_head_symref && !incremental {
         let symref_entry = import_tools::read_symref(HEAD_SYMREF, path, &prefs)
             .await
             .context("read_symrefs failed")?;
@@ -564,9 +679,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .context("failed to add symbolic ref entries")?;
     }
     if !args.suppress_ref_mapping || args.generate_bookmarks {
-        let refs = import_tools::read_git_refs(path, &prefs)
-            .await
-            .context("read_git_refs failed")?;
+        let refs = match incremental_refs {
+            Some(refs) => refs,
+            None => import_tools::read_git_refs(path, &prefs)
+                .await
+                .context("read_git_refs failed")?,
+        };
         let git_ref_mapping = refs
             .into_iter()
             // Filtered here rather than via --exclude-refs because
@@ -594,20 +712,39 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             }
         }
         if args.generate_bookmarks {
+            log_import_phase(args.log_import_phases, "resolve_refs", &mut phase_started);
             let authz = AuthorizationContext::new_bypass_access_control();
-            let repo_context: RepoContext<mononoke_api::Repo> = app
-                .open_managed_repo_arg(&args.repo_args)
+            let repos_manager = app
+                .open_managed_repo_arg::<mononoke_api::Repo>(&args.repo_args)
                 .await
-                .context("failed to create mononoke app")?
-                .make_mononoke_api()?
-                .repo_by_id(ctx.clone(), repo.repo_identity().id())
-                .await
-                .with_context(|| format!("failed to access repo: {}", repo.repo_identity().id()))?
-                .expect("repo exists")
+                .context("failed to create mononoke app")?;
+            let repo_context_builder = if incremental {
+                let bookmark_repo = repos_manager
+                    .repos()
+                    .get_by_id(repo.repo_identity().id().id())
+                    .context("selected repository was not initialized")?;
+                RepoContextBuilder::new(ctx.clone(), bookmark_repo, repos_manager.repos().clone())
+                    .await?
+            } else {
+                repos_manager
+                    .make_mononoke_api()?
+                    .repo_by_id(ctx.clone(), repo.repo_identity().id())
+                    .await
+                    .with_context(|| {
+                        format!("failed to access repo: {}", repo.repo_identity().id())
+                    })?
+                    .expect("repo exists")
+            };
+            let repo_context: RepoContext<mononoke_api::Repo> = repo_context_builder
                 .with_authorization_context(authz)
                 .build()
                 .await
                 .context("failed to build RepoContext")?;
+            log_import_phase(
+                args.log_import_phases,
+                "open_managed_repo",
+                &mut phase_started,
+            );
             let existing_tags = repo
                 .bonsai_tag_mapping()
                 .get_all_entries(&ctx)
@@ -832,6 +969,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             }
         };
     }
+    log_import_phase(args.log_import_phases, "publication", &mut phase_started);
     Ok(())
 }
 

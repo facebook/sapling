@@ -52,6 +52,18 @@ pub async fn missing_for_commit(
     git_command_path: &Path,
     repo_path: &Path,
 ) -> Result<GitimportTarget, Error> {
+    missing_for_commits(&[commit], ctx, hg_repo, git_command_path, repo_path).await
+}
+
+/// Find the already-imported frontier shared by all selected commit heads.
+pub async fn missing_for_commits(
+    commits: &[ObjectId],
+    ctx: &CoreContext,
+    hg_repo: &impl BonsaiGitMappingRef,
+    git_command_path: &Path,
+    repo_path: &Path,
+) -> Result<GitimportTarget, Error> {
+    anyhow::ensure!(!commits.is_empty(), "At least one commit must be selected");
     let reader = GitRepoReader::new(git_command_path, repo_path).await?;
     let ta = Instant::now();
 
@@ -59,7 +71,7 @@ pub async fn missing_for_commit(
     // We do this by doing a bfs search from the specified commit.
     let mut known = HashMap::<ObjectId, ChangesetId>::new();
     let mut visited = HashSet::new();
-    let mut q = vec![commit];
+    let mut q = commits.to_vec();
     while let Some(id) = q.pop() {
         if visited.insert(id) {
             if let Some(changeset) = commit_in_mononoke(ctx, hg_repo, &id).await? {
@@ -78,7 +90,7 @@ pub async fn missing_for_commit(
     let tb = Instant::now();
     debug!("Time to find missing commits {:?}", tb.duration_since(ta));
 
-    GitimportTarget::new(commit, known)
+    GitimportTarget::try_new_with_heads(commits.to_vec(), known)
 }
 
 async fn commit_in_mononoke(
