@@ -481,6 +481,13 @@ test worktree add - max-count limit enforced
   $ test -d $TESTTMP/limit3
   [1]
 
+test worktree add - max-count-message replaces the default limit message
+
+  $ setconfig 'worktree.max-count-message=too many worktrees; see https://example.com/worktrees'
+  $ sl worktree add $TESTTMP/limit3
+  abort: too many worktrees; see https://example.com/worktrees
+  [255]
+
 test worktree add - a slot reservation counts against max-count
 
   $ cd $TESTTMP

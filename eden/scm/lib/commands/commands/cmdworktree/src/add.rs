@@ -93,10 +93,14 @@ fn sapling_snapshot_checkout(sl_bin: &OsString, dest: &Path, id: &str) -> anyhow
 /// Error message shown when the per-repo linked-worktree limit is reached.
 ///
 /// Centralized so the two abort sites (the pre-lock fast-fail and the
-/// under-lock reservation check) stay in sync, and includes instructions for
-/// overriding the limit via user config.
-fn worktree_limit_reached_message(max_count: u64, repo_path: &Path, current: usize) -> String {
-    let repo_path = repo_path.display();
+/// under-lock reservation check) stay in sync. `worktree.max-count-message`
+/// replaces the default text, which includes instructions for overriding the
+/// limit via user config.
+fn worktree_limit_reached_message(repo: &Repo, max_count: u64, current: usize) -> String {
+    if let Some(message) = repo.config().get_nonempty("worktree", "max-count-message") {
+        return message.to_string();
+    }
+    let repo_path = repo.path().display();
     format!(
         "cannot create worktree: limit of {max_count} linked worktrees reached for repository '{repo_path}' (currently {current}); \
          set `worktree.max-count` in your user config (e.g. ~/.hgrc) to raise it, or 0 to disable the limit"
@@ -219,7 +223,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         if linked >= max_count as usize {
             abort!(
                 "{}",
-                worktree_limit_reached_message(max_count, repo.path(), linked)
+                worktree_limit_reached_message(repo, max_count, linked)
             );
         }
     }
@@ -328,7 +332,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
             if in_use >= max_count as usize {
                 abort!(
                     "{}",
-                    worktree_limit_reached_message(max_count, repo.path(), in_use)
+                    worktree_limit_reached_message(repo, max_count, in_use)
                 );
             }
             reservations.reservations.insert(

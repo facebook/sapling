@@ -129,6 +129,7 @@ pub fn doc() -> &'static str {
     Config options::
 
       worktree.max-count=N                     Hard limit on linked worktrees per repo group (0 = unlimited, the default)
+      worktree.max-count-message=TEXT          Message shown instead of the default when max-count is reached
       worktree.reservation-ttl=DURATION        How long an in-flight add holds a slot before it is treated as stale (default 1h)
       worktree.require-generated-path=true     Require path generator, disallow manual PATH
       worktree.path-generator=CMD              Shell command to generate PATH when omitted
