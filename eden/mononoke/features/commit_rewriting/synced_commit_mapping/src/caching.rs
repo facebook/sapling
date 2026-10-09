@@ -38,7 +38,6 @@ use crate::FetchedMappingEntry;
 use crate::SyncedCommitMapping;
 use crate::SyncedCommitMappingEntry;
 use crate::WorkingCopyEquivalence;
-use crate::sql::BATCH_TARGET_REPOS_KNOB;
 use crate::types::get_maybe_stale_many_targets_serially;
 
 /// Caching layer for SyncedCommitMapping. The cache works as a map from
@@ -358,10 +357,14 @@ impl SyncedCommitMapping for CachingSyncedCommitMapping {
         bcs_id: ChangesetId,
         target_repo_ids: &[RepositoryId],
     ) -> Result<HashMap<RepositoryId, Vec<FetchedMappingEntry>>, Error> {
-        // Gated here as well as in the inner mapping, because the batched cache
-        // lookup below is itself a behaviour change: off has to restore the
-        // per-target-repo lookups, not just the query their misses turn into.
-        if !justknobs::eval(BATCH_TARGET_REPOS_KNOB, None, None) {
+        // With the knob on, all target repos are looked up in the cache together and
+        // the misses are fetched from the inner mapping in batches. With it off, each
+        // target repo goes through the cache separately.
+        if !justknobs::eval(
+            "scm/mononoke:synced_commit_mapping_batch_target_repos",
+            None,
+            None,
+        ) {
             return get_maybe_stale_many_targets_serially(
                 self,
                 ctx,

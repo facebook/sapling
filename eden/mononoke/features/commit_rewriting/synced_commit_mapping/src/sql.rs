@@ -48,13 +48,6 @@ use crate::SyncedCommitSourceRepo;
 use crate::WorkingCopyEquivalence;
 use crate::types::get_maybe_stale_many_targets_serially;
 
-/// Kill switch for resolving many target repos in one query instead of one query
-/// per target repo. Off -> the previous per-target-repo behaviour. Read by every
-/// layer that batches on this axis, so that turning it off restores the old
-/// behaviour of the stack as a whole and not just of this one.
-pub(crate) const BATCH_TARGET_REPOS_KNOB: &str =
-    "scm/mononoke:synced_commit_mapping_batch_target_repos";
-
 define_stats! {
     prefix = "mononoke.synced_commit_mapping";
     gets: timeseries(Rate, Sum),
@@ -604,9 +597,16 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             return Ok(HashMap::new());
         }
 
-        // One target has nothing to batch, so keep the rendezvous, which can still
-        // coalesce it with concurrent lookups of the same repo pair.
-        if target_repo_ids.len() == 1 || !justknobs::eval(BATCH_TARGET_REPOS_KNOB, None, None) {
+        // With the knob on, several target repos are fetched in one query. Otherwise,
+        // and for a single target, each target goes through the rendezvous, which
+        // coalesces concurrent lookups of the same repo pair.
+        if target_repo_ids.len() == 1
+            || !justknobs::eval(
+                "scm/mononoke:synced_commit_mapping_batch_target_repos",
+                None,
+                None,
+            )
+        {
             return get_maybe_stale_many_targets_serially(
                 self,
                 ctx,
