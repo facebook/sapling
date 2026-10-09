@@ -10,7 +10,7 @@
     "vscode"
   ],
   "devDependencies": {
-    "@babel/runtime": "^7.21.0",
+    "@babel/runtime": "^7.26.10",
     "oxlint": "^1.58.0",
     "prettier": "3.9.4",
     "prettier-plugin-organize-imports": "^4.1.0",
