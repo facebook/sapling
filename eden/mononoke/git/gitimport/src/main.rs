@@ -6,6 +6,7 @@
  */
 
 mod repo;
+mod session;
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -75,6 +76,7 @@ use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::MononokeReposManager;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::TLSArgs;
 use mononoke_app::monitoring::AliveService;
@@ -94,6 +96,8 @@ use tracing::info;
 use tracing::warn;
 
 use crate::repo::Repo;
+use crate::session::SessionFailure;
+use crate::session::SessionResultExt;
 
 pub const HEAD_SYMREF: &str = "HEAD";
 // Retry policy for the one-shot bulk bookmark listing.
@@ -167,6 +171,10 @@ enum LfsServerUrlFormatArg {
 /// Mononoke Git Importer
 #[derive(Parser)]
 struct GitimportArgs {
+    /// Accept bounded serial requests on stdin while retaining runtime and client caches.
+    /// Only supported with the scoped incremental import mode.
+    #[clap(long)]
+    persistent: bool,
     /// Emit bounded phase names and elapsed milliseconds for import profiling.
     #[clap(long)]
     log_import_phases: bool,
@@ -465,6 +473,36 @@ async fn async_main(
 ) -> Result<(), Error> {
     let args: GitimportArgs = app.args()?;
     log_import_phase(args.log_import_phases, "startup", &mut phase_started);
+    if args.persistent {
+        return session::run(&app, &args, phase_started, lifecycle_timing)
+            .await
+            .map_err(session::sanitize_error);
+    }
+    run_import(
+        &app,
+        &args,
+        phase_started,
+        ImportExecution {
+            expected_refs: None,
+            lifecycle_timing,
+            session_manager: None,
+        },
+    )
+    .await
+}
+
+struct ImportExecution<'a> {
+    expected_refs: Option<&'a BTreeMap<String, String>>,
+    lifecycle_timing: &'a ImportLifecycleTiming,
+    session_manager: Option<&'a mut Option<MononokeReposManager<mononoke_api::Repo>>>,
+}
+
+async fn run_import(
+    app: &MononokeApp,
+    args: &GitimportArgs,
+    mut phase_started: Instant,
+    execution: ImportExecution<'_>,
+) -> Result<(), Error> {
     let incremental = matches!(&args.subcommand, GitimportSubcommand::Incremental);
     if incremental {
         anyhow::ensure!(
@@ -494,11 +532,13 @@ async fn async_main(
         // that this caller is permitted to bypass hooks.
         #[cfg(fbcode_build)]
         if args.bypass_all_hooks {
-            let local_idents = identity_ext::x509::get_locally_available_identities().context(
-                "Failed to read local certificate identities. \
+            let local_idents = identity_ext::x509::get_locally_available_identities()
+                .context(
+                    "Failed to read local certificate identities. \
                      --bypass-all-hooks requires valid identities from the machine's \
                      x509 certificate (THRIFT_TLS_CL_CERT_PATH)",
-            )?;
+                )
+                .session_context(args.persistent, SessionFailure::Identity)?;
             let identities = local_idents
                 .iter()
                 .map(MononokeIdentity::from_identity)
@@ -520,7 +560,10 @@ async fn async_main(
         ReuploadCommits::Never
     };
 
-    let repo: Repo = app.open_repo(&args.repo_args).await?;
+    let repo: Repo = app
+        .open_repo(&args.repo_args)
+        .await
+        .session_context(args.persistent, SessionFailure::OpenRepo)?;
     log_import_phase(args.log_import_phases, "open_repo", &mut phase_started);
     info!(
         "using repo \"{}\" repoid {:?}",
@@ -559,7 +602,7 @@ async fn async_main(
     // flag is documentary only; without it, the absence of `--lfs-server`
     // already selects internal mode.
     let lfs = if repo.repo_config().git_configs.git_lfs_interpret_pointers {
-        match (args.lfs_server, args.github_lfs_url) {
+        match (&args.lfs_server, &args.github_lfs_url) {
             (Some(lfs_server), None) => {
                 let url_format = match args.lfs_server_url_format {
                     LfsServerUrlFormatArg::Dewey => LfsServerUrlFormat::LegacyDewey,
@@ -568,33 +611,39 @@ async fn async_main(
                     },
                 };
                 GitImportLfs::new(
-                    lfs_server,
+                    lfs_server.clone(),
                     url_format,
                     args.allow_dangling_lfs_pointers,
                     args.lfs_import_max_attempts,
                     Some(args.lfs_concurrency),
-                    args.tls_args,
-                )?
+                    args.tls_args.clone(),
+                )
+                .session_context(args.persistent, SessionFailure::LfsSetup)?
             }
             (None, Some(github_lfs_url)) => {
-                let token_file = args.github_lfs_token_file.ok_or_else(|| {
-                    anyhow::format_err!(
-                        "--github-lfs-token-file is required when --github-lfs-url is set",
-                    )
-                })?;
+                let token_file = args
+                    .github_lfs_token_file
+                    .clone()
+                    .ok_or_else(|| {
+                        anyhow::format_err!(
+                            "--github-lfs-token-file is required when --github-lfs-url is set",
+                        )
+                    })
+                    .session_context(args.persistent, SessionFailure::LfsSetup)?;
                 let https_proxy = if args.github_lfs_no_https_proxy {
                     None
                 } else {
-                    Some(args.github_lfs_https_proxy)
+                    Some(args.github_lfs_https_proxy.clone())
                 };
                 GitImportLfs::new_github(
-                    github_lfs_url,
+                    github_lfs_url.clone(),
                     token_file,
                     https_proxy,
                     args.allow_dangling_lfs_pointers,
                     args.lfs_import_max_attempts,
                     Some(args.lfs_concurrency),
-                )?
+                )
+                .session_context(args.persistent, SessionFailure::LfsSetup)?
             }
             (None, None) => GitImportLfs::new_internal(
                 repo.repo_blobstore_arc().boxed(),
@@ -616,18 +665,32 @@ async fn async_main(
         ..Default::default()
     };
 
-    if let Some(path) = args.git_command_path {
+    if let Some(path) = &args.git_command_path {
         prefs.git_command_path = PathBuf::from(path);
     }
 
     let uploader = Arc::new(import_direct::DirectUploader::new(repo.clone(), reupload));
-    let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
+    let reader = Arc::new(
+        GitRepoReader::new(&prefs.git_command_path, path)
+            .await
+            .session_context(args.persistent, SessionFailure::ReadGit)?,
+    );
+    let selected_refs = match execution.expected_refs {
+        Some(refs) => refs.keys().cloned().collect::<Vec<_>>(),
+        None => args.include_refs.clone(),
+    };
     let incremental_refs = if incremental {
-        Some(selected_incremental_refs(path, &prefs, &args.include_refs).await?)
+        let refs = selected_incremental_refs(path, &prefs, &selected_refs)
+            .await
+            .session_context(args.persistent, SessionFailure::ReadGit)?;
+        if let Some(expected) = execution.expected_refs {
+            session::check_ref_snapshot(&refs, expected)?;
+        }
+        Some(refs)
     } else {
         None
     };
-    let target = match args.subcommand {
+    let target = match &args.subcommand {
         GitimportSubcommand::FullRepo => GitimportTarget::full(),
         GitimportSubcommand::Incremental => {
             let commits = incremental_refs
@@ -637,7 +700,8 @@ async fn async_main(
                 .copied()
                 .collect::<Vec<_>>();
             import_direct::missing_for_commits(&commits, &ctx, &repo, &prefs.git_command_path, path)
-                .await?
+                .await
+                .session_context(args.persistent, SessionFailure::DiscoverCommits)?
         }
         GitimportSubcommand::GitRange { git_from, git_to } => {
             let from = git_from.parse()?;
@@ -666,11 +730,11 @@ async fn async_main(
             return Ok(());
         }
         GitimportSubcommand::UploadTags { tag_sha1s } => {
-            stream::iter(tag_sha1s.into_iter().map(Ok))
+            stream::iter(tag_sha1s.iter().map(Ok))
                 .map_ok(|tag_sha1| {
                     cloned!(ctx, uploader, reader);
                     async move {
-                        let tag_sha1 = ObjectId::from_str(&tag_sha1).with_context(|| {
+                        let tag_sha1 = ObjectId::from_str(tag_sha1).with_context(|| {
                             format!("Invalid SHA1 hash provided for Git Tag {tag_sha1}")
                         })?;
                         upload_git_tag(&ctx, uploader.clone(), reader.clone(), &tag_sha1)
@@ -694,24 +758,37 @@ async fn async_main(
         "discover_commits",
         &mut phase_started,
     );
-
     let mut gitimport_result: LinkedHashMap<_, _> =
         import_tools::gitimport(&ctx, path, uploader.clone(), &target, &prefs)
             .await
+            .session_context(args.persistent, SessionFailure::ImportContents)
             .context("gitimport failed")?;
     log_import_phase(
         args.log_import_phases,
         "import_contents",
         &mut phase_started,
     );
+    if let Some(expected) = execution.expected_refs {
+        let current_refs = selected_incremental_refs(path, &prefs, &selected_refs)
+            .await
+            .session_context(args.persistent, SessionFailure::ReadGit)?;
+        session::check_ref_snapshot(&current_refs, expected)?;
+    }
     if let Some(refs) = &incremental_refs {
         let commits = refs.values().copied().collect::<Vec<_>>();
-        gitimport_result.extend(uploader.preload_uploaded_commits(&ctx, &commits).await?);
+        gitimport_result.extend(
+            uploader
+                .preload_uploaded_commits(&ctx, &commits)
+                .await
+                .session_context(args.persistent, SessionFailure::ResolveRefs)?,
+        );
         for commit in commits {
-            anyhow::ensure!(
-                gitimport_result.contains_key(&commit),
-                "Selected ref target was not imported: {commit}"
-            );
+            if !gitimport_result.contains_key(&commit) {
+                return Err(anyhow::anyhow!(
+                    "Selected ref target was not imported: {commit}"
+                ))
+                .session_context(args.persistent, SessionFailure::ResolveRefs);
+            }
         }
     }
     if args.derive_hg {
@@ -755,7 +832,8 @@ async fn async_main(
                     gitimport_result.get(&commit),
                 ))
             })
-            .collect::<anyhow::Result<Vec<_>>>()?;
+            .collect::<anyhow::Result<Vec<_>>>()
+            .session_context(args.persistent, SessionFailure::ResolveRefs)?;
         if !args.suppress_ref_mapping {
             for (_, name, changeset) in &git_ref_mapping {
                 info!("Ref: {:?}: {:?}", name, changeset);
@@ -764,17 +842,34 @@ async fn async_main(
         if args.generate_bookmarks {
             log_import_phase(args.log_import_phases, "resolve_refs", &mut phase_started);
             let authz = AuthorizationContext::new_bypass_access_control();
-            let repos_manager = app
-                .open_managed_repo_arg::<mononoke_api::Repo>(&args.repo_args)
-                .await
-                .context("failed to create mononoke app")?;
+            let mut one_shot_manager = None;
+            let manager_slot = execution.session_manager.unwrap_or(&mut one_shot_manager);
+            if let Some(manager) = manager_slot.as_ref() {
+                manager
+                    .add_repo(repo.repo_identity().name())
+                    .await
+                    .session_context(args.persistent, SessionFailure::OpenManagedRepo)?;
+            } else {
+                *manager_slot = Some(
+                    app.open_managed_repo_arg::<mononoke_api::Repo>(&args.repo_args)
+                        .await
+                        .context("failed to create mononoke app")
+                        .session_context(args.persistent, SessionFailure::OpenManagedRepo)?,
+                );
+            }
+            let repos_manager = manager_slot
+                .as_ref()
+                .context("selected repository manager was not initialized")
+                .session_context(args.persistent, SessionFailure::OpenManagedRepo)?;
             let repo_context_builder = if incremental {
                 let bookmark_repo = repos_manager
                     .repos()
                     .get_by_id(repo.repo_identity().id().id())
-                    .context("selected repository was not initialized")?;
+                    .context("selected repository was not initialized")
+                    .session_context(args.persistent, SessionFailure::OpenManagedRepo)?;
                 RepoContextBuilder::new(ctx.clone(), bookmark_repo, repos_manager.repos().clone())
-                    .await?
+                    .await
+                    .session_context(args.persistent, SessionFailure::OpenManagedRepo)?
             } else {
                 repos_manager
                     .make_mononoke_api()?
@@ -789,7 +884,8 @@ async fn async_main(
                 .with_authorization_context(authz)
                 .build()
                 .await
-                .context("failed to build RepoContext")?;
+                .context("failed to build RepoContext")
+                .session_context(args.persistent, SessionFailure::OpenManagedRepo)?;
             log_import_phase(
                 args.log_import_phases,
                 "open_managed_repo",
@@ -799,7 +895,8 @@ async fn async_main(
                 .bonsai_tag_mapping()
                 .get_all_entries(&ctx)
                 .await
-                .context("Failed to fetch bonsai tag mapping")?
+                .context("Failed to fetch bonsai tag mapping")
+                .session_context(args.persistent, SessionFailure::Publication)?
                 .into_iter()
                 .map(|entry| (entry.tag_name, entry.tag_hash))
                 .collect::<HashMap<_, _>>();
@@ -887,7 +984,8 @@ async fn async_main(
                 )
             })
             .await
-            .context("failed to list existing bookmarks")?;
+            .context("failed to list existing bookmarks")
+            .session_context(args.persistent, SessionFailure::Publication)?;
             let existing_bookmarks: BTreeMap<BookmarkKey, ChangesetId> = existing_bookmarks_list
                 .into_iter()
                 .map(|(bookmark, cs_id)| (bookmark.key().clone(), cs_id))
@@ -932,9 +1030,11 @@ async fn async_main(
                         uploader.clone(),
                         reader.clone(),
                     )
-                    .await?;
+                    .await
+                    .session_context(args.persistent, SessionFailure::Publication)?;
                 }
-                let bookmark_key = BookmarkKey::new(&name)?;
+                let bookmark_key = BookmarkKey::new(&name)
+                    .session_context(args.persistent, SessionFailure::Publication)?;
 
                 // Unchanged per snapshot: skip both read and write.
                 if existing_bookmarks.get(&bookmark_key) == Some(&final_changeset) {
@@ -944,14 +1044,16 @@ async fn async_main(
                 let old_changeset = repo_context
                     .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                     .await
-                    .with_context(|| format!("failed to resolve bookmark {name}"))?
+                    .with_context(|| format!("failed to resolve bookmark {name}"))
+                    .session_context(args.persistent, SessionFailure::Publication)?
                     .map(|context| context.id());
                 if old_changeset.as_ref() == Some(&final_changeset) {
                     continue;
                 }
                 let allow_non_fast_forward = true;
                 let operation =
-                    BookmarkOperation::new(bookmark_key, old_changeset, Some(final_changeset))?;
+                    BookmarkOperation::new(bookmark_key, old_changeset, Some(final_changeset))
+                        .session_context(args.persistent, SessionFailure::Publication)?;
                 set_bookmark(
                     &ctx,
                     &repo_context,
@@ -961,7 +1063,8 @@ async fn async_main(
                     BookmarkOperationErrorReporting::WithContext,
                     None,
                 )
-                .await?;
+                .await
+                .session_context(args.persistent, SessionFailure::Publication)?;
             }
             if args.cleanup_mononoke_bookmarks {
                 // From the full ref mapping, not the filtered generate set, else
@@ -1020,7 +1123,10 @@ async fn async_main(
         };
     }
     log_import_phase(args.log_import_phases, "publication", &mut phase_started);
-    let _ = lifecycle_timing.async_cleanup_started.set(phase_started);
+    let _ = execution
+        .lifecycle_timing
+        .async_cleanup_started
+        .set(phase_started);
     Ok(())
 }
 
