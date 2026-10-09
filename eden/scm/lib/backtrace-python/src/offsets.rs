@@ -23,3 +23,6 @@ pub const OFFSET_SP_CODE: Option<usize> = None;
 
 /// SP Offset to get the isize line_no.
 pub const OFFSET_SP_LINE_NO: Option<usize> = None;
+
+/// SP Offset to get the cookie bound to its address, code and line number.
+pub const OFFSET_SP_COOKIE: Option<usize> = None;

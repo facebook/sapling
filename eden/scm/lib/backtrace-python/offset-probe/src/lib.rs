@@ -38,12 +38,16 @@ pub const OFFSET_SP_CODE: Option<usize> = {:?};
 
 /// SP Offset to get the isize line_no.
 pub const OFFSET_SP_LINE_NO: Option<usize> = {:?};
+
+/// SP Offset to get the cookie bound to its address, code and line number.
+pub const OFFSET_SP_COOKIE: Option<usize> = {:?};
 "#,
         "g",
         offsets.and_then(|o| o.ip_offset.get()),
         offsets.and_then(|o| o.sp_frame.get()),
         offsets.and_then(|o| o.sp_code.get()),
         offsets.and_then(|o| o.sp_line_no.get()),
+        offsets.and_then(|o| o.sp_cookie.get()),
     )
 }
 
@@ -54,6 +58,7 @@ struct Offsets {
     sp_frame: OnceLock<usize>,
     sp_code: OnceLock<usize>,
     sp_line_no: OnceLock<usize>,
+    sp_cookie: OnceLock<usize>,
 }
 
 impl Offsets {
@@ -61,6 +66,7 @@ impl Offsets {
         self.ip_offset.get().is_some()
             && self.sp_code.get().is_some()
             && self.sp_line_no.get().is_some()
+            && self.sp_cookie.get().is_some()
     }
 }
 
@@ -115,7 +121,9 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
             }
         });
         // How many bytes the `Sapling_PyEvalFrameInner` stack might be at most?
-        const STACK_SIZE_THRESHOLD: usize = 48;
+        // Windows also needs room for argument home space and larger
+        // unoptimized stack frames.
+        const STACK_SIZE_THRESHOLD: usize = if cfg!(windows) { 128 } else { 64 };
 
         // On macOS, backtrace may resolve names either from DWARF frames (often
         // "Sapling_PyEvalFrame") or from Mach-O symtab fallback (raw nlist name
@@ -124,6 +132,7 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
             let sp = frame.sp() as usize;
             let (last_code, last_line_no) = evalframe_sys::get_last_code_line_no();
             let last_frame = evalframe_sys::get_last_frame();
+            let start = evalframe_sys::sapling_py_eval_frame_addr();
 
             for sp_offset in (0..=STACK_SIZE_THRESHOLD).step_by(std::mem::size_of::<usize>()) {
                 let stack_ptr = (sp + sp_offset) as *const libc::c_void;
@@ -131,13 +140,14 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
                 // so it is readable and aligned to at least `align_of::<usize>()`
                 // per the platform stack-pointer ABI; `sp_offset` is a multiple
                 // of `size_of::<usize>()` bounded by STACK_SIZE_THRESHOLD, so
-                // `stack_ptr` stays within Sapling_PyEvalFrame's small stack
-                // frame (where the probe values live) and remains word-aligned.
+                // `stack_ptr` remains word-aligned within the bounded scan
+                // of the wrapper and its caller's stack.
                 let value = unsafe { evalframe_sys::probe_read_stack_word(stack_ptr) };
 
                 let mut has_code = OFFSETS.sp_code.get().is_some();
                 let mut has_line_no = OFFSETS.sp_line_no.get().is_some();
                 let mut has_frame = OFFSETS.sp_frame.get().is_some();
+                let mut has_cookie = OFFSETS.sp_cookie.get().is_some();
 
                 if !has_code && value == last_code {
                     OFFSETS.sp_code.get_or_init(|| sp_offset);
@@ -151,9 +161,13 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
                     OFFSETS.sp_frame.get_or_init(|| sp_offset);
                     has_frame = true;
                 }
-                if has_code && has_line_no {
-                    // Got both SP offsets.
-                    let start = evalframe_sys::sapling_py_eval_frame_addr();
+                let cookie = start ^ (sp + sp_offset) ^ last_code ^ last_line_no as usize;
+                if !has_cookie && value == cookie {
+                    OFFSETS.sp_cookie.get_or_init(|| sp_offset);
+                    has_cookie = true;
+                }
+                if has_code && has_line_no && has_cookie {
+                    // Got all required SP offsets.
                     OFFSETS.ip_offset.get_or_init(|| ip - start);
                 }
             }

@@ -158,11 +158,16 @@ Sapling_PyEvalFrame(PyThreadState* tstate, PyFrame* f, int exc) {
   volatile ssize_t line_no = 0;
   volatile PyCodeObject* code =
       sapling_cext_evalframe_extract_code_lineno_from_frame(f, &line_no);
+  // Compute a checksum from the wrapper address, stack slot, and sampled
+  // values. The sampler checks this without dereferencing any Python object.
+  volatile uintptr_t cookie = (uintptr_t)Sapling_PyEvalFrame ^
+      (uintptr_t)&cookie ^ (uintptr_t)code ^ (uintptr_t)line_no;
   // Mark variables as used, and keep them on stack explicitly.
   // NO_OPT can still be useful to keep the frame pointer.
 #if !defined(_MSC_VER)
   __asm__ __volatile__("" : : "m"(code));
   __asm__ __volatile__("" : : "m"(line_no));
+  __asm__ __volatile__("" : : "m"(cookie));
 #endif
   return _PyEval_EvalFrameDefault(tstate, f, exc);
 }

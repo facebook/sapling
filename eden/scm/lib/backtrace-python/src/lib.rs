@@ -73,7 +73,8 @@ impl SupportedInfo {
         Self {
             os_arch: offsets::OFFSET_IP.is_some()
                 && offsets::OFFSET_SP_CODE.is_some()
-                && offsets::OFFSET_SP_LINE_NO.is_some(),
+                && offsets::OFFSET_SP_LINE_NO.is_some()
+                && offsets::OFFSET_SP_COOKIE.is_some(),
             c_evalframe: evalframe_sys::resolve_frame_is_supported(),
         }
     }
@@ -167,7 +168,10 @@ impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
 }
 
 fn extract_python_supplemental_info(sp: usize) -> Option<SupplementalInfo> {
-    if sp == 0 {
+    // The typed stack reads below require word alignment. Supported x86_64
+    // and aarch64 ABIs provide it (including x86_64's 8-mod-16 entry SP),
+    // but alignment alone does not prove the unwound SP belongs to this frame.
+    if sp == 0 || !sp.is_multiple_of(std::mem::align_of::<usize>()) {
         return None;
     }
 
@@ -182,6 +186,14 @@ fn extract_python_supplemental_info(sp: usize) -> Option<SupplementalInfo> {
     let code_obj = read_stack(offsets::OFFSET_SP_CODE?)?;
     let line_no = read_stack(offsets::OFFSET_SP_LINE_NO?)?;
     if !is_plausible_code_and_line(code_obj, line_no) {
+        return None;
+    }
+
+    let cookie_offset = offsets::OFFSET_SP_COOKIE?;
+    let cookie_addr = sp.checked_add(cookie_offset)?;
+    let expected_cookie =
+        evalframe_sys::sapling_py_eval_frame_addr() ^ cookie_addr ^ code_obj ^ line_no;
+    if read_stack(cookie_offset)? != expected_cookie {
         return None;
     }
 
@@ -207,7 +219,53 @@ fn is_plausible_code_and_line(code: usize, line_no: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use backtrace_ext::FrameDecision;
+    use backtrace_ext::SupplementalFrameResolver;
+
+    use super::PythonSupplementalFrameResolver;
+    use super::extract_python_supplemental_info;
     use super::is_plausible_code_and_line;
+    use super::offsets;
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_stack_cookie() {
+        if !evalframe_sys::resolve_frame_is_supported() {
+            return;
+        }
+        let word_size = std::mem::size_of::<usize>();
+        let [code_offset, line_offset, cookie_offset] = [
+            offsets::OFFSET_SP_CODE,
+            offsets::OFFSET_SP_LINE_NO,
+            offsets::OFFSET_SP_COOKIE,
+        ]
+        .map(|offset| offset.expect("runtime wrapper offsets should be probed") / word_size);
+        let mut stack = vec![0; code_offset.max(line_offset).max(cookie_offset) + 1];
+        let sp = stack.as_ptr() as usize;
+        let start = evalframe_sys::sapling_py_eval_frame_addr();
+        let code = 0x10000;
+        let line = 12;
+        stack[code_offset] = code;
+        stack[line_offset] = line;
+        stack[cookie_offset] = start ^ (sp + cookie_offset * word_size) ^ code ^ line;
+        assert_eq!(extract_python_supplemental_info(sp), Some([code, line]));
+
+        // Both changed values still pass the numerical plausibility checks.
+        stack[code_offset] += word_size;
+        assert!(extract_python_supplemental_info(sp).is_none());
+        stack[code_offset] = code;
+        stack[line_offset] += 1;
+        assert!(extract_python_supplemental_info(sp).is_none());
+        stack[line_offset] = line;
+
+        let copied_stack = stack.clone();
+        let copied_sp = copied_stack.as_ptr() as usize;
+        let ip = start + offsets::OFFSET_IP.expect("wrapper return IP should be probed");
+        assert!(matches!(
+            PythonSupplementalFrameResolver.maybe_extract_supplemental_info(ip, copied_sp),
+            FrameDecision::Keep
+        ));
+    }
 
     #[test]
     fn test_plausible_code_and_line() {
