@@ -22,10 +22,12 @@ class MonotonicCounter {
  public:
   MonotonicCounter(
       folly::StringPiece name,
-      fb303::ExportType,
-      fb303::ExportType) {
+      fb303::ExportType type1,
+      fb303::ExportType type2) {
     auto statMap = facebook::fb303::fbData->getStatMap();
     stat_ = statMap->getLockableStatNoExport(name);
+    statMap->exportStat(stat_, name, type1);
+    statMap->exportStat(stat_, name, type2);
     name_ = name;
   }
   void updateValue(std::chrono::seconds now, int64_t value) {
