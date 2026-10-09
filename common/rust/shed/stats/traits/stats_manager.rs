@@ -16,9 +16,17 @@ use crate::stat_types::BoxHistogram;
 use crate::stat_types::BoxLocalCounter;
 use crate::stat_types::BoxLocalHistogram;
 use crate::stat_types::BoxLocalTimeseries;
+use crate::stat_types::BoxSingletonCounter;
 
 pub trait StatsManagerFactory {
     fn create(&self) -> BoxStatsManager;
+
+    /// Create the singleton counter `name`, which backs `singleton_counter`
+    /// and `dynamic_singleton_counter` stats. `None` keeps the stats crate's
+    /// built-in singleton counter.
+    fn create_singleton_counter(&self, _name: &str) -> Option<BoxSingletonCounter> {
+        None
+    }
 }
 
 pub type BoxStatsManager = Box<dyn StatsManager + Send + Sync>;
