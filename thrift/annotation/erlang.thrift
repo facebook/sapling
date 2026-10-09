@@ -33,6 +33,14 @@ struct NameOverride {
 }
 
 /**
+ * Override the XML element/attribute name used by Erlang IQ parsing/generation.
+ **/
+@scope.Field
+struct XmlNameOverride {
+  1: string name;
+}
+
+/**
  * Choose the default value for an enum. The string must match one of the enum
  * identifiers.
  **/
