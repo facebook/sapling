@@ -70,7 +70,7 @@ impl Display for DurationForDisplay {
 #[derive(Clone)]
 pub enum LogMiddleware {
     TestFriendly,
-    Tracing { jk_name: String },
+    Tracing,
 }
 
 enum LogEntry {
@@ -83,13 +83,13 @@ impl LogMiddleware {
         Self::TestFriendly
     }
 
-    pub fn tracing(jk_name: String) -> Self {
-        Self::Tracing { jk_name }
+    pub fn tracing() -> Self {
+        Self::Tracing
     }
 }
 
-fn log_request_tracing(state: &mut State, entry: LogEntry, jk_name: &str) -> Option<()> {
-    if !justknobs::eval(jk_name, None, None) {
+fn log_request_tracing(state: &mut State, entry: LogEntry) -> Option<()> {
+    if !justknobs::eval("scm/mononoke:request_log_enabled", None, None) {
         return None;
     }
 
@@ -196,8 +196,8 @@ impl LogMiddleware {
             Self::TestFriendly => {
                 log_request_test_friendly(state, entry);
             }
-            Self::Tracing { jk_name } => {
-                log_request_tracing(state, entry, jk_name);
+            Self::Tracing => {
+                log_request_tracing(state, entry);
             }
         }
     }

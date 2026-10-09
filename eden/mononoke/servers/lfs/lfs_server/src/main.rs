@@ -260,7 +260,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let log_middleware = if args.test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
-        LogMiddleware::tracing("scm/mononoke:request_log_enabled".to_string())
+        LogMiddleware::tracing()
     };
 
     app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
