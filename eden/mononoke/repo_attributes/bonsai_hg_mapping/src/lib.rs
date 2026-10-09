@@ -31,7 +31,6 @@ use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -630,9 +629,9 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             };
         };
 
-        let res = timed_res.log_future_stats(ctx.scuba().clone(), "Get BonsaiHgMapping", None);
+        let res = timed_res.1;
 
-        // Log reads to the dedicated table (see `with_scuba`) too, so both
+        // Log reads to the dedicated table (see `with_scuba`), so both
         // sides of the mapping are attributable there.
         let mut scuba = self.scuba.clone();
         scuba.add_metadata(ctx.metadata());
