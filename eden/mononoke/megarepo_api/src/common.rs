@@ -1274,6 +1274,15 @@ pub async fn save_sync_target_config_in_changeset(
     Ok(())
 }
 
+/// The override set by a numeric knob, or `None` when the knob is 0 or less.
+fn override_from_knob<T: TryFrom<i64>>(value: i64) -> Option<T> {
+    if value > 0 {
+        T::try_from(value).ok()
+    } else {
+        None
+    }
+}
+
 pub(crate) async fn derive_all_types_locally(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -1286,9 +1295,10 @@ pub(crate) async fn derive_all_types_locally(
     )
     .max(1) as usize;
 
-    let override_batch_size = Some(
-        justknobs::get("scm/mononoke:megarepo_override_derivation_batch_size", None).max(1) as u64,
-    );
+    let override_batch_size = override_from_knob(justknobs::get(
+        "scm/mononoke:megarepo_override_derivation_batch_size",
+        None,
+    ));
 
     for chunk in csids.chunks(num_heads_to_derive_at_once) {
         retry(
@@ -1339,13 +1349,10 @@ pub(crate) async fn derive_all_types_remotely(
     )
     .max(1) as usize;
 
-    let override_concurrency = Some(
-        justknobs::get(
-            "scm/mononoke:megarepo_override_remote_derivation_concurrency",
-            None,
-        )
-        .max(1) as usize,
-    );
+    let override_concurrency = override_from_knob(justknobs::get(
+        "scm/mononoke:megarepo_override_remote_derivation_concurrency",
+        None,
+    ));
 
     let manager = repo
         .repo_derived_data()
@@ -1415,6 +1422,18 @@ mod test {
     use mononoke_macros::mononoke;
 
     use super::*;
+
+    #[mononoke::test]
+    fn test_override_from_knob() {
+        assert_eq!(override_from_knob::<u64>(0), None, "0 means no override");
+        assert_eq!(
+            override_from_knob::<u64>(-3),
+            None,
+            "negative means no override"
+        );
+        assert_eq!(override_from_knob::<u64>(1), Some(1));
+        assert_eq!(override_from_knob::<usize>(20), Some(20));
+    }
 
     #[mononoke::test]
     fn test_create_relative_symlink() -> Result<(), Error> {
