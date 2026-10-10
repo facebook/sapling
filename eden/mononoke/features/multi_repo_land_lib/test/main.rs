@@ -380,6 +380,111 @@ async fn test_resolve_bookmarks_cross_repo_empty(fb: FacebookInit) -> Result<()>
     Ok(())
 }
 
+/// A provider that can load a served repo does so on the first miss; a load
+/// failure is that entry's error and leaves the rest of the batch intact.
+struct LateRepos {
+    loaded: MononokeRepos<TestRepo>,
+    pending: std::sync::Mutex<Option<(String, i32, TestRepo)>>,
+    failing: String,
+}
+
+impl RepoProvider<TestRepo> for LateRepos {
+    fn get_by_name(&self, name: &str) -> Option<Arc<TestRepo>> {
+        self.loaded.get_by_name(name)
+    }
+
+    fn get_or_load<'a>(
+        &'a self,
+        name: &'a str,
+    ) -> futures::future::BoxFuture<'a, Result<Option<Arc<TestRepo>>>>
+    where
+        TestRepo: 'a,
+    {
+        use futures::FutureExt;
+        async move {
+            if name == self.failing {
+                anyhow::bail!("storage is not provisioned");
+            }
+            let pending = self
+                .pending
+                .lock()
+                .unwrap()
+                .take_if(|(n, _, _)| n.as_str() == name);
+            if let Some((n, id, repo)) = pending {
+                self.loaded.add(&n, id, repo);
+            }
+            Ok(self.loaded.get_by_name(name))
+        }
+        .boxed()
+    }
+}
+
+#[mononoke::fbinit_test]
+async fn test_resolve_bookmarks_cross_repo_loads_a_served_repo_on_first_use(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut factory = TestRepoFactory::new(fb)?;
+    let repo_a: TestRepo = factory
+        .with_id(RepositoryId::new(0))
+        .with_name("repo_a")
+        .build()
+        .await?;
+    let late: TestRepo = factory
+        .with_id(RepositoryId::new(1))
+        .with_name("late")
+        .build()
+        .await?;
+    let head = CreateCommitContext::new_root(&ctx, &late)
+        .add_file("f", "late")
+        .commit()
+        .await?;
+    bookmark(&ctx, &late, "main")
+        .create_publishing(head)
+        .await?;
+    let sha = GitSha1::from_byte_array([0xCC; 20]);
+    late.bonsai_git_mapping()
+        .add(&ctx, BonsaiGitMappingEntry::new(sha, head))
+        .await?;
+
+    let loaded: MononokeRepos<TestRepo> = MononokeRepos::new();
+    loaded.add("repo_a", 0, repo_a);
+    let provider = LateRepos {
+        loaded,
+        pending: std::sync::Mutex::new(Some(("late".to_string(), 1, late))),
+        failing: "broken".to_string(),
+    };
+    let entries = vec![
+        ResolveEntry {
+            repo_name: "late".to_string(),
+            bookmark_name: "main".to_string(),
+        },
+        ResolveEntry {
+            repo_name: "broken".to_string(),
+            bookmark_name: "main".to_string(),
+        },
+        ResolveEntry {
+            repo_name: "ghost".to_string(),
+            bookmark_name: "main".to_string(),
+        },
+    ];
+
+    let results = resolve_bookmarks_cross_repo(&ctx, &provider, &entries).await?;
+    assert_eq!(results[0].outcome, ResolveOutcome::Resolved(sha));
+    assert_eq!(
+        results[1].outcome,
+        ResolveOutcome::LoadFailed(
+            "repo broken failed to load: storage is not provisioned".to_string()
+        ),
+    );
+    assert_eq!(
+        results[2].outcome,
+        ResolveOutcome::Error("unknown repo: ghost".to_string()),
+    );
+    assert!(provider.get_by_name("late").is_some(), "the load stuck");
+    Ok(())
+}
+
 /// With no parent override, the generated commit is built on the bookmark head,
 /// `old_cs` is that head (the CAS baseline), and the manifest file is the only
 /// change. A `MappedGitCommitId` is pre-derived.

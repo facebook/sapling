@@ -226,6 +226,8 @@ pub enum ResolveOutcome {
     Resolved(GitSha1),
     /// Human-readable reason resolution failed.
     Error(String),
+    /// The repo is served but did not build; the reason is the load error.
+    LoadFailed(String),
 }
 
 /// Per-entry result; results are returned in input order.
@@ -262,8 +264,8 @@ where
     let mut any_repo: Option<Arc<R>> = None;
 
     for (idx, entry) in entries.iter().enumerate() {
-        match provider.get_by_name(&entry.repo_name) {
-            Some(repo) => {
+        match provider.get_or_load(&entry.repo_name).await {
+            Ok(Some(repo)) => {
                 let repo_id = repo.repo_identity().id();
                 if any_repo.is_none() {
                     any_repo = Some(repo);
@@ -275,13 +277,27 @@ where
                     entry.bookmark_name.clone(),
                 ));
             }
-            None => {
+            Ok(None) => {
                 if let Some(slot) = results.get_mut(idx) {
                     *slot = Some(ResolveResult {
                         repo_name: entry.repo_name.clone(),
                         bookmark_name: entry.bookmark_name.clone(),
                         outcome: ResolveOutcome::Error(format!(
                             "unknown repo: {}",
+                            entry.repo_name
+                        )),
+                    });
+                }
+            }
+            // A served repo that failed to load is this entry's error, not the
+            // batch's: the other members still resolve.
+            Err(e) => {
+                if let Some(slot) = results.get_mut(idx) {
+                    *slot = Some(ResolveResult {
+                        repo_name: entry.repo_name.clone(),
+                        bookmark_name: entry.bookmark_name.clone(),
+                        outcome: ResolveOutcome::LoadFailed(format!(
+                            "repo {} failed to load: {e:#}",
                             entry.repo_name
                         )),
                     });

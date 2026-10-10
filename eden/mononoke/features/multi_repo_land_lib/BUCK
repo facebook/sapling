@@ -42,6 +42,7 @@ rust_unittest(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
         ":multi_repo_land_lib",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
