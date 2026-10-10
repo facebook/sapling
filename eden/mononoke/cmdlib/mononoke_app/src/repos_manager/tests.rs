@@ -32,6 +32,7 @@ use metaconfig_types::ShardedService;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
 use repos::RawAllowlistIdentity;
 use repos::RawBlobstoreConfig;
@@ -47,7 +48,9 @@ use tokio::sync::Notify;
 
 use super::MononokeConfigUpdateReceiver;
 use super::ReconcileTrigger;
+use super::RepoFilter;
 use super::apply_generation;
+use super::get_or_load_repo_in;
 use super::lazy_for_service;
 use super::memoized_spec_hash;
 use super::reconcile_loop;
@@ -781,4 +784,181 @@ fn test_unsharded_is_independent_of_the_sharded_map() {
         &repo_config,
         Some(ShardedService::MononokeGitServer)
     ));
+}
+
+// --- get_or_load_repo: a tier member asked for after startup ---
+
+/// Hands out `42` for any name and counts the asks.
+#[derive(Default)]
+struct CountingLoader {
+    loads: AtomicUsize,
+}
+
+impl mononoke_repos::RepoLoader<i32> for CountingLoader {
+    fn load(&self, _repo_name: String) -> futures::future::BoxFuture<'static, anyhow::Result<i32>> {
+        use futures::FutureExt;
+        self.loads.fetch_add(1, Ordering::SeqCst);
+        async { Ok(42) }.boxed()
+    }
+}
+
+fn spec_json(repo_id: i32, name: &str, enabled: bool) -> String {
+    let spec = repos::RepoSpec {
+        repo_id,
+        repo_name: name.to_string(),
+        enabled,
+        default_commit_identity_scheme: repos::RawCommitIdentityScheme::GIT,
+        repo_config: Some(repos::RawRepoConfig {
+            storage_config: Some(STORAGE.to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    serde_json::to_string(&spec).unwrap()
+}
+
+/// Manifest-mode configs over `names` (ids 1..), with specs staged only for
+/// `with_specs` (name, enabled), plus a lazy collection over a counting loader.
+fn on_demand_fixture(
+    names: &[&str],
+    with_specs: &[(&str, bool)],
+) -> (
+    Arc<MononokeRepos<i32>>,
+    Arc<CountingLoader>,
+    Arc<MononokeConfigs>,
+    ConfigStore,
+) {
+    let entries: Vec<(&str, String)> = names.iter().map(|n| (*n, git_path(n))).collect();
+    let mut manifest: TierManifest = serde_json::from_str(&manifest_json(&entries)).unwrap();
+    for (i, entry) in manifest.repos.iter_mut().enumerate() {
+        entry.repo_id = i as i32 + 1;
+    }
+    let source = Arc::new(TestSource::new());
+    source.insert_config(
+        MANIFEST_PATH,
+        &serde_json::to_string(&manifest).unwrap(),
+        ModificationTime::UnixTimestamp(0),
+    );
+    for (name, enabled) in with_specs {
+        let repo_id = names.iter().position(|n| n == name).unwrap() as i32 + 1;
+        source.insert_config(
+            &git_path(name),
+            &spec_json(repo_id, name, *enabled),
+            ModificationTime::UnixTimestamp(0),
+        );
+    }
+    let store = ConfigStore::new(source, Duration::from_secs(3600), None);
+    let configs = Arc::new(
+        MononokeConfigs::new(
+            TIER_CONFIG_PATH,
+            &store,
+            Some(MANIFEST_PATH),
+            tokio::runtime::Handle::current(),
+        )
+        .expect("manifest mode constructs"),
+    );
+    let loader = Arc::new(CountingLoader::default());
+    let repos = Arc::new(MononokeRepos::new_lazy(loader.clone()));
+    (repos, loader, configs, store)
+}
+
+#[mononoke::test]
+async fn test_get_or_load_repo_builds_an_enabled_member_once() {
+    let (repos, loader, configs, _store) = on_demand_fixture(&["a"], &[("a", true)]);
+    assert!(repos.get_by_name("a").is_none(), "not loaded at startup");
+    let repo = get_or_load_repo_in(&repos, &configs, None, "a")
+        .await
+        .unwrap()
+        .expect("built on first use");
+    assert_eq!(*repo, 42);
+    assert_eq!(
+        repos.get_by_id(1).as_deref(),
+        Some(&42),
+        "placeholder carried the manifest id"
+    );
+    let again = get_or_load_repo_in(&repos, &configs, None, "a")
+        .await
+        .unwrap()
+        .expect("served");
+    assert!(
+        Arc::ptr_eq(&repo, &again),
+        "the resident repo is returned untouched"
+    );
+    assert_eq!(loader.loads.load(Ordering::SeqCst), 1, "built once");
+}
+
+#[mononoke::test]
+async fn test_get_or_load_repo_outside_the_manifest_is_unknown_without_reading_a_spec() {
+    let (repos, loader, configs, _store) = on_demand_fixture(&["a"], &[]);
+    assert!(
+        get_or_load_repo_in(&repos, &configs, None, "ghost")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        repos.iter_names().next().is_none(),
+        "no placeholder was registered"
+    );
+    assert_eq!(loader.loads.load(Ordering::SeqCst), 0);
+}
+
+#[mononoke::test]
+async fn test_get_or_load_repo_disabled_member_is_unknown() {
+    let (repos, loader, configs, _store) = on_demand_fixture(&["a"], &[("a", false)]);
+    assert!(
+        get_or_load_repo_in(&repos, &configs, None, "a")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(repos.iter_names().next().is_none());
+    assert_eq!(loader.loads.load(Ordering::SeqCst), 0);
+}
+
+#[mononoke::test]
+async fn test_get_or_load_repo_member_without_a_readable_spec_is_an_error() {
+    let (repos, loader, configs, _store) = on_demand_fixture(&["a"], &[]);
+    let err = match get_or_load_repo_in(&repos, &configs, None, "a").await {
+        Err(e) => e,
+        Ok(_) => panic!("in the manifest but its config does not load"),
+    };
+    assert!(
+        format!("{err:#}").contains("loading config for tier repo a"),
+        "{err:#}"
+    );
+    assert!(
+        repos.iter_names().next().is_none(),
+        "no placeholder for an unreadable member"
+    );
+    assert_eq!(loader.loads.load(Ordering::SeqCst), 0);
+}
+
+#[mononoke::test]
+async fn test_get_or_load_repo_filtered_out_member_is_unknown() {
+    let (repos, loader, configs, _store) = on_demand_fixture(&["a"], &[("a", true)]);
+    let filter: RepoFilter = Arc::new(|name: &str| name != "a");
+    assert!(
+        get_or_load_repo_in(&repos, &configs, Some(&filter), "a")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(loader.loads.load(Ordering::SeqCst), 0);
+}
+
+#[mononoke::test]
+async fn test_get_or_load_repo_is_a_no_op_without_a_loader() {
+    let (_, _, configs, _store) = on_demand_fixture(&["a"], &[("a", true)]);
+    let eager: MononokeRepos<i32> = MononokeRepos::new();
+    assert!(
+        get_or_load_repo_in(&eager, &configs, None, "a")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        eager.iter_names().next().is_none(),
+        "no placeholder without a loader"
+    );
 }

@@ -759,12 +759,14 @@ impl MononokeApp {
                 None
             }
         });
-        self.open_named_managed_repos_with_redaction_disabled(
-            repo_names,
-            service_name,
-            redaction_disabled,
-        )
-        .await
+        let mgr = self
+            .open_named_managed_repos_with_redaction_disabled(
+                repo_names,
+                service_name,
+                redaction_disabled,
+            )
+            .await?;
+        Ok(mgr.with_repo_filter(repo_filter))
     }
 
     /// Enforce or log per-repo config parse failures seen at startup. When the

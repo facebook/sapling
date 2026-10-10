@@ -61,6 +61,12 @@ impl<R> MononokeRepos<R> {
         }
     }
 
+    /// Whether this collection can build a placeholder on request, i.e. was
+    /// constructed with a loader.
+    pub fn loads_on_demand(&self) -> bool {
+        self.loader.is_some()
+    }
+
     /// Get the repo corresponding to the repo-name if the repo
     /// has been loaded for the service/command, else return None.
     pub fn get_by_name(&self, repo_name: &str) -> Option<Arc<R>> {

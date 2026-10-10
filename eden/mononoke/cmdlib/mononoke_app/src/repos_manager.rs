@@ -79,6 +79,10 @@ define_stats! {
     // assignment via add_repo or add_repo_for_service, or on first request via
     // ConfigDefinedRepoLoader for a repo assigned unbuilt.
     add_repo_failed: timeseries(Sum, Count),
+    // A tier member a request asked for after startup, built on that request
+    // (see `get_or_load_repo`), or that failed to load for it.
+    repo_loaded_on_demand: timeseries(Rate, Sum),
+    repo_load_on_demand_failed: timeseries(Rate, Sum),
     reconcile_applied: timeseries(Average, Sum, Count),
     reconcile_dropped: timeseries(Average, Sum, Count),
     reconcile_failed_repos: timeseries(Average, Sum, Count),
@@ -116,7 +120,13 @@ pub struct MononokeReposManager<Repo> {
     reconcile_driver: Arc<ReconcileDriver<Repo>>,
     // Background reconcile loop; aborted on Drop. None without split-loading.
     reconcile_loop_handle: Option<JoinHandle<()>>,
+    // The startup `--filter-repos` predicate, so a request-time load never
+    // widens the repo set the task was started with.
+    repo_filter: Option<RepoFilter>,
 }
+
+/// The startup repo filter, as the app environment carries it.
+pub type RepoFilter = Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>;
 
 /// Whether `service` should defer building this repo until its first request.
 ///
@@ -263,6 +273,7 @@ impl<Repo> MononokeReposManager<Repo> {
             names_from_manifest,
             reconcile_driver,
             reconcile_loop_handle: None,
+            repo_filter: None,
         };
         mgr.populate_repos(repo_names).await?;
         let update_receiver =
@@ -383,6 +394,37 @@ impl<Repo> MononokeReposManager<Repo> {
         self.configs.remove_repo_config_handle(repo_name);
     }
 
+    pub(crate) fn with_repo_filter(mut self, repo_filter: Option<RepoFilter>) -> Self {
+        self.repo_filter = repo_filter;
+        self
+    }
+
+    /// The repo, built on this request if it joined the tier after startup.
+    ///
+    /// Request-time counterpart of the ShardManager assignment path, for a
+    /// service that opened its whole tier: a name that is in the live tier
+    /// manifest but not in the collection is registered as a placeholder and
+    /// built through the collection's loader. The slot provides single-flight,
+    /// cancellation safety and the failed-build hold; eager startup is
+    /// unchanged, and placeholders exist only for names a request asked for.
+    ///
+    /// `None` when the repo is not served: outside the tier manifest (no
+    /// config is read for it), disabled, excluded by the startup repo filter,
+    /// or the collection has no loader. A config that does not load, or a
+    /// failed build, is this call's error.
+    pub async fn get_or_load_repo(&self, repo_name: &str) -> Result<Option<Arc<Repo>>>
+    where
+        Repo: Send + Sync + 'static,
+    {
+        get_or_load_repo_in(
+            &self.repos,
+            &self.configs,
+            self.repo_filter.as_ref(),
+            repo_name,
+        )
+        .await
+    }
+
     /// Run one reconciliation pass now. Delegates to the driver. No-op unless the
     /// `use_config_reconcile` killswitch is on (read every call).
     pub async fn reconcile(&self) -> Result<()>
@@ -492,6 +534,69 @@ fn retain_live_cache_entries<T>(
 ) {
     let mut cache = cache.lock().expect("spec_hash_cache poisoned");
     cache.retain(|name, _| live.contains(name.as_str()));
+}
+
+/// Body of [`MononokeReposManager::get_or_load_repo`], over the pieces it
+/// needs, so the decision is testable without a `RepoFactory`.
+pub(crate) async fn get_or_load_repo_in<R>(
+    repos: &MononokeRepos<R>,
+    configs: &MononokeConfigs,
+    repo_filter: Option<&RepoFilter>,
+    repo_name: &str,
+) -> Result<Option<Arc<R>>>
+where
+    R: Send + Sync + 'static,
+{
+    if let Some(repo) = repos.get_by_name(repo_name) {
+        return Ok(Some(repo));
+    }
+    if !repos.loads_on_demand() {
+        return Ok(None);
+    }
+    if repo_filter.is_some_and(|filter| !filter(repo_name)) {
+        return Ok(None);
+    }
+    // Tier membership is the authorisation boundary: nothing outside the
+    // manifest is read, let alone built. Misses are rare, so no cache.
+    let Some(repo_id) = configs.manifest().and_then(|manifest| {
+        manifest
+            .repos
+            .iter()
+            .find(|entry| entry.repo_name == repo_name)
+            .map(|entry| entry.repo_id)
+    }) else {
+        return Ok(None);
+    };
+    let repo_config = match configs.get_or_load_repo_config(repo_name) {
+        Ok(repo_config) => repo_config,
+        Err(e) => {
+            STATS::repo_load_on_demand_failed.add_value(1);
+            warn!(
+                "Tier repo {} is in the manifest but its config did not load: {:#}",
+                repo_name, e
+            );
+            return Err(e).with_context(|| format!("loading config for tier repo {repo_name}"));
+        }
+    };
+    if !repo_config.enabled {
+        return Ok(None);
+    }
+
+    // No-op if a concurrent request or the reconcile loop got there first.
+    repos.add_placeholder(repo_name, repo_id);
+    match repos.get(repo_name).await {
+        Ok(Some(repo)) => {
+            STATS::repo_loaded_on_demand.add_value(1);
+            info!("Loaded tier repo on demand: {}", repo_name);
+            Ok(Some(repo))
+        }
+        Ok(None) => Ok(None),
+        Err(e) => {
+            STATS::repo_load_on_demand_failed.add_value(1);
+            warn!("Tier repo {} did not build on demand: {:#}", repo_name, e);
+            Err(e.context(format!("loading tier repo {repo_name} on demand")))
+        }
+    }
 }
 
 /// Adapts `MononokeConfigs` to the `config_reconcile::ConfigSource` trait.
