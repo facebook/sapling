@@ -60,7 +60,7 @@ export type FieldConfig = {
   key: 'Title' | string;
   /** Codicon to show next to this field */
   icon: string;
-  /** Whether this field may be rendered from markup into html */
+  /** Whether this field is shown as rendered markup when not editing */
   isRenderableMarkup?: boolean;
 } & (
   | {

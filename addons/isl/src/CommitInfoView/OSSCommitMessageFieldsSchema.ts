@@ -9,5 +9,5 @@ import type {FieldConfig} from './types';
 
 export const OSSCommitMessageFieldSchema: Array<FieldConfig> = [
   {key: 'Title', type: 'title', icon: 'milestone'},
-  {key: 'Description', type: 'textarea', icon: 'note'},
+  {key: 'Description', type: 'textarea', icon: 'note', isRenderableMarkup: true},
 ];
