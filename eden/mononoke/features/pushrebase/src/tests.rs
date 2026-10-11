@@ -73,6 +73,20 @@ fn init_just_knobs_for_test() {
         "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
         "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
         "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
+        "scm/mononoke:pushrebase_replay_from_fork_point".to_string() => KnobVal::Int(0),
+    }));
+}
+
+/// The standard map plus the fork-point replay mode and the merge limits the
+/// replay's content comparison reads.
+fn init_just_knobs_with_replay(mode: i64) {
+    override_just_knobs(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(false),
+        "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
+        "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
+        "scm/mononoke:pushrebase_replay_from_fork_point".to_string() => KnobVal::Int(mode),
+        "scm/mononoke:pushrebase_max_merge_conflicts".to_string() => KnobVal::Int(100),
+        "scm/mononoke:pushrebase_max_merge_file_size".to_string() => KnobVal::Int(1_000_000),
     }));
 }
 
@@ -698,10 +712,197 @@ async fn rebase_with_baseline_rejects_a_non_ancestor_baseline(
         .await?;
 
     // `base` precedes the head but not the stack.
-    let res =
-        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), base, stack, current)
-            .await;
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        base,
+        stack,
+        current,
+        None,
+    )
+    .await;
     assert_eq!(rejection_of(res), BaselineRejection::NotAncestorOfHead);
+    Ok(())
+}
+
+fn names_parent(rejection: &BaselineRejection, parent: ChangesetId) -> bool {
+    matches!(rejection, BaselineRejection::ParentLandedWithChanges(cs_id) if *cs_id == parent)
+}
+
+/// Stands in for an SCM-specific source: answers the same candidates for any
+/// baseline.
+struct FixedCandidates(Vec<ChangesetId>);
+
+#[async_trait]
+impl BaselineCandidateSource for FixedCandidates {
+    fn name(&self) -> &'static str {
+        "fixed"
+    }
+
+    async fn candidates_for(
+        &self,
+        _ctx: &CoreContext,
+        _baseline: ChangesetId,
+        _onto: ChangesetId,
+        _fork_point: ChangesetId,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        Ok(self.0.clone())
+    }
+}
+
+struct CandidateHop {
+    v1: ChangesetId,
+    child: ChangesetId,
+    landed: ChangesetId,
+    head: ChangesetId,
+}
+
+/// The server changed line 1 and V1 line 5; V1 landed as L with both. The
+/// head then changed line 5 again, so a replay against the head cannot drop
+/// V1: only a candidate proving V1 against L can place the child.
+async fn candidate_hop(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+) -> Result<CandidateHop, Error> {
+    let fork = CreateCommitContext::new_root(ctx, repo)
+        .add_file("shared", "1\n2\n3\n4\n5\n")
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(ctx, repo, vec![fork])
+        .add_file("shared", "one\n2\n3\n4\n5\n")
+        .commit()
+        .await?;
+    let v1 = CreateCommitContext::new(ctx, repo, vec![fork])
+        .add_file("shared", "1\n2\n3\n4\nfive\n")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(ctx, repo, vec![v1])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    let landed = CreateCommitContext::new(ctx, repo, vec![server])
+        .add_file("shared", "one\n2\n3\n4\nfive\n")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(ctx, repo, vec![landed])
+        .add_file("shared", "one\n2\n3\n4\nFIVE\n")
+        .commit()
+        .await?;
+    derive_content_manifests(ctx, repo, &[fork, landed, head]).await?;
+    Ok(CandidateHop {
+        v1,
+        child,
+        landed,
+        head,
+    })
+}
+
+async fn rebase_with_candidates(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    hop: &CandidateHop,
+    candidates: Vec<ChangesetId>,
+) -> Result<RebasedStack, PushrebaseError> {
+    rebase_stack_onto_with_baseline(
+        ctx,
+        repo,
+        &replay_flags(),
+        hop.v1,
+        hop.child,
+        hop.head,
+        Some(&FixedCandidates(candidates)),
+    )
+    .await
+}
+
+/// The caller's source names L; V1 drops against L, so the child lands on
+/// the head with V1 as its base and only its own change.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_resolves_through_a_proven_candidate(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+
+    // Without a candidate, the replay sees V1's line conflict with the head.
+    let rejection = rejection_of(rebase_with_candidates(&ctx, &repo, &hop, vec![]).await);
+    assert!(names_parent(&rejection, hop.v1), "{rejection:?}");
+
+    let rebased = rebase_with_candidates(&ctx, &repo, &hop, vec![hop.landed]).await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    assert_eq!(
+        rebased.rebased_changesets.len(),
+        1,
+        "only the child is rebased"
+    );
+    assert!(rebased.dropped.is_empty());
+    let tip = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(tip.parents().collect::<Vec<_>>(), vec![hop.head]);
+    assert_eq!(
+        tip.file_changes_map().keys().collect::<Vec<_>>(),
+        vec![&NonRootMPath::new("file_child")?],
+        "the child carries only its own change; the resolution is already in L"
+    );
+    Ok(())
+}
+
+/// Shadow evaluates the candidate but keeps today's rejection.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_candidate_only_logs_in_shadow_mode(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(1);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+    let res = rebase_with_candidates(&ctx, &repo, &hop, vec![hop.landed]).await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+    Ok(())
+}
+
+/// Two candidates is not an answer; the baseline falls through to the replay.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_refuses_ambiguous_candidates(fb: FacebookInit) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+    let res = rebase_with_candidates(&ctx, &repo, &hop, vec![hop.landed, hop.head]).await;
+    let rejection = rejection_of(res);
+    assert!(names_parent(&rejection, hop.v1), "{rejection:?}");
+    Ok(())
+}
+
+/// The source only chooses; a candidate V1 does not drop against is refused.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_candidate_must_prove_the_parent_by_content(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+    let res = rebase_with_candidates(&ctx, &repo, &hop, vec![hop.head]).await;
+    let rejection = rejection_of(res);
+    assert!(names_parent(&rejection, hop.v1), "{rejection:?}");
+    Ok(())
+}
+
+/// A candidate off the branch is refused before any content is read.
+#[mononoke::fbinit_test]
+async fn rebase_with_baseline_refuses_an_off_branch_candidate(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+    let res = rebase_with_candidates(&ctx, &repo, &hop, vec![hop.child]).await;
+    let rejection = rejection_of(res);
+    assert!(names_parent(&rejection, hop.v1), "{rejection:?}");
     Ok(())
 }
 
@@ -740,18 +941,32 @@ async fn rebase_with_baseline_resolves_a_rewritten_baseline(fb: FacebookInit) ->
         .await?;
     assert_ne!(orphan, landed, "the two forms must be distinct changesets");
 
-    let res =
-        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
-            .await;
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        stack,
+        current,
+        None,
+    )
+    .await;
     assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
 
     // Recorded twice, as a retried land would leave it: one answer, not two.
     record_rewrite(&ctx, &repo, orphan, landed).await?;
     record_rewrite(&ctx, &repo, orphan, landed).await?;
 
-    let rebased =
-        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
-            .await?;
+    let rebased = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        stack,
+        current,
+        None,
+    )
+    .await?;
     changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
     let tip = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
     assert_eq!(
@@ -763,6 +978,513 @@ async fn rebase_with_baseline_resolves_a_rewritten_baseline(fb: FacebookInit) ->
         tip.file_changes_map()
             .contains_key(&NonRootMPath::new("file_author")?),
         "the rebased head keeps its own change"
+    );
+    Ok(())
+}
+
+/// The auto-rebase hop: the author built `child` on `v1`; the parent then
+/// landed on the branch as `landed` (same content unless `landed_content`
+/// says otherwise) under a different identity, and the branch moved on.
+struct ReplayHop {
+    fork: ChangesetId,
+    v1: ChangesetId,
+    child: ChangesetId,
+    head: ChangesetId,
+}
+
+async fn replay_hop(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    landed_content: &str,
+) -> Result<ReplayHop, Error> {
+    let fork = CreateCommitContext::new_root(ctx, repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let v1 = CreateCommitContext::new(ctx, repo, vec![fork])
+        .add_file("file_parent", "p1")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(ctx, repo, vec![v1])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(ctx, repo, vec![fork])
+        .add_file("file_server_early", "early")
+        .commit()
+        .await?;
+    let landed = CreateCommitContext::new(ctx, repo, vec![server])
+        .add_file("file_parent", landed_content)
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(ctx, repo, vec![landed])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(ctx, repo, &[fork, head]).await?;
+    Ok(ReplayHop {
+        fork,
+        v1,
+        child,
+        head,
+    })
+}
+
+fn replay_flags() -> PushrebaseFlags {
+    manifest_rebase_flags(MergeResolutionOverride::UseJk)
+}
+
+/// Pure auto-rebase: the parent's landed form has the author's content, so it
+/// drops and the child lands on the head with the parent's content as base.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_lands_a_stack_whose_parent_landed_unchanged(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = replay_hop(&ctx, &repo, "p1").await?;
+
+    let rebased = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &replay_flags(),
+        hop.v1,
+        hop.child,
+        hop.head,
+        None,
+    )
+    .await?;
+    assert_eq!(
+        rebased.dropped,
+        vec![hop.v1],
+        "the parent drops as already landed"
+    );
+    assert_eq!(
+        rebased
+            .rebased_changesets
+            .iter()
+            .map(|pair| pair.id_old)
+            .collect::<Vec<_>>(),
+        vec![hop.child],
+        "only the child is rewritten"
+    );
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    let tip = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(tip.parents().collect::<Vec<_>>(), vec![hop.head]);
+    assert!(
+        tip.file_changes_map()
+            .contains_key(&NonRootMPath::new("file_child")?)
+    );
+    let _ = hop.fork;
+    Ok(())
+}
+
+/// The parent landed with different content in the region the author built
+/// on: rejected naming the parent, nothing landed.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_rejects_a_parent_that_landed_with_different_content(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = replay_hop(&ctx, &repo, "p2").await?;
+
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &replay_flags(),
+        hop.v1,
+        hop.child,
+        hop.head,
+        None,
+    )
+    .await;
+    let rejection = rejection_of(res);
+    assert!(names_parent(&rejection, hop.v1), "{rejection:?}");
+    Ok(())
+}
+
+/// The parent's landed form dropped one of its hunks in a file the child also
+/// edits. A plain replay would merge the dropped hunk back in under the child;
+/// the guard rejects instead.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_never_resurrects_a_hunk_the_parent_dropped(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("f", "1\n2\n3\n4\n5\n")
+        .commit()
+        .await?;
+    // The author's parent changed lines 1 and 5.
+    let v1 = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("f", "one\n2\n3\n4\nfive\n")
+        .commit()
+        .await?;
+    // The child changed line 3 on top of it.
+    let child = CreateCommitContext::new(&ctx, &repo, vec![v1])
+        .add_file("f", "one\n2\nthree\n4\nfive\n")
+        .commit()
+        .await?;
+    // What landed kept only the line-1 change.
+    let landed = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("f", "one\n2\n3\n4\n5\n")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork, head]).await?;
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1, child, head, None).await;
+    let rejection = rejection_of(res);
+    assert!(
+        names_parent(&rejection, v1),
+        "the line-5 hunk must not come back under the child: {rejection:?}"
+    );
+    Ok(())
+}
+
+/// Shadow mode evaluates the replay but keeps today's rejection.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_in_shadow_mode_still_rejects(fb: FacebookInit) -> Result<(), Error> {
+    init_just_knobs_with_replay(1);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = replay_hop(&ctx, &repo, "p1").await?;
+
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &replay_flags(),
+        hop.v1,
+        hop.child,
+        hop.head,
+        None,
+    )
+    .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+    Ok(())
+}
+
+/// A caller that forbids content merging cannot drop parents by content, so
+/// it keeps today's rejection even in enforce mode.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_skips_callers_with_merging_forced_off(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = replay_hop(&ctx, &repo, "p1").await?;
+
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        hop.v1,
+        hop.child,
+        hop.head,
+        None,
+    )
+    .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+    Ok(())
+}
+
+/// Every commit of a multi-commit parent stack must drop.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_drops_every_parent_of_a_multi_commit_stack(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let v1a = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_a", "a")
+        .commit()
+        .await?;
+    let v1b = CreateCommitContext::new(&ctx, &repo, vec![v1a])
+        .add_file("file_b", "b")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![v1b])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    let landed_a = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_server_early", "early")
+        .add_file("file_a", "a")
+        .commit()
+        .await?;
+    let landed_b = CreateCommitContext::new(&ctx, &repo, vec![landed_a])
+        .add_file("file_b", "b")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![landed_b])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork, head]).await?;
+
+    let rebased =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1b, child, head, None)
+            .await?;
+    assert_eq!(rebased.dropped, vec![v1a, v1b]);
+    assert_eq!(rebased.rebased_changesets.len(), 1);
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    let tip = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(tip.parents().collect::<Vec<_>>(), vec![head]);
+    Ok(())
+}
+
+/// A stack longer than the cap is rejected as before.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_rejects_a_stack_longer_than_the_cap(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let mut parent = fork;
+    let mut landed_parent = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_server_early", "early")
+        .commit()
+        .await?;
+    for i in 0..REPLAY_MAX_COMMITS {
+        let name = format!("file_{i}");
+        parent = CreateCommitContext::new(&ctx, &repo, vec![parent])
+            .add_file(name.as_str(), "x")
+            .commit()
+            .await?;
+        landed_parent = CreateCommitContext::new(&ctx, &repo, vec![landed_parent])
+            .add_file(name.as_str(), "x")
+            .commit()
+            .await?;
+    }
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork, landed_parent]).await?;
+
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &replay_flags(),
+        parent,
+        child,
+        landed_parent,
+        None,
+    )
+    .await;
+    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+    Ok(())
+}
+
+/// The target case: V1 drops through a three-way merge (server changed line
+/// 1, V1 line 5, the landed form has both) and the child lands.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_drops_a_parent_through_a_three_way_merge(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![hop.landed])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[head]).await?;
+
+    let rebased = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &replay_flags(),
+        hop.v1,
+        hop.child,
+        head,
+        None,
+    )
+    .await?;
+    assert_eq!(rebased.dropped, vec![hop.v1]);
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    let tip = rebased.new_head.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(tip.parents().collect::<Vec<_>>(), vec![head]);
+    assert_eq!(
+        tip.file_changes_map().keys().collect::<Vec<_>>(),
+        vec![&NonRootMPath::new("file_child")?]
+    );
+    Ok(())
+}
+
+/// A child whose content is already on the branch is a resubmission, not a
+/// land onto someone else's commit.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_rejects_an_already_landed_child(fb: FacebookInit) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = replay_hop(&ctx, &repo, "p1").await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![hop.head])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[head]).await?;
+
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &replay_flags(),
+        hop.v1,
+        hop.child,
+        head,
+        None,
+    )
+    .await;
+    let rejection = rejection_of(res);
+    assert!(
+        rejection == BaselineRejection::AlreadyLanded(hop.child),
+        "{rejection:?}"
+    );
+    Ok(())
+}
+
+/// One of two parent commits landed: the other is named, nothing lands.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_rejects_a_partially_landed_parent_stack(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let v1a = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_a", "a")
+        .commit()
+        .await?;
+    let v1b = CreateCommitContext::new(&ctx, &repo, vec![v1a])
+        .add_file("file_b", "b")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![v1b])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    let landed_a = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_a", "a")
+        .add_file("file_server_early", "early")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![landed_a])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork, head]).await?;
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1b, child, head, None).await;
+    assert_eq!(
+        rejection_of(res),
+        BaselineRejection::ParentLandedWithChanges(v1b),
+        "the unlanded parent is named"
+    );
+    Ok(())
+}
+
+/// A parent that landed and was then reverted on the branch does not come
+/// back under the child.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_rejects_a_parent_reverted_on_the_branch(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let v1 = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_parent", "p1")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![v1])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    // Distinct from V1: a different identity with the same hunk.
+    let landed = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_parent", "p1")
+        .add_file("file_server_early", "early")
+        .commit()
+        .await?;
+    let reverted = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .delete_file("file_parent")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![reverted])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork, head]).await?;
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1, child, head, None).await;
+    let rejection = rejection_of(res);
+    assert!(names_parent(&rejection, v1), "{rejection:?}");
+    Ok(())
+}
+
+/// A conflict the child took part in is the child's, even on a file the
+/// parent also touched.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_reports_the_childs_own_conflict_as_a_conflict(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+    let hop = candidate_hop(&ctx, &repo).await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![hop.v1])
+        .add_file("shared", "1\n2\nthree\n4\nfive\n")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![hop.landed])
+        .add_file("shared", "one\n2\nTHREE\n4\nfive\n")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[head]).await?;
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), hop.v1, child, head, None)
+            .await;
+    assert!(
+        matches!(res, Err(PushrebaseError::Conflicts(_))),
+        "the child's line-3 conflict is not the parent's: {res:?}"
     );
     Ok(())
 }
@@ -814,9 +1536,16 @@ async fn rebase_with_baseline_refuses_two_distinct_on_branch_successors(
         "both rewrites must be on record for the ambiguity to be real"
     );
 
-    let res =
-        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
-            .await;
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        stack,
+        current,
+        None,
+    )
+    .await;
     assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
     Ok(())
 }
@@ -861,9 +1590,16 @@ async fn rebase_with_baseline_ignores_an_off_branch_successor(
         "the off-branch rewrite must be on record for the rejection to mean anything"
     );
 
-    let res =
-        rebase_stack_onto_with_baseline(&ctx, &repo, &stack_rebase_flags(), orphan, stack, current)
-            .await;
+    let res = rebase_stack_onto_with_baseline(
+        &ctx,
+        &repo,
+        &stack_rebase_flags(),
+        orphan,
+        stack,
+        current,
+        None,
+    )
+    .await;
     assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
     Ok(())
 }

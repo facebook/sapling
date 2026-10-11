@@ -9,6 +9,7 @@
 //! `multi_repo_land_service` binary's concrete `Repo` container.
 
 mod manifest_commit;
+mod predecessor_hop;
 mod repin;
 mod repo_provider;
 mod resolve;
@@ -19,6 +20,10 @@ pub use crate::manifest_commit::RECONCILER_SERVICE_IDENTITY;
 pub use crate::manifest_commit::build_manifest_commit;
 pub use crate::manifest_commit::create_manifest_commit;
 pub use crate::manifest_commit::is_service_identity;
+pub use crate::predecessor_hop::PREDECESSOR_HOP_MAX_BRANCH_COMMITS;
+pub use crate::predecessor_hop::RecordedPredecessorHop;
+pub use crate::predecessor_hop::describe_commit_for_client;
+pub use crate::predecessor_hop::differential_revision;
 pub use crate::repin::CasBaseline;
 pub use crate::repin::ManifestCommitSpec;
 pub use crate::repin::PreparedManifestCommit;

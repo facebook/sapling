@@ -61,6 +61,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::format_err;
+use async_trait::async_trait;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingArc;
@@ -123,6 +124,7 @@ use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use scuba_ext::MononokeScubaSampleBuilder;
 use shared_error::std::SharedError;
 use stats::prelude::*;
 use thiserror::Error;
@@ -151,12 +153,23 @@ define_stats! {
     merge_resolution_lost_on_retry: dynamic_timeseries("{}.merge_resolution_lost_on_retry", (reponame: String); Count),
     noop_merge_commits_detected: dynamic_timeseries("{}.noop_merge_commits_detected", (reponame: String); Count),
     noop_merge_commits_rejected: dynamic_timeseries("{}.noop_merge_commits_rejected", (reponame: String); Count),
+    baseline_replay: dynamic_timeseries("{}.baseline_replay.{}.{}", (reponame: String, mode: &'static str, outcome: &'static str); Count),
+    baseline_resolution_source: dynamic_timeseries("{}.baseline_resolution_source.{}", (reponame: String, source: &'static str); Count),
 }
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
+/// 0 rejects as before, 1 replays but still rejects, 2 lands the replay.
+const REPLAY_FROM_FORK_JK: &str = "scm/mononoke:pushrebase_replay_from_fork_point";
+/// Longest `fork..head` replayed; longer is rejected as before.
+const REPLAY_MAX_COMMITS: usize = 50;
+/// Changed-path bound for the replay's manifest lookups.
+const REPLAY_MAX_PATHS: usize = 5_000;
+
 /// Ancestry probes over a baseline's recorded successors. Normally one.
 const BASELINE_SUCCESSOR_CONCURRENCY: usize = 5;
+/// Concurrent changeset loads when attributing a replay conflict.
+const CONFLICT_ATTRIBUTION_CONCURRENCY: usize = 10;
 
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
@@ -227,18 +240,61 @@ pub enum BaselineRejection {
     /// Rewritten onto the branch, but sharing no single fork point with the
     /// head to bound the server range.
     NoSingleForkPoint,
+    /// A commit at or below the baseline did not drop on replay.
+    ParentLandedWithChanges(ChangesetId),
+    /// A commit above the baseline is already on the branch.
+    AlreadyLanded(ChangesetId),
+}
+
+impl BaselineRejection {
+    /// The commit the rejection names, for callers that render it in their
+    /// own identifiers.
+    pub fn named_commit(&self) -> Option<ChangesetId> {
+        match self {
+            Self::ParentLandedWithChanges(cs_id) | Self::AlreadyLanded(cs_id) => Some(*cs_id),
+            Self::NotAncestorOfHead | Self::NotOnBranch | Self::NoSingleForkPoint => None,
+        }
+    }
+}
+
+/// Branch commits that may be the landed form of an off-branch baseline,
+/// found from SCM-specific rewrite metadata the caller owns. Pushrebase
+/// requires exactly one candidate and still proves it by content.
+#[async_trait]
+pub trait BaselineCandidateSource: Send + Sync {
+    /// Logged as the resolution source.
+    fn name(&self) -> &'static str;
+
+    async fn candidates_for(
+        &self,
+        ctx: &CoreContext,
+        baseline: ChangesetId,
+        onto: ChangesetId,
+        fork_point: ChangesetId,
+    ) -> Result<Vec<ChangesetId>>;
 }
 
 impl std::fmt::Display for BaselineRejection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::NotAncestorOfHead => "is not an ancestor of the target",
-            Self::NotOnBranch => {
+        match self {
+            Self::NotAncestorOfHead => f.write_str("is not an ancestor of the target"),
+            Self::NotOnBranch => f.write_str(
                 "is not an ancestor of the current head and no rewritten form of it is on \
-                 the branch; refusing to rebase across a force-move or unrelated history"
-            }
-            Self::NoSingleForkPoint => "has no single fork point on the current head",
-        })
+                 the branch; refusing to rebase across a force-move or unrelated history",
+            ),
+            Self::NoSingleForkPoint => f.write_str("has no single fork point on the current head"),
+            Self::ParentLandedWithChanges(parent) => write!(
+                f,
+                "is not on the current head, and the stack's parent commit {parent} landed \
+                 with different content than this stack was built on; rebase the stack onto \
+                 the landed form and resubmit"
+            ),
+            Self::AlreadyLanded(commit) => write!(
+                f,
+                "is not on the current head, and commit {commit} of this stack is already on \
+                 the branch; nothing new to land"
+            ),
+        }
     }
 }
 
@@ -627,9 +683,12 @@ pub async fn rebase_stack_onto_with_conflict_base(
 /// an earlier pushrebase may have rewritten it. A baseline on the branch is
 /// the ordinary case. One off the branch is resolved through the pushrebase
 /// mutation mapping: when exactly one recorded successor is an ancestor of
-/// `onto`, the stack's base landed under another identity and the server
-/// range starts at the fork point of `baseline` and `onto`. Anything else is
-/// `UnplaceableBaseline`, never a parent-swap onto unrelated history.
+/// `onto`, or the caller's candidate source names exactly one branch commit
+/// the baseline drops against, the stack's base landed under another identity
+/// and the server range starts at the fork point of `baseline` and `onto`.
+/// Otherwise the stack is replayed from that fork point, and anything that
+/// does not drop the baseline's history is `UnplaceableBaseline`, never a
+/// parent-swap onto unrelated history.
 pub async fn rebase_stack_onto_with_baseline(
     ctx: &CoreContext,
     repo: &(impl Repo + PushrebaseMutationMappingRef),
@@ -637,6 +696,7 @@ pub async fn rebase_stack_onto_with_baseline(
     baseline: ChangesetId,
     head: ChangesetId,
     onto: ChangesetId,
+    candidates: Option<&dyn BaselineCandidateSource>,
 ) -> Result<RebasedStack, PushrebaseError> {
     let unplaceable = |rejection| PushrebaseError::UnplaceableBaseline {
         baseline,
@@ -655,19 +715,22 @@ pub async fn rebase_stack_onto_with_baseline(
     let conflict_base = if baseline_precedes_onto {
         baseline
     } else {
-        if !rewritten_baseline_is_on_branch(ctx, repo, baseline, onto).await {
-            return Err(unplaceable(BaselineRejection::NotOnBranch));
-        }
-        match repo
-            .commit_graph()
-            .common_base(ctx, baseline, onto)
+        // The knob is read here only: an on-branch baseline never reaches it.
+        let mode = ReplayMode::from_knob(repo.repo_identity().name());
+        let fork_point = single_fork_point(ctx, repo, baseline, onto)
             .await
-            .map_err(PushrebaseError::Error)?
-            .as_slice()
+            .map_err(PushrebaseError::Error)?;
+        if !rewritten_baseline_is_on_branch(
+            ctx, repo, config, mode, baseline, onto, fork_point, candidates,
+        )
+        .await
         {
-            [fork_point] => *fork_point,
-            _ => return Err(unplaceable(BaselineRejection::NoSingleForkPoint)),
+            return replay_from_fork_point(
+                ctx, repo, config, mode, baseline, head, onto, fork_point,
+            )
+            .await;
         }
+        fork_point.ok_or_else(|| unplaceable(BaselineRejection::NoSingleForkPoint))?
     };
     rebase_stack_onto_with_conflict_base(ctx, repo, config, baseline, conflict_base, head, onto)
         .await
@@ -849,10 +912,18 @@ pub async fn rebase_stack_onto_manifest(
 async fn rewritten_baseline_is_on_branch(
     ctx: &CoreContext,
     repo: &(impl Repo + PushrebaseMutationMappingRef),
+    config: &PushrebaseFlags,
+    mode: ReplayMode,
     baseline: ChangesetId,
     onto: ChangesetId,
+    fork_point: Option<ChangesetId>,
+    candidates: Option<&dyn BaselineCandidateSource>,
 ) -> bool {
-    match try_resolve_rewritten_baseline(ctx, repo, baseline, onto).await {
+    match try_resolve_rewritten_baseline(
+        ctx, repo, config, mode, baseline, onto, fork_point, candidates,
+    )
+    .await
+    {
         Ok(resolved) => resolved.is_some(),
         Err(err) => {
             ctx.scuba()
@@ -871,8 +942,12 @@ async fn rewritten_baseline_is_on_branch(
 async fn try_resolve_rewritten_baseline(
     ctx: &CoreContext,
     repo: &(impl Repo + PushrebaseMutationMappingRef),
+    config: &PushrebaseFlags,
+    mode: ReplayMode,
     baseline: ChangesetId,
     onto: ChangesetId,
+    fork_point: Option<ChangesetId>,
+    candidates: Option<&dyn BaselineCandidateSource>,
 ) -> Result<Option<ChangesetId>> {
     let repo_name = repo.repo_identity().name();
     // Deduped: no unique constraint, so a retried land can record a pair twice.
@@ -902,19 +977,36 @@ async fn try_resolve_rewritten_baseline(
         .try_collect()
         .await?;
 
-    // Exactly one, or we do not guess.
-    let resolved = match on_branch.as_slice() {
-        [only] => Some(*only),
-        _ => None,
-    };
-    // 0/0 is "no row"; n/0 is "recorded but off-branch".
-    ctx.scuba()
-        .clone()
+    let mut scuba = ctx.scuba().clone();
+    scuba
         .add("log_tag", "orphaned_baseline_resolution")
         .add("repo", repo_name)
+        .add("mode", mode.label())
         .add("old_target", baseline.to_string())
+        .add("onto", onto.to_string())
         .add("recorded_successors", successors.len())
-        .add("candidates_on_branch", on_branch.len())
+        .add("candidates_on_branch", on_branch.len());
+    // Exactly one, or we do not guess.
+    let (resolved, source) = match (on_branch.as_slice(), candidates) {
+        ([only], _) => (Some(*only), "mapping"),
+        ([], Some(candidates)) => {
+            match resolve_through_candidate(
+                ctx, repo, config, mode, baseline, onto, fork_point, candidates, &mut scuba,
+            )
+            .await?
+            {
+                Some(landed) => (Some(landed), candidates.name()),
+                None => (None, "none"),
+            }
+        }
+        _ => (None, "none"),
+    };
+    if resolved.is_some() {
+        STATS::baseline_resolution_source.add_value(1, (repo_name.to_string(), source));
+    }
+    // 0/0 is "no row"; n/0 is "recorded but off-branch".
+    scuba
+        .add("resolution_source", source)
         .add(
             "resolved_to",
             resolved.map_or_else(|| "none".to_string(), |cs| cs.to_string()),
@@ -922,6 +1014,387 @@ async fn try_resolve_rewritten_baseline(
         .unsampled()
         .log();
     Ok(resolved)
+}
+
+/// The caller's source picks one branch commit; `fork..baseline` must then
+/// drop against it by content before it stands in for the baseline.
+async fn resolve_through_candidate(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &PushrebaseFlags,
+    mode: ReplayMode,
+    baseline: ChangesetId,
+    onto: ChangesetId,
+    fork_point: Option<ChangesetId>,
+    candidates: &dyn BaselineCandidateSource,
+    scuba: &mut MononokeScubaSampleBuilder,
+) -> Result<Option<ChangesetId>> {
+    if mode == ReplayMode::Off || merging_forced_off(config) {
+        scuba.add("candidate_source", "off");
+        return Ok(None);
+    }
+    let Some(fork_point) = fork_point else {
+        scuba.add("candidate_source", "no_single_fork_point");
+        return Ok(None);
+    };
+    let found = candidates
+        .candidates_for(ctx, baseline, onto, fork_point)
+        .await?;
+    scuba.add("candidate_count", found.len());
+    let [candidate] = found.as_slice() else {
+        scuba.add(
+            "candidate_source",
+            if found.is_empty() {
+                "none"
+            } else {
+                "ambiguous"
+            },
+        );
+        return Ok(None);
+    };
+    let candidate = *candidate;
+    scuba.add("candidate", candidate.to_string());
+    if !repo
+        .commit_graph()
+        .is_ancestor(ctx, candidate, onto)
+        .await?
+    {
+        scuba.add("candidate_source", "candidate_off_branch");
+        return Ok(None);
+    }
+
+    let guard = replay_stack_from_fork(
+        ctx, repo, config, baseline, baseline, candidate, fork_point, scuba,
+    )
+    .await;
+    scuba.add("candidate_guard", guard.label());
+    match (guard, mode) {
+        (ReplayOutcome::Replayed(_), ReplayMode::Enforce) => {
+            scuba.add("candidate_source", "resolved");
+            Ok(Some(candidate))
+        }
+        (ReplayOutcome::Replayed(_), _) => {
+            scuba.add("candidate_source", "shadow_would_resolve");
+            Ok(None)
+        }
+        _ => {
+            scuba.add("candidate_source", "guard_rejected");
+            Ok(None)
+        }
+    }
+}
+
+fn merging_forced_off(config: &PushrebaseFlags) -> bool {
+    matches!(
+        config.merge_resolution_override,
+        MergeResolutionOverride::ForceOff
+    )
+}
+
+async fn single_fork_point(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    baseline: ChangesetId,
+    onto: ChangesetId,
+) -> Result<Option<ChangesetId>> {
+    Ok(
+        match repo
+            .commit_graph()
+            .common_base(ctx, baseline, onto)
+            .await?
+            .as_slice()
+        {
+            [fork_point] => Some(*fork_point),
+            _ => None,
+        },
+    )
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ReplayMode {
+    Off,
+    Shadow,
+    Enforce,
+}
+
+impl ReplayMode {
+    fn from_knob(repo_name: &str) -> Self {
+        match justknobs::get_as::<i64>(REPLAY_FROM_FORK_JK, Some(repo_name)) {
+            1 => Self::Shadow,
+            2 => Self::Enforce,
+            _ => Self::Off,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Shadow => "shadow",
+            Self::Enforce => "enforce",
+        }
+    }
+}
+
+/// What replaying `fork..head` onto the branch would do.
+enum ReplayOutcome {
+    /// Every commit at or below the baseline dropped as already landed.
+    Replayed(RebasedStack),
+    /// A commit at or below the baseline did not drop or conflicted.
+    ParentDiffers(ChangesetId),
+    /// A commit above the baseline dropped: it is already on the branch.
+    AlreadyLanded(ChangesetId),
+    /// The stack's own commits conflict with the branch.
+    Conflict(PushrebaseError),
+    /// Out of bounds; rejected as today.
+    TooLong,
+    TooManyPaths(usize),
+    /// Could not be evaluated; rejected as today.
+    Failed(PushrebaseError),
+}
+
+impl ReplayOutcome {
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Replayed(_) => "replayed",
+            Self::ParentDiffers(_) => "parent_differs",
+            Self::AlreadyLanded(_) => "already_landed",
+            Self::Conflict(_) => "conflict",
+            Self::TooLong => "too_long",
+            Self::TooManyPaths(_) => "too_many_paths",
+            Self::Failed(_) => "failed",
+        }
+    }
+}
+
+/// Replays `fork..head` onto the branch; lands only if every parent dropped
+/// and nothing above the baseline did.
+async fn replay_from_fork_point(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &PushrebaseFlags,
+    mode: ReplayMode,
+    baseline: ChangesetId,
+    head: ChangesetId,
+    onto: ChangesetId,
+    fork_point: Option<ChangesetId>,
+) -> Result<RebasedStack, PushrebaseError> {
+    let repo_name = repo.repo_identity().name();
+    let unplaceable = |rejection| PushrebaseError::UnplaceableBaseline {
+        baseline,
+        onto,
+        rejection,
+    };
+    // A caller that forbids content merging cannot have parents drop by content.
+    if mode == ReplayMode::Off || merging_forced_off(config) {
+        return Err(unplaceable(BaselineRejection::NotOnBranch));
+    }
+    let Some(fork_point) = fork_point else {
+        return Err(unplaceable(BaselineRejection::NoSingleForkPoint));
+    };
+
+    let mut scuba = ctx.scuba().clone();
+    scuba
+        .add("log_tag", "baseline_replay_from_fork_point")
+        .add("repo", repo_name)
+        .add("mode", mode.label())
+        .add("resolution_source", "replay")
+        .add("old_target", baseline.to_string())
+        .add("onto", onto.to_string())
+        .add("head", head.to_string());
+    let mut outcome = replay_stack_from_fork(
+        ctx, repo, config, baseline, head, onto, fork_point, &mut scuba,
+    )
+    .await;
+    if let ReplayOutcome::Replayed(rebased) = &outcome {
+        if rebased.rebased_changesets.is_empty() {
+            outcome = ReplayOutcome::AlreadyLanded(head);
+        }
+    }
+    scuba.add("outcome", outcome.label());
+    match &outcome {
+        ReplayOutcome::ParentDiffers(parent) => {
+            scuba.add("undropped_parent", parent.to_string());
+        }
+        ReplayOutcome::AlreadyLanded(commit) => {
+            scuba.add("already_landed", commit.to_string());
+        }
+        ReplayOutcome::Conflict(err) | ReplayOutcome::Failed(err) => {
+            scuba.add("error", format!("{err:#}"));
+        }
+        ReplayOutcome::TooManyPaths(paths) => {
+            scuba.add("changed_paths", *paths);
+        }
+        ReplayOutcome::Replayed(_) | ReplayOutcome::TooLong => {}
+    }
+    scuba.unsampled().log();
+    STATS::baseline_replay.add_value(1, (repo_name.to_string(), mode.label(), outcome.label()));
+    if matches!(outcome, ReplayOutcome::Replayed(_)) {
+        STATS::baseline_resolution_source.add_value(1, (repo_name.to_string(), "replay"));
+    }
+
+    if mode == ReplayMode::Shadow {
+        return Err(unplaceable(BaselineRejection::NotOnBranch));
+    }
+    match outcome {
+        ReplayOutcome::Replayed(stack) => Ok(stack),
+        ReplayOutcome::ParentDiffers(parent) => Err(unplaceable(
+            BaselineRejection::ParentLandedWithChanges(parent),
+        )),
+        ReplayOutcome::AlreadyLanded(commit) => {
+            Err(unplaceable(BaselineRejection::AlreadyLanded(commit)))
+        }
+        ReplayOutcome::Conflict(err) => Err(err),
+        ReplayOutcome::TooLong | ReplayOutcome::TooManyPaths(_) | ReplayOutcome::Failed(_) => {
+            Err(unplaceable(BaselineRejection::NotOnBranch))
+        }
+    }
+}
+
+async fn replay_stack_from_fork(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &PushrebaseFlags,
+    baseline: ChangesetId,
+    head: ChangesetId,
+    onto: ChangesetId,
+    fork_point: ChangesetId,
+    scuba: &mut MononokeScubaSampleBuilder,
+) -> ReplayOutcome {
+    scuba.add("fork_point", fork_point.to_string());
+    let (parents, stack) = match try_join(
+        range_ids_above_capped(ctx, repo, fork_point, baseline, REPLAY_MAX_COMMITS),
+        range_ids_above_capped(ctx, repo, fork_point, head, REPLAY_MAX_COMMITS),
+    )
+    .await
+    {
+        Ok((Some(parents), Some(stack))) => (parents, stack),
+        Ok(_) => return ReplayOutcome::TooLong,
+        Err(err) => return ReplayOutcome::Failed(PushrebaseError::Error(err)),
+    };
+    let parent_set: HashSet<ChangesetId> = parents.iter().copied().collect();
+    let above: Vec<ChangesetId> = stack
+        .iter()
+        .copied()
+        .filter(|cs_id| !parent_set.contains(cs_id))
+        .collect();
+    scuba
+        .add("replay_len", stack.len())
+        .add("parent_len", parents.len());
+
+    // Dropping a parent means comparing merged content with the branch.
+    let flags = PushrebaseFlags {
+        merge_resolution_override: MergeResolutionOverride::ForceOn,
+        ..config.clone()
+    };
+    let rebased = match rebase_stack_onto_manifest(
+        ctx,
+        repo,
+        &flags,
+        fork_point,
+        head,
+        onto,
+        REPLAY_MAX_PATHS,
+    )
+    .await
+    {
+        Ok(rebased) => rebased,
+        Err(PushrebaseError::TooManyPaths { paths, .. }) => {
+            return ReplayOutcome::TooManyPaths(paths);
+        }
+        Err(err @ PushrebaseError::Conflicts(_))
+        | Err(err @ PushrebaseError::PotentialCaseConflict(_)) => {
+            // Only a conflict no commit above the baseline took part in is the parent's.
+            return match parent_only_conflict(ctx, repo, &parents, &above, &err).await {
+                Ok(Some(parent)) => ReplayOutcome::ParentDiffers(parent),
+                Ok(None) => ReplayOutcome::Conflict(err),
+                Err(load_err) => ReplayOutcome::Failed(PushrebaseError::Error(load_err)),
+            };
+        }
+        Err(err) => return ReplayOutcome::Failed(err),
+    };
+
+    let dropped: HashSet<ChangesetId> = rebased.dropped.iter().copied().collect();
+    let undropped: Vec<ChangesetId> = parents
+        .iter()
+        .copied()
+        .filter(|parent| !dropped.contains(parent))
+        .collect();
+    let landed_above: Vec<ChangesetId> = above
+        .iter()
+        .copied()
+        .filter(|cs_id| dropped.contains(cs_id))
+        .collect();
+    scuba
+        .add("dropped_count", rebased.dropped.len())
+        .add("undropped_below_baseline", undropped.len())
+        .add("dropped_above_baseline", landed_above.len());
+    rebased.merge_summary.add_to_scuba(scuba);
+    if let Some(parent) = undropped.first() {
+        return ReplayOutcome::ParentDiffers(*parent);
+    }
+    if let Some(commit) = landed_above.first() {
+        return ReplayOutcome::AlreadyLanded(*commit);
+    }
+    ReplayOutcome::Replayed(rebased)
+}
+
+/// `ancestor..descendant`, oldest first, without the ancestor; `None` when
+/// longer than `cap`.
+pub async fn range_ids_above_capped(
+    ctx: &CoreContext,
+    repo: &impl CommitGraphRef,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+    cap: usize,
+) -> Result<Option<Vec<ChangesetId>>> {
+    let ids: Vec<ChangesetId> = repo
+        .commit_graph()
+        .range_stream(ctx, ancestor, descendant)
+        .await?
+        .filter(|cs_id| future::ready(cs_id != &ancestor))
+        .take(cap + 1)
+        .collect()
+        .await;
+    Ok((ids.len() <= cap).then_some(ids))
+}
+
+/// The first parent commit that touched a conflicting path no commit above
+/// the baseline touched; the conflict is then the parent's landed form.
+async fn parent_only_conflict(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    parents: &[ChangesetId],
+    above: &[ChangesetId],
+    err: &PushrebaseError,
+) -> Result<Option<ChangesetId>> {
+    let conflict_paths: Vec<MPath> = match err {
+        PushrebaseError::Conflicts(conflicts) => conflicts
+            .iter()
+            .flat_map(|conflict| [conflict.left.clone(), conflict.right.clone()])
+            .collect(),
+        PushrebaseError::PotentialCaseConflict(path) => vec![MPath::from(path.clone())],
+        _ => return Ok(None),
+    };
+    let load_all = |ids: &[ChangesetId]| {
+        stream::iter(ids.to_vec())
+            .map(|cs_id| async move { cs_id.load(ctx, &repo.repo_blobstore()).await })
+            .buffered(CONFLICT_ATTRIBUTION_CONCURRENCY)
+            .try_collect::<Vec<BonsaiChangeset>>()
+    };
+    let (parent_bcs, above_bcs) = try_join(load_all(parents), load_all(above)).await?;
+    let touched = |bcs: &BonsaiChangeset, path: &MPath| {
+        bcs.file_changes_map()
+            .keys()
+            .any(|changed| path.is_related_to(&MPath::from(changed.clone())))
+    };
+    Ok(parent_bcs
+        .iter()
+        .find(|parent| {
+            conflict_paths.iter().any(|path| {
+                touched(parent, path) && !above_bcs.iter().any(|child| touched(child, path))
+            })
+        })
+        .map(|parent| parent.get_changeset_id()))
 }
 
 /// A successfully rebased request pending the CAS bookmark update.

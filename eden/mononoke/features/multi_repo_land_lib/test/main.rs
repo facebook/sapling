@@ -53,6 +53,7 @@ use multi_repo_land_lib::prepare_manifest_commits;
 use multi_repo_land_lib::repin_manifest_branch;
 use multi_repo_land_lib::resolve_bookmarks_cross_repo;
 use phases::Phases;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
@@ -63,6 +64,8 @@ use test_repo_factory::TestRepoFactory;
 use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
+
+mod predecessor_hop;
 
 #[mononoke::fbinit_test]
 async fn test_creates_commit_on_top_of_parent(fb: FacebookInit) -> Result<()> {
@@ -192,7 +195,7 @@ fn test_repo_provider_blanket_impl() {
 /// facet.
 #[facet::container]
 #[derive(Clone)]
-struct TestRepo {
+pub(crate) struct TestRepo {
     #[facet]
     repo_identity: RepoIdentity,
 
@@ -231,6 +234,9 @@ struct TestRepo {
 
     #[facet]
     phases: dyn Phases,
+
+    #[facet]
+    pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
 }
 
 /// A mixed batch exercises every outcome (unknown repo, invalid/missing
