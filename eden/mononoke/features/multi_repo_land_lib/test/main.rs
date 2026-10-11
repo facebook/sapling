@@ -349,7 +349,7 @@ async fn test_resolve_bookmarks_cross_repo_mixed_batch(fb: FacebookInit) -> Resu
     assert_eq!(results[0].outcome, ResolveOutcome::Resolved(sha_a));
     assert_eq!(
         results[1].outcome,
-        ResolveOutcome::Error("unknown repo: ghost".to_string()),
+        ResolveOutcome::UnknownRepo("unknown repo: ghost".to_string()),
     );
     assert_eq!(
         results[2].outcome,
@@ -479,7 +479,7 @@ async fn test_resolve_bookmarks_cross_repo_loads_a_served_repo_on_first_use(
     );
     assert_eq!(
         results[2].outcome,
-        ResolveOutcome::Error("unknown repo: ghost".to_string()),
+        ResolveOutcome::UnknownRepo("unknown repo: ghost".to_string()),
     );
     assert!(provider.get_by_name("late").is_some(), "the load stuck");
     Ok(())

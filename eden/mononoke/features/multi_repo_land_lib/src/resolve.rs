@@ -226,6 +226,8 @@ pub enum ResolveOutcome {
     Resolved(GitSha1),
     /// Human-readable reason resolution failed.
     Error(String),
+    /// The repo is not served here; the message keeps the `unknown repo` form.
+    UnknownRepo(String),
     /// The repo is served but did not build; the reason is the load error.
     LoadFailed(String),
 }
@@ -282,7 +284,7 @@ where
                     *slot = Some(ResolveResult {
                         repo_name: entry.repo_name.clone(),
                         bookmark_name: entry.bookmark_name.clone(),
-                        outcome: ResolveOutcome::Error(format!(
+                        outcome: ResolveOutcome::UnknownRepo(format!(
                             "unknown repo: {}",
                             entry.repo_name
                         )),
