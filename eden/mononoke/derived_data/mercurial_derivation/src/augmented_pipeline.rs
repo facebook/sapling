@@ -42,8 +42,8 @@ use mononoke_types::acl_manifest::AclManifestRestriction;
 use mononoke_types::path::MPath;
 use mononoke_types::typed_hash::AclManifestId;
 
+use crate::augmented_derivation::fetch_augmented_roots_with_fallback;
 use crate::augmented_manifest_v2::RootHgAugmentedManifestV2Id;
-use crate::augmented_manifest_v2::fetch_augmented_roots_with_fallback;
 use crate::augmented_manifest_v2::should_publish_shared_mapping;
 use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;

@@ -7,6 +7,7 @@
 
 mod acl_overlay_manifest;
 pub mod augmented_backfill;
+mod augmented_derivation;
 mod augmented_manifest_v2;
 mod augmented_pipeline;
 pub mod derive_hg_augmented_manifest;
