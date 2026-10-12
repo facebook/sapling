@@ -307,12 +307,45 @@ not that the build gave up first.
   missing: 1
   failed: 0
 
-Scenario 5 -- storing ON and changeset-upload derivation ON. Tree upload stores
+Scenario 5 -- a child that is stored but not derived. Shadow and changeset-upload
+derivation are both still off, so the `dir` tree scenario 4 uploaded is stored
+with no augmented manifest. Changing only a root file uploads the root alone, and
+its unchanged `dir` child resolves to that stored, underived tree. This is the
+production race, where a concurrent upload of the same commit stored the child
+moments earlier, and it must not be counted as the client's fault.
+  $ cd "$TESTTMP/client1"
+  $ BEFORE=$(scuba_rows)
+  $ echo five > rootfile
+  $ sl commit -qAm "fifth commit, root file only, shadow"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ tail -n +$((BEFORE + 1)) "$SCUBA" \
+  >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
+  >            | "\(.normal.failure_kind): \(.normal.msg)"' \
+  >   | sed -E 's/[0-9a-f]{40}/HASH/g'
+  child_not_derived: building the augmented manifest for uploaded tree HASH: tree HASH contains dir (HASH), which is neither built in this batch nor already derived
+
+The request row carries the build's tree count and a nonzero build time, failed
+build included.
+  $ tail -n +$((BEFORE + 1)) "$SCUBA" \
+  >   | jq -r 'select(.normal.log_tag == "EdenAPI Request Processed"
+  >                   and .normal.edenapi_method == "upload_trees")
+  >            | "\(.int.EdenapiUploadTreesAugmentedTrees) \(.int.EdenapiUploadTreesAugmentedBuildUs > 0)"'
+  1 true
+
+Scenario 6 -- storing ON and changeset-upload derivation ON. Tree upload stores
 an envelope for every tree it receives, root included, before the changeset is
 uploaded. Changeset upload then derives the same commits anyway: it does not use
 what tree upload stored, and its if-absent puts all skip. The stack starts at
 master_bookmark, which scenario 1 derived, so every row below belongs to these
-two commits rather than to the underived commits scenarios 2 to 4 left behind.
+two commits rather than to the underived commits scenarios 2 to 5 left behind.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true}}
   > EOF
@@ -323,9 +356,9 @@ two commits rather than to the underived commits scenarios 2 to 4 left behind.
   $ BEFORE=$(scuba_rows)
   $ mkdir stack
   $ echo five > stack/file5
-  $ sl commit -qAm "fifth commit, new dir"
+  $ sl commit -qAm "sixth commit, new dir"
   $ echo six > stack/file6
-  $ sl commit -qAm "sixth commit"
+  $ sl commit -qAm "seventh commit"
   $ sl cloud upload
   commitcloud: head '*' hasn't been uploaded yet (glob)
   edenapi: queue 2 commits for upload
@@ -341,19 +374,19 @@ two commits rather than to the underived commits scenarios 2 to 4 left behind.
 
 Each commit's augmented manifest is the envelope at its own root tree, the one
 tree upload already stored.
-  $ CS5=$(sl log -r .^ -T '{node}')
-  $ ROOT_MFID_5=$(sl log -r .^ -T '{manifest}')
-  $ CS6=$(sl log -r . -T '{node}')
-  $ ROOT_MFID_6=$(sl log -r . -T '{manifest}')
+  $ CS6=$(sl log -r .^ -T '{node}')
+  $ ROOT_MFID_6=$(sl log -r .^ -T '{manifest}')
+  $ CS7=$(sl log -r . -T '{node}')
+  $ ROOT_MFID_7=$(sl log -r . -T '{manifest}')
   $ cd $TESTTMP
-  $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS5" | grep -c "$ROOT_MFID_5"
-  1
   $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS6" | grep -c "$ROOT_MFID_6"
   1
+  $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS7" | grep -c "$ROOT_MFID_7"
+  1
 
-Scenario 6 -- storing OFF, changeset-upload derivation still ON. The root envelope
+Scenario 7 -- storing OFF, changeset-upload derivation still ON. The root envelope
 only ever lands in the tree upload's overlay, so changeset upload has to derive.
-This is the control for scenario 5: whatever changeset upload learns to skip
+This is the control for scenario 6: whatever changeset upload learns to skip
 there, it must keep deriving here.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false}}
@@ -365,7 +398,7 @@ there, it must keep deriving here.
   $ BEFORE=$(scuba_rows)
   $ mkdir other
   $ echo seven > other/file7
-  $ sl commit -qAm "seventh commit, store off"
+  $ sl commit -qAm "eighth commit, store off"
   $ sl cloud upload
   commitcloud: head '*' hasn't been uploaded yet (glob)
   edenapi: queue 1 commit for upload
@@ -379,7 +412,7 @@ there, it must keep deriving here.
   /repo/upload/changesets acl_manifests
   /repo/upload/changesets hg_augmented_manifests
 
-  $ CS7=$(sl log -r . -T '{node}')
+  $ CS8=$(sl log -r . -T '{node}')
   $ cd $TESTTMP
-  $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS7"
+  $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS8"
   Derived: * (glob)
