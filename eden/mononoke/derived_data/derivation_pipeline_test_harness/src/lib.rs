@@ -716,21 +716,26 @@ mod tests {
         fb: FacebookInit,
     ) -> Result<()> {
         let ctx = &CoreContext::test_mock(fb);
-        let (repo, commits) = verify_pipeline_first_then_canonical_with_repo::<F>(
-            fb,
-            &AUGMENTED_MANIFEST_V2_TYPES,
-            false,
-        )
-        .await?;
+        for types in [&AUGMENTED_MANIFEST_V1_TYPES, &AUGMENTED_MANIFEST_V2_TYPES] {
+            let (repo, commits) =
+                verify_pipeline_first_then_canonical_with_repo::<F>(fb, types, false).await?;
 
-        assert!(
-            repo.bonsai_hg_mapping()
-                .get(ctx, commits.into())
-                .await?
-                .is_empty(),
-            "pipeline and canonical direct V2 should not create Bonsai-Hg mappings for {}",
-            F::REPO_NAME,
-        );
+            // The canonical type still depends on HgChangesets, so its
+            // canonical derivation creates mappings and takes the mapped-Hg
+            // branch.
+            if types == &AUGMENTED_MANIFEST_V1_TYPES {
+                continue;
+            }
+            assert!(
+                repo.bonsai_hg_mapping()
+                    .get(ctx, commits.into())
+                    .await?
+                    .is_empty(),
+                "pipeline and canonical derivation of {:?} should not create Bonsai-Hg mappings for {}",
+                types,
+                F::REPO_NAME,
+            );
+        }
         Ok(())
     }
 

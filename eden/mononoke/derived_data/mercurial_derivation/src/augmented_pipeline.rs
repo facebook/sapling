@@ -42,15 +42,14 @@ use mononoke_types::acl_manifest::AclManifestRestriction;
 use mononoke_types::path::MPath;
 use mononoke_types::typed_hash::AclManifestId;
 
+use crate::augmented_derivation::AugmentedManifestRoot;
 use crate::augmented_derivation::fetch_augmented_roots_with_fallback;
 use crate::augmented_manifest_v2::RootHgAugmentedManifestV2Id;
 use crate::augmented_manifest_v2::should_publish_shared_mapping;
 use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;
-use crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents_staged;
 use crate::derive_hg_augmented_manifest::finalize_augmented_manifest_root;
 use crate::derive_hg_augmented_manifest::subtree_copy_source_changesets;
-use crate::mapping::MappedHgChangesetId;
 use crate::mapping::RootHgAugmentedManifestId;
 use crate::mapping::format_key;
 
@@ -100,17 +99,20 @@ fn use_normal_mapping(
         }
 }
 
-async fn fetch_v2_source_augmented_roots(
+async fn fetch_source_augmented_roots<Root>(
     ctx: &CoreContext,
     derivation: &DerivationContext,
     source_csids: HashSet<ChangesetId>,
-) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
+) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>>
+where
+    Root: AugmentedManifestRoot + PipelineDerivable<StageOutput = Option<HgAugmentedManifestEntry>>,
+{
     if source_csids.is_empty() {
         return Ok(HashMap::new());
     }
 
     let source_csids: Vec<_> = source_csids.into_iter().collect();
-    let pipeline_outputs = RootHgAugmentedManifestV2Id::fetch_stage_outputs(
+    let pipeline_outputs = Root::fetch_stage_outputs(
         ctx,
         derivation,
         &StageId::Manifest(MPath::ROOT),
@@ -124,18 +126,13 @@ async fn fetch_v2_source_augmented_roots(
                 Ok((csid, HgAugmentedManifestId::new(dir.treenode)))
             }
             output => Err(anyhow!(
-                "V2 terminal stage output for copy source {csid} should be a directory, got {output:?}",
+                "{} terminal stage output for copy source {csid} should be a directory, got {output:?}",
+                Root::NAME,
             )),
         })
         .collect::<Result<_>>()?;
-    fetch_augmented_roots_with_fallback::<RootHgAugmentedManifestV2Id>(
-        ctx,
-        derivation,
-        source_csids,
-        roots,
-        "V2 copy source",
-    )
-    .await
+    fetch_augmented_roots_with_fallback::<Root>(ctx, derivation, source_csids, roots, "Copy source")
+        .await
 }
 
 async fn store_intermediate_stage_output(
@@ -194,18 +191,6 @@ async fn fetch_intermediate_stage_output(
         }
     };
     Ok(Some(output))
-}
-
-/// Recover the augmented subtree id from a parent's stage output. A parent stage
-/// output is a `DirectoryNode` for trees; a `FileNode` (stage root is a file)
-/// has no subtree to descend into and contributes no parent overlay.
-fn parent_aug_id(entry: &HgAugmentedManifestEntry) -> Option<HgAugmentedManifestId> {
-    match entry {
-        HgAugmentedManifestEntry::DirectoryNode(dir) => {
-            Some(HgAugmentedManifestId::new(dir.treenode))
-        }
-        HgAugmentedManifestEntry::FileNode(_) => None,
-    }
 }
 
 /// Normalize an ACL stage output into an optional overlay id, mirroring
@@ -282,6 +267,141 @@ async fn extract_stage_entry(
     Ok(None)
 }
 
+/// Derives augmented manifest stage entries from Bonsai changes, parent stage
+/// entries, child stage entries, and the same-stage ACL output.
+async fn derive_stage_batch_from_bonsai<Root>(
+    ctx: &CoreContext,
+    derivation: &DerivationContext,
+    bonsais: Vec<BonsaiChangeset>,
+    payload: &DerivationStagePayload,
+    parents: HashMap<ChangesetId, Option<HgAugmentedManifestEntry>>,
+    dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Option<HgAugmentedManifestEntry>>>,
+) -> Result<HashMap<ChangesetId, Option<HgAugmentedManifestEntry>>>
+where
+    Root: AugmentedManifestRoot + PipelineDerivable<StageOutput = Option<HgAugmentedManifestEntry>>,
+{
+    let DerivationStagePayload::Manifest(payload) = payload else {
+        anyhow::bail!("{} has no finalize derive", Root::NAME);
+    };
+    let stage_path = &payload.path;
+
+    let csids = bonsais
+        .iter()
+        .map(BonsaiChangeset::get_changeset_id)
+        .collect();
+
+    let acl_outputs = RootAclManifestId::fetch_stage_outputs(
+        ctx,
+        derivation,
+        &StageId::Manifest(stage_path.clone()),
+        csids,
+    )
+    .await?;
+
+    let mut results: HashMap<ChangesetId, Option<HgAugmentedManifestEntry>> = HashMap::new();
+    for bonsai in &bonsais {
+        let cs_id = bonsai.get_changeset_id();
+
+        let parent_entries = bonsai
+            .parents()
+            .map(|parent_csid| {
+                results
+                    .get(&parent_csid)
+                    .or_else(|| parents.get(&parent_csid))
+                    .cloned()
+                    .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let root_parent_entries = stage_path.is_root().then(|| parent_entries.clone());
+
+        let known_entries = dependency_outputs.get(&cs_id).cloned().unwrap_or_default();
+        let acl_overlay = normalize_acl_stage(acl_outputs.get(&cs_id), cs_id, stage_path)?;
+
+        let file_changes = bonsai
+            .file_changes()
+            .filter(|(path, _)| stage_path.is_prefix_of(*path))
+            .map(|(path, file_change)| {
+                Ok((
+                    path.clone(),
+                    match file_change {
+                        FileChange::Change(change) => Some(change.clone()),
+                        FileChange::Deletion => None,
+                        FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
+                            anyhow::bail!("Can't derive manifest for snapshot")
+                        }
+                    },
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let content_ids = file_changes
+            .iter()
+            .filter_map(|(_, change)| change.as_ref().map(|change| change.content_id()))
+            .collect::<HashSet<_>>();
+
+        let content_metadata_fut =
+            prefetch_content_metadata(ctx, derivation.blobstore(), content_ids);
+        let mut parent_csids = bonsai.parents();
+        let parent_bonsai_csids = (parent_csids.next(), parent_csids.next());
+        let is_hg_parent = |copy_csid: &ChangesetId| {
+            parent_bonsai_csids.0.as_ref() == Some(copy_csid)
+                || parent_bonsai_csids.1.as_ref() == Some(copy_csid)
+        };
+        let source_csids: HashSet<_> = file_changes
+            .iter()
+            .filter_map(|(_, change)| change.as_ref()?.copy_from())
+            .filter(|(copy_path, copy_csid)| {
+                !stage_path.is_prefix_of(copy_path) && is_hg_parent(copy_csid)
+            })
+            .map(|(_, copy_csid)| *copy_csid)
+            .chain(subtree_copy_source_changesets(bonsai, stage_path))
+            .collect();
+        let source_aug_roots =
+            fetch_source_augmented_roots::<Root>(ctx, derivation, source_csids).await?;
+        let subtree_replacements_fut = build_augmented_subtree_replacements(
+            ctx,
+            derivation.blobstore(),
+            bonsai,
+            stage_path,
+            &source_aug_roots,
+        );
+        let (content_metadata, subtree_replacements) =
+            futures::future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
+
+        let output = derive_augmented_manifest_entry_from_bonsai(
+            ctx,
+            derivation.blobstore(),
+            stage_path.clone(),
+            parent_entries,
+            known_entries,
+            file_changes,
+            subtree_replacements,
+            parent_bonsai_csids,
+            &source_aug_roots,
+            &content_metadata,
+            &derivation.restricted_paths(),
+            acl_overlay,
+        )
+        .await?;
+        let output = match root_parent_entries {
+            Some(root_parent_entries) => Some(HgAugmentedManifestEntry::DirectoryNode(
+                finalize_augmented_manifest_root(
+                    ctx,
+                    derivation.blobstore(),
+                    output,
+                    root_parent_entries,
+                    &derivation.restricted_paths(),
+                    acl_overlay,
+                )
+                .await?,
+            )),
+            None => output,
+        };
+        results.insert(cs_id, output);
+    }
+
+    Ok(results)
+}
+
 #[async_trait]
 impl PipelineDerivable for RootHgAugmentedManifestId {
     const PIPELINE_DERIVABLE_VARIANT: PipelineDerivableVariant =
@@ -299,100 +419,15 @@ impl PipelineDerivable for RootHgAugmentedManifestId {
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        let DerivationStagePayload::Manifest(payload) = payload else {
-            anyhow::bail!("{} has no finalize derive", Self::NAME);
-        };
-        let stage_path = &payload.path;
-
-        // Cross-type inputs at this stage (same-stage edges guarantee they are
-        // derived): the own hg manifest subtree from HgChangesets@S and the own
-        // acl subtree from AclManifests@S. Parent hg manifests are NOT fetched
-        // here; they flow from the parent augmented subtree's hg_node_id, exactly
-        // as the traversal recovers them.
-        let csids: Vec<ChangesetId> = bonsais.iter().map(|b| b.get_changeset_id()).collect();
-        let hg_stage = StageId::Manifest(stage_path.clone());
-        let acl_stage = StageId::Manifest(stage_path.clone());
-        let (hg_outputs, acl_outputs) = futures::future::try_join(
-            MappedHgChangesetId::fetch_stage_outputs(ctx, derivation, &hg_stage, csids.clone()),
-            RootAclManifestId::fetch_stage_outputs(ctx, derivation, &acl_stage, csids),
+        derive_stage_batch_from_bonsai::<Self>(
+            ctx,
+            derivation,
+            bonsais,
+            payload,
+            parents,
+            dependency_outputs,
         )
-        .await?;
-
-        let mut results: HashMap<ChangesetId, Self::StageOutput> = HashMap::new();
-
-        for bonsai in &bonsais {
-            let cs_id = bonsai.get_changeset_id();
-
-            // Missing output is a broken invariant; an absent entry (None below) is the legitimate "nothing here" case.
-            let hg_output = hg_outputs.get(&cs_id).ok_or_else(|| {
-                anyhow!("missing HgChangesets stage output for {cs_id} at stage {stage_path}")
-            })?;
-            let hg_entry = hg_output.entry.clone().map(crate::pipeline::untrace_entry);
-
-            let out = match hg_entry {
-                // Nothing at this stage path.
-                None => None,
-                // A tree to augment, or a file when the stage root resolves to a
-                // file in this commit. The staged core handles both.
-                Some(hg_entry) => {
-                    // Parent augmented subtrees at S, bonsai-parent order,
-                    // preferring in-batch results over external parents.
-                    let parent_aug: Vec<Option<HgAugmentedManifestId>> = bonsai
-                        .parents()
-                        .map(|parent_csid| {
-                            let output = results
-                                .get(&parent_csid)
-                                .or_else(|| parents.get(&parent_csid))
-                                .ok_or_else(|| {
-                                    anyhow!("missing stage output for parent {parent_csid}")
-                                })?;
-                            Ok(output.as_ref().and_then(parent_aug_id))
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-
-                    let known_entries: HashMap<MPath, Option<HgAugmentedManifestEntry>> =
-                        dependency_outputs
-                            .get(&cs_id)
-                            .map(|deps| {
-                                deps.iter()
-                                    .map(|(dep_path, dep_output)| {
-                                        (dep_path.clone(), dep_output.clone())
-                                    })
-                                    .collect()
-                            })
-                            .unwrap_or_default();
-
-                    let acl_overlay =
-                        normalize_acl_stage(acl_outputs.get(&cs_id), cs_id, stage_path)?;
-
-                    // Content metadata for files changed under this stage path.
-                    let content_ids: HashSet<_> = bonsai
-                        .file_changes()
-                        .filter(|(path, _)| stage_path.is_prefix_of(*path))
-                        .filter_map(|(_, change)| change.simplify().map(|c| c.content_id()))
-                        .collect();
-                    let content_metadata =
-                        prefetch_content_metadata(ctx, derivation.blobstore(), content_ids).await?;
-
-                    derive_from_hg_manifest_and_parents_staged(
-                        ctx,
-                        derivation.blobstore(),
-                        stage_path.clone(),
-                        hg_entry,
-                        parent_aug,
-                        known_entries,
-                        &content_metadata,
-                        &derivation.restricted_paths(),
-                        acl_overlay,
-                    )
-                    .await?
-                }
-            };
-
-            results.insert(cs_id, out);
-        }
-
-        Ok(results)
+        .await
     }
 
     async fn extract_stage_output_from_derived(
@@ -533,126 +568,15 @@ impl PipelineDerivable for RootHgAugmentedManifestV2Id {
         parents: HashMap<ChangesetId, Self::StageOutput>,
         dependency_outputs: HashMap<ChangesetId, HashMap<MPath, Self::StageOutput>>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        let DerivationStagePayload::Manifest(payload) = payload else {
-            anyhow::bail!("{} has no finalize derive", Self::NAME);
-        };
-        let stage_path = &payload.path;
-
-        let csids = bonsais
-            .iter()
-            .map(BonsaiChangeset::get_changeset_id)
-            .collect();
-
-        let acl_outputs = RootAclManifestId::fetch_stage_outputs(
+        derive_stage_batch_from_bonsai::<Self>(
             ctx,
             derivation,
-            &StageId::Manifest(stage_path.clone()),
-            csids,
+            bonsais,
+            payload,
+            parents,
+            dependency_outputs,
         )
-        .await?;
-
-        let mut results: HashMap<ChangesetId, Self::StageOutput> = HashMap::new();
-        for bonsai in &bonsais {
-            let cs_id = bonsai.get_changeset_id();
-
-            let parent_entries = bonsai
-                .parents()
-                .map(|parent_csid| {
-                    results
-                        .get(&parent_csid)
-                        .or_else(|| parents.get(&parent_csid))
-                        .cloned()
-                        .ok_or_else(|| anyhow!("missing stage output for parent {parent_csid}"))
-                })
-                .collect::<Result<Vec<_>>>()?;
-            let root_parent_entries = stage_path.is_root().then(|| parent_entries.clone());
-
-            let known_entries = dependency_outputs.get(&cs_id).cloned().unwrap_or_default();
-            let acl_overlay = normalize_acl_stage(acl_outputs.get(&cs_id), cs_id, stage_path)?;
-
-            let file_changes = bonsai
-                .file_changes()
-                .filter(|(path, _)| stage_path.is_prefix_of(*path))
-                .map(|(path, file_change)| {
-                    Ok((
-                        path.clone(),
-                        match file_change {
-                            FileChange::Change(change) => Some(change.clone()),
-                            FileChange::Deletion => None,
-                            FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
-                                anyhow::bail!("Can't derive manifest for snapshot")
-                            }
-                        },
-                    ))
-                })
-                .collect::<Result<Vec<_>>>()?;
-            let content_ids = file_changes
-                .iter()
-                .filter_map(|(_, change)| change.as_ref().map(|change| change.content_id()))
-                .collect::<HashSet<_>>();
-
-            let content_metadata_fut =
-                prefetch_content_metadata(ctx, derivation.blobstore(), content_ids);
-            let mut parent_csids = bonsai.parents();
-            let parent_bonsai_csids = (parent_csids.next(), parent_csids.next());
-            let is_hg_parent = |copy_csid: &ChangesetId| {
-                parent_bonsai_csids.0.as_ref() == Some(copy_csid)
-                    || parent_bonsai_csids.1.as_ref() == Some(copy_csid)
-            };
-            let source_csids: HashSet<_> = file_changes
-                .iter()
-                .filter_map(|(_, change)| change.as_ref()?.copy_from())
-                .filter(|(copy_path, copy_csid)| {
-                    !stage_path.is_prefix_of(copy_path) && is_hg_parent(copy_csid)
-                })
-                .map(|(_, copy_csid)| *copy_csid)
-                .chain(subtree_copy_source_changesets(bonsai, stage_path))
-                .collect();
-            let source_aug_roots =
-                fetch_v2_source_augmented_roots(ctx, derivation, source_csids).await?;
-            let subtree_replacements_fut = build_augmented_subtree_replacements(
-                ctx,
-                derivation.blobstore(),
-                bonsai,
-                stage_path,
-                &source_aug_roots,
-            );
-            let (content_metadata, subtree_replacements) =
-                futures::future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
-
-            let output = derive_augmented_manifest_entry_from_bonsai(
-                ctx,
-                derivation.blobstore(),
-                stage_path.clone(),
-                parent_entries,
-                known_entries,
-                file_changes,
-                subtree_replacements,
-                parent_bonsai_csids,
-                &source_aug_roots,
-                &content_metadata,
-                &derivation.restricted_paths(),
-                acl_overlay,
-            )
-            .await?;
-            let output = match root_parent_entries {
-                Some(root_parent_entries) => Some(HgAugmentedManifestEntry::DirectoryNode(
-                    finalize_augmented_manifest_root(
-                        ctx,
-                        derivation.blobstore(),
-                        output,
-                        root_parent_entries,
-                        &derivation.restricted_paths(),
-                        acl_overlay,
-                    )
-                    .await?,
-                )),
-                None => output,
-            };
-            results.insert(cs_id, output);
-        }
-
-        Ok(results)
+        .await
     }
 
     async fn extract_stage_output_from_derived(
