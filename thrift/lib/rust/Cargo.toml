@@ -27,7 +27,7 @@ panic-message = "0.3"
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.21"
-unicase = "2.9.0"
+unicase = "2.10.0"
 
 [dev-dependencies]
 quickcheck = "1.1"
