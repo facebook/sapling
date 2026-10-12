@@ -24,6 +24,17 @@ pub enum CborStreamError {
 
     #[error("Unexpected trailing data found at end of CBOR stream ({0} bytes)")]
     TrailingData(usize),
+
+    #[error("Unable to allocate {0} bytes to buffer the CBOR stream")]
+    OutOfMemory(usize),
+}
+
+/// Grow `buffer` by `additional` bytes, reporting allocation failure as a
+/// stream error instead of aborting the process.
+fn try_reserve(buffer: &mut Vec<u8>, additional: usize) -> Result<(), CborStreamError> {
+    buffer
+        .try_reserve(additional)
+        .map_err(|_| CborStreamError::OutOfMemory(buffer.len() + additional))
 }
 
 const MEDIUM_BUFFER_SIZE: usize = 1024 * 1024;
@@ -127,8 +138,16 @@ where
                         Err(bytes) => {
                             // Couldn't recover the buffer (because T::deserialize retained a slice).
                             // Copy unused part into a new buffer.
-                            *this.buffer = Vec::with_capacity(*this.threshold);
-                            this.buffer.extend_from_slice(&bytes[*this.position..]);
+                            let remaining = &bytes[*this.position..];
+                            let mut buffer = Vec::new();
+                            if let Err(e) =
+                                try_reserve(&mut buffer, (*this.threshold).max(remaining.len()))
+                            {
+                                *this.terminated = true;
+                                return Poll::Ready(Some(Err(E::from(e))));
+                            }
+                            buffer.extend_from_slice(remaining);
+                            *this.buffer = buffer;
                             *this.position = 0;
                         }
                     }
@@ -172,6 +191,10 @@ where
                             // data chunk from curl.
                             *this.buffer = chunk;
                         } else {
+                            if let Err(e) = try_reserve(this.buffer, chunk.len()) {
+                                *this.terminated = true;
+                                return Poll::Ready(Some(Err(E::from(e))));
+                            }
                             this.buffer.extend_from_slice(&chunk);
                         }
                     }
