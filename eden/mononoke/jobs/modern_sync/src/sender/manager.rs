@@ -43,6 +43,23 @@ pub(crate) const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 pub(crate) const MODERN_SYNC_BATCH_CHECKPOINT_NAME: &str = "modern_sync_batch_checkpoint";
 pub(crate) const MODERN_SYNC_CURRENT_ENTRY_ID: &str = "modern_sync_batch_id";
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct ModernSyncCounterNames {
+    pub completed_entry: String,
+    pub batch_checkpoint: String,
+    pub current_entry: String,
+}
+
+impl ModernSyncCounterNames {
+    pub fn legacy() -> Self {
+        Self {
+            completed_entry: MODERN_SYNC_COUNTER_NAME.to_owned(),
+            batch_checkpoint: MODERN_SYNC_BATCH_CHECKPOINT_NAME.to_owned(),
+            current_entry: MODERN_SYNC_CURRENT_ENTRY_ID.to_owned(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SendManager {
     content_sender: mpsc::Sender<ContentMessage>,
@@ -90,7 +107,11 @@ pub enum ChangesetMessage {
     // Send the changeset to remote end
     Changeset((HgBlobChangeset, BonsaiChangeset)),
     // Checkpoint position (first argument) within the BUL entry (second argument)
-    CheckpointInEntry(u64, i64),
+    CheckpointInEntry {
+        position: u64,
+        entry_id: i64,
+        counter_names: ModernSyncCounterNames,
+    },
     // Perform bookmark movement and mark BUL entry as completed once the changeset is synced
     FinishEntry(BookmarkInfo),
     // Notify changeset sending is done
@@ -107,6 +128,7 @@ pub struct BookmarkInfo {
     // reuses both so the replica's log row matches the source row for row.
     pub log_id: i64,
     pub reason: BookmarkUpdateReason,
+    pub counter_names: ModernSyncCounterNames,
 }
 
 impl SendManager {

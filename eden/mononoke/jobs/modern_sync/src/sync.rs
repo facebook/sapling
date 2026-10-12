@@ -79,10 +79,9 @@ use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::ContentMessage;
 use crate::sender::manager::FileMessage;
-use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
 use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
-use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
 use crate::sender::manager::Messages;
+use crate::sender::manager::ModernSyncCounterNames;
 use crate::sender::manager::SendManager;
 use crate::sender::manager::TreeMessage;
 use crate::stat;
@@ -198,6 +197,7 @@ pub async fn sync(
         stat::log_sync_start(&ctx, start_id);
 
         let bookmark = app_args.bookmark;
+        let counter_names = ModernSyncCounterNames::legacy();
         let last_entry = Arc::new(RwLock::new(None));
         bul_util::read_bookmark_update_log(
             &ctx,
@@ -215,6 +215,7 @@ pub async fn sync(
                 mut send_manager,
                 last_entry,
                 bookmark,
+                counter_names,
                 config
             );
             borrowed!(ctx);
@@ -279,6 +280,7 @@ pub async fn sync(
                                 app_args.log_to_ods,
                                 *last_entry.read().await,
                                 mc.clone(),
+                                counter_names.clone(),
                             )
                             .await
                             .inspect(|_| {
@@ -385,6 +387,7 @@ pub async fn process_bookmark_update_log_entry(
     log_to_ods: bool,
     last_entry: Option<ChangesetId>,
     mc: Arc<dyn MutableCounters + Send + Sync>,
+    counter_names: ModernSyncCounterNames,
 ) -> Result<()> {
     let repo_name = repo.repo_identity().name().to_string();
 
@@ -464,13 +467,13 @@ pub async fn process_bookmark_update_log_entry(
             },
             async {
                 let checkpointed_entry = mc
-                    .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
+                    .get_counter(&ctx, &counter_names.current_entry)
                     .await?
                     .unwrap_or(0);
 
                 if checkpointed_entry == entry.id.0 as i64 {
                     Ok(mc
-                        .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
+                        .get_counter(&ctx, &counter_names.batch_checkpoint)
                         .await?
                         .unwrap_or(0))
                 } else {
@@ -518,7 +521,8 @@ pub async fn process_bookmark_update_log_entry(
                 sender,
                 mut send_manager,
                 bookmark_name,
-                current_position
+                current_position,
+                counter_names
             );
             if skip_commits > 0 {
                 tracing::info!("Skipping {} commits within batch", skip_commits);
@@ -595,10 +599,11 @@ pub async fn process_bookmark_update_log_entry(
 
                 *current_position.lock().await += ms_len as u64;
                 send_manager
-                    .send_changeset(ChangesetMessage::CheckpointInEntry(
-                        current_position.lock().await.clone(),
+                    .send_changeset(ChangesetMessage::CheckpointInEntry {
+                        position: current_position.lock().await.clone(),
                         entry_id,
-                    ))
+                        counter_names: counter_names.clone(),
+                    })
                     .await?;
                 Ok(())
             }
@@ -606,7 +611,11 @@ pub async fn process_bookmark_update_log_entry(
         .await?;
 
     send_manager
-        .send_changeset(ChangesetMessage::CheckpointInEntry(0, entry.id.0 as i64))
+        .send_changeset(ChangesetMessage::CheckpointInEntry {
+            position: 0,
+            entry_id: entry.id.0 as i64,
+            counter_names: counter_names.clone(),
+        })
         .await?;
 
     send_manager
@@ -616,6 +625,7 @@ pub async fn process_bookmark_update_log_entry(
             to_cs_id: entry.to_changeset_id,
             log_id: entry.id.0 as i64,
             reason: entry.reason,
+            counter_names,
         }))
         .await?;
 

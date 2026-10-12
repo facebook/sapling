@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -30,10 +31,8 @@ use crate::sender::edenapi::BookmarkMove;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
-use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
-use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
-use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
 use crate::sender::manager::Manager;
+use crate::sender::manager::ModernSyncCounterNames;
 use crate::stat;
 
 define_stats! {
@@ -75,8 +74,8 @@ impl ChangesetManager {
         mc: Arc<dyn MutableCounters + Send + Sync>,
         current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
         pending_log: &mut VecDeque<Option<i64>>,
-        latest_checkpoint: &mut Option<(u64, i64)>,
-        latest_entry_id: &mut Option<i64>,
+        latest_checkpoints: &mut HashMap<ModernSyncCounterNames, (u64, i64)>,
+        latest_entry_ids: &mut HashMap<ModernSyncCounterNames, i64>,
         latest_bookmark_chain: &mut Vec<BookmarkInfo>,
         pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
     ) -> Result<(), anyhow::Error> {
@@ -100,17 +99,17 @@ impl ChangesetManager {
             STATS::sync_lag_seconds.add_value(lag, (reponame.clone(),));
         }
 
-        if let Some((position, id)) = latest_checkpoint.take() {
+        for (counter_names, (position, id)) in latest_checkpoints.drain() {
             tracing::info!("Setting checkpoint from entry {} to {}", id, position);
 
             let res_entry = mc
-                .set_counter(ctx, MODERN_SYNC_CURRENT_ENTRY_ID, id, None)
+                .set_counter(ctx, &counter_names.current_entry, id, None)
                 .await?;
 
             let res_checkpoint = mc
                 .set_counter(
                     ctx,
-                    MODERN_SYNC_BATCH_CHECKPOINT_NAME,
+                    &counter_names.batch_checkpoint,
                     position.try_into().unwrap(),
                     None,
                 )
@@ -166,10 +165,10 @@ impl ChangesetManager {
             }
         }
 
-        if let Some(id) = latest_entry_id.take() {
+        for (counter_names, id) in latest_entry_ids.drain() {
             tracing::info!("Marking entry {} as done", id);
             let res = mc
-                .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, id, None)
+                .set_counter(ctx, &counter_names.completed_entry, id, None)
                 .await?;
 
             if !res {
@@ -201,8 +200,8 @@ impl Manager for ChangesetManager {
 
             let mut pending_log = VecDeque::new();
 
-            let mut latest_in_entry_checkpoint = None;
-            let mut latest_entry_id = None;
+            let mut latest_in_entry_checkpoints = HashMap::new();
+            let mut latest_entry_ids = HashMap::new();
             let mut latest_bookmark_chain: Vec<BookmarkInfo> = Vec::new();
             let mut pending_notification = None;
 
@@ -261,10 +260,15 @@ impl Manager for ChangesetManager {
                                 current_batch.push((hg_cs, bcs));
                             }
 
-                            Some(ChangesetMessage::CheckpointInEntry(position, id))
+                            Some(ChangesetMessage::CheckpointInEntry {
+                                position,
+                                entry_id,
+                                counter_names,
+                            })
                                 if encountered_error.is_none() =>
                             {
-                                latest_in_entry_checkpoint = Some((position, id));
+                                latest_in_entry_checkpoints
+                                    .insert(counter_names, (position, entry_id));
                             }
 
                             Some(ChangesetMessage::FinishEntry(bookmark))
@@ -273,7 +277,8 @@ impl Manager for ChangesetManager {
                                 // Accumulate the contiguous chain of moves. The
                                 // flush replays every move to the replica so it
                                 // reuses each source log id.
-                                latest_entry_id = Some(bookmark.log_id);
+                                latest_entry_ids
+                                    .insert(bookmark.counter_names.clone(), bookmark.log_id);
                                 latest_bookmark_chain.push(bookmark);
                             }
 
@@ -306,7 +311,7 @@ impl Manager for ChangesetManager {
                             let now = std::time::Instant::now();
                             let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                             stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
-                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark_chain, &mut pending_notification)
+                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoints, &mut latest_entry_ids, &mut latest_bookmark_chain, &mut pending_notification)
                             .await
                             {
                                 Ok(()) => {
@@ -326,7 +331,7 @@ impl Manager for ChangesetManager {
                         let now = std::time::Instant::now();
                         let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                         stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
-                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark_chain, &mut pending_notification)
+                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoints, &mut latest_entry_ids, &mut latest_bookmark_chain, &mut pending_notification)
                         .await
                         {
                             Ok(()) => {
