@@ -414,10 +414,15 @@ class InodeMap {
    * inodeLoadFailed() should only be called by TreeInode (or startChildLookup)
    *
    * This should be called when an attempt to load a child inode fails.
+   * A failure that is the expected outcome of a race, such as a lookup of an
+   * inode that was removed meanwhile, passes logAsError=false to skip the
+   * error log and the error logger. The inode trace event is published
+   * either way.
    */
   void inodeLoadFailed(
       InodeNumber number,
-      const folly::exception_wrapper& exception);
+      const folly::exception_wrapper& exception,
+      bool logAsError = true);
 
   void inodeCreated(const InodePtr& inode);
 

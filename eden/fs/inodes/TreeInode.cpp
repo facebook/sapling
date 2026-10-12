@@ -1420,6 +1420,10 @@ void TreeInode::loadUnlinkedChildInode(
 void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
   std::optional<PathComponent> inodeName;
   auto future = Future<unique_ptr<InodeBase>>::makeEmpty();
+  // Set when the entry no longer refers to the requested inode. The load is
+  // failed after the contents lock is released, since failing it runs the
+  // continuations of everyone waiting for the inode.
+  folly::exception_wrapper nameReused;
   {
     auto contents = lockContentsRead();
     auto iter = contents->entries.find(name);
@@ -1435,9 +1439,33 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
     inodeName = copyCanonicalInodeName(iter);
     name = inodeName->piece();
     auto& entry = iter->second;
-    // InodeMap makes sure to only try loading each inode once, so this entry
-    // should not already be loaded.
-    if (entry.getInode() != nullptr) {
+    if (entry.getInodeNumber() != number) {
+      // Removing an unloaded child leaves its InodeMap entry in place for the
+      // FS references still held on it, so by the time the InodeMap asks for
+      // the inode by name, the name can belong to a new inode. Loading that
+      // one here would complete the load of an inode the InodeMap never
+      // started.
+      XLOGF(
+          DBG3,
+          "InodeMap requested to load inode {} ({} in {}), but that name now refers to inode {}",
+          number,
+          name,
+          getNodeId(),
+          entry.getInodeNumber());
+      // An NFS client holding a handle to the old inode expects ESTALE, as
+      // InodeMap::lookupInode reports for an inode it no longer knows.
+      // Windows has neither NFS nor ESTALE.
+#ifdef _WIN32
+      const int reusedErrno = ENOENT;
+#else
+      const int reusedErrno =
+          getMount()->throwEstaleIfInodeIsMissing() ? ESTALE : ENOENT;
+#endif
+      nameReused = folly::make_exception_wrapper<InodeError>(
+          reusedErrno, inodePtrFromThis(), name);
+    } else if (entry.getInode() != nullptr) {
+      // InodeMap makes sure to only try loading each inode once, so this
+      // entry should not already be loaded.
       auto bug = EDEN_BUG_EXCEPTION()
           << "InodeMap requested to load inode " << number << "(" << name
           << " in " << getNodeId() << "), which is already loaded";
@@ -1450,14 +1478,18 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
       // any further.)
       getInodeMap()->inodeLoadFailed(number, bug);
       return;
+    } else {
+      // loadChildInode is called by InodeMap during FUSE_LOOKUP processing.
+      // Pass a null fetch context because we don't need to record statistics.
+      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+          ObjectFetchContext::StaticCauseDetail::fromLiteral(
+              "TreeInode::loadChildInode"));
+      future = startLoadingInodeNoThrow(entry, name, context, false);
     }
-
-    // loadChildInode is called by InodeMap during FUSE_LOOKUP processing. Pass
-    // a null fetch context because we don't need to record statistics.
-    static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-        ObjectFetchContext::StaticCauseDetail::fromLiteral(
-            "TreeInode::loadChildInode"));
-    future = startLoadingInodeNoThrow(entry, name, context, false);
+  }
+  if (nameReused) {
+    getInodeMap()->inodeLoadFailed(number, nameReused, /*logAsError=*/false);
+    return;
   }
   registerInodeLoadComplete(future, name, number);
 }

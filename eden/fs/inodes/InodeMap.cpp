@@ -576,7 +576,8 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
 
 void InodeMap::inodeLoadFailed(
     InodeNumber number,
-    const folly::exception_wrapper& ex) {
+    const folly::exception_wrapper& ex,
+    bool logAsError) {
   auto promises = extractPendingPromises(number);
   for (auto& promise : promises) {
     promise.setException(ex);
@@ -586,16 +587,19 @@ void InodeMap::inodeLoadFailed(
     mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
   }
 
-  auto outcome = ErrorLogOutcome::Disabled;
-  ex.with_exception([&](const std::exception& e) {
-    outcome = mount_->getServerState()->getErrorLogger().log(
-        EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(e))
-            .withInode(number.getRawValue())
-            .withMountPoint(mount_->getPath().asString())
-            .withErrorType("inode_loading_failed"));
-  });
-  if (outcome != ErrorLogOutcome::RateLimited) {
-    XLOGF(ERR, "failed to load inode {}: {}", number, folly::exceptionStr(ex));
+  if (logAsError) {
+    auto outcome = ErrorLogOutcome::Disabled;
+    ex.with_exception([&](const std::exception& e) {
+      outcome = mount_->getServerState()->getErrorLogger().log(
+          EdenErrorInfo::objectStore(ErrorArg::fromExceptionWithoutTrace(e))
+              .withInode(number.getRawValue())
+              .withMountPoint(mount_->getPath().asString())
+              .withErrorType("inode_loading_failed"));
+    });
+    if (outcome != ErrorLogOutcome::RateLimited) {
+      XLOGF(
+          ERR, "failed to load inode {}: {}", number, folly::exceptionStr(ex));
+    }
   }
   stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }

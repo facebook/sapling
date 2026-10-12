@@ -600,6 +600,45 @@ TEST(InodeMap, unloadedUnlinkedFilesAreRemovedFromOverlay) {
   EXPECT_FALSE(overlay->hasOverlayFile(file2ino));
 }
 
+TEST(InodeMap, lookupOfRemovedUnloadedInodeWhoseNameWasReused) {
+  TestMount mount{FakeTreeBuilder{}};
+  auto edenMount = mount.getEdenMount();
+  auto* inodeMap = edenMount->getInodeMap();
+  auto root = edenMount->getRootInode();
+
+  auto file =
+      root->mknod("file"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  const auto oldIno = file->getNodeId();
+  file->incFsRefcount();
+  file.reset();
+  root->unloadChildrenNow();
+  ASSERT_TRUE(inodeMap->isInodeRemembered(oldIno));
+
+  // Recursive removal drops an unloaded child without loading it, and the
+  // InodeMap keeps remembering the inode for the FS reference.
+  root->removeRecursively(
+          "file"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
+  auto newFile =
+      root->mknod("file"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  ASSERT_NE(oldIno, newFile->getNodeId());
+
+  // Looking the old inode up by number must fail instead of loading the new
+  // file under the old number.
+  auto lookup =
+      inodeMap->lookupInode(oldIno).semi().via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  EXPECT_THROW_ERRNO(std::move(lookup).get(0ms), ENOENT);
+  EXPECT_EQ(newFile->getNodeId(), root->getChildInodeNumber("file"_pc));
+
+  // The old inode stays remembered until its FS reference is released.
+  EXPECT_TRUE(inodeMap->isInodeRemembered(oldIno));
+  inodeMap->decFsRefcount(oldIno);
+  EXPECT_FALSE(inodeMap->isInodeRemembered(oldIno));
+}
+
 TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   FakeTreeBuilder builder;
   builder.setFile("dir1/file.txt", "contents");
