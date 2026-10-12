@@ -9,6 +9,7 @@
 Default config file for testing
 """
 
+import sys
 from typing import Optional
 
 
@@ -106,7 +107,9 @@ buffer-commit-count = 5
         content += """
 [extensions]
 fsmonitor=
-
+"""
+        if sys.platform != "darwin":
+            content += """
 [fsmonitor]
 fallback-on-watchman-exception=false
 """
