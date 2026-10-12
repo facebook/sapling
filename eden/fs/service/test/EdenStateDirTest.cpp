@@ -7,6 +7,7 @@
 
 #include "eden/fs/service/EdenStateDir.h"
 
+#include <folly/FileUtil.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
 
@@ -51,6 +52,17 @@ TEST_F(EdenStateDirTest, restartSentinelLockHasAStableName) {
   EXPECT_EQ(
       ".edenfs_restart.lock",
       stateDir.getRestartSentinelLockPath().basename().view());
+}
+
+TEST_F(EdenStateDirTest, acquireLockReturnsOldPidWithoutNewline) {
+  auto pidPath = stateDirPath() + PathComponentPiece{"pid"};
+  ASSERT_TRUE(folly::writeFile(std::string{"999999999\n"}, pidPath.c_str()));
+  EdenStateDir stateDir{stateDirPath()};
+
+  auto [acquired, oldPid] = stateDir.acquireLock();
+
+  EXPECT_TRUE(acquired);
+  EXPECT_EQ(std::optional<std::string>{"999999999"}, oldPid);
 }
 
 } // namespace

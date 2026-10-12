@@ -1772,11 +1772,6 @@ Future<TakeoverData> recoverPreparedTakeoverFromError(
 Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   bool doingTakeover = false;
   auto edenDirLockResult = edenDir_.acquireLock();
-  if (edenDirLockResult.second.has_value()) {
-    // If it is during graceful restart and the old edenfs daemon process is
-    // still running, we need to keep the old daemon pid.
-    oldDaemonPid_ = edenDirLockResult.second;
-  }
   if (!edenDirLockResult.first) {
     // Another edenfs process is already running.
     //

@@ -10,6 +10,7 @@
 #include <fmt/core.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
+#include <folly/String.h>
 #include <folly/logging/xlog.h>
 
 using folly::StringPiece;
@@ -73,16 +74,20 @@ std::optional<std::string> EdenStateDir::takeoverLock(folly::File lockFile) {
 
   std::string oldDaemonPid;
   std::optional<std::string> oldDaemonPidContents = std::nullopt;
-  const auto pidContents = folly::to<std::string>(getpid(), "\n");
+  const auto pidContents = folly::to<std::string>(getpid());
   // If the pid file already exists, we have an eden already running. We need to
   // keep its pid as old eden pid. However, the takeoverLock() function get
   // called multiple times during the startup process. We only want to keep the
   // old pid if the contents of the pid file are different from the current
   // running eden pid. Otherwise, it is the new eden pid that get into the pid
   // file before.
-  if (folly::readFile(pidFilePath.c_str(), oldDaemonPid) &&
-      pidContents != oldDaemonPid) {
-    oldDaemonPidContents = oldDaemonPid;
+  if (folly::readFile(pidFilePath.c_str(), oldDaemonPid)) {
+    // The pid file ends with a newline. Callers need the bare pid to build
+    // the name of the old daemon heartbeat file.
+    auto oldPid = folly::trimWhitespace(oldDaemonPid);
+    if (!oldPid.empty() && oldPid != pidContents) {
+      oldDaemonPidContents = oldPid.str();
+    }
   }
 
   folly::File pidFile(pidFilePath.c_str(), O_WRONLY | O_CREAT, 0644);

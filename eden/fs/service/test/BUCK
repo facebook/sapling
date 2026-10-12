@@ -183,6 +183,7 @@ cpp_unittest(
         "fbsource//third-party/googletest:gtest",
         "//eden/common/utils:path",
         "//eden/fs/service:server",
+        "//folly:file_util",
         "//folly/testing:test_util",
     ],
 )
