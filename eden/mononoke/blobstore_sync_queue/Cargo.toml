@@ -14,7 +14,7 @@ path = "test/main.rs"
 [dependencies]
 anyhow = "1.0.104"
 async-trait = "0.1.92"
-auto_impl = "1.3.0"
+auto_impl = "1.4.0"
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
