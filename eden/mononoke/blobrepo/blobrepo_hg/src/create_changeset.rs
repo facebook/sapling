@@ -46,7 +46,9 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use repo_blobstore::RepoBlobstoreArc;
+use restricted_paths::AclFileChangeRejection;
 use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsError;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::SortedVectorMap;
@@ -72,11 +74,27 @@ pub struct AclFileValidation {
     pub repo_name: String,
 }
 
+/// A `.slacl` change rejected while creating `hg_cs_id`. Children of the
+/// rejected commit fail with this same error, so it names the commit. It has
+/// no source, so it stays the root cause under the creation context.
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{rejection} (changeset {hg_cs_id})")]
+pub struct AclFileChangeRejectedInChangeset {
+    pub hg_cs_id: HgChangesetId,
+    pub rejection: AclFileChangeRejection,
+}
+
 impl AclFileValidation {
     /// Validate the bonsai's `.slacl` changes against its parents. The bonsai
     /// file changes come from the manifest diff, so this doesn't trust the
-    /// client-supplied list of changed files.
-    async fn validate(&self, ctx: &CoreContext, bonsai: &BonsaiChangeset) -> Result<()> {
+    /// client-supplied list of changed files. A rejection is reported as
+    /// [`AclFileChangeRejectedInChangeset`] for `hg_cs_id`.
+    async fn validate(
+        &self,
+        ctx: &CoreContext,
+        hg_cs_id: HgChangesetId,
+        bonsai: &BonsaiChangeset,
+    ) -> Result<()> {
         let acl_file_name = self.restricted_paths.config().acl_file_name().as_bytes();
         let touched_acl_files: Vec<NonRootMPath> = bonsai
             .file_changes()
@@ -97,7 +115,15 @@ impl AclFileValidation {
                 &[touched_acl_files.as_slice()],
             )
             .await
-            .map_err(Error::from)
+            .map_err(|e| match e {
+                RestrictedPathsError::AclFileChangeRejected(rejection) => {
+                    Error::from(AclFileChangeRejectedInChangeset {
+                        hg_cs_id,
+                        rejection,
+                    })
+                }
+                e => Error::from(e),
+            })
     }
 }
 
@@ -313,7 +339,7 @@ impl CreateChangeset {
             // restrictions can be looked up.
             if let Some(acl_file_validation) = acl_file_validation {
                 acl_file_validation
-                    .validate(&ctx, &bonsai_cs)
+                    .validate(&ctx, hg_cs.get_changeset_id(), &bonsai_cs)
                     .await
                     .context("While validating ACL file changes")?;
             }

@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blame::BlameError;
+use blobrepo_hg::AclFileChangeRejectedInChangeset;
 use blobstore::LoadableError;
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkMovementError;
@@ -128,7 +129,15 @@ impl MononokeError {
 }
 
 impl From<Error> for MononokeError {
+    /// `.slacl` rejections from Hg changeset creation are reported as the
+    /// rejection itself, without the creation context around it.
     fn from(e: Error) -> Self {
+        if let Some(rejected) = e
+            .root_cause()
+            .downcast_ref::<AclFileChangeRejectedInChangeset>()
+        {
+            return acl_file_change_rejection_error(&rejected.rejection, rejected.to_string());
+        }
         match has_redaction_root_cause(&e) {
             Some((key, reason)) => MononokeError::RedactionError {
                 key: key.to_string(),
@@ -267,14 +276,124 @@ impl From<RestrictedPathsError> for MononokeError {
 
 impl From<AclFileChangeRejection> for MononokeError {
     fn from(rejection: AclFileChangeRejection) -> Self {
-        let message = rejection.to_string();
-        match rejection {
-            AclFileChangeRejection::Unauthorized { .. } => {
-                MononokeError::AuthorizationError(message)
-            }
-            AclFileChangeRejection::ModifiedEarlierInStack { .. } => {
-                MononokeError::InvalidRequest(message)
-            }
+        acl_file_change_rejection_error(&rejection, rejection.to_string())
+    }
+}
+
+/// Map an ACL file change rejection to the `MononokeError` variant for its
+/// kind, with `message` as the error text. `message` is separate so that a
+/// wrapped rejection, e.g. [`AclFileChangeRejectedInChangeset`], keeps the
+/// wrapper's full text.
+fn acl_file_change_rejection_error(
+    rejection: &AclFileChangeRejection,
+    message: String,
+) -> MononokeError {
+    match rejection {
+        AclFileChangeRejection::Unauthorized { .. } => MononokeError::AuthorizationError(message),
+        AclFileChangeRejection::ModifiedEarlierInStack { .. } => {
+            MononokeError::InvalidRequest(message)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use anyhow::Result;
+    use anyhow::format_err;
+    use mercurial_types::HgChangesetId;
+    use mononoke_macros::mononoke;
+    use mononoke_types::NonRootMPath;
+    use shared_error::anyhow::SharedError;
+
+    use super::*;
+
+    /// What it tests: an unauthorized `.slacl` change rejected while creating
+    /// an Hg changeset, reported through a child commit's shared error.
+    /// Expected: a permission error whose message is the rejection reason
+    /// naming the rejected changeset.
+    #[mononoke::test]
+    fn test_from_error_reports_unauthorized_acl_file_change() -> Result<()> {
+        let rejection = AclFileChangeRejection::Unauthorized {
+            dir: MPath::new("secret")?,
+            repo_region_acl: "REPO_REGION:acl".to_string(),
+            restriction_root: NonRootMPath::new("secret")?,
+        };
+        let reason = "Cannot modify ACL file at secret: directory is restricted by REPO_REGION:acl (restriction root: secret). Caller does not have maintainer access. (changeset 1111111111111111111111111111111111111111)";
+
+        let error = MononokeError::from(child_changeset_error(rejected_in_changeset(rejection)?));
+
+        assert!(
+            matches!(&error, MononokeError::AuthorizationError(r) if r == reason),
+            "expected AuthorizationError({reason:?}), got {error:#?}"
+        );
+        assert_eq!(error.to_string(), format!("permission denied: {reason}"));
+        Ok(())
+    }
+
+    /// What it tests: a `.slacl` change rejected by the stack rule while
+    /// creating an Hg changeset.
+    /// Expected: an invalid request whose message is the rejection reason
+    /// naming the rejected changeset.
+    #[mononoke::test]
+    fn test_from_error_reports_acl_file_stack_rejection() -> Result<()> {
+        let rejection = AclFileChangeRejection::ModifiedEarlierInStack {
+            dir: MPath::new("secret")?,
+        };
+        let reason = "Cannot modify ACL file at secret: .slacl at this path was already modified by an earlier changeset in this stack. Split into separate submissions. (changeset 1111111111111111111111111111111111111111)";
+
+        let error = MononokeError::from(child_changeset_error(rejected_in_changeset(rejection)?));
+
+        assert!(
+            matches!(&error, MononokeError::InvalidRequest(r) if r == reason),
+            "expected InvalidRequest({reason:?}), got {error:#?}"
+        );
+        Ok(())
+    }
+
+    /// What it tests: changeset creation failures that are not `.slacl`
+    /// rejections, including a restricted paths error that is not a
+    /// rejection.
+    /// Expected: they stay internal errors.
+    #[mononoke::test]
+    fn test_from_error_keeps_other_changeset_creation_errors_internal() {
+        let failures = [
+            format_err!("Inconsistent node hash for changeset"),
+            RestrictedPathsError::InternalError(format_err!("ACL lookup failed")).into(),
+        ];
+
+        for failure in failures {
+            let error = MononokeError::from(child_changeset_error(failure));
+
+            assert!(
+                matches!(error, MononokeError::InternalError(_)),
+                "expected InternalError, got {error:#?}"
+            );
+        }
+    }
+
+    fn rejected_in_changeset(rejection: AclFileChangeRejection) -> Result<Error> {
+        Ok(AclFileChangeRejectedInChangeset {
+            hg_cs_id: HgChangesetId::from_str("1111111111111111111111111111111111111111")?,
+            rejection,
+        }
+        .into())
+    }
+
+    /// Wrap `failure` the way `CreateChangeset` reports it for the child of
+    /// the commit that failed: the parent's error gets creation context and is
+    /// shared through its `ChangesetHandle`, then the child adds its own
+    /// context and is shared again.
+    fn child_changeset_error(failure: Error) -> Error {
+        let parent = SharedError::from(Arc::new(
+            failure
+                .context("While validating ACL file changes")
+                .context("While creating Changeset parent"),
+        ));
+        let child = SharedError::from(Arc::new(
+            Error::from(parent).context("While creating Changeset child"),
+        ));
+        Error::from(child)
     }
 }

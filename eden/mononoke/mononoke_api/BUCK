@@ -29,6 +29,7 @@ rust_library(
         "fbsource//third-party/rust:pretty_assertions",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/shared_error:shared_error",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/sql_construct:sql_construct",

@@ -110,7 +110,7 @@ impl RestrictedPathsAuthorizationError {
 }
 
 /// Why creation-time validation rejected a change to an ACL (`.slacl`) file.
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum AclFileChangeRejection {
     /// The caller lacks maintainer access to the restriction covering `dir`.
     #[error(
