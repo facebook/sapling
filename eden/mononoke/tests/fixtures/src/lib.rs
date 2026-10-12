@@ -11,7 +11,10 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::ensure;
 use async_trait::async_trait;
+use blobstore::KeyedBlobstore;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bytes::Bytes;
@@ -20,8 +23,20 @@ use fbinit::FacebookInit;
 use filestore::StoreRequest;
 use futures::stream;
 use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestEnvelopeMut;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
+use mercurial_types::RepoPath;
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgChangesetContent;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::fetch_manifest_envelope;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -30,6 +45,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::RepositoryId;
+use mononoke_types::sha1_hash::Sha1;
 use sorted_vector_map::SortedVectorMap;
 use test_repo_factory::TestRepoFactory;
 use test_repo_factory::TestRepoFactoryBuilder;
@@ -92,6 +108,71 @@ pub async fn set_bookmark(
     txn.force_set(&bookmark, bcs_id.unwrap(), BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
+}
+
+/// Store `cs_id`'s root Hg manifest under `supplied` and point `cs_id`'s Hg
+/// changeset at it, the way legacy `unbundle` stores a client-supplied root
+/// hash without checking it. The stored manifest keeps its content and
+/// parents, so its `computed_node_id` is still the content hash.
+///
+/// Hg changesets are derived through the derived data manager, not
+/// `derive_hg_changeset`, which in tests also derives augmented manifests from
+/// the root this replaces.
+pub async fn store_supplied_hg_root(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    supplied: HgNodeHash,
+) -> Result<HgManifestId> {
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_heads::<MappedHgChangesetId>(ctx.clone(), vec![cs_id], None, None)
+        .await?;
+    let hg_cs_id = manager
+        .fetch_derived::<MappedHgChangesetId>(ctx, cs_id, None)
+        .await?
+        .ok_or_else(|| anyhow!("missing Hg changeset for {cs_id}"))?
+        .hg_changeset_id();
+    let hg_cs = HgBlobChangeset::load(ctx, repo.repo_blobstore(), hg_cs_id)
+        .await?
+        .ok_or_else(|| anyhow!("missing Hg changeset blob {hg_cs_id}"))?;
+    let HgManifestEnvelopeMut {
+        p1, p2, contents, ..
+    } = fetch_manifest_envelope(ctx, repo.repo_blobstore(), hg_cs.manifestid())
+        .await?
+        .into_mut();
+    let (supplied_root, upload) = UploadHgTreeEntry {
+        upload_node_id: UploadHgNodeHash::Supplied(supplied),
+        contents,
+        p1,
+        p2,
+        path: RepoPath::root(),
+        computed_node_id: None,
+    }
+    .upload(ctx.clone(), repo.repo_blobstore_arc())?;
+    upload.await?;
+
+    // Blobstores keep the first value put under a key, so remove the original.
+    repo.repo_blobstore()
+        .unlink(ctx, &hg_cs_id.blobstore_key())
+        .await?;
+    HgBlobChangeset::new_with_id(
+        hg_cs_id,
+        HgChangesetContent::new_from_parts(
+            hg_cs.parents(),
+            supplied_root,
+            ChangesetMetadata {
+                user: String::from_utf8(hg_cs.user().to_vec())?,
+                time: *hg_cs.time(),
+                extra: hg_cs.extra().clone(),
+                message: String::from_utf8(hg_cs.message().to_vec())?,
+            },
+            hg_cs.files().to_vec(),
+        ),
+    )
+    .save(ctx, repo.repo_blobstore())
+    .await?;
+    Ok(supplied_root)
 }
 
 #[async_trait]
@@ -1309,6 +1390,164 @@ impl TestRepoFixture for AugmentedManifestV2AclNoHgMapping {
             ]),
         ))
     }
+}
+
+/// Pipeline counterpart of the V1/V2 augmented manifest parity tests for a
+/// root stored under a client-supplied id (see `store_supplied_hg_root`). `S`
+/// adds files to `R`, and its Hg root is supplied. With `S` as a canonical-only
+/// pipeline boundary, the other commits extract parent stage entries from the
+/// canonical roots of `R` and `S`, as the pipeline does for older history:
+/// - `E1`, `E2`: empty children of `S`.
+/// - `M1`: merges `E1` and `E2`, whose roots are both the supplied root.
+/// - `M2`: merges `M1` with `R`; the result equals p1.
+/// - `C`: an empty child of `R`.
+/// - `M3`: merges `C` with `M2`; the result equals p2.
+/// - `T`: changes a file in `M3`.
+///
+/// Hg reuses the supplied root for `E1`, `E2`, `M1`, `M2` and `M3`, and `T`'s
+/// new root has it as p1. Every commit has an Hg changeset, so canonical
+/// derivation builds each augmented manifest from its Hg manifest.
+pub struct AugmentedManifestSuppliedRoot;
+
+#[async_trait]
+impl TestRepoFixture for AugmentedManifestSuppliedRoot {
+    const REPO_NAME: &'static str = "augmented_manifest_supplied_root";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        init_supplied_root_repo(fb, repo, false).await
+    }
+}
+
+/// `AugmentedManifestSuppliedRoot` with an ACL restriction root, so every
+/// augmented root carries an ACL pointer.
+pub struct AugmentedManifestSuppliedRootAcl;
+
+#[async_trait]
+impl TestRepoFixture for AugmentedManifestSuppliedRootAcl {
+    const REPO_NAME: &'static str = "augmented_manifest_supplied_root_acl";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        init_supplied_root_repo(fb, repo, true).await
+    }
+}
+
+async fn init_supplied_root_repo(
+    fb: FacebookInit,
+    repo: &impl Repo,
+    with_acl: bool,
+) -> Result<(
+    BTreeMap<String, ChangesetId>,
+    BTreeMap<String, BTreeSet<String>>,
+)> {
+    use tests_utils::CreateCommitContext;
+
+    let ctx = CoreContext::test_mock(fb);
+    let mut r = CreateCommitContext::new_root(&ctx, repo)
+        .set_message("R")
+        .add_file("dir/a", "a\n")
+        .add_file("other/b", "b\n");
+    if with_acl {
+        r = r
+            .add_file("restricted/.slacl", ACL_PROJECT1)
+            .add_file("restricted/secret", "secret\n");
+    }
+    let r = r.commit().await?;
+    let s = CreateCommitContext::new(&ctx, repo, vec![r])
+        .set_message("S")
+        .add_file("dir/p", "p\n")
+        .add_file("new/q", "q\n")
+        .commit()
+        .await?;
+    let supplied = HgNodeHash::new(Sha1::from_byte_array([0xAB; 20]));
+    store_supplied_hg_root(&ctx, repo, s, supplied).await?;
+
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![s], None, None)
+        .await?;
+    let s_root = manager
+        .fetch_derived::<RootHgAugmentedManifestId>(&ctx, s, None)
+        .await?
+        .ok_or_else(|| anyhow!("missing augmented manifest for S"))?;
+    ensure!(
+        s_root.hg_augmented_manifest_id().into_nodehash() == supplied,
+        "S's canonical augmented root should be its supplied Hg root",
+    );
+
+    let e1 = CreateCommitContext::new(&ctx, repo, vec![s])
+        .set_message("E1")
+        .commit()
+        .await?;
+    let e2 = CreateCommitContext::new(&ctx, repo, vec![s])
+        .set_message("E2")
+        .commit()
+        .await?;
+    let m1 = CreateCommitContext::new(&ctx, repo, vec![e1, e2])
+        .set_message("M1")
+        .commit()
+        .await?;
+    let m2 = CreateCommitContext::new(&ctx, repo, vec![m1, r])
+        .set_message("M2")
+        .commit()
+        .await?;
+    let c = CreateCommitContext::new(&ctx, repo, vec![r])
+        .set_message("C")
+        .commit()
+        .await?;
+    let m3 = CreateCommitContext::new(&ctx, repo, vec![c, m2])
+        .set_message("M3")
+        .commit()
+        .await?;
+    let t = CreateCommitContext::new(&ctx, repo, vec![m3])
+        .set_message("T")
+        .add_file("dir/a", "a2\n")
+        .commit()
+        .await?;
+    manager
+        .derive_heads::<MappedHgChangesetId>(ctx.clone(), vec![t], None, None)
+        .await?;
+
+    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+    txn.force_set(
+        &BookmarkKey::new("master")?,
+        t,
+        BookmarkUpdateReason::TestMove,
+    )?;
+    txn.commit().await?;
+
+    let commits = [
+        ("R", r, vec![]),
+        ("S", s, vec!["R"]),
+        ("E1", e1, vec!["S"]),
+        ("E2", e2, vec!["S"]),
+        ("M1", m1, vec!["E1", "E2"]),
+        ("M2", m2, vec!["M1", "R"]),
+        ("C", c, vec!["R"]),
+        ("M3", m3, vec!["C", "M2"]),
+        ("T", t, vec!["M3"]),
+    ];
+    let mut ids = BTreeMap::from([("master".to_string(), t)]);
+    let mut dag = BTreeMap::new();
+    for (name, id, parents) in commits {
+        ids.insert(name.to_string(), id);
+        dag.insert(
+            name.to_string(),
+            parents.into_iter().map(str::to_string).collect(),
+        );
+    }
+    Ok((ids, dag))
 }
 
 /// Reproduces the cross-stage copy-source divergence between the canonical and

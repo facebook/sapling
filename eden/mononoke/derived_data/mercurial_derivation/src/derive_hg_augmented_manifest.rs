@@ -1234,10 +1234,6 @@ fn collect_augmented_subentries(
     Ok(direct)
 }
 
-fn root_envelope_is_content_derived(envelope: &HgAugmentedManifestEnvelope) -> bool {
-    envelope.augmented_manifest.hg_node_id == envelope.augmented_manifest.computed_node_id
-}
-
 /// Given the fully-merged subentries for one tree node, attempt parent reuse
 /// (mirroring `create_hg_manifest`) or otherwise compute a fresh `hg_node_id`
 /// and store the envelope. Records the envelope's id in the restricted-paths
@@ -1269,8 +1265,8 @@ async fn finalize_envelope(
 
     // Mirror `create_hg_manifest` parent reuse: if merged contents match an
     // hg-relevant parent (and the parent's ACL pointer agrees), reuse that
-    // parent's envelope. At the root, reuse is only valid when the returned
-    // envelope is itself content-derived.
+    // parent's envelope. A reused root keeps a client-supplied `hg_node_id`
+    // because Hg reuses that root id too.
     let computed_node_id = if parents.len() > 1 {
         let ParentEnvelopeReuse {
             reusable_parent,
@@ -1287,24 +1283,21 @@ async fn finalize_envelope(
         .await?;
 
         if let Some(reused) = reusable_parent {
-            let root_reuse_allowed = !is_root || root_envelope_is_content_derived(&reused.envelope);
-            if root_reuse_allowed {
-                return Ok((
-                    (),
-                    IndexedAugmentedDirectory {
-                        node: HgAugmentedDirectoryNode {
-                            treenode: reused.id.into_nodehash(),
-                            augmented_manifest_id: reused.envelope.augmented_manifest_id,
-                            augmented_manifest_size: reused.envelope.augmented_manifest_size,
-                            acl_manifest_directory_id: reused
-                                .envelope
-                                .augmented_manifest
-                                .acl_manifest_directory_id,
-                        },
-                        index: None,
+            return Ok((
+                (),
+                IndexedAugmentedDirectory {
+                    node: HgAugmentedDirectoryNode {
+                        treenode: reused.id.into_nodehash(),
+                        augmented_manifest_id: reused.envelope.augmented_manifest_id,
+                        augmented_manifest_size: reused.envelope.augmented_manifest_size,
+                        acl_manifest_directory_id: reused
+                            .envelope
+                            .augmented_manifest
+                            .acl_manifest_directory_id,
                     },
-                ));
-            }
+                    index: None,
+                },
+            ));
         }
 
         computed_node_id
@@ -1482,7 +1475,7 @@ where
                 .augmented_manifest
                 .acl_manifest_directory_id
                 == acl_root_overlay;
-            if root_envelope_is_content_derived(&candidate_envelope) && root_acl_pointer_matches {
+            if root_acl_pointer_matches {
                 Ok(root_dir)
             } else {
                 let restricted_paths_enabled = justknobs::eval(

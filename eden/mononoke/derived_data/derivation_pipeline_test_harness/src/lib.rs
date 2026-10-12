@@ -536,6 +536,8 @@ async fn run_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
 mod tests {
     use bonsai_hg_mapping::BonsaiHgMappingRef;
     use fixtures::AclNestedDirectories;
+    use fixtures::AugmentedManifestSuppliedRoot;
+    use fixtures::AugmentedManifestSuppliedRootAcl;
     use fixtures::AugmentedManifestV2AbsentParentStageNoHgMapping;
     use fixtures::AugmentedManifestV2AclNoHgMapping;
     use fixtures::AugmentedManifestV2DuplicateParentEntriesNoHgMapping;
@@ -644,6 +646,23 @@ mod tests {
                 ("", vec!["top1"]),
                 ("top1", vec!["docs"]),
                 ("top1/docs", vec![]),
+            ]
+        }
+    }
+
+    impl PipelineTestFixture for AugmentedManifestSuppliedRoot {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![("", vec!["dir", "new"]), ("dir", vec![]), ("new", vec![])]
+        }
+    }
+
+    impl PipelineTestFixture for AugmentedManifestSuppliedRootAcl {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![
+                ("", vec!["dir", "new", "restricted"]),
+                ("dir", vec![]),
+                ("new", vec![]),
+                ("restricted", vec![]),
             ]
         }
     }
@@ -837,6 +856,35 @@ mod tests {
         verify_augmented_manifest_v2_pipeline_first_without_hg_mapping::<
             AugmentedManifestV2AclNoHgMapping,
         >(fb)
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_augmented_manifest_reuses_supplied_root(fb: FacebookInit) -> Result<()> {
+        // Given: commit S, whose Hg root is stored under a client-supplied id,
+        // derived only canonically, and descendants for which Hg reuses it.
+        // When: the pipeline derives S's descendants from Bonsai.
+        // Then: every stage, including each root, matches canonical
+        // derivation from the Hg manifests.
+        verify_pipeline_matches_canonical_with_canonical_ancestors::<AugmentedManifestSuppliedRoot>(
+            fb,
+            "S",
+            &AUGMENTED_MANIFEST_V1_TYPES,
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_augmented_manifest_reuses_supplied_root_with_acl(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Given: the supplied-root history with an ACL restriction root.
+        // When: the pipeline derives S's descendants from Bonsai.
+        // Then: every stage, including each root and its ACL pointer, matches
+        // canonical derivation from the Hg manifests.
+        verify_pipeline_matches_canonical_with_canonical_ancestors::<
+            AugmentedManifestSuppliedRootAcl,
+        >(fb, "S", &AUGMENTED_MANIFEST_V1_TYPES)
         .await
     }
 

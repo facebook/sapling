@@ -68,6 +68,7 @@ use mononoke_types::sharded_map_v2::ShardedMapV2Value;
 use mononoke_types::typed_hash::AclManifestId;
 use mononoke_types::typed_hash::BlobstoreKey;
 use permission_checker::MononokeIdentity;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::ManifestType;
@@ -711,19 +712,19 @@ async fn create_backfill_parity_history(
 /// Loads every directory envelope under `root`, keyed by path. Envelope digests
 /// omit ACL pointers, so comparing only root envelopes would miss a wrong
 /// pointer deeper in the tree.
-async fn load_augmented_directory_envelopes(
+async fn load_augmented_directory_envelopes<B: KeyedBlobstore + Clone + 'static>(
     ctx: &CoreContext,
-    repo: &Repo,
+    store: &B,
     root: HgAugmentedManifestId,
 ) -> Result<BTreeMap<MPath, HgAugmentedManifestEnvelope>> {
     let directories: Vec<_> = root
-        .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+        .list_all_entries(ctx.clone(), store.clone())
         .try_filter_map(|(path, entry)| async move { Ok(entry.into_tree().map(|id| (path, id))) })
         .try_collect()
         .await?;
     let mut envelopes = BTreeMap::new();
     for (path, id) in directories {
-        envelopes.insert(path, id.load(ctx, repo.repo_blobstore()).await?);
+        envelopes.insert(path, id.load(ctx, store).await?);
     }
     Ok(envelopes)
 }
@@ -782,7 +783,8 @@ async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit
             .get(&v2_csid)
             .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestV2Id for {v2_csid}"))
             .hg_augmented_manifest_id();
-        let v2_envelopes = load_augmented_directory_envelopes(&ctx, &v2_repo, v2_root).await?;
+        let v2_envelopes =
+            load_augmented_directory_envelopes(&ctx, v2_repo.repo_blobstore(), v2_root).await?;
         assert!(
             v2_envelopes[&MPath::new("restricted/code")?]
                 .augmented_manifest
@@ -793,7 +795,12 @@ async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit
         let backfilled_root = backfilled_roots[&backfill_csid];
         assert_eq!(backfilled_root, v2_root);
         assert_eq!(
-            load_augmented_directory_envelopes(&ctx, &backfill_repo, backfilled_root).await?,
+            load_augmented_directory_envelopes(
+                &ctx,
+                backfill_repo.repo_blobstore(),
+                backfilled_root,
+            )
+            .await?,
             v2_envelopes,
             "backfilled augmented manifest for {backfill_csid} should match V2",
         );
@@ -2819,7 +2826,57 @@ async fn test_direct_derivation_computed_root_when_none(fb: FacebookInit) -> Res
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_none_rejects_supplied_parent_envelope_reuse(
+async fn test_direct_derivation_empty_commit_reuses_supplied_parent_root(
+    fb: FacebookInit,
+) -> Result<()> {
+    use mercurial_types::HgNodeHash;
+    use mononoke_types::sha1_hash::Sha1 as NodeSha1;
+
+    // Given: an empty commit whose parent's augmented root is stored under a
+    // supplied root id, as legacy `unbundle` stores client root hashes.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "content")
+        .commit()
+        .await?;
+    let supplied = HgNodeHash::new(NodeSha1::from_byte_array([0xAB; 20]));
+    let parent_forced = store_augmented_manifest_with_supplied_root(
+        &ctx,
+        &repo,
+        derive_parent_aug(&ctx, &repo, parent).await?,
+        supplied,
+    )
+    .await?;
+    let empty = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .commit()
+        .await?;
+
+    // When: deriving the empty commit directly from Bonsai.
+    let aug_id = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
+        &ctx,
+        repo.repo_blobstore(),
+        vec![parent_forced],
+        file_changes_from_bonsai(&ctx, &repo, empty).await?,
+        vec![],
+        (Some(parent), None),
+        &Default::default(),
+        repo.restricted_paths().config_based(),
+        derive_acl_overlay(&ctx, &repo, empty).await?,
+    )
+    .await?;
+
+    // Then: like Hg, the empty commit keeps its parent's root id.
+    assert_eq!(
+        aug_id, parent_forced,
+        "an empty commit should reuse the supplied parent root",
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_direct_derivation_none_reuses_supplied_parent_envelope(
     fb: FacebookInit,
 ) -> Result<()> {
     use mercurial_types::HgNodeHash;
@@ -2868,24 +2925,16 @@ async fn test_direct_derivation_none_rejects_supplied_parent_envelope_reuse(
     )
     .await?;
 
-    // Then: the direct path creates a content-derived root instead of
-    // reusing p1's supplied envelope.
+    // Then: like Hg, the direct path reuses p1's supplied envelope.
     let env = aug_id.load(&ctx, repo.repo_blobstore()).await?;
-    assert_ne!(aug_id, p1_forced, "must not reuse the supplied parent root");
-    assert_eq!(
-        env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-        "direct Bonsai derivation should produce a content-derived root",
-    );
-    assert_ne!(
-        env.augmented_manifest.hg_node_id, supplied,
-        "the supplied parent root id must not leak into the direct path",
-    );
+    assert_eq!(aug_id, p1_forced, "should reuse the supplied p1 root");
+    assert_eq!(env.augmented_manifest.hg_node_id, supplied);
 
     Ok(())
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
+async fn test_direct_derivation_none_keeps_supplied_short_circuit_root(
     fb: FacebookInit,
 ) -> Result<()> {
     use mercurial_types::HgNodeHash;
@@ -2947,26 +2996,15 @@ async fn test_direct_derivation_none_reemits_supplied_short_circuit_root(
     )
     .await?;
 
-    // Then: the root short-circuit is re-emitted as content-derived instead of
-    // returning the supplied parent root verbatim, and it keeps the merge root
-    // ACL pointer.
+    // Then: like Hg, the root short-circuit returns the supplied parent root,
+    // whose ACL pointer matches the merge root ACL.
     let env = aug_id.load(&ctx, repo.repo_blobstore()).await?;
-    assert_ne!(
-        aug_id, p1_forced,
-        "must not return the supplied parent root"
-    );
-    assert_eq!(
-        env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-        "direct Bonsai derivation should produce a content-derived root",
-    );
-    assert_ne!(
-        env.augmented_manifest.hg_node_id, supplied,
-        "the supplied parent root id must not leak through root short-circuit reuse",
-    );
+    assert_eq!(aug_id, p1_forced, "should return the supplied parent root");
+    assert_eq!(env.augmented_manifest.hg_node_id, supplied);
     assert_eq!(
         env.augmented_manifest.acl_manifest_directory_id,
         Some(acl_root_overlay),
-        "direct Bonsai root re-emission should preserve the merge root ACL pointer",
+        "the reused root should carry the merge root ACL pointer",
     );
 
     Ok(())
@@ -3062,6 +3100,694 @@ async fn test_direct_derivation_reemits_content_derived_short_circuit_root_when_
         "direct Bonsai derivation should still produce a content-derived root",
     );
 
+    Ok(())
+}
+
+// V1/V2 parity for roots stored under a client-supplied id.
+//
+// Legacy `unbundle` stores a pushed root tree under the hash the client
+// supplied, so that root's `hg_node_id` differs from its `computed_node_id`.
+// Wherever Hg reuses such a root, V1 reuses it too, because V1 copies node ids
+// from the Hg manifest. These tests derive each commit with both algorithms
+// and require identical output.
+
+const SUPPLIED_ROOT_SLACL: &str =
+    "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=restricted\"\n";
+
+/// Derives augmented manifests with V1 and V2 into separate in-memory stores
+/// over a shared base, giving each side its own earlier outputs as parents.
+///
+/// V1 builds from the Hg manifest that Mononoke derives for the commit from
+/// its parents' Hg changesets; V2 builds from Bonsai. Envelopes are keyed by
+/// `hg_node_id`, so in a single store one side's envelope would be dropped
+/// wherever the ids collide, and the comparison would read one blob twice.
+struct V1V2Parity<B> {
+    v1_store: MemWritesKeyedBlobstore<B>,
+    v2_store: MemWritesKeyedBlobstore<B>,
+    v1_roots: HashMap<ChangesetId, HgAugmentedManifestId>,
+    v2_roots: HashMap<ChangesetId, HgAugmentedManifestId>,
+}
+
+/// One commit's augmented roots from both algorithms, and its Hg root.
+struct V1V2Roots {
+    cs_id: ChangesetId,
+    hg_root: HgManifestId,
+    v1: HgAugmentedManifestId,
+    v2: HgAugmentedManifestId,
+}
+
+impl<B: KeyedBlobstore + Clone + 'static> V1V2Parity<B> {
+    fn new(base: B) -> Self {
+        Self {
+            v1_store: MemWritesKeyedBlobstore::new(base.clone()),
+            v2_store: MemWritesKeyedBlobstore::new(base),
+            v1_roots: HashMap::new(),
+            v2_roots: HashMap::new(),
+        }
+    }
+
+    /// Use `root`, already in the base store, as both sides' root for `cs_id`.
+    fn add_stored_root(&mut self, cs_id: ChangesetId, root: HgAugmentedManifestId) {
+        self.v1_roots.insert(cs_id, root);
+        self.v2_roots.insert(cs_id, root);
+    }
+
+    async fn derive(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &Repo,
+        cs_id: ChangesetId,
+    ) -> Result<V1V2Roots> {
+        let bonsai: mononoke_types::BonsaiChangeset =
+            cs_id.load(ctx, repo.repo_blobstore()).await?;
+        let v1_parents = parent_augmented_roots(&self.v1_roots, &bonsai)?;
+        let v2_parents = parent_augmented_roots(&self.v2_roots, &bonsai)?;
+        let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
+        let hg_root = derive_hg_root(ctx, repo, cs_id).await?;
+        let restricted_paths = repo.restricted_paths().config_based();
+        let v1 = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+            ctx,
+            &self.v1_store,
+            hg_root,
+            v1_parents,
+            &Default::default(),
+            restricted_paths,
+            acl_root_overlay,
+        )
+        .await?;
+        let v2 = derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai_changeset(
+            ctx,
+            &self.v2_store,
+            &bonsai,
+            v2_parents,
+            &HashMap::new(),
+            restricted_paths,
+            acl_root_overlay,
+        )
+        .await?;
+        self.v1_roots.insert(cs_id, v1);
+        self.v2_roots.insert(cs_id, v2);
+        Ok(V1V2Roots {
+            cs_id,
+            hg_root,
+            v1,
+            v2,
+        })
+    }
+
+    /// Asserts that V2's output equals V1's: the same root id, which is the
+    /// commit's Hg root manifest id, and the same envelope at every directory,
+    /// each read from its own side's store. Envelope digests omit ACL
+    /// pointers, so equal root ids alone would not show equal ACL pointers.
+    async fn assert_v2_matches_v1(
+        &self,
+        ctx: &CoreContext,
+        roots: &V1V2Roots,
+        case: &str,
+    ) -> Result<()> {
+        let cs_id = roots.cs_id;
+        assert_eq!(
+            roots.v1.into_nodehash(),
+            roots.hg_root.into_nodehash(),
+            "{case}: V1 root of {cs_id} should be its Hg root manifest",
+        );
+        assert_eq!(
+            roots.v2, roots.v1,
+            "{case}: V2 root of {cs_id} should equal V1's"
+        );
+        assert_eq!(
+            load_augmented_directory_envelopes(ctx, &self.v2_store, roots.v2).await?,
+            load_augmented_directory_envelopes(ctx, &self.v1_store, roots.v1).await?,
+            "{case}: V2 directory envelopes of {cs_id} should equal V1's",
+        );
+        Ok(())
+    }
+}
+
+fn parent_augmented_roots(
+    roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
+    bonsai: &mononoke_types::BonsaiChangeset,
+) -> Result<Vec<HgAugmentedManifestId>> {
+    bonsai
+        .parents()
+        .map(|parent| {
+            roots
+                .get(&parent)
+                .copied()
+                .ok_or_else(|| anyhow!("no augmented root for parent {parent}"))
+        })
+        .collect()
+}
+
+/// The Hg root manifest that Mononoke derives for `cs_id`. Derives through
+/// the derived data manager because `derive_hg_changeset` also derives
+/// augmented manifests in tests, which would put V1 output into the base that
+/// both sides read.
+async fn derive_hg_root(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<HgManifestId> {
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_heads::<MappedHgChangesetId>(ctx.clone(), vec![cs_id], None, None)
+        .await?;
+    let hg_cs_id = manager
+        .fetch_derived::<MappedHgChangesetId>(ctx, cs_id, None)
+        .await?
+        .with_context(|| format!("missing Hg changeset for {cs_id}"))?
+        .hg_changeset_id();
+    Ok(hg_cs_id
+        .load(ctx, repo.repo_blobstore())
+        .await?
+        .manifestid())
+}
+
+/// The augmented root that canonical derivation stores for `cs_id`. A commit
+/// with an Hg changeset is built from its Hg manifest, so this is V1 output,
+/// as in existing history.
+async fn derive_stored_root(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+) -> Result<HgAugmentedManifestId> {
+    derive_hg_root(ctx, repo, cs_id).await?;
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![cs_id], None, None)
+        .await?;
+    Ok(manager
+        .fetch_derived::<RootHgAugmentedManifestId>(ctx, cs_id, None)
+        .await?
+        .with_context(|| format!("missing augmented root for {cs_id}"))?
+        .hg_augmented_manifest_id())
+}
+
+/// `p` adds files to `b`, and its Hg root is stored under a supplied id. Both
+/// have stored augmented roots.
+struct SuppliedRootHistory {
+    b: ChangesetId,
+    p: ChangesetId,
+    supplied_root: HgAugmentedManifestId,
+}
+
+/// Files of the base commit of the supplied-root tests.
+fn supplied_root_base_files(with_slacl: bool) -> Vec<(&'static str, &'static str)> {
+    let mut files = vec![("dir/a", "a"), ("other/b", "b")];
+    if with_slacl {
+        files.extend([
+            ("restricted/.slacl", SUPPLIED_ROOT_SLACL),
+            ("restricted/secret", "secret"),
+        ]);
+    }
+    files
+}
+
+async fn create_supplied_root_base(
+    ctx: &CoreContext,
+    repo: &Repo,
+    with_slacl: bool,
+) -> Result<ChangesetId> {
+    let mut base = CreateCommitContext::new_root(ctx, repo);
+    for (path, content) in supplied_root_base_files(with_slacl) {
+        base = base.add_file(path, content);
+    }
+    base.commit().await
+}
+
+fn supplied_hg_root_hash() -> mercurial_types::HgNodeHash {
+    mercurial_types::HgNodeHash::new(mononoke_types::sha1_hash::Sha1::from_byte_array([0xAB; 20]))
+}
+
+async fn create_supplied_root_history(
+    ctx: &CoreContext,
+    repo: &Repo,
+    with_slacl: bool,
+) -> Result<SuppliedRootHistory> {
+    let b = create_supplied_root_base(ctx, repo, with_slacl).await?;
+    let p = CreateCommitContext::new(ctx, repo, vec![b])
+        .add_file("dir/p", "p")
+        .add_file("new/q", "q")
+        .commit()
+        .await?;
+    let supplied = supplied_hg_root_hash();
+    fixtures::store_supplied_hg_root(ctx, repo, p, supplied).await?;
+
+    let supplied_root = derive_stored_root(ctx, repo, p).await?;
+    let envelope = supplied_root.load(ctx, repo.repo_blobstore()).await?;
+    assert_eq!(
+        supplied_root.into_nodehash(),
+        supplied,
+        "fixture: p's stored root should be its supplied Hg root",
+    );
+    assert_ne!(
+        envelope.augmented_manifest.hg_node_id, envelope.augmented_manifest.computed_node_id,
+        "fixture: p's stored root should not be content-derived",
+    );
+    assert_eq!(
+        derive_acl_overlay(ctx, repo, p).await?.is_some(),
+        with_slacl,
+        "fixture: p should have an ACL root exactly when it has a .slacl file",
+    );
+    Ok(SuppliedRootHistory {
+        b,
+        p,
+        supplied_root,
+    })
+}
+
+/// A parity checker whose base holds the stored roots of `history`.
+async fn supplied_root_parity(
+    ctx: &CoreContext,
+    repo: &Repo,
+    history: &SuppliedRootHistory,
+) -> Result<V1V2Parity<RepoBlobstore>> {
+    let mut parity = V1V2Parity::new(repo.repo_blobstore().clone());
+    parity.add_stored_root(history.b, derive_stored_root(ctx, repo, history.b).await?);
+    parity.add_stored_root(history.p, history.supplied_root);
+    Ok(parity)
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_empty_commit_on_supplied_root(fb: FacebookInit) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("empty commit, slacl={with_slacl}");
+        // Given: an empty commit whose parent's Hg root is stored under a
+        // supplied id.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let empty = CreateCommitContext::new(&ctx, &repo, vec![history.p])
+            .commit()
+            .await?;
+
+        // When: deriving the empty commit with V1 and V2.
+        let roots = parity.derive(&ctx, &repo, empty).await?;
+
+        // Then: V2 matches V1, and both keep the supplied root.
+        parity.assert_v2_matches_v1(&ctx, &roots, &case).await?;
+        assert_eq!(
+            roots.v1, history.supplied_root,
+            "{case}: should keep the supplied root"
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_descendants_of_reused_supplied_root(
+    fb: FacebookInit,
+) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("descendants, slacl={with_slacl}");
+        // Given: an empty commit on the supplied root, and a child of it that
+        // changes a file.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let empty = CreateCommitContext::new(&ctx, &repo, vec![history.p])
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(&ctx, &repo, vec![empty])
+            .add_file("dir/a", "a2")
+            .commit()
+            .await?;
+
+        // When: deriving both commits, each side from its own outputs.
+        let empty_roots = parity.derive(&ctx, &repo, empty).await?;
+        let child_roots = parity.derive(&ctx, &repo, child).await?;
+
+        // Then: V2 matches V1 for both, and the child's new root has the
+        // reused supplied root as p1.
+        parity
+            .assert_v2_matches_v1(&ctx, &empty_roots, &case)
+            .await?;
+        parity
+            .assert_v2_matches_v1(&ctx, &child_roots, &case)
+            .await?;
+        assert_eq!(
+            empty_roots.v1, history.supplied_root,
+            "{case}: the empty commit should keep the supplied root",
+        );
+        let child_envelope = child_roots.v1.load(&ctx, &parity.v1_store).await?;
+        assert_eq!(
+            child_envelope.augmented_manifest.p1,
+            Some(history.supplied_root.into_nodehash()),
+            "{case}: the child's root should have the supplied root as p1",
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_merge_equal_to_supplied_p1(fb: FacebookInit) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("merge equal to p1, slacl={with_slacl}");
+        // Given: a merge of the supplied-root commit with its parent, whose
+        // files it already has, so the merge result equals p1.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![history.p, history.b])
+            .commit()
+            .await?;
+
+        // When: deriving the merge with V1 and V2.
+        let roots = parity.derive(&ctx, &repo, merge).await?;
+
+        // Then: V2 matches V1, and both reuse the supplied p1 root.
+        parity.assert_v2_matches_v1(&ctx, &roots, &case).await?;
+        assert_eq!(
+            roots.v1, history.supplied_root,
+            "{case}: should reuse the supplied p1 root"
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_merge_equal_to_supplied_p2(fb: FacebookInit) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("merge equal to p2, slacl={with_slacl}");
+        // Given: a merge of the supplied-root commit's parent with it, so the
+        // merge result equals p2 but not p1.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![history.b, history.p])
+            .commit()
+            .await?;
+
+        // When: deriving the merge with V1 and V2.
+        let roots = parity.derive(&ctx, &repo, merge).await?;
+
+        // Then: V2 matches V1, and both reuse the supplied p2 root.
+        parity.assert_v2_matches_v1(&ctx, &roots, &case).await?;
+        assert_eq!(
+            roots.v1, history.supplied_root,
+            "{case}: should reuse the supplied p2 root"
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_merge_of_parents_sharing_supplied_root(
+    fb: FacebookInit,
+) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("parents sharing the supplied root, slacl={with_slacl}");
+        // Given: two empty children of the supplied-root commit, whose stored
+        // roots are both the supplied root, and a merge of the two.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let mut sides = Vec::new();
+        for message in ["left", "right"] {
+            let side = CreateCommitContext::new(&ctx, &repo, vec![history.p])
+                .set_message(message)
+                .commit()
+                .await?;
+            let side_root = derive_stored_root(&ctx, &repo, side).await?;
+            assert_eq!(
+                side_root, history.supplied_root,
+                "fixture: {case}: the {message} parent's stored root should be the supplied root",
+            );
+            parity.add_stored_root(side, side_root);
+            sides.push(side);
+        }
+        let merge = CreateCommitContext::new(&ctx, &repo, sides)
+            .commit()
+            .await?;
+
+        // When: deriving the merge with V1 and V2.
+        let roots = parity.derive(&ctx, &repo, merge).await?;
+
+        // Then: V2 matches V1, and both keep the shared supplied root.
+        parity.assert_v2_matches_v1(&ctx, &roots, &case).await?;
+        assert_eq!(
+            roots.v1, history.supplied_root,
+            "{case}: should keep the shared supplied root",
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_merge_of_parents_with_equal_content(
+    fb: FacebookInit,
+) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("parents with equal content, slacl={with_slacl}");
+        // Given: `q` makes the supplied-root commit's change to the same
+        // parent, so it has the same content under a content-derived root, and
+        // merges of the two in both orders.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let q = CreateCommitContext::new(&ctx, &repo, vec![history.b])
+            .set_message("same change")
+            .add_file("dir/p", "p")
+            .add_file("new/q", "q")
+            .commit()
+            .await?;
+        let q_root = derive_stored_root(&ctx, &repo, q).await?;
+        let supplied_envelope = history
+            .supplied_root
+            .load(&ctx, repo.repo_blobstore())
+            .await?;
+        assert_eq!(
+            q_root.into_nodehash(),
+            supplied_envelope.augmented_manifest.computed_node_id,
+            "fixture: {case}: q's root should be the content-derived id of the supplied root",
+        );
+        parity.add_stored_root(q, q_root);
+        let supplied_first = CreateCommitContext::new(&ctx, &repo, vec![history.p, q])
+            .commit()
+            .await?;
+        let derived_first = CreateCommitContext::new(&ctx, &repo, vec![q, history.p])
+            .commit()
+            .await?;
+
+        // When: deriving both merges with V1 and V2.
+        let supplied_first_roots = parity.derive(&ctx, &repo, supplied_first).await?;
+        let derived_first_roots = parity.derive(&ctx, &repo, derived_first).await?;
+
+        // Then: V2 matches V1, and like Hg both reuse p1's root.
+        parity
+            .assert_v2_matches_v1(&ctx, &supplied_first_roots, &case)
+            .await?;
+        parity
+            .assert_v2_matches_v1(&ctx, &derived_first_roots, &case)
+            .await?;
+        assert_eq!(
+            supplied_first_roots.v1, history.supplied_root,
+            "{case}: should reuse the supplied p1 root",
+        );
+        assert_eq!(
+            derived_first_roots.v1, q_root,
+            "{case}: should reuse the content-derived p1 root",
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_octopus_merge_equal_to_supplied_p1(fb: FacebookInit) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("octopus merge equal to p1, slacl={with_slacl}");
+        // Given: `r` adds one of the supplied-root commit's files to the same
+        // parent, and an octopus merge of the supplied-root commit, its parent
+        // and `r`, whose result equals p1.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let r = CreateCommitContext::new(&ctx, &repo, vec![history.b])
+            .set_message("part of the change")
+            .add_file("new/q", "q")
+            .commit()
+            .await?;
+        parity.add_stored_root(r, derive_stored_root(&ctx, &repo, r).await?);
+        let octopus = CreateCommitContext::new(&ctx, &repo, vec![history.p, history.b, r])
+            .commit()
+            .await?;
+
+        // When: deriving the octopus merge with V1 and V2.
+        let roots = parity.derive(&ctx, &repo, octopus).await?;
+
+        // Then: V2 matches V1, and both reuse the supplied p1 root.
+        parity.assert_v2_matches_v1(&ctx, &roots, &case).await?;
+        assert_eq!(
+            roots.v1, history.supplied_root,
+            "{case}: should reuse the supplied p1 root"
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_octopus_merge_equal_to_supplied_step_parent(
+    fb: FacebookInit,
+) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("octopus merge equal to p3, slacl={with_slacl}");
+        // Given: an octopus merge whose result equals its third parent, the
+        // supplied-root commit. Hg only reuses p1 or p2.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let history = create_supplied_root_history(&ctx, &repo, with_slacl).await?;
+        let mut parity = supplied_root_parity(&ctx, &repo, &history).await?;
+        let r = CreateCommitContext::new(&ctx, &repo, vec![history.b])
+            .set_message("part of the change")
+            .add_file("new/q", "q")
+            .commit()
+            .await?;
+        parity.add_stored_root(r, derive_stored_root(&ctx, &repo, r).await?);
+        let octopus = CreateCommitContext::new(&ctx, &repo, vec![history.b, r, history.p])
+            .commit()
+            .await?;
+
+        // When: deriving the octopus merge with V1 and V2.
+        let roots = parity.derive(&ctx, &repo, octopus).await?;
+
+        // Then: V2 matches V1, and neither reuses the supplied step-parent
+        // root.
+        parity.assert_v2_matches_v1(&ctx, &roots, &case).await?;
+        assert_ne!(
+            roots.v1, history.supplied_root,
+            "{case}: should not reuse the supplied p3 root"
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_merge_equal_to_empty_supplied_root(fb: FacebookInit) -> Result<()> {
+    for with_slacl in [false, true] {
+        let case = format!("merge equal to an empty supplied root, slacl={with_slacl}");
+        // Given: `cleared` deletes every file of `b`, and its empty Hg root is
+        // stored under a supplied id. Merges of the two, in both orders, also
+        // delete `b`'s files, so each result is the empty tree.
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let base_files = supplied_root_base_files(with_slacl);
+        let b = create_supplied_root_base(&ctx, &repo, with_slacl).await?;
+        let mut cleared = CreateCommitContext::new(&ctx, &repo, vec![b]);
+        for (path, _) in &base_files {
+            cleared = cleared.delete_file(*path);
+        }
+        let cleared = cleared.commit().await?;
+        fixtures::store_supplied_hg_root(&ctx, &repo, cleared, supplied_hg_root_hash()).await?;
+        let cleared_root = derive_stored_root(&ctx, &repo, cleared).await?;
+        let cleared_envelope = cleared_root.load(&ctx, repo.repo_blobstore()).await?;
+        assert_eq!(
+            cleared_root.into_nodehash(),
+            supplied_hg_root_hash(),
+            "fixture: {case}: the cleared commit's stored root should be its supplied Hg root",
+        );
+        assert_ne!(
+            cleared_envelope.augmented_manifest.hg_node_id,
+            cleared_envelope.augmented_manifest.computed_node_id,
+            "fixture: {case}: the cleared commit's stored root should not be content-derived",
+        );
+        let mut parity = V1V2Parity::new(repo.repo_blobstore().clone());
+        parity.add_stored_root(b, derive_stored_root(&ctx, &repo, b).await?);
+        parity.add_stored_root(cleared, cleared_root);
+        let mut merges = Vec::new();
+        // Distinct messages: Hg changeset ids ignore parent order, so the two
+        // merges would otherwise share one.
+        for (message, parents) in [
+            ("cleared first", vec![cleared, b]),
+            ("base first", vec![b, cleared]),
+        ] {
+            let mut merge = CreateCommitContext::new(&ctx, &repo, parents).set_message(message);
+            for (path, _) in &base_files {
+                merge = merge.delete_file(*path);
+            }
+            merges.push(merge.commit().await?);
+        }
+
+        // When: deriving both merges with V1 and V2.
+        let mut merge_roots = Vec::new();
+        for merge in merges {
+            merge_roots.push(parity.derive(&ctx, &repo, merge).await?);
+        }
+
+        // Then: V2 matches V1, and both reuse the empty supplied root, as p1
+        // in one merge and as p2 in the other.
+        for roots in &merge_roots {
+            parity.assert_v2_matches_v1(&ctx, roots, &case).await?;
+            assert_eq!(
+                roots.v1, cleared_root,
+                "{case}: should reuse the empty supplied root",
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Pins a known V1/V2 divergence: when a reusable root's stored ACL pointer
+/// disagrees with the commit's ACL root, V2 re-emits the root under a new id
+/// to carry the current pointer, while V1 keeps the Hg root id. Changing
+/// either side of this should be a deliberate decision.
+#[mononoke::fbinit_test]
+async fn test_v2_reemits_supplied_root_with_stale_acl_pointer_unlike_v1(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: an empty commit on the supplied-root commit, whose stored root has
+    // no ACL pointer although the repo has an ACL root, as for an envelope
+    // stored before ACL pointers existed.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let history = create_supplied_root_history(&ctx, &repo, true).await?;
+    let stale_base = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+    let mut stale_envelope = history
+        .supplied_root
+        .load(&ctx, repo.repo_blobstore())
+        .await?;
+    stale_envelope.augmented_manifest.acl_manifest_directory_id = None;
+    assert_eq!(
+        stale_envelope.store(&ctx, &stale_base).await?,
+        history.supplied_root,
+        "fixture: the stale envelope should be stored under the supplied root",
+    );
+    let mut parity = V1V2Parity::new(stale_base);
+    parity.add_stored_root(history.b, derive_stored_root(&ctx, &repo, history.b).await?);
+    parity.add_stored_root(history.p, history.supplied_root);
+    let empty = CreateCommitContext::new(&ctx, &repo, vec![history.p])
+        .commit()
+        .await?;
+    let acl_root_overlay = derive_acl_overlay(&ctx, &repo, empty)
+        .await?
+        .context("fixture: the empty commit should have an ACL root")?;
+
+    // When: deriving the empty commit with V1 and V2.
+    let roots = parity.derive(&ctx, &repo, empty).await?;
+
+    // Then: V1 keeps the supplied Hg root id, while V2 re-emits a
+    // content-derived root that carries the commit's ACL root.
+    assert_eq!(
+        roots.v1, history.supplied_root,
+        "V1 should keep the supplied root id"
+    );
+    assert_ne!(roots.v2, roots.v1, "V2 should re-emit the root");
+    let v2_envelope = roots.v2.load(&ctx, &parity.v2_store).await?;
+    assert_eq!(
+        v2_envelope.augmented_manifest.acl_manifest_directory_id,
+        Some(acl_root_overlay),
+        "V2's root should carry the commit's ACL root",
+    );
+    assert_eq!(
+        v2_envelope.augmented_manifest.hg_node_id, v2_envelope.augmented_manifest.computed_node_id,
+        "V2's re-emitted root should be content-derived",
+    );
     Ok(())
 }
 
