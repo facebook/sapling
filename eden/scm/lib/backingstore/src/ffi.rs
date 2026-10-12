@@ -225,7 +225,7 @@ pub(crate) mod ffi {
             ttype: TreeEntryType,
             is_restricted: bool,
             has_acl: bool,
-        );
+        ) -> Result<()>;
 
         fn add_entry_with_aux_data(
             self: Pin<&mut TreeBuilder>,
@@ -237,13 +237,13 @@ pub(crate) mod ffi {
             blake3: &[u8; 32],
             is_restricted: bool,
             has_acl: bool,
-        );
+        ) -> Result<()>;
 
         fn mark_missing(self: Pin<&mut TreeBuilder>);
 
-        fn reserve(self: Pin<&mut TreeBuilder>, capacity: usize);
+        fn reserve(self: Pin<&mut TreeBuilder>, capacity: usize) -> Result<()>;
 
-        fn set_aux_data(self: Pin<&mut TreeBuilder>, digest: &[u8; 32], size: u64);
+        fn set_aux_data(self: Pin<&mut TreeBuilder>, digest: &[u8; 32], size: u64) -> Result<()>;
 
         fn num_files(&self) -> usize;
 
@@ -699,7 +699,7 @@ fn add_tree_to_builder(
 
     // Pre-allocate the per-entry storage.
     if let Some(hint) = tree.size_hint() {
-        builder.as_mut().reserve(hint);
+        builder.as_mut().reserve(hint)?;
     }
 
     for entry in tree.iter()? {
@@ -731,7 +731,7 @@ fn add_tree_to_builder(
                 aux.blake3.as_byte_array(),
                 is_restricted,
                 has_acl,
-            );
+            )?;
         } else {
             builder.as_mut().add_entry(
                 name.as_str(),
@@ -739,7 +739,7 @@ fn add_tree_to_builder(
                 ttype,
                 is_restricted,
                 has_acl,
-            );
+            )?;
         }
     }
 
@@ -747,7 +747,7 @@ fn add_tree_to_builder(
         builder.as_mut().set_aux_data(
             aux.augmented_manifest_id.as_byte_array(),
             aux.augmented_manifest_size,
-        );
+        )?;
     }
 
     Ok(())
