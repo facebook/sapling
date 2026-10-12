@@ -886,6 +886,9 @@ def logmessage(repo, opts):
 
     message = opts.get("message")
     logfile = opts.get("logfile")
+    # Typed -m values are lists. Commands that fill in an existing message
+    # (amend, graft, shelve, --reuse-message) pass a str, which is not checked.
+    typed = isinstance(message, list) or bool(logfile)
 
     if message and logfile:
         raise error.Abort(_("options --message and --logfile are mutually exclusive"))
@@ -901,6 +904,8 @@ def logmessage(repo, opts):
             raise error.Abort(
                 _("can't read commit message '%s': %s") % (logfile, inst.strerror)
             )
+    if typed and message:
+        _checkescapednewlines(ui, message)
 
     message = _update_commit_message_fields(
         message,
@@ -909,6 +914,43 @@ def logmessage(repo, opts):
     )
 
     return message
+
+
+def _checkescapednewlines(ui, message):
+    r"""Abort agents and warn humans if the title has a typed "\n" before a field.
+
+    The "\n" is stored as two characters, so the whole message becomes the
+    title. Only the title is checked: a body may quote "\n" on purpose.
+    """
+    title = message.lstrip().split("\n", 1)[0]
+    fields = ui.configlist("committemplate", "commit-message-fields")
+    if "\\n" not in title or not fields:
+        return
+    if not ui.configbool("commit", "check-escaped-newlines", True):
+        return
+    match = re.search(
+        r"\\n\s*(%s):" % "|".join(re.escape(field) for field in fields),
+        title,
+        re.IGNORECASE,
+    )
+    if not match:
+        return
+    if ui.plain():
+        ui.metrics.inc("commit.escapednewline.automation_allowed", 1)
+        return
+
+    msg = _("commit message title contains a '\\n' escape sequence before '%s:'") % (
+        match.group(1)
+    )
+    hint = _(
+        "use literal newlines instead of '\\n' escape sequences, "
+        "which @Product@ does not interpret"
+    )
+    if bindings.agentdetect.is_agent():
+        ui.metrics.inc("commit.escapednewline.agent_rejected", 1)
+        raise error.Abort(msg, hint=hint)
+    ui.metrics.inc("commit.escapednewline.human_warned", 1)
+    ui.warn(_("warning: %s\n(%s)\n") % (msg, hint))
 
 
 def _update_commit_message_fields(
