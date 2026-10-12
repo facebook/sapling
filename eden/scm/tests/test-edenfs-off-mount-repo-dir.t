@@ -1,4 +1,8 @@
+#inprocess-hg-incompatible
 #require eden
+
+Run Sapling out of process so Windows releases repository directory handles
+before "eden rm".
 
 Basic test demonstrating that ".sl" dir is now a symlink in eden mounts.
 
