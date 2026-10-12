@@ -306,3 +306,80 @@ not that the build gave up first.
   present: 0
   missing: 1
   failed: 0
+
+Scenario 5 -- storing ON and changeset-upload derivation ON. Tree upload stores
+an envelope for every tree it receives, root included, before the changeset is
+uploaded. Changeset upload then derives the same commits anyway: it does not use
+what tree upload stored, and its if-absent puts all skip. The stack starts at
+master_bookmark, which scenario 1 derived, so every row below belongs to these
+two commits rather than to the underived commits scenarios 2 to 4 left behind.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ mkdir stack
+  $ echo five > stack/file5
+  $ sl commit -qAm "fifth commit, new dir"
+  $ echo six > stack/file6
+  $ sl commit -qAm "sixth commit"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 4 trees for upload
+  edenapi: uploaded 4 trees
+  edenapi: uploaded 2 changesets
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  /repo/upload/changesets acl_manifests
+  /repo/upload/changesets hg_augmented_manifests
+
+Each commit's augmented manifest is the envelope at its own root tree, the one
+tree upload already stored.
+  $ CS5=$(sl log -r .^ -T '{node}')
+  $ ROOT_MFID_5=$(sl log -r .^ -T '{manifest}')
+  $ CS6=$(sl log -r . -T '{node}')
+  $ ROOT_MFID_6=$(sl log -r . -T '{manifest}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS5" | grep -c "$ROOT_MFID_5"
+  1
+  $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS6" | grep -c "$ROOT_MFID_6"
+  1
+
+Scenario 6 -- storing OFF, changeset-upload derivation still ON. The root envelope
+only ever lands in the tree upload's overlay, so changeset upload has to derive.
+This is the control for scenario 5: whatever changeset upload learns to skip
+there, it must keep deriving here.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ mkdir other
+  $ echo seven > other/file7
+  $ sl commit -qAm "seventh commit, store off"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  /repo/upload/changesets acl_manifests
+  /repo/upload/changesets hg_augmented_manifests
+
+  $ CS7=$(sl log -r . -T '{node}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS7"
+  Derived: * (glob)
