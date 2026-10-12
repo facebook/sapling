@@ -1547,6 +1547,20 @@ void Overlay::preallocThreadLoop() {
   folly::setThreadName("OverlayPrealloc");
   bool backoff = false;
   bool filePoolBroken = false;
+  // Reserving inode numbers writes to the overlay directory and fails the
+  // same way the file and directory writes below do. An exception escaping
+  // this thread would terminate the process.
+  auto allocate = [this]() -> std::optional<InodeNumber> {
+    try {
+      return allocateInodeNumber();
+    } catch (const std::exception& ex) {
+      XLOGF(
+          WARN,
+          "overlay preallocation could not reserve an inode number: {}",
+          folly::exceptionStr(ex));
+      return std::nullopt;
+    }
+  };
   while (true) {
     size_t wantFiles;
     size_t wantDirs;
@@ -1574,7 +1588,12 @@ void Overlay::preallocThreadLoop() {
     for (size_t i = 0; i < wantFiles; ++i) {
       // If creation fails below, this number stays consumed; the inode
       // number space is 64 bits, so the gap is harmless.
-      auto number = allocateInodeNumber();
+      auto allocated = allocate();
+      if (!allocated) {
+        backoff = true;
+        break;
+      }
+      auto number = *allocated;
       try {
         auto created =
             fileContentStore_->createOverlayFile(number, folly::ByteRange{});
@@ -1615,8 +1634,16 @@ void Overlay::preallocThreadLoop() {
         break;
       }
     }
-    for (size_t i = 0; i < wantDirs; ++i) {
-      auto number = allocateInodeNumber();
+    // A failed file write or reservation would fail again for directories,
+    // so wait for the backoff before trying the directory pool.
+    const size_t dirsToPrepare = backoff ? 0 : wantDirs;
+    for (size_t i = 0; i < dirsToPrepare; ++i) {
+      auto allocated = allocate();
+      if (!allocated) {
+        backoff = true;
+        break;
+      }
+      auto number = *allocated;
       try {
         // Publish a complete record before making its inode number claimable.
         inodeCatalog_->saveOverlayEntries(
