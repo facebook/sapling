@@ -128,8 +128,14 @@ async fn fetch_v2_source_augmented_roots(
             )),
         })
         .collect::<Result<_>>()?;
-    fetch_augmented_roots_with_fallback(ctx, derivation, source_csids, roots, "V2 copy source")
-        .await
+    fetch_augmented_roots_with_fallback::<RootHgAugmentedManifestV2Id>(
+        ctx,
+        derivation,
+        source_csids,
+        roots,
+        "V2 copy source",
+    )
+    .await
 }
 
 async fn store_intermediate_stage_output(

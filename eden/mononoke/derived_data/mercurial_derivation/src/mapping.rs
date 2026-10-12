@@ -16,7 +16,6 @@ use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
-use blobstore::StoreLoadable;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bytes::Bytes;
 use context::CoreContext;
@@ -24,7 +23,6 @@ use derived_data::batch::DEFAULT_STACK_FILE_CHANGES_LIMIT;
 use derived_data::batch::FileConflicts;
 use derived_data::batch::SplitOptions;
 use derived_data::batch::split_bonsais_in_linear_stacks;
-use derived_data::prefetch_content_metadata;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
@@ -394,56 +392,16 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _known: Option<&HashMap<ChangesetId, Self>>,
+        known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        let csid = bonsai.get_changeset_id();
-
-        let blobstore = derivation_ctx.blobstore();
-        let content_ids = bonsai
-            .file_changes()
-            .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
-            .collect::<HashSet<_>>();
-        let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
-
-        // Wrap the dependency fetch and envelope load into one future so the
-        // manifest id is resolved concurrently with the content metadata and
-        // acl_root fetches, matching the pre-cleanup concurrency.
-        let hg_manifest_id_fut = async {
-            let hg_cs = derivation_ctx
-                .fetch_dependency::<MappedHgChangesetId>(ctx, csid)
-                .await?;
-            anyhow::Ok(
-                hg_cs
-                    .hg_changeset_id()
-                    .load(ctx, blobstore)
-                    .await?
-                    .manifestid(),
-            )
-        };
-        let acl_root_fut = derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid);
-
-        let (hg_manifest_id, content_metadata, acl_root) =
-            future::try_join3(hg_manifest_id_fut, content_metadata_fut, acl_root_fut).await?;
-
-        let acl_root_overlay = crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
-
-        let parents = parents
-            .into_iter()
-            .map(|parent| parent.hg_augmented_manifest_id())
-            .collect();
-        let root_hg_aug_mfid =
-            crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
-                ctx,
-                blobstore,
-                hg_manifest_id,
-                parents,
-                &content_metadata,
-                &derivation_ctx.restricted_paths(),
-                acl_root_overlay,
-            )
-            .await?;
-
-        Ok(Self(root_hg_aug_mfid))
+        crate::augmented_manifest_v2::derive_single_root(
+            ctx,
+            derivation_ctx,
+            bonsai,
+            parents,
+            known,
+        )
+        .await
     }
 
     async fn derive_batch(
@@ -451,63 +409,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
-        let blobstore = derivation_ctx.blobstore();
-        let mut res: HashMap<ChangesetId, Self> = HashMap::new();
-
-        for bonsai in &bonsais {
-            let csid = bonsai.get_changeset_id();
-            let content_ids = bonsai
-                .file_changes()
-                .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
-                .collect::<HashSet<_>>();
-            let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
-
-            // Wrap the dependency fetch and envelope load into one future so
-            // the manifest id is resolved concurrently with the content
-            // metadata and acl_root fetches, matching the pre-cleanup
-            // concurrency.
-            let hg_manifest_id_fut = async {
-                let hg_cs = derivation_ctx
-                    .fetch_dependency::<MappedHgChangesetId>(ctx, csid)
-                    .await?;
-                anyhow::Ok(
-                    hg_cs
-                        .hg_changeset_id()
-                        .load(ctx, blobstore)
-                        .await?
-                        .manifestid(),
-                )
-            };
-            let acl_root_fut = derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid);
-
-            let (hg_manifest_id, content_metadata, acl_root) =
-                future::try_join3(hg_manifest_id_fut, content_metadata_fut, acl_root_fut).await?;
-
-            let acl_root_overlay =
-                crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
-
-            let parents: Vec<_> = derivation_ctx
-                .fetch_unknown_parents::<Self>(ctx, Some(&res), bonsai)
-                .await?
-                .into_iter()
-                .map(|p| p.hg_augmented_manifest_id())
-                .collect();
-
-            let root = crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
-                ctx,
-                blobstore,
-                hg_manifest_id,
-                parents,
-                &content_metadata,
-                &derivation_ctx.restricted_paths(),
-                acl_root_overlay,
-            )
-            .await?;
-
-            res.insert(csid, Self(root));
-        }
-
-        Ok(res)
+        crate::augmented_manifest_v2::derive_batch_roots(ctx, derivation_ctx, bonsais).await
     }
 
     async fn store_mapping(
@@ -1229,14 +1131,14 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_augmented_manifest_v1_old_path_handles_subtree_changes(
+    async fn test_augmented_manifest_mapped_hg_branch_handles_subtree_changes(
         fb: FacebookInit,
     ) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
 
-        // Given: a commit with manifest-altering subtree changes and all
-        // dependencies required by the legacy augmented-manifest path.
+        // Given: a commit with manifest-altering subtree changes and a
+        // Bonsai-to-Hg mapping, so derivation takes the mapped-Hg branch.
         let source = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("src/a.txt", "copied content")
             .commit()
@@ -1257,13 +1159,13 @@ mod test {
             .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
             .await?;
 
-        // When: deriving v1 through the manager.
+        // When: deriving the canonical type through the manager.
         manager
             .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
             .await?;
 
         // Then: the subtree-copy result is present and matches the canonical
-        // Hg manifest from the v1 old path.
+        // Hg manifest of the mapped Hg changeset.
         let child_aug = manager
             .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
             .await?

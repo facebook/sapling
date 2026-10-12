@@ -22,6 +22,7 @@ use futures::stream;
 use futures_stats::TimedTryFutureExt;
 use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
@@ -92,7 +93,11 @@ pub async fn try_derive<'a>(
     ctx: &'a CoreContext,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
-    // Derive augmented manifest for this changeset if not yet derived.
+    // The uploader walks the Hg changeset's manifests, which augmented manifest
+    // derivation does not create.
+    repo.repo_derived_data()
+        .derive::<MappedHgChangesetId>(ctx, bcs_id, DerivationPriority::LOW)
+        .await?;
     repo.repo_derived_data()
         .derive::<RootHgAugmentedManifestId>(ctx, bcs_id, DerivationPriority::LOW)
         .await?;

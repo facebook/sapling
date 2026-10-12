@@ -157,40 +157,6 @@ async fn test_augmented_manifest_v2_manager_derivation_does_not_require_hgchange
 }
 
 #[mononoke::fbinit_test]
-async fn test_augmented_manifest_v1_direct_batch_requires_hgchangesets(
-    fb: FacebookInit,
-) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
-
-    // Given: a linear history with only the ACL dependency prederived.
-    let (repo, root, child) = create_two_commit_repo(fb).await?;
-    let csids = vec![root, child];
-    let manager = repo.repo_derived_data().manager();
-    manager
-        .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
-        .await?;
-    let bonsais = futures::future::try_join_all(
-        csids
-            .iter()
-            .map(|cs_id| Loadable::load(cs_id, &ctx, repo.repo_blobstore())),
-    )
-    .await?;
-    let derivation_ctx = manager.derivation_context(None);
-
-    // When: invoking v1 batch derivation directly below the manager dependency gate.
-    let result = RootHgAugmentedManifestId::derive_batch(&ctx, &derivation_ctx, bonsais).await;
-
-    // Then: v1 refuses to derive without its HgChangeset dependency.
-    let err = result.expect_err("v1 augmented manifest derivation should require HgChangesets");
-    assert!(
-        err.to_string().contains("dependency 'hgchangesets'"),
-        "unexpected error: {err:#}",
-    );
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
 async fn test_augmented_manifest_v2_derive_single_without_hgchangeset_mapping_matches_old_path(
     fb: FacebookInit,
 ) -> Result<()> {

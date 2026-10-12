@@ -38,6 +38,33 @@ use mononoke_types::MPath;
 use crate::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use crate::mapping::RootHgAugmentedManifestId;
 
+/// The canonical and rollout augmented-manifest types run the same derivation
+/// and differ only in where they store and fetch roots.
+pub(crate) trait AugmentedManifestRoot: BonsaiDerivable {
+    fn from_root_id(root: HgAugmentedManifestId) -> Self;
+    fn root_id(&self) -> HgAugmentedManifestId;
+}
+
+impl AugmentedManifestRoot for RootHgAugmentedManifestId {
+    fn from_root_id(root: HgAugmentedManifestId) -> Self {
+        Self::new(root)
+    }
+
+    fn root_id(&self) -> HgAugmentedManifestId {
+        self.hg_augmented_manifest_id()
+    }
+}
+
+impl AugmentedManifestRoot for RootHgAugmentedManifestV2Id {
+    fn from_root_id(root: HgAugmentedManifestId) -> Self {
+        Self(root)
+    }
+
+    fn root_id(&self) -> HgAugmentedManifestId {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootHgAugmentedManifestV2Id(HgAugmentedManifestId);
 
@@ -160,7 +187,7 @@ pub(crate) fn should_publish_shared_mapping(repo_name: &str) -> bool {
     )
 }
 
-pub(crate) async fn fetch_augmented_roots_with_fallback(
+pub(crate) async fn fetch_augmented_roots_with_fallback<Root: AugmentedManifestRoot>(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     source_csids: Vec<ChangesetId>,
@@ -175,10 +202,10 @@ pub(crate) async fn fetch_augmented_roots_with_fallback(
     if !missing_sources.is_empty() {
         roots.extend(
             derivation_ctx
-                .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(ctx, missing_sources)
+                .fetch_derived_batch::<Root>(ctx, missing_sources)
                 .await?
                 .into_iter()
-                .map(|(csid, root)| (csid, root.hg_augmented_manifest_id())),
+                .map(|(csid, root)| (csid, root.root_id())),
         );
     }
     if let Some(csid) = source_csids.iter().find(|csid| !roots.contains_key(csid)) {
@@ -190,11 +217,11 @@ pub(crate) async fn fetch_augmented_roots_with_fallback(
     Ok(roots)
 }
 
-async fn get_subtree_source_aug_roots(
+async fn get_subtree_source_aug_roots<Root: AugmentedManifestRoot>(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
-    known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestV2Id>>,
+    known_aug_roots: Option<&HashMap<ChangesetId, Root>>,
 ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
     let source_csids = subtree_copy_source_changesets(bonsai, &MPath::ROOT);
     let roots = source_csids
@@ -202,10 +229,10 @@ async fn get_subtree_source_aug_roots(
         .filter_map(|csid| {
             known_aug_roots
                 .and_then(|known| known.get(csid))
-                .map(|root| (*csid, root.hg_augmented_manifest_id()))
+                .map(|root| (*csid, root.root_id()))
         })
         .collect();
-    fetch_augmented_roots_with_fallback(
+    fetch_augmented_roots_with_fallback::<Root>(
         ctx,
         derivation_ctx,
         source_csids,
@@ -295,12 +322,12 @@ async fn derive_from_mapped_hg_manifest(
     .await
 }
 
-async fn derive_direct(
+async fn derive_direct<Root: AugmentedManifestRoot>(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
     aug_parents: Vec<HgAugmentedManifestId>,
-    known_aug_roots: Option<&HashMap<ChangesetId, RootHgAugmentedManifestV2Id>>,
+    known_aug_roots: Option<&HashMap<ChangesetId, Root>>,
 ) -> Result<HgAugmentedManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let csid = bonsai.get_changeset_id();
@@ -325,6 +352,63 @@ async fn derive_direct(
     .await
 }
 
+/// A commit with a Bonsai-to-Hg mapping builds from its mapped Hg manifest,
+/// because an uploaded Hg changeset can differ from the one Mononoke would
+/// derive, and the augmented manifest must match the Hg tree clients have.
+pub(crate) async fn derive_single_root<Root: AugmentedManifestRoot>(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: BonsaiChangeset,
+    parents: Vec<Root>,
+    known: Option<&HashMap<ChangesetId, Root>>,
+) -> Result<Root> {
+    let csid = bonsai.get_changeset_id();
+    let aug_parents = parents.iter().map(Root::root_id).collect();
+    let root = if let Some(hg_manifest_id) =
+        lookup_mapped_root_hg_manifest_id(ctx, derivation_ctx, csid).await?
+    {
+        derive_from_mapped_hg_manifest(ctx, derivation_ctx, &bonsai, hg_manifest_id, aug_parents)
+            .await?
+    } else {
+        derive_direct(ctx, derivation_ctx, &bonsai, aug_parents, known).await?
+    };
+    Ok(Root::from_root_id(root))
+}
+
+pub(crate) async fn derive_batch_roots<Root: AugmentedManifestRoot>(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsais: Vec<BonsaiChangeset>,
+) -> Result<HashMap<ChangesetId, Root>> {
+    let mut res: HashMap<ChangesetId, Root> = HashMap::new();
+    let mapped_hg_manifest_ids = lookup_mapped_root_hg_manifest_ids(
+        ctx,
+        derivation_ctx,
+        bonsais
+            .iter()
+            .map(BonsaiChangeset::get_changeset_id)
+            .collect(),
+    )
+    .await?;
+    for bonsai in &bonsais {
+        let csid = bonsai.get_changeset_id();
+        let aug_parents: Vec<_> = derivation_ctx
+            .fetch_unknown_parents::<Root>(ctx, Some(&res), bonsai)
+            .await?
+            .iter()
+            .map(Root::root_id)
+            .collect();
+        let root = if let Some(hg_manifest_id) = mapped_hg_manifest_ids.get(&csid).copied() {
+            derive_from_mapped_hg_manifest(ctx, derivation_ctx, bonsai, hg_manifest_id, aug_parents)
+                .await?
+        } else {
+            derive_direct(ctx, derivation_ctx, bonsai, aug_parents, Some(&res)).await?
+        };
+        res.insert(csid, Root::from_root_id(root));
+    }
+    Ok(res)
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
     const VARIANT: DerivableType = DerivableType::HgAugmentedManifestsV2;
@@ -338,26 +422,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
         parents: Vec<Self>,
         known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        let csid = bonsai.get_changeset_id();
-        let aug_parents = parents
-            .into_iter()
-            .map(|p| p.hg_augmented_manifest_id())
-            .collect();
-        let root = if let Some(hg_manifest_id) =
-            lookup_mapped_root_hg_manifest_id(ctx, derivation_ctx, csid).await?
-        {
-            derive_from_mapped_hg_manifest(
-                ctx,
-                derivation_ctx,
-                &bonsai,
-                hg_manifest_id,
-                aug_parents,
-            )
-            .await?
-        } else {
-            derive_direct(ctx, derivation_ctx, &bonsai, aug_parents, known).await?
-        };
-        Ok(Self(root))
+        derive_single_root(ctx, derivation_ctx, bonsai, parents, known).await
     }
 
     async fn derive_batch(
@@ -365,39 +430,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestV2Id {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
-        let mut res: HashMap<ChangesetId, Self> = HashMap::new();
-        let mapped_hg_manifest_ids = lookup_mapped_root_hg_manifest_ids(
-            ctx,
-            derivation_ctx,
-            bonsais
-                .iter()
-                .map(BonsaiChangeset::get_changeset_id)
-                .collect(),
-        )
-        .await?;
-        for bonsai in &bonsais {
-            let csid = bonsai.get_changeset_id();
-            let aug_parents: Vec<_> = derivation_ctx
-                .fetch_unknown_parents::<Self>(ctx, Some(&res), bonsai)
-                .await?
-                .into_iter()
-                .map(|p| p.hg_augmented_manifest_id())
-                .collect();
-            let root = if let Some(hg_manifest_id) = mapped_hg_manifest_ids.get(&csid).copied() {
-                derive_from_mapped_hg_manifest(
-                    ctx,
-                    derivation_ctx,
-                    bonsai,
-                    hg_manifest_id,
-                    aug_parents,
-                )
-                .await?
-            } else {
-                derive_direct(ctx, derivation_ctx, bonsai, aug_parents, Some(&res)).await?
-            };
-            res.insert(csid, Self(root));
-        }
-        Ok(res)
+        derive_batch_roots(ctx, derivation_ctx, bonsais).await
     }
 
     async fn store_mapping(

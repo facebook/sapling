@@ -15,6 +15,7 @@ use changesets_uploader::UploadPolicy;
 use clap::Args;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::args::ChangesetArgs;
@@ -92,7 +93,11 @@ pub async fn cas_store_upload(
         path = Some(MPath::new(spath).with_context(|| anyhow!("Invalid path: {spath}"))?);
     }
 
-    // Derive augmented manifest for this changeset if not yet derived.
+    // The uploader walks the Hg changeset's manifests, which augmented manifest
+    // derivation does not create.
+    repo.repo_derived_data()
+        .derive::<MappedHgChangesetId>(ctx, changeset_id, DerivationPriority::LOW)
+        .await?;
     repo.repo_derived_data()
         .derive::<RootHgAugmentedManifestId>(ctx, changeset_id, DerivationPriority::LOW)
         .await?;
