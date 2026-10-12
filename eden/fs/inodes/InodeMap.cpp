@@ -789,9 +789,15 @@ InodePtr InodeMap::decFsRefcountHelper(
                << number;
   }
 
-  // Decrement the reference count in the unloaded entry
+  // Decrement the reference count in the unloaded entry. Only FUSE counts
+  // references, and InodeBase::incFsRefcount counts them only on Linux, so
+  // the same test applies here. The PrjFS invalidation path arrives with the
+  // 0/1 flag that InodeBase::decFsRefcount keeps for loaded inodes, and NFS
+  // only ever clears through forgetStaleInodes(). An inode may be remembered
+  // without a reference, for example while a load is pending, so clear
+  // rather than subtract.
   auto& unloadedEntry = unloadedIter->second;
-  if (clearRefCount) {
+  if (clearRefCount || !folly::kIsLinux) {
     unloadedEntry.numFsReferences = 0;
   } else {
     XCHECK_GE(unloadedEntry.numFsReferences, count);

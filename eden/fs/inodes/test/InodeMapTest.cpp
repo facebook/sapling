@@ -7,6 +7,7 @@
 
 #include "eden/fs/inodes/InodeMap.h"
 
+#include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
@@ -59,6 +60,40 @@ TEST(InodeMap, forgetMultipleReferencesFromLoadedInode) {
   EXPECT_EQ(0, file->debugGetFsRefcount());
 }
 #endif
+
+TEST(InodeMap, decFsRefcountOnRememberedInodeWithoutReference) {
+  if (folly::kIsLinux) {
+    GTEST_SKIP() << "FUSE reference counts are exact";
+  }
+  auto builder = FakeTreeBuilder();
+  builder.setFile("src/test.txt", "this is a test file");
+  TestMount testMount{builder, false};
+
+  // Leave the load of "src" pending so the InodeMap remembers the inode
+  // without an FS reference.
+  auto rootInode = testMount.getEdenMount()->getRootInode();
+  auto srcFuture =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  ASSERT_FALSE(srcFuture.isReady());
+
+  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
+  const auto srcIno = rootInode->getChildInodeNumber("src"_pc);
+  ASSERT_TRUE(inodeMap->isInodeRemembered(srcIno));
+
+  // A PrjFS invalidation of an entry without an on-disk placeholder reaches
+  // this call while the load is in flight.
+  inodeMap->decFsRefcount(srcIno);
+  EXPECT_TRUE(inodeMap->isInodeRemembered(srcIno));
+
+  builder.setReady("src");
+  testMount.drainServerExecutor();
+  ASSERT_TRUE(srcFuture.isReady());
+  auto srcTree = std::move(srcFuture).get(std::chrono::seconds(1));
+  EXPECT_EQ(srcIno, srcTree->getNodeId());
+}
 
 TEST(InodeMap, simpleLookups) {
   // Test simple lookups that succeed immediately from the LocalStore
