@@ -40,6 +40,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::RootHgAugmentedManifestV2Id;
+use mercurial_derivation::augmented_backfill;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_derivation::upload_augmented_manifest::UploadTreeBuildError;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
@@ -269,7 +270,7 @@ async fn get_manifests(
 
     // First derive the manifest in full using a temporary side blobstore.
     let blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
-    let full_aug_id = derive_hg_augmented_manifest::derive_from_full_hg_manifest(
+    let full_aug_id = augmented_backfill::derive_from_full_hg_manifest(
         ctx.clone(),
         blobstore.clone(),
         hg_id,
@@ -668,6 +669,135 @@ async fn test_augmented_manifest_parity_with_slacl(fb: FacebookInit) -> Result<(
         .await?;
 
     let (_, _aug_child) = get_manifests(&ctx, &repo, child, vec![aug_root]).await?;
+
+    Ok(())
+}
+
+/// Returns `[root, left, right, merge]`. Building the same history in two
+/// repos yields the same augmented manifests, because Hg node ids depend only
+/// on file history, not on changeset ids.
+async fn create_backfill_parity_history(
+    ctx: &CoreContext,
+    repo: &Repo,
+) -> Result<[ChangesetId; 4]> {
+    let root = CreateCommitContext::new_root(ctx, repo)
+        .add_file(
+            "restricted/code/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project1\"\n",
+        )
+        .add_file("restricted/code/secret.rs", "fn secret() {}")
+        .add_file("public/readme.md", "hello")
+        .add_file("public/old.md", "old")
+        .commit()
+        .await?;
+    let left = CreateCommitContext::new(ctx, repo, vec![root])
+        .add_file("restricted/code/more.rs", "fn more() {}")
+        .add_file_with_copy_info("public/copied.md", "hello", (root, "public/readme.md"))
+        .delete_file("public/old.md")
+        .commit()
+        .await?;
+    let right = CreateCommitContext::new(ctx, repo, vec![root])
+        .add_file("public/readme.md", "hello again")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(ctx, repo, vec![left, right])
+        .add_file("public/readme.md", "hello again")
+        .delete_file("public/old.md")
+        .commit()
+        .await?;
+    Ok([root, left, right, merge])
+}
+
+/// Loads every directory envelope under `root`, keyed by path. Envelope digests
+/// omit ACL pointers, so comparing only root envelopes would miss a wrong
+/// pointer deeper in the tree.
+async fn load_augmented_directory_envelopes(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root: HgAugmentedManifestId,
+) -> Result<BTreeMap<MPath, HgAugmentedManifestEnvelope>> {
+    let directories: Vec<_> = root
+        .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+        .try_filter_map(|(path, entry)| async move { Ok(entry.into_tree().map(|id| (path, id))) })
+        .try_collect()
+        .await?;
+    let mut envelopes = BTreeMap::new();
+    for (path, id) in directories {
+        envelopes.insert(path, id.load(ctx, repo.repo_blobstore()).await?);
+    }
+    Ok(envelopes)
+}
+
+/// Backfill rebuilds each augmented manifest from the commit's full Hg
+/// manifest, without parent augmented manifests. Backfill and V2 publish the
+/// same shared root, so they must produce identical manifests.
+#[mononoke::fbinit_test]
+async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit) -> Result<()> {
+    // Given: the same history, with an ACL restriction root, a copy, a
+    // deletion and a merge, in two repos. In the first, V2 derived every
+    // augmented manifest from Bonsai alone. The second has none derived.
+    let ctx = CoreContext::test_mock(fb);
+    let v2_repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let v2_csids = create_backfill_parity_history(&ctx, &v2_repo).await?;
+    let v2_manager = v2_repo.repo_derived_data().manager();
+    v2_manager
+        .derive_heads::<RootHgAugmentedManifestV2Id>(ctx.clone(), vec![v2_csids[3]], None, None)
+        .await?;
+    assert!(
+        v2_repo
+            .bonsai_hg_mapping()
+            .get(&ctx, v2_csids.to_vec().into())
+            .await?
+            .is_empty(),
+        "V2 must derive from Bonsai, not from mapped Hg manifests",
+    );
+    let v2_roots = v2_manager
+        .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(&ctx, v2_csids.to_vec(), None)
+        .await?;
+
+    let backfill_repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let backfill_csids = create_backfill_parity_history(&ctx, &backfill_repo).await?;
+    let backfill_manager = backfill_repo.repo_derived_data().manager();
+    assert!(
+        backfill_manager
+            .fetch_derived_batch::<RootHgAugmentedManifestId>(&ctx, backfill_csids.to_vec(), None)
+            .await?
+            .is_empty(),
+        "backfill would fetch an existing root instead of deriving one",
+    );
+
+    // When: backfilling every commit in the second repo, head first.
+    let mut backfilled_roots = HashMap::new();
+    for csid in backfill_csids.into_iter().rev() {
+        let root = backfill_manager
+            .unsafe_derive_untopologically::<RootHgAugmentedManifestId>(&ctx, csid, None)
+            .await?;
+        backfilled_roots.insert(csid, root.hg_augmented_manifest_id());
+    }
+
+    // Then: each backfilled root, and every directory envelope under it
+    // including ACL pointers, equals the V2 result.
+    for (v2_csid, backfill_csid) in v2_csids.into_iter().zip(backfill_csids) {
+        let v2_root = v2_roots
+            .get(&v2_csid)
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestV2Id for {v2_csid}"))
+            .hg_augmented_manifest_id();
+        let v2_envelopes = load_augmented_directory_envelopes(&ctx, &v2_repo, v2_root).await?;
+        assert!(
+            v2_envelopes[&MPath::new("restricted/code")?]
+                .augmented_manifest
+                .acl_manifest_directory_id
+                .is_some(),
+            "fixture must have an ACL pointer below the root",
+        );
+        let backfilled_root = backfilled_roots[&backfill_csid];
+        assert_eq!(backfilled_root, v2_root);
+        assert_eq!(
+            load_augmented_directory_envelopes(&ctx, &backfill_repo, backfilled_root).await?,
+            v2_envelopes,
+            "backfilled augmented manifest for {backfill_csid} should match V2",
+        );
+    }
 
     Ok(())
 }
