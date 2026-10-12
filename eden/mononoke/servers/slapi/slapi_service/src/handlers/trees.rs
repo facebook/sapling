@@ -108,6 +108,8 @@ define_stats! {
     manifests_served: timeseries(Rate, Sum),
     trees_batch_keys_requested: timeseries(Rate, Sum),
     upload_augmented_manifests_attempted: timeseries(Rate, Sum),
+    upload_augmented_manifests_batches_attempted: timeseries(Rate, Sum),
+    upload_augmented_manifests_batches_built: timeseries(Rate, Sum),
     upload_augmented_manifests_built: timeseries(Rate, Sum),
     upload_augmented_manifests_skipped_no_acl_work: timeseries(Rate, Sum),
     upload_augmented_manifests_failed: timeseries(Rate, Sum),
@@ -613,6 +615,11 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     let batch: HashSet<HgNodeHash> = trees.iter().map(|tree| tree.node_id()).collect();
     let repo_name = repo.repo().repo_identity().name().to_string();
     STATS::upload_augmented_manifests_attempted.add_value(trees.len() as i64);
+    STATS::upload_augmented_manifests_batches_attempted.add_value(1);
+    repo.ctx().perf_counters().add_to_counter(
+        PerfCounterType::EdenapiUploadTreesAugmentedTrees,
+        trees.len() as i64,
+    );
     STATS::upload_augmented_manifests_batch_trees
         .add_value(trees.len() as i64, (repo_name.clone(),));
     // Runs before the response stream ends, so this is time the client waits
@@ -622,11 +629,23 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     let result = repo
         .build_and_store_augmented_manifests_for_uploaded_trees(trees)
         .await;
+    let elapsed = started.elapsed();
     STATS::upload_augmented_manifests_build_ms
-        .add_value(started.elapsed().as_millis() as i64, (repo_name.clone(),));
+        .add_value(elapsed.as_millis() as i64, (repo_name.clone(),));
+    // The per-repo histogram is sparse per task, so averaging it across tasks
+    // reads far too low; the request row carries the exact figure.
+    repo.ctx()
+        .perf_counters()
+        .add_duration_us(PerfCounterType::EdenapiUploadTreesAugmentedBuildUs, elapsed);
     match result {
         Ok(built) => {
             record_augmented_manifest_outcomes(&built);
+            STATS::upload_augmented_manifests_batches_built.add_value(1);
+            // A failure counter that never moved is never exported, and a
+            // monitor on it then reads no data rather than zero.
+            STATS::upload_augmented_manifests_failed.add_value(0);
+            STATS::upload_augmented_manifests_failed_missing_child.add_value(0);
+            STATS::upload_augmented_manifests_failed_child_not_derived.add_value(0);
             let levels = built.iter().map(|tree| tree.level + 1).max().unwrap_or(0);
             STATS::upload_augmented_manifests_batch_levels.add_value(levels as i64, (repo_name,));
         }

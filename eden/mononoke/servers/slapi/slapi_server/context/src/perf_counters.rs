@@ -82,6 +82,8 @@ define_perf_counters! {
         EdenapiAugmentedTreesFallback,
         EdenapiOriginalRoutedToAugmented,
         EdenapiAugmentedManifestMissUnderRoute,
+        EdenapiUploadTreesAugmentedBuildUs,
+        EdenapiUploadTreesAugmentedTrees,
         GetbundleNumCommits,
         GetbundleNumDrafts,
         GetpackNumPossibleLFSFiles,
@@ -187,6 +189,8 @@ impl PerfCounterType {
             | EdenapiAugmentedTreesFallback
             | EdenapiOriginalRoutedToAugmented
             | EdenapiAugmentedManifestMissUnderRoute
+            | EdenapiUploadTreesAugmentedBuildUs
+            | EdenapiUploadTreesAugmentedTrees
             | GetbundleNumCommits
             | GetbundleNumDrafts
             | GetpackNumPossibleLFSFiles
