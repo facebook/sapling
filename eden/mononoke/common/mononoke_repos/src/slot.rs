@@ -195,13 +195,10 @@ impl<R> RepoSlot<R> {
     fn apply_outcome(&self, outcome: &BuildOutcome<R>) {
         let next = match outcome {
             Ok(repo) => SlotState::Ready(Arc::clone(repo)),
-            // TODO(lmvasquezg): a repo that never builds is invisible beyond
-            // the error each caller happens to see, so it looks like a slow
-            // repo rather than a broken one. Needs a counter here and an alert
-            // on it before any service builds lazily. The counter cannot live
-            // in this crate, which has no stats dependency and should keep it
-            // that way; `mononoke_app` already has `define_stats!`, so the
-            // outcome has to surface to the caller that owns the loader.
+            // A repo that never builds would otherwise look slow rather than
+            // broken. This crate has no stats dependency and should keep it
+            // that way, so the failure is counted by the loader that owns the
+            // build (`mononoke.app.lazy_repo_build_failed` in `mononoke_app`).
             Err(error) => SlotState::Failed {
                 error: Arc::clone(error),
                 retry_after: Instant::now() + FAILED_BUILD_TTL,

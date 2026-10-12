@@ -75,10 +75,13 @@ fn repos_manager_concurrency() -> Result<usize> {
 define_stats! {
     prefix = "mononoke.app";
     completion_duration_secs: timeseries(Average, Sum, Count),
-    // Repo load failures (config load or facet build): at
-    // assignment via add_repo or add_repo_for_service, or on first request via
-    // ConfigDefinedRepoLoader for a repo assigned unbuilt.
+    // Repo load failures (config load or facet build) at assignment, via
+    // add_repo or add_repo_for_service.
     add_repo_failed: timeseries(Sum, Count),
+    // The same failures for a repo registered unbuilt, when ConfigDefinedRepoLoader
+    // builds it on its first request. Counted at most once per build attempt,
+    // so a repo that never builds adds one per failed-build retry window.
+    lazy_repo_build_failed: timeseries(Sum, Count),
     // A tier member a request asked for after startup, built on that request
     // (see `get_or_load_repo`), or that failed to load for it.
     repo_loaded_on_demand: timeseries(Rate, Sum),
@@ -173,7 +176,7 @@ where
             // internally.
             let mut repo_config = configs
                 .get_or_load_repo_config(&repo_name)
-                .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
+                .inspect_err(|_| STATS::lazy_repo_build_failed.add_value(1))?;
             if redaction_disabled {
                 repo_config.redaction = Redaction::Disabled;
             }
@@ -182,7 +185,7 @@ where
             let repo = repo_factory
                 .build(repo_name.clone(), repo_config, common_config)
                 .await
-                .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
+                .inspect_err(|_| STATS::lazy_repo_build_failed.add_value(1))?;
             info!(
                 "Built repo on first request: {} in {:?}",
                 repo_name,
