@@ -28,6 +28,8 @@ use fs_err::remove_file;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
+use pathmatcher::ExactMatcher;
+use pathmatcher::UnionMatcher;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use storemodel::FileStore;
@@ -115,6 +117,7 @@ impl EdenFileSystem {
         &self,
         p1: HgId,
         include_ignored: bool,
+        matcher: DynMatcher,
     ) -> Result<BTreeMap<RepoPathBuf, FileStatus>> {
         // If "derace" mode is enabled, below we touch a file and then keep calling eden
         // status until we see the (untracked) file in the results. This is to mitigate a
@@ -128,6 +131,11 @@ impl EdenFileSystem {
         // worst case is we just don't perform the derace check).
         let derace_touch_file: &RepoPath =
             ".eden-status-derace-GSZULQFGEEJXIONP".try_into().unwrap();
+        // Keep the touch file even if a gitignore rule makes EdenFS report it as ignored.
+        let matcher = UnionMatcher::new(vec![
+            matcher,
+            Arc::new(ExactMatcher::new(std::iter::once(derace_touch_file), true)),
+        ]);
 
         // This is set iff we create the touch file.
         let mut wait_for_touch_file: Option<Duration> = None;
@@ -172,7 +180,7 @@ impl EdenFileSystem {
         let _active_bar = ProgressBar::new_adhoc("EdenFS status", 0, "");
 
         loop {
-            let status_result = self.client.get_status(p1, include_ignored);
+            let status_result = self.client.get_status(p1, include_ignored, &matcher);
             let mut status_map = match status_result {
                 Ok(map) => {
                     if let Some(checkout_start) = checkout_start_time.take() {
@@ -375,7 +383,7 @@ impl FileSystem for EdenFileSystem {
             .next()
             .unwrap_or_else(|| Ok(NULL_ID))?;
 
-        let status_map = self.get_status(p1, include_ignored)?;
+        let status_map = self.get_status(p1, include_ignored, matcher.clone())?;
 
         // In rare cases, a file can transition in the dirstate directly from "normal" to
         // "added". Eden won't report a pending change if the file is not modified (since

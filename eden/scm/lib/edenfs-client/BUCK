@@ -35,6 +35,7 @@ sl_rust_library(
         "//eden/scm/lib/filters:filters",
         "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/pathmatcher/types:pathmatcher-types",
         "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/types:types",
     ],

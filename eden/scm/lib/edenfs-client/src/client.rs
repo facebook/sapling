@@ -27,6 +27,7 @@ use filters::migration::cleanup_filter_sync_backup;
 use filters::migration::rollback_filter_sync;
 use filters::migration::sync_filters;
 use parking_lot::Mutex;
+use pathmatcher_types::Matcher;
 use serde::Deserialize;
 use thrift_types::edenfs;
 use thrift_types::edenfs::CheckoutProgressInfoRequest;
@@ -126,11 +127,14 @@ impl EdenFsClient {
     }
 
     /// Get file status. Normalized to non-Thrift types.
-    #[tracing::instrument(skip(self))]
+    /// Unmatched ignored entries are omitted before building the map. Matcher errors keep
+    /// the entry so callers can report them when processing the status.
+    #[tracing::instrument(skip(self, matcher))]
     pub fn get_status(
         &self,
         commit: HgId,
         list_ignored: bool,
+        matcher: &dyn Matcher,
     ) -> anyhow::Result<BTreeMap<RepoPathBuf, FileStatus>> {
         let thrift_client = block_on(self.get_async_thrift_client())?;
 
@@ -159,19 +163,7 @@ impl EdenFsClient {
 
         tracing::debug!(target: "eden_info", eden_version=thrift_result.version);
 
-        let mut result = BTreeMap::new();
-        for (path_bytes, status) in thrift_result.status.entries {
-            let path = match RepoPathBuf::from_utf8(path_bytes) {
-                Err(e) => {
-                    tracing::warn!("ignored non-utf8 path {}", e);
-                    continue;
-                }
-                Ok(path) => path,
-            };
-            let status = FileStatus::local_from(status);
-            result.insert(path, status);
-        }
-        Ok(result)
+        Ok(status_map(thrift_result.status.entries, matcher))
     }
 
     /// Get the raw journal position. Useful to check whether there are file changes.
@@ -464,5 +456,85 @@ impl EdenConfig {
             socket,
             client,
         })
+    }
+}
+
+fn status_map(
+    entries: impl IntoIterator<Item = (Vec<u8>, edenfs::ScmFileStatus)>,
+    matcher: &dyn Matcher,
+) -> BTreeMap<RepoPathBuf, FileStatus> {
+    let mut result = BTreeMap::new();
+    for (path_bytes, status) in entries {
+        let path = match RepoPathBuf::from_utf8(path_bytes) {
+            Err(e) => {
+                tracing::warn!("ignored non-utf8 path {}", e);
+                continue;
+            }
+            Ok(path) => path,
+        };
+        // EdenFS returns every ignored path in the checkout, even for a narrow status query.
+        // Keep errors for the caller's normal status processing to report.
+        if status == edenfs::ScmFileStatus::IGNORED
+            && matches!(matcher.matches_file(&path), Ok(false))
+        {
+            continue;
+        }
+        result.insert(path, FileStatus::local_from(status));
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use pathmatcher_types::DirectoryMatch;
+    use types::RepoPath;
+
+    use super::*;
+
+    struct StatusMatcher;
+
+    impl Matcher for StatusMatcher {
+        fn matches_directory(&self, _path: &RepoPath) -> Result<DirectoryMatch> {
+            Ok(DirectoryMatch::ShouldTraverse)
+        }
+
+        fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+            if path.as_str() == "error" {
+                anyhow::bail!("matcher failed");
+            }
+            Ok(path.as_str().starts_with("www/"))
+        }
+    }
+
+    #[test]
+    fn status_map_filters_ignored_entries_and_retains_errors_and_other_statuses() {
+        let entries = vec![
+            (b"www/a.pyc".to_vec(), edenfs::ScmFileStatus::IGNORED),
+            (b"fbcode/b.pyc".to_vec(), edenfs::ScmFileStatus::IGNORED),
+            (b"fbcode/added".to_vec(), edenfs::ScmFileStatus::ADDED),
+            (b"fbcode/modified".to_vec(), edenfs::ScmFileStatus::MODIFIED),
+            (b"fbcode/removed".to_vec(), edenfs::ScmFileStatus::REMOVED),
+            (b"error".to_vec(), edenfs::ScmFileStatus::IGNORED),
+            (vec![0xff], edenfs::ScmFileStatus::IGNORED),
+        ];
+        let map = status_map(entries, &StatusMatcher);
+        assert_eq!(
+            map.keys().map(|path| path.as_str()).collect::<Vec<_>>(),
+            [
+                "error",
+                "fbcode/added",
+                "fbcode/modified",
+                "fbcode/removed",
+                "www/a.pyc"
+            ]
+        );
+        assert_eq!(
+            map[RepoPath::from_str("www/a.pyc").unwrap()],
+            FileStatus::Ignored
+        );
+        assert_eq!(
+            map[RepoPath::from_str("fbcode/added").unwrap()],
+            FileStatus::Added
+        );
     }
 }

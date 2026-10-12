@@ -13,6 +13,8 @@ use anyhow::bail;
 use configmodel::Config;
 use gitcompat::GitCmd;
 use gitcompat::rungit::RepoGit;
+#[cfg(feature = "eden")]
+use pathmatcher::AlwaysMatcher;
 use types::HgId;
 use types::RepoPathBuf;
 use types::hgid::GIT_EMPTY_TREE_ID;
@@ -66,7 +68,7 @@ impl WorkingCopyClient for edenfs_client::EdenFsClient {
         list_ignored: bool,
     ) -> Result<BTreeMap<RepoPathBuf, FileStatus>> {
         tracing::debug!(p1=?node, list_ignored=list_ignored, "get_status");
-        edenfs_client::EdenFsClient::get_status(self, node, list_ignored)
+        edenfs_client::EdenFsClient::get_status(self, node, list_ignored, &AlwaysMatcher::new())
     }
 
     fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> Result<()> {
