@@ -28,6 +28,7 @@ use mononoke_types::path::MPath;
 use pushrebase::PushrebaseError;
 use redactedblobstore::has_redaction_root_cause;
 use repo_authorization::AuthorizationError;
+use restricted_paths::AclFileChangeRejection;
 use restricted_paths::RestrictedPathsAuthorizationError;
 use restricted_paths::RestrictedPathsError;
 use thiserror::Error;
@@ -256,11 +257,24 @@ impl From<RestrictedPathsError> for MononokeError {
             RestrictedPathsError::AuthorizationError(err) => {
                 MononokeError::RestrictedPathsAuthorizationError(err)
             }
-            RestrictedPathsError::AclFileAuthorizationError(err) => {
-                MononokeError::AuthorizationError(err)
+            RestrictedPathsError::AclFileChangeRejected(rejection) => {
+                MononokeError::from(rejection)
             }
-            RestrictedPathsError::InvalidRequest(err) => MononokeError::InvalidRequest(err),
             RestrictedPathsError::InternalError(err) => MononokeError::InternalError(err.into()),
+        }
+    }
+}
+
+impl From<AclFileChangeRejection> for MononokeError {
+    fn from(rejection: AclFileChangeRejection) -> Self {
+        let message = rejection.to_string();
+        match rejection {
+            AclFileChangeRejection::Unauthorized { .. } => {
+                MononokeError::AuthorizationError(message)
+            }
+            AclFileChangeRejection::ModifiedEarlierInStack { .. } => {
+                MononokeError::InvalidRequest(message)
+            }
         }
     }
 }

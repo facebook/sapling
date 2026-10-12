@@ -109,15 +109,34 @@ impl RestrictedPathsAuthorizationError {
     }
 }
 
+/// Why creation-time validation rejected a change to an ACL (`.slacl`) file.
+#[derive(Debug, Error)]
+pub enum AclFileChangeRejection {
+    /// The caller lacks maintainer access to the restriction covering `dir`.
+    #[error(
+        "Cannot modify ACL file at {dir}: directory is restricted by {repo_region_acl} \
+         (restriction root: {restriction_root}). Caller does not have maintainer access."
+    )]
+    Unauthorized {
+        dir: MPath,
+        repo_region_acl: String,
+        restriction_root: NonRootMPath,
+    },
+    /// An earlier changeset in the same stack already changed the ACL file in `dir`.
+    #[error(
+        "Cannot modify ACL file at {dir}: .slacl at this path was already modified by an \
+         earlier changeset in this stack. Split into separate submissions."
+    )]
+    ModifiedEarlierInStack { dir: MPath },
+}
+
 /// Error type for restricted paths enforcement.
 #[derive(Debug, Error)]
 pub enum RestrictedPathsError {
     #[error(transparent)]
     AuthorizationError(RestrictedPathsAuthorizationError),
-    #[error("{0}")]
-    AclFileAuthorizationError(String),
-    #[error("{0}")]
-    InvalidRequest(String),
+    #[error(transparent)]
+    AclFileChangeRejected(#[from] AclFileChangeRejection),
     #[error("Internal error: {0}")]
     InternalError(#[from] anyhow::Error),
 }
@@ -461,11 +480,10 @@ impl RestrictedPaths {
         for touched_dirs in &acl_file_dirs_stack {
             for dir_path in touched_dirs {
                 if dirs_touched_in_stack.contains(dir_path) {
-                    return Err(RestrictedPathsError::InvalidRequest(format!(
-                        "Cannot modify ACL file at {dir_path}: .slacl at this path was \
-                         already modified by an earlier changeset in this stack. \
-                         Split into separate submissions.",
-                    )));
+                    return Err(AclFileChangeRejection::ModifiedEarlierInStack {
+                        dir: dir_path.clone(),
+                    }
+                    .into());
                 }
 
                 // Targeted restriction lookup using the existing primitive.
@@ -506,12 +524,12 @@ impl RestrictedPaths {
                         .context("Failed to parse repo_region_acl")?;
                     let has_access = self.has_maintainer_access(ctx, &[&acl]).await?;
                     if !has_access {
-                        return Err(RestrictedPathsError::AclFileAuthorizationError(format!(
-                            "Cannot modify ACL file at {}: directory is restricted \
-                             by {} (restriction root: {}). Caller does not have \
-                             maintainer access.",
-                            dir_path, info.repo_region_acl, info.restriction_root,
-                        )));
+                        return Err(AclFileChangeRejection::Unauthorized {
+                            dir: dir_path.clone(),
+                            repo_region_acl: info.repo_region_acl.clone(),
+                            restriction_root: info.restriction_root.clone(),
+                        }
+                        .into());
                     }
                 }
             }
