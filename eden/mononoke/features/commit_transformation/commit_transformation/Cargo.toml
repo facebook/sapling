@@ -12,7 +12,7 @@ path = "../src/lib.rs"
 
 [dependencies]
 anyhow = "1.0.104"
-async-recursion = "1.1.1"
+async-recursion = "1.2.0"
 async-trait = "0.1.92"
 blobrepo_utils = { version = "0.1.0", path = "../../../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
