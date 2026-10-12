@@ -54,6 +54,11 @@ pub enum LZ4Error {
     #[error("{message:?}")]
     Generic { message: String },
 
+    // Carries the size rather than a message, as the message would need the
+    // kind of allocation that just failed.
+    #[error("unable to allocate {0} bytes for lz4 decompression")]
+    Allocation(usize),
+
     #[error("{source:?}")]
     Decompression {
         #[from]
@@ -166,7 +171,10 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
     if max_decompressed_size == 0 {
         return Ok(Vec::new());
     }
-    let mut dest = vec![0; max_decompressed_size];
+    let mut dest = Vec::new();
+    dest.try_reserve_exact(max_decompressed_size)
+        .map_err(|_| LZ4Error::Allocation(max_decompressed_size))?;
+    dest.resize(max_decompressed_size, 0);
     decompress_into(data, &mut dest)?;
     Ok(dest)
 }
