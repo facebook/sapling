@@ -2554,7 +2554,10 @@ struct CommitCompareResponse {
 struct CommitFileDiffsResponseElement {
   1: optional Path base_path;
   2: optional Path other_path;
-  3: Diff diff;
+  /// Absent when both sides of the requested pair were denied: a
+  /// placeholder preserving request order, so clients correlate by
+  /// position. Both paths are absent too.
+  3: optional Diff diff;
   4: optional CommitId other_commit_id;
 }
 

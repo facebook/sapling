@@ -190,13 +190,13 @@ async fn make_file_diff_request(
         .into_iter()
         .filter_map(|path_diff| match path_diff {
             thrift::CommitFileDiffsResponseElement {
-                diff: thrift::Diff::raw_diff(diff),
+                diff: Some(thrift::Diff::raw_diff(diff)),
                 ..
             } => Some(DiffOutputElement::RawDiff(
                 diff.raw_diff.unwrap_or_else(Vec::new),
             )),
             thrift::CommitFileDiffsResponseElement {
-                diff: thrift::Diff::metadata_diff(diff),
+                diff: Some(thrift::Diff::metadata_diff(diff)),
                 base_path,
                 other_path,
                 ..

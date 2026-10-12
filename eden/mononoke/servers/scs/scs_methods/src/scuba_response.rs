@@ -114,7 +114,7 @@ impl AddScubaResponse for thrift::CommitFileDiffsResponse {
             .path_diffs
             .iter()
             .filter_map(|response| match &response.diff {
-                thrift::Diff::metadata_diff(metadata) => match (
+                Some(thrift::Diff::metadata_diff(metadata)) => match (
                     metadata.old_file_info.file_content_type,
                     metadata.new_file_info.file_content_type,
                 ) {

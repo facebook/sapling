@@ -118,28 +118,44 @@ fn run_as_identities(
     Ok(identities)
 }
 
-struct CommitFileDiffsItem {
-    path_diff_context: ChangesetPathDiffContext<Repo>,
-    placeholder: bool,
+/// One requested pair after visibility classification: either a
+/// diffable pair or a placeholder for a pair denied on both sides.
+/// Placeholders keep response positions aligned with request positions.
+enum CommitFileDiffsItem {
+    Diff {
+        path_diff_context: ChangesetPathDiffContext<Repo>,
+        placeholder: bool,
+    },
+    Omitted,
 }
 
 impl CommitFileDiffsItem {
     fn to_stopped_at_pair(&self) -> thrift::CommitFileDiffsStoppedAtPair {
-        thrift::CommitFileDiffsStoppedAtPair {
-            base_path: self
-                .path_diff_context
-                .get_new_content()
-                .map(|p| p.path().to_string()),
-            other_path: self
-                .path_diff_context
-                .get_old_content()
-                .map(|p| p.path().to_string()),
-            ..Default::default()
+        match self {
+            Self::Diff {
+                path_diff_context, ..
+            } => thrift::CommitFileDiffsStoppedAtPair {
+                base_path: path_diff_context
+                    .get_new_content()
+                    .map(|p| p.path().to_string()),
+                other_path: path_diff_context
+                    .get_old_content()
+                    .map(|p| p.path().to_string()),
+                ..Default::default()
+            },
+            Self::Omitted => thrift::CommitFileDiffsStoppedAtPair::default(),
         }
     }
 
     async fn total_size(&self) -> Result<u64, scs_errors::ServiceError> {
-        if self.placeholder {
+        let (path_diff_context, placeholder) = match self {
+            Self::Diff {
+                path_diff_context,
+                placeholder,
+            } => (path_diff_context, *placeholder),
+            Self::Omitted => return Ok(0),
+        };
+        if placeholder {
             Ok(0)
         } else {
             async fn file_size(
@@ -153,8 +169,8 @@ impl CommitFileDiffsItem {
                 Ok(0)
             }
             let (base_size, other_size) = try_join!(
-                file_size(self.path_diff_context.get_new_content()),
-                file_size(self.path_diff_context.get_old_content())
+                file_size(path_diff_context.get_new_content()),
+                file_size(path_diff_context.get_old_content())
             )?;
             Ok(base_size.saturating_add(other_size))
         }
@@ -167,15 +183,30 @@ impl CommitFileDiffsItem {
         context_lines: usize,
         repo_name: &str,
         diff_router: &crate::diff::DiffRouter<'_>,
-    ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
+    ) -> Result<Option<CommitFileDiffsResponseElement>, scs_errors::ServiceError> {
+        let (path_diff_context, placeholder) = match self {
+            Self::Diff {
+                path_diff_context,
+                placeholder,
+            } => (path_diff_context, *placeholder),
+            Self::Omitted => return Ok(None),
+        };
         match format {
-            thrift::DiffFormat::RAW_DIFF => {
-                self.raw_diff(ctx, context_lines, repo_name, diff_router)
-                    .await
-            }
-            thrift::DiffFormat::METADATA_DIFF => {
-                self.metadata_diff(ctx, repo_name, diff_router).await
-            }
+            thrift::DiffFormat::RAW_DIFF => self
+                .raw_diff(
+                    ctx,
+                    path_diff_context,
+                    placeholder,
+                    context_lines,
+                    repo_name,
+                    diff_router,
+                )
+                .await
+                .map(Some),
+            thrift::DiffFormat::METADATA_DIFF => self
+                .metadata_diff(ctx, path_diff_context, repo_name, diff_router)
+                .await
+                .map(Some),
             unknown => {
                 Err(scs_errors::invalid_request(format!("invalid diff format: {unknown:?}")).into())
             }
@@ -185,18 +216,20 @@ impl CommitFileDiffsItem {
     async fn raw_diff(
         &self,
         ctx: &CoreContext,
+        path_diff_context: &ChangesetPathDiffContext<Repo>,
+        placeholder: bool,
         context_lines: usize,
         repo_name: &str,
         diff_router: &crate::diff::DiffRouter<'_>,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
-        let mode = if self.placeholder {
+        let mode = if placeholder {
             UnifiedDiffMode::OmitContent
         } else {
             UnifiedDiffMode::Inline
         };
 
         let diff = diff_router
-            .unified_diff(ctx, repo_name, &self.path_diff_context, mode, context_lines)
+            .unified_diff(ctx, repo_name, path_diff_context, mode, context_lines)
             .await?;
         Ok(CommitFileDiffsResponseElement::RawDiff { diff })
     }
@@ -204,11 +237,12 @@ impl CommitFileDiffsItem {
     async fn metadata_diff(
         &self,
         ctx: &CoreContext,
+        path_diff_context: &ChangesetPathDiffContext<Repo>,
         repo_name: &str,
         diff_router: &crate::diff::DiffRouter<'_>,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         let metadata_diff = diff_router
-            .metadata_diff(ctx, repo_name, &self.path_diff_context)
+            .metadata_diff(ctx, repo_name, path_diff_context)
             .await?;
         Ok(CommitFileDiffsResponseElement::MetadataDiff { metadata_diff })
     }
@@ -231,31 +265,28 @@ impl CommitFileDiffsResponseElement {
         self,
         item: &CommitFileDiffsItem,
     ) -> thrift::CommitFileDiffsResponseElement {
-        match self {
-            Self::RawDiff { diff } => thrift::CommitFileDiffsResponseElement {
-                base_path: item
-                    .path_diff_context
+        let (base_path, other_path) = match item {
+            CommitFileDiffsItem::Diff {
+                path_diff_context, ..
+            } => (
+                path_diff_context
                     .get_new_content()
                     .map(|p| p.path().to_string()),
-                other_path: item
-                    .path_diff_context
+                path_diff_context
                     .get_old_content()
                     .map(|p| p.path().to_string()),
-                diff: diff.into_response(),
-                ..Default::default()
-            },
-            Self::MetadataDiff { metadata_diff } => thrift::CommitFileDiffsResponseElement {
-                base_path: item
-                    .path_diff_context
-                    .get_new_content()
-                    .map(|p| p.path().to_string()),
-                other_path: item
-                    .path_diff_context
-                    .get_old_content()
-                    .map(|p| p.path().to_string()),
-                diff: metadata_diff.into_response(),
-                ..Default::default()
-            },
+            ),
+            CommitFileDiffsItem::Omitted => (None, None),
+        };
+        let diff = match self {
+            Self::RawDiff { diff } => Some(diff.into_response()),
+            Self::MetadataDiff { metadata_diff } => Some(metadata_diff.into_response()),
+        };
+        thrift::CommitFileDiffsResponseElement {
+            base_path,
+            other_path,
+            diff,
+            ..Default::default()
         }
     }
 }
@@ -703,9 +734,10 @@ impl SourceControlServiceImpl {
                             && other_context.is_none()
                             && (base_denied || other_denied)
                         {
-                            // Nothing visible on either side: omit the pair.
-                            // The omission count above records it.
-                            return Ok(None);
+                            // Nothing visible on either side: a placeholder
+                            // keeps response positions aligned with request
+                            // positions. The omission count above records it.
+                            return Ok(CommitFileDiffsItem::Omitted);
                         }
 
                         // A denied side carries no provenance: drop copy info
@@ -733,10 +765,10 @@ impl SourceControlServiceImpl {
                             copy_info,
                             replacement_path,
                         )?;
-                        Ok::<_, scs_errors::ServiceError>(Some(CommitFileDiffsItem {
+                        Ok::<_, scs_errors::ServiceError>(CommitFileDiffsItem::Diff {
                             path_diff_context,
                             placeholder,
-                        }))
+                        })
                         };
                         item.await
                     }
@@ -744,10 +776,7 @@ impl SourceControlServiceImpl {
             )
             .buffered(50)
             .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>();
+            .await?;
 
         // Check the total file size limit
         let total_input_size = stream::iter(items.iter())
@@ -794,7 +823,8 @@ impl SourceControlServiceImpl {
             .try_take_while(|(item, element)| {
                 let mut limit_reached = false;
                 if let Some(diff_size_limit) = diff_size_limit {
-                    size_so_far = size_so_far.saturating_add(element.size());
+                    size_so_far =
+                        size_so_far.saturating_add(element.as_ref().map_or(0, |e| e.size()));
                     if size_so_far > diff_size_limit {
                         limit_reached = true;
                         stopped_at_pair = Some(item.to_stopped_at_pair());
@@ -802,7 +832,10 @@ impl SourceControlServiceImpl {
                 }
                 async move { Ok(!limit_reached) }
             })
-            .map_ok(|(item, element)| element.into_response_for_item(&item))
+            .map_ok(|(item, element)| match element {
+                Some(element) => element.into_response_for_item(&item),
+                None => thrift::CommitFileDiffsResponseElement::default(),
+            })
             .try_collect()
             .await?;
 
