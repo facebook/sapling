@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/servers/slapi/.*\.rs$'
-apply_to_content: 'HandlerError|HttpError|e4xx|e5xx|MononokeError|status_code|\?;'
+name: http-status-code-semantics
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/servers/slapi/.*\.rs$'
+  apply_to_content: 'HandlerError|HttpError|e4xx|e5xx|MononokeError|status_code|\?;'
 ---
 
 # HTTP Status Code Semantics
