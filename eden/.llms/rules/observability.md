@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: 'pub async fn handle|pub fn handle|OdsCounter|perf_counters|scuba|PerfCounterType|kill.switch|feature.flag'
+name: observability
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: 'pub async fn handle|pub fn handle|OdsCounter|perf_counters|scuba|PerfCounterType|kill.switch|feature.flag'
 ---
 
 # Observability and Operational Readiness
