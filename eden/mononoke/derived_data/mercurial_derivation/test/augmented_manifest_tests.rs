@@ -134,6 +134,14 @@ impl<B> DenyGetKeyedBlobstore<B> {
             result: DeniedGetResult::Missing,
         }
     }
+
+    fn denying_keys(inner: B, denied_keys: impl IntoIterator<Item = String>) -> Self {
+        Self {
+            inner,
+            denied: DeniedGet::Keys(denied_keys.into_iter().collect()),
+            result: DeniedGetResult::Error,
+        }
+    }
 }
 
 impl<B: fmt::Display> fmt::Display for DenyGetKeyedBlobstore<B> {
@@ -6494,6 +6502,84 @@ async fn test_upload_path_reuses_unchanged_file_leaves(fb: FacebookInit) -> Resu
         .context("wide/ must build from the parent's leaves without reading any file blob")?;
 
     Ok(())
+}
+
+/// What it tests: building a directory loads the envelope of every child
+/// directory it lists, unchanged or not, and the result is byte-identical to
+/// derivation.
+///
+/// Why it matters: a commit to one user's directory in `notes` rebuilds
+/// `users/`, which lists thousands of unchanged children, so each such commit
+/// pays thousands of blobstore reads on the upload path. Denying those reads
+/// makes every one of them visible.
+#[mononoke::fbinit_test]
+async fn test_upload_path_loads_unchanged_child_directories(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+
+    const UNCHANGED_CHILDREN: usize = 8;
+    let unchanged_paths: Vec<String> = (0..UNCHANGED_CHILDREN)
+        .map(|i| format!("wide/d{i:03}"))
+        .collect();
+    let mut files = vec![(NonRootMPath::new("wide/changed/x")?, "one".to_string())];
+    for path in &unchanged_paths {
+        files.push((NonRootMPath::new(format!("{path}/y"))?, path.clone()));
+    }
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_files(files)
+        .commit()
+        .await?;
+    // Only one child directory changes, so every other child wide/ lists is
+    // unchanged.
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("wide/changed/x", "two")
+        .commit()
+        .await?;
+
+    let restricted_paths_config = repo.restricted_paths().config_based();
+    derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
+        &ctx,
+        repo.repo_blobstore(),
+        hg_manifest_id_of(&ctx, &repo, parent).await?,
+        vec![],
+        &Default::default(),
+        restricted_paths_config,
+        derive_acl_overlay(&ctx, &repo, parent).await?,
+    )
+    .await?;
+
+    let child_manifest = hg_manifest_id_of(&ctx, &repo, child).await?;
+    let overlay: Arc<dyn KeyedBlobstore> =
+        Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
+    build_one_uploaded_tree(
+        &ctx,
+        &repo,
+        &overlay,
+        tree_id_at_path(&ctx, &repo, child_manifest, "wide/changed").await?,
+    )
+    .await?;
+
+    // Those envelopes exist, so wide/ fails on them only because it loads them.
+    let mut unchanged_keys = Vec::with_capacity(UNCHANGED_CHILDREN);
+    for path in &unchanged_paths {
+        let tree = tree_id_at_path(&ctx, &repo, child_manifest, path).await?;
+        unchanged_keys.push(HgAugmentedManifestId::new(tree.into_nodehash()).blobstore_key());
+    }
+    let no_unchanged_child_reads: Arc<dyn KeyedBlobstore> = Arc::new(
+        DenyGetKeyedBlobstore::denying_keys(overlay.clone(), unchanged_keys),
+    );
+    let wide = tree_id_at_path(&ctx, &repo, child_manifest, "wide").await?;
+    let err = build_one_uploaded_tree(&ctx, &repo, &no_unchanged_child_reads, wide)
+        .await
+        .expect_err("wide/ loads the envelope of every child it lists, unchanged or not");
+    let message = format!("{err:#}");
+    assert!(
+        message.contains("unexpected load of denied blobstore key"),
+        "wide/ should fail on loading an unchanged child, got: {message}"
+    );
+
+    assert_upload_path_matches_derivation(&ctx, &repo, parent, child, &["wide/changed", "wide", ""])
+        .await
 }
 
 /// What it tests: a file whose content metadata is missing fails the build
