@@ -63,7 +63,6 @@ class EdenFsManager:
         self.eden = None
 
     def start(self, overrides: Dict[str, str]) -> None:
-        overrides = dict(overrides)
         orig_test_dir = self.test_dir
 
         # Valid socketpaths on macOS are too short, and the usual temp dir created when running
@@ -94,19 +93,18 @@ overrides = {{}}
 """
             )
 
-        overrides.update(
-            {
-                "SCRATCH_CONFIG_PATH": str(scratch_config),
-                "EDENFS_INTEGRATION_TEST": "1",
-            }
-        )
+        # The test process and edenfsctl must resolve the same scratch targets.
+        overrides["SCRATCH_CONFIG_PATH"] = str(scratch_config)
+        eden_overrides = dict(overrides)
+        # Keep this out of the test process: it changes sl's network detection.
+        eden_overrides["EDENFS_INTEGRATION_TEST"] = "1"
 
         # See D43988120 to see why this is necessary
         if sys.platform == "darwin":
-            overrides["TMPDIR"] = "/tmp"
+            eden_overrides["TMPDIR"] = "/tmp"
 
         ex = None
-        with override_environ(overrides):
+        with override_environ(eden_overrides):
             try:
                 eden = edenclient.EdenFS(
                     base_dir=self.edenfs_dir,

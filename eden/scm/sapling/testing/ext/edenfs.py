@@ -13,6 +13,10 @@ def testsetup(t: TestTmp):
     edenfsctl_path = t.requireexe("eden")
     # Make other parts of the tests aware of the fact the test is using EdenFS
     t.setenv("HGTEST_USE_EDEN", "1")
+    for name in ("MKSCRATCH_BIN", "SCRATCH_CONFIG_PATH"):
+        value = os.getenv(name)
+        if value is not None:
+            t.setenv(name, value)
     # This fallback is there increasing the compatibility of the `goto` command.
     # EdenFS does not report the number of files that were updated, while the
     # rest of DotSL modes do.
