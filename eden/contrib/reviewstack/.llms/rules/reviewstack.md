@@ -1,6 +1,9 @@
 ---
-oncalls: ["scm_client_infra"]
-apply_to_regex: ".*\\.(tsx?|graphql|css)$"
+name: reviewstack
+metadata:
+  oncalls: ["scm_client_infra"]
+  strict: true
+  apply_to_path: ".*\\.(tsx?|graphql|css)$"
 ---
 
 # ReviewStack Codebase Guide
