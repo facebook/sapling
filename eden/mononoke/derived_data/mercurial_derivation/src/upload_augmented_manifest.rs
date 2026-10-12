@@ -375,11 +375,14 @@ async fn build_uploaded_tree(
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
 ) -> Result<(BuiltTree, HgAugmentedManifestEnvelope)> {
-    // The parent's leaves depend on nothing below, so they load while the
-    // children and the ACL node do rather than after them.
-    let ((children, acl), reusable) = future::try_join(
-        children_and_acl(ctx, blobstore, restricted_paths, manifest, sources),
-        parent_file_leaves(ctx, blobstore, manifest.p1()),
+    let parent = parent_entries(ctx, blobstore, manifest.p1()).await?;
+    let (children, acl) = children_and_acl(
+        ctx,
+        blobstore,
+        restricted_paths,
+        manifest,
+        sources,
+        &parent.directories,
     )
     .await?;
     let acl_overlay = acl.node().map(|entry| entry.id);
@@ -397,7 +400,7 @@ async fn build_uploaded_tree(
         // in `p1`: a leaf is a pure function of its filenode and file type, so
         // an entry matching both is the one this would have built. A wrong
         // parent can only cost a miss.
-        match reusable.get(name) {
+        match parent.leaves.get(name) {
             Some(leaf)
                 if leaf.filenode == filenode_id.into_nodehash() && leaf.file_type == *file_type =>
             {
@@ -513,43 +516,56 @@ async fn build_uploaded_file_leaf(
     })
 }
 
-/// This directory's file leaves in the parent commit, to reuse for the files
-/// that did not change. An uploaded manifest lists every file in the
-/// directory, not just the changed ones, so without this a one-file change to a
-/// wide directory pays two blob reads for each of the files that did not
-/// change.
+/// What this directory held in the parent commit, to reuse for the entries
+/// that did not change.
+#[derive(Default)]
+struct ParentEntries {
+    leaves: HashMap<MPathElement, HgAugmentedFileLeafNode>,
+    directories: HashMap<MPathElement, HgAugmentedDirectoryNode>,
+}
+
+/// This directory's entries in the parent commit. An uploaded manifest lists
+/// every entry in the directory, not just the changed ones, so without this a
+/// one-file change to a wide directory pays two blob reads for each unchanged
+/// file and one envelope load for each unchanged child directory.
 ///
-/// No parent, or a parent that was never derived, is not an error: every leaf
-/// is then built from scratch, which is what this path did before.
-async fn parent_file_leaves(
+/// No parent, or a parent that was never derived, is not an error: every entry
+/// is then built or loaded from scratch, which is what this path did before.
+async fn parent_entries(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),
     p1: Option<HgNodeHash>,
-) -> Result<HashMap<MPathElement, HgAugmentedFileLeafNode>> {
+) -> Result<ParentEntries> {
     let Some(p1) = p1 else {
-        return Ok(HashMap::new());
+        return Ok(ParentEntries::default());
     };
     let Some(envelope) =
         HgAugmentedManifestEnvelope::load(ctx, blobstore, HgAugmentedManifestId::new(p1)).await?
     else {
-        return Ok(HashMap::new());
+        return Ok(ParentEntries::default());
     };
-    // One pass over the parent's map, rather than a lookup per file: the
+    // One pass over the parent's map, rather than a lookup per entry: the
     // directory is being rebuilt precisely because most of it is unchanged, so
     // nearly every entry is wanted.
     envelope
         .augmented_manifest
         .subentries
         .into_entries(ctx, blobstore)
-        .try_filter_map(|(name, entry)| async move {
-            match entry {
-                HgAugmentedManifestEntry::FileNode(leaf) => {
-                    Ok(Some((MPathElement::from_smallvec(name)?, leaf)))
+        .and_then(|(name, entry)| async move { Ok((MPathElement::from_smallvec(name)?, entry)) })
+        .try_fold(
+            ParentEntries::default(),
+            |mut parent, (name, entry)| async move {
+                match entry {
+                    HgAugmentedManifestEntry::FileNode(leaf) => {
+                        parent.leaves.insert(name, leaf);
+                    }
+                    HgAugmentedManifestEntry::DirectoryNode(directory) => {
+                        parent.directories.insert(name, directory);
+                    }
                 }
-                HgAugmentedManifestEntry::DirectoryNode(_) => Ok(None),
-            }
-        })
-        .try_collect()
+                Ok(parent)
+            },
+        )
         .await
 }
 
@@ -560,8 +576,16 @@ async fn children_and_acl(
     restricted_paths: &RestrictedPathsConfigBased,
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
+    parent_directories: &HashMap<MPathElement, HgAugmentedDirectoryNode>,
 ) -> Result<(HashMap<MPathElement, ChildNode>, DirectoryAcl)> {
-    let children = load_children(ctx, blobstore, manifest.node_id(), sources).await?;
+    let children = load_children(
+        ctx,
+        blobstore,
+        manifest.node_id(),
+        sources,
+        parent_directories,
+    )
+    .await?;
 
     let acl_file_name = restricted_paths.config().acl_file_name().to_string();
     let acl_file_element = MPathElement::new(acl_file_name.as_bytes().to_vec())?;
@@ -604,13 +628,15 @@ async fn children_and_acl(
     Ok((children, acl))
 }
 
-/// Resolve every child directory, from the batch when it arrived there and from
-/// its own stored augmented manifest otherwise.
+/// Resolve every child directory: from the batch when it arrived there, from
+/// the parent's entry when it is unchanged, and from its own stored augmented
+/// manifest otherwise.
 async fn load_children(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     tree: HgNodeHash,
     sources: ChildSources<'_>,
+    parent_directories: &HashMap<MPathElement, HgAugmentedDirectoryNode>,
 ) -> Result<HashMap<MPathElement, ChildNode>> {
     let resolved = sources
         .children
@@ -637,12 +663,35 @@ async fn load_children(
         })
         .collect::<Result<Vec<_>>>()?;
 
+    // A child with the node id its parent entry records is the same subtree,
+    // so that entry is exactly what loading the child's envelope would give.
+    let (unchanged, changed): (Vec<_>, Vec<_>) =
+        sources
+            .children
+            .external
+            .iter()
+            .partition(|(name, node_id)| {
+                parent_directories
+                    .get(name)
+                    .is_some_and(|directory| directory.treenode == *node_id)
+            });
+    let reused = unchanged.into_iter().filter_map(|(name, _)| {
+        let directory = parent_directories.get(name)?;
+        Some((
+            name.clone(),
+            ChildNode {
+                directory: directory.clone(),
+                acl: directory
+                    .acl_manifest_directory_id
+                    .map(AclChildNode::IdOnly),
+            },
+        ))
+    });
+
     // Materialised before the stream: a closure borrowing `ctx` inlined into
     // `stream::iter` is not inferred higher-ranked, and `Send` then fails.
-    let lookups: Vec<_> = sources
-        .children
-        .external
-        .iter()
+    let lookups: Vec<_> = changed
+        .into_iter()
         .map(|(name, node_id)| async move {
             let envelope = HgAugmentedManifestEnvelope::load(
                 ctx,
@@ -678,7 +727,7 @@ async fn load_children(
         .try_collect()
         .await?;
 
-    Ok(resolved.into_iter().chain(fetched).collect())
+    Ok(resolved.into_iter().chain(reused).chain(fetched).collect())
 }
 
 #[cfg(test)]

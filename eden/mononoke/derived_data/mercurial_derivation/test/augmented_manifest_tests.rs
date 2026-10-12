@@ -6504,16 +6504,16 @@ async fn test_upload_path_reuses_unchanged_file_leaves(fb: FacebookInit) -> Resu
     Ok(())
 }
 
-/// What it tests: building a directory loads the envelope of every child
-/// directory it lists, unchanged or not, and the result is byte-identical to
-/// derivation.
+/// What it tests: a directory's unchanged child directories are taken from its
+/// parent's entries, without loading their envelopes, and the result is still
+/// byte-identical to derivation.
 ///
 /// Why it matters: a commit to one user's directory in `notes` rebuilds
-/// `users/`, which lists thousands of unchanged children, so each such commit
-/// pays thousands of blobstore reads on the upload path. Denying those reads
-/// makes every one of them visible.
+/// `users/`, which lists thousands of unchanged children. Loading each of their
+/// envelopes put thousands of blobstore reads on the upload path of every such
+/// commit. Denying those reads is what keeps that from coming back.
 #[mononoke::fbinit_test]
-async fn test_upload_path_loads_unchanged_child_directories(fb: FacebookInit) -> Result<()> {
+async fn test_upload_path_reuses_unchanged_child_directories(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
@@ -6530,7 +6530,7 @@ async fn test_upload_path_loads_unchanged_child_directories(fb: FacebookInit) ->
         .commit()
         .await?;
     // Only one child directory changes, so every other child wide/ lists is
-    // unchanged.
+    // unchanged and can come from the parent's envelope.
     let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
         .add_file("wide/changed/x", "two")
         .commit()
@@ -6559,7 +6559,7 @@ async fn test_upload_path_loads_unchanged_child_directories(fb: FacebookInit) ->
     )
     .await?;
 
-    // Those envelopes exist, so wide/ fails on them only because it loads them.
+    // Those envelopes exist, so only reuse lets wide/ build without them.
     let mut unchanged_keys = Vec::with_capacity(UNCHANGED_CHILDREN);
     for path in &unchanged_paths {
         let tree = tree_id_at_path(&ctx, &repo, child_manifest, path).await?;
@@ -6569,14 +6569,9 @@ async fn test_upload_path_loads_unchanged_child_directories(fb: FacebookInit) ->
         DenyGetKeyedBlobstore::denying_keys(overlay.clone(), unchanged_keys),
     );
     let wide = tree_id_at_path(&ctx, &repo, child_manifest, "wide").await?;
-    let err = build_one_uploaded_tree(&ctx, &repo, &no_unchanged_child_reads, wide)
+    build_one_uploaded_tree(&ctx, &repo, &no_unchanged_child_reads, wide)
         .await
-        .expect_err("wide/ loads the envelope of every child it lists, unchanged or not");
-    let message = format!("{err:#}");
-    assert!(
-        message.contains("unexpected load of denied blobstore key"),
-        "wide/ should fail on loading an unchanged child, got: {message}"
-    );
+        .context("wide/ must build from the parent's entries without loading unchanged children")?;
 
     assert_upload_path_matches_derivation(&ctx, &repo, parent, child, &["wide/changed", "wide", ""])
         .await
