@@ -797,6 +797,20 @@ class EdenServer : private TakeoverHandler {
   // This is used because at some point we have both edenfs daemon processes
   // running and we need to be able to tell which one is the old one.
   std::optional<std::string> oldDaemonPid_ = std::nullopt;
+
+  /**
+   * The thread that serves the NFS sockets: mountd, rpcbind and every
+   * mount's nfsd. NFS requests must not wait behind the main EventBase,
+   * whose periodic tasks can block it for tens of seconds (the backing
+   * store flush syncs the hgcache), and soft mounts turn such a stall into
+   * ETIMEDOUT for the application. Declared before the Thrift server,
+   * mountPoints_ and serverState_: a mount's NFS channel and the NFS servers
+   * are destroyed on this thread, so it must outlive every holder of the
+   * ServerState, including the Thrift connections that server_ drops when
+   * it is destroyed.
+   */
+  folly::ScopedEventBaseThread nfsEventBaseThread_{"NfsEventBase"};
+
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
@@ -806,17 +820,6 @@ class EdenServer : private TakeoverHandler {
 
   folly::Synchronized<BackingStoreMap> backingStores_;
   std::shared_ptr<ReloadableConfig> config_;
-
-  /**
-   * The thread that serves the NFS sockets: mountd, rpcbind and every
-   * mount's nfsd. NFS requests must not wait behind the main EventBase,
-   * whose periodic tasks can block it for tens of seconds (the backing
-   * store flush syncs the hgcache), and soft mounts turn such a stall into
-   * ETIMEDOUT for the application. Declared before mountPoints_ and
-   * serverState_: a mount's NFS channel and the servers are destroyed on
-   * this thread, so it must outlive them.
-   */
-  folly::ScopedEventBaseThread nfsEventBaseThread_{"NfsEventBase"};
 
   std::shared_ptr<folly::Synchronized<MountMap>> mountPoints_;
   std::shared_ptr<folly::Synchronized<
