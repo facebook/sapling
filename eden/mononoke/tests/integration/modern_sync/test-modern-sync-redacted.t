@@ -88,6 +88,7 @@ even for the repo that enables the bypass.
 The initial ACL grants mirror_upload to an identity that does not match the client.
   $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
   > mononoke_modern_sync "" sync-once orig dest --start-id 0 > "$TESTTMP/denied-sync.log" 2>&1
+  [1]
   $ grep -o "The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0" "$TESTTMP/denied-sync.log" | head -1
   The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0
 
@@ -95,6 +96,7 @@ Redaction is the only error. The retry count does not matter, so list the
 distinct errors. A different or extra error adds a line here and fails the test.
   $ grep "ERROR" "$TESTTMP/denied-sync.log" | sed 's/.*\] //' | sort -u
   Error processing content: collecting contents entries
+  Execution error: Error processing changesets: Files/trees error received. Winding down changesets sender.
 
 The denied sync writes nothing to the destination.
   $ mononoke_admin bookmarks -R dest get master_bookmark
@@ -140,12 +142,14 @@ Facebook certificates carry a service identity, while the OSS fixture exposes it
 Even an authorised identity cannot bypass redaction on a repo that does not enable it.
   $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::edenapi::retry=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
   > mononoke_modern_sync "" sync-once orig dest_nobypass --start-id 0 > "$TESTTMP/config-disabled-sync.log" 2>&1
+  [1]
   $ grep -o "The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0" "$TESTTMP/config-disabled-sync.log" | head -1
   The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0
 
 Redaction is the only error here as well.
   $ grep "ERROR" "$TESTTMP/config-disabled-sync.log" | sed 's/.*\] //' | sort -u
   Error processing content: collecting contents entries
+  Execution error: Error processing changesets: Files/trees error received. Winding down changesets sender.
 
 The denied sync writes nothing to the destination.
   $ mononoke_admin bookmarks -R dest_nobypass get master_bookmark

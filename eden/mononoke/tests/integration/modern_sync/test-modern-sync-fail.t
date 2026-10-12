@@ -81,3 +81,5 @@ Sync all bookmarks moves
   .WARN. .sync.repo=orig.. Found error: Trees upload: Expected [0-9]+ responses, got 0, retrying attempt #2 (re)
   .ERROR. .sync.repo=orig.. Failed to upload trees: Trees upload: Expected [0-9]+ responses, got 0 (re)
   .ERROR. .sync.repo=orig.. Trees flush failed: Trees upload: Expected [0-9]+ responses, got 0 (re)
+  [ERROR] Execution error: Error processing changesets: Error waiting for files/trees error received oneshot canceled
+  Error: Execution failed

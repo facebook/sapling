@@ -13,6 +13,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Result;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use futures::channel::oneshot;
@@ -25,6 +26,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mutable_counters::MutableCounters;
+use mutable_counters::validate_counter_name;
 use repo_blobstore::RepoBlobstore;
 use tokio::sync::mpsc;
 
@@ -57,6 +59,19 @@ impl ModernSyncCounterNames {
             batch_checkpoint: MODERN_SYNC_BATCH_CHECKPOINT_NAME.to_owned(),
             current_entry: MODERN_SYNC_CURRENT_ENTRY_ID.to_owned(),
         }
+    }
+
+    pub fn for_bookmark(bookmark: &BookmarkKey) -> Result<Self> {
+        let suffix = format!("{}_{}", bookmark.category(), bookmark.as_str());
+        let counter_names = Self {
+            completed_entry: format!("modern_sync_by_bookmark_v1_{suffix}"),
+            batch_checkpoint: format!("modern_sync_batch_checkpoint_by_bookmark_v1_{suffix}"),
+            current_entry: format!("modern_sync_batch_id_by_bookmark_v1_{suffix}"),
+        };
+        validate_counter_name(&counter_names.completed_entry)?;
+        validate_counter_name(&counter_names.batch_checkpoint)?;
+        validate_counter_name(&counter_names.current_entry)?;
+        Ok(counter_names)
     }
 }
 
@@ -293,4 +308,42 @@ trait Manager {
         external_sender: Arc<dyn EdenapiSender + Send + Sync>,
         cancellation_requested: Arc<AtomicBool>,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use bookmarks::BookmarkCategory;
+    use bookmarks::BookmarkName;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn bookmark_counter_names_are_readable_and_category_specific() -> Result<()> {
+        let branch = BookmarkKey::new("feature/modern-sync")?;
+        let counters = ModernSyncCounterNames::for_bookmark(&branch)?;
+        assert_eq!(
+            counters.completed_entry,
+            "modern_sync_by_bookmark_v1_branch_feature/modern-sync"
+        );
+        assert_eq!(
+            counters.batch_checkpoint,
+            "modern_sync_batch_checkpoint_by_bookmark_v1_branch_feature/modern-sync"
+        );
+        assert_eq!(
+            counters.current_entry,
+            "modern_sync_batch_id_by_bookmark_v1_branch_feature/modern-sync"
+        );
+
+        let tag = BookmarkKey::with_name_and_category(
+            BookmarkName::new("feature/modern-sync")?,
+            BookmarkCategory::Tag,
+        );
+        assert_ne!(
+            counters.completed_entry,
+            ModernSyncCounterNames::for_bookmark(&tag)?.completed_entry
+        );
+        Ok(())
+    }
 }

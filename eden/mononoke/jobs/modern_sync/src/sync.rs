@@ -8,12 +8,14 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::format_err;
 use assembly_line::TryAssemblyLine;
+use backsyncer::get_bookmark_counter_or_initialize;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
@@ -21,7 +23,7 @@ use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksRef;
-use borrowed::borrowed;
+use bookmarks::Freshness;
 use changeset_info::ChangesetInfo;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
@@ -54,9 +56,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::sha1_hash::SHA1_HASH_LENGTH_BYTES;
+use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
-use mutable_counters::MutableCountersRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -64,7 +66,6 @@ use repo_identity::RepoIdentityRef;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::Mutex;
-use tokio::sync::RwLock;
 use tracing::Instrument;
 use url::Url;
 
@@ -87,6 +88,7 @@ use crate::sender::manager::TreeMessage;
 use crate::stat;
 
 const SLEEP_INTERVAL_WHEN_CAUGHT_UP: Duration = Duration::from_secs(5);
+const BOOKMARK_POLLING_JUST_KNOB: &str = "scm/mononoke:modern_sync_bookmark_polling";
 
 define_stats! {
     prefix = "mononoke.modern_sync.sync";
@@ -104,10 +106,134 @@ pub struct SyncArgs {
     pub dest_repo_name: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum ExecutionType {
     SyncOnce,
     Tail,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PollingMode {
+    Legacy,
+    Bookmark,
+}
+
+impl PollingMode {
+    fn counter_names(self, bookmark: &BookmarkKey) -> Result<ModernSyncCounterNames> {
+        match self {
+            Self::Legacy => Ok(ModernSyncCounterNames::legacy()),
+            Self::Bookmark => ModernSyncCounterNames::for_bookmark(bookmark),
+        }
+    }
+}
+
+struct PollingState {
+    mode: PollingMode,
+    cursor: BookmarkUpdateLogId,
+    counter_names: ModernSyncCounterNames,
+}
+
+fn polling_mode(repo_name: &str) -> PollingMode {
+    if justknobs::eval(BOOKMARK_POLLING_JUST_KNOB, None, Some(repo_name)) {
+        PollingMode::Bookmark
+    } else {
+        PollingMode::Legacy
+    }
+}
+
+async fn resolve_start_id(
+    ctx: &CoreContext,
+    counters: &ArcMutableCounters,
+    start_id_arg: Option<u64>,
+    bookmark: &BookmarkKey,
+    mode: PollingMode,
+) -> Result<Option<PollingState>> {
+    let counter_names = mode.counter_names(bookmark)?;
+    let configured_start_id = start_id_arg.map(BookmarkUpdateLogId);
+    let cursor = match mode {
+        PollingMode::Legacy => match configured_start_id {
+            Some(start_id) => start_id,
+            None => counters
+                .get_counter(ctx, &counter_names.completed_entry)
+                .await?
+                .map(TryInto::try_into)
+                .transpose()?
+                .ok_or_else(|| {
+                    format_err!(
+                        "No start-id or mutable counter {} provided",
+                        counter_names.completed_entry
+                    )
+                })?,
+        },
+        PollingMode::Bookmark => {
+            let initial_counter = match configured_start_id {
+                Some(start_id) => start_id,
+                None => counters
+                    .get_counter(ctx, MODERN_SYNC_COUNTER_NAME)
+                    .await?
+                    .map(TryInto::try_into)
+                    .transpose()?
+                    .ok_or_else(|| {
+                        format_err!(
+                            "No start-id or mutable counter {MODERN_SYNC_COUNTER_NAME} provided"
+                        )
+                    })?,
+            };
+            let Some(durable_counter) = get_bookmark_counter_or_initialize(
+                ctx,
+                counters,
+                &counter_names.completed_entry,
+                initial_counter,
+            )
+            .await?
+            else {
+                return Ok(None);
+            };
+            configured_start_id.unwrap_or(durable_counter)
+        }
+    };
+    Ok(Some(PollingState {
+        mode,
+        cursor,
+        counter_names,
+    }))
+}
+
+async fn read_next_entries(
+    ctx: &CoreContext,
+    repo: &Repo,
+    bookmark: &BookmarkKey,
+    state: &PollingState,
+    limit: u64,
+) -> Result<Vec<BookmarkUpdateLogEntry>> {
+    let log = repo.bookmark_update_log_arc();
+    let entries = match state.mode {
+        PollingMode::Legacy => log.read_next_bookmark_log_entries(
+            ctx.clone(),
+            state.cursor,
+            limit,
+            Freshness::MaybeStale,
+        ),
+        PollingMode::Bookmark => log.read_next_bookmark_log_entries_by_bookmark(
+            ctx.clone(),
+            bookmark.clone(),
+            state.cursor,
+            limit,
+            Freshness::MaybeStale,
+        ),
+    };
+    entries
+        .try_collect()
+        .await
+        .context("While querying bookmarks_update_log")
+}
+
+async fn finish_send_manager(send_manager: &SendManager) -> Result<Result<()>> {
+    let (finish_tx, finish_rx) = oneshot::channel();
+    send_manager
+        .send_changeset(ChangesetMessage::NotifyCompletion(finish_tx))
+        .await?;
+    Ok(finish_rx.await?)
 }
 
 pub async fn sync(
@@ -149,23 +275,27 @@ pub async fn sync(
 
         let ctx = build_context(app.clone(), &repo_name, dry_run);
 
-        let start_id = if let Some(id) = start_id_arg {
-            id
-        } else {
-            repo.mutable_counters()
-                .get_counter(&ctx, MODERN_SYNC_COUNTER_NAME)
-                .await?
-                .map(|val| val.try_into())
-                .transpose()?
-                .ok_or_else(|| {
-                    format_err!(
-                        "No start-id or mutable counter {MODERN_SYNC_COUNTER_NAME} provided"
-                    )
-                })?
-        };
-        tracing::info!("Starting sync from {}", start_id,);
-
         let app_args = app.args::<ModernSyncArgs>()?;
+        let bookmark = BookmarkKey::new(app_args.bookmark.clone())?;
+        let mut state = loop {
+            if cancellation_requested.load(Ordering::Relaxed) {
+                tracing::info!("sync stopping due to cancellation request");
+                return Ok(());
+            }
+
+            let desired_mode = polling_mode(&repo_name);
+            let Some(initial_state) =
+                resolve_start_id(&ctx, &mc, start_id_arg, &bookmark, desired_mode).await?
+            else {
+                // Another replica initialized the counter. Read the value it
+                // installed on the next polling iteration.
+                tokio::time::sleep(SLEEP_INTERVAL_WHEN_CAUGHT_UP).await;
+                continue;
+            };
+            tracing::info!("Starting sync from {}", initial_state.cursor);
+            stat::log_sync_start(&ctx, initial_state.cursor.0);
+            break initial_state;
+        };
 
         let sender = build_edenfs_client(
             ctx.clone(),
@@ -191,131 +321,129 @@ pub async fn sync(
             repo_name.clone(),
             exit_file,
             mc.clone(),
-            cancellation_requested,
+            cancellation_requested.clone(),
         );
         tracing::info!("Initialized channels");
-        stat::log_sync_start(&ctx, start_id);
+        let mut last_entry = None;
 
-        let bookmark = app_args.bookmark;
-        let counter_names = ModernSyncCounterNames::legacy();
-        let last_entry = Arc::new(RwLock::new(None));
-        bul_util::read_bookmark_update_log(
-            &ctx,
-            BookmarkUpdateLogId(start_id),
-            exec_type,
-            repo.bookmark_update_log_arc(),
-            config.single_db_query_entries_limit as u64,
-        )
-        .then(|entries| {
-            cloned!(
-                repo,
-                repo_name,
-                mc,
-                sender,
-                mut send_manager,
-                last_entry,
-                bookmark,
-                counter_names,
-                config
-            );
-            borrowed!(ctx);
-            async move {
-                match entries {
-                    Err(e) => {
-                        tracing::info!(
-                            "Found error while getting bookmark update log entry {:#?}",
-                            e
-                        );
-                        Err(e)
-                    }
-                    Ok(entries) if entries.is_empty() => {
-                        send_manager
-                            .send_changesets(vec![ChangesetMessage::Log((repo_name, Some(0)))])
-                            .await?;
-
-                        tokio::time::sleep(SLEEP_INTERVAL_WHEN_CAUGHT_UP).await;
-                        Ok(())
-                    }
-                    Ok(mut entries) => {
-                        tracing::info!("Read {} entries", entries.len(),);
-                        entries = entries
-                            .iter()
-                            .filter_map(|entry| {
-                                if entry.bookmark_name.name().as_str() == bookmark {
-                                    Some(entry.clone())
-                                } else {
-                                    tracing::warn!(
-                                        "Ignoring entry with id {} from branch {}",
-                                        entry.id,
-                                        entry.bookmark_name,
-                                    );
-                                    None
-                                }
-                            })
-                            .collect::<Vec<BookmarkUpdateLogEntry>>();
-                        tracing::info!("{} entries left after filtering", entries.len());
-
-                        if app_args.flatten_bul && !entries.is_empty() {
-                            let original_size = entries.len();
-                            let flattened_bul = bul_util::group_entries(entries);
-                            tracing::info!(
-                                "Grouped {} entries into {} macro-entries",
-                                original_size,
-                                flattened_bul.len()
-                            );
-                            entries = flattened_bul;
-                        }
-
-                        for entry in entries {
-                            let now = std::time::Instant::now();
-
-                            process_bookmark_update_log_entry(
-                                ctx,
-                                &config,
-                                &repo,
-                                &entry,
-                                &send_manager,
-                                sender.clone(),
-                                config.chunk_size as u64,
-                                app_args.log_to_ods,
-                                *last_entry.read().await,
-                                mc.clone(),
-                                counter_names.clone(),
-                            )
-                            .await
-                            .inspect(|_| {
-                                stat::log_bookmark_update_entry_done(
-                                    ctx,
-                                    &repo_name,
-                                    &entry,
-                                    now.elapsed(),
-                                );
-                            })
-                            .inspect_err(|e| {
-                                stat::log_bookmark_update_entry_error(
-                                    ctx,
-                                    &repo_name,
-                                    &entry,
-                                    e,
-                                    now.elapsed(),
-                                );
-                            })?;
-                            *last_entry.write().await = entry.to_changeset_id;
-                        }
-                        Ok(())
-                    }
-                }
+        loop {
+            if cancellation_requested.load(Ordering::Relaxed) {
+                tracing::info!("sync stopping due to cancellation request");
+                break;
             }
-        })
-        .try_collect::<()>()
-        .await?;
 
-        // Wait for the last commit to be synced before exiting
-        let (finish_tx, finish_rx) = oneshot::channel();
-        send_manager
-            .send_changeset(ChangesetMessage::NotifyCompletion(finish_tx))
+            let desired_mode = polling_mode(&repo_name);
+            if state.mode != desired_mode {
+                // Keep messages from the old execution model ordered before
+                // resolving the new model's durable cursor.
+                finish_send_manager(&send_manager).await??;
+                last_entry = None;
+                let Some(new_state) =
+                    resolve_start_id(&ctx, &mc, None, &bookmark, desired_mode).await?
+                else {
+                    // Another replica initialized the counter. Read the value it
+                    // installed on the next polling iteration.
+                    tokio::time::sleep(SLEEP_INTERVAL_WHEN_CAUGHT_UP).await;
+                    continue;
+                };
+                tracing::info!("Starting sync from {}", new_state.cursor);
+                stat::log_sync_start(&ctx, new_state.cursor.0);
+                state = new_state;
+            }
+
+            let mode = state.mode;
+            let counter_names = state.counter_names.clone();
+            let mut entries = read_next_entries(
+                &ctx,
+                &repo,
+                &bookmark,
+                &state,
+                config.single_db_query_entries_limit as u64,
+            )
             .await?;
-        let _ = finish_rx.await?;
+
+            if let Some(last) = entries.last() {
+                state.cursor = last.id;
+            } else {
+                send_manager
+                    .send_changesets(vec![ChangesetMessage::Log((repo_name.clone(), Some(0)))])
+                    .await?;
+                if matches!(exec_type, ExecutionType::SyncOnce) {
+                    break;
+                }
+                tokio::time::sleep(SLEEP_INTERVAL_WHEN_CAUGHT_UP).await;
+                continue;
+            }
+
+            tracing::info!("Read {} entries", entries.len());
+            if mode == PollingMode::Legacy {
+                // An unrelated-only batch does not mean SyncOnce is caught up:
+                // a matching bookmark entry may occur later in the global log.
+                // Keep scanning until the unfiltered read above returns empty,
+                // matching the legacy stream's behavior.
+                entries.retain(|entry| {
+                    if entry.bookmark_name.name() == bookmark.name() {
+                        true
+                    } else {
+                        tracing::warn!(
+                            "Ignoring entry with id {} from branch {}",
+                            entry.id,
+                            entry.bookmark_name,
+                        );
+                        false
+                    }
+                });
+            }
+            tracing::info!("{} entries left after filtering", entries.len());
+
+            if app_args.flatten_bul && !entries.is_empty() {
+                let original_size = entries.len();
+                let flattened_bul = bul_util::group_entries(entries);
+                tracing::info!(
+                    "Grouped {} entries into {} macro-entries",
+                    original_size,
+                    flattened_bul.len()
+                );
+                entries = flattened_bul;
+            }
+
+            for entry in entries {
+                let now = std::time::Instant::now();
+                process_bookmark_update_log_entry(
+                    &ctx,
+                    &config,
+                    &repo,
+                    &entry,
+                    &send_manager,
+                    sender.clone(),
+                    config.chunk_size as u64,
+                    app_args.log_to_ods,
+                    last_entry,
+                    mc.clone(),
+                    counter_names.clone(),
+                )
+                .await
+                .inspect(|_| {
+                    stat::log_bookmark_update_entry_done(&ctx, &repo_name, &entry, now.elapsed());
+                })
+                .inspect_err(|e| {
+                    stat::log_bookmark_update_entry_error(
+                        &ctx,
+                        &repo_name,
+                        &entry,
+                        e,
+                        now.elapsed(),
+                    );
+                })?;
+                last_entry = entry.to_changeset_id;
+            }
+        }
+
+        if !cancellation_requested.load(Ordering::Relaxed) {
+            // Wait for the manager to handle all queued messages and propagate
+            // any asynchronous sender failure it reports.
+            finish_send_manager(&send_manager).await??;
+        }
 
         Ok(())
     }

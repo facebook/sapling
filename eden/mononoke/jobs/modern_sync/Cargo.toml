@@ -11,10 +11,10 @@ license = "GPLv2+"
 anyhow = "1.0.104"
 assembly_line = { version = "0.1.0", path = "../../common/assembly_line" }
 async-trait = "0.1.92"
+backsyncer = { version = "0.1.0", path = "../../features/commit_rewriting/backsyncer" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.12.1", features = ["serde"] }
 bytesize = "2.7.0"
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
