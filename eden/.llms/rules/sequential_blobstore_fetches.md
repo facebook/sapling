@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: '\.load\(|\.get\(|blobstore|derive|manifest|Loadable|get_hg_from_bonsai|get_git_sha1_from_bonsai|get_bonsai_from|HgMapping|GitMapping|GlobalrevMapping|SvnrevMapping'
+name: sequential-blobstore-fetches
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: '\.load\(|\.get\(|blobstore|derive|manifest|Loadable|get_hg_from_bonsai|get_git_sha1_from_bonsai|get_bonsai_from|HgMapping|GitMapping|GlobalrevMapping|SvnrevMapping'
 ---
 
 # Sequential Blobstore Fetches
