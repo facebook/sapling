@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
@@ -12,6 +13,8 @@ use std::time::Instant;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
+use blobstore::BlobstoreIsPresent;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::PerfCounterType;
@@ -109,6 +112,7 @@ define_stats! {
     upload_augmented_manifests_skipped_no_acl_work: timeseries(Rate, Sum),
     upload_augmented_manifests_failed: timeseries(Rate, Sum),
     upload_augmented_manifests_failed_missing_child: timeseries(Rate, Sum),
+    upload_augmented_manifests_failed_child_not_derived: timeseries(Rate, Sum),
     upload_augmented_manifests_build_ms: dynamic_histogram(
         "{}.upload_augmented_manifests_build_ms", (repo: String);
         20, 0, 10_000, Average, Count; P 50; P 90; P 99),
@@ -522,15 +526,62 @@ async fn store_tree<R: MononokeRepo>(
     ))
 }
 
-/// A batch the client built wrong: a parent uploaded before a child it
-/// contains. Counted apart from genuine server failures.
-fn is_client_fault(err: &Error) -> bool {
-    err.chain().any(|cause| {
-        matches!(
-            cause.downcast_ref::<UploadTreeBuildError>(),
-            Some(UploadTreeBuildError::MissingChild { .. })
-        )
-    })
+/// Why a batch did not build, as counted in ODS and logged as `failure_kind`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BuildFailureKind {
+    /// The client's fault: a child the batch names is neither in it nor
+    /// stored, or the batch could not be ordered.
+    MissingChild,
+    /// The child tree is stored, typically by a concurrent upload of the same
+    /// commit whose changeset has not arrived yet, but its augmented manifest
+    /// is not derived. Expected, and not the client's fault.
+    ChildNotDerived,
+    Server,
+}
+
+impl BuildFailureKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::MissingChild => "missing_child",
+            Self::ChildNotDerived => "child_not_derived",
+            Self::Server => "server",
+        }
+    }
+}
+
+fn missing_child(err: &Error) -> Option<&UploadTreeBuildError> {
+    err.chain()
+        .find_map(|cause| cause.downcast_ref::<UploadTreeBuildError>())
+}
+
+/// Only a complete batch can tell the client's mistake from our own, and only
+/// the store can tell a child that was never sent from one that is merely not
+/// derived yet.
+async fn classify_build_failure<R: MononokeRepo>(
+    repo: &HgRepoContext<R>,
+    err: &Error,
+    batch: &HashSet<HgNodeHash>,
+    complete_batch: bool,
+) -> BuildFailureKind {
+    let Some(UploadTreeBuildError::MissingChild { child, .. }) = missing_child(err) else {
+        return BuildFailureKind::Server;
+    };
+    if !complete_batch {
+        return BuildFailureKind::Server;
+    }
+    if batch.contains(child) {
+        return BuildFailureKind::MissingChild;
+    }
+    let key = HgManifestId::new(*child).blobstore_key();
+    match repo
+        .repo()
+        .repo_blobstore()
+        .is_present(repo.ctx(), &key)
+        .await
+    {
+        Ok(BlobstoreIsPresent::Present) => BuildFailureKind::ChildNotDerived,
+        _ => BuildFailureKind::MissingChild,
+    }
 }
 
 /// Bump the counters for one batch of augmented-manifest builds.
@@ -559,6 +610,7 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
     // can look like it is missing a child the client did send. Only a complete
     // batch can tell the client's mistake from our own.
     let complete_batch = trees.len() == batch_len;
+    let batch: HashSet<HgNodeHash> = trees.iter().map(|tree| tree.node_id()).collect();
     let repo_name = repo.repo().repo_identity().name().to_string();
     STATS::upload_augmented_manifests_attempted.add_value(trees.len() as i64);
     STATS::upload_augmented_manifests_batch_trees
@@ -579,18 +631,21 @@ async fn build_and_record_augmented_manifests<R: MononokeRepo>(
             STATS::upload_augmented_manifests_batch_levels.add_value(levels as i64, (repo_name,));
         }
         Err(err) => {
-            let failure_kind = if complete_batch && is_client_fault(&err) {
-                STATS::upload_augmented_manifests_failed_missing_child.add_value(1);
-                "missing_child"
-            } else {
-                STATS::upload_augmented_manifests_failed.add_value(1);
-                "server"
-            };
+            let failure_kind = classify_build_failure(repo, &err, &batch, complete_batch).await;
+            match failure_kind {
+                BuildFailureKind::MissingChild => {
+                    STATS::upload_augmented_manifests_failed_missing_child.add_value(1)
+                }
+                BuildFailureKind::ChildNotDerived => {
+                    STATS::upload_augmented_manifests_failed_child_not_derived.add_value(1)
+                }
+                BuildFailureKind::Server => STATS::upload_augmented_manifests_failed.add_value(1),
+            }
             repo.ctx()
                 .scuba()
                 .clone()
                 .add("repo", repo.repo().repo_identity().name())
-                .add("failure_kind", failure_kind)
+                .add("failure_kind", failure_kind.as_str())
                 .log_with_msg(
                     "Failed to build augmented Hg manifests at tree upload",
                     Some(format!("{err:#}")),
