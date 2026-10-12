@@ -124,7 +124,11 @@ inline void InodeMap::insertLoadedInode(
     const folly::Synchronized<Members>::LockedPtr& data,
     InodeBase* inode) {
   auto ret = data->loadedInodes_.emplace(inode->getNodeId(), inode);
-  XCHECK(ret.second);
+  XCHECK(ret.second) << fmt::format(
+      "inode {} is already loaded as {} while inserting {}",
+      inode->getNodeId(),
+      ret.first->second->getLogPath(),
+      inode->getLogPath());
   if (inode->getType() == dtype_t::Dir) {
     ++data->numTreeInodes_;
   } else {
