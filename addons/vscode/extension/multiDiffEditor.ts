@@ -12,6 +12,7 @@ import {
   beforeRevsetForComparison,
   comparisonIsAgainstHead,
   comparisonStringKey,
+  ComparisonType,
   currRevsetForComparison,
   labelForComparison,
 } from 'shared/Comparison';
@@ -42,11 +43,13 @@ export const hasMultiDiffEditorSupport = lazyInit(async () => {
  * @param repoRoot - The absolute path to the repository root
  * @param comparison - The comparison type (uncommitted, head, stack, or committed)
  * @param files - Array of changed files with path and status
+ * @param headCommitHash - Current head hash, required for head and uncommitted comparisons
  */
 export async function openMultiDiffEditor(
   repoRoot: string,
   comparison: Comparison,
   files: Array<ChangedFile>,
+  headCommitHash?: string,
 ): Promise<void> {
   if (files.length === 0) {
     vscode.window.showInformationMessage(t('No changed files to display'));
@@ -94,12 +97,28 @@ export async function openMultiDiffEditor(
     };
   });
 
-  const title = t(labelForComparison(comparison));
+  const baseTitle = t(labelForComparison(comparison));
+  const isReplaceableComparison =
+    comparison.type === ComparisonType.HeadChanges ||
+    comparison.type === ComparisonType.UncommittedChanges;
+  let title = baseTitle;
+  if (isReplaceableComparison) {
+    if (headCommitHash == null) {
+      throw new Error(`Cannot open ${comparison.type} comparison before the head commit is loaded`);
+    }
+    const titlePrefix = `${baseTitle} [`;
+    const previousTabs = vscode.window.tabGroups.all
+      .flatMap(group => group.tabs)
+      .filter(tab => hasHashedTitle(tab, titlePrefix));
+    if (previousTabs.length > 0) {
+      await vscode.window.tabGroups.close(previousTabs);
+    }
+    title = `${titlePrefix}${headCommitHash.slice(0, 12)}]`;
+  }
 
-  // Include repoRoot so each repo gets its own multi-diff tab, and use
-  // comparisonStringKey so different comparisons of the same type don't collide.
-  // Use a distinct scheme for committed comparisons so per-file toolbar buttons can be
-  // gated to committed-style comparisons via `resourceScheme` in their `when` clauses.
+  // comparisonStringKey includes commit hashes for committed comparisons and stable type markers
+  // for working-copy comparisons. Head and uncommitted tabs are closed above before their stable
+  // source URI is reused, ensuring VS Code opens them with a fresh resource list.
   const multiDiffSourceUri = vscode.Uri.from({
     scheme: comparisonIsAgainstHead(comparison)
       ? MULTI_DIFF_COMPARISON_SCHEME
@@ -112,4 +131,12 @@ export async function openMultiDiffEditor(
     multiDiffSourceUri,
     resources,
   });
+}
+
+function hasHashedTitle(tab: vscode.Tab, titlePrefix: string): boolean {
+  if (!tab.label.startsWith(titlePrefix)) {
+    return false;
+  }
+  const suffix = tab.label.slice(titlePrefix.length);
+  return /^[0-9a-f]{12}\](?: \(|$)/i.test(suffix);
 }

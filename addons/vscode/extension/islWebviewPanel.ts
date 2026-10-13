@@ -331,6 +331,7 @@ async function openNativeMultiDiffEditor(
       repo.info.repoRoot,
       comparison,
       await sortGeneratedFilesToEnd(repo, files, logger),
+      repo.getHeadCommit()?.hash,
     );
     return true;
   } catch (err) {
