@@ -352,6 +352,9 @@ impl WorkingCopy {
                 }
             }
             FileSystemType::DotGit => {
+                // This is the working-copy `.git` entry. For a linked worktree or submodule it can
+                // be a gitfile; lib/gitcompat's RepoGit follows it to GIT_DIR and separately resolves
+                // GIT_COMMON_DIR.
                 let git_dir = vfs.root().join(".git");
                 Box::new(DotGitFileSystem::new(
                     vfs.clone(),

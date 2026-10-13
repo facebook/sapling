@@ -37,6 +37,7 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
         return Ok(());
     }
 
+    // Git's GIT_DIR. For a linked worktree this is `<GIT_COMMON_DIR>/worktrees/<name>`.
     let dot_git_path = follow_dotgit_path(root_path.join(".git"));
     let dot_dir = dot_git_path.join("sl");
     let store_dir = dot_dir.join("store");
@@ -111,6 +112,7 @@ pub fn init_empty_dirstate(dot_dir: &Path) -> Result<()> {
 }
 
 fn git_repo_config_mtime(dot_git_path: &Path) -> FileTime {
+    // FIXME:: This is GIT_DIR/config, need to consider GIT_COMMON_DIR/config.
     try_mtime(&dot_git_path.join("config"))
 }
 

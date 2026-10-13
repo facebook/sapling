@@ -71,6 +71,7 @@ fn open_git(
 }
 
 fn calculate_git_path(store_path: &Path) -> Result<PathBuf, std::io::Error> {
+    // "gitdir" in Sapling store. Path to per-worktree `$GIT_DIR`, not `$GIT_COMMON_DIR`.
     let git_file_contents = get_path_from_file(store_path, GIT_FILE)?;
     let git_path = PathBuf::from(&git_file_contents);
     if !git_path.is_absolute() {

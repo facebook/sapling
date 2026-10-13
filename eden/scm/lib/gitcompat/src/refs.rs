@@ -255,12 +255,12 @@ impl BareGit {
     /// reference might have changed. Used as the reference cache key.
     fn read_reftable_generation(&self) -> Result<Option<Vec<u8>>> {
         let mut generation = Vec::new();
-        // The common stack decides the ref storage format for the whole repo.
+        // The GIT_COMMON_DIR stack decides the ref storage format for the whole repo.
         if !append_reftable_generation(self.common_dir(), &mut generation)? {
             return Ok(None);
         }
         if self.git_dir() != self.common_dir() {
-            // A linked worktree has its own stack holding per-worktree refs like HEAD.
+            // A linked worktree's GIT_DIR has its own stack holding per-worktree refs like HEAD.
             append_reftable_generation(self.git_dir(), &mut generation)?;
         }
         Ok(Some(generation))

@@ -20,6 +20,7 @@ pub(crate) fn setup_git_store_constructor() {
         info: &dyn StoreInfo,
     ) -> anyhow::Result<Option<Box<dyn StoreOutput>>> {
         if info.has_requirement("git-store") {
+            // "gitdir" in Sapling store. Path to per-worktree `$GIT_DIR`, not `$GIT_COMMON_DIR`.
             const GIT_DIR_FILE: &str = "gitdir";
             let store_path = match info.store_path() {
                 Some(p) => p,

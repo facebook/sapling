@@ -9,9 +9,11 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-/// Usually `.git` is a directory. However, submodule repo created by `git`
+/// Usually `.git` is a directory. However, a submodule or linked worktree created by `git`
 /// uses a file `.git` with the content `gitdir: ...`. This function attempts
 /// to follow the file to get a directory. Best-effort.
+///
+/// In Git terminology, returns `$GIT_DIR`, not `$GIT_COMMON_DIR`.
 pub fn follow_dotgit_path(mut git_dir: PathBuf) -> PathBuf {
     for _patience in 0..4 {
         let metadata = match fs::metadata(&git_dir) {
@@ -42,6 +44,8 @@ pub fn follow_dotgit_path(mut git_dir: PathBuf) -> PathBuf {
 }
 
 /// `.git` mode specific logic to resolve `dot_dir`.
+///
+/// Returns the per-worktree Sapling dot dir `$GIT_DIR/sl`, not `$GIT_COMMON_DIR/sl`.
 pub fn resolve_dot_dir_func(root: &Path, dot_dir: &'static str) -> PathBuf {
     assert!(dot_dir.starts_with(".git"));
     let dot_git_path = &follow_dotgit_path(root.join(".git"));

@@ -24,6 +24,35 @@ pub use requirements::Requirements;
 ///
 /// It can be useful by the config loader to decide extra config
 /// per requirement.
+///
+/// Sapling repo example:
+///
+/// ```text
+/// /repos/wc/.sl/sharedpath: /repos/backing/.sl
+///
+/// path:               /repos/wc
+/// shared_path:        /repos/backing
+/// dot_hg_path:        /repos/wc/.sl
+/// shared_dot_hg_path: /repos/backing/.sl
+/// store_path:         /repos/backing/.sl/store
+/// ```
+///
+/// Git repo (worktree) example:
+///
+/// ```text
+/// /repos/topic/.git: gitdir: /repos/main/.git/worktrees/topic
+/// /repos/main/.git/worktrees/topic/commondir: ../..
+///
+/// path:               /repos/topic
+/// shared_path:        /repos/topic (no direct Git equivalent)
+/// GIT_DIR:            /repos/main/.git/worktrees/topic
+/// GIT_COMMON_DIR:     /repos/main/.git
+/// dot_hg_path:        /repos/main/.git/worktrees/topic/sl
+/// shared_dot_hg_path: /repos/main/.git/sl (intended)
+///                     /repos/main/.git/worktrees/topic/sl (current, FIXME)
+/// store_path:         /repos/main/.git/sl/store (intended)
+///                     /repos/main/.git/worktrees/topic/sl/store (current, FIXME)
+/// ```
 #[derive(Clone)]
 pub struct RepoMinimalInfo {
     pub path: PathBuf,
@@ -52,6 +81,7 @@ impl RepoMinimalInfo {
         };
 
         let (dot_git_path, dot_hg_path) = if ident.is_dot_git() {
+            // follow_dotgit_path() returns the per-worktree GIT_DIR.
             let dot_git_path = follow_dotgit_path(path.join(".git"));
             let dot_dir = "sl";
             let dot_sl_path = dot_git_path.join(dot_dir);

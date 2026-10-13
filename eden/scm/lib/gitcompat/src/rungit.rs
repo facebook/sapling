@@ -34,13 +34,17 @@ pub struct GlobalGit {
 
 /// Run `git` in a "bare" git repo, without a working copy.
 pub struct BareGit {
-    /// The `GIT_DIR`.
-    /// This is usually `root/.git`. When `.git` is a "symlink" ("gitdir: ..."),
-    /// this is the "symlink" destination.
+    /// Git's `GIT_DIR`. This is usually `root/.git`. For a linked worktree,
+    /// this is the worktree's private Git directory named by its `.git`
+    /// gitfile, such as `<GIT_COMMON_DIR>/worktrees/<name>`. A submodule also
+    /// uses a `.git` gitfile, typically pointing to `<superproject
+    /// GIT_DIR>/modules/<path>`.
     pub(crate) git_dir: PathBuf,
-    /// The directory containing repository-wide Git state. Same as `git_dir` unless this is
-    /// a linked worktree. Resolved once at construction time, so constructing before the
-    /// worktree exists on disk (ex. before `git worktree add`) will not pick it up.
+    /// Git's `GIT_COMMON_DIR`, containing repository-wide state shared by all
+    /// worktrees. This is the same as `git_dir` unless this is a linked
+    /// worktree. Resolved once at construction time, so constructing before the
+    /// worktree exists on disk (ex. before `git worktree add`) will not pick it
+    /// up.
     pub(crate) common_dir: PathBuf,
     pub(crate) parent: GlobalGit,
     pub(crate) reftable_ref_cache: RwLock<Option<ReftableRefCache>>,
@@ -133,6 +137,7 @@ impl GlobalGit {
 impl BareGit {
     fn new(git_dir: PathBuf, parent: GlobalGit) -> Self {
         let git_dir = follow_dotgit_path(git_dir);
+        // A linked worktree records GIT_COMMON_DIR relative to GIT_DIR in this file.
         let commondir_path = git_dir.join("commondir");
         let common_dir = match fs::read_to_string(&commondir_path) {
             Ok(path) => git_dir.join(path.trim_end()),
@@ -173,12 +178,12 @@ impl BareGit {
         }
     }
 
-    /// The bare repo root, usually ".git" or "<name>.git".
+    /// Git's `GIT_DIR`, usually ".git" or "<name>.git".
     pub fn git_dir(&self) -> &Path {
         &self.git_dir
     }
 
-    /// The directory containing repository-wide Git state.
+    /// Git's `GIT_COMMON_DIR`, containing repository-wide state shared by all worktrees.
     pub fn common_dir(&self) -> &Path {
         &self.common_dir
     }
