@@ -809,15 +809,29 @@ def is_edenfs_mount_device(device: bytes) -> bool:
     return device == b"eden" or device == b"edenfs" or device.startswith(b"edenfs:")
 
 
+def is_edenfs_unix_socket_nfs_device(device: bytes) -> bool:
+    """Whether the device of an NFS mount names EdenFS's nfsd socket.
+
+    macOS reports an NFS mount served over a Unix domain socket as
+    "<socket path>:<mount path>". Keep in sync with
+    is_edenfs_unix_socket_nfs_source() in eden/common/utils/FSDetect.h.
+    """
+    return device.startswith(b"<") and b"/edenfs-nfsd.socket>:" in device
+
+
 def is_edenfs_mount(device: bytes, vfstype: bytes) -> bool:
     """Whether a mount table entry is an EdenFS checkout.
 
     On macOS the kernel replaces the device of an NFS mount served over a
-    Unix domain socket with the socket path, so the device alone does not
-    identify EdenFS there; the filesystem type, which EdenFS overrides to
-    "edenfs:", still does.
+    Unix domain socket with the socket path, so the "edenfs:" device alone
+    does not identify EdenFS there. The socket name does, and so does the
+    filesystem type when EdenFS overrides it to "edenfs:".
     """
-    return is_edenfs_mount_device(device) or vfstype == b"edenfs:"
+    return (
+        is_edenfs_mount_device(device)
+        or vfstype == b"edenfs:"
+        or (vfstype == b"nfs" and is_edenfs_unix_socket_nfs_device(device))
+    )
 
 
 def get_eden_cli_cmd(argv: List[str] = sys.argv) -> List[str]:

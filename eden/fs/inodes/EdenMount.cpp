@@ -133,8 +133,11 @@ constexpr PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
 #endif
 
 namespace {
-constexpr PathComponentPiece kNfsdSocketName{"nfsd.socket"_pc};
-}
+// The name is part of how the mount is recognized: macOS reports a mount
+// served over a Unix domain socket as "<socket path>:<mount path>", see
+// is_edenfs_nfs_mount().
+constexpr PathComponentPiece kNfsdSocketName{"edenfs-nfsd.socket"_pc};
+} // namespace
 
 /**
  * Helper for computing unclean paths when changing parents

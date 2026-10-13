@@ -302,6 +302,7 @@ cpp_library(
     srcs = ["NfsSocket.cpp"],
     headers = ["NfsSocket.h"],
     deps = [
+        "fbsource//third-party/fmt:fmt",
         "//folly:exception",
     ],
     exported_deps = [
