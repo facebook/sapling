@@ -1,5 +1,6 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load(
     "@fbsource//xplat/thrift:defs.bzl",
     "thrift_rust_unittest",
@@ -46,6 +47,7 @@ rust_binary(
         "test_helper.rs",
     ],
     crate_root = "binary_skip.rs",
+    test_labels = ci.labels(ci.linux(ci.migration_only_linux_aarch64_host())),
     deps = [
         "fbcode//thrift/lib/rust:fbthrift",
         "fbsource//third-party/rust:bytes",

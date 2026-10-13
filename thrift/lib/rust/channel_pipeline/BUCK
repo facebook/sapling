@@ -1,6 +1,7 @@
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 oncall("thrift")
 
@@ -22,7 +23,7 @@ rust_library(
         "fbcode//thrift/lib/cpp2/fast_thrift/channel_pipeline/rust:rust_type_erased_box",
     ],
     cxx_bridge = "src/ffi.rs",
-    test_labels = ["tpx:no-timeout-multiplier"],
+    test_labels = ["tpx:no-timeout-multiplier"] + ci.labels(ci.linux(ci.migration_only_linux_aarch64_host())),
     visibility = ["PUBLIC"],
     deps = [
         "fbcode//common/rust/folly:iobuf",
@@ -43,7 +44,7 @@ rust_unittest(
     ],
     crate_root = "src/integration_test.rs",
     cxx_bridge = "src/integration_test.rs",
-    labels = ["tpx:no-timeout-multiplier"],
+    labels = ["tpx:no-timeout-multiplier"] + ci.labels(ci.linux(ci.migration_only_linux_aarch64_host())),
     deps = [
         "fbsource//third-party/rust:cxx",
         "fbsource//third-party/rust:static_assertions",
