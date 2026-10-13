@@ -42,19 +42,24 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     let dot_dir = dot_git_path.join("sl");
     let store_dir = dot_dir.join("store");
 
-    // Check for existence of "requires" file so we can fix repo dirs that already exist but are missing requires file.
+    // Check for existence of "requires" files so we can fix repo dirs that already exist but are
+    // missing them. The dot dir and store are initialized independently because they can have
+    // different lifetimes when the store is shared by multiple worktrees.
+    if !dot_dir.join("requires").exists() {
+        fs::create_dir_all(&dot_dir)?;
+        fs::write(dot_dir.join("requires"), "store\ndotgit\n")?;
+
+        // Write an empty eden dirstate so it can be loaded.
+        init_empty_dirstate(&dot_dir)?;
+    }
+
     if !store_dir.join("requires").exists() {
         fs::create_dir_all(&store_dir)?;
-
-        fs::write(dot_dir.join("requires"), "store\ndotgit\n")?;
         fs::write(
             store_dir.join("requires"),
             "narrowheads\nvisibleheads\ngit\ngit-store\ndotgit\n",
         )?;
         fs::write(store_dir.join("gitdir"), format!("..{SEP}.."))?;
-
-        // Write an empty eden dirstate so it can be loaded.
-        init_empty_dirstate(&dot_dir)?;
     }
 
     // Sync git config to "config-git-user", "config-git-repo".
