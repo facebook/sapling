@@ -38,6 +38,12 @@ Config::
     bad-diff-id-human-mode = prompt
     # Remove Differential Revision lines when agents copy commits.
     unlink-copied-diff-revisions = true
+
+    [phabstatus]
+    # Make {phabstatus} return the label of the status badge Phabricator
+    # shows for the diff (e.g. "Awaiting OWNERS Review"), and fill in
+    # {phabbadgestatus} with its state (e.g. AWAITING_OWNER_REVIEW).
+    use-status-badge = false
 """
 
 import http.client
@@ -582,6 +588,7 @@ def extsetup(ui) -> None:
         {
             "phabsignalstatus": ["phabstatus"],
             "phabstatus": ["phabstatus"],
+            "phabbadgestatus": ["phabstatus"],
             "syncstatus": ["phabstatus"],
             "phabcommit": ["phabstatus"],
         }
@@ -648,6 +655,7 @@ def getdiffstatus(repo, *diffid):
         return []
     timeout = repo.ui.configint("ssl", "timeout", 10)
     signalstatus = repo.ui.configbool("ssl", "signal_status", True)
+    statusbadge = repo.ui.configbool("phabstatus", "use-status-badge")
     batchsize = repo.ui.configint("fbcodereview", "max-diff-count", 50)
 
     try:
@@ -657,7 +665,12 @@ def getdiffstatus(repo, *diffid):
         # Use itertools.batched once we are on Python 3.12.
         for i in range(0, len(diffid), batchsize):
             statuses.update(
-                client.getrevisioninfo(timeout, signalstatus, diffid[i : i + batchsize])
+                client.getrevisioninfo(
+                    timeout,
+                    signalstatus,
+                    diffid[i : i + batchsize],
+                    statusbadge=statusbadge,
+                )
             )
     except arcconfig.ArcConfigError as ex:
         msg = _(
@@ -740,6 +753,9 @@ def showphabstatus(repo, ctx, templ, **args):
 
     result = getdiffstatus(repo, diffnum)[0]
     if isinstance(result, dict) and "status" in result:
+        badge = result.get("status_badge")
+        if badge:
+            return badge["label"]
         landstatus = result.get("land_job_status")
         finalreviewstatus = result.get("needs_final_review_status")
         if landstatus == "LAND_JOB_RUNNING":
@@ -786,6 +802,20 @@ def showphabstatus(repo, ctx, templ, **args):
             return result.get("status")
     else:
         return "Error"
+
+
+@templatekeyword("phabbadgestatus")
+def showphabbadgestatus(repo, ctx, templ, **args):
+    """String. Return the state of the Phabricator status badge for a given
+    @prog@ rev, e.g. LANDING or NEEDS_REVIEW."""
+    diffnum = getdiffnum(repo, ctx)
+    if diffnum is None:
+        return None
+    populateresponseforphab(repo, diffnum)
+
+    result = getdiffstatus(repo, diffnum)[0]
+    if isinstance(result, dict) and result.get("status_badge"):
+        return result["status_badge"]["status"]
 
 
 @templatekeyword("phabsignalstatus")

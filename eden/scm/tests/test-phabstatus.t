@@ -393,6 +393,22 @@ And finally, the success case
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit sl log -T '{phabstatus}\n' -r .
   Needs Review
 
+With phabstatus.use-status-badge, show the status badge Phabricator computed
+instead of deriving one from the raw fields
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": {"nodes": [
+  >   {"number": 1, "diff_status_name": "Accepted",
+  >    "created_time": 0, "updated_time": 2, "is_landing": false,
+  >    "land_job_status": "NO_LAND_RUNNING",
+  >    "needs_final_review_status": "NOT_NEEDED",
+  >    "required_reviewers_info": {"overall_status": "AWAITING", "type": "PRE_LAND_OWNER_REVIEW"},
+  >    "status_badge": {"label": "Awaiting OWNERS Review", "status": "AWAITING_OWNER_REVIEW"}}
+  > ]}}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit sl log -T '{phabstatus}|{phabbadgestatus}\n' -r . --config phabstatus.use-status-badge=true
+  Awaiting OWNERS Review|AWAITING_OWNER_REVIEW
+
 Make sure the code works without the smartlog extensions
 
   $ cat > $TESTTMP/mockduit << EOF

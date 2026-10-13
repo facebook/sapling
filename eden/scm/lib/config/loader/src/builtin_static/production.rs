@@ -326,7 +326,7 @@ github_sl_difflabel="{case(github_pr_state,
     )}"
 
 phab_sl_diffstatus="{phabstatus}{case(phabstatus, 'Waiting For Author', '*', 'Needs Revision', '*')}"
-phab_sl_difflabel="{case(phabstatus,
+phab_sl_difflabel="{if(phabbadgestatus, phab_sl_badgelabel, case(phabstatus,
  'Landing', 'ssl.landing',
  'Accepted', 'ssl.accepted',
  'Waiting For Author', 'ssl.revision',
@@ -349,6 +349,44 @@ phab_sl_difflabel="{case(phabstatus,
  'Needs DRS Review', 'ssl.review',
  'Needs CRS Review', 'ssl.review',
  'AI Approved', 'ssl.aiapproved',
+ 'sl.diff'
+ ))}"
+# Keyed on the badge state: its label can embed counts, like the number of
+# AI review findings.
+phab_sl_badgelabel="{case(phabbadgestatus,
+ 'ACCEPTED', 'ssl.accepted',
+ 'NEEDS_REVIEW', 'ssl.review',
+ 'AI_REVIEWING', 'ssl.review',
+ 'AI_REVIEWED', 'ssl.review',
+ 'AWAITING_STEWARD_REVIEW', 'ssl.review',
+ 'AWAITING_ACL_REVIEWER', 'ssl.review',
+ 'AWAITING_OWNER_REVIEW', 'ssl.review',
+ 'AWAITING_CRS_REVIEWER', 'ssl.review',
+ 'AWAITING_DRS_REVIEW', 'ssl.review',
+ 'NEEDS_EXTRA_REVIEW', 'ssl.review',
+ 'NEEDS_SECOND_REVIEW', 'ssl.review',
+ 'CHANGES_PLANNED', 'ssl.revision',
+ 'WAITING_FOR_AUTHOR', 'ssl.revision',
+ 'WAITING_FOR_AGENT', 'ssl.revision',
+ 'WAITING_FOR_CODEMOD_AUTHOR', 'ssl.revision',
+ 'LANDING', 'ssl.landing',
+ 'PARSING_COMMIT', 'ssl.landing',
+ 'LAND_ENQUEUED', 'ssl.landenqueued',
+ 'LAND_SCHEDULED', 'ssl.landscheduled',
+ 'RECENTLY_FAILED_TO_LAND', 'ssl.landfailed',
+ 'COMMITTED', 'ssl.committed',
+ 'NEEDS_FINAL_REVIEW', 'ssl.finalreview',
+ 'POST_LAND_NEEDS_REVIEW', 'ssl.finalreview',
+ 'NEEDS_STEWARD_REVIEW', 'ssl.finalreview',
+ 'NEEDS_OWNER_REVIEW', 'ssl.finalreview',
+ 'NEEDS_PRESCREENER', 'ssl.finalreview',
+ 'NEEDS_CONFIRMATION', 'ssl.finalreview',
+ 'DEFERRED_REVIEW', 'ssl.aiapproved',
+ 'ABANDONED', 'ssl.abandoned',
+ 'UNPUBLISHED', 'ssl.unpublished',
+ 'PUBLISH_PENDING', 'ssl.unpublished',
+ 'PUBLISH_FAILED', 'ssl.unpublished',
+ 'FAILED_TESTS', 'ssl.unpublished',
  'sl.diff'
  )}"
 
