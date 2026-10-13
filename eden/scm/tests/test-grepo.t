@@ -44,9 +44,10 @@ Each project gets a second commit so the manifest history below can bump it.
 
   $ mkdir repodir && cd repodir
 
-Set up .repo/manifests as its own git repo with .git symlinked to manifests.git:
+Set up .repo/manifests as its own git repo with .git symlinked to manifests.git.
+`repo init` puts the manifests repo on the local branch `default`:
 
-  $ git init -q -b main .repo/manifests
+  $ git init -q -b default .repo/manifests
   $ mv .repo/manifests/.git .repo/manifests.git
   $ ln -s ../manifests.git .repo/manifests/.git
   $ mkdir -p .repo/manifests/static
@@ -288,17 +289,17 @@ per project, all on one line.
 `reset_workspace [REV]` gives a clean checkout of manifest commit REV. REV
 defaults to `$REV_AFTER_BUMP_C`. It uses Git, not `sl goto`, so it works even
 after a `goto` that failed halfway. It:
-- points `refs/heads/main` back at REV. This brings back commits that an
+- points `refs/heads/default` back at REV. This brings back commits that an
 earlier `goto` orphaned.
-- attaches HEAD of the manifests repo to `main`.
+- attaches HEAD of the manifests repo to `default`.
 - resets the manifests index and files.
 - checks out each project at its revision in `static.xml` of REV.
 It does not remove untracked files.
 
   $ reset_workspace() {
   >   local rev=${1:-$REV_AFTER_BUMP_C}
-  >   git -C .repo/manifests update-ref refs/heads/main $rev
-  >   git -C .repo/manifests symbolic-ref HEAD refs/heads/main
+  >   git -C .repo/manifests update-ref refs/heads/default $rev
+  >   git -C .repo/manifests symbolic-ref HEAD refs/heads/default
   >   git -C .repo/manifests reset -q --hard
   >   for p in vendor/a frameworks/b vendor/a/sub/c; do
   >     local r=$(grep "path=\"$p\"" .repo/manifests/static/static.xml | sed 's/.*revision="([^"]*)".*/\1/')
@@ -311,7 +312,7 @@ puts each project back at its revision in `static.xml` of `$REV_AFTER_BUMP_C`:
 
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A_LOCAL_REV
@@ -323,7 +324,7 @@ puts each project back at its revision in `static.xml` of `$REV_AFTER_BUMP_C`:
   $ reset_workspace
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -344,7 +345,7 @@ with the file on disk.
   $ echo "uncommitted change" > frameworks/b/README
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   manifests:  M static/static.xml
@@ -356,7 +357,7 @@ with the file on disk.
   $ reset_workspace
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -374,7 +375,7 @@ the manifest commits that `goto` orphaned:
   $ reset_workspace
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -415,7 +416,7 @@ Each test ends with the args that `sl goto` passes to `hg.updatetotally`:
 it works like `updatecheck="none"`.
 
 Default flags. Expected: the result above.
-(bad: `main` moved back. The `bump vendor/a/sub/c` commit is orphaned.)
+(bad: `default` moved back. The `bump vendor/a/sub/c` commit is orphaned.)
 (bad: it says "0 files updated", but it checked out a project.)
 clean=False, updatecheck="noconflict"
 
@@ -423,7 +424,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -437,7 +438,7 @@ clean=False, updatecheck="noconflict"
   o  add manifest
 
 `--check`. Expected: the result above.
-(bad: `main` moved back and "0 files updated", same as the default flags.)
+(bad: `default` moved back and "0 files updated", same as the default flags.)
 clean=False, updatecheck="abort"
 
   $ reset_workspace
@@ -445,7 +446,7 @@ clean=False, updatecheck="abort"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -462,7 +463,7 @@ clean=False, updatecheck="none"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -479,7 +480,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -497,7 +498,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_A
   static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -512,7 +513,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -550,14 +551,14 @@ project stays at its source revision and keeps its change. The other projects
 move to the target. At the end, goto reports all conflicting projects in one
 error.
 
-The problems from the clean tests (`main` moved back) show up here too. We do
+The problems from the clean tests (`default` moved back) show up here too. We do
 not mark them again.
 
 Uncommitted change in `vendor/a/sub/c`. The goto updates the revision of
 this project.
 
 Default flags. Expected: `vendor/a/sub/c` is a conflicting project. `.` and
-`main` move to `$REV_AFTER_BUMP_B`. `vendor/a/sub/c` stays at `C2_REV` and keeps
+`default` move to `$REV_AFTER_BUMP_B`. `vendor/a/sub/c` stays at `C2_REV` and keeps
 the change. goto reports that `vendor/a/sub/c` failed.
 clean=False, updatecheck="noconflict"
 
@@ -575,7 +576,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -602,7 +603,7 @@ clean=False, updatecheck="abort"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -628,7 +629,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -647,7 +648,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -658,7 +659,7 @@ Uncommitted change in `frameworks/b`, going to `$REV_AFTER_BUMP_A`. The goto
 updates the revision of two projects, `frameworks/b` and `vendor/a/sub/c`. Git
 checks out `frameworks/b` first. `vendor/a/sub/c` has no change.
 
-Default flags. Expected: `frameworks/b` is a conflicting project. `.` and `main`
+Default flags. Expected: `frameworks/b` is a conflicting project. `.` and `default`
 move to `$REV_AFTER_BUMP_A`. `frameworks/b` stays at `B2_REV` and keeps the
 change. `vendor/a/sub/c` moves to `C_REV`. goto reports that `frameworks/b`
 failed.
@@ -678,7 +679,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_A
   static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -698,7 +699,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_A
   static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -723,7 +724,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_A
   static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -757,7 +758,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_A
   static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -778,7 +779,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_A
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_A
   static.xml index: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -798,7 +799,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -817,7 +818,7 @@ clean=False, updatecheck="abort"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -835,7 +836,7 @@ clean=False, updatecheck="none"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -853,7 +854,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -875,7 +876,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -893,7 +894,7 @@ clean=False, updatecheck="abort"
   abort: uncommitted changes
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -913,7 +914,7 @@ clean=False, updatecheck="none"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -931,7 +932,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -952,7 +953,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -970,7 +971,7 @@ clean=False, updatecheck="abort"
   abort: uncommitted changes
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -990,7 +991,7 @@ clean=False, updatecheck="none"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1008,7 +1009,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1063,7 +1064,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1085,7 +1086,7 @@ clean=False, updatecheck="abort"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1108,7 +1109,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1126,7 +1127,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1150,7 +1151,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1172,7 +1173,7 @@ clean=False, updatecheck="abort"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1195,7 +1196,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1213,7 +1214,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1238,7 +1239,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1259,7 +1260,7 @@ clean=False, updatecheck="abort"
   abort: uncommitted changes
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1284,7 +1285,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1304,7 +1305,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1330,7 +1331,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1351,7 +1352,7 @@ clean=False, updatecheck="abort"
   abort: uncommitted changes
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1376,7 +1377,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1396,7 +1397,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1441,7 +1442,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1464,7 +1465,7 @@ clean=False, updatecheck="abort"
   abort: uncommitted changes
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1490,7 +1491,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_LOCAL_REV
   manifests:  M static/static.xml
@@ -1512,7 +1513,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1538,7 +1539,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1561,7 +1562,7 @@ clean=False, updatecheck="abort"
   abort: uncommitted changes
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1588,7 +1589,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B_LOCAL_REV vendor/a/sub/c=C2_REV
   manifests:  M static/static.xml
@@ -1611,7 +1612,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1645,7 +1646,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1667,7 +1668,7 @@ clean=False, updatecheck="abort"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1689,7 +1690,7 @@ clean=False, updatecheck="none"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1711,7 +1712,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -1735,7 +1736,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   manifests: ?? untracked
@@ -1756,7 +1757,7 @@ clean=False, updatecheck="abort"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   manifests: ?? untracked
@@ -1777,7 +1778,7 @@ clean=False, updatecheck="none"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   manifests: ?? untracked
@@ -1798,7 +1799,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   manifests: ?? untracked
@@ -1815,7 +1816,7 @@ No revision above adds a path. So the setup below makes two new commits:
 - `C3_REV` in project `c`. It adds the file `added` on top of `C2_REV`.
 - `$REV_AFTER_ADD_C` in the manifests repo, on top of `$REV_AFTER_BUMP_C`. Its
 `static.xml` sets `vendor/a/sub/c` to `C3_REV`.
-`reset_workspace` moves `refs/heads/main` back. The `add-c` branch keeps
+`reset_workspace` moves `refs/heads/default` back. The `add-c` branch keeps
 `$REV_AFTER_ADD_C` visible to Sapling after that. `map_rev_names` does not know
 the two new hashes. So the tests rename them with an extra `sed`.
 
@@ -1831,7 +1832,7 @@ the two new hashes. So the tests rename them with an extra `sed`.
   $ git -C .repo/manifests branch add-c
 
 Default flags. Expected: `vendor/a/sub/c` is a conflicting project. `.` and
-`main` move to `$REV_AFTER_ADD_C`. `vendor/a/sub/c` stays at `C2_REV` and keeps
+`default` move to `$REV_AFTER_ADD_C`. `vendor/a/sub/c` stays at `C2_REV` and keeps
 the file. goto reports that `vendor/a/sub/c` failed.
 clean=False, updatecheck="noconflict"
 
@@ -1849,7 +1850,7 @@ clean=False, updatecheck="noconflict"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  manifests HEAD: refs/heads/default REV_AFTER_ADD_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   vendor/a: A2_REV
@@ -1880,7 +1881,7 @@ clean=False, updatecheck="abort"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  manifests HEAD: refs/heads/default REV_AFTER_ADD_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   vendor/a: A2_REV
@@ -1910,7 +1911,7 @@ clean=False, updatecheck="none"
   (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  manifests HEAD: refs/heads/default REV_AFTER_ADD_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   vendor/a: A2_REV
@@ -1934,7 +1935,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state | sed -e "s/$C3_REV/C3_REV/g" -e "s/$REV_AFTER_ADD_C/REV_AFTER_ADD_C/g"
   sl_workingcopy_parent: add file to vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_ADD_C
+  manifests HEAD: refs/heads/default REV_AFTER_ADD_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C3_REV
   vendor/a: A2_REV
@@ -1963,7 +1964,7 @@ clean=False, updatecheck="noconflict"
   abort: preupdate hook exited with status 1
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -1980,7 +1981,7 @@ clean=False, updatecheck="abort"
   abort: preupdate hook exited with status 1
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -1997,7 +1998,7 @@ clean=False, updatecheck="none"
   abort: preupdate hook exited with status 1
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -2014,7 +2015,7 @@ clean=True
   abort: preupdate hook exited with status 1
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_C
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
   vendor/a: A2_REV
@@ -2040,7 +2041,7 @@ clean=False, updatecheck="noconflict"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
@@ -2056,7 +2057,7 @@ clean=True
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ workspace_state
   sl_workingcopy_parent: bump frameworks/b
-  manifests HEAD: refs/heads/main REV_AFTER_BUMP_B
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_B
   static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
   vendor/a: A2_REV
