@@ -45,7 +45,10 @@ should detect that "sub" is a symlink and reject the operation.
 
   $ cd workdir
   $ sl up remote/master
-  abort: submodule path 'sub' is a symlink
+  abort: could not check out 1 project
+    sub (55829088ef53173c786e87d3f08f10d60680e6a4):
+      submodule path 'sub' is a symlink
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
   [255]
 
 The working directory only has the planted symlink, no .sl/config compromise:

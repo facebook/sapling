@@ -307,3 +307,23 @@ Rebase submodule change
   $ sl st
   $ echo m2/*
   m2/C
+
+Goto keeps checking out the other submodules after one fails
+
+  $ cd
+  $ sl clone -q --git "$TESTTMP/parent-repo-git" keepgoing-hg
+  $ cd keepgoing-hg
+  $ echo dirty > mod/1/B
+  $ sl goto '.^'
+  pulling submodule mod/1
+  B: untracked file differs
+  pulling submodule mod/2
+  abort: could not check out 1 project
+    mod/1 (0de30934572f96ff6d3cbfc70aa8b46ef95dbb42):
+      untracked files in working directory differ from files in requested revision
+  (if local changes conflict, commit, stash or remove them and retry, or use 'sl goto --clean' to discard them)
+  [255]
+  $ echo mod/*/*
+  mod/1/A mod/1/B mod/2/C mod/2/D
+  $ cat mod/1/B
+  dirty
