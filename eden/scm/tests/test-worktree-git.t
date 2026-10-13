@@ -55,6 +55,23 @@ shared working-copy root remains the linked worktree.
   ['main', 'linked']
   [False, True]
 
+Changes to common and per-worktree Git config refresh the translated config.
+
+  $ git config --local user.name Common
+  $ git config --local user.email common@example.com
+  $ touch -t 203001010000 ../repo/.git/config
+  $ sl config ui.username
+  Common <common@example.com>
+
+  $ git config extensions.worktreeConfig true
+  $ sl config ui.username
+  Common <common@example.com>
+  $ git config --worktree user.name Linked
+  $ git config --worktree user.email linked@example.com
+  $ touch -t 203101010000 ../repo/.git/worktrees/linked/config.worktree
+  $ sl config ui.username
+  Linked <linked@example.com>
+
 The main worktree gets separate local state but reuses the store initialized by
 the linked worktree.
 
