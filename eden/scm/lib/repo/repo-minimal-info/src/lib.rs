@@ -8,6 +8,7 @@
 pub mod constants;
 pub mod requirements;
 
+use std::borrow::Cow;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -15,6 +16,7 @@ use anyhow::Result;
 use anyhow::bail;
 use fs_err as fs;
 use identity::dotgit::follow_dotgit_path;
+use identity::dotgit::resolve_git_common_dir;
 pub use requirements::Requirements;
 
 /// RepoMinimalInfo contains:
@@ -118,6 +120,34 @@ impl RepoMinimalInfo {
         };
 
         Ok(info)
+    }
+}
+
+// Git-specific path helpers.
+impl RepoMinimalInfo {
+    /// Returns `$GIT_DIR` for git repos.
+    pub fn git_dir(&self) -> Option<&Path> {
+        if self.ident.is_dot_git() {
+            self.dot_hg_path.parent()
+        } else {
+            None
+        }
+    }
+
+    /// Returns `$GIT_COMMON_DIR` for git repos.
+    pub fn git_common_dir(&self) -> Result<Option<Cow<'_, Path>>> {
+        let Some(git_dir) = self.git_dir() else {
+            return Ok(None);
+        };
+
+        if self.shared_dot_hg_path == self.dot_hg_path {
+            // Legacy on-disk layout. No `sl/sharedpath`. Worktrees use separate stores.
+            // GIT_COMMON_DIR might be different from shared_dot_hg_path/..
+            Ok(Some(resolve_git_common_dir(git_dir)?.into()))
+        } else {
+            // New on-disk layout. GIT_COMMON_DIR is shared_dot_hg_path/..
+            Ok(self.shared_dot_hg_path.parent().map(Into::into))
+        }
     }
 }
 
