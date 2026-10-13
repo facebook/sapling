@@ -21,7 +21,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use manifest_tree::FileType;
 use manifest_tree::Flag;
+use manifest_tree::FsNodeMetadata;
 use manifest_tree::TreeEntry;
+use manifest_tree::TreeManifest;
+use manifest_tree::TreeManifestReadNode;
 use manifest_tree::TreeStore;
 use types::FetchCause;
 use types::FetchContext;
@@ -38,8 +41,15 @@ pub struct CompiledPaths {
     /// Provide next ContentIds.
     content_id_map: HashMap<Vec<Option<PathContent>>, ContentId>,
 
+    /// Intern structural content for directories without a persisted ID.
+    ephemeral_directory_content_map:
+        HashMap<EphemeralDirectoryContent, EphemeralDirectoryContentId>,
+
     /// Cache to speed up tree lookup.
     lookup_cache: LookupCache,
+
+    /// Cache to speed up durable TreeManifest node lookup.
+    manifest_lookup_cache: ManifestLookupCache,
 
     /// Ignore file content changes if the value is true, this is used
     /// for tracing file renames. Default value is `false`.
@@ -51,10 +61,32 @@ pub struct CompiledPaths {
 // This is sound since `ops` in `CompiledPaths` is immutable after being constructed.
 type LookupCache = HashMap<(HgId, usize), Option<(HgId, Flag)>>;
 
+// Uses the same stable Op component pointer as LookupCache.
+type ManifestLookupCache = HashMap<(HgId, usize), Option<TreeManifestReadNode>>;
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum PathContent {
     File { hgid: HgId, file_type: FileType },
-    Directory(HgId),
+    Directory(DirectoryContent),
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum DirectoryContent {
+    Durable(HgId),
+    Ephemeral(EphemeralDirectoryContentId),
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct EphemeralDirectoryContentId(usize);
+
+#[derive(Debug, Eq, Hash, PartialEq)]
+struct EphemeralDirectoryContent(Vec<EphemeralDirectoryEntry>);
+
+#[derive(Debug, Eq, Hash, PartialEq)]
+struct EphemeralDirectoryEntry {
+    name: PathComponentBuf,
+    path_content: PathContent,
+    directory_content: Option<DirectoryContent>,
 }
 
 /// A cheap way of comparing `paths`.
@@ -223,6 +255,80 @@ impl<'a> State<'a> {
     }
 }
 
+/// State machine that executes compiled operations over a TreeManifest.
+struct ManifestState {
+    items: Vec<Option<TreeManifestReadNode>>,
+    output: Vec<Option<TreeManifestReadNode>>,
+}
+
+impl ManifestState {
+    fn from_manifest(manifest: &TreeManifest) -> Result<Self> {
+        Ok(Self {
+            items: vec![Some(manifest.read_root()?)],
+            output: Vec::new(),
+        })
+    }
+
+    fn into_output(self) -> Vec<Option<TreeManifestReadNode>> {
+        self.output
+    }
+
+    fn execute(&mut self, op: &Op, lookup_cache: &mut ManifestLookupCache) -> Result<()> {
+        match op {
+            Op::Output(indexes) => {
+                self.output.extend(
+                    indexes
+                        .iter()
+                        .filter_map(|index| self.items.get(*index).cloned()),
+                );
+            }
+            Op::Lookup(keys) => {
+                self.items = keys
+                    .iter()
+                    .map(|key| {
+                        let Some(item) = self
+                            .items
+                            .get(key.item_index)
+                            .and_then(|item| item.as_ref())
+                        else {
+                            return Ok(None);
+                        };
+
+                        let cache_key = item
+                            .directory_hgid()
+                            .map(|hgid| (hgid, &key.component as *const PathComponentBuf as usize));
+                        if let Some(value) =
+                            cache_key.and_then(|cache_key| lookup_cache.get(&cache_key))
+                        {
+                            return Ok(value.clone());
+                        }
+
+                        let value = item
+                            .lookup_children(std::slice::from_ref(&key.component))?
+                            .pop()
+                            .flatten();
+                        if let Some(cache_key) = cache_key {
+                            lookup_cache.insert(cache_key, value.clone());
+                        }
+                        Ok(value)
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn push_prefetch_nodes(&self, nodes: &mut Vec<TreeManifestReadNode>) {
+        nodes.extend(
+            self.items
+                .iter()
+                .flatten()
+                .filter(|node| node.directory_hgid().is_some())
+                .cloned(),
+        );
+    }
+}
+
 impl CompiledPaths {
     /// Constructs a list of `op`s from a list of paths.
     pub fn compile(mut paths: Vec<RepoPathBuf>) -> Self {
@@ -306,7 +412,9 @@ impl CompiledPaths {
         Self {
             ops,
             content_id_map: Default::default(),
+            ephemeral_directory_content_map: Default::default(),
             lookup_cache: Default::default(),
+            manifest_lookup_cache: Default::default(),
             ignore_file_content: Default::default(),
         }
     }
@@ -356,21 +464,158 @@ impl CompiledPaths {
 
         let mut result = Vec::with_capacity(root_tree_ids.len());
         for state in states {
-            let mut output = state.into_output();
-            if self.ignore_file_content {
-                for o in output.iter_mut() {
-                    normalize_content_key_ignore_file_content(o);
-                }
-            }
-            let content_id = if output.iter().all(|o| o.is_none()) {
-                ContentId::empty()
-            } else {
-                let next_content_id = ContentId(self.content_id_map.len() + 1);
-                *self.content_id_map.entry(output).or_insert(next_content_id)
-            };
-            result.push(content_id);
+            result.push(intern_output(
+                &mut self.content_id_map,
+                self.ignore_file_content,
+                state.into_output(),
+            ));
         }
         Ok(result)
+    }
+
+    /// Convert manifests to `ContentId`s using the same compiled path operations as `execute`.
+    pub async fn execute_manifests(
+        &mut self,
+        manifests: Vec<TreeManifest>,
+    ) -> Result<Vec<ContentId>> {
+        let mut states = manifests
+            .iter()
+            .map(ManifestState::from_manifest)
+            .collect::<Result<Vec<_>>>()?;
+
+        for op in &self.ops {
+            if let Op::Lookup(_) = op {
+                let mut nodes = Vec::new();
+                states
+                    .iter()
+                    .for_each(|state| state.push_prefetch_nodes(&mut nodes));
+                if !nodes.is_empty() {
+                    async_runtime::block_on(async { TreeManifestReadNode::prefetch(&nodes) })?;
+                }
+            }
+
+            for state in &mut states {
+                async_runtime::block_on(async {
+                    state.execute(op, &mut self.manifest_lookup_cache)
+                })?;
+            }
+        }
+
+        let mut ephemeral_cache = HashMap::new();
+        states
+            .into_iter()
+            .enumerate()
+            .map(|(manifest_index, state)| {
+                let output = state
+                    .into_output()
+                    .into_iter()
+                    .map(|node| {
+                        node.as_ref()
+                            .map(|node| {
+                                self.path_content_for_node(
+                                    manifest_index,
+                                    node,
+                                    &mut ephemeral_cache,
+                                )
+                            })
+                            .transpose()
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(intern_output(
+                    &mut self.content_id_map,
+                    self.ignore_file_content,
+                    output,
+                ))
+            })
+            .collect()
+    }
+
+    fn path_content_for_node(
+        &mut self,
+        manifest_index: usize,
+        node: &TreeManifestReadNode,
+        ephemeral_cache: &mut HashMap<(usize, RepoPathBuf), DirectoryContent>,
+    ) -> Result<PathContent> {
+        match node.metadata() {
+            FsNodeMetadata::File(metadata) => Ok(PathContent::File {
+                hgid: metadata.hgid,
+                file_type: metadata.file_type,
+            }),
+            FsNodeMetadata::Directory(_) => Ok(PathContent::Directory(
+                self.directory_content_for_node(manifest_index, node, ephemeral_cache)?,
+            )),
+        }
+    }
+
+    fn directory_content_for_node(
+        &mut self,
+        manifest_index: usize,
+        node: &TreeManifestReadNode,
+        ephemeral_cache: &mut HashMap<(usize, RepoPathBuf), DirectoryContent>,
+    ) -> Result<DirectoryContent> {
+        if let Some(hgid) = node.directory_hgid() {
+            return Ok(DirectoryContent::Durable(hgid));
+        }
+        if !node.is_directory() {
+            anyhow::bail!("{} is not a directory", node.path());
+        }
+
+        let cache_key = (manifest_index, node.path().to_owned());
+        if let Some(content) = ephemeral_cache.get(&cache_key) {
+            return Ok(*content);
+        }
+
+        let mut entries = Vec::new();
+        for (name, child) in node.children()? {
+            let directory_content = if child.is_directory() {
+                Some(self.directory_content_for_node(manifest_index, &child, ephemeral_cache)?)
+            } else {
+                None
+            };
+            let path_content = match child.metadata() {
+                FsNodeMetadata::File(metadata) => PathContent::File {
+                    hgid: metadata.hgid,
+                    file_type: metadata.file_type,
+                },
+                FsNodeMetadata::Directory(_) => {
+                    PathContent::Directory(directory_content.ok_or_else(|| {
+                        anyhow::anyhow!("{} has directory metadata without children", child.path())
+                    })?)
+                }
+            };
+            entries.push(EphemeralDirectoryEntry {
+                name,
+                path_content,
+                directory_content,
+            });
+        }
+
+        let next_id = EphemeralDirectoryContentId(self.ephemeral_directory_content_map.len() + 1);
+        let id = *self
+            .ephemeral_directory_content_map
+            .entry(EphemeralDirectoryContent(entries))
+            .or_insert(next_id);
+        let content = DirectoryContent::Ephemeral(id);
+        ephemeral_cache.insert(cache_key, content);
+        Ok(content)
+    }
+}
+
+fn intern_output(
+    content_id_map: &mut HashMap<Vec<Option<PathContent>>, ContentId>,
+    ignore_file_content: bool,
+    mut output: Vec<Option<PathContent>>,
+) -> ContentId {
+    if ignore_file_content {
+        output
+            .iter_mut()
+            .for_each(normalize_content_key_ignore_file_content);
+    }
+    if output.iter().all(Option::is_none) {
+        ContentId::empty()
+    } else {
+        let next_content_id = ContentId(content_id_map.len() + 1);
+        *content_id_map.entry(output).or_insert(next_content_id)
     }
 }
 
@@ -380,9 +625,11 @@ fn normalize_content_key_ignore_file_content(optional_key: &mut Option<PathConte
             *hgid = *HgId::wdir_id();
             *file_type = FileType::Regular;
         }
-        // A directory hgid changes when a file in the directory changes.
+        // Directory content changes when a file in the directory changes.
         // Keep only the existence of the directory.
-        Some(PathContent::Directory(hgid)) => *hgid = *HgId::wdir_id(),
+        Some(PathContent::Directory(content)) => {
+            *content = DirectoryContent::Durable(*HgId::wdir_id());
+        }
         None => {}
     }
 }
@@ -391,7 +638,7 @@ impl PathContent {
     fn from_hgid_flag(hgid: HgId, flag: Flag) -> Self {
         match flag {
             Flag::File(file_type) => Self::File { hgid, file_type },
-            Flag::Directory => Self::Directory(hgid),
+            Flag::Directory => Self::Directory(DirectoryContent::Durable(hgid)),
         }
     }
 }
@@ -425,7 +672,64 @@ impl fmt::Debug for LookupKey {
 
 #[cfg(test)]
 mod tests {
+    use manifest_tree::FileMetadata;
+    use manifest_tree::Manifest;
+    use manifest_tree::PathComponent;
+    use manifest_tree::PathTranslator;
+    use manifest_tree::testutil::TestStore;
+    use manifest_tree::testutil::make_tree_manifest;
+    use types::testutil::hgid;
+
     use super::*;
+
+    #[derive(Debug)]
+    struct SuffixPathTranslator;
+
+    impl PathTranslator for SuffixPathTranslator {
+        fn encode_file(&self, path: &RepoPath) -> Result<RepoPathBuf> {
+            Ok(RepoPathBuf::from_string(format!("{}\x7f", path.as_str()))?)
+        }
+
+        fn decode_file(&self, path: &RepoPath) -> Result<RepoPathBuf> {
+            let decoded = path.as_str().strip_suffix('\x7f').unwrap_or(path.as_str());
+            Ok(RepoPathBuf::from_string(decoded.to_owned())?)
+        }
+
+        fn encode_file_name(&self, name: &PathComponent) -> Result<PathComponentBuf> {
+            Ok(PathComponentBuf::from_string(format!(
+                "{}\x7f",
+                name.as_str()
+            ))?)
+        }
+
+        fn decode_file_name(&self, name: &PathComponent) -> Result<PathComponentBuf> {
+            let decoded = name.as_str().strip_suffix('\x7f').unwrap_or(name.as_str());
+            Ok(PathComponentBuf::from_string(decoded.to_owned())?)
+        }
+    }
+
+    fn durable_manifest(
+        store: Arc<TestStore>,
+        paths: &[(&str, &str)],
+    ) -> Result<(HgId, TreeManifest)> {
+        let mut manifest = make_tree_manifest(store.clone(), paths);
+        let root_hgid = manifest.persist(&[])?;
+        Ok((root_hgid, TreeManifest::durable(store, root_hgid)))
+    }
+
+    fn overlapping_manifest(store: Arc<TestStore>, child_hgid: HgId) -> Result<TreeManifest> {
+        let mut manifest = TreeManifest::ephemeral(store);
+        manifest.set_path_translator(Arc::new(SuffixPathTranslator));
+        manifest.insert(
+            p("a"),
+            FileMetadata::new(hgid("10"), FileType::GitSubmodule),
+        )?;
+        manifest.insert(
+            p("a/b"),
+            FileMetadata::new(child_hgid, FileType::GitSubmodule),
+        )?;
+        Ok(manifest)
+    }
 
     #[test]
     fn test_op_compile() {
@@ -516,10 +820,86 @@ mod tests {
             })
         );
         assert_eq!(
-            normalize(Some(PathContent::Directory(hgid))),
-            Some(PathContent::Directory(wdir_id))
+            normalize(Some(PathContent::Directory(DirectoryContent::Durable(
+                hgid
+            )))),
+            Some(PathContent::Directory(DirectoryContent::Durable(wdir_id)))
+        );
+        assert_eq!(
+            normalize(Some(PathContent::Directory(DirectoryContent::Ephemeral(
+                EphemeralDirectoryContentId(1)
+            )))),
+            Some(PathContent::Directory(DirectoryContent::Durable(wdir_id)))
         );
         assert_eq!(normalize(None), None);
+    }
+
+    #[test]
+    fn test_execute_manifests_matches_tree_store() -> Result<()> {
+        async_runtime::block_on(async {
+            let store = Arc::new(TestStore::new());
+            let (first_root, first) =
+                durable_manifest(store.clone(), &[("a/b", "10"), ("unrelated", "20")])?;
+            let (second_root, second) =
+                durable_manifest(store.clone(), &[("a/b", "10"), ("unrelated", "30")])?;
+            let (third_root, third) =
+                durable_manifest(store.clone(), &[("a/b", "11"), ("unrelated", "30")])?;
+            let paths = vec![p("a"), p("a/b"), p("missing")];
+
+            let mut legacy = CompiledPaths::compile(paths.clone());
+            let tree_store: Arc<dyn TreeStore> = store;
+            let legacy_ids = legacy
+                .execute(vec![first_root, second_root, third_root], tree_store)
+                .await?;
+            let mut manifest = CompiledPaths::compile(paths);
+            let manifest_ids = manifest
+                .execute_manifests(vec![first, second, third])
+                .await?;
+
+            assert_eq!(manifest_ids, legacy_ids);
+            assert_eq!(manifest_ids[0], manifest_ids[1]);
+            assert_ne!(manifest_ids[1], manifest_ids[2]);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_execute_manifests_interns_ephemeral_directory_content() -> Result<()> {
+        async_runtime::block_on(async {
+            let store = Arc::new(TestStore::new());
+            let manifests = vec![
+                make_tree_manifest(store.clone(), &[("dir/file", "10")]),
+                make_tree_manifest(store.clone(), &[("dir/file", "10")]),
+                make_tree_manifest(store, &[("dir/file", "20")]),
+            ];
+            let mut paths = CompiledPaths::compile(vec![p("dir")]);
+
+            let ids = paths.execute_manifests(manifests).await?;
+
+            assert_eq!(ids[0], ids[1]);
+            assert_ne!(ids[1], ids[2]);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_execute_manifests_traverses_overlapping_file_and_directory() -> Result<()> {
+        async_runtime::block_on(async {
+            let store = Arc::new(TestStore::new());
+            let first = overlapping_manifest(store.clone(), hgid("20"))?;
+            let second = overlapping_manifest(store, hgid("30"))?;
+
+            let mut exact_path = CompiledPaths::compile(vec![p("a")]);
+            let exact_ids = exact_path
+                .execute_manifests(vec![first.clone(), second.clone()])
+                .await?;
+            let mut child_path = CompiledPaths::compile(vec![p("a/b")]);
+            let child_ids = child_path.execute_manifests(vec![first, second]).await?;
+
+            assert_eq!(exact_ids[0], exact_ids[1]);
+            assert_ne!(child_ids[0], child_ids[1]);
+            Ok(())
+        })
     }
 
     fn p(s: &str) -> RepoPathBuf {
