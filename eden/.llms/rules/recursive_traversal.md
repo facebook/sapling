@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(mononoke|scm)/.*\.rs$'
-apply_to_content: 'fn blame|fn annotate|fn ancestors|fn history|fn traverse|fn walk'
+name: recursive-traversal
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(mononoke|scm)/.*\.rs$'
+  apply_to_content: 'fn blame|fn annotate|fn ancestors|fn history|fn traverse|fn walk'
 ---
 
 # Recursive History Traversal
