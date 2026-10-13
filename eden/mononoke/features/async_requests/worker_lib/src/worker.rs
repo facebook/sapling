@@ -35,9 +35,7 @@ use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use executor_lib::RepoShardedProcessExecutor;
-use futures::FutureExt;
 use futures::Stream;
-use futures::future::BoxFuture;
 use futures::future::Either;
 use futures::future::abortable;
 use futures::future::select;
@@ -51,6 +49,7 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_app::MononokeReposManager;
 use mononoke_macros::mononoke;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use rand::RngExt as _;
@@ -68,57 +67,14 @@ use crate::scuba::log_retriable_error;
 use crate::scuba::log_start;
 use crate::stats::stats_loop;
 
-/// What on-demand loading needs from the process's repo set. A trait so the
-/// claim and release paths can be tested without a `MononokeReposManager`.
-trait OndemandRepoHost: Send + Sync {
-    /// Whether the repo is already served without on-demand management.
-    fn is_preconfigured(&self, repo_id: RepositoryId) -> bool;
-
-    fn repo_name(&self, repo_id: RepositoryId) -> Result<String>;
-
-    /// Adds the repo to the repo set unbuilt, if it is not there already.
-    fn add_placeholder(&self, repo_name: &str, repo_id: RepositoryId);
-
-    /// Waits for the repo to be built, sharing one build between concurrent
-    /// callers. False if the repo is no longer in the repo set.
-    fn wait_for_repo<'a>(&'a self, repo_name: &'a str) -> BoxFuture<'a, Result<bool>>;
-
-    fn remove_repo(&self, repo_name: &str);
-}
-
-impl OndemandRepoHost for MononokeReposManager<Repo> {
-    // The worker's `Mononoke` is built by `make_mononoke_api` over this same
-    // repo set, so this is the lookup `Mononoke::raw_repo_by_id` does.
-    fn is_preconfigured(&self, repo_id: RepositoryId) -> bool {
-        self.repos().get_by_id(repo_id.id()).is_some()
-    }
-
-    fn repo_name(&self, repo_id: RepositoryId) -> Result<String> {
-        let (repo_name, _) = self.configs().get_or_load_repo_config_by_id(repo_id.id())?;
-        Ok(repo_name)
-    }
-
-    fn add_placeholder(&self, repo_name: &str, repo_id: RepositoryId) {
-        self.repos().add_placeholder(repo_name, repo_id.id());
-    }
-
-    fn wait_for_repo<'a>(&'a self, repo_name: &'a str) -> BoxFuture<'a, Result<bool>> {
-        async move { Ok(self.repos().get(repo_name).await?.is_some()) }.boxed()
-    }
-
-    fn remove_repo(&self, repo_name: &str) {
-        MononokeReposManager::remove_repo(self, repo_name);
-    }
-}
-
 /// Decrement the refcount for an on-demand loaded repo. When the count drops
-/// to zero the repo is removed from memory via `host.remove_repo()`.
+/// to zero the repo is removed from memory via `remove_repo`.
 /// This is a standalone function so it can be called both through `&self` and
 /// after `self` has been partially moved.
 fn release_ondemand_repo_impl(
     repo_id: Option<RepositoryId>,
     ondemand_repo_refs: &Mutex<HashMap<RepositoryId, OndemandRepoRef>>,
-    host: &impl OndemandRepoHost,
+    remove_repo: impl FnOnce(&str),
 ) {
     let repo_id = match repo_id {
         Some(id) => id,
@@ -133,7 +89,7 @@ fn release_ondemand_repo_impl(
             // Keep the entry locked until the repo has been removed. Otherwise,
             // a concurrent request can mistake the still-present repo for a
             // pre-configured repo and use it without taking a reference.
-            host.remove_repo(&name);
+            remove_repo(&name);
             refs.remove(&repo_id);
         } else {
             repo_ref.count -= 1;
@@ -148,11 +104,19 @@ struct OndemandRepoRef {
 
 /// Ensure the repo for a request is loaded. Returns true if this is an
 /// on-demand repo that must be released after processing.
-async fn ensure_ondemand_repo_loaded(
-    host: &impl OndemandRepoHost,
+///
+/// `repo_name` resolves an unloaded repo's name; `remove_repo` unloads it if
+/// the load fails and this was its last request.
+async fn ensure_ondemand_repo_loaded<R>(
+    repos: &MononokeRepos<R>,
     ondemand_repo_refs: &Mutex<HashMap<RepositoryId, OndemandRepoRef>>,
     repo_id: Option<RepositoryId>,
-) -> Result<bool, Arc<Error>> {
+    repo_name: impl FnOnce(RepositoryId) -> Result<String>,
+    remove_repo: impl FnOnce(&str),
+) -> Result<bool, Arc<Error>>
+where
+    R: Send + Sync + 'static,
+{
     let repo_id = match repo_id {
         Some(id) => id,
         None => return Ok(false),
@@ -164,11 +128,13 @@ async fn ensure_ondemand_repo_loaded(
             repo_ref.count += 1;
             repo_ref.name.clone()
         } else {
-            // Pre-configured repo — no on-demand management needed.
-            if host.is_preconfigured(repo_id) {
+            // Pre-configured repo — no on-demand management needed. The
+            // worker's `Mononoke` is built over this same repo set, so this is
+            // the lookup `Mononoke::raw_repo_by_id` does.
+            if repos.get_by_id(repo_id.id()).is_some() {
                 return Ok(false);
             }
-            let repo_name = host.repo_name(repo_id).map_err(|e| {
+            let repo_name = repo_name(repo_id).map_err(|e| {
                 Arc::new(Error::msg(format!(
                     "No config found for repo_id {repo_id}: {e}"
                 )))
@@ -176,7 +142,7 @@ async fn ensure_ondemand_repo_loaded(
             // Registered under the refs lock so a concurrent release cannot
             // remove the repo before this request holds its reference.
             info!("Loading repo {} (id={}) on-demand", repo_name, repo_id);
-            host.add_placeholder(&repo_name, repo_id);
+            repos.add_placeholder(&repo_name, repo_id.id());
             refs.insert(
                 repo_id,
                 OndemandRepoRef {
@@ -189,9 +155,9 @@ async fn ensure_ondemand_repo_loaded(
     };
 
     // Concurrent requests for the same repo share one detached build.
-    let load_result = match host.wait_for_repo(&repo_name).await {
-        Ok(true) => Ok(()),
-        Ok(false) => Err(Error::msg(format!(
+    let load_result = match repos.get(&repo_name).await {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => Err(Error::msg(format!(
             "On-demand repo {repo_name} (id={repo_id}) was removed while loading"
         ))),
         Err(error) => Err(error),
@@ -200,7 +166,7 @@ async fn ensure_ondemand_repo_loaded(
     // A failed load is released like a finished request: the last waiter
     // removes the repo, so the next request starts a fresh build.
     if let Err(error) = load_result {
-        release_ondemand_repo_impl(Some(repo_id), ondemand_repo_refs, host);
+        release_ondemand_repo_impl(Some(repo_id), ondemand_repo_refs, remove_repo);
         return Err(Arc::new(error));
     }
 
@@ -464,13 +430,28 @@ impl AsyncMethodRequestWorker {
     /// an on-demand repo that should be released after processing via
     /// `release_ondemand_repo`.
     async fn ensure_repo_loaded(&self, repo_id: Option<RepositoryId>) -> Result<bool, Arc<Error>> {
-        ensure_ondemand_repo_loaded(&*self.repos_mgr, &self.ondemand_repo_refs, repo_id).await
+        let repos_mgr = &self.repos_mgr;
+        ensure_ondemand_repo_loaded(
+            repos_mgr.repos(),
+            &self.ondemand_repo_refs,
+            repo_id,
+            |repo_id| {
+                let (repo_name, _) = repos_mgr
+                    .configs()
+                    .get_or_load_repo_config_by_id(repo_id.id())?;
+                Ok(repo_name)
+            },
+            |repo_name| repos_mgr.remove_repo(repo_name),
+        )
+        .await
     }
 
     /// Decrement the refcount for an on-demand repo. When it reaches zero,
     /// remove the repo from memory.
     fn release_ondemand_repo(&self, repo_id: Option<RepositoryId>) {
-        release_ondemand_repo_impl(repo_id, &self.ondemand_repo_refs, &*self.repos_mgr);
+        release_ondemand_repo_impl(repo_id, &self.ondemand_repo_refs, |repo_name| {
+            self.repos_mgr.remove_repo(repo_name)
+        });
     }
 
     fn concurrency_limit_backoff() -> Duration {
@@ -672,11 +653,9 @@ impl AsyncMethodRequestWorker {
         }
 
         // Release on-demand repo (decrement refcount, remove when zero).
-        release_ondemand_repo_impl(
-            cleanup_repo_id,
-            &ondemand_repo_refs,
-            &*repos_mgr_for_cleanup,
-        );
+        release_ondemand_repo_impl(cleanup_repo_id, &ondemand_repo_refs, |repo_name| {
+            repos_mgr_for_cleanup.remove_repo(repo_name)
+        });
     }
 
     async fn keep_alive_loop(
@@ -725,9 +704,10 @@ mod test {
 
     use anyhow::Error;
     use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use futures::future::BoxFuture;
     use mononoke_api::RepositoryId;
     use mononoke_macros::mononoke;
-    use mononoke_repos::MononokeRepos;
     use mononoke_repos::RepoLoader;
     use requests_table::RequestType;
     use source_control as thrift;
@@ -820,39 +800,25 @@ mod test {
         }
     }
 
-    impl OndemandRepoHost for Ondemand {
-        fn is_preconfigured(&self, repo_id: RepositoryId) -> bool {
-            self.repos.get_by_id(repo_id.id()).is_some()
-        }
-
-        fn repo_name(&self, _repo_id: RepositoryId) -> Result<String> {
-            Ok(ONDEMAND_REPO.to_string())
-        }
-
-        fn add_placeholder(&self, repo_name: &str, repo_id: RepositoryId) {
-            self.repos.add_placeholder(repo_name, repo_id.id());
-        }
-
-        fn wait_for_repo<'a>(&'a self, repo_name: &'a str) -> BoxFuture<'a, Result<bool>> {
-            async move { Ok(self.repos.get(repo_name).await?.is_some()) }.boxed()
-        }
-
-        fn remove_repo(&self, repo_name: &str) {
-            self.repos.remove(repo_name);
-        }
-    }
-
     impl Ondemand {
         fn request(self: &Arc<Self>) -> tokio::task::JoinHandle<Result<bool, Arc<Error>>> {
             let ondemand = self.clone();
             mononoke::spawn_task(async move {
-                ensure_ondemand_repo_loaded(&*ondemand, &ondemand.refs, Some(ondemand_repo_id()))
-                    .await
+                ensure_ondemand_repo_loaded(
+                    &ondemand.repos,
+                    &ondemand.refs,
+                    Some(ondemand_repo_id()),
+                    |_| Ok(ONDEMAND_REPO.to_string()),
+                    |repo_name| ondemand.repos.remove(repo_name),
+                )
+                .await
             })
         }
 
         fn release(&self) {
-            release_ondemand_repo_impl(Some(ondemand_repo_id()), &self.refs, self);
+            release_ondemand_repo_impl(Some(ondemand_repo_id()), &self.refs, |repo_name| {
+                self.repos.remove(repo_name)
+            });
         }
 
         fn is_loaded(&self) -> bool {
