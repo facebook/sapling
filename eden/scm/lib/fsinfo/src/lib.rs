@@ -379,10 +379,21 @@ mod macos {
         }
     }
 
-    /// EdenFS NFS mounts report "nfs" but keep the "edenfs:" mount source. Keep
-    /// in sync with `is_edenfs_nfs_mount()` in eden/common/utils/FSDetect.h.
+    /// EdenFS NFS mounts report "nfs" but keep the "edenfs:" mount source,
+    /// except that macOS reports a mount served over a Unix domain socket as
+    /// "<socket path>:<mount path>", where EdenFS's socket name identifies
+    /// the mount. Keep in sync with `is_edenfs_nfs_mount()` in
+    /// eden/common/utils/FSDetect.h.
     fn is_edenfs_nfs_mount(fstype: &str, source: &[u8]) -> bool {
-        fstype == "nfs" && (source == b"edenfs" || source.starts_with(b"edenfs:"))
+        fstype == "nfs"
+            && (source == b"edenfs"
+                || source.starts_with(b"edenfs:")
+                || is_edenfs_unix_socket_nfs_source(source))
+    }
+
+    fn is_edenfs_unix_socket_nfs_source(source: &[u8]) -> bool {
+        const MARKER: &[u8] = b"/edenfs-nfsd.socket>:";
+        source.starts_with(b"<") && source.windows(MARKER.len()).any(|window| window == MARKER)
     }
 
     pub fn fstype(path: &Path) -> Result<FsType> {
@@ -407,6 +418,17 @@ mod macos {
             assert!(
                 is_edenfs_nfs_mount("nfs", b"edenfs:"),
                 "EdenFS NFS mounts keep the edenfs: source"
+            );
+            assert!(
+                is_edenfs_nfs_mount(
+                    "nfs",
+                    b"</Users/me/.eden/clients/repo/edenfs-nfsd.socket>:/Users/me/repo"
+                ),
+                "macOS names the nfsd socket as the source of a Unix-socket mount"
+            );
+            assert!(
+                !is_edenfs_nfs_mount("nfs", b"</var/run/other/nfsd.socket>:/mnt/other"),
+                "another server's socket is not EdenFS"
             );
             assert!(
                 !is_edenfs_nfs_mount("nfs", b"server:/export"),
