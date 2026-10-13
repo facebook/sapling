@@ -60,7 +60,16 @@ fn open_git(
         .ok_or_else(|| anyhow::anyhow!("git commits require a store path"))?;
     let metalog = info.metalog()?;
     let mut metalog = metalog.write();
-    let git_path = calculate_git_path(store_path)?;
+    let git_path = if is_dotgit {
+        // .git mode
+        info.repo_minimal_info()
+            .and_then(|info| info.git_dir())
+            .ok_or_else(|| anyhow::anyhow!("dotgit commits require GIT_DIR"))?
+            .to_path_buf()
+    } else {
+        // .sl mode
+        calculate_git_path(store_path)?
+    };
     let segments_path = calculate_segments_path(store_path);
     let config = info.config();
     let mut git_segmented_commits =
@@ -71,7 +80,8 @@ fn open_git(
 }
 
 fn calculate_git_path(store_path: &Path) -> Result<PathBuf, std::io::Error> {
-    // "gitdir" in Sapling store. Path to per-worktree `$GIT_DIR`, not `$GIT_COMMON_DIR`.
+    // "gitdir" in Sapling store. This should only be used by `.sl` mode.
+    // For `.git` mode, use `RepoMinimalInfo`-provided `GIT_DIR` instead.
     let git_file_contents = get_path_from_file(store_path, GIT_FILE)?;
     let git_path = PathBuf::from(&git_file_contents);
     if !git_path.is_absolute() {
