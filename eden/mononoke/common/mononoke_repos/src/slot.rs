@@ -43,10 +43,10 @@ type SharedBuild<R> = Shared<oneshot::Receiver<BuildOutcome<R>>>;
 ///
 /// This type is part of the inexpensive-repos work (lazy repo loading), which
 /// is still rolling out. Request-time loading
-/// (`MononokeReposManager::get_or_load_repo`) already creates unbuilt slots,
-/// but what an unbuilt repo means for callers is not settled, and the
-/// semantics here (single-flight, failed-build hold, eviction) may still
-/// change.
+/// (`MononokeReposManager::get_or_load_repo`) and the async-requests worker's
+/// on-demand repos already create unbuilt slots, but what an unbuilt repo
+/// means for callers is not settled, and the semantics here (single-flight,
+/// failed-build hold, eviction) may still change.
 ///
 /// If you build on `RepoSlot` or its unbuilt state, expect to follow those
 /// changes, and give lmvasquezg a heads-up so the rollout knows about you.
@@ -153,9 +153,12 @@ impl<R> RepoSlot<R> {
     ///
     /// Single-flight holds **per slot, not per repo name**: `remove` followed
     /// by a re-`add` of the same name makes a *new* slot, so a build against
-    /// the old one can still be in flight. Harmless while nothing evicts - the
-    /// orphaned slot is unreachable and its result dropped - but eviction has
-    /// to account for it.
+    /// the old one can still be in flight. The orphaned slot is unreachable and
+    /// its result dropped, so this costs a duplicate build, never a wrong repo.
+    /// A caller that evicts avoids even that by not removing a repo while
+    /// anyone still waits on its build: the async-requests worker, which unloads
+    /// an on-demand repo when its last request finishes, holds each request's
+    /// reference until that request has seen the build complete.
     fn claim_build(self: &Arc<Self>) -> Claim<R> {
         if let Some(claim) = self.peek() {
             return claim;
@@ -252,10 +255,13 @@ impl<R> RepoSlot<R> {
                 // livelock a repo behind any client timeout shorter than its
                 // build.
                 //
-                // Unbounded for now: one spawn per repo at most. Request-time
-                // loading only builds repos a request names, but there is
-                // still no concurrency bound, so a burst of requests for
-                // distinct unbuilt repos builds all of them at once.
+                // Unbounded here: at most one spawn per slot at a time, so
+                // concurrent builds are bounded only by how many distinct
+                // unbuilt repos callers ask for at once. The async-requests
+                // worker is bounded by how many requests it runs at once, but
+                // request-time loading has no bound yet, so a burst of
+                // requests for distinct unbuilt repos builds all of them at
+                // once.
                 let repo_name = self.name.clone();
                 mononoke::spawn_task(async move {
                     completion.finish(build(repo_name).await.map(Arc::new).map_err(Arc::new));
