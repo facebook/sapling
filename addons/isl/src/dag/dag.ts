@@ -502,7 +502,18 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   /** All visible successors recursively, including `set`. */
   successors(set: SetLike): HashSet {
-    return this.mutationDag.range(set, this);
+    return this.mutationRange(set);
+  }
+
+  /**
+   * Same as `mutationDag.range(set, this)`, but O(successors of `set`) instead of
+   * O(size of this dag): mutation descendants of `set` are closed under further
+   * descendants, so the visible ones' ancestors never leave that set.
+   */
+  private mutationRange(set: SetLike): HashSet {
+    const mDag = this.mutationDag;
+    const descendants = mDag.descendants(set);
+    return mDag.ancestors(this.present(descendants), {within: descendants});
   }
 
   /** All visible predecessors of commits in `set`, including `set`. */
@@ -534,7 +545,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   followSuccessors(set: SetLike): HashSet {
     const hashSet = HashSet.fromHashes(set);
     const mDag = this.mutationDag;
-    let successors = mDag.heads(mDag.range(hashSet, this));
+    let successors = mDag.heads(this.mutationRange(hashSet));
     // When following a split to multiple successors, consider using
     // the main dag to pick the stack top.
     if (hashSet.size === 1 && successors.size > 1) {

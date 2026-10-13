@@ -372,6 +372,27 @@ describe('Dag', () => {
       expect(dag.successors(['a1', 'a2']).toSortedArray()).toEqual(['a1', 'a2']);
     });
 
+    it('follows successors through hidden commits, skipping dead ends', () => {
+      // mutation: x-->x1-->x2, x-->y-->y1
+      // dag: x2 (x, x1, y, y1 are hidden)
+      const dag = new Dag()
+        .add([{...info, hash: 'x2', closestPredecessors: ['x1']}].map(toInfo))
+        .addMutations([
+          ['x', 'x1'],
+          ['x', 'y'],
+          ['y', 'y1'],
+        ]);
+      expect(dag.successors('x').toSortedArray()).toEqual(['x', 'x1', 'x2']);
+      expect(dag.successors('y').toSortedArray()).toEqual([]);
+      expect(dag.followSuccessors('x').toSortedArray()).toEqual(['x2']);
+      expect(dag.followSuccessors('y').toSortedArray()).toEqual(['y']);
+      for (const set of [['x'], ['y'], ['x1', 'y'], ['x2'], ['unknown']]) {
+        expect(dag.successors(set).toSortedArray()).toEqual(
+          dag.mutationDag.range(set, dag).toSortedArray(),
+        );
+      }
+    });
+
     it('predecessors()', () => {
       expect(dag.predecessors(['a', 'b']).toSortedArray()).toEqual(['b']);
       expect(dag.predecessors(['a2']).toSortedArray()).toEqual(['a1', 'a2']);
