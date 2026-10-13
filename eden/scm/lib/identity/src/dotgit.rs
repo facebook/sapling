@@ -50,8 +50,8 @@ pub fn follow_dotgit_path(mut git_dir: PathBuf) -> PathBuf {
 /// repositories, where that file does not exist, `GIT_COMMON_DIR` is the same as `GIT_DIR`.
 pub fn resolve_git_common_dir(git_dir: &Path) -> io::Result<PathBuf> {
     match fs::read_to_string(git_dir.join("commondir")) {
-        Ok(path) => Ok(git_dir.join(path.trim_end())),
-        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(git_dir.to_path_buf()),
+        Ok(path) => Ok(util::path::normalize(&git_dir.join(path.trim_end()))),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(util::path::normalize(git_dir)),
         Err(err) => Err(err),
     }
 }
@@ -78,7 +78,10 @@ mod tests {
         assert_eq!(resolve_git_common_dir(&git_dir)?, git_dir);
 
         fs::write(git_dir.join("commondir"), "../..")?;
-        assert_eq!(resolve_git_common_dir(&git_dir)?, git_dir.join("../.."));
+        assert_eq!(
+            resolve_git_common_dir(&git_dir)?,
+            temp_dir.path().join("common")
+        );
 
         Ok(())
     }

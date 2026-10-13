@@ -8,7 +8,6 @@
 pub mod constants;
 pub mod requirements;
 
-use std::borrow::Cow;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -50,10 +49,8 @@ pub use requirements::Requirements;
 /// GIT_DIR:            /repos/main/.git/worktrees/topic
 /// GIT_COMMON_DIR:     /repos/main/.git
 /// dot_hg_path:        /repos/main/.git/worktrees/topic/sl
-/// shared_dot_hg_path: /repos/main/.git/sl (intended)
-///                     /repos/main/.git/worktrees/topic/sl (current, FIXME)
-/// store_path:         /repos/main/.git/sl/store (intended)
-///                     /repos/main/.git/worktrees/topic/sl/store (current, FIXME)
+/// shared_dot_hg_path: /repos/main/.git/sl
+/// store_path:         /repos/main/.git/sl/store
 /// ```
 #[derive(Clone)]
 pub struct RepoMinimalInfo {
@@ -82,26 +79,22 @@ impl RepoMinimalInfo {
             None => bail!("repository {} not found!", path.display()),
         };
 
-        let (dot_git_path, dot_hg_path) = if ident.is_dot_git() {
+        let (dot_hg_path, git_common_dir) = if ident.is_dot_git() {
             // follow_dotgit_path() returns the per-worktree GIT_DIR.
             let dot_git_path = follow_dotgit_path(path.join(".git"));
-            let dot_dir = "sl";
-            let dot_sl_path = dot_git_path.join(dot_dir);
-            (Some(dot_git_path), dot_sl_path)
-        } else if ident.is_dot_repo() {
-            let dot_git_path = path.join(".repo/manifests/.git");
-            let dot_sl_path = path.join(ident.dot_dir());
-            (Some(dot_git_path), dot_sl_path)
+            let git_common_dir = resolve_git_common_dir(&dot_git_path)?;
+            (dot_git_path.join("sl"), Some(git_common_dir))
         } else {
-            (None, path.join(ident.dot_dir()))
+            (path.join(ident.dot_dir()), None)
         };
 
-        let (shared_dot_hg_path, shared_path, shared_ident) =
-            match (read_sharedpath(&dot_hg_path)?, dot_git_path) {
-                (Some((path, ident)), _) => (path.join(ident.dot_dir()), path, ident),
-                (None, None) => (path.join(ident.dot_dir()), path.clone(), ident),
-                (None, Some(_dot_git_path)) => (dot_hg_path.clone(), path.clone(), ident),
-            };
+        let (shared_dot_hg_path, shared_path, shared_ident) = match git_common_dir {
+            Some(git_common_dir) => (git_common_dir.join("sl"), path.clone(), ident),
+            None => match read_sharedpath(&dot_hg_path)? {
+                Some((path, ident)) => (path.join(ident.dot_dir()), path, ident),
+                None => (dot_hg_path.clone(), path.clone(), ident),
+            },
+        };
         let store_path = shared_dot_hg_path.join("store");
 
         let requirements = Requirements::load_repo_requirements(&dot_hg_path)?;
@@ -135,18 +128,11 @@ impl RepoMinimalInfo {
     }
 
     /// Returns `$GIT_COMMON_DIR` for git repos.
-    pub fn git_common_dir(&self) -> Result<Option<Cow<'_, Path>>> {
-        let Some(git_dir) = self.git_dir() else {
-            return Ok(None);
-        };
-
-        if self.shared_dot_hg_path == self.dot_hg_path {
-            // Legacy on-disk layout. No `sl/sharedpath`. Worktrees use separate stores.
-            // GIT_COMMON_DIR might be different from shared_dot_hg_path/..
-            Ok(Some(resolve_git_common_dir(git_dir)?.into()))
+    pub fn git_common_dir(&self) -> Option<&Path> {
+        if self.ident.is_dot_git() {
+            self.shared_dot_hg_path.parent()
         } else {
-            // New on-disk layout. GIT_COMMON_DIR is shared_dot_hg_path/..
-            Ok(self.shared_dot_hg_path.parent().map(Into::into))
+            None
         }
     }
 }

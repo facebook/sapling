@@ -18,20 +18,29 @@ use filetime::set_file_mtime;
 use fs_err as fs;
 use identity::Identity;
 use identity::dotgit::follow_dotgit_path;
+use identity::dotgit::resolve_git_common_dir;
 use tracing::debug;
 use types::HgId;
 
 use crate::BareGit;
 use crate::refs::ReferenceValue;
 
-/// Initialize and update Sapling's dotdir inside `.git/`.
+/// Initialize and update Sapling's dotdir inside `.git/` (or other `GIT_DIR`).
 /// - Write requirements, on demand.
 /// - Update config files from translated Git config, on demand.
 /// - Update "bookmarks.current".
 ///
 /// Skip if `ident` is not using `.git/sl` dot dir.
 ///
-/// `dot_dir` is expected to be something like `<prefix>/.git/sl`.
+/// Layout:
+/// - `$GIT_DIR/sl/`: local state
+///   - requirements, dirstate, translated config, bookmarks.current
+///   - with linked worktree, typically, `$GIT_COMMON_DIR/worktrees/<name>/sl/`
+/// - `$GIT_COMMON_DIR/sl/store/`: shared store
+///   - without linked worktree, same as `$GIT_DIR/sl/store/`
+///
+/// Git config translation and `bookmarks.current` are refreshed on demand.
+/// This function does nothing if `ident` is not using the `.git/sl` layout.
 pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()> {
     if !ident.is_dot_git() {
         return Ok(());
@@ -40,7 +49,9 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     // Git's GIT_DIR. For a linked worktree this is `<GIT_COMMON_DIR>/worktrees/<name>`.
     let dot_git_path = follow_dotgit_path(root_path.join(".git"));
     let dot_dir = dot_git_path.join("sl");
-    let store_dir = dot_dir.join("store");
+    let store_dir = resolve_git_common_dir(&dot_git_path)?
+        .join("sl")
+        .join("store");
 
     // Check for existence of "requires" files so we can fix repo dirs that already exist but are
     // missing them. The dot dir and store are initialized independently because they can have
