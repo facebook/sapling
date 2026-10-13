@@ -1295,7 +1295,85 @@ async fn replay_from_fork_rejects_a_stack_longer_than_the_cap(
         None,
     )
     .await;
-    assert_eq!(rejection_of(res), BaselineRejection::NotOnBranch);
+    assert_eq!(
+        rejection_of(res),
+        BaselineRejection::HistoryTooLong {
+            max_commits: REPLAY_MAX_COMMITS
+        },
+        "the rejection names the cap the stack overran"
+    );
+    Ok(())
+}
+
+/// The parent's paths are untouched on a branch that has not moved: the
+/// parent never landed, and the message says so rather than claiming it
+/// landed with other content.
+#[mononoke::fbinit_test]
+async fn replay_from_fork_names_a_parent_that_never_landed(fb: FacebookInit) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let v1 = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_parent", "p1")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![v1])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork]).await?;
+
+    // The branch head is still the fork point.
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1, child, fork, None).await;
+    assert_eq!(
+        rejection_of(res),
+        BaselineRejection::ParentNotLanded(v1),
+        "an unlanded parent on an unmoved branch is named as not landed"
+    );
+    Ok(())
+}
+
+/// The branch moved, but only on paths the parent does not touch: still
+/// "not landed", not "landed with different content".
+#[mononoke::fbinit_test]
+async fn replay_from_fork_names_a_parent_that_never_landed_on_a_moved_branch(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    init_just_knobs_with_replay(2);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?.build().await?;
+
+    let fork = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file_base", "base")
+        .commit()
+        .await?;
+    let v1 = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_parent", "p1")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![v1])
+        .add_file("file_child", "child")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![fork])
+        .add_file("file_server", "server")
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[fork, head]).await?;
+
+    let res =
+        rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1, child, head, None).await;
+    assert_eq!(
+        rejection_of(res),
+        BaselineRejection::ParentNotLanded(v1),
+        "unrelated branch movement does not make the parent 'landed with changes'"
+    );
     Ok(())
 }
 
@@ -1408,14 +1486,15 @@ async fn replay_from_fork_rejects_a_partially_landed_parent_stack(
         rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1b, child, head, None).await;
     assert_eq!(
         rejection_of(res),
-        BaselineRejection::ParentLandedWithChanges(v1b),
-        "the unlanded parent is named"
+        BaselineRejection::ParentNotLanded(v1b),
+        "the unlanded parent is named as not landed"
     );
     Ok(())
 }
 
 /// A parent that landed and was then reverted on the branch does not come
-/// back under the child.
+/// back under the child. Its paths are net-unchanged on the branch, so it
+/// reads as not landed, which is also what re-landing it would fix.
 #[mononoke::fbinit_test]
 async fn replay_from_fork_rejects_a_parent_reverted_on_the_branch(
     fb: FacebookInit,
@@ -1454,8 +1533,11 @@ async fn replay_from_fork_rejects_a_parent_reverted_on_the_branch(
 
     let res =
         rebase_stack_onto_with_baseline(&ctx, &repo, &replay_flags(), v1, child, head, None).await;
-    let rejection = rejection_of(res);
-    assert!(names_parent(&rejection, v1), "{rejection:?}");
+    assert_eq!(
+        rejection_of(res),
+        BaselineRejection::ParentNotLanded(v1),
+        "the reverted parent is absent from the branch, so it is named as not landed"
+    );
     Ok(())
 }
 

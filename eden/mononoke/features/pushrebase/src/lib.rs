@@ -165,6 +165,8 @@ const REPLAY_FROM_FORK_JK: &str = "scm/mononoke:pushrebase_replay_from_fork_poin
 const REPLAY_MAX_COMMITS: usize = 50;
 /// Changed-path bound for the replay's manifest lookups.
 const REPLAY_MAX_PATHS: usize = 5_000;
+/// Range length reported for an over-cap replay; longer logs as this.
+const REPLAY_LEN_PROBE_CAP: usize = 1_000;
 
 /// Ancestry probes over a baseline's recorded successors. Normally one.
 const BASELINE_SUCCESSOR_CONCURRENCY: usize = 5;
@@ -240,10 +242,16 @@ pub enum BaselineRejection {
     /// Rewritten onto the branch, but sharing no single fork point with the
     /// head to bound the server range.
     NoSingleForkPoint,
-    /// A commit at or below the baseline did not drop on replay.
+    /// A commit at or below the baseline did not drop on replay, and the
+    /// branch changed a path it touches.
     ParentLandedWithChanges(ChangesetId),
+    /// A commit at or below the baseline did not drop on replay, and the
+    /// branch left every path it touches alone.
+    ParentNotLanded(ChangesetId),
     /// A commit above the baseline is already on the branch.
     AlreadyLanded(ChangesetId),
+    /// The stack forked from the branch more than `max_commits` ago.
+    HistoryTooLong { max_commits: usize },
 }
 
 impl BaselineRejection {
@@ -251,8 +259,13 @@ impl BaselineRejection {
     /// own identifiers.
     pub fn named_commit(&self) -> Option<ChangesetId> {
         match self {
-            Self::ParentLandedWithChanges(cs_id) | Self::AlreadyLanded(cs_id) => Some(*cs_id),
-            Self::NotAncestorOfHead | Self::NotOnBranch | Self::NoSingleForkPoint => None,
+            Self::ParentLandedWithChanges(cs_id)
+            | Self::ParentNotLanded(cs_id)
+            | Self::AlreadyLanded(cs_id) => Some(*cs_id),
+            Self::NotAncestorOfHead
+            | Self::NotOnBranch
+            | Self::NoSingleForkPoint
+            | Self::HistoryTooLong { .. } => None,
         }
     }
 }
@@ -289,10 +302,21 @@ impl std::fmt::Display for BaselineRejection {
                  with different content than this stack was built on; rebase the stack onto \
                  the landed form and resubmit"
             ),
+            Self::ParentNotLanded(parent) => write!(
+                f,
+                "is not on the current head, and the stack's parent commit {parent} has not \
+                 landed on this branch; land it first or land the stack together"
+            ),
             Self::AlreadyLanded(commit) => write!(
                 f,
                 "is not on the current head, and commit {commit} of this stack is already on \
                  the branch; nothing new to land"
+            ),
+            Self::HistoryTooLong { max_commits } => write!(
+                f,
+                "is not on the current head, and the stack's history forked from the branch \
+                 more than {max_commits} commits ago; rebase the stack onto the current head \
+                 and resubmit"
             ),
         }
     }
@@ -543,6 +567,9 @@ pub struct RebasedStack {
     pub dropped: Vec<ChangesetId>,
     /// Old id -> paths whose content was 3-way merged in that commit.
     pub merged_paths: HashMap<ChangesetId, Vec<NonRootMPath>>,
+    /// Stack paths the branch also changed between `root` and `onto`.
+    /// Only `rebase_stack_onto_manifest` fills this.
+    pub server_overlaps: Vec<MPath>,
 }
 
 /// Rebases the linear stack `root..head` onto `onto` with pushrebase's
@@ -675,6 +702,7 @@ pub async fn rebase_stack_onto_with_conflict_base(
         merge_summary: conflict_result.merge_summary,
         dropped: Vec::new(),
         merged_paths: HashMap::new(),
+        server_overlaps: Vec::new(),
     })
 }
 
@@ -814,9 +842,10 @@ pub async fn rebase_stack_onto_manifest(
     .await
     .map_err(PushrebaseError::Error)?;
     let server_cf = manifest_overlaps(&client_cf, &base_states, &onto_states);
+    let overlaps = server_cf.clone();
 
     let reponame = repo.repo_identity().name();
-    let (overrides, conflict_files_count) = match intersect_changed_files(server_cf, client_cf) {
+    let (overrides, conflict_files_count) = match intersect_changed_files(overlaps, client_cf) {
         Ok(()) => (None, 0),
         Err(PushrebaseError::Conflicts(conflicts)) => {
             let merge_enabled = match config.merge_resolution_override {
@@ -898,6 +927,7 @@ pub async fn rebase_stack_onto_manifest(
         merge_summary,
         dropped: set.dropped,
         merged_paths: set.merged_paths,
+        server_overlaps: server_cf,
     })
 }
 
@@ -1139,8 +1169,12 @@ impl ReplayMode {
 enum ReplayOutcome {
     /// Every commit at or below the baseline dropped as already landed.
     Replayed(RebasedStack),
-    /// A commit at or below the baseline did not drop or conflicted.
+    /// A commit at or below the baseline did not drop or conflicted, and the
+    /// branch changed a path it touches.
     ParentDiffers(ChangesetId),
+    /// A commit at or below the baseline did not drop, and the branch left
+    /// its paths alone: it never landed.
+    ParentNotLanded(ChangesetId),
     /// A commit above the baseline dropped: it is already on the branch.
     AlreadyLanded(ChangesetId),
     /// The stack's own commits conflict with the branch.
@@ -1157,6 +1191,7 @@ impl ReplayOutcome {
         match self {
             Self::Replayed(_) => "replayed",
             Self::ParentDiffers(_) => "parent_differs",
+            Self::ParentNotLanded(_) => "parent_not_landed",
             Self::AlreadyLanded(_) => "already_landed",
             Self::Conflict(_) => "conflict",
             Self::TooLong => "too_long",
@@ -1212,7 +1247,7 @@ async fn replay_from_fork_point(
     }
     scuba.add("outcome", outcome.label());
     match &outcome {
-        ReplayOutcome::ParentDiffers(parent) => {
+        ReplayOutcome::ParentDiffers(parent) | ReplayOutcome::ParentNotLanded(parent) => {
             scuba.add("undropped_parent", parent.to_string());
         }
         ReplayOutcome::AlreadyLanded(commit) => {
@@ -1240,11 +1275,17 @@ async fn replay_from_fork_point(
         ReplayOutcome::ParentDiffers(parent) => Err(unplaceable(
             BaselineRejection::ParentLandedWithChanges(parent),
         )),
+        ReplayOutcome::ParentNotLanded(parent) => {
+            Err(unplaceable(BaselineRejection::ParentNotLanded(parent)))
+        }
         ReplayOutcome::AlreadyLanded(commit) => {
             Err(unplaceable(BaselineRejection::AlreadyLanded(commit)))
         }
         ReplayOutcome::Conflict(err) => Err(err),
-        ReplayOutcome::TooLong | ReplayOutcome::TooManyPaths(_) | ReplayOutcome::Failed(_) => {
+        ReplayOutcome::TooLong => Err(unplaceable(BaselineRejection::HistoryTooLong {
+            max_commits: REPLAY_MAX_COMMITS,
+        })),
+        ReplayOutcome::TooManyPaths(_) | ReplayOutcome::Failed(_) => {
             Err(unplaceable(BaselineRejection::NotOnBranch))
         }
     }
@@ -1268,7 +1309,20 @@ async fn replay_stack_from_fork(
     .await
     {
         Ok((Some(parents), Some(stack))) => (parents, stack),
-        Ok(_) => return ReplayOutcome::TooLong,
+        Ok(_) => {
+            // Sized for the cap: how far past it the ranges run.
+            if let Ok((parent_len, replay_len)) = try_join(
+                range_len_capped(ctx, repo, fork_point, baseline, REPLAY_LEN_PROBE_CAP),
+                range_len_capped(ctx, repo, fork_point, head, REPLAY_LEN_PROBE_CAP),
+            )
+            .await
+            {
+                scuba
+                    .add("replay_len", replay_len)
+                    .add("parent_len", parent_len);
+            }
+            return ReplayOutcome::TooLong;
+        }
         Err(err) => return ReplayOutcome::Failed(PushrebaseError::Error(err)),
     };
     let parent_set: HashSet<ChangesetId> = parents.iter().copied().collect();
@@ -1330,12 +1384,64 @@ async fn replay_stack_from_fork(
         .add("dropped_above_baseline", landed_above.len());
     rebased.merge_summary.add_to_scuba(scuba);
     if let Some(parent) = undropped.first() {
-        return ReplayOutcome::ParentDiffers(*parent);
+        return match branch_touched_parent_paths(ctx, repo, *parent, &rebased.server_overlaps).await
+        {
+            Ok(true) => ReplayOutcome::ParentDiffers(*parent),
+            Ok(false) => ReplayOutcome::ParentNotLanded(*parent),
+            Err(err) => ReplayOutcome::Failed(PushrebaseError::Error(err)),
+        };
     }
     if let Some(commit) = landed_above.first() {
         return ReplayOutcome::AlreadyLanded(*commit);
     }
     ReplayOutcome::Replayed(rebased)
+}
+
+/// Whether the branch changed a path `parent` touches, or one under or above
+/// it. `server_overlaps` is already bounded by the replay's path cap.
+async fn branch_touched_parent_paths(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    parent: ChangesetId,
+    server_overlaps: &[MPath],
+) -> Result<bool> {
+    if server_overlaps.is_empty() {
+        return Ok(false);
+    }
+    let overlaps: HashSet<&MPath> = server_overlaps.iter().collect();
+    let bcs = parent.load(ctx, &repo.repo_blobstore()).await?;
+    let parent_paths: HashSet<MPath> = bcs
+        .file_changes_map()
+        .keys()
+        .map(|path| MPath::from(path.clone()))
+        .collect();
+    let under_overlap = parent_paths
+        .iter()
+        .any(|path| path.clone().into_ancestors().any(|p| overlaps.contains(&p)));
+    let over_overlap = server_overlaps.iter().any(|path| {
+        path.clone()
+            .into_ancestors()
+            .any(|p| parent_paths.contains(&p))
+    });
+    Ok(under_overlap || over_overlap)
+}
+
+/// `ancestor..descendant` length without the ancestor, counted up to `cap`.
+async fn range_len_capped(
+    ctx: &CoreContext,
+    repo: &impl CommitGraphRef,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+    cap: usize,
+) -> Result<usize> {
+    Ok(repo
+        .commit_graph()
+        .range_stream(ctx, ancestor, descendant)
+        .await?
+        .filter(|cs_id| future::ready(cs_id != &ancestor))
+        .take(cap)
+        .count()
+        .await)
 }
 
 /// `ancestor..descendant`, oldest first, without the ancestor; `None` when
