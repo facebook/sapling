@@ -1653,17 +1653,21 @@ class committablectx(basectx):
         ui.note(_("committing files:\n"))
 
         if not isgit:
-            # Prefetch rename data, since _filecommit will look for it.
-            # (git does not need this step)
             if hasattr(repo.fileslog, "metadatastore"):
                 keys = []
                 for f in added:
                     fctx = self[f]
                     if fctx.filenode() is not None:
                         keys.append((fctx.path(), fctx.filenode()))
+                    else:
+                        keys.extend(
+                            (f, node)
+                            for node in {m1.get(f), m2.get(f)}
+                            if node is not None
+                        )
                 if p2.node() == nullid:
                     # Not merging - only fetch direct file history so we avoid per-file
-                    # fetches for `flog.parents(node)` in _filecommit.
+                    # fetches for `flog.parents(node)` and `flog.cmp()` in _filecommit.
                     length = 1
                 else:
                     # If we are merging, _filecommit has some logic with flog history, so
