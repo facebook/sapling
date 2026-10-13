@@ -11,6 +11,7 @@ use std::sync::Arc;
 use edenapi::SaplingRemoteApi;
 use metalog::MetaLog;
 use parking_lot::RwLock;
+use repo_minimal_info::RepoMinimalInfo;
 use storemodel::StoreInfo;
 
 use crate::repo::Repo;
@@ -29,6 +30,10 @@ impl StoreInfo for Repo {
 
     fn store_path(&self) -> Option<&Path> {
         Some(&self.store_path)
+    }
+
+    fn repo_minimal_info(&self) -> Option<&RepoMinimalInfo> {
+        Some(std::ops::Deref::deref(self))
     }
 
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>> {

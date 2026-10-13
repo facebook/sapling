@@ -36,6 +36,7 @@ use metalog::MetaLog;
 pub use minibytes;
 pub use minibytes::Bytes;
 use parking_lot::RwLock;
+use repo_minimal_info::RepoMinimalInfo;
 use serde::Deserialize;
 use serde::Serialize;
 use slex_items::Items;
@@ -690,6 +691,12 @@ pub trait StoreInfo: 'static {
     /// Provide the "storage path", which is usually `.sl/store` in the backing repo.
     /// Returns `None` for ephemeral repos with no local disk storage.
     fn store_path(&self) -> Option<&Path>;
+    /// Provide the minimal information for a local repository.
+    ///
+    /// Returns `None` for repositories without a local working copy.
+    fn repo_minimal_info(&self) -> Option<&RepoMinimalInfo> {
+        None
+    }
     /// Provide the remote peer.
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>>;
     // Provide the metalog, useful to sync refs from git.
