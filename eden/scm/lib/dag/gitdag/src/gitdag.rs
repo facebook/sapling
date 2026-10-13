@@ -53,18 +53,18 @@ impl GitDag {
     /// Import heads (and ancestors) from Git objects to the `dag`.
     /// The commit hashes are imported, but not the commit messages.
     ///
-    /// Settings like git's shadow history will be read from `git_dir`
-    /// (like "repo/.git").
+    /// Repository-wide settings like Git's shallow history will be read from
+    /// `git_common_dir` (like "repo/.git").
     pub fn import_from_git(
         &mut self,
         git_store: &GitStore,
         heads: VertexListWithOptions,
-        git_dir: &Path,
+        git_common_dir: &Path,
     ) -> anyhow::Result<()> {
         if heads.is_empty() {
             return Ok(());
         }
-        let shallow = read_git_shallow(git_dir)?;
+        let shallow = read_git_shallow(git_common_dir)?;
         // git_repo is used to read local objects, not for reading references.
         sync_from_git(&mut self.dag, git_store, heads, shallow)?;
         Ok(())
@@ -85,15 +85,17 @@ impl DerefMut for GitDag {
     }
 }
 
-/// Read the .git/shallow files. It contains hex hashes that are the "stop"
-fn read_git_shallow(git_dir: &Path) -> anyhow::Result<HashSet<HgId>> {
+/// Read the GIT_COMMON_DIR/shallow file. It contains hex hashes that are the "stop"
+fn read_git_shallow(git_common_dir: &Path) -> anyhow::Result<HashSet<HgId>> {
     // https://git-scm.com/docs/shallow
     // > $GIT_DIR/shallow lists commit object names and tells Git to pretend as if they are root
     // > commits (e.g. "git log" traversal stops after showing them; "git fsck" does not complain
     // > saying the commits listed on their "parent" lines do not exist).
     // > Each line contains exactly one object name. When read, a commit_graft will be constructed,
     // > which has nr_parent < 0 to make it easier to discern from user provided grafts.
-    let path = git_dir.join("shallow");
+    // When GIT_COMMON_DIR is set, Git uses $GIT_COMMON_DIR/shallow instead. The caller always
+    // supplies the effective common dir.
+    let path = git_common_dir.join("shallow");
     match fs::read_to_string(&path) {
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(Default::default()),
         Err(e) => Err(e.into()),
