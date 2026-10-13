@@ -5,8 +5,10 @@
   $ printf '%s\0' "$MONONOKE_GITIMPORT" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --repo-id "$REPOID" --mononoke-config-path "$TESTTMP/mononoke-config" --tracing-test-format --persist-partial-mappings > "$TESTTMP/importer-argv"
 
 Use a local GitHub LFS Batch server and dummy tokens. One importer handles multiple
-imports, token rotation, a mapped rewind and bookmark repair before clean EOF.
-Protocol failures and missing LFS contents must never produce completion responses.
+imports, token rotation, a mapped rewind, bookmark repair and ref subsets before
+clean EOF. Protocol failures stop the importer without a response. Request failures
+such as a stale snapshot or missing LFS contents report a fixed category, never a
+completion, and leave the importer serving.
 
   $ cat > "$TESTTMP/persistent-test.py" <<'PY'
   > import hashlib
@@ -102,22 +104,19 @@ Protocol failures and missing LFS contents must never produce completion respons
   >             self.buffer += data
   >         line, self.buffer = self.buffer.split(b"\n", 1)
   >         return line
-  >     def request(self, operation, refs, success=True):
+  >     def request(self, operation, refs, failure=None):
   >         self.count += 1
-  >         request = {"version": 1, "request_id": str(self.count), "repo_name": "repo", "operation": operation, "refs": refs}
+  >         request = {"version": 2, "request_id": str(self.count), "repo_name": "repo", "operation": operation, "refs": refs}
   >         self.proc.stdin.write(json.dumps(request).encode() + b"\n")
   >         self.proc.stdin.flush()
   >         phases = []
   >         while True:
   >             line = self.line()
-  >             if line is None:
-  >                 assert not success
-  >                 assert self.proc.wait(timeout=30) != 0
-  >                 return phases
+  >             assert line is not None, "importer exited instead of responding"
   >             if line.startswith(b"gitimport_session "):
-  >                 assert success, "failed request emitted a completion"
   >                 response = json.loads(line[len(b"gitimport_session "):])
-  >                 assert response == dict(request, status="ready" if operation == "warm" else "completed")
+  >                 status = {"failed": failure} if failure else ("ready" if operation == "warm" else "completed")
+  >                 assert response == dict(request, status=status), response
   >                 return phases
   >             match = re.fullmatch(rb"gitimport_phase phase=([a-z_]+) duration_ms=([0-9]+)", line)
   >             assert match and match[1].decode() in allowed, line
@@ -140,6 +139,12 @@ Protocol failures and missing LFS contents must never produce completion respons
   >         stderr = pathlib.Path(self.log.name).read_text()
   >         assert "Persistent import session failed: " + reason in stderr, stderr
   >         assert "dummy-token" not in stderr, stderr
+  >     def request_failed(self, reason):
+  >         stderr = pathlib.Path(self.log.name).read_text()
+  >         assert "Persistent import request " + str(self.count) + " failed: " in stderr, stderr
+  >         assert reason in stderr, stderr
+  >         assert "dummy-token" not in stderr, stderr
+  >         return stderr
   >     def readers_drained(self):
   >         deadline = time.monotonic() + 10
   >         while True:
@@ -151,8 +156,8 @@ Protocol failures and missing LFS contents must never produce completion respons
   > def sql(query, args=()):
   >     with sqlite3.connect(root / "monsql/sqlite_dbs") as db:
   >         return db.execute(query, args).fetchall()
-  > def bookmark():
-  >     return sql("SELECT lower(hex(g.git_sha1)) FROM bookmarks b JOIN bonsai_git_mapping g ON b.changeset_id=g.bcs_id AND b.repo_id=g.repo_id WHERE CAST(b.name AS TEXT)='heads/master_bookmark'")[0][0]
+  > def bookmark(name="master_bookmark"):
+  >     return sql("SELECT lower(hex(g.git_sha1)) FROM bookmarks b JOIN bonsai_git_mapping g ON b.changeset_id=g.bcs_id AND b.repo_id=g.repo_id WHERE CAST(b.name AS TEXT)=?", ("heads/" + name,))[0][0]
   > def snapshot(main):
   >     return {"refs/heads/master_bookmark": main, "refs/heads/release": first}
   > try:
@@ -184,31 +189,44 @@ Protocol failures and missing LFS contents must never produce completion respons
   >     sql("UPDATE bookmarks SET changeset_id=(SELECT bcs_id FROM bonsai_git_mapping WHERE lower(hex(git_sha1))=?) WHERE CAST(name AS TEXT)='heads/master_bookmark'", (second,))
   >     session.request("import", snapshot(first))
   >     assert bookmark() == first
+  >     git("update-ref", "refs/heads/release", second)
+  >     session.request("import", {"refs/heads/release": second})
+  >     assert bookmark("release") == second and bookmark() == first, "a ref subset publishes only its refs"
+  >     git("update-ref", "refs/heads/release", first)
+  >     session.request("import", {"refs/heads/release": first})
+  >     assert bookmark("release") == first and bookmark() == first
   >     session.readers_drained()
   >     session.clean_eof()
-  >     print("warm, serial imports, fresh token, no-op, rewind, repair and EOF passed")
+  >     print("warm, serial imports, fresh token, no-op, rewind, repair, ref subsets and EOF passed")
   >     before = sql("SELECT count(*) FROM bookmarks_update_log")[0][0]
   >     mismatch = Session()
-  >     mismatch.request("import", snapshot(second), success=False)
-  >     mismatch.failed_with("snapshot_mismatch")
+  >     mismatch.request("import", snapshot(second), failure="snapshot_mismatch")
+  >     mismatch.request_failed("snapshot_mismatch")
   >     assert bookmark() == first
   >     assert sql("SELECT count(*) FROM bookmarks_update_log")[0][0] == before
+  >     mismatch.request("import", snapshot(first))
+  >     assert sql("SELECT count(*) FROM bookmarks_update_log")[0][0] == before
+  >     mismatch.clean_eof()
   >     for frame, reason in [(b"{malformed}\n", "invalid_frame"), (b"x" * (128 * 1024 + 1), "frame_too_large"), (b'{"version":1', "incomplete_frame")]:
   >         bad = Session()
   >         bad.rejected_frame(frame)
   >         bad.failed_with(reason)
   >     assert sql("SELECT count(*) FROM bookmarks_update_log")[0][0] == before
-  >     print("wrong SHA, malformed, oversized and partial frames rejected without publication")
+  >     print("wrong SHA kept serving; malformed, oversized and partial frames rejected without publication")
   >     missing, missing_oid = commit_payload(b"absent persistent LFS payload\n", available=False)
   >     strict = Session()
   >     strict.request("warm", {})
-  >     strict.request("import", snapshot(missing), success=False)
-  >     strict.failed_with("import_contents_failed")
+  >     strict.request("import", snapshot(missing), failure="import_contents")
+  >     assert "Caused by:" in strict.request_failed("import_contents_failed"), "stderr carries the full chain"
   >     assert bookmark() == first
   >     assert sql("SELECT count(*) FROM bookmarks_update_log")[0][0] == before
   >     assert sql("SELECT count(*) FROM bonsai_git_mapping WHERE lower(hex(git_sha1))=?", (missing,))[0][0] == 0
   >     assert missing_oid not in state["downloads"]
-  >     print("missing LFS contents rejected before target mapping or bookmark publication")
+  >     strict.request("import", {"refs/heads/release": first})
+  >     assert sql("SELECT count(*) FROM bookmarks_update_log")[0][0] == before
+  >     strict.readers_drained()
+  >     strict.clean_eof()
+  >     print("missing LFS contents rejected before mapping or publication; the importer kept serving")
   > finally:
   >     for session in sessions:
   >         try:
@@ -221,9 +239,9 @@ Protocol failures and missing LFS contents must never produce completion respons
   >     server.server_close()
   > PY
   $ python3 "$TESTTMP/persistent-test.py"
-  warm, serial imports, fresh token, no-op, rewind, repair and EOF passed
-  wrong SHA, malformed, oversized and partial frames rejected without publication
-  missing LFS contents rejected before target mapping or bookmark publication
+  warm, serial imports, fresh token, no-op, rewind, repair, ref subsets and EOF passed
+  wrong SHA kept serving; malformed, oversized and partial frames rejected without publication
+  missing LFS contents rejected before mapping or publication; the importer kept serving
 
 Verify actual Mononoke filestore bytes, independent of the mock's download log.
 

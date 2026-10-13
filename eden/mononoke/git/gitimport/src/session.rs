@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
+use gitimport_session_protocol::Failure;
 use gitimport_session_protocol::MAX_FRAME_BYTES;
 use gitimport_session_protocol::Operation;
 use gitimport_session_protocol::ProtocolError;
@@ -24,6 +25,7 @@ use tokio::io::AsyncBufRead;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
+use tracing::error;
 
 use crate::GitimportArgs;
 use crate::GitimportSubcommand;
@@ -132,6 +134,24 @@ fn check_options(args: &GitimportArgs) -> Result<()> {
     Ok(())
 }
 
+/// Map a request-scoped error to the fixed category reported on stdout.
+fn request_failure(error: &anyhow::Error) -> Failure {
+    match error.downcast_ref::<SessionFailure>() {
+        #[cfg(fbcode_build)]
+        Some(SessionFailure::Identity) => Failure::Identity,
+        Some(SessionFailure::OpenRepo) => Failure::OpenRepo,
+        Some(SessionFailure::LfsSetup) => Failure::LfsSetup,
+        Some(SessionFailure::ReadGit) => Failure::ReadGit,
+        Some(SessionFailure::DiscoverCommits) => Failure::DiscoverCommits,
+        Some(SessionFailure::ImportContents) => Failure::ImportContents,
+        Some(SessionFailure::ResolveRefs) => Failure::ResolveRefs,
+        Some(SessionFailure::OpenManagedRepo) => Failure::OpenManagedRepo,
+        Some(SessionFailure::Publication) => Failure::Publication,
+        Some(SessionFailure::SnapshotMismatch) => Failure::SnapshotMismatch,
+        _ => Failure::Unclassified,
+    }
+}
+
 /// Match the original ref object, including the outermost annotated tag object.
 pub(crate) fn check_ref_snapshot(
     actual: &BTreeMap<GitRef, ObjectId>,
@@ -209,23 +229,26 @@ pub(crate) async fn run(
                 .all(|name| args.include_refs.contains(name)),
             SessionFailure::RefOutsideScope
         );
-        let response = encode_response(&Response::for_request(&request))?;
         if !first_request {
             phase_started = Instant::now();
         }
         first_request = false;
-        match request.operation {
+        let outcome = match request.operation {
             Operation::Warm => {
-                let repo: Repo = app
-                    .open_repo(&args.repo_args)
-                    .await
-                    .context(SessionFailure::OpenRepo)?;
-                drop(repo);
-                log_import_phase(args.log_import_phases, "open_repo", &mut phase_started);
+                async {
+                    let repo: Repo = app
+                        .open_repo(&args.repo_args)
+                        .await
+                        .context(SessionFailure::OpenRepo)?;
+                    drop(repo);
+                    log_import_phase(args.log_import_phases, "open_repo", &mut phase_started);
+                    anyhow::Ok(())
+                }
+                .await
             }
             Operation::Import => {
                 let request_timing = ImportLifecycleTiming::default();
-                run_import(
+                let result = run_import(
                     app,
                     args,
                     phase_started,
@@ -235,10 +258,25 @@ pub(crate) async fn run(
                         session_manager: Some(&mut manager),
                     },
                 )
-                .await?;
+                .await;
                 request_timing.log_async_cleanup(args.log_import_phases);
+                result
             }
-        }
+        };
+        let response = match outcome {
+            Ok(()) => Response::for_request(&request),
+            Err(error) => {
+                // Stderr carries the full chain for operators; stdout only a fixed category.
+                error!(
+                    "Persistent import request {} failed: {error:?}",
+                    request.request_id
+                );
+                // A request that failed during publication may leave a partial manager.
+                manager = None;
+                Response::failed(&request, request_failure(&error))
+            }
+        };
+        let response = encode_response(&response)?;
         output
             .write_all(&response)
             .await

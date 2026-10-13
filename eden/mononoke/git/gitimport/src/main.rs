@@ -92,6 +92,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use restricted_paths::RestrictedPathsArc;
 use tracing::debug;
+use tracing::error;
 use tracing::info;
 use tracing::warn;
 
@@ -476,7 +477,10 @@ async fn async_main(
     if args.persistent {
         return session::run(&app, &args, phase_started, lifecycle_timing)
             .await
-            .map_err(session::sanitize_error);
+            .map_err(|error| {
+                error!("Persistent import session stopped: {error:?}");
+                session::sanitize_error(error)
+            });
     }
     run_import(
         &app,

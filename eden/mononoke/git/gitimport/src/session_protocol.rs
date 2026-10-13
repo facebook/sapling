@@ -14,7 +14,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 /// The protocol version understood by both the importer and its parent.
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 /// Maximum encoded frame size, including the response prefix and final newline.
 pub const MAX_FRAME_BYTES: usize = 128 * 1024;
 /// Distinguishes completion responses from bounded native timing lines.
@@ -30,12 +30,48 @@ pub enum Operation {
     Import,
 }
 
-/// Successful completion of an operation. Failures terminate the helper.
+/// Outcome of an operation. A reported failure leaves the helper serving.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     Ready,
     Completed,
+    Failed(Failure),
+}
+
+/// Fixed categories for a request that did not complete; never input-derived text.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Failure {
+    Identity,
+    OpenRepo,
+    LfsSetup,
+    ReadGit,
+    DiscoverCommits,
+    ImportContents,
+    ResolveRefs,
+    OpenManagedRepo,
+    Publication,
+    SnapshotMismatch,
+    Unclassified,
+}
+
+impl Failure {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Identity => "identity_failed",
+            Self::OpenRepo => "open_repo_failed",
+            Self::LfsSetup => "lfs_setup_failed",
+            Self::ReadGit => "read_git_failed",
+            Self::DiscoverCommits => "discover_commits_failed",
+            Self::ImportContents => "import_contents_failed",
+            Self::ResolveRefs => "resolve_refs_failed",
+            Self::OpenManagedRepo => "open_managed_repo_failed",
+            Self::Publication => "publication_failed",
+            Self::SnapshotMismatch => "snapshot_mismatch",
+            Self::Unclassified => "unclassified",
+        }
+    }
 }
 
 /// One request, with a caller-chosen identifier and exact repository/ref scope.
@@ -155,9 +191,25 @@ impl Response {
         }
     }
 
+    /// Construct the response for a validated request that did not complete.
+    pub fn failed(request: &Request, failure: Failure) -> Self {
+        Self {
+            status: Status::Failed(failure),
+            ..Self::for_request(request)
+        }
+    }
+
     /// Require a full echo and the status associated with the requested operation.
     pub fn matches_request(&self, request: &Request) -> bool {
         self == &Self::for_request(request)
+    }
+
+    /// The reported failure, when this response fully echoes a failed request.
+    pub fn failure_for(&self, request: &Request) -> Option<Failure> {
+        match self.status {
+            Status::Failed(failure) if self == &Self::failed(request, failure) => Some(failure),
+            _ => None,
+        }
     }
 
     fn validate(&self) -> Result<(), ProtocolError> {
@@ -169,7 +221,7 @@ impl Response {
             refs: self.refs.clone(),
         };
         request.validate()?;
-        if !self.matches_request(&request) {
+        if !self.matches_request(&request) && self.failure_for(&request).is_none() {
             return Err(ProtocolError::InvalidStatus);
         }
         Ok(())
@@ -214,7 +266,7 @@ pub fn decode_request(frame: &[u8]) -> Result<Request, ProtocolError> {
     Ok(request)
 }
 
-/// Encode one validated success response, including prefix and newline.
+/// Encode one validated response, including prefix and newline.
 pub fn encode_response(response: &Response) -> Result<Vec<u8>, ProtocolError> {
     response.validate()?;
     encode(response, RESPONSE_PREFIX.as_bytes())
@@ -264,7 +316,43 @@ mod tests {
             assert!(response.matches_request(&request));
             response.request_id.push('x');
             assert!(!response.matches_request(&request));
+
+            let failed = Response::failed(&request, Failure::ImportContents);
+            let decoded = decode_response(&encode_response(&failed).unwrap()).unwrap();
+            assert_eq!(decoded, failed);
+            assert!(
+                !decoded.matches_request(&request),
+                "a failure is never a completion"
+            );
+            assert_eq!(decoded.failure_for(&request), Some(Failure::ImportContents));
+            let mut other = request.clone();
+            other.request_id.push('x');
+            assert_eq!(
+                decoded.failure_for(&other),
+                None,
+                "a failure must echo its own request"
+            );
         }
+    }
+
+    #[mononoke::test]
+    fn failure_categories_are_fixed() {
+        let request = request(Operation::Import);
+        let frame = format!(
+            "{RESPONSE_PREFIX}{{\"version\":{PROTOCOL_VERSION},\"request_id\":\"attempt-1\",\"repo_name\":\"par-msl/jarvis\",\"operation\":\"import\",\"refs\":{{\"refs/heads/main\":\"{}\"}},\"status\":{{\"failed\":\"publication\"}}}}\n",
+            "1".repeat(40)
+        );
+        assert_eq!(
+            decode_response(frame.as_bytes())
+                .unwrap()
+                .failure_for(&request),
+            Some(Failure::Publication)
+        );
+        let frame = frame.replace("\"publication\"", "\"free text\"");
+        assert_eq!(
+            decode_response(frame.as_bytes()),
+            Err(ProtocolError::InvalidFrame)
+        );
     }
 
     #[mononoke::test]
@@ -282,7 +370,7 @@ mod tests {
         let mut frame = encode_request(&request).unwrap();
         frame.pop();
         assert_eq!(decode_request(&frame), Err(ProtocolError::InvalidFrame));
-        let frame = b"{\"version\":1,\"request_id\":\"x\",\"repo_name\":\"repo\",\"operation\":\"warm\",\"refs\":{},\"unknown\":true}\n";
+        let frame = b"{\"version\":2,\"request_id\":\"x\",\"repo_name\":\"repo\",\"operation\":\"warm\",\"refs\":{},\"unknown\":true}\n";
         assert_eq!(decode_request(frame), Err(ProtocolError::InvalidFrame));
         assert_eq!(
             decode_request(&vec![b'x'; MAX_FRAME_BYTES + 1]),
