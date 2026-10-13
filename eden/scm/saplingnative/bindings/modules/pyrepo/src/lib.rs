@@ -40,6 +40,8 @@ use rsrepo::repo::Repo;
 use rsworkingcopy::workingcopy::WorkingCopy;
 use types::HgId;
 
+mod impl_into;
+
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "repo"].join(".");
     let m = PyModule::new(py, &name)?;
@@ -59,6 +61,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             .iter()
             .collect::<Vec<_>>(),
     )?;
+
+    impl_into::register(py);
 
     Ok(m)
 }

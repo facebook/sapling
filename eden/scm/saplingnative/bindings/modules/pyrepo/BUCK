@@ -7,11 +7,13 @@ rust_python_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:parking_lot",
         "//eden/scm/lib/checkout:checkout",
         "//eden/scm/lib/config/set:configset",
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/repolock:repolock",
         "//eden/scm/lib/types:types",
