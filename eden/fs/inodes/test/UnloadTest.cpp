@@ -187,9 +187,7 @@ TEST(UnloadAfterAsyncLoad, unloadRacesDeterministicallyWithInodeLoadComplete) {
   EXPECT_NE(kRootNodeId, dirInode->getNodeId());
 }
 
-TEST(
-    UnloadLastAccessedBefore,
-    unloadsInodesByLastFsRequestTimeNotMetadataAtime) {
+TEST(UnloadLastAccessedBefore, unloadsInodesByLastGcRefTimeNotMetadataAtime) {
   FakeTreeBuilder builder;
   builder.setFile("old.txt", "old contents");
   builder.setFile("new.txt", "new contents");
@@ -206,14 +204,14 @@ TEST(
   oldInode->incFsRefcount();
   newInode->incFsRefcount();
 
-  // Advance the clock and touch only "new.txt" via updateLastFsRequestTime.
-  // Both inodes start with lastFsRequestTime from mount creation.
-  // After this, new.txt's lastFsRequestTime is 120s later than old.txt's.
+  // Advance the clock and touch only "new.txt" via markGcRef.
+  // Both inodes start with lastGcRefTime from mount creation.
+  // After this, new.txt's lastGcRefTime is 120s later than old.txt's.
   testMount.getClock().advance(120s);
-  newInode->updateLastFsRequestTime();
+  newInode->markGcRef();
 
-  // Use a cutoff between old and new lastFsRequestTime values.
-  auto cutoff = oldInode->getLastFsRequestTime().toTimespec();
+  // Use a cutoff between old and new lastGcRefTime values.
+  auto cutoff = oldInode->getLastGcRefTime().toTimespec();
   cutoff.tv_sec += 60;
 
   // Release InodePtrs (FUSE refcount keeps them alive in InodeMap)
@@ -229,8 +227,8 @@ TEST(
   auto rootInode = edenMount->getRootInode();
   auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff);
 
-  // old.txt (lastFsRequestTime < cutoff) should be unloaded.
-  // new.txt (lastFsRequestTime > cutoff) should remain loaded.
+  // old.txt (lastGcRefTime < cutoff) should be unloaded.
+  // new.txt (lastGcRefTime > cutoff) should remain loaded.
   EXPECT_GE(unloaded, 1);
   auto countsAfter = inodeMap->getInodeCounts();
   EXPECT_LT(countsAfter.fileCount, countsBefore.fileCount);
@@ -266,7 +264,7 @@ TEST(UnloadLastAccessedBefore, cancellationStopsUnloading) {
       edenMount->getRootInode()->unloadChildrenLastAccessedBefore(cutoff), 0);
 }
 
-TEST(UnloadLastAccessedBefore, preservesLastFsRequestTimeAcrossReload) {
+TEST(UnloadLastAccessedBefore, preservesLastGcRefTimeAcrossReload) {
   FakeTreeBuilder builder;
   builder.setFile("file.txt", "contents");
   TestMount testMount{builder};
@@ -276,7 +274,7 @@ TEST(UnloadLastAccessedBefore, preservesLastFsRequestTimeAcrossReload) {
   auto inode = testMount.getInode("file.txt"_relpath);
   auto inodeNumber = inode->getNodeId();
   inode->incFsRefcount();
-  auto lastFsRequestTime = inode->getLastFsRequestTime();
+  auto lastGcRefTime = inode->getLastGcRefTime();
 
   testMount.getClock().advance(120s);
   auto cutoff = testMount.getClock().getRealtime();
@@ -288,7 +286,7 @@ TEST(UnloadLastAccessedBefore, preservesLastFsRequestTimeAcrossReload) {
   EXPECT_GT(inodeMap->getInodeCounts().unloadedInodeCount, 0);
 
   auto reloaded = inodeMap->lookupInode(inodeNumber).get();
-  EXPECT_EQ(lastFsRequestTime, reloaded->getLastFsRequestTime());
+  EXPECT_EQ(lastGcRefTime, reloaded->getLastGcRefTime());
 }
 
 TEST(UnloadLastAccessedBefore, getsUnloadedChildrenForGcInOneBatch) {
@@ -307,7 +305,7 @@ TEST(UnloadLastAccessedBefore, getsUnloadedChildrenForGcInOneBatch) {
   auto otherNumber = other->getNodeId();
   file->incFsRefcount();
   other->incFsRefcount();
-  auto expectedLastFsRequestTime = file->getLastFsRequestTime();
+  auto expectedLastGcRefTime = file->getLastGcRefTime();
 
   testMount.getClock().advance(120s);
   auto cutoff = testMount.getClock().getRealtime();
@@ -324,7 +322,7 @@ TEST(UnloadLastAccessedBefore, getsUnloadedChildrenForGcInOneBatch) {
 
   ASSERT_EQ(1, children.size());
   EXPECT_EQ("file.txt"_pc, children.front().name);
-  EXPECT_EQ(expectedLastFsRequestTime, children.front().lastFsRequestTime);
+  EXPECT_EQ(expectedLastGcRefTime, children.front().lastGcRefTime);
   EXPECT_EQ(1, children.front().numFsReferences);
 }
 

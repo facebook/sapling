@@ -95,10 +95,10 @@ class NfsDispatcher {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
-   * Update the last fs request time of the inode. Parents won't be updated.
+   * Record a reference to the inode for inode garbage collection. Parents
+   * won't be updated.
    */
-  virtual ImmediateFuture<folly::Unit> updateLastFsRequestTime(
-      InodeNumber ino) = 0;
+  virtual ImmediateFuture<folly::Unit> markGcRef(InodeNumber ino) = 0;
 
   /**
    * Find the given file in the passed in directory. It's InodeNumber and

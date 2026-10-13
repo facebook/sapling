@@ -45,11 +45,11 @@ InodeMap::UnloadedInode::UnloadedInode(
     InodeNumber parentNum,
     PathComponentPiece entryName,
     mode_t mode,
-    EdenTimestamp lastFsRequestTime)
+    EdenTimestamp lastGcRefTime)
     : parent(parentNum),
       name(entryName),
       mode{mode},
-      lastFsRequestTime{lastFsRequestTime} {}
+      lastGcRefTime{lastGcRefTime} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
     InodeNumber parentNum,
@@ -58,13 +58,13 @@ InodeMap::UnloadedInode::UnloadedInode(
     mode_t mode,
     std::optional<ObjectId> id,
     uint32_t fsRefcount,
-    EdenTimestamp lastFsRequestTime)
+    EdenTimestamp lastGcRefTime)
     : parent(parentNum),
       name(entryName),
       isUnlinked{isUnlinked},
       mode{mode},
       id{std::move(id)},
-      lastFsRequestTime{lastFsRequestTime},
+      lastGcRefTime{lastGcRefTime},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -82,7 +82,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
       id{inode->getObjectId()},
-      lastFsRequestTime{inode->getLastFsRequestTime()},
+      lastGcRefTime{inode->getLastGcRefTime()},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -531,7 +531,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
       swap(promises, it->second.promises);
 
       inode->setChannelRefcount(it->second.numFsReferences);
-      inode->restoreLastFsRequestTime(it->second.lastFsRequestTime);
+      inode->restoreLastGcRefTime(it->second.lastGcRefTime);
 
       // Insert the entry into loadedInodes_ and remove it from unloadedInodes_
       insertLoadedInode(data, inode);
@@ -1066,7 +1066,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(
       // If entry.id is empty, the inode is materialized.
       serializedEntry.mode() = entry.mode;
       serializedEntry.lastFsRequestTime() =
-          entry.lastFsRequestTime.toSerializedValue();
+          entry.lastGcRefTime.toSerializedValue();
 
       result.unloadedInodes()->emplace_back(std::move(serializedEntry));
     }
@@ -1305,7 +1305,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
           S_IFDIR | 0755,
           treeContents.treeId,
           fsCount,
-          asTree->getLastFsRequestTime());
+          asTree->getLastGcRefTime());
     };
 
     // If the fs refcount is non-zero we have to remember this inode.
@@ -1472,7 +1472,7 @@ std::vector<InodeMap::UnloadedInodeGcEntry> InodeMap::getUnloadedChildrenForGc(
     result.push_back(
         UnloadedInodeGcEntry{
             PathComponent{inode.name},
-            inode.lastFsRequestTime,
+            inode.lastGcRefTime,
             inode.numFsReferences});
   }
   return result;

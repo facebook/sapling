@@ -7392,9 +7392,9 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
                 continue;
               }
 
-              auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
-                  entryInode->getLastFsRequestTime().toTimespec().tv_sec);
-              if (lastFsRequestTime >= cutoff) {
+              auto lastGcRefTime = std::chrono::system_clock::from_time_t(
+                  entryInode->getLastGcRefTime().toTimespec().tv_sec);
+              if (lastGcRefTime >= cutoff) {
                 continue;
               }
 
@@ -7420,9 +7420,9 @@ TreeInode::invalidateChildrenNotAccessedRecentlyFuseImpl(
             if (shouldCancelGC(cancellationToken)) {
               return FuseGcResult{numInvalidated, containsPin};
             }
-            auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
-                child.lastFsRequestTime.toTimespec().tv_sec);
-            if (lastFsRequestTime >= cutoff) {
+            auto lastGcRefTime = std::chrono::system_clock::from_time_t(
+                child.lastGcRefTime.toTimespec().tv_sec);
+            if (lastGcRefTime >= cutoff) {
               continue;
             }
             if (!parentHasFsRef) {
@@ -7592,8 +7592,8 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
     bool shouldInvalidate =
         (cutoff == std::chrono::system_clock::time_point::max());
     if (!shouldInvalidate) {
-      auto lastFsRequestTime = std::chrono::system_clock::from_time_t(
-          self->getLastFsRequestTime().toTimespec().tv_sec);
+      auto lastGcRefTime = std::chrono::system_clock::from_time_t(
+          self->getLastGcRefTime().toTimespec().tv_sec);
       // As we didn't update parent's last fs request time when children
       // are accessed via the fs channel dispatcher, we need to check
       // the children's last fs request time here.
@@ -7602,18 +7602,18 @@ ImmediateFuture<NfsGcResult> TreeInode::invalidateChildrenNotMaterializedNFS(
         if (!entryInode) {
           continue;
         }
-        auto childLastFsRequestTime = std::chrono::system_clock::from_time_t(
-            entryInode->getLastFsRequestTime().toTimespec().tv_sec);
-        if (lastFsRequestTime < childLastFsRequestTime) {
-          lastFsRequestTime = childLastFsRequestTime;
+        auto childLastGcRefTime = std::chrono::system_clock::from_time_t(
+            entryInode->getLastGcRefTime().toTimespec().tv_sec);
+        if (lastGcRefTime < childLastGcRefTime) {
+          lastGcRefTime = childLastGcRefTime;
         }
       }
-      shouldInvalidate = (lastFsRequestTime < cutoff);
+      shouldInvalidate = (lastGcRefTime < cutoff);
       XLOGF(
           DBG9,
           "For path: {}, last fs request time: {}, cutoff: {}, shouldInvalidate by GC is {}",
           self->getPath().value().asString(),
-          self->getLastFsRequestTime().toTimespec().tv_sec,
+          self->getLastGcRefTime().toTimespec().tv_sec,
           cutoff.time_since_epoch().count(),
           shouldInvalidate);
     }
@@ -7960,11 +7960,11 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(
   // links.
   std::unordered_set<InodeNumber> toUnload;
 
-  // Use lastFsRequestTime_ which is updated on every FUSE/NFS access.
+  // Use lastGcRefTime_ which is updated on every FUSE/NFS access.
   // This avoids acquiring the inode's state lock (which getMetadata() does)
   // and provides a more accurate signal than atime for GC decisions.
   auto shouldUnload = [&](const auto& inode) {
-    return inode->getLastFsRequestTime().toTimespec() < cutoff;
+    return inode->getLastGcRefTime().toTimespec() < cutoff;
   };
 
   for (const auto& inode : fileChildren) {

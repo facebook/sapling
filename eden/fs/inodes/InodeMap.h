@@ -464,7 +464,7 @@ class InodeMap {
 
   struct UnloadedInodeGcEntry {
     PathComponent name;
-    EdenTimestamp lastFsRequestTime;
+    EdenTimestamp lastGcRefTime;
     uint32_t numFsReferences;
   };
 
@@ -493,7 +493,7 @@ class InodeMap {
         InodeNumber parentNum,
         PathComponentPiece entryName,
         mode_t mode,
-        EdenTimestamp lastFsRequestTime);
+        EdenTimestamp lastGcRefTime);
 
     UnloadedInode(
         InodeNumber parentNum,
@@ -502,7 +502,7 @@ class InodeMap {
         mode_t mode,
         std::optional<ObjectId> id,
         uint32_t fsRefcount,
-        EdenTimestamp lastFsRequestTime);
+        EdenTimestamp lastGcRefTime);
     UnloadedInode(
         FileInode* inode,
         TreeInode* parent,
@@ -539,7 +539,7 @@ class InodeMap {
      */
     std::optional<ObjectId> const id;
 
-    EdenTimestamp const lastFsRequestTime;
+    EdenTimestamp const lastGcRefTime;
 
     /**
      * A list of promises waiting on this inode to be loaded.

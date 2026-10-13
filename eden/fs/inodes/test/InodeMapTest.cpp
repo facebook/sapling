@@ -869,13 +869,13 @@ TEST_F(
 }
 
 #ifndef _WIN32
-TEST_F(InodePersistenceTreeTest, preservesLastFsRequestTimeDuringTakeover) {
+TEST_F(InodePersistenceTreeTest, preservesLastGcRefTimeDuringTakeover) {
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();
   auto file = testMount.getInode("dir/file1.txt"_relpath);
   file->incFsRefcount();
   const auto inodeNumber = file->getNodeId();
-  const auto expectedLastFsRequestTime = file->getLastFsRequestTime();
+  const auto expectedLastGcRefTime = file->getLastGcRefTime();
 
   testMount.getClock().advance(120s);
   edenMount.reset();
@@ -884,7 +884,7 @@ TEST_F(InodePersistenceTreeTest, preservesLastFsRequestTimeDuringTakeover) {
 
   auto reloaded =
       testMount.getEdenMount()->getInodeMap()->lookupInode(inodeNumber).get();
-  EXPECT_EQ(expectedLastFsRequestTime, reloaded->getLastFsRequestTime());
+  EXPECT_EQ(expectedLastGcRefTime, reloaded->getLastGcRefTime());
 }
 #endif
 

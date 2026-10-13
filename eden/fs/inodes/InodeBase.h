@@ -412,11 +412,11 @@ class InodeBase {
   }
 
   /**
-   * Used by Garbage Collection (GC) to determine if an inode
-   * is unused for the cutoff time and can be collected.
+   * When this inode was last referenced for the purposes of inode garbage
+   * collection; see lastGcRefTime_.
    */
-  EdenTimestamp getLastFsRequestTime() const {
-    return lastFsRequestTime_.load(std::memory_order_relaxed);
+  EdenTimestamp getLastGcRefTime() const {
+    return lastGcRefTime_.load(std::memory_order_relaxed);
   }
 
   struct LocationInfo {
@@ -548,8 +548,8 @@ class InodeBase {
   friend class InodeMap;
   friend class InodePtrTestHelper;
 
-  void restoreLastFsRequestTime(EdenTimestamp timestamp) {
-    lastFsRequestTime_.store(timestamp, std::memory_order_relaxed);
+  void restoreLastGcRefTime(EdenTimestamp timestamp) {
+    lastGcRefTime_.store(timestamp, std::memory_order_relaxed);
   }
 
   // Forbid copies and moves (we cannot be moved since we contain mutexes)
@@ -623,10 +623,11 @@ class InodeBase {
   }
 
   /**
-   * Updates the last fs request time for this inode. The value is only updated
-   * for this inode, it is not propagated to its parents.
+   * Records that this inode was just referenced, so that inode garbage
+   * collection leaves it alone for another cutoff period. The value is only
+   * updated for this inode, it is not propagated to its parents.
    */
-  void updateLastFsRequestTime();
+  void markGcRef();
 
  private:
   ParentInodeInfo getParentInfo() const;
@@ -768,9 +769,10 @@ class InodeBase {
   folly::Synchronized<LocationInfo> location_;
 
   /**
-   * The last time the kernel made a request involving this inode.
-   * Used by Garbage Collection (GC) to determine if an inode
-   * is unused for the cutoff time and can be collected.
+   * The last time this inode was referenced, as far as inode garbage
+   * collection is concerned: every FUSE and NFS request involving the inode
+   * records one. GC treats an inode whose last reference is older than its
+   * cutoff as unused and collects it.
    *
    * Note1: This field is distinct from atime and is not persisted to disk via
    * InodeTable.
@@ -778,7 +780,7 @@ class InodeBase {
    * Note2: This field get updated for the inode itself and not propagate to its
    * parent.
    */
-  std::atomic<EdenTimestamp> lastFsRequestTime_{getNow()};
+  std::atomic<EdenTimestamp> lastGcRefTime_{getNow()};
 
   template <typename InodeState>
   friend class InodeBaseMetadata;

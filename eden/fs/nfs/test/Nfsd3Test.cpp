@@ -65,8 +65,7 @@ class FakeNfsDispatcher : public NfsDispatcher {
     return st;
   }
 
-  ImmediateFuture<folly::Unit> updateLastFsRequestTime(
-      InodeNumber /*ino*/) override {
+  ImmediateFuture<folly::Unit> markGcRef(InodeNumber /*ino*/) override {
     return folly::unit;
   }
 

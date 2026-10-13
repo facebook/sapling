@@ -82,11 +82,10 @@ ImmediateFuture<InodeNumber> NfsDispatcherImpl::getParent(
       });
 }
 
-ImmediateFuture<folly::Unit> NfsDispatcherImpl::updateLastFsRequestTime(
-    InodeNumber ino) {
+ImmediateFuture<folly::Unit> NfsDispatcherImpl::markGcRef(InodeNumber ino) {
   return inodeMap_->lookupInode(ino)
       .thenValue([](const InodePtr& inode) {
-        inode->updateLastFsRequestTime();
+        inode->markGcRef();
         return folly::unit;
       })
       .thenError([ino](folly::exception_wrapper&& ew) {

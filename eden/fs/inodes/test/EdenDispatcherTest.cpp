@@ -190,16 +190,16 @@ TEST(RawEdenDispatcherTest, lookup_updates_last_used_time) {
           .get(0ms);
   auto ino = InodeNumber{entry.nodeid};
   auto inode = mount.getEdenMount()->getInodeMap()->lookupInode(ino).get(0ms);
-  auto timeAfterLookup = inode->getLastFsRequestTime();
+  auto timeAfterLookup = inode->getLastGcRefTime();
 
   // Advance the clock
   mount.getClock().advance(60s);
 
-  // Another lookup should update lastFsRequestTime
+  // Another lookup should update lastGcRefTime
   mount.getDispatcher()
       ->lookup(0, kRootNodeId, "hello"_pc, ObjectFetchContext::getNullContext())
       .get(0ms);
-  auto timeAfterSecondLookup = inode->getLastFsRequestTime();
+  auto timeAfterSecondLookup = inode->getLastGcRefTime();
   EXPECT_GT(
       timeAfterSecondLookup.toTimespec().tv_sec,
       timeAfterLookup.toTimespec().tv_sec);
@@ -222,12 +222,12 @@ TEST(RawEdenDispatcherTest, getattr_updates_last_used_time) {
   // Advance the clock
   mount.getClock().advance(60s);
 
-  // getattr should update lastFsRequestTime
-  auto timeBefore = inode->getLastFsRequestTime();
+  // getattr should update lastGcRefTime
+  auto timeBefore = inode->getLastGcRefTime();
   mount.getDispatcher()
       ->getattr(ino, ObjectFetchContext::getNullContext())
       .get(0ms);
-  auto timeAfter = inode->getLastFsRequestTime();
+  auto timeAfter = inode->getLastGcRefTime();
   EXPECT_GT(timeAfter.toTimespec().tv_sec, timeBefore.toTimespec().tv_sec);
 }
 
