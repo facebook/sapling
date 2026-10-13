@@ -3404,6 +3404,20 @@ class TestpilotTestRunner:
         return TestpilotTestResult(testpilotjson)
 
 
+KICKSTART_FSEVENTSD = "/usr/local/bin/kickstart-fseventsd"
+
+
+def startfseventsd():
+    """Start fseventsd on macOS hosts that provide KICKSTART_FSEVENTSD.
+
+    Watchman cannot watch anything on macOS without fseventsd. Sandcastle's
+    Mac VM images keep it off and provide the script, which the job user may
+    run with ``sudo -n``; other hosts do not have the script.
+    """
+    if sys.platform == "darwin" and os.access(KICKSTART_FSEVENTSD, os.X_OK):
+        subprocess.call(["sudo", "-n", KICKSTART_FSEVENTSD])
+
+
 class TestRunner:
     """Holds context for executing tests.
 
@@ -3610,6 +3624,7 @@ class TestRunner:
             # pyrefly: ignore [missing-attribute]
             self._watchman = self.options.with_watchman or "watchman"
             os.environ["HGFSMONITOR_TESTS"] = "1"
+            startfseventsd()
         else:
             os.environ["BINDIR"] = self._bindir
             self._watchman = None
