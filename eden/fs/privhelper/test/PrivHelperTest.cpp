@@ -995,6 +995,12 @@ TEST_F(PrivHelperRawProtocolTest, legacyMacFuseConfigRequestsAreNoOps) {
       PrivHelperConn::REQ_SET_USE_EDENFS, useEdenFsResponse);
 }
 
+TEST_F(PrivHelperTest, nfsFstypeOverrideCanBeTurnedOff) {
+  EXPECT_TRUE(server_.nfsFstypeOverrideEnabled());
+  client_->setNfsFstypeOverride(false).get(1s);
+  EXPECT_FALSE(server_.nfsFstypeOverrideEnabled());
+}
+
 #ifdef __linux__
 TEST_F(PrivHelperTest, fuseReadAheadRequiresARegisteredMount) {
   auto dir = makeTempDir();

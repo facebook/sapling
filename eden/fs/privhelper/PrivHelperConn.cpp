@@ -960,6 +960,22 @@ void PrivHelperConn::parseSetFuseReadAheadRequest(
   checkAtEnd(cursor, "set fuse read-ahead request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeSetNfsFstypeOverrideRequest(
+    uint32_t xid,
+    bool enabled) {
+  auto msg = serializeRequestPacket(xid, REQ_SET_NFS_FSTYPE_OVERRIDE);
+  Appender appender(&msg.data, kDefaultBufferSize);
+  serializeBool(appender, enabled);
+  return msg;
+}
+
+void PrivHelperConn::parseSetNfsFstypeOverrideRequest(
+    Cursor& cursor,
+    bool& enabled) {
+  enabled = deserializeBool(cursor);
+  checkAtEnd(cursor, "set nfs fstype override request");
+}
+
 void PrivHelperConn::serializeSanityCheckResult(
     Appender& appender,
     const SanityCheckResult& result) {

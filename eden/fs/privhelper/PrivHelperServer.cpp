@@ -966,7 +966,8 @@ void PrivHelperServer::nfsMount(
    * guards the syscall: a setuid-root privhelper leaves an EXC_GUARD crash
    * report on every mount, and on macOS 27.2 a non-root privhelper gets EPERM.
    */
-  if (needsFstypeOverride(options)) {
+  if (nfsFstypeOverride_.load(std::memory_order_relaxed) &&
+      needsFstypeOverride(options)) {
     rc = fsctl(
         mountPath.c_str(), FSCTL_SET_FSTYPENAME_OVERRIDE, (void*)"edenfs:", 0);
     if (rc != 0) {
@@ -1627,6 +1628,25 @@ UnixSocket::Message PrivHelperServer::processSetFuseReadAhead(
   return makeResponse();
 }
 
+UnixSocket::Message PrivHelperServer::processSetNfsFstypeOverride(
+    folly::io::Cursor& cursor) {
+  bool enabled = true;
+  PrivHelperConn::parseSetNfsFstypeOverrideRequest(cursor, enabled);
+  nfsFstypeOverride_.store(enabled, std::memory_order_relaxed);
+#ifdef __APPLE__
+  XLOGF(
+      INFO,
+      "NFS filesystem type override {}",
+      enabled ? "enabled" : "disabled");
+#else
+  XLOGF(
+      DBG2,
+      "NFS filesystem type override {} (no effect on this platform)",
+      enabled ? "enabled" : "disabled");
+#endif
+  return makeResponse();
+}
+
 void PrivHelperServer::setMemoryPriorityForProcess(pid_t pid, int priority) {
   auto processPriority = ProcessPriority{priority, uid_};
 
@@ -2103,6 +2123,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processSetMemoryPriorityForProcess(cursor);
     case PrivHelperConn::REQ_SET_FUSE_READ_AHEAD:
       return processSetFuseReadAhead(cursor);
+    case PrivHelperConn::REQ_SET_NFS_FSTYPE_OVERRIDE:
+      return processSetNfsFstypeOverride(cursor);
     case PrivHelperConn::REQ_SET_RESTART_ARGS:
       return processSetRestartArgsMsg(cursor);
     case PrivHelperConn::REQ_NOTIFY_CLEAN_SHUTDOWN:

@@ -168,6 +168,11 @@ Future<Unit> FakePrivHelper::setFuseReadAhead(
       runtime_error("FakePrivHelper::setFuseReadAhead() not implemented"));
 }
 
+Future<Unit> FakePrivHelper::setNfsFstypeOverride(bool /* enabled */) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::setNfsFstypeOverride() not implemented"));
+}
+
 int FakePrivHelper::stop() {
   return 0;
 }

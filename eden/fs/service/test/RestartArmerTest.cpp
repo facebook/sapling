@@ -132,6 +132,9 @@ class RecordingPrivHelper final : public PrivHelper {
       override {
     notImplemented();
   }
+  folly::Future<folly::Unit> setNfsFstypeOverride(bool) override {
+    notImplemented();
+  }
   int stop() override {
     return 0;
   }

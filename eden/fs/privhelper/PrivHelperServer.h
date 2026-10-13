@@ -11,6 +11,7 @@
 #include <folly/File.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <atomic>
 #include <functional>
 #include <limits>
 #include <map>
@@ -72,12 +73,12 @@ struct FileAccessMonitorProcess {
 void detachFromParentProcessGroup();
 
 /**
- * Whether an NFS mount with these options needs the macOS f_fstypename
- * override ("edenfs:") applied after mounting.
+ * Whether an NFS mount with these options gets the macOS f_fstypename
+ * override ("edenfs:") applied after mounting, while the override is on.
  *
- * EdenFS NFS mounts are identified by their "edenfs:" mount source (see
- * is_edenfs_nfs_mount()). macOS replaces f_mntfromname for Unix-domain socket
- * transports, so only those mounts need the override.
+ * macOS replaces f_mntfromname for Unix-domain socket transports, so only
+ * those mounts need it. With the override off they are recognized by the
+ * name of the nfsd socket instead, see is_edenfs_nfs_mount().
  */
 bool needsFstypeOverride(const NFSMountOptions& options);
 
@@ -115,6 +116,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * Run the PrivHelperServer main loop.
    */
   void run();
+
+  bool nfsFstypeOverrideEnabled() const {
+    return nfsFstypeOverride_.load(std::memory_order_relaxed);
+  }
 
  private:
   // UnixSocket::ReceiveCallback methods
@@ -313,6 +318,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       UnixSocket::Message& request);
   UnixSocket::Message processStopFam();
   UnixSocket::Message processSetFuseReadAhead(folly::io::Cursor& cursor);
+  UnixSocket::Message processSetNfsFstypeOverride(folly::io::Cursor& cursor);
   virtual AbsolutePath getFamBinaryPath() const;
 
   // Virtual so tests can replace a pathname after its descriptor is checked.
@@ -429,6 +435,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // Written from eofReceived() and read after the loop exits, both on the
   // EventBase thread, so it needs no synchronization.
   bool peerExited_{false};
+
+  // Whether nfsMount() overrides the filesystem type of mounts served over a
+  // Unix domain socket. Atomic only so tests can read it from another thread.
+  std::atomic<bool> nfsFstypeOverride_{true};
 
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state

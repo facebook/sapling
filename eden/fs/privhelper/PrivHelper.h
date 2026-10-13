@@ -307,6 +307,16 @@ class PrivHelper {
       uint32_t readAheadKb) = 0;
 
   /**
+   * Whether NFS mounts served over a Unix domain socket get their filesystem
+   * type overridden to "edenfs:" (macOS only). The privhelper starts with it
+   * on and keeps the last value it was sent, so the daemon sends the current
+   * setting at every start. A privhelper that predates the request rejects
+   * it and keeps the override.
+   */
+  [[nodiscard]] virtual folly::Future<folly::Unit> setNfsFstypeOverride(
+      bool enabled) = 0;
+
+  /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
    * the call has completed.
    *

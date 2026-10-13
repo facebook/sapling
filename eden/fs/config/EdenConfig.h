@@ -1308,6 +1308,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
 
   /**
+   * Whether the privhelper overrides the filesystem type that statfs reports
+   * for an NFS mount served over a Unix domain socket to "edenfs:". The
+   * override is a private fsctl that macOS 27 answers with a crash report on
+   * every call. Mount table consumers now recognize these mounts by the name
+   * of the nfsd socket, so this can be turned off once the Sapling and
+   * watchman builds that know that name are deployed. Read at daemon start.
+   */
+  ConfigSetting<bool> nfsOverrideFstype{"nfs:override-fstype", true, this};
+
+  /**
    * Send and receive buffer size of the nfsd socket when it is a Unix domain
    * socket (nfs:use-uds), 0 to keep the kernel default. Such a socket on
    * macOS defaults to 8 KiB each way, less than one READ reply, so every

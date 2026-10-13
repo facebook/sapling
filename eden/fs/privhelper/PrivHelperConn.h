@@ -61,6 +61,7 @@ class PrivHelperConn {
     REQ_SET_FUSE_READ_AHEAD = 18,
     REQ_SET_RESTART_ARGS = 19,
     REQ_NOTIFY_CLEAN_SHUTDOWN = 20,
+    REQ_SET_NFS_FSTYPE_OVERRIDE = 21,
   };
 
   // This structure should never change. If fields need to be added to the
@@ -233,6 +234,13 @@ class PrivHelperConn {
       std::string& mountPath,
       uint32_t& readAheadKb);
 
+  static UnixSocket::Message serializeSetNfsFstypeOverrideRequest(
+      uint32_t xid,
+      bool enabled);
+  static void parseSetNfsFstypeOverrideRequest(
+      folly::io::Cursor& cursor,
+      bool& enabled);
+
   /**
    * Framing bounds for a REQ_SET_RESTART_ARGS message, so that nothing in it
    * can size an allocation in the root privhelper. They say nothing about
@@ -397,6 +405,9 @@ struct formatter<facebook::eden::PrivHelperConn::MsgType>
         break;
       case facebook::eden::PrivHelperConn::REQ_NOTIFY_CLEAN_SHUTDOWN:
         name = "REQ_NOTIFY_CLEAN_SHUTDOWN";
+        break;
+      case facebook::eden::PrivHelperConn::REQ_SET_NFS_FSTYPE_OVERRIDE:
+        name = "REQ_SET_NFS_FSTYPE_OVERRIDE";
         break;
       default:
         name = "Unknown PrivHelperConn::MsgType";

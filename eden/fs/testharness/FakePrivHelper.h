@@ -97,6 +97,7 @@ class FakePrivHelper final : public PrivHelper {
   folly::Future<folly::Unit> setFuseReadAhead(
       folly::StringPiece mountPath,
       uint32_t readAheadKb) override;
+  folly::Future<folly::Unit> setNfsFstypeOverride(bool enabled) override;
   int stop() override;
   int getRawClientFd() const override {
     return -1;

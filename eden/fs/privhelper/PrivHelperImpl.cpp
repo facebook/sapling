@@ -621,6 +621,7 @@ class PrivHelperClientImpl : public PrivHelper {
   Future<folly::Unit> setFuseReadAhead(
       StringPiece mountPath,
       uint32_t readAheadKb) override;
+  Future<folly::Unit> setNfsFstypeOverride(bool enabled) override;
   Future<Unit> setRestartArgs(const EdenFsRestartArgs& args) override;
   void notifyCleanShutdown(StringPiece reason) noexcept override;
   void setEdenFsEventsLogger(
@@ -945,6 +946,17 @@ Future<Unit> PrivHelperClientImpl::setFuseReadAhead(
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_SET_FUSE_READ_AHEAD, response);
+      });
+}
+
+Future<Unit> PrivHelperClientImpl::setNfsFstypeOverride(bool enabled) {
+  auto xid = getNextXid();
+  auto request =
+      PrivHelperConn::serializeSetNfsFstypeOverrideRequest(xid, enabled);
+  return sendAndRecv(xid, "set_nfs_fstype_override", std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_SET_NFS_FSTYPE_OVERRIDE, response);
       });
 }
 
@@ -1367,6 +1379,11 @@ class StubPrivHelper final : public PrivHelper {
       uint32_t readAheadKb) override {
     (void)mountPath;
     (void)readAheadKb;
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<folly::Unit> setNfsFstypeOverride(bool enabled) override {
+    (void)enabled;
     NOT_IMPLEMENTED();
   }
 

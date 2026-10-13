@@ -1790,6 +1790,34 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   // Start the PrivHelper client, using our main event base to drive its I/O
   serverState_->getPrivHelper()->setEdenFsEventsLogger(edenFsEventsLogger_);
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
+#ifndef _WIN32
+  {
+    // Sent whether it is on or off: a privhelper that outlives this daemon
+    // keeps the last value it was told, so a reverted setting has to reach it.
+    const bool overrideFstype =
+        serverState_->getEdenConfig()->nfsOverrideFstype.getValue();
+    folly::futures::detachOn(
+        mainEventBase_,
+        serverState_->getPrivHelper()
+            ->setNfsFstypeOverride(overrideFstype)
+            .thenError([overrideFstype](folly::exception_wrapper&& ew) {
+              // An older privhelper rejects the request and keeps the
+              // override on, which only matters when it was meant to go off.
+              if (overrideFstype) {
+                XLOGF(
+                    DBG2,
+                    "the privhelper does not support the NFS filesystem type override setting: {}",
+                    ew.what());
+              } else {
+                XLOGF(
+                    WARN,
+                    "the privhelper did not turn the NFS filesystem type override off: {}",
+                    ew.what());
+              }
+            })
+            .semi());
+  }
+#endif
 
   startPeriodicTasks();
 
