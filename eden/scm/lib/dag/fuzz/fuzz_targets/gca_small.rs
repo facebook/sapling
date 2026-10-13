@@ -10,7 +10,6 @@
 use std::sync::LazyLock;
 
 use bindag::TestContext;
-use libfuzzer_sys::fuzz_target;
 
 mod tests;
 
@@ -19,7 +18,7 @@ static CONTEXT: LazyLock<TestContext> = LazyLock::new(|| {
     TestContext::from_bin_sliced(bindag::MOZILLA, start..start + 256)
 });
 
-fuzz_target!(|input: Vec<u8>| {
+tests::fuzz_target_with_context!(|input: Vec<u8>| {
     // plain gca supports 6 revs at maximum.
     let revs = CONTEXT.clamp_revs(&input[..input.len().min(6)]);
     tests::test_gca(&CONTEXT, revs);

@@ -7,6 +7,19 @@
 
 use bindag::GeneralTestContext;
 
+// Builds `CONTEXT` in `LLVMFuzzerInitialize` so its cost is not charged to the first input's timeout.
+macro_rules! fuzz_target_with_context {
+    (|$input:ident: $ty:ty| $body:expr) => {
+        libfuzzer_sys::fuzz_target!(
+            init: {
+                std::sync::LazyLock::force(&CONTEXT);
+            },
+            |$input: $ty| $body
+        );
+    };
+}
+pub(crate) use fuzz_target_with_context;
+
 #[allow(dead_code)]
 pub fn test_gca<T: AsRef<[usize]>>(context: &GeneralTestContext<T>, mut plain_revs: Vec<usize>) {
     plain_revs.sort_unstable();

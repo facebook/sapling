@@ -11,14 +11,13 @@ use std::sync::LazyLock;
 
 use bindag::OctopusTestContext;
 use bindag::octopus;
-use libfuzzer_sys::fuzz_target;
 
 mod tests;
 
 static CONTEXT: LazyLock<OctopusTestContext> =
     LazyLock::new(|| OctopusTestContext::from_parents(octopus::cross_octopus()));
 
-fuzz_target!(|input: Vec<u8>| {
+tests::fuzz_target_with_context!(|input: Vec<u8>| {
     let revs = CONTEXT.clamp_revs(&input[..input.len().min(5)]);
     tests::test_gca(&CONTEXT, revs);
 });

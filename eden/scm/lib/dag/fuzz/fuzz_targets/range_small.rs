@@ -10,7 +10,6 @@
 use std::sync::LazyLock;
 
 use bindag::TestContext;
-use libfuzzer_sys::fuzz_target;
 
 mod tests;
 
@@ -19,7 +18,7 @@ static CONTEXT: LazyLock<TestContext> = LazyLock::new(|| {
     TestContext::from_bin_sliced(bindag::MOZILLA, start..start + 256)
 });
 
-fuzz_target!(|input: (Vec<u8>, Vec<u8>)| {
+tests::fuzz_target_with_context!(|input: (Vec<u8>, Vec<u8>)| {
     let roots = CONTEXT.clamp_revs(&input.0);
     let heads = CONTEXT.clamp_revs(&input.1);
     tests::test_range(&CONTEXT, roots, heads);
