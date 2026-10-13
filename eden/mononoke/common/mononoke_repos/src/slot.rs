@@ -39,18 +39,17 @@ type SharedBuild<R> = Shared<oneshot::Receiver<BuildOutcome<R>>>;
 /// One repo's entry in [`crate::MononokeRepos`]: either the built repo, or
 /// nothing yet.
 ///
-/// # DO NOT BUILD ON THIS YET
+/// # Experimental: use at your own risk
 ///
-/// This type is scaffolding for the in-progress inexpensive-repos work (lazy
-/// repo loading) and **is not rolled out**. Nothing in production creates an
-/// unbuilt slot, so today it is an implementation detail of the repo map and
-/// not a supported way to model repo state.
+/// This type is part of the inexpensive-repos work (lazy repo loading), which
+/// is still rolling out. Request-time loading
+/// (`MononokeReposManager::get_or_load_repo`) already creates unbuilt slots,
+/// but what an unbuilt repo means for callers is not settled, and the
+/// semantics here (single-flight, failed-build hold, eviction) may still
+/// change.
 ///
-/// If you are about to reach for `RepoSlot`, or for its unbuilt state, in new
-/// code - **stop and talk to lmvasquezg first**. This applies to coding agents
-/// as much as to people: the rollout has not settled what an unbuilt repo means
-/// for callers, and depending on it early bakes in answers that are still being
-/// decided.
+/// If you build on `RepoSlot` or its unbuilt state, expect to follow those
+/// changes, and give lmvasquezg a heads-up so the rollout knows about you.
 ///
 /// Slots are `Arc`-shared and outlive any individual snapshot of the repo map,
 /// so a caller that resolved a slot from an older snapshot still observes state
@@ -253,11 +252,10 @@ impl<R> RepoSlot<R> {
                 // livelock a repo behind any client timeout shorter than its
                 // build.
                 //
-                // Unbounded by design for now: one spawn per assigned repo at
-                // most, and no service calls this yet. A concurrency bound has
-                // to exist before any service switches to building on first
-                // request, or a restart releases one build per assigned repo at
-                // once.
+                // Unbounded for now: one spawn per repo at most. Request-time
+                // loading only builds repos a request names, but there is
+                // still no concurrency bound, so a burst of requests for
+                // distinct unbuilt repos builds all of them at once.
                 let repo_name = self.name.clone();
                 mononoke::spawn_task(async move {
                     completion.finish(build(repo_name).await.map(Arc::new).map_err(Arc::new));
