@@ -65,12 +65,9 @@ use tokio::task::JoinHandle;
 use tracing::info;
 use tracing::warn;
 
-fn repos_manager_concurrency() -> Result<usize> {
-    Ok(justknobs::get_as::<usize>(
-        "scm/mononoke:repos_manager_concurrency",
-        None,
-    ))
-}
+/// How many repos are built at once, at startup and per reconcile pass. Repo
+/// construction is CPU-heavy, so this trades startup time against CPU spikes.
+const REPOS_MANAGER_CONCURRENCY: usize = 30;
 
 define_stats! {
     prefix = "mononoke.app";
@@ -486,8 +483,7 @@ impl<Repo> MononokeReposManager<Repo> {
                     anyhow::Ok((repo_id, repo_name, repo))
                 })
             })
-            // Repo construction can be heavy, limit concurrency via JK.
-            .buffer_unordered(repos_manager_concurrency()?)
+            .buffer_unordered(REPOS_MANAGER_CONCURRENCY)
             .map(|r| anyhow::Ok(r??))
             .try_collect::<Vec<_>>()
             .await?;
@@ -805,13 +801,9 @@ where
                 redaction_disabled: self.redaction_disabled,
             };
             let current = self.reconcile_state.load_full();
-            let outcome = config_reconcile::reconcile(
-                &config,
-                &manager,
-                &current,
-                repos_manager_concurrency()?,
-            )
-            .await?;
+            let outcome =
+                config_reconcile::reconcile(&config, &manager, &current, REPOS_MANAGER_CONCURRENCY)
+                    .await?;
 
             if outcome.built + outcome.rebuilt + outcome.dropped > 0 || !outcome.failed.is_empty() {
                 info!(
