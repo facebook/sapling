@@ -36,7 +36,7 @@ pub struct CompiledPaths {
     ops: Vec<Op>,
 
     /// Provide next ContentIds.
-    content_id_map: HashMap<Vec<Option<(HgId, Flag)>>, ContentId>,
+    content_id_map: HashMap<Vec<Option<PathContent>>, ContentId>,
 
     /// Cache to speed up tree lookup.
     lookup_cache: LookupCache,
@@ -51,6 +51,12 @@ pub struct CompiledPaths {
 // This is sound since `ops` in `CompiledPaths` is immutable after being constructed.
 type LookupCache = HashMap<(HgId, usize), Option<(HgId, Flag)>>;
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum PathContent {
+    File { hgid: HgId, file_type: FileType },
+    Directory(HgId),
+}
+
 /// A cheap way of comparing `paths`.
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ContentId(usize);
@@ -59,7 +65,7 @@ pub struct ContentId(usize);
 /// following "Op"s (operations).
 struct State<'a> {
     items: Vec<Option<TreeItem<'a>>>,
-    output: Vec<Option<(HgId, Flag)>>,
+    output: Vec<Option<PathContent>>,
 }
 
 /// An item of a tree. It optionally contains a resolved `TreeEntry`.
@@ -113,7 +119,7 @@ impl<'a> State<'a> {
     }
 
     /// Convert to output.
-    fn into_output(self) -> Vec<Option<(HgId, Flag)>> {
+    fn into_output(self) -> Vec<Option<PathContent>> {
         if let Some(Some(item)) = self.items.first() {
             tracing::trace!("   root tree {} => {:?}", item.id, &self.output);
         }
@@ -132,7 +138,8 @@ impl<'a> State<'a> {
                 for &i in indexes {
                     if let Some(item) = self.items.get(i) {
                         let item: Option<&TreeItem> = item.as_ref();
-                        let output: Option<(HgId, Flag)> = item.map(|f| (f.id, f.flag));
+                        let output =
+                            item.map(|item| PathContent::from_hgid_flag(item.id, item.flag));
                         self.output.push(output);
                     }
                 }
@@ -367,13 +374,24 @@ impl CompiledPaths {
     }
 }
 
-fn normalize_content_key_ignore_file_content(optional_key: &mut Option<(HgId, Flag)>) {
-    if let Some(key) = optional_key.as_mut() {
-        // replaces `HgId` to a fixed value (WDIR_ID) to ignore file content changes
-        key.0 = *HgId::wdir_id();
-        // normalizes executable files as regular files to ignore file type changes
-        if let Flag::File(_) = key.1 {
-            key.1 = Flag::File(FileType::Regular);
+fn normalize_content_key_ignore_file_content(optional_key: &mut Option<PathContent>) {
+    match optional_key {
+        Some(PathContent::File { hgid, file_type }) => {
+            *hgid = *HgId::wdir_id();
+            *file_type = FileType::Regular;
+        }
+        // A directory hgid changes when a file in the directory changes.
+        // Keep only the existence of the directory.
+        Some(PathContent::Directory(hgid)) => *hgid = *HgId::wdir_id(),
+        None => {}
+    }
+}
+
+impl PathContent {
+    fn from_hgid_flag(hgid: HgId, flag: Flag) -> Self {
+        match flag {
+            Flag::File(file_type) => Self::File { hgid, file_type },
+            Flag::Directory => Self::Directory(hgid),
         }
     }
 }
@@ -476,6 +494,32 @@ mod tests {
                 "Output([0])"
             ]
         );
+    }
+
+    #[test]
+    fn test_normalize_content_key_ignore_file_content() {
+        let normalize = |mut key: Option<PathContent>| {
+            normalize_content_key_ignore_file_content(&mut key);
+            key
+        };
+        let hgid = HgId::from_byte_array([1; HgId::len()]);
+        let wdir_id = *HgId::wdir_id();
+
+        assert_eq!(
+            normalize(Some(PathContent::File {
+                hgid,
+                file_type: FileType::Executable,
+            })),
+            Some(PathContent::File {
+                hgid: wdir_id,
+                file_type: FileType::Regular,
+            })
+        );
+        assert_eq!(
+            normalize(Some(PathContent::Directory(hgid))),
+            Some(PathContent::Directory(wdir_id))
+        );
+        assert_eq!(normalize(None), None);
     }
 
     fn p(s: &str) -> RepoPathBuf {
