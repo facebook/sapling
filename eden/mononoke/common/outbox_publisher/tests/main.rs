@@ -106,6 +106,7 @@ async fn publishes_and_acknowledges_the_whole_batch() -> Result<()> {
     assert_eq!(outcome.leased, 3);
     assert_eq!(outcome.published, 3);
     assert_eq!(outcome.failed, 0);
+    assert_eq!(outcome.sink_error, None);
     assert_eq!(sink.published.lock().unwrap().len(), 1);
     assert_eq!(store.acknowledged.lock().unwrap().len(), 3);
     assert!(store.retried.lock().unwrap().is_empty());
@@ -122,6 +123,7 @@ async fn retries_the_whole_batch_when_publish_fails() -> Result<()> {
     assert_eq!(outcome.leased, 3);
     assert_eq!(outcome.published, 0);
     assert_eq!(outcome.failed, 3);
+    assert_eq!(outcome.sink_error.as_deref(), Some("injected failure"));
     assert_eq!(sink.published.lock().unwrap().len(), 1);
     assert!(store.acknowledged.lock().unwrap().is_empty());
     assert_eq!(store.retried.lock().unwrap().len(), 3);

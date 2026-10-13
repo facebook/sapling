@@ -59,6 +59,8 @@ pub struct PublishBatchOutcome {
     pub leased: usize,
     pub published: usize,
     pub failed: usize,
+    /// Delivery failure that caused the batch to be released for retry.
+    pub sink_error: Option<String>,
 }
 
 /// Lease and publish one batch.
@@ -90,7 +92,7 @@ pub async fn publish_batch(
         .map(|event| event.id.clone())
         .collect::<Vec<_>>();
     let publish_result = sink.publish_batch(&events).await;
-    let (published, failed) = match publish_result {
+    let (published, failed, sink_error) = match publish_result {
         Ok(()) => {
             let acknowledged = store
                 .acknowledge(&request.owner, &ids)
@@ -101,19 +103,23 @@ pub async fn publish_batch(
                 "outbox acknowledge was fenced: expected {} rows, changed {acknowledged}",
                 ids.len()
             );
-            (leased, 0)
+            (leased, 0, None)
         }
-        Err(_) => {
+        Err(error) => {
+            let sink_error = format!("{error:#}");
             let released = store
                 .retry_at(&request.owner, &ids, retry_at_ms)
                 .await
-                .context("releasing failed outbox events")?;
+                .with_context(|| {
+                    format!("releasing failed outbox events after sink failure: {sink_error}")
+                })?;
             ensure!(
                 released == ids.len(),
-                "outbox retry was fenced: expected {} rows, changed {released}",
+                "outbox retry was fenced after sink failure ({sink_error}): expected {} rows, \
+                 changed {released}",
                 ids.len()
             );
-            (0, leased)
+            (0, leased, Some(sink_error))
         }
     };
 
@@ -121,5 +127,6 @@ pub async fn publish_batch(
         leased,
         published,
         failed,
+        sink_error,
     })
 }
