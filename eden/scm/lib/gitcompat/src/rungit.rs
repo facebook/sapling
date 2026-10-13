@@ -17,8 +17,8 @@ use std::sync::RwLock;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
-use fs_err as fs;
 use identity::dotgit::follow_dotgit_path;
+use identity::dotgit::resolve_git_common_dir;
 use spawn_ext::CommandExt;
 
 use crate::refs::ReftableRefCache;
@@ -137,14 +137,11 @@ impl GlobalGit {
 impl BareGit {
     fn new(git_dir: PathBuf, parent: GlobalGit) -> Self {
         let git_dir = follow_dotgit_path(git_dir);
-        // A linked worktree records GIT_COMMON_DIR relative to GIT_DIR in this file.
-        let commondir_path = git_dir.join("commondir");
-        let common_dir = match fs::read_to_string(&commondir_path) {
-            Ok(path) => git_dir.join(path.trim_end()),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => git_dir.clone(),
+        let common_dir = match resolve_git_common_dir(&git_dir) {
+            Ok(path) => path,
             Err(err) => {
                 tracing::warn!(
-                    path = %commondir_path.display(),
+                    path = %git_dir.join("commondir").display(),
                     error = %err,
                     "failed to read Git commondir; falling back to git dir"
                 );
