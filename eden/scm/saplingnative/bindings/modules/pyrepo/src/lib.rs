@@ -248,6 +248,19 @@ py_class!(pub class repo |py| {
         self.inner(py).read().dot_hg_path().try_into().map_pyerr(py)
     }
 
+    /// Shared Sapling dot dir, resolved from GIT_COMMON_DIR in dotgit mode.
+    @property
+    def shared_dot_path(&self) -> PyResult<PyPathBuf> {
+        self.inner(py).read().shared_dot_hg_path().try_into().map_pyerr(py)
+    }
+
+    /// Shared repository root. For Git worktrees this remains the worktree root:
+    /// GIT_COMMON_DIR might be a bare repo, not a working copy root.
+    @property
+    def shared_root(&self) -> PyResult<PyPathBuf> {
+        self.inner(py).read().shared_path().try_into().map_pyerr(py)
+    }
+
     def trywlock(&self, wc_dot_hg: PyPathBuf) -> PyResult<repolock> {
         let lock = self.inner(py).read().locker().try_lock_working_copy(wc_dot_hg.to_path_buf()).map_pyerr(py)?;
         if lock.count() > 1 {

@@ -485,11 +485,10 @@ class localrepository:
 
         cachepath = self.localvfs.join("cache")
         self.sharedpath = self.path
-        self.sharedroot = self.root
-        try:
-            sharedpath = self.localvfs.readutf8("sharedpath").rstrip("\n")
-            if "relshared" in self.requirements:
-                sharedpath = self.localvfs.join(sharedpath)
+        self.sharedroot = os.path.realpath(self._rsrepo.shared_root)
+        self.sharedvfs = self.localvfs
+        sharedpath = self._rsrepo.shared_dot_path
+        if sharedpath != self.path:
             sharedvfs = vfsmod.vfs(sharedpath, realpath=True)
             cachepath = sharedvfs.join("cache")
             s = sharedvfs.base
@@ -499,7 +498,6 @@ class localrepository:
                     % (identity.default().dotdir(), s)
                 )
             self.sharedpath = s
-            self.sharedroot = sharedvfs.dirname(s)
             self.sharedvfs = sharedvfs
             # Read the requirements of the shared repo to make sure we
             # support them.
@@ -509,10 +507,6 @@ class localrepository:
                 if inst.errno != errno.ENOENT:
                     raise
             self.sharedvfs.audit = self._getvfsward(self.sharedvfs.audit)
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
-            self.sharedvfs = self.localvfs
 
         self.store = store.store(
             self.requirements,
