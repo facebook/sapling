@@ -393,7 +393,7 @@ async fn unmount_redirections(instance: &EdenFsInstance, path: &Path) -> Result<
 
     for redirection in redirections.values() {
         redirection
-            .remove_existing(instance, &checkout, false, false, "eden rm")
+            .remove_existing(instance, &checkout, false, false, "fixup")
             .await
             .with_context(|| {
                 format!(
