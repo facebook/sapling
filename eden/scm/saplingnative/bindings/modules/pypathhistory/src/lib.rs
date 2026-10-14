@@ -11,6 +11,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use ::pathhistory::PathHistory;
+use ::pathhistory::PathHistoryTreeSource;
+use anyhow::Result;
 use async_runtime::block_on;
 use cpython::*;
 use cpython_ext::PyPathBuf;
@@ -18,6 +20,7 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::ImplInto;
 use dag::Set;
 use dag::Vertex;
+use manifest_tree::TreeResolver;
 use storemodel::ReadRootTreeIds;
 use storemodel::TreeStore;
 use types::RepoPathBuf;
@@ -34,6 +37,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             path: PyPathBuf,
             roottreereader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
             treestore: ImplInto<Arc<dyn TreeStore>>,
+            treeresolver: ImplInto<Result<Arc<dyn TreeResolver>>>,
+            use_tree_manifest: bool,
         )),
     )?;
     Ok(m)
@@ -48,12 +53,14 @@ py_class!(class pathhistory |py| {
         paths: Vec<PyPathBuf>,
         roottreereader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
         treestore: ImplInto<Arc<dyn TreeStore>>,
+        treeresolver: ImplInto<Result<Arc<dyn TreeResolver>>>,
+        use_tree_manifest: bool,
     ) -> PyResult<Self> {
         let set = set.into();
         let paths: Vec<RepoPathBuf> = paths.into_iter().map(|p| p.to_repo_path_buf()).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
         let root_tree_reader = roottreereader.into();
-        let tree_store = treestore.into();
-        let history = py.allow_threads(|| block_on(PathHistory::new_content_tracer(set, paths, root_tree_reader, tree_store))).map_pyerr(py)?;
+        let tree_source = tree_source(py, treestore, treeresolver, use_tree_manifest)?;
+        let history = py.allow_threads(|| block_on(PathHistory::new_content_tracer(set, paths, root_tree_reader, tree_source))).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(Mutex::new(history)))
     }
 
@@ -77,10 +84,12 @@ fn lastcreation(
     path: PyPathBuf,
     roottreereader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
     treestore: ImplInto<Arc<dyn TreeStore>>,
+    treeresolver: ImplInto<Result<Arc<dyn TreeResolver>>>,
+    use_tree_manifest: bool,
 ) -> PyResult<Option<PyBytes>> {
     let set = set.into();
     let root_tree_reader = roottreereader.into();
-    let tree_store = treestore.into();
+    let tree_source = tree_source(py, treestore, treeresolver, use_tree_manifest)?;
     let got = py
         .allow_threads(|| {
             block_on(async {
@@ -88,7 +97,7 @@ fn lastcreation(
                     set,
                     path.to_repo_path_buf()?,
                     root_tree_reader,
-                    tree_store,
+                    tree_source,
                 )
                 .await?;
                 history.next().await
@@ -97,4 +106,19 @@ fn lastcreation(
         .map_pyerr(py)?;
 
     Ok(got.map(|n| PyBytes::new(py, n.as_ref())))
+}
+
+fn tree_source(
+    py: Python,
+    tree_store: ImplInto<Arc<dyn TreeStore>>,
+    tree_resolver: ImplInto<Result<Arc<dyn TreeResolver>>>,
+    use_tree_manifest: bool,
+) -> PyResult<PathHistoryTreeSource> {
+    if use_tree_manifest {
+        Ok(PathHistoryTreeSource::TreeManifest(
+            tree_resolver.into().map_pyerr(py)?,
+        ))
+    } else {
+        Ok(PathHistoryTreeSource::TreeStore(tree_store.into()))
+    }
 }

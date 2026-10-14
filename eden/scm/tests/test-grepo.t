@@ -3,6 +3,7 @@
   $ . $TESTDIR/git.sh
   $ enable smartlog
   $ setconfig grepo.manifestpath=.repo/manifests/static/static.xml
+  $ setconfig experimental.pathhistory-treemanifest=true
 
 Set up small project repos to simulate repos managed by the repo tool.
 project-a is the outer project at vendor/a; project-c is a nested project at
@@ -225,10 +226,7 @@ Mainly used for ISL integration.
   	active=true
 
 copytrace resolves grepo project paths: a project path answers with itself, and
-so does the nested overlapping one, while an unknown path answers null. Source
-and destination are the same commit, so the trace is degenerate; tracing across
-a range needs path history to resolve content through the same resolver, which
-it does not do yet.
+so does the nested overlapping one, while an unknown path answers null.
 
   $ sl debugcopytrace -s . -d . vendor/a
   {"vendor/a": "vendor/a"}
@@ -237,10 +235,40 @@ it does not do yet.
   $ sl debugcopytrace -s . -d . nosuch/path
   {"nosuch/path": null}
 
-(bad: blame doesn't work)
-  $ sl blame vendor/a
-  abort: vendor/a@000000000000: not found in manifest!
-  [255]
+sl log on a project path shows the manifest commits that bumped it. The exact
+vendor/a file identity is independent of its traversable directory cursor:
+
+  $ sl log vendor/a -T '{desc}\n'
+  bump vendor/a
+  add manifest
+
+  $ sl log vendor/a/sub/c -T '{desc}\n'
+  bump vendor/a/sub/c
+  add manifest
+
+A pure directory ancestor tracks structural changes below it:
+
+  $ sl log vendor -T '{desc}\n'
+  bump vendor/a/sub/c
+  bump vendor/a
+  add manifest
+
+A project with no nested project below it only shows its own bumps:
+
+  $ sl log frameworks/b -T '{desc}\n'
+  bump frameworks/b
+  add manifest
+
+A path that is not a project has no history:
+
+  $ sl log vendor/nope -T '{desc}\n'
+
+sl blame on a project path attributes the outer and nested project lines to
+their corresponding manifest commits:
+
+  $ sl blame -n -f vendor/a
+  72057594037927937 vendor/a: Subproject commit * (glob)
+  72057594037927939 vendor/a/sub/c: Subproject commit * (glob)
 
 Helpers for the `goto` tests below. Each test does 4 steps:
 1. `reset_workspace` makes the workspace clean.

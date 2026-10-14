@@ -1618,8 +1618,16 @@ class localrepository:
 
         This can be used for `log` operations.
         """
+        use_tree_manifest = self.ui.configbool(
+            "experimental", "pathhistory-treemanifest"
+        )
         hist = bindings.pathhistory.pathhistory(
-            nodes, paths, self.changelog.inner, self.manifestlog.datastore
+            nodes,
+            paths,
+            self.changelog.inner,
+            self.manifestlog.datastore,
+            self._rsrepo,
+            use_tree_manifest,
         )
         return hist
 
@@ -1629,8 +1637,16 @@ class localrepository:
         path can be either a file or a directory.
         nodes decides the search range (ex. "::." or "_firstancestors(.)")
         """
+        use_tree_manifest = self.ui.configbool(
+            "experimental", "pathhistory-treemanifest"
+        )
         return bindings.pathhistory.lastcreation(
-            nodes, path, self.changelog.inner, self.manifestlog.datastore
+            nodes,
+            path,
+            self.changelog.inner,
+            self.manifestlog.datastore,
+            self._rsrepo,
+            use_tree_manifest,
         )
 
     def publishing(self):

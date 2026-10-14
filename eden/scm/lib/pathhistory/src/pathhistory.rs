@@ -8,7 +8,9 @@
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
+use std::time::Instant;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
 use dag::Id;
@@ -20,6 +22,7 @@ use dag::Vertex;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::ops::IdDagAlgorithm;
+use manifest_tree::TreeResolver;
 use manifest_tree::TreeStore;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
@@ -29,6 +32,22 @@ use crate::pathops::CompiledPaths;
 use crate::pathops::ContentId;
 use crate::utils;
 
+/// Backend used to resolve tree content while evaluating compiled path operations.
+#[derive(Clone)]
+pub enum PathHistoryTreeSource {
+    TreeStore(Arc<dyn TreeStore>),
+    TreeManifest(Arc<dyn TreeResolver>),
+}
+
+impl PathHistoryTreeSource {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::TreeStore(_) => "tree_store",
+            Self::TreeManifest(_) => "tree_manifest",
+        }
+    }
+}
+
 /// State for answering history questions about paths.
 pub struct PathHistory {
     // Input
@@ -36,8 +55,8 @@ pub struct PathHistory {
     /// Resolve commit ids to trees in batch.
     root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
 
-    /// Resolve and prefetch trees in batch.
-    tree_store: Arc<dyn TreeStore>,
+    /// Resolve and prefetch tree content in batch.
+    tree_source: PathHistoryTreeSource,
 
     // Derived from input
     //
@@ -105,9 +124,9 @@ impl PathHistory {
         set: Set,
         paths: Vec<RepoPathBuf>,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
-        tree_store: Arc<dyn TreeStore>,
+        tree_source: PathHistoryTreeSource,
     ) -> Result<Self> {
-        Self::new_internal(set, paths, root_tree_reader, tree_store, false).await
+        Self::new_internal(set, paths, root_tree_reader, tree_source, false).await
     }
 
     /// Prepare context to search existence changes of `paths` in commit `set`.
@@ -118,9 +137,9 @@ impl PathHistory {
         set: Set,
         path: RepoPathBuf,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
-        tree_store: Arc<dyn TreeStore>,
+        tree_source: PathHistoryTreeSource,
     ) -> Result<Self> {
-        Self::new_internal(set, vec![path], root_tree_reader, tree_store, true).await
+        Self::new_internal(set, vec![path], root_tree_reader, tree_source, true).await
     }
 
     /// Internal version of `PathHistory::new` method.
@@ -132,7 +151,7 @@ impl PathHistory {
         set: Set,
         paths: Vec<RepoPathBuf>,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
-        tree_store: Arc<dyn TreeStore>,
+        tree_source: PathHistoryTreeSource,
         ignore_file_content: bool,
     ) -> Result<Self> {
         tracing::debug!("PathHistory::new(set={:.12?}, paths={:?})", &set, &paths);
@@ -165,7 +184,7 @@ impl PathHistory {
             id_map,
             id_set,
             root_tree_reader,
-            tree_store,
+            tree_source,
             roots,
             compiled_paths,
             queue,
@@ -493,8 +512,43 @@ impl PathHistory {
         &mut self,
         root_tree_ids: Vec<HgId>,
     ) -> Result<Vec<ContentId>> {
-        let tree_store = self.tree_store.clone();
-        self.compiled_paths.execute(root_tree_ids, tree_store).await
+        let start = Instant::now();
+        let root_count = root_tree_ids.len();
+        let backend = self.tree_source.name();
+        let result = match &self.tree_source {
+            PathHistoryTreeSource::TreeStore(tree_store) => {
+                self.compiled_paths
+                    .execute(root_tree_ids, tree_store.clone())
+                    .await
+            }
+            PathHistoryTreeSource::TreeManifest(tree_resolver) => {
+                let tree_resolver = tree_resolver.clone();
+                async {
+                    let manifests = async_runtime::spawn_blocking(move || {
+                        tree_resolver.get_by_root_ids(&root_tree_ids)
+                    })
+                    .await
+                    .context("TreeResolver batch task failed")?
+                    .context("failed to resolve root tree IDs into manifests")?;
+                    if manifests.len() != root_count {
+                        bail!(
+                            "TreeResolver returned {} manifests for {root_count} root tree IDs",
+                            manifests.len()
+                        );
+                    }
+                    self.compiled_paths.execute_manifests(manifests).await
+                }
+                .await
+            }
+        };
+        sampling::log_event!(
+            "pathhistory.resolve_trees",
+            backend = backend,
+            root_count = root_count,
+            duration_ms = start.elapsed().as_millis() as u64,
+            success = result.is_ok()
+        );
+        result
     }
 }
 

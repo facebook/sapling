@@ -79,7 +79,7 @@ impl CopyTraceTestCase {
         let mut copies: HashMap<Key, Key> = Default::default();
         let tree_store = Arc::new(TestStore::new().with_format(SerializationFormat::Git));
         let changes = Change::build_changes(changes);
-        let config: BTreeMap<&'static str, &'static str> = Default::default();
+        let config = BTreeMap::from([("experimental.pathhistory-treemanifest", "true")]);
 
         // iterate through the commit graph to build trees in topo order (ascending)
         let set = mem_dag.all().await.unwrap();

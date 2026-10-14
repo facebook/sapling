@@ -22,6 +22,7 @@ use manifest_tree::TreeManifest;
 use manifest_tree::TreeResolver;
 use manifest_tree::TreeStore;
 use pathhistory::PathHistory;
+use pathhistory::PathHistoryTreeSource;
 use pathmatcher::Matcher;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
@@ -45,11 +46,11 @@ pub struct DagCopyTrace {
     /// Resolve commit ids to trees in batch.
     root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
 
-    /// Resolve and prefetch trees in batch.
-    tree_store: Arc<dyn TreeStore>,
-
     /// Turn a commit into a manifest.
     tree_resolver: Arc<dyn TreeResolver>,
+
+    /// Tree backend used by PathHistory, selected once from config.
+    path_history_tree_source: PathHistoryTreeSource,
 
     // Find renames for given commits
     rename_finder: Arc<dyn RenameFinder + Send + Sync>,
@@ -70,10 +71,18 @@ impl DagCopyTrace {
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
     ) -> Result<Self> {
+        let path_history_tree_source = if config
+            .get_opt::<bool>("experimental", "pathhistory-treemanifest")?
+            .unwrap_or(false)
+        {
+            PathHistoryTreeSource::TreeManifest(tree_resolver.clone())
+        } else {
+            PathHistoryTreeSource::TreeStore(tree_store)
+        };
         let dag_copy_trace = Self {
             root_tree_reader,
-            tree_store,
             tree_resolver,
+            path_history_tree_source,
             rename_finder,
             dag,
             config,
@@ -97,7 +106,7 @@ impl DagCopyTrace {
             set,
             path,
             self.root_tree_reader.clone(),
-            self.tree_store.clone(),
+            self.path_history_tree_source.clone(),
         )
         .await?;
         let rename_commit = rename_tracer.next().await?;

@@ -7,9 +7,11 @@ rust_python_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/pathhistory:pathhistory",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",

@@ -26,6 +26,7 @@ use manifest::FileType;
 use manifest::Manifest;
 use manifest::PersistOpts;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use sha1::Digest;
 use sha1::Sha1;
 use storemodel::InsertOpts;
@@ -40,6 +41,12 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::PathHistory;
+use crate::PathHistoryTreeSource;
+
+#[ctor::ctor]
+fn init_tree_parser() {
+    manifest_tree::init();
+}
 
 #[derive(Clone, Default)]
 pub struct TestHistory {
@@ -137,9 +144,34 @@ impl TestHistory {
             .map(|s| RepoPath::from_str(s).unwrap().to_owned())
             .collect();
 
-        PathHistory::new_content_tracer(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
-            .await
-            .unwrap()
+        PathHistory::new_content_tracer(
+            set,
+            paths,
+            Arc::new(self.clone()),
+            PathHistoryTreeSource::TreeManifest(Arc::new(self.clone())),
+        )
+        .await
+        .unwrap()
+    }
+
+    async fn paths_history_with_tree_store(
+        &self,
+        params: impl Into<BuildSetParam>,
+        paths: &[&str],
+    ) -> PathHistory {
+        let set = self.build_set(params.into()).await;
+        let paths = paths
+            .iter()
+            .map(|s| RepoPath::from_str(s).unwrap().to_owned())
+            .collect();
+        PathHistory::new_content_tracer(
+            set,
+            paths,
+            Arc::new(self.clone()),
+            PathHistoryTreeSource::TreeStore(Arc::new(self.clone())),
+        )
+        .await
+        .unwrap()
     }
 
     /// Obtain the access log.
@@ -202,9 +234,14 @@ impl TestHistory {
     pub async fn rename_tracer(&self, params: impl Into<BuildSetParam>, path: &str) -> PathHistory {
         let set = self.build_set(params.into()).await;
         let path = RepoPath::from_str(path).unwrap().to_owned();
-        PathHistory::new_existence_tracer(set, path, Arc::new(self.clone()), Arc::new(self.clone()))
-            .await
-            .unwrap()
+        PathHistory::new_existence_tracer(
+            set,
+            path,
+            Arc::new(self.clone()),
+            PathHistoryTreeSource::TreeManifest(Arc::new(self.clone())),
+        )
+        .await
+        .unwrap()
     }
 }
 
@@ -280,6 +317,24 @@ impl KeyStore for TestHistory {
 impl TreeStore for TestHistory {
     fn clone_tree_store(&self) -> Box<dyn TreeStore> {
         Box::new(self.clone())
+    }
+}
+
+impl TreeResolver for TestHistory {
+    fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
+        self.get_by_root_id(&self.get_root_id(commit_id)?)
+    }
+
+    fn get_root_id(&self, commit_id: &HgId) -> Result<HgId> {
+        Ok(self.commit_to_tree(*commit_id))
+    }
+
+    fn get_by_root_id(&self, root_id: &HgId) -> Result<TreeManifest> {
+        if root_id.is_null() {
+            Ok(TreeManifest::ephemeral(Arc::new(self.clone())))
+        } else {
+            Ok(TreeManifest::durable(Arc::new(self.clone()), *root_id))
+        }
     }
 }
 
@@ -380,6 +435,15 @@ async fn test_log_files() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_tree_store_rollback_backend_matches_tree_manifest() {
+    let t = TestHistory::from_history(&[(0, "a", 1, R), (50, "a", 2, E), (100, "a", 0, R)]);
+
+    let mut manifest = t.paths_history(100, &["a"]).await;
+    let mut tree_store = t.paths_history_with_tree_store(100, &["a"]).await;
+    assert_eq!(manifest.next_n(10).await, tree_store.next_n(10).await);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_dirs() {
     let t = TestHistory::from_history(&[
         (0, "a/b/c/d", 1, R),
@@ -418,22 +482,19 @@ async fn test_log_dirs() {
             "Trees: [10831/a, 6f98e/a, 4429c/h]",
             "Commits: [15, 31, 47, 63, 79, 95, 111, 127, 143, 159, 175, 191, 207, 223, 239]",
             "Trees: [21f04/, 4b825/, 991a1/, e25ad/]",
-            "Trees: [10831/a, 8b8c5/a, 4429c/h]",
+            "Trees: [8b8c5/a, 4429c/h]",
             "Commits: [240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254]",
             "Trees: [991a1/, d8714/]",
-            "Trees: [6f98e/a, 4429c/h]",
+            "Trees: [4429c/h]",
             "Commits: [192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206]",
             "Trees: [4b825/, 991a1/]",
             "Trees: [4429c/h]",
             "Commits: [144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158]",
             "Trees: [4b825/, e25ad/]",
-            "Trees: [8b8c5/a]",
             "Commits: [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]",
             "Trees: [21f04/, e25ad/]",
-            "Trees: [10831/a, 8b8c5/a]",
             "Commits: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]",
-            "Trees: [21f04/]",
-            "Trees: [10831/a]"
+            "Trees: [21f04/]"
         ]
     );
 }

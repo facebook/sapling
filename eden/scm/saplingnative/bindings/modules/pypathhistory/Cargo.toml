@@ -6,10 +6,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.104"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-dag = { version = "0.1.0", path = "../../../../lib/dag" }
+sapling-manifest-tree = { version = "0.1.0", path = "../../../../lib/manifest-tree" }
 sapling-pathhistory = { version = "0.1.0", path = "../../../../lib/pathhistory" }
 sapling-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
