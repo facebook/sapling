@@ -83,6 +83,13 @@ export const diffSummary = atomFamilyWeak((diffId: DiffId | undefined) =>
   }),
 );
 
+// A push merges into the existing map, so most diffs keep their summary object. Handing those the
+// same result object lets jotai stop there, instead of re-rendering every badge and re-asking for
+// every diff's signal count on each push.
+const NO_SUMMARY: Result<DiffSummary | undefined> = {value: undefined};
+const summaryResults = new WeakMap<DiffSummary, Result<DiffSummary | undefined>>();
+const errorResults = new WeakMap<Error, Result<DiffSummary | undefined>>();
+
 /** A diff's last known summary, or the fetch error if there is none to show. */
 function summaryOrFetchError(
   all: DiffSummariesState,
@@ -91,9 +98,26 @@ function summaryOrFetchError(
   const summary = all.value?.get(diffId);
   const error = diffFetchError(all, diffId);
   if (summary == null && error != null) {
-    return {error};
+    return memoizedResult(errorResults, error, () => ({error}));
   }
-  return {value: summary};
+  if (summary == null) {
+    return NO_SUMMARY;
+  }
+  return memoizedResult(summaryResults, summary, () => ({value: summary}));
+}
+
+function memoizedResult<K extends object>(
+  cache: WeakMap<K, Result<DiffSummary | undefined>>,
+  key: K,
+  make: () => Result<DiffSummary | undefined>,
+): Result<DiffSummary | undefined> {
+  const cached = cache.get(key);
+  if (cached != null) {
+    return cached;
+  }
+  const result = make();
+  cache.set(key, result);
+  return result;
 }
 
 /** The error that speaks for one diff: its own if failures are tracked per diff, else the fetch's. */
