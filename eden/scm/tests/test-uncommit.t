@@ -435,3 +435,32 @@ and we have a pending removal of the copied file.
   $ sl st
   $ find .
   ./foo
+
+Partial uncommit replaces the commit: check the mutation it records, that the
+bookmark moves, and that undo restores the original commit
+  $ newrepo
+  $ enable undo
+  $ echo a > a
+  $ echo b > b
+  $ sl commit -Aqm 'add a and b'
+  $ sl bookmark book
+  $ OLD=$(sl log -r . -T '{node}')
+  $ sl bookmark
+   * book                      214d02328b23
+  $ sl uncommit b
+  $ sl status
+  A b
+  $ sl bookmark
+   * book                      0fe586ac1b64
+  $ sl log -r 'predecessors(.)' -T '{desc} {files}\n'
+  add a and b a
+  $ sl log -r "successors($OLD)" -T '{desc} {files}\n'
+  $ sl log --hidden -r $OLD -T '{desc}: obsolete={obsolete} op={mutations % "{operation}"}\n'
+  add a and b: obsolete= op=
+  $ sl revert -q --all
+  $ sl undo -q
+  $ sl log -r . -T '{node|short} {files} obsolete={obsolete}\n'
+  214d02328b23 a b obsolete=
+  $ sl status
+  $ sl bookmark
+   * book                      214d02328b23
