@@ -1012,6 +1012,9 @@ function enable_scmquery_scs_direct {
     "scm/scmquery:client_library_blame_v2_direct": true,
     "scm/scmquery:client_library_get_branches_direct": true,
     "scm/scmquery:client_library_get_metadata_diff_direct": true
+  },
+  "ints": {
+    "scm/scmquery:changed_file_groups_limit": 1000
   }
 }
 EOF

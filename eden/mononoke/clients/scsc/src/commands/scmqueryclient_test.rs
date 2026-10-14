@@ -18,6 +18,7 @@
 //! test that invokes `scsc scmqueryclient-test <method>` against a tiny
 //! Mononoke fixture repo.
 
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::sync::Arc;
 
@@ -55,6 +56,9 @@ enum Method {
     GetGeneration(GetGenerationArgs),
     /// merge_base: find the most recent common ancestor of two commits.
     MergeBase(MergeBaseArgs),
+    /// get_commit_v2: fetch full ScmCommit metadata, with optional changed
+    /// files/dirs, copy/rename detection, and subtree changes.
+    GetCommitV2(GetCommitV2Args),
 }
 
 #[derive(Args)]
@@ -103,6 +107,24 @@ struct MergeBaseArgs {
     rev2: String,
 }
 
+#[derive(Args)]
+struct GetCommitV2Args {
+    #[arg(long)]
+    repo: String,
+    #[arg(long, default_value = "hg")]
+    scm_type: String,
+    #[arg(long)]
+    rev: String,
+    #[arg(long)]
+    fetch_changed_files: bool,
+    #[arg(long)]
+    fetch_changed_dirs: bool,
+    #[arg(long)]
+    detect_copies_renames: bool,
+    #[arg(long)]
+    fetch_subtree_changes: bool,
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let wrapper = build_wrapper(&app, &args.client_id).await?;
     match args.method {
@@ -148,6 +170,64 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             };
             let result = wrapper.merge_base(&params).await?;
             println!("{}", result.hash);
+        }
+        Some(Method::GetCommitV2(a)) => {
+            let optional_fields: BTreeSet<_> = [
+                (
+                    a.fetch_changed_files,
+                    scmquery_types::ScmCommitProp::FETCH_CHANGED_FILES,
+                ),
+                (
+                    a.fetch_changed_dirs,
+                    scmquery_types::ScmCommitProp::FETCH_CHANGED_DIRS,
+                ),
+                (
+                    a.detect_copies_renames,
+                    scmquery_types::ScmCommitProp::DETECT_COPIES_RENAMES,
+                ),
+                (
+                    a.fetch_subtree_changes,
+                    scmquery_types::ScmCommitProp::FETCH_SUBTREE_CHANGES,
+                ),
+            ]
+            .into_iter()
+            .filter_map(|(enabled, prop)| enabled.then_some(prop))
+            .collect();
+            let params = scmquery_types::ScmGetCommitParams {
+                repo: a.repo,
+                scm_type: a.scm_type,
+                rev: a.rev,
+                optional_fields,
+                ..Default::default()
+            };
+            let c = wrapper.get_commit_v2(&params).await?;
+            // Stable, line-oriented output that .t tests can match against.
+            println!("hash={}", c.hash);
+            println!("author={}", c.author);
+            println!("repotype={}", c.repotype);
+            println!("parents={}", c.parents.len());
+            println!("phabdiff={}", c.phabdiff);
+            if let Some(changed_files) = &c.changed_files {
+                println!("changed_files={}", changed_files.len());
+                for f in changed_files {
+                    println!(
+                        "  file {:?} {:?} moved_from={:?} copied_from={:?}",
+                        f.file_path, f.r#type, f.moved_from, f.copied_from
+                    );
+                }
+            }
+            if let Some(changed_dirs) = &c.changed_dirs {
+                println!("changed_dirs={}", changed_dirs.len());
+                for d in changed_dirs {
+                    println!(
+                        "  dir {:?} {:?} moved_from={:?} copied_from={:?}",
+                        d.dir_path, d.r#type, d.moved_from, d.copied_from
+                    );
+                }
+            }
+            if let Some(subtree_changes) = &c.subtree_changes {
+                println!("subtree_changes={}", subtree_changes.len());
+            }
         }
         None => bail!(
             "no method specified; pass one of the per-method subcommands. \
