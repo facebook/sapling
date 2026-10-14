@@ -281,6 +281,7 @@ fn plan_mrl_submit(
             // The git protocol cannot express a server-side member rebase.
             disable_rebase_on_cas_failure: true,
             caller_request_id: Some(caller_request_id),
+            retry_budget_ms: None,
         }
     });
     Ok(MrlPlan {
