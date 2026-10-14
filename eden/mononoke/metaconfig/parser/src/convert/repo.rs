@@ -1205,6 +1205,9 @@ impl Convert for RawShardedService {
             RawShardedService::DERIVATION_PIPELINE_TAILER => {
                 ShardedService::DerivationPipelineTailer
             }
+            RawShardedService::DERIVATION_PIPELINE_WORKER => {
+                ShardedService::DerivationPipelineWorker
+            }
             v => return Err(anyhow!("Invalid value {v} for enum ShardedService")),
         };
         Ok(service)
