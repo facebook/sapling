@@ -90,6 +90,7 @@ pub enum Json5Mode {
 pub struct Json5WriterOptions {
     mode: Json5Mode,
     indent_width: usize,
+    binary_as_base64_string: bool,
 }
 
 impl Default for Json5WriterOptions {
@@ -97,6 +98,7 @@ impl Default for Json5WriterOptions {
         Self {
             mode: Json5Mode::BasicJson,
             indent_width: 0,
+            binary_as_base64_string: false,
         }
     }
 }
@@ -106,6 +108,7 @@ impl Json5WriterOptions {
         Self {
             mode: Json5Mode::BasicJson,
             indent_width: 0,
+            binary_as_base64_string: false,
         }
     }
 
@@ -113,6 +116,7 @@ impl Json5WriterOptions {
         Self {
             mode: Json5Mode::Json5,
             indent_width: 0,
+            binary_as_base64_string: false,
         }
     }
 
@@ -123,6 +127,12 @@ impl Json5WriterOptions {
         );
         self.indent_width = indent_width;
         Ok(self)
+    }
+
+    /// Encode binary values as standard unpadded base64 strings instead of tagged objects.
+    pub const fn with_binary_as_base64_string(mut self, enabled: bool) -> Self {
+        self.binary_as_base64_string = enabled;
+        self
     }
 }
 
@@ -638,6 +648,14 @@ fn write_value(
                 .as_bytes(),
         ),
         Value::String(value) => write_string(output, value, options, object_name),
+        Value::Binary(value) if options.binary_as_base64_string => {
+            write_string(
+                output,
+                &STANDARD_NO_PAD_INDIFFERENT.encode(value),
+                options,
+                object_name,
+            );
+        }
         Value::Binary(value) => {
             let (encoding, encoded) = match printable_utf8(value) {
                 Some(text) => ("utf-8", text.to_owned()),

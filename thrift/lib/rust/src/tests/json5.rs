@@ -126,6 +126,43 @@ fn serializes_binary_using_utf8_or_base64url_wrapper() {
 }
 
 #[test]
+fn serializes_binary_as_base64_strings_when_enabled() {
+    for options in [
+        Json5WriterOptions::default(),
+        Json5WriterOptions::basic_json(),
+        Json5WriterOptions::json5(),
+    ] {
+        for (input, expected) in [
+            (&b""[..], r#""""#),
+            (&b"hello"[..], r#""aGVsbG8""#),
+            (&b"hello\0"[..], r#""aGVsbG8A""#),
+            (&[0xff][..], r#""/w""#),
+            (&[0xfb, 0xff][..], r#""+/8""#),
+        ] {
+            let value = Bytes::copy_from_slice(input);
+            let encoded = json5_protocol::serialize_with_options(
+                value.clone(),
+                options.with_binary_as_base64_string(true),
+            );
+            assert_eq!(encoded, expected);
+            let decoded: Bytes =
+                json5_protocol::deserialize(&encoded).expect("base64 output must round-trip");
+            assert_eq!(decoded, value);
+            assert_eq!(
+                json5_protocol::serialize_with_options(
+                    value.clone(),
+                    options
+                        .with_binary_as_base64_string(true)
+                        .with_binary_as_base64_string(false),
+                ),
+                json5_protocol::serialize_with_options(value, options),
+                "disabling the option restores tagged binary output"
+            );
+        }
+    }
+}
+
+#[test]
 fn preserves_float_precision_and_negative_zero() {
     let values = vec![0.100_000_01_f32, -0.0];
 
