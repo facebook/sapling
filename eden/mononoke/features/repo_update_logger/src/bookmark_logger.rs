@@ -26,14 +26,15 @@ use logger_ext::Loggable;
 use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::RepoConfigRef;
 #[cfg(fbcode_build)]
-use mononoke_bookmark_rust_logger::MononokeBookmarkLogger;
-#[cfg(fbcode_build)]
 use mononoke_git_content_refs_rust_logger::MononokeGitContentRefsLogger;
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
 use serde_derive::Serialize;
 #[cfg(fbcode_build)]
 use whence_logged::WhenceScribeLogged;
+
+#[cfg(fbcode_build)]
+mod facebook;
 
 #[derive(Serialize)]
 pub enum BookmarkOperation {
@@ -259,42 +260,9 @@ impl PlainBookmarkInfo {
     }
 }
 
+#[cfg(not(fbcode_build))]
 #[async_trait]
-impl Loggable for PlainBookmarkInfo {
-    #[cfg(fbcode_build)]
-    async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
-        // Without override, WhenceScribeLogged is set to default which will cause
-        // data being logged to "/sandbox" category if service is run from devserver.
-        // But currently we use Logger only if we're in prod (as config implies), so
-        // we should log to prod too, even from devserver.
-        // For example, we can land a commit to prod from devserver, and logging for
-        // this commit should go to prod, not to sandbox.
-        MononokeBookmarkLogger::override_whence_scribe_logged(ctx.fb, WhenceScribeLogged::PROD);
-        let mut logger = MononokeBookmarkLogger::new(ctx.fb);
-        logger
-            .set_repo_name(self.repo_name.clone())
-            .set_bookmark_name(self.bookmark_name.clone())
-            .set_bookmark_kind(self.bookmark_kind.clone());
-        if let Some(v) = &self.old_bookmark_value {
-            logger.set_old_bookmark_value(v.clone());
-        }
-        if let Some(v) = &self.new_bookmark_value {
-            logger.set_new_bookmark_value(v.clone());
-        }
-        logger
-            .set_operation(self.operation.clone())
-            .set_update_reason(self.update_reason.clone());
-
-        if let Some(cri) = ctx.client_request_info() {
-            logger.set_client_correlator(cri.correlator.clone());
-            logger.set_client_entry_point(cri.entry_point.to_string());
-        }
-        logger.attach_raw_scribe_write_cat()?;
-        logger.log_async()?;
-
-        Ok(())
-    }
-}
+impl Loggable for PlainBookmarkInfo {}
 
 pub async fn log_bookmark_operation(
     ctx: &CoreContext,

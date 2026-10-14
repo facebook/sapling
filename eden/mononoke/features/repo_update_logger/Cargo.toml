@@ -23,11 +23,14 @@ context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context"
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 gix-hash = { version = "0.25.1", features = ["sha1"] }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 logger_ext = { version = "0.1.0", path = "../../common/logger_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
@@ -44,7 +47,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 maplit = "1.0"
-mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
+tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
