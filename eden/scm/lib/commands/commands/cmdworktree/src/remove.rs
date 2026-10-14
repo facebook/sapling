@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(feature = "fb")]
+mod direct;
+
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::io::BufRead;
@@ -13,7 +16,10 @@ use std::path::PathBuf;
 
 use anyhow::Error;
 use clidispatch::ReqCtx;
+#[cfg(not(feature = "fb"))]
+use clidispatch::TermLogger;
 use clidispatch::abort;
+use cmdutil::ConfigExt;
 use cmdutil::Result;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
@@ -23,6 +29,8 @@ use worktree::lock_worktree_path_op;
 use worktree::with_registry_lock;
 use worktree::with_worktree_path_op_lock;
 
+#[cfg(feature = "fb")]
+use self::direct::run_direct_eden_remove;
 use crate::CurrentGroup;
 use crate::WorktreeOpts;
 use crate::require_group;
@@ -125,7 +133,7 @@ fn remove_and_update_registry(
                 logger.info(format!("removed {}", target.display()));
             }
             Err(err) if multi_target => {
-                logger.warn(format!("failed to remove {}: {}", target.display(), err));
+                logger.warn(format!("failed to remove {}: {:#}", target.display(), err));
                 if remove_error.is_none() {
                     remove_error = Some(err);
                 }
@@ -229,7 +237,7 @@ fn run_remove_all(
         match run_eden_remove(ctx, repo, path) {
             Ok(()) => {}
             Err(err) => {
-                logger.warn(format!("failed to remove {}: {}", path.display(), err));
+                logger.warn(format!("failed to remove {}: {:#}", path.display(), err));
                 if remove_error.is_none() {
                     remove_error = Some(err);
                 }
@@ -266,7 +274,20 @@ fn run_eden_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, path: &Path) -> Resu
         ));
         return Ok(());
     }
-    edenfs_client::run_eden_remove(repo.config().as_ref(), path)
+
+    if repo
+        .config()
+        .get_or("worktree", "direct-eden-removal", || cfg!(feature = "fb"))?
+    {
+        run_direct_eden_remove(&ctx.logger(), repo, path)
+    } else {
+        edenfs_client::run_eden_remove(repo.config().as_ref(), path)
+    }
+}
+
+#[cfg(not(feature = "fb"))]
+fn run_direct_eden_remove(_logger: &TermLogger, _repo: &Repo, _path: &Path) -> Result<()> {
+    abort!("worktree.direct-eden-removal is not supported in this build");
 }
 
 fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {

@@ -29,6 +29,8 @@ test full lifecycle
   * main    $TESTTMP/e2e_repo
 
   $ sl worktree remove $TESTTMP/e2e_linked1 -y
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
   removed $TESTTMP/e2e_linked1
 
   $ sl worktree list
@@ -43,6 +45,8 @@ test full lifecycle
   * main    $TESTTMP/e2e_repo
 
   $ sl worktree remove --all -y
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
   removed $TESTTMP/e2e_linked2
 
   $ sl worktree list
@@ -113,4 +117,6 @@ sl worktree add to the same path should succeed after the registry is cleaned
   created linked worktree at $TESTTMP/orphan_wt
 
   $ sl worktree remove $TESTTMP/orphan_wt -y
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
   removed $TESTTMP/orphan_wt

@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("//eden/scm:targets.bzl", "sl_rust_library")
 
 oncall("sapling")
@@ -7,6 +8,21 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "edenfs-core": {"optional": True},
+                    "edenfs-remove": {"optional": True},
+                    "sapling-async-runtime": {"optional": True},
+                },
+            },
+            "features": {
+                "default": [],
+                "fb": [
+                    "edenfs-core",
+                    "edenfs-remove",
+                    "sapling-async-runtime",
+                ],
+            },
             "lib": {"name": "cmdworktree"},
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -18,6 +34,7 @@ sl_rust_library(
         },
     },
     crate_root = "src/lib.rs",
+    features = ["fb"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
@@ -43,5 +60,14 @@ sl_rust_library(
         "//eden/scm/lib/vfs:vfs",
         "//eden/scm/lib/workingcopy:workingcopy",
         "//eden/scm/lib/worktree:worktree",
-    ],
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/fs/cli_rs/edenfs-core:edenfs-core",
+            "//eden/fs/cli_rs/edenfs-remove:edenfs-remove",
+            "//eden/scm/lib/async-runtime:async-runtime",
+        ]
+    ),
 )

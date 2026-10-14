@@ -135,6 +135,7 @@ pub fn doc() -> &'static str {
       worktree.path-generator=CMD              Shell command to generate PATH when omitted
       worktree.snapshot-direct-copy=true       Use direct copy for --snapshot
       worktree.git-enabled=true                Enable worktree listing in native Git repositories
+      worktree.direct-eden-removal=false       Remove EdenFS checkouts via edenfsctl instead of in-process (default: true)
 
     Git repositories currently support the `list` subcommand. Other subcommands
     require an EdenFS-backed repository."#
