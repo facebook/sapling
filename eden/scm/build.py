@@ -283,7 +283,7 @@ def rust_paths(args):
         }
 
     if FBSOURCE is not None:
-        toolchain = FBSOURCE / "xplat/rust/toolchain/current/basic/bin"
+        toolchain = FBSOURCE / "third-party/rust-toolchain/rustup/current/basic/bin"
         toolchain = toolchain.resolve()
         cargo = toolchain / f"cargo{suffix}"
         if cargo.exists():
