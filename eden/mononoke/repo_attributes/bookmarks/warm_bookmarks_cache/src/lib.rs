@@ -1225,6 +1225,25 @@ pub async fn find_latest_derived_and_underived(
     book: &BookmarkKey,
     warmers: &[Warmer],
 ) -> Result<LatestBookmarkEntries, Error> {
+    find_latest_derived_and_underived_with_freshness(
+        ctx,
+        bookmarks,
+        bookmark_update_log,
+        book,
+        warmers,
+        Freshness::MaybeStale,
+    )
+    .await
+}
+
+async fn find_latest_derived_and_underived_with_freshness(
+    ctx: &CoreContext,
+    bookmarks: &dyn Bookmarks,
+    bookmark_update_log: &dyn BookmarkUpdateLog,
+    book: &BookmarkKey,
+    warmers: &[Warmer],
+    freshness: Freshness,
+) -> Result<LatestBookmarkEntries, Error> {
     let mut latest_underived = LatestUnderivedBookmarkEntry::default();
     let mut latest_log_id = None;
     let mut derived_entries = EnumMap::<WarmerTag, Option<LatestDerivedBookmarkEntry>>::default();
@@ -1245,7 +1264,7 @@ pub async fn find_latest_derived_and_underived(
                 book.clone(),
                 limit,
                 Some(prev_limit),
-                Freshness::MaybeStale,
+                freshness,
             )
             .map_ok(|(id, maybe_cs_id, _, ts)| {
                 let id = id.into();
