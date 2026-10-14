@@ -40,6 +40,7 @@ const X_FB_PRODUCT_LOG_HEADER: &str = "x-fb-product-log";
 const X_FB_X2PAGENT_REQUEST_ID_HEADER: &str = "x-fb-x2pagent-request-id";
 const X_FB_PRODUCT_LOG_INFO_HEADER: &str = "x-fb-product-log-info";
 const X_FB_GIT_WRAPPER: &str = "x-fb-git-wrapper";
+const X_FB_GREPO_WRAPPER: &str = "x-fb-grepo-wrapper";
 const X_FB_NETWORK_TYPE: &str = "x-fb-validated-x2pauth-advice-subject-network-type";
 
 /// Common HTTP-related Scuba columns that the middleware will set automatically.
@@ -116,6 +117,8 @@ pub enum HttpScubaKey {
     XFBX2PAgentRequestId,
     /// Indicates whether the client was using the Meta's git wrapper or not.
     XFBGitWrapper,
+    /// Indicates whether the client was using the Meta's grepo wrapper or not.
+    XFBGrepoWrapper,
     /// Which kind of network type user came from. E.g. corp or vpnless.
     XFBNetworkType,
     /// Whether identities contain AGENT taint
@@ -171,6 +174,7 @@ impl AsRef<str> for HttpScubaKey {
             XFBProductLogInfo => "x_fb_product_log_info",
             XFBX2PAgentRequestId => "x_fb_x2pagent_request_id",
             XFBGitWrapper => "git_wrapper",
+            XFBGrepoWrapper => "grepo_wrapper",
             XFBNetworkType => "fb_network_type",
             LikelyAgentic => "likely_agentic",
             UnixUsername => "unix_username",
@@ -328,6 +332,13 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             headers,
             HttpScubaKey::XFBGitWrapper,
             X_FB_GIT_WRAPPER,
+            |header| header.to_string(),
+        );
+        add_header(
+            scuba,
+            headers,
+            HttpScubaKey::XFBGrepoWrapper,
+            X_FB_GREPO_WRAPPER,
             |header| header.to_string(),
         );
         add_header(
