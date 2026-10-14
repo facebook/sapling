@@ -3076,8 +3076,9 @@ class memctx(committablectx):
         man = pctx.manifest().copy()
 
         for f in self._status.modified:
+            fctx = self[f]
             if git.isgitformat(self._repo):
-                man[f] = git.hashobj(b"blob", self[f].data())
+                filenode = git.hashobj(b"blob", fctx.data())
             else:
                 p1node = nullid
                 p2node = nullid
@@ -3086,13 +3087,16 @@ class memctx(committablectx):
                     p1node = p[0].filenode()
                     if len(p) > 1:
                         p2node = p[1].filenode()
-                man[f] = revlog.hash(self[f].data(), p1node, p2node)
+                filenode = revlog.hash(fctx.data(), p1node, p2node)
+            man.set(f, filenode, fctx.flags())
 
         for f in self._status.added:
+            fctx = self[f]
             if git.isgitformat(self._repo):
-                man[f] = git.hashobj(b"blob", self[f].data())
+                filenode = git.hashobj(b"blob", fctx.data())
             else:
-                man[f] = revlog.hash(self[f].data(), nullid, nullid)
+                filenode = revlog.hash(fctx.data(), nullid, nullid)
+            man.set(f, filenode, fctx.flags())
 
         for f in self._status.removed:
             if f in man:
