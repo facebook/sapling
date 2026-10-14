@@ -14,7 +14,7 @@ use bindag::TestContext;
 mod tests;
 
 static CONTEXT: LazyLock<TestContext> =
-    LazyLock::new(|| TestContext::from_bin(bindag::MOZILLA).truncate(u16::max_value() as usize));
+    LazyLock::new(|| TestContext::from_bin(bindag::MOZILLA).truncate(u16::MAX as usize));
 
 tests::fuzz_target_with_context!(|input: Vec<u16>| {
     // gca with > 3 revs is less interesting to this test.
