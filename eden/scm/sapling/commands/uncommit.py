@@ -224,7 +224,8 @@ def fixdirstate(repo, oldctx, newctx, status) -> None:
     copies = dict((dst, oldcopies.get(src, src)) for dst, src in oldcopies.items())
     # Adjust the dirstate copies
     for dst, src in copies.items():
-        if dst not in newctx:
+        if ds[dst] == "?":
+            # A copy whose pending removal untracked it above.
             continue
         if src not in newctx or dst in newctx or ds[dst] != "a":
             src = None

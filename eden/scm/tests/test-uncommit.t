@@ -436,6 +436,31 @@ and we have a pending removal of the copied file.
   $ find .
   ./foo
 
+Copies and renames made by the commit stay recorded as pending copies, whether
+the whole commit or only those files are uncommitted
+  $ newrepo
+  $ echo m > moveme
+  $ echo c > c
+  $ sl commit -Aqm base
+  $ sl mv -q moveme moved
+  $ sl cp -q c c2
+  $ sl commit -qm work
+  $ sl uncommit
+  $ sl status -C
+  A c2
+    c
+  A moved
+    moveme
+  R moveme
+  $ sl commit -qm work
+  $ sl uncommit moved moveme c2
+  $ sl status -C
+  A c2
+    c
+  A moved
+    moveme
+  R moveme
+
 Partial uncommit replaces the commit: check the mutation it records, that the
 bookmark moves, and that undo restores the original commit
   $ newrepo
