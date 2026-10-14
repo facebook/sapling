@@ -295,6 +295,7 @@ struct ManagedBackingCleanupPlan {
     failures: Vec<String>,
 }
 
+#[tracing::instrument(level = "debug", skip_all, fields(path = %path.display()))]
 async fn plan_managed_backing_cleanup(
     instance: &EdenFsInstance,
     path: &Path,
@@ -404,6 +405,7 @@ async fn unmount_redirections(instance: &EdenFsInstance, path: &Path) -> Result<
     Ok(())
 }
 
+#[tracing::instrument(level = "debug", skip_all, fields(path = %path.display()))]
 async fn unmount_redirections_with_timeout<UnmountFuture, WarningHandler>(
     path: &Path,
     timeout: Duration,
@@ -413,6 +415,7 @@ async fn unmount_redirections_with_timeout<UnmountFuture, WarningHandler>(
     UnmountFuture: Future<Output = Result<()>>,
     WarningHandler: FnMut(RemoveCheckoutWarning),
 {
+    let start = Instant::now();
     match tokio::time::timeout(timeout, unmount).await {
         Ok(Ok(())) => {}
         Ok(Err(error)) => warning_handler(RemoveCheckoutWarning::RedirectionUnmountFailed {
@@ -424,6 +427,7 @@ async fn unmount_redirections_with_timeout<UnmountFuture, WarningHandler>(
             timeout,
         }),
     }
+    debug!(path = %path.display(), elapsed = ?start.elapsed(), "Finished unmounting redirections");
 }
 
 async fn remove_active_checkout(
@@ -434,9 +438,11 @@ async fn remove_active_checkout(
     event_handler: &mut impl FnMut(RemoveCheckoutEvent),
 ) -> Result<()> {
     event_handler(RemoveCheckoutEvent::UnmountingCheckout);
+    let start = Instant::now();
     edenfs_core::unmount::unmount_for_removal(instance, path, options.no_force)
         .await
         .with_context(|| format!("failed to unmount mount point at {}", path.display()))?;
+    debug!(path = %path.display(), elapsed = ?start.elapsed(), "Unmounted checkout");
     remove_inactive_checkout(instance, path, client_name, options, event_handler).await
 }
 
@@ -460,11 +466,14 @@ async fn clean_up_managed_backing<EventHandler>(
 ) where
     EventHandler: FnMut(RemoveCheckoutEvent),
 {
+    let start = Instant::now();
+    let plan = plan_managed_backing_cleanup(instance, path, timeout).await;
+    debug!(path = %path.display(), elapsed = ?start.elapsed(), "Finished planning redirection backing cleanup");
     let ManagedBackingCleanupPlan {
         checkout,
         redirections,
         failures,
-    } = match plan_managed_backing_cleanup(instance, path, timeout).await {
+    } = match plan {
         Ok(plan) => plan,
         Err(error) => {
             event_handler(RemoveCheckoutEvent::Warning(
@@ -492,6 +501,7 @@ async fn clean_up_managed_backing<EventHandler>(
     if !redirections.is_empty() {
         event_handler(RemoveCheckoutEvent::UnmountingRedirections);
     }
+    let start = Instant::now();
 
     #[cfg(target_os = "linux")]
     let scopes = unmount_managed_redirections(
@@ -549,6 +559,7 @@ async fn clean_up_managed_backing<EventHandler>(
     )
     .await;
 
+    debug!(path = %path.display(), elapsed = ?start.elapsed(), "Finished unmounting redirections");
     let deletions = redirections
         .into_iter()
         .zip(scopes)
@@ -570,6 +581,7 @@ async fn clean_up_managed_backing<EventHandler>(
 }
 
 #[cfg(target_os = "linux")]
+#[tracing::instrument(level = "debug", skip_all, fields(path = %path.display()))]
 async fn unmount_managed_redirections(
     instance: &EdenFsInstance,
     path: &Path,
@@ -775,7 +787,9 @@ where
             path: action_target.clone(),
         });
         let execute = execute.clone();
-        let result = tokio::task::spawn_blocking(move || execute(action))
+        let span =
+            tracing::debug_span!("delete_redirection_backing", path = %action_target.display());
+        let result = tokio::task::spawn_blocking(move || span.in_scope(|| execute(action)))
             .await
             .context("backing cleanup worker failed")
             .and_then(|result| result)
@@ -820,6 +834,7 @@ async fn remove_inactive_checkout(
     validate_removal_completion(instance, path, options.preserve_mount_point).await
 }
 
+#[tracing::instrument(level = "debug", skip_all, fields(path = %path.display()))]
 fn remove_client_config_dir(
     instance: &EdenFsInstance,
     path: &Path,
@@ -837,6 +852,7 @@ fn remove_client_config_dir(
 }
 
 /// Remove a directory using the same permission and retry handling as checkout removal.
+#[tracing::instrument(level = "debug", skip_all, fields(path = %path.display()))]
 pub fn clean_mount_point(path: &Path) -> Result<()> {
     #[cfg(unix)]
     std::fs::set_permissions(path, Permissions::from_mode(0o755))
