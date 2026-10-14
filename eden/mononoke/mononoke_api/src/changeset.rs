@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Display;
 use std::future::Future;
+use std::iter;
 use std::ops::Bound;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
@@ -1618,7 +1619,6 @@ where
         let first_parent_is_other = parents.first() == Some(&other.id);
         if comparing_against_parent && include_copies_renames {
             let file_changes = self.file_changes().await?;
-            let mut to_paths = HashSet::new();
             if let Some(overrides) = &self.mutable_history {
                 for (dst_path, mutable_history) in overrides {
                     if let Some((cs_id, path)) = mutable_history.get_copy_from() {
@@ -1627,7 +1627,6 @@ where
                                 .entry(path.clone())
                                 .or_insert_with(Vec::new)
                                 .push(dst_path.clone());
-                            to_paths.insert(dst_path.clone());
                         }
                     }
                 }
@@ -1656,8 +1655,7 @@ where
                                 copy_path_map
                                     .entry(from_path)
                                     .or_insert_with(Vec::new)
-                                    .push(to_path.clone());
-                                to_paths.insert(to_path);
+                                    .push(to_path);
                             }
                         }
                     }
@@ -1666,6 +1664,24 @@ where
                     | FileChange::UntrackedChange(_) => {}
                 }
             }
+
+            // Copy detection below looks up every copy source and destination,
+            // so keep only the entries the diff can read. The diff reads the
+            // copy maps for an added file within the restrictions (through
+            // its source's entry) and for a removed file within the
+            // restrictions (as a source). So every entry it reads has its
+            // source or a destination within the restrictions. An entry's
+            // outcome does not depend on other entries, and a kept entry keeps
+            // all its destinations in order, because the first one that did
+            // not exist in the parent is the move and the rest are copies.
+            if path_restrictions.is_some() {
+                copy_path_map.retain(|from_path, to_paths| {
+                    iter::once(from_path)
+                        .chain(to_paths.iter())
+                        .any(|path| within_restrictions(path, &path_restrictions))
+                });
+            }
+            let to_paths: HashSet<MPath> = copy_path_map.values().flatten().cloned().collect();
 
             let other_root_manifest_id = other.root_content_manifest_id().await?;
 

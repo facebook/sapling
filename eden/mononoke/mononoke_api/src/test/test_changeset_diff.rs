@@ -2126,13 +2126,11 @@ async fn test_restricted_diff_copy_detection_cost(fb: FacebookInit) -> Result<()
     let large = restricted_diff_copy_detection_gets(fb, 200).await?;
     println!("copy detection gets: 10 moves = {small}, 200 moves = {large}");
 
-    // FIXME: a path-restricted diff should not do work proportional to moves
-    // outside the requested paths. Copy detection currently looks up every
-    // copy source and destination in the commit, so its gets grow with the
-    // number of moves.
-    assert!(
-        large >= small + (200 - 10) / 2,
-        "expected copy detection gets to grow with unrelated moves: 10 moves = {small}, 200 moves = {large}"
+    // Copy detection is limited to the requested paths, so moves outside
+    // them add no work.
+    assert_eq!(
+        large, small,
+        "copy detection gets should not depend on unrelated moves: 10 moves = {small}, 200 moves = {large}"
     );
 
     Ok(())
