@@ -28,6 +28,7 @@ import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import {GeneratedStatus} from 'isl/src/types';
+import path from 'node:path';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
 import type {Deferred} from 'shared/utils';
 import {defer} from 'shared/utils';
@@ -186,7 +187,7 @@ export function cwdForOpenISLCommand(arg: unknown): string | undefined {
     if (repoRoot != null) {
       return repoRoot;
     }
-    return FILESYSTEM_URI_SCHEMES.has(uri.scheme) ? uri.fsPath : undefined;
+    return FILESYSTEM_URI_SCHEMES.has(uri.scheme) ? path.dirname(uri.fsPath) : undefined;
   }
   return undefined;
 }

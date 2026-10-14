@@ -42,11 +42,19 @@ describe('cwdForOpenISLCommand', () => {
     expect(spy).toHaveBeenCalledWith(fileUri.fsPath);
   });
 
-  it('falls back to the Uri path when no repo is cached for it', () => {
+  it("falls back to the file's folder when no repo is cached for it", () => {
     jest.spyOn(repositoryCache, 'cachedRepositoryForPath').mockReturnValue(undefined);
 
     const fileUri = vscode.Uri.file(`${repoRoot}/path/to/file.ts`);
-    expect(cwdForOpenISLCommand(fileUri)).toBe(fileUri.fsPath);
+    expect(cwdForOpenISLCommand(fileUri)).toBe(vscode.Uri.file(`${repoRoot}/path/to`).fsPath);
+  });
+
+  it('uses the folder, not the file, for a file outside any repo', () => {
+    jest.spyOn(repositoryCache, 'cachedRepositoryForPath').mockReturnValue(undefined);
+
+    // Using the file itself as the cwd leaves ISL unable to spawn `sl` there.
+    const fileUri = vscode.Uri.file('/home/user/projects/notes/design.md');
+    expect(cwdForOpenISLCommand(fileUri)).toBe(vscode.Uri.file('/home/user/projects/notes').fsPath);
   });
 
   it('resolves the repo root from a sapling-diff Uri (diff view)', () => {
