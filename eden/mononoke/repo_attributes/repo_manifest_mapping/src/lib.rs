@@ -46,6 +46,7 @@ use mononoke_types::RepositoryId;
 pub use crate::store::SqlRepoManifestMapping;
 pub use crate::store::SqlRepoManifestMappingBuilder;
 pub use crate::store::is_configured;
+pub use crate::types::BranchWatermark;
 pub use crate::types::ManifestBranch;
 pub use crate::types::MembershipEdge;
 pub use crate::types::RepoBranch;
@@ -126,6 +127,14 @@ pub trait RepoManifestMapping: Send + Sync {
         manifest_repo_id: RepositoryId,
         staleness: Staleness,
     ) -> Result<Vec<ManifestBranch>>;
+
+    /// [`Self::list_manifest_branches`] with each branch's `log_id` and `last_landed_at`, same order.
+    async fn list_manifest_branch_watermarks(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        staleness: Staleness,
+    ) -> Result<Vec<BranchWatermark>>;
 
     /// Read the tailer watermark for one manifest branch (`None` if never set).
     async fn get_branch_watermark(
@@ -238,6 +247,15 @@ impl RepoManifestMapping for UnconfiguredRepoManifestMapping {
         self.error()
     }
 
+    async fn list_manifest_branch_watermarks(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_repo_id: RepositoryId,
+        _staleness: Staleness,
+    ) -> Result<Vec<BranchWatermark>> {
+        self.error()
+    }
+
     async fn get_branch_watermark(
         &self,
         _ctx: &CoreContext,
@@ -333,6 +351,15 @@ impl RepoManifestMapping for NoopRepoManifestMapping {
         _manifest_repo_id: RepositoryId,
         _staleness: Staleness,
     ) -> Result<Vec<ManifestBranch>> {
+        Ok(vec![])
+    }
+
+    async fn list_manifest_branch_watermarks(
+        &self,
+        _ctx: &CoreContext,
+        _manifest_repo_id: RepositoryId,
+        _staleness: Staleness,
+    ) -> Result<Vec<BranchWatermark>> {
         Ok(vec![])
     }
 
@@ -537,6 +564,32 @@ impl RepoManifestMapping for TestRepoManifestMapping {
             .collect();
         rows.sort();
         Ok(rows.into_iter().map(|(_, branch)| branch).collect())
+    }
+
+    async fn list_manifest_branch_watermarks(
+        &self,
+        _ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        _staleness: Staleness,
+    ) -> Result<Vec<BranchWatermark>> {
+        let state = self.state.lock().expect("poisoned lock");
+        let mut rows: Vec<(i64, ManifestBranch, Option<i64>)> = state
+            .watermarks
+            .iter()
+            .filter(|((repo_id, _), _)| *repo_id == manifest_repo_id)
+            .map(|((_, branch), row)| (row.log_id, branch.clone(), row.last_landed_at))
+            .collect();
+        rows.sort();
+        Ok(rows
+            .into_iter()
+            .map(
+                |(log_id, manifest_branch, last_landed_at)| BranchWatermark {
+                    manifest_branch,
+                    log_id,
+                    last_landed_at,
+                },
+            )
+            .collect())
     }
 
     async fn get_branch_watermark(

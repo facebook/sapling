@@ -10,6 +10,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
+use repo_manifest_mapping::BranchWatermark;
 use repo_manifest_mapping::ManifestBranch;
 use repo_manifest_mapping::MembershipEdge;
 use repo_manifest_mapping::NoopRepoManifestMapping;
@@ -1396,6 +1397,68 @@ async fn test_list_manifest_branches_is_oldest_move_first(fb: FacebookInit) -> R
                 .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
                 .await?,
             vec![mb("d"), mb("c"), mb("a"), mb("b")]
+        );
+    }
+    Ok(())
+}
+
+// 22. The watermark listing: the plain listing's rows and order, plus `log_id` and `last_landed_at`.
+#[mononoke::fbinit_test]
+async fn test_list_manifest_branch_watermarks(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let sql = new_store()?;
+    let mem = TestRepoManifestMapping::new();
+    let aosp = rid(1);
+    let other = rid(2);
+    for store in [&sql as &dyn RepoManifestMapping, &mem] {
+        assert!(
+            store
+                .list_manifest_branch_watermarks(&ctx, aosp, Staleness::MostRecent)
+                .await?
+                .is_empty()
+        );
+        store.set_branch_watermark(&ctx, aosp, &mb("a"), 30).await?;
+        store.set_branch_watermark(&ctx, aosp, &mb("b"), 10).await?;
+        store
+            .set_branch_activity(&ctx, aosp, &mb("b"), 1_000)
+            .await?;
+        // Stamped before the tailer projected it: placeholder watermark 0.
+        store
+            .set_branch_activity(&ctx, aosp, &mb("c"), 2_000)
+            .await?;
+        store.set_branch_watermark(&ctx, other, &mb("d"), 5).await?;
+        let rows = store
+            .list_manifest_branch_watermarks(&ctx, aosp, Staleness::MostRecent)
+            .await?;
+        assert_eq!(
+            rows,
+            vec![
+                BranchWatermark {
+                    manifest_branch: mb("c"),
+                    log_id: 0,
+                    last_landed_at: Some(2_000),
+                },
+                BranchWatermark {
+                    manifest_branch: mb("b"),
+                    log_id: 10,
+                    last_landed_at: Some(1_000),
+                },
+                BranchWatermark {
+                    manifest_branch: mb("a"),
+                    log_id: 30,
+                    last_landed_at: None,
+                },
+            ],
+            "ordered by log_id then name, scoped to the manifest repo"
+        );
+        assert_eq!(
+            rows.into_iter()
+                .map(|row| row.manifest_branch)
+                .collect::<Vec<_>>(),
+            store
+                .list_manifest_branches(&ctx, aosp, Staleness::MostRecent)
+                .await?,
+            "same rows and order as the plain listing"
         );
     }
     Ok(())

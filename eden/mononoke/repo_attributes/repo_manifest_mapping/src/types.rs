@@ -94,6 +94,14 @@ impl RepoBranch {
     }
 }
 
+/// One `manifest_watermark` row; `last_landed_at` is `None` when never landed on.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct BranchWatermark {
+    pub manifest_branch: ManifestBranch,
+    pub log_id: i64,
+    pub last_landed_at: Option<i64>,
+}
+
 /// A single membership edge: the member repo `(repo_name, repo_branch)` belongs
 /// to a manifest branch. The owning `(manifest_repo_id, manifest_branch)` is the
 /// context in which the edge lives (it is supplied alongside a batch of edges),

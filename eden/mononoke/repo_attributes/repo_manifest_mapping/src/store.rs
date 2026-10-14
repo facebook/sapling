@@ -27,6 +27,7 @@ use sql_ext::should_retry_query;
 
 use crate::RepoManifestMapping;
 use crate::Staleness;
+use crate::types::BranchWatermark;
 use crate::types::ManifestBranch;
 use crate::types::MembershipEdge;
 use crate::types::RepoBranch;
@@ -113,6 +114,11 @@ mononoke_queries! {
     // consumer that stops early resumes with the branches it has not reached.
     read ListManifestBranches(repo_id: RepositoryId) -> (ManifestBranch,) {
         "SELECT manifest_branch FROM manifest_watermark WHERE repo_id = {repo_id} ORDER BY log_id ASC, manifest_branch ASC"
+    }
+
+    // The plain listing with each branch's watermark and activity; same order contract.
+    read ListManifestBranchWatermarks(repo_id: RepositoryId) -> (ManifestBranch, i64, Option<i64>) {
+        "SELECT manifest_branch, log_id, last_landed_at FROM manifest_watermark WHERE repo_id = {repo_id} ORDER BY log_id ASC, manifest_branch ASC"
     }
 
     // Unconditional per-branch upsert, deliberately NOT a compare-and-swap.
@@ -474,6 +480,35 @@ impl RepoManifestMapping for SqlRepoManifestMapping {
             format!("Failure listing manifest branches for manifest repo {manifest_repo_id}")
         })?;
         Ok(rows.into_iter().map(|(branch,)| branch).collect())
+    }
+
+    async fn list_manifest_branch_watermarks(
+        &self,
+        ctx: &CoreContext,
+        manifest_repo_id: RepositoryId,
+        staleness: Staleness,
+    ) -> Result<Vec<BranchWatermark>> {
+        let rows = ListManifestBranchWatermarks::query(
+            self.get_connection(staleness),
+            ctx.sql_query_telemetry(),
+            &manifest_repo_id,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure listing manifest branch watermarks for manifest repo {manifest_repo_id}"
+            )
+        })?;
+        Ok(rows
+            .into_iter()
+            .map(
+                |(manifest_branch, log_id, last_landed_at)| BranchWatermark {
+                    manifest_branch,
+                    log_id,
+                    last_landed_at,
+                },
+            )
+            .collect())
     }
 
     async fn set_branch_watermark(
