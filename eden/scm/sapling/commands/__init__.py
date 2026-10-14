@@ -6269,7 +6269,7 @@ def _ensurebaserev(ui, repo, fname):
     legacyaliases=[
         "upd",
         "upda",
-        "updat",
+        "updat",  # typos:ignore-line
         "che",
         "chec",
         "check",
