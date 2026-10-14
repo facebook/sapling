@@ -121,8 +121,9 @@ pub async fn acl_node_for_directory(
         // A directory at the ACL file's own name would overwrite the leaf
         // inserted above, and the restriction lookup would then find a
         // directory and report the node unrestricted. A manifest name is
-        // either a file or a directory, so this can only be a caller error.
-        if name.as_ref() == acl_file_name.as_bytes() {
+        // either a file or a directory, so having both can only be a caller
+        // error. A directory at that name alone is valid.
+        if own_acl_file.is_some() && name.as_ref() == acl_file_name.as_bytes() {
             bail!("child directory {name} collides with acl file name {acl_file_name}");
         }
 

@@ -42,6 +42,7 @@ use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::augmented_backfill;
 use mercurial_derivation::derive_hg_augmented_manifest;
+use mercurial_derivation::upload_augmented_manifest::DirectoryAcl;
 use mercurial_derivation::upload_augmented_manifest::UploadTreeBuildError;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
 use mercurial_derivation::upload_augmented_manifest::store_uploaded_tree_envelopes;
@@ -64,6 +65,7 @@ use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SubtreeChange;
+use mononoke_types::acl_manifest::AclManifestDirectoryRestriction;
 use mononoke_types::sharded_map_v2::ShardedMapV2Value;
 use mononoke_types::typed_hash::AclManifestId;
 use mononoke_types::typed_hash::BlobstoreKey;
@@ -7096,17 +7098,14 @@ async fn test_batch_upload_augmented_manifests_are_byte_identical_for_a_merge(
 }
 
 /// What it tests: a directory whose child directory is named like the ACL
-/// file and holds a restriction, uploaded as a client would.
+/// file and holds a restriction, uploaded as a client would, builds the same
+/// envelopes and ACL nodes as canonical derivation.
 ///
-/// Why it matters: the tree is valid and canonical derivation builds it. A
-/// rejected batch stores nothing, and every later upload listing the same
-/// subtree then fails with a missing child, because clients never resend trees
-/// the server already has.
-///
-/// FIXME: `acl_node_for_directory` rejects any child directory named like the
-/// ACL file as colliding with the directory's own ACL file, but a name is
-/// either a file or a directory, so here there is no ACL file to collide with.
-/// Once fixed, the batch builds and matches canonical derivation.
+/// Why it matters: the tree is valid and canonical derivation builds it. The
+/// upload path used to reject it as colliding with the directory's own ACL
+/// file. A rejected batch stores nothing, and every later upload listing the
+/// same subtree then fails with a missing child, because clients never resend
+/// trees the server already has.
 #[mononoke::fbinit_test]
 async fn test_upload_of_a_child_directory_named_like_the_acl_file(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -7116,10 +7115,15 @@ async fn test_upload_of_a_child_directory_named_like_the_acl_file(fb: FacebookIn
         .add_file("d/file", "file")
         .commit()
         .await?;
+    let paths = ["d/.slacl", "d", ""];
 
+    // Envelopes, including their ACL pointers, are byte-identical.
+    assert_batch_upload_matches_derivation(&ctx, &repo, &[], root, &paths).await?;
+
+    // The ACL nodes the upload path hands up match canonical derivation's.
     let manifest = hg_manifest_id_of(&ctx, &repo, root).await?;
     let mut uploaded = Vec::new();
-    for path in ["d/.slacl", "d", ""] {
+    for path in paths {
         uploaded.push(tree_id_at_path(&ctx, &repo, manifest, path).await?);
     }
     let overlay: Arc<dyn KeyedBlobstore> = Arc::new(MemWritesKeyedBlobstore::new(
@@ -7130,18 +7134,55 @@ async fn test_upload_of_a_child_directory_named_like_the_acl_file(fb: FacebookIn
                 .map(|id| HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key()),
         ),
     ));
-    let err = build_augmented_manifests_for_uploaded_trees(
+    let built = build_augmented_manifests_for_uploaded_trees(
         &ctx,
         &overlay,
         repo.restricted_paths().config_based(),
         uploaded_trees_for(&ctx, &repo, &uploaded).await?,
     )
-    .await
-    .expect_err("FIXME: the batch should build");
-    assert!(
-        format!("{err:#}").contains("collides with acl file name"),
-        "FIXME: d is rejected for its .slacl directory, got: {err:#}"
-    );
+    .await?;
+    let acl_root = derive_acl_overlay(&ctx, &repo, root)
+        .await?
+        .context("d/.slacl/ holds a restriction, so there is an ACL manifest")?;
+    for (path, id) in paths.into_iter().zip(&uploaded) {
+        let tree = built
+            .iter()
+            .find(|tree| tree.node_id == id.into_nodehash())
+            .with_context(|| format!("{path:?} was not built"))?;
+        let mpath = if path.is_empty() {
+            MPath::ROOT
+        } else {
+            MPath::new(path)?
+        };
+        let canonical = match acl_root
+            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), mpath)
+            .await?
+        {
+            Some(Entry::Tree(canonical)) => canonical,
+            other => panic!("{path:?} should have a canonical ACL node, got {other:?}"),
+        };
+        let canonical_node = canonical.load(&ctx, repo.repo_blobstore()).await?;
+        let DirectoryAcl::Node(entry) = &tree.acl else {
+            panic!(
+                "{path:?} should have an uploaded ACL node, got {:?}",
+                tree.acl
+            );
+        };
+        assert_eq!(entry.id, canonical, "{path:?}: ACL node ids");
+        assert_eq!(
+            entry.is_restricted,
+            matches!(
+                canonical_node.restriction,
+                AclManifestDirectoryRestriction::Restricted(_)
+            ),
+            "{path:?}: is_restricted"
+        );
+        assert_eq!(
+            entry.has_restricted_descendants,
+            canonical_node.subentries.rollup_data().has_restricted,
+            "{path:?}: has_restricted_descendants"
+        );
+    }
 
     Ok(())
 }
