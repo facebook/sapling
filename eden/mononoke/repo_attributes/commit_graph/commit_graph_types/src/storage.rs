@@ -65,11 +65,21 @@ pub enum Prefetch {
     Include(PrefetchTarget),
 }
 
-/// Number of first-parent steps prefetched by
-/// `Prefetch::for_p1_linear_traversal`.  This is arbitrary, but is a balance
-/// between not overfetching for the cache and reducing the number of
-/// sequential steps.
+/// Number of first-parent steps `Prefetch::for_p1_linear_traversal` asks
+/// for.  This is arbitrary, but is a balance between not overfetching for
+/// the cache and reducing the number of sequential steps.
 pub const P1_LINEAR_PREFETCH_STEPS: u64 = 128;
+
+/// Number of first-parent steps a linear prefetch covers: the steps asked
+/// for, capped by the step limit that bounds every prefetching query.
+/// Callers that rely on a prefetch having covered a distance must use this
+/// rather than the constant.
+pub fn p1_linear_prefetch_steps() -> u64 {
+    P1_LINEAR_PREFETCH_STEPS.min(justknobs::get_as::<u64>(
+        "scm/mononoke:commit_graph_prefetch_step_limit",
+        None,
+    ))
+}
 
 impl Prefetch {
     /// Prepare prefetching for skew-binary traversal over the skip tree.
@@ -81,7 +91,7 @@ impl Prefetch {
     pub fn for_p1_linear_traversal() -> Self {
         Prefetch::Hint(PrefetchTarget::LinearAncestors {
             generation: FIRST_GENERATION,
-            steps: P1_LINEAR_PREFETCH_STEPS,
+            steps: p1_linear_prefetch_steps(),
         })
     }
 
@@ -274,9 +284,10 @@ pub trait CommitGraphStorage: Send + Sync {
     /// Unlike a prefetch hint passed to `fetch_many_edges`, this looks past
     /// the edges of `cs_ids` themselves: a cache hit for them says nothing
     /// about what is cached beyond them, so whatever is missing beyond them
-    /// is fetched from the backing store.  Finding out what is missing costs
-    /// up to one cache lookup per changeset per step, so callers should
-    /// bound `cs_ids`.  Storages without caches do nothing.
+    /// is fetched, from a shared cache when another host has fetched it
+    /// already and otherwise from the backing store.  Finding out what is
+    /// missing costs up to one cache lookup per changeset per step, so
+    /// callers should bound `cs_ids`.  Storages without caches do nothing.
     async fn prefetch_many_edges(
         &self,
         _ctx: &CoreContext,

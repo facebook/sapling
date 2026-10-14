@@ -14,9 +14,9 @@ use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::EdgeType;
 use commit_graph_types::frontier::ChangesetFrontier;
-use commit_graph_types::storage::P1_LINEAR_PREFETCH_STEPS;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
+use commit_graph_types::storage::p1_linear_prefetch_steps;
 use context::CoreContext;
 use futures::Future;
 use futures::future;
@@ -189,6 +189,7 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
 
         stream::iter(runs)
             .map(|(run, mut frontier)| async move {
+                let linear_steps = p1_linear_prefetch_steps();
                 let mut lowered = Vec::with_capacity(run.len());
                 for (index, generation) in run.iter().enumerate() {
                     if index > 0 {
@@ -199,9 +200,8 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
                     // Lowering to a next generation that is within the linear
                     // prefetch distance prefetches the chain by itself.
                     let next = run.get(index + 1).copied();
-                    let next_is_near = next.is_some_and(|next| {
-                        generation.value() - next.value() <= P1_LINEAR_PREFETCH_STEPS
-                    });
+                    let next_is_near =
+                        next.is_some_and(|next| generation.value() - next.value() <= linear_steps);
                     if !next_is_near && let Some((_, cs_ids)) = frontier.last_key_value() {
                         let chain_start: Vec<_> = cs_ids.iter().copied().collect();
                         commit_graph
@@ -211,7 +211,7 @@ impl<E: EdgeType> AncestorsStreamBuilder<E> {
                                 &chain_start,
                                 PrefetchTarget::LinearAncestors {
                                     generation: next.unwrap_or(FIRST_GENERATION),
-                                    steps: P1_LINEAR_PREFETCH_STEPS,
+                                    steps: linear_steps,
                                 },
                             )
                             .await?;

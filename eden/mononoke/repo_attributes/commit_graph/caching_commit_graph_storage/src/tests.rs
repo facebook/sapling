@@ -65,7 +65,7 @@ pub async fn test_prefetch_many_edges_warms_beyond_cached_edges(fb: FacebookInit
             .unwrap()
             .build(RendezVousOptions::for_test(), test_repo_identity()),
     )));
-    from_dag(&ctx, r"A-B-C-D-E", storage.clone()).await?;
+    from_dag(&ctx, r"A-B-C-D-E-F-G-H", storage.clone()).await?;
     storage.flush();
 
     let cachelib = storage.cachelib.mock_store().unwrap();
@@ -75,62 +75,53 @@ pub async fn test_prefetch_many_edges_warms_beyond_cached_edges(fb: FacebookInit
             .is_some()
     };
 
-    storage.fetch_edges(&ctx, name_cs_id("E")).await?;
-    assert!(cached("E"));
-    assert!(!cached("D"));
+    storage.fetch_edges(&ctx, name_cs_id("H")).await?;
+    assert!(cached("H"));
+    assert!(!cached("G"));
 
     // A prefetch hint has no effect once the changeset itself is cached, since
     // nothing is fetched from the backing store.
     storage
         .fetch_many_edges(
             &ctx,
-            &[name_cs_id("E")],
+            &[name_cs_id("H")],
             Prefetch::for_p1_linear_traversal(),
         )
         .await?;
-    assert!(!cached("D"));
+    assert!(!cached("G"));
 
-    // E is cached already, so the chain is fetched from D: D, C and B.
+    // H is cached already, so the chain is fetched from G.  The test step
+    // limit is 4, so the fetch covers G, F, E and D however many steps are
+    // asked for.
     storage
         .prefetch_many_edges(
             &ctx,
-            &[name_cs_id("E")],
+            &[name_cs_id("H")],
             PrefetchTarget::LinearAncestors {
                 generation: FIRST_GENERATION,
-                steps: 3,
+                steps: 10,
             },
         )
         .await?;
-    assert!(cached("B"));
-    assert!(!cached("A"));
+    assert!(cached("D"));
+    assert!(!cached("C"));
 
-    // Nothing is fetched for a chain that is cached all the way.
+    // Asking again fetches nothing: the walk checks as far as one fetch
+    // fills, so it doesn't find the uncached chain beyond D and fetch it on
+    // every call.
     let sets = cachelib.stats().sets;
     storage
         .prefetch_many_edges(
             &ctx,
-            &[name_cs_id("E")],
+            &[name_cs_id("H")],
             PrefetchTarget::LinearAncestors {
                 generation: FIRST_GENERATION,
-                steps: 3,
+                steps: 10,
             },
         )
         .await?;
     assert_eq!(cachelib.stats().sets, sets);
-
-    // A longer chain is fetched only from where the cached part ends: A.
-    storage
-        .prefetch_many_edges(
-            &ctx,
-            &[name_cs_id("E")],
-            PrefetchTarget::LinearAncestors {
-                generation: FIRST_GENERATION,
-                steps: 5,
-            },
-        )
-        .await?;
-    assert!(cached("A"));
-    assert_eq!(cachelib.stats().sets, sets + 1);
+    assert!(!cached("C"));
 
     Ok(())
 }

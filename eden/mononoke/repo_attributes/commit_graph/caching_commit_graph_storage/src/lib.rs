@@ -24,7 +24,6 @@ use caching_ext::McErrorKind;
 use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
-use caching_ext::fill_cache;
 use caching_ext::fill_cachelib;
 use caching_ext::get_or_fill;
 use caching_ext::get_or_fill_chunked;
@@ -613,12 +612,28 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         }
         let cs_ids = match target {
             PrefetchTarget::LinearAncestors { generation, steps } => {
+                // A prefetch fills at most the step limit below each changeset
+                // it fetches, so the walk checks exactly that far.  Checking
+                // further would find the band beyond the last fill uncached
+                // and fetch it again on every call.
+                let steps = steps.min(justknobs::get_as::<u64>(
+                    "scm/mononoke:commit_graph_prefetch_step_limit",
+                    None,
+                ));
                 self.first_uncached_linear_ancestors(cs_ids, generation, steps)?
             }
             PrefetchTarget::ExactSkipTreeAncestors { .. } => cs_ids.to_vec(),
         };
-        let fetched = request.get_from_db(cs_ids.into_iter().collect()).await?;
-        fill_cache(&request, fetched.iter()).await;
+        // Through the caches rather than straight to the backing store:
+        // another host may have fetched these already, and memcache holds
+        // the edges prefetched for them alongside them.
+        get_or_fill_chunked(
+            &request,
+            cs_ids.into_iter().collect(),
+            CHUNK_SIZE,
+            PARALLEL_CHUNKS,
+        )
+        .await?;
         Ok(())
     }
 

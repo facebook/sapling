@@ -16,6 +16,7 @@ commit_graph_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 either = "1.18.0"
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
+justknobs_ext = { version = "0.1.0", path = "../../../common/rust/justknobs_ext" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_identity = { version = "0.1.0", path = "../../repo_identity" }

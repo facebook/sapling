@@ -15,9 +15,9 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::EdgeType;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
-use commit_graph_types::storage::P1_LINEAR_PREFETCH_STEPS;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
+use commit_graph_types::storage::p1_linear_prefetch_steps;
 use context::CoreContext;
 use futures::Future;
 use futures::StreamExt;
@@ -217,10 +217,9 @@ impl<E: EdgeType> CommitGraphOps<E> {
         target_generation: Generation,
         incremental: bool,
     ) -> Result<()> {
+        let linear_steps = p1_linear_prefetch_steps();
         let prefetch_from = |generation: Generation| {
-            if incremental
-                && generation.value() - target_generation.value() <= P1_LINEAR_PREFETCH_STEPS
-            {
+            if incremental && generation.value() - target_generation.value() <= linear_steps {
                 Prefetch::for_p1_linear_traversal()
             } else {
                 Prefetch::for_exact_skip_tree_traversal(target_generation)
