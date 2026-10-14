@@ -728,9 +728,19 @@ impl crate::Subcommand for DiskUsageCmd {
             get_redirections(&checkouts).context("Failed to get EdenFS redirections")?;
         let (_redirect_sources, redirect_targets): (BTreeSet<PathBuf>, BTreeSet<PathBuf>) =
             redirections.iter().cloned().unzip();
-        let orphaned_redirections =
-            redirect::scratch::get_orphaned_redirection_targets(&redirect_targets)
-                .unwrap_or_else(|_| Vec::new());
+        // `--clean`/`--deep-clean` still run their other cleanups and report the
+        // scan failure at the end.
+        let (orphaned_redirections, orphan_scan_error) =
+            match redirect::scratch::get_orphaned_redirection_targets(&redirect_targets) {
+                Ok(orphaned) => (orphaned, None),
+                Err(error) if self.clean_orphaned => {
+                    return Err(error.context("Failed to find orphaned redirections for cleanup"));
+                }
+                Err(error) => {
+                    eprintln!("Warning: failed to scan for orphaned redirections: {error:#}");
+                    (Vec::new(), Some(error))
+                }
+            };
         let fsck_dirs = get_fsck_dirs(&checkouts);
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
@@ -874,7 +884,9 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
 
                 write_title("Orphaned redirections");
-                if orphaned_redirections.is_empty() {
+                if orphan_scan_error.is_some() {
+                    println!("Failed to scan for orphaned redirections");
+                } else if orphaned_redirections.is_empty() {
                     println!("No orphaned redirections");
                 } else {
                     for redir in orphaned_redirections.iter() {
@@ -1000,7 +1012,12 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
             }
         }
-        Ok(0)
+        match orphan_scan_error {
+            Some(error) if self.should_clean() => {
+                Err(error.context("Failed to find orphaned redirections for cleanup"))
+            }
+            _ => Ok(0),
+        }
     }
 }
 

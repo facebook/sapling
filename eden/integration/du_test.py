@@ -40,6 +40,23 @@ class DiskUsageTest(testcase.EdenRepoTest):
         # Verify the mount path is shown
         self.assertIn(self.mount, output)
 
+    def test_du_continues_when_orphan_scan_fails(self) -> None:
+        """Plain du still reports usage when orphan scanning fails."""
+        self.set_rust_rollout_config({"du": True})
+        result = self.eden.run_unchecked(
+            "du",
+            self.mount,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            env={"MKSCRATCH_BIN": "false"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("failed to scan for orphaned redirections", result.stderr)
+        self.assertIn("Failed to scan for orphaned redirections", result.stdout)
+        self.assertNotIn("No orphaned redirections", result.stdout)
+        self.assertIn("Summary", result.stdout)
+
     # JSON output tests
     def test_du_json_output_has_valid_fields(self) -> None:
         """Test that `eden du --json` produces valid JSON with correct field types and values."""
@@ -75,15 +92,6 @@ class DiskUsageTest(testcase.EdenRepoTest):
         # Fast mode should NOT show the detailed "Mounts" section header
         self.assertNotIn("Mounts\n", output)
 
-    def test_du_fast_and_json_report_same_base_values(self) -> None:
-        """Test that fast mode and JSON mode report consistent base information."""
-        fast_output = self.eden.run_cmd("du", "--fast", self.mount)
-        json_output = self.eden.run_cmd("du", "--json", self.mount)
-
-        data = json.loads(json_output)
-        self.assertIsInstance(data, dict)
-        self.assertIn("Summary", fast_output)
-
     # Clean mode tests
     def test_du_clean_mode_shows_warning_and_sections(self) -> None:
         """Test that `eden du --clean` shows warnings and expected sections."""
@@ -115,10 +123,50 @@ class DiskUsageTest(testcase.EdenRepoTest):
         )
         self.assertIn("WARNING", result.stdout)
 
+    def test_du_clean_continues_when_orphan_scan_fails(self) -> None:
+        """Test that `eden du --clean` runs its other cleanups and fails at the end when mkscratch fails."""
+        # Keep Python fallback available for the nested `eden gc` command.
+        self.set_rust_rollout_config({"du": True})
+        result = self.eden.run_unchecked(
+            "du",
+            "--clean",
+            self.mount,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            env={
+                "MKSCRATCH_BIN": "false",
+                "EDENFSCTL_CONFIG_DIR": str(self.eden.eden_dir),
+                "EDENFSCTL_ETC_EDEN_DIR": str(self.eden.etc_eden_dir),
+                "EDENFSCTL_HOME_DIR": str(self.eden.home_dir),
+            },
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("failed to scan for orphaned redirections", result.stderr)
+        self.assertIn("Failed to scan for orphaned redirections", result.stdout)
+        self.assertIn("Failed to find orphaned redirections for cleanup", result.stderr)
+        self.assertIn("Finished cleaning shared space.", result.stdout)
+
     def test_du_clean_orphaned_mode_runs_successfully(self) -> None:
         """Test that `eden du --clean-orphaned` runs without errors."""
         output = self.eden.run_cmd("du", "--clean-orphaned", self.mount)
         self.assertIn("Summary", output)
+
+    def test_du_clean_orphaned_fails_when_orphan_scan_fails(self) -> None:
+        """Orphan-only cleanup stops when orphan scanning fails."""
+        self.set_rust_rollout_config({"du": True})
+        result = self.eden.run_unchecked(
+            "du",
+            "--clean-orphaned",
+            self.mount,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            env={"MKSCRATCH_BIN": "false"},
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Failed to find orphaned redirections for cleanup", result.stderr)
+        self.assertNotIn("Summary", result.stdout)
 
     # Materialized files tests
     def test_du_materialized_increases_after_file_modification(self) -> None:

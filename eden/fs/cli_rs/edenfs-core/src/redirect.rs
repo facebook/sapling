@@ -2285,10 +2285,13 @@ pub mod scratch {
     use std::ffi::OsStr;
     use std::fs;
     use std::fs::DirEntry;
+    use std::io::ErrorKind;
     use std::path::Path;
     use std::path::PathBuf;
 
+    use anyhow::Context;
     use anyhow::Result;
+    use anyhow::anyhow;
     use edenfs_utils::metadata::MetadataExt;
     use rayon::prelude::*;
 
@@ -2423,9 +2426,19 @@ pub mod scratch {
             )
         };
 
+        // mkscratch only prints the path, so the scratch root may not exist yet.
+        let scratch_root_entries = match fs::read_dir(scratch_root) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!("Failed to read scratch root {}", scratch_root.display())
+                });
+            }
+        };
         let mut orphaned_redirections = Vec::new();
         if is_scratch_mirrored {
-            for dirent in fs::read_dir(scratch_root)? {
+            for dirent in scratch_root_entries {
                 let dirent_path = dirent?.path();
                 let redirection_path = dirent_path.join(&prefix);
                 if redirection_path.exists() {
@@ -2437,7 +2450,7 @@ pub mod scratch {
                 }
             }
         } else {
-            for dirent in fs::read_dir(scratch_root)? {
+            for dirent in scratch_root_entries {
                 let dirent_path = dirent?.path();
                 if !dirent_path.is_dir() {
                     continue;
@@ -2464,7 +2477,16 @@ pub mod scratch {
     pub fn get_orphaned_redirection_targets(
         existing_redirections: &BTreeSet<PathBuf>,
     ) -> Result<Vec<PathBuf>> {
-        let mkscratch = Redirection::mkscratch_bin();
+        get_orphaned_redirection_targets_with_mkscratch(
+            &Redirection::mkscratch_bin(),
+            existing_redirections,
+        )
+    }
+
+    fn get_orphaned_redirection_targets_with_mkscratch(
+        mkscratch: &Path,
+        existing_redirections: &BTreeSet<PathBuf>,
+    ) -> Result<Vec<PathBuf>> {
         let scratch_subdir = Redirection::scratch_subdir();
         let scratch_subdir_str = scratch_subdir.to_string_lossy();
         let home_dir = match dirs::home_dir() {
@@ -2481,27 +2503,20 @@ pub mod scratch {
             &*scratch_subdir_str,
         ]
         .map(OsStr::new);
-        let mkscratch_res = Redirection::run_mkscratch(&mkscratch, &mkscratch_args);
+        let mkscratch_res = Redirection::run_mkscratch(mkscratch, &mkscratch_args);
 
         let scratch_path = match mkscratch_res {
             Ok(output) if output.status.success() => {
                 Redirection::parse_mkscratch_stdout(&output.stdout)?
             }
             Ok(output) => {
-                tracing::warn!(
-                    status = ?output.status,
-                    stderr = %String::from_utf8_lossy(&output.stderr),
-                    "failed to query mkscratch path while finding orphaned redirections"
-                );
-                return Ok(vec![]);
+                return Err(anyhow!(
+                    "mkscratch exited with {:?} while resolving the scratch root: {}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stderr).trim()
+                ));
             }
-            Err(error) => {
-                tracing::warn!(
-                    error = %error,
-                    "failed to run mkscratch while finding orphaned redirections"
-                );
-                return Ok(vec![]);
-            }
+            Err(error) => return Err(error).context("failed to run mkscratch"),
         };
 
         get_orphaned_redirection_targets_impl(scratch_path, scratch_subdir, existing_redirections)
@@ -2523,6 +2538,48 @@ pub mod scratch {
         ) -> Result<()> {
             create_dir_all(path.as_ref())?;
             existing_redirections.insert(path.as_ref().to_path_buf());
+            Ok(())
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn test_get_orphaned_redirection_targets_propagates_mkscratch_failure() -> Result<()> {
+            use std::os::unix::fs::PermissionsExt;
+
+            let tempdir = TempDir::new()?;
+            let fake_mkscratch = tempdir.path().join("mkscratch");
+            std::fs::write(
+                &fake_mkscratch,
+                "#!/bin/sh\necho 'scratch config broken' >&2\nexit 1\n",
+            )?;
+            std::fs::set_permissions(&fake_mkscratch, std::fs::Permissions::from_mode(0o755))?;
+
+            let error =
+                get_orphaned_redirection_targets_with_mkscratch(&fake_mkscratch, &BTreeSet::new())
+                    .expect_err(
+                        "a failing mkscratch must surface an error, not an empty orphan list",
+                    );
+            assert!(
+                error.to_string().contains("scratch config broken"),
+                "error should carry mkscratch's stderr: {error:#}"
+            );
+            Ok(())
+        }
+
+        #[test]
+        fn test_get_orphaned_redirection_targets_missing_scratch_root() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let scratch_path = tempdir.path().join("missing/repository/fooZbar");
+
+            let res = get_orphaned_redirection_targets_impl(
+                scratch_path,
+                Path::new("foo/bar").to_path_buf(),
+                &BTreeSet::new(),
+            )?;
+            assert!(
+                res.is_empty(),
+                "a scratch root that doesn't exist has no orphans"
+            );
             Ok(())
         }
 
