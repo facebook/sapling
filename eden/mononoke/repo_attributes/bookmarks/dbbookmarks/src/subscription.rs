@@ -17,6 +17,7 @@ use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
 use context::CoreContext;
@@ -43,7 +44,7 @@ pub struct SqlBookmarksSubscription {
     sql_bookmarks: SqlBookmarks,
     freshness: Freshness,
     log_id: u64,
-    bookmarks: HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>,
+    bookmarks: HashMap<BookmarkKey, (ChangesetId, BookmarkKind, Option<BookmarkUpdateLogId>)>,
     last_refresh: Instant,
 }
 
@@ -118,10 +119,10 @@ impl SqlBookmarksSubscription {
 
         let bookmarks = bookmarks
             .into_iter()
-            .map(|(name, category, kind, cs_id, _log_id, _tok)| {
+            .map(|(name, category, kind, cs_id, log_id, _tok)| {
                 (
                     BookmarkKey::with_name_and_category(name, category),
-                    (cs_id, kind),
+                    (cs_id, kind, log_id.map(BookmarkUpdateLogId)),
                 )
             })
             .collect();
@@ -177,7 +178,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
             // if one is missing, that means the join didn't find anything, and the one must be
             // missing too.
             let value = match (kind, cs_id) {
-                (Some(kind), Some(cs_id)) => Some((cs_id, kind)),
+                (Some(kind), Some(cs_id)) => Some((cs_id, kind, Some(BookmarkUpdateLogId(log_id)))),
                 (None, None) => None,
                 _ => bail!("Inconsistent data for bookmark: {bookmark}"),
             };
@@ -189,7 +190,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
             updates.entry(bookmark).or_insert(value);
         }
 
-        for (book, maybe_value) in updates.into_iter() {
+        for (book, maybe_value) in updates {
             match maybe_value {
                 Some(value) => {
                     self.bookmarks.insert(book, value);
@@ -215,7 +216,9 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
         Ok(())
     }
 
-    fn bookmarks(&self) -> &HashMap<BookmarkKey, (ChangesetId, BookmarkKind)> {
+    fn bookmarks(
+        &self,
+    ) -> &HashMap<BookmarkKey, (ChangesetId, BookmarkKind, Option<BookmarkUpdateLogId>)> {
         &self.bookmarks
     }
 }
@@ -293,7 +296,7 @@ mod test {
         sub.refresh(&ctx).await?;
         assert_eq!(
             *sub.bookmarks(),
-            hashmap! { book => (ONES_CSID, BookmarkKind::Publishing)}
+            hashmap! { book => (ONES_CSID, BookmarkKind::Publishing, None)}
         );
 
         Ok(())

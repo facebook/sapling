@@ -148,6 +148,7 @@ pub enum RequirementState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BookmarkState {
     kind: BookmarkKind,
+    log_id: Option<BookmarkUpdateLogId>,
     derived_cs_per_requirement: EnumMap<WarmerRequirement, RequirementState>,
 }
 
@@ -176,8 +177,18 @@ impl BookmarkState {
 
         Self {
             kind,
+            log_id: None,
             derived_cs_per_requirement,
         }
+    }
+
+    /// Returns the bookmark update log ID represented by this cached state.
+    pub fn log_id(&self) -> Option<BookmarkUpdateLogId> {
+        self.log_id
+    }
+
+    fn set_log_id(&mut self, log_id: BookmarkUpdateLogId) {
+        self.log_id = Some(log_id);
     }
 
     pub fn set_all_tracked(&mut self, cs_id: ChangesetId) {
@@ -867,10 +878,11 @@ async fn init_bookmarks(
     let futs = all_bookmarks
         .iter()
         .enumerate()
-        .map(|(i, (book, (cs_id, kind)))| async move {
+        .map(|(i, (book, (cs_id, kind, log_id)))| async move {
             let book = book.clone();
             let kind = *kind;
             let cs_id = *cs_id;
+            let log_id = *log_id;
 
             let remaining = total - i - 1;
 
@@ -927,12 +939,18 @@ async fn init_bookmarks(
                         warm_all(ctx, cs_id, warmers).watched().await?;
                         let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
                         bookmarks_state.set_all_tracked(cs_id);
+                        if let Some(log_id) = log_id {
+                            bookmarks_state.set_log_id(log_id);
+                        }
                         Ok((remaining, Some((book, bookmarks_state))))
                     }
                 }
             } else {
                 let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
                 bookmarks_state.set_all_tracked(cs_id);
+                if let Some(log_id) = log_id {
+                    bookmarks_state.set_log_id(log_id);
+                }
                 Ok((remaining, Some((book, bookmarks_state))))
             }
         })
@@ -1194,6 +1212,7 @@ pub struct LatestUnderivedBookmarkEntry {
 
 pub struct LatestBookmarkEntries {
     pub latest_underived: LatestUnderivedBookmarkEntry,
+    pub latest_log_id: Option<BookmarkUpdateLogId>,
     pub derived_entries: EnumMap<WarmerRequirement, LatestDerivedBookmarkEntry>,
 }
 
@@ -1207,6 +1226,7 @@ pub async fn find_latest_derived_and_underived(
     warmers: &[Warmer],
 ) -> Result<LatestBookmarkEntries, Error> {
     let mut latest_underived = LatestUnderivedBookmarkEntry::default();
+    let mut latest_log_id = None;
     let mut derived_entries = EnumMap::<WarmerTag, Option<LatestDerivedBookmarkEntry>>::default();
     let mut found_latest_entry = false;
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
@@ -1239,15 +1259,16 @@ pub async fn find_latest_derived_and_underived(
             let maybe_cs_id = bookmarks
                 .get(ctx.clone(), book, bookmarks::Freshness::MostRecent)
                 .await?;
-            // If a bookmark has no history then we add a fake entry saying that
-            // timestamp is unknown.
+            // If a bookmark has no history then we add a synthetic entry with no timestamp or
+            // log ID. Every real log entry above carries `Some((id, timestamp))`.
             log_entries.push((maybe_cs_id, None));
         }
 
         let log_entries_fetched = log_entries.len();
         if !found_latest_entry {
-            if let Some((maybe_cs_id, _)) = log_entries.first() {
+            if let Some((maybe_cs_id, id_and_ts)) = log_entries.first() {
                 latest_underived.maybe_cs_id = *maybe_cs_id;
+                latest_log_id = id_and_ts.as_ref().map(|(id, _)| *id);
                 found_latest_entry = true;
             }
         }
@@ -1280,6 +1301,7 @@ pub async fn find_latest_derived_and_underived(
                 let latest_all = LatestDerivedBookmarkEntry::Found(maybe_cs_ts);
                 return Ok(LatestBookmarkEntries {
                     latest_underived,
+                    latest_log_id,
                     derived_entries: enum_map::enum_map! {
                         // If they are all warm, the unwrap sections should never run
                         WarmerRequirement::HgOnly => derived_entries[WarmerTag::Hg].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
@@ -1297,6 +1319,7 @@ pub async fn find_latest_derived_and_underived(
         if (log_entries_fetched as u32) < limit {
             return Ok(LatestBookmarkEntries {
                 latest_underived,
+                latest_log_id,
                 derived_entries: enum_map::enum_map! {
                     WarmerRequirement::HgOnly => derived_entries[WarmerTag::Hg].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
                     WarmerRequirement::GitOnly => derived_entries[WarmerTag::Git].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
@@ -1308,6 +1331,7 @@ pub async fn find_latest_derived_and_underived(
 
     Ok(LatestBookmarkEntries {
         latest_underived,
+        latest_log_id,
         derived_entries: enum_map::enum_map! {
             WarmerRequirement::HgOnly => derived_entries[WarmerTag::Hg].unwrap_or(LatestDerivedBookmarkEntry::NotFound),
             WarmerRequirement::GitOnly => derived_entries[WarmerTag::Git].unwrap_or(LatestDerivedBookmarkEntry::NotFound),
@@ -1701,7 +1725,16 @@ async fn single_bookmark_updater(
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
-    let entries = find_latest_derived_and_underived(
+    let cached_log_id = bookmarks.with_read(|bookmarks| {
+        bookmarks
+            .get(bookmark.key())
+            .and_then(BookmarkState::log_id)
+    });
+    let LatestBookmarkEntries {
+        latest_underived,
+        latest_log_id,
+        derived_entries,
+    } = find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
@@ -1709,8 +1742,6 @@ async fn single_bookmark_updater(
         warmers.as_ref(),
     )
     .await?;
-
-    let latest_underived = entries.latest_underived;
 
     let update_bookmark = |state: BookmarkState| async move {
         bookmarks.with_write(|bookmarks| {
@@ -1720,10 +1751,13 @@ async fn single_bookmark_updater(
     };
 
     let mut bookmark_state = BookmarkState::from_warmers(*bookmark.kind(), warmers);
+    if let Some(log_id) = cached_log_id {
+        bookmark_state.set_log_id(log_id);
+    }
 
     // Update the state based on what we found in the bookmark log
     let mut found_any_derived = false;
-    for (requirement, entry) in entries.derived_entries {
+    for (requirement, entry) in derived_entries {
         match entry {
             LatestDerivedBookmarkEntry::Found(maybe_val) => match maybe_val {
                 Some((cs_id, _)) => {
@@ -1787,6 +1821,9 @@ async fn single_bookmark_updater(
             Ok(()) => {
                 // We just warmed all our warmers, so we can update all tracked requirements
                 bookmark_state.set_all_tracked(underived_cs_id);
+                if let Some(log_id) = latest_log_id {
+                    bookmark_state.set_log_id(log_id);
+                }
                 update_bookmark(bookmark_state).await;
             }
             Err(err) => {
@@ -1903,10 +1940,13 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers_with_latest_log_id(
+                &ctx,
+                &repo,
+                "master",
                 BookmarkKind::PullDefaultPublishing,
                 master_cs_id,
-            )}
+            ).await?}
         );
         Ok(())
     }
@@ -1995,10 +2035,13 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers_with_latest_log_id(
+                &ctx,
+                &repo,
+                "master",
                 BookmarkKind::PullDefaultPublishing,
                 master,
-            )}
+            ).await?}
         );
 
         Ok(())
@@ -2161,29 +2204,26 @@ mod tests {
         );
 
         let master_book = BookmarkKey::new("master")?;
+        let expected_master = test_bookmark_state_all_warmers_with_latest_log_id(
+            &ctx,
+            &repo,
+            "master",
+            BookmarkKind::PullDefaultPublishing,
+            master,
+        )
+        .await?;
         update_and_wait_for_bookmark(
             &ctx,
             &mut coordinator,
             &master_book,
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::PullDefaultPublishing,
-                master,
-            )),
+            Some(expected_master.clone()),
         )
         .await?;
 
         bookmark(&ctx, &repo, "master").delete().await?;
         // This check should not be successful in deleting master because it is protected
-        update_and_wait_for_bookmark(
-            &ctx,
-            &mut coordinator,
-            &master_book,
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::PullDefaultPublishing,
-                master,
-            )),
-        )
-        .await?;
+        update_and_wait_for_bookmark(&ctx, &mut coordinator, &master_book, Some(expected_master))
+            .await?;
 
         Ok(())
     }
@@ -2236,10 +2276,16 @@ mod tests {
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::PullDefaultPublishing,
-                master_cs_id,
-            ))
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "master",
+                    BookmarkKind::PullDefaultPublishing,
+                    master_cs_id,
+                )
+                .await?,
+            )
         );
 
         Ok(())
@@ -2378,10 +2424,16 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::PullDefaultPublishing,
-                master,
-            )),
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "master",
+                    BookmarkKind::PullDefaultPublishing,
+                    master,
+                )
+                .await?,
+            ),
         )
         .await?;
 
@@ -2417,10 +2469,16 @@ mod tests {
             &ctx,
             &mut coordinator,
             &failing_book,
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::PullDefaultPublishing,
-                failing_cs_id,
-            )),
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "failingbook",
+                    BookmarkKind::PullDefaultPublishing,
+                    failing_cs_id,
+                )
+                .await?,
+            ),
         )
         .await?;
 
@@ -2599,10 +2657,16 @@ mod tests {
             &ctx,
             &mut coordinator,
             &publishing_book,
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::Publishing,
-                new_cs_id,
-            )),
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "publishing",
+                    BookmarkKind::Publishing,
+                    new_cs_id,
+                )
+                .await?,
+            ),
         )
         .await?;
 
@@ -2616,10 +2680,16 @@ mod tests {
             &ctx,
             &mut coordinator,
             &publishing_book,
-            Some(test_bookmark_state_all_warmers(
-                BookmarkKind::PullDefaultPublishing,
-                new_cs_id,
-            )),
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "publishing",
+                    BookmarkKind::PullDefaultPublishing,
+                    new_cs_id,
+                )
+                .await?,
+            ),
         )
         .await?;
 
@@ -2677,6 +2747,27 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    async fn test_bookmark_state_all_warmers_with_latest_log_id(
+        ctx: &CoreContext,
+        repo: &Repo,
+        bookmark: &str,
+        kind: BookmarkKind,
+        cs_id: ChangesetId,
+    ) -> Result<BookmarkState, Error> {
+        let mut state = test_bookmark_state_all_warmers(kind, cs_id);
+        let subscription = repo
+            .bookmarks()
+            .create_subscription(ctx, Freshness::MostRecent)
+            .await?;
+        let key = BookmarkKey::new(bookmark)?;
+        if let Some((current_cs_id, _, Some(log_id))) = subscription.bookmarks().get(&key)
+            && *current_cs_id == cs_id
+        {
+            state.set_log_id(*log_id);
+        }
+        Ok(state)
     }
 
     // Test helper to create a BookmarkState with all warmers enabled

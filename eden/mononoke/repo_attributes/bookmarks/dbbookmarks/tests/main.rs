@@ -1957,13 +1957,23 @@ async fn bookmark_subscription_initialization(fb: FacebookInit) -> Result<()> {
         .await?;
 
     sub.refresh(&ctx).await?;
+    let bookmark_values = sub
+        .bookmarks()
+        .iter()
+        .map(|(key, (cs_id, kind, _log_id))| (key.clone(), (*cs_id, *kind)))
+        .collect::<HashMap<_, _>>();
     assert_eq!(
-        *sub.bookmarks(),
+        bookmark_values,
         hashmap! {
             book1.clone() => (ONES_CSID, BookmarkKind::Publishing),
             book2.clone() => (TWOS_CSID, BookmarkKind::Publishing),
             book3.clone() => (THREES_CSID, BookmarkKind::Publishing),
         }
+    );
+    assert!(
+        sub.bookmarks()
+            .values()
+            .all(|(_, _, log_id)| { (*log_id).is_some_and(|log_id| u64::from(log_id) > 0) })
     );
 
     Ok(())
@@ -1983,22 +1993,42 @@ async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.create_publishing(&book, ONES_CSID, BookmarkUpdateReason::TestMove)?;
-    assert!(txn.commit().await?.is_some());
+    let create_log_id = BookmarkUpdateLogId(
+        txn.commit()
+            .await?
+            .expect("bookmark creation should write an update-log entry"),
+    );
 
     sub.refresh(&ctx).await?;
     assert_eq!(
         *sub.bookmarks(),
-        hashmap! { book.clone() => (ONES_CSID, BookmarkKind::Publishing)}
+        hashmap! { book.clone() => (ONES_CSID, BookmarkKind::Publishing, Some(create_log_id))}
+    );
+    assert_eq!(
+        sub.bookmarks()
+            .get(&book)
+            .and_then(|(_, _, log_id)| *log_id),
+        Some(create_log_id)
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.update(&book, TWOS_CSID, ONES_CSID, BookmarkUpdateReason::TestMove)?;
-    assert!(txn.commit().await?.is_some());
+    let update_log_id = BookmarkUpdateLogId(
+        txn.commit()
+            .await?
+            .expect("bookmark update should write an update-log entry"),
+    );
 
     sub.refresh(&ctx).await?;
     assert_eq!(
         *sub.bookmarks(),
-        hashmap! { book.clone() => (TWOS_CSID, BookmarkKind::Publishing)}
+        hashmap! { book.clone() => (TWOS_CSID, BookmarkKind::Publishing, Some(update_log_id))}
+    );
+    assert_eq!(
+        sub.bookmarks()
+            .get(&book)
+            .and_then(|(_, _, log_id)| *log_id),
+        Some(update_log_id)
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
