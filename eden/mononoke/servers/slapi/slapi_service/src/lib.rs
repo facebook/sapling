@@ -18,12 +18,16 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+#[cfg(fbcode_build)]
+use anyhow::Context;
 use anyhow::Error;
 #[cfg(fbcode_build)]
 use backend_if::RimBackend;
 use cached_config::ConfigStore;
 use clientinfo::ClientEntryPoint;
 use fbinit::FacebookInit;
+#[cfg(fbcode_build)]
+use fbwhoami::FbWhoAmI;
 use gotham::router::Router;
 use gotham_ext::handler::MononokeHttpHandler;
 use gotham_ext::middleware::ArtilleryMiddleware;
@@ -68,14 +72,30 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     is_shadow_tier: bool,
     tls_ca_path: Option<&Path>,
     rim_backend: Option<i32>,
+    rim_regional_backend: Option<i32>,
 ) -> Result<SaplingRemoteApi, Error> {
     #[cfg(fbcode_build)]
     let rim_backend = rim_backend
         .map(RimBackend)
         .inspect(|rim_backend| crate::utils::rim_rate_limiter::init(*rim_backend));
 
+    #[cfg(fbcode_build)]
+    let rim_regional_backend = rim_regional_backend
+        .map(|backend| -> Result<_, Error> {
+            let region = FbWhoAmI::get()
+                .context("Reading serving region for regional RIM accounting")?
+                .region_datacenter_prefix
+                .clone()
+                .filter(|region| !region.is_empty())
+                .context("Regional RIM accounting requires a serving region")?;
+            let backend = RimBackend(backend);
+            crate::utils::rim_rate_limiter::init(backend);
+            Ok((backend, region))
+        })
+        .transpose()?;
+
     #[cfg(not(fbcode_build))]
-    let _ = rim_backend;
+    let _ = (rim_backend, rim_regional_backend);
 
     let ctx = ServerContext::new(mononoke, will_exit);
 
@@ -135,6 +155,8 @@ pub fn build<R: Send + Sync + Clone + 'static>(
         .add(ThrottleMiddleware::new(
             #[cfg(fbcode_build)]
             rim_backend,
+            #[cfg(fbcode_build)]
+            rim_regional_backend,
         ))
         .add(LoadMiddleware::new())
         .add(log_middleware)

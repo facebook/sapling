@@ -6,6 +6,9 @@
  */
 
 #[cfg(fbcode_build)]
+use std::collections::HashMap;
+
+#[cfg(fbcode_build)]
 use anyhow::anyhow;
 #[cfg(fbcode_build)]
 use backend_if::RimBackend;
@@ -30,8 +33,6 @@ use http::Method;
 use http::Response;
 use http::StatusCode;
 use http::Uri;
-#[cfg(fbcode_build)]
-use permission_checker::TenantInfo;
 
 use crate::handlers::JsonErrorFormatter;
 #[cfg(fbcode_build)]
@@ -40,6 +41,8 @@ use crate::utils::rim_rate_limiter::RimDecision;
 use crate::utils::rim_rate_limiter::check_rate_limit;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::report_load;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::tenancy_path;
 
 #[cfg(fbcode_build)]
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
@@ -68,27 +71,29 @@ fn error_response(state: &mut State, error: HttpError) -> Response<Body> {
 async fn apply_rim_decision(
     state: &mut State,
     ctx: &CoreContext,
-    tenant: &TenantInfo,
+    tenancy_path: &[String],
     rim_backend: RimBackend,
-    requirement: (&str, f64),
+    requirements: &HashMap<String, f64>,
 ) -> Option<Response<Body>> {
-    match check_rate_limit(ctx, tenant, rim_backend, requirement).await {
-        RimDecision::Allow => {
-            report_load(ctx, tenant, rim_backend, requirement).await;
-            None
-        }
+    let decision = check_rate_limit(ctx, tenancy_path, rim_backend, requirements).await;
+    // The deployed backends use demand_equals_usage: report all work offered
+    // to this stage, including requests this stage rejects.
+    if decision != RimDecision::FailOpen {
+        report_load(ctx, tenancy_path, rim_backend, requirements).await;
+    }
+    match decision {
+        RimDecision::Allow => None,
         RimDecision::Reject if justknobs::eval(RIM_ENFORCE_JK, None, None) => {
             Some(rim_rejection_response(state))
         }
         RimDecision::Reject => {
             let mut scuba = ctx.scuba().clone();
-            scuba.add("rim_tenancy_path", tenant.to_string());
-            scuba.add("rim_resource", requirement.0);
+            scuba.add("rim_tenancy_path", tenancy_path.join("/"));
+            scuba.add("rim_backend", rim_backend.0);
             scuba.log_with_msg(
                 "RIM would have rejected request but enforcement is disabled",
                 format!("JustKnob {RIM_ENFORCE_JK} is disabled"),
             );
-            report_load(ctx, tenant, rim_backend, requirement).await;
             None
         }
         RimDecision::FailOpen => None,
@@ -112,12 +117,19 @@ fn load_shedding_response(state: &mut State, ctx: &CoreContext) -> Option<Respon
 pub struct ThrottleMiddleware {
     #[cfg(fbcode_build)]
     rim_backend: Option<RimBackend>,
+    #[cfg(fbcode_build)]
+    rim_regional_backend: Option<(RimBackend, String)>,
 }
 impl ThrottleMiddleware {
-    pub fn new(#[cfg(fbcode_build)] rim_backend: Option<RimBackend>) -> Self {
+    pub fn new(
+        #[cfg(fbcode_build)] rim_backend: Option<RimBackend>,
+        #[cfg(fbcode_build)] rim_regional_backend: Option<(RimBackend, String)>,
+    ) -> Self {
         Self {
             #[cfg(fbcode_build)]
             rim_backend,
+            #[cfg(fbcode_build)]
+            rim_regional_backend,
         }
     }
 }
@@ -139,7 +151,7 @@ impl Middleware for ThrottleMiddleware {
         }
 
         #[cfg(fbcode_build)]
-        if let Some(rim_backend) = self.rim_backend {
+        if self.rim_backend.is_some() || self.rim_regional_backend.is_some() {
             let tenant = state
                 .try_borrow::<MetadataState>()
                 .map(|metadata| metadata.metadata().tenant_info());
@@ -166,11 +178,24 @@ impl Middleware for ThrottleMiddleware {
                         Some((resource, f64::from(count)))
                     })
                     .flatten();
-                let requirements = [Some(("qps", 1.0)), fetches];
-                // Check independently so an unconfigured fetch resource cannot bypass QPS.
-                for requirement in requirements.into_iter().flatten() {
+                let requirements = [Some(("qps", 1.0)), fetches]
+                    .into_iter()
+                    .flatten()
+                    .map(|(resource, units)| (resource.to_owned(), units))
+                    .collect();
+                let scopes = [
+                    self.rim_regional_backend
+                        .as_ref()
+                        .map(|(backend, region)| (*backend, Some(region.as_str()))),
+                    self.rim_backend.map(|backend| (backend, None)),
+                ];
+                // Global accounting sees only traffic that proceeds past the regional stage.
+                for (backend, region) in scopes.into_iter().flatten() {
+                    let Some(path) = tenancy_path(&tenant, region) else {
+                        continue;
+                    };
                     if let Some(response) =
-                        apply_rim_decision(state, &ctx, &tenant, rim_backend, requirement).await
+                        apply_rim_decision(state, &ctx, &path, backend, &requirements).await
                     {
                         return Some(response);
                     }
