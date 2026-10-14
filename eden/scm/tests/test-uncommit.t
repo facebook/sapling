@@ -154,7 +154,7 @@ Try partial uncommit, also moves bookmark
   │ │
   │ │ x  aa5000ec01a38397e1e2ad1eddc643c151459a9b empty
   │ ├─╯
-  │ o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
+  │ x  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
   ├─╯
   │ o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
   ├─╯
@@ -280,7 +280,7 @@ Partial uncommit in the middle, does not move bookmark
   │ │ │ │
   │ │ │ │ x  aa5000ec01a38397e1e2ad1eddc643c151459a9b empty
   │ │ │ ├─╯
-  │ │ │ o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
+  │ │ │ x  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
   │ │ ├─╯
   │ │ │ o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
   │ │ ├─╯
@@ -288,7 +288,7 @@ Partial uncommit in the middle, does not move bookmark
   │ │ │
   │ │ o  abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
   │ ├─╯
-  │ o  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
+  │ x  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
   ├─╯
   o  3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   
@@ -453,10 +453,12 @@ bookmark moves, and that undo restores the original commit
   $ sl bookmark
    * book                      0fe586ac1b64
   $ sl log -r 'predecessors(.)' -T '{desc} {files}\n'
+  add a and b a b
   add a and b a
   $ sl log -r "successors($OLD)" -T '{desc} {files}\n'
+  add a and b a
   $ sl log --hidden -r $OLD -T '{desc}: obsolete={obsolete} op={mutations % "{operation}"}\n'
-  add a and b: obsolete= op=
+  add a and b: obsolete=obsolete op=uncommit
   $ sl revert -q --all
   $ sl undo -q
   $ sl log -r . -T '{node|short} {files} obsolete={obsolete}\n'

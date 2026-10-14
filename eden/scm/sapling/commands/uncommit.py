@@ -23,7 +23,16 @@ added and removed in the working directory.
 
 from typing import Optional
 
-from .. import cmdutil, context, copies, error, rewriteutil, scmutil, treestate
+from .. import (
+    cmdutil,
+    context,
+    copies,
+    error,
+    mutation,
+    rewriteutil,
+    scmutil,
+    treestate,
+)
 from ..i18n import _
 from ..node import nullid
 from .cmdtable import command
@@ -132,6 +141,10 @@ def commitfilteredctx(repo, ctx, match, allowempty):
         )
         return mctx
 
+    extra = dict(ctx.extra())
+    mutinfo = mutation.record(repo, extra, [ctx.node()], "uncommit")
+    loginfo = {"predecessors": ctx.hex(), "mutation": "uncommit"}
+
     new = context.memctx(
         repo,
         parents=[base],
@@ -140,7 +153,9 @@ def commitfilteredctx(repo, ctx, match, allowempty):
         filectxfn=filectxfn,
         user=ctx.user(),
         date=ctx.date(),
-        extra=ctx.extra(),
+        extra=extra,
+        loginfo=loginfo,
+        mutinfo=mutinfo,
     )
     # phase handling
     commitphase = ctx.phase()
