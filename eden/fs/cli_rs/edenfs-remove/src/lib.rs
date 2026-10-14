@@ -80,6 +80,18 @@ impl Default for RemoveCheckoutOptions {
     }
 }
 
+/// Return `configured`, else `EDENFS_AUX_PROCESSES_TIMEOUT_SECS`, else the default timeout.
+pub fn auxiliary_process_timeout(configured: Option<Duration>) -> Duration {
+    configured
+        .or_else(|| {
+            std::env::var("EDENFS_AUX_PROCESSES_TIMEOUT_SECS")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .map(Duration::from_secs)
+        })
+        .unwrap_or(DEFAULT_AUXILIARY_PROCESS_TIMEOUT)
+}
+
 /// A non-fatal condition encountered while removing a checkout.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RemoveCheckoutWarning {
@@ -99,8 +111,14 @@ pub enum RemoveCheckoutWarning {
 /// Progress and non-fatal warnings reported while removing a checkout.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RemoveCheckoutEvent {
-    /// A nonempty batch of backing targets is about to be deleted.
-    DeletingBackingStorage,
+    /// Redirections are about to be unmounted.
+    UnmountingRedirections,
+    /// A backing target is about to be deleted or emptied.
+    DeletingBackingStorage { path: PathBuf },
+    /// The checkout is about to be unmounted.
+    UnmountingCheckout,
+    /// The checkout's EdenFS client state is about to be deleted.
+    DeletingCheckoutState,
     /// Removal continues after this warning.
     Warning(RemoveCheckoutWarning),
 }
@@ -173,7 +191,6 @@ pub async fn remove_checkout_with_event_handler(
     let path = tokio::fs::canonicalize(path)
         .await
         .with_context(|| format!("failed to canonicalize checkout path {}", path.display()))?;
-    let mut warning_handler = |warning| event_handler(RemoveCheckoutEvent::Warning(warning));
     let client_name = registered_client(instance, &path)?
         .ok_or_else(|| anyhow!("{} is not a registered EdenFS checkout", path.display()))?;
     let checkout_is_active = is_active_eden_mount(&path);
@@ -185,16 +202,18 @@ pub async fn remove_checkout_with_event_handler(
             // Client state is deleted after backing cleanup, so a retry of an
             // interrupted removal has no redirections left to plan from.
             Ok(false) => {
-                warning_handler(RemoveCheckoutWarning::BackingCleanupSkipped {
-                    path: path.clone(),
-                });
+                event_handler(RemoveCheckoutEvent::Warning(
+                    RemoveCheckoutWarning::BackingCleanupSkipped { path: path.clone() },
+                ));
                 BackingCleanupPolicy::Preserve
             }
             Err(error) => {
-                warning_handler(RemoveCheckoutWarning::BackingCleanupFailed {
-                    path: path.clone(),
-                    error: format!("failed to check {}: {error}", client_config.display()),
-                });
+                event_handler(RemoveCheckoutEvent::Warning(
+                    RemoveCheckoutWarning::BackingCleanupFailed {
+                        path: path.clone(),
+                        error: format!("failed to check {}: {error}", client_config.display()),
+                    },
+                ));
                 BackingCleanupPolicy::Preserve
             }
         },
@@ -206,9 +225,11 @@ pub async fn remove_checkout_with_event_handler(
             // `.eden-redirections` is checkout content, so only client config redirections
             // can be planned while the checkout is unmounted.
             if !checkout_is_active {
-                warning_handler(RemoveCheckoutWarning::RepositoryRedirectionCleanupSkipped {
-                    path: path.clone(),
-                });
+                event_handler(RemoveCheckoutEvent::Warning(
+                    RemoveCheckoutWarning::RepositoryRedirectionCleanupSkipped {
+                        path: path.clone(),
+                    },
+                ));
             }
             clean_up_managed_backing(
                 instance,
@@ -220,11 +241,12 @@ pub async fn remove_checkout_with_event_handler(
             .await;
         }
         Some(BackingCleanupPolicy::Preserve) => {
+            event_handler(RemoveCheckoutEvent::UnmountingRedirections);
             unmount_redirections_with_timeout(
                 &path,
                 options.auxiliary_process_timeout,
                 unmount_redirections(instance, &path),
-                &mut warning_handler,
+                &mut |warning| event_handler(RemoveCheckoutEvent::Warning(warning)),
             )
             .await;
         }
@@ -232,9 +254,9 @@ pub async fn remove_checkout_with_event_handler(
     }
 
     if checkout_is_active {
-        remove_active_checkout(instance, &path, &client_name, options).await
+        remove_active_checkout(instance, &path, &client_name, options, &mut event_handler).await
     } else {
-        remove_inactive_checkout(instance, &path, &client_name, options).await
+        remove_inactive_checkout(instance, &path, &client_name, options, &mut event_handler).await
     }
 }
 
@@ -409,11 +431,13 @@ async fn remove_active_checkout(
     path: &Path,
     client_name: &str,
     options: RemoveCheckoutOptions,
+    event_handler: &mut impl FnMut(RemoveCheckoutEvent),
 ) -> Result<()> {
+    event_handler(RemoveCheckoutEvent::UnmountingCheckout);
     edenfs_core::unmount::unmount_for_removal(instance, path, options.no_force)
         .await
         .with_context(|| format!("failed to unmount mount point at {}", path.display()))?;
-    remove_inactive_checkout(instance, path, client_name, options).await
+    remove_inactive_checkout(instance, path, client_name, options, event_handler).await
 }
 
 /// How much of a redirection's backing can be deleted after trying to unmount it.
@@ -463,6 +487,10 @@ async fn clean_up_managed_backing<EventHandler>(
                 ),
             },
         ));
+    }
+
+    if !redirections.is_empty() {
+        event_handler(RemoveCheckoutEvent::UnmountingRedirections);
     }
 
     #[cfg(target_os = "linux")]
@@ -740,12 +768,12 @@ where
     Target: Fn(&Action) -> PathBuf,
     Execute: Fn(Action) -> Result<()> + Clone + Send + Sync + 'static,
 {
-    if !actions.is_empty() {
-        event_handler(RemoveCheckoutEvent::DeletingBackingStorage);
-    }
     let mut failures = Vec::new();
     for action in actions {
         let action_target = target(&action);
+        event_handler(RemoveCheckoutEvent::DeletingBackingStorage {
+            path: action_target.clone(),
+        });
         let execute = execute.clone();
         let result = tokio::task::spawn_blocking(move || execute(action))
             .await
@@ -778,7 +806,9 @@ async fn remove_inactive_checkout(
     path: &Path,
     client_name: &str,
     options: RemoveCheckoutOptions,
+    event_handler: &mut impl FnMut(RemoveCheckoutEvent),
 ) -> Result<()> {
+    event_handler(RemoveCheckoutEvent::DeletingCheckoutState);
     remove_client_config_dir(instance, path, client_name)?;
     instance
         .remove_path_from_directory_map(path)
@@ -814,6 +844,49 @@ pub fn clean_mount_point(path: &Path) -> Result<()> {
 
     forcefully_remove_dir_all(path)
         .with_context(|| format!("failed to remove mount point {}", path.display()))
+}
+
+/// What a directory is to EdenFS, decided from checkout-local metadata and the
+/// directory map without talking to the daemon.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LocalCheckoutState {
+    /// The directory carries live checkout metadata. On Windows that metadata outlives
+    /// an unmount, so removal still has to find the checkout in the directory map.
+    Active,
+    /// Registered in the directory map but not mounted.
+    Inactive,
+    /// Unregistered and not recognizably a checkout.
+    Unknown,
+}
+
+/// Classify `path` before removing it. Fails if `path` lies inside a mounted checkout
+/// rather than being its root.
+pub async fn classify_checkout(
+    instance: &EdenFsInstance,
+    path: &Path,
+) -> Result<LocalCheckoutState> {
+    let path = tokio::fs::canonicalize(path)
+        .await
+        .with_context(|| format!("failed to canonicalize checkout path {}", path.display()))?;
+    // A nested checkout's root is itself an active mount, so test the path before its ancestors.
+    if is_active_eden_mount(&path) {
+        return Ok(LocalCheckoutState::Active);
+    }
+    if let Some(root) = path
+        .ancestors()
+        .skip(1)
+        .find(|ancestor| is_active_eden_mount(ancestor))
+    {
+        return Err(anyhow!(
+            "{} is not the root of checkout {}, not removing",
+            path.display(),
+            root.display()
+        ));
+    }
+    if registered_client(instance, &path)?.is_some() {
+        return Ok(LocalCheckoutState::Inactive);
+    }
+    Ok(LocalCheckoutState::Unknown)
 }
 
 async fn validate_removal_completion(
@@ -1020,6 +1093,93 @@ mod tests {
                 path: PathBuf::from("/checkout"),
                 error: "device busy".to_owned(),
             }]
+        );
+    }
+
+    #[tokio::test]
+    async fn classify_checkout_tells_registered_and_unknown_directories_apart() {
+        let temp_dir = tempdir().expect("temp directory should be created");
+        let config_dir = temp_dir.path().join("eden");
+        let inactive = temp_dir.path().join("inactive");
+        let unknown = temp_dir.path().join("unknown");
+        for dir in [&config_dir, &inactive, &unknown] {
+            fs::create_dir_all(dir).expect("directory should be created");
+        }
+        fs::write(unknown.join("notes.txt"), "keep").expect("notes should be written");
+        fs::write(
+            config_dir.join("config.json"),
+            serde_json::to_vec(&BTreeMap::from([(
+                inactive.canonicalize().expect("inactive path"),
+                "inactive-client",
+            )]))
+            .expect("directory map should serialize"),
+        )
+        .expect("directory map should be written");
+        let instance = EdenFsInstance::with_daemon(
+            config_dir.clone(),
+            config_dir.join("etc"),
+            None,
+            Arc::new(DisconnectedDaemon),
+        );
+
+        assert_eq!(
+            classify_checkout(&instance, &inactive)
+                .await
+                .expect("inactive lookup"),
+            LocalCheckoutState::Inactive
+        );
+        assert_eq!(
+            classify_checkout(&instance, &unknown)
+                .await
+                .expect("unknown lookup"),
+            LocalCheckoutState::Unknown
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn classify_checkout_rejects_a_directory_inside_a_mounted_checkout() {
+        let temp_dir = tempdir().expect("temp directory should be created");
+        let root = temp_dir.path().canonicalize().expect("temp directory path");
+        let config_dir = root.join("eden");
+        let checkout = root.join("checkout");
+        let inside = checkout.join("inside");
+        let metadata = checkout.join(".eden");
+        let nested = checkout.join("nested");
+        let nested_metadata = nested.join(".eden");
+        for dir in [&config_dir, &inside, &metadata, &nested_metadata] {
+            fs::create_dir_all(dir).expect("directory should be created");
+        }
+        std::os::unix::fs::symlink(&checkout, metadata.join("root")).expect("root pointer");
+        std::os::unix::fs::symlink(&nested, nested_metadata.join("root"))
+            .expect("nested root pointer");
+        fs::write(config_dir.join("config.json"), b"{}").expect("directory map should be written");
+        let instance = EdenFsInstance::with_daemon(
+            config_dir.clone(),
+            config_dir.join("etc"),
+            None,
+            Arc::new(DisconnectedDaemon),
+        );
+
+        assert_eq!(
+            classify_checkout(&instance, &checkout)
+                .await
+                .expect("checkout lookup"),
+            LocalCheckoutState::Active
+        );
+        assert_eq!(
+            classify_checkout(&instance, &nested)
+                .await
+                .expect("nested checkout lookup"),
+            LocalCheckoutState::Active,
+            "a nested checkout root is a mount, not a directory inside its parent"
+        );
+        let error = classify_checkout(&instance, &inside)
+            .await
+            .expect_err("a directory inside a mounted checkout must be rejected");
+        assert!(
+            error.to_string().contains("is not the root of checkout"),
+            "{error:#}"
         );
     }
 

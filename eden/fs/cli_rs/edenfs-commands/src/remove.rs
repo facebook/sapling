@@ -22,7 +22,6 @@ mod operations;
 mod types;
 mod utils;
 
-use operations::get_aux_processes_stop_timeout;
 use types::Messenger;
 use types::PathType;
 use types::RemoveContext;
@@ -90,7 +89,8 @@ impl Subcommand for RemoveCmd {
             self.no,
         ));
 
-        let timeout = Duration::from_secs(get_aux_processes_stop_timeout(self.timeout));
+        let timeout =
+            edenfs_remove::auxiliary_process_timeout(self.timeout.map(Duration::from_secs));
 
         for path in &self.paths {
             let (canonicalized_path, path_type) = operations::classify_path(path).await?;

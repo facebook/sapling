@@ -19,21 +19,6 @@ use super::types::PathType;
 use super::types::RemoveContext;
 use super::utils;
 
-const AUX_PROCESSES_STOP_TIMEOUT: u64 = 60;
-
-/// Get the timeout for stopping aux processes.
-///
-/// Priority: CLI arg > EDENFS_AUX_PROCESSES_TIMEOUT_SECS env var > default (60s).
-pub fn get_aux_processes_stop_timeout(cli_timeout: Option<u64>) -> u64 {
-    if let Some(t) = cli_timeout {
-        return t;
-    }
-    std::env::var("EDENFS_AUX_PROCESSES_TIMEOUT_SECS")
-        .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(AUX_PROCESSES_STOP_TIMEOUT)
-}
-
 // Validate and canonicalize the given path into absolute path with the type of PathBuf.
 // Then determine a type for this path.
 //
