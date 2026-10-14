@@ -6,6 +6,7 @@
  */
 
 mod add;
+mod checkout;
 mod label;
 mod list;
 mod remove;

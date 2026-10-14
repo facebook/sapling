@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(feature = "fb")]
-mod direct;
-
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::io::BufRead;
@@ -16,10 +13,7 @@ use std::path::PathBuf;
 
 use anyhow::Error;
 use clidispatch::ReqCtx;
-#[cfg(not(feature = "fb"))]
-use clidispatch::TermLogger;
 use clidispatch::abort;
-use cmdutil::ConfigExt;
 use cmdutil::Result;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
@@ -29,10 +23,9 @@ use worktree::lock_worktree_path_op;
 use worktree::with_registry_lock;
 use worktree::with_worktree_path_op_lock;
 
-#[cfg(feature = "fb")]
-use self::direct::run_direct_eden_remove;
 use crate::CurrentGroup;
 use crate::WorktreeOpts;
+use crate::checkout;
 use crate::require_group;
 
 pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) -> Result<u8> {
@@ -267,27 +260,13 @@ fn run_remove_all(
 /// (e.g., removed externally via `eden rm`), skips the call and returns Ok
 /// so the caller can proceed to clean the worktree registry.
 fn run_eden_remove(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, path: &Path) -> Result<()> {
-    if !path.exists() {
+    if !checkout::remove_checkout(&ctx.logger(), repo, path)? {
         ctx.logger().warn(format!(
             "eden checkout {} not found on disk, continuing to remove from registry",
             path.display()
         ));
-        return Ok(());
     }
-
-    if repo
-        .config()
-        .get_or("worktree", "direct-eden-removal", || cfg!(feature = "fb"))?
-    {
-        run_direct_eden_remove(&ctx.logger(), repo, path)
-    } else {
-        edenfs_client::run_eden_remove(repo.config().as_ref(), path)
-    }
-}
-
-#[cfg(not(feature = "fb"))]
-fn run_direct_eden_remove(_logger: &TermLogger, _repo: &Repo, _path: &Path) -> Result<()> {
-    abort!("worktree.direct-eden-removal is not supported in this build");
+    Ok(())
 }
 
 fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {

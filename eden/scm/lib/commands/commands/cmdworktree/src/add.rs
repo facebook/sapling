@@ -41,6 +41,7 @@ use worktree::with_worktree_path_op_lock;
 use worktree::write_worktree_name_marker;
 
 use crate::WorktreeOpts;
+use crate::checkout::AddSource;
 
 fn current_sl_binary() -> OsString {
     std::env::current_exe()
@@ -228,20 +229,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         }
     }
 
-    // Replicate the source repo's scm type and active filters.
-    // When edensparse is in requirements, the backing store should be filteredhg
-    // (even with no filter paths configured). Otherwise the backing store is hg.
-    // Read active filter paths from the source repo's .sl/sparse file.
-    let clone_filters = repo
-        .requirements
-        .contains("edensparse")
-        .then(|| -> anyhow::Result<_> {
-            let paths = filters::util::read_filter_config(repo.dot_hg_path())?
-                .map(|paths| paths.into_iter().map(|p| p.into_string().into()).collect())
-                .unwrap_or_default();
-            Ok(paths)
-        })
-        .transpose()?;
+    let source = AddSource::new(repo)?;
 
     let pre_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "pre-worktree-add");
     pre_hooks.run_hooks(
@@ -282,17 +270,9 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
 
     // Lock the source checkout path only while snapshotting the source state that
     // needs to be copied into the new worktree.
-    let (target, source_sparse_config, source_user_config, source_status) =
+    let (prepared, source_status) =
         with_worktree_path_op_lock(&shared_store_path, &canonical_repo_path, || {
-            let source_client_dir = edenfs_client::get_client_dir(repo.path())?;
-            let parents = workingcopy::fast_path_wdir_parents_with_config(
-                repo.path(),
-                repo.ident(),
-                repo.config(),
-            )?;
-            let target = requested_target.or_else(|| parents.p1().copied());
-            let source_sparse_config = clone::snapshot_sparse_config(repo.dot_hg_path())?;
-            let source_user_config = clone::snapshot_eden_user_config(&source_client_dir)?;
+            let prepared = source.capture(requested_target)?;
             let source_status = if ctx.opts.snapshot && use_direct_copy {
                 logger.info("computing working copy status...");
                 let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
@@ -300,12 +280,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
             } else {
                 None
             };
-            Ok((
-                target,
-                source_sparse_config,
-                source_user_config,
-                source_status,
-            ))
+            Ok((prepared, source_status))
         })?;
 
     // Reserve a slot before cloning. The reservation counts against max-count,
@@ -359,22 +334,12 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         }
         check_dest_not_in_repo(&dest)?;
 
-        clone::eden_clone(repo, &dest, target, clone_filters).inspect_err(|_| {
+        prepared.create(&dest).inspect_err(|_| {
             ctx.logger().warn(format!(
                 "worktree add may have left a partial checkout; try running `eden rm {}` to recover",
                 dest.display()
             ));
-        })?;
-
-        source_sparse_config.as_deref().map_or(Ok(()), |config| {
-            clone::write_sparse_config(config, &dest.join(repo.ident().dot_dir()))
-        })?;
-
-        source_user_config.as_deref().map_or(Ok(()), |config| {
-            clone::apply_eden_user_config_snapshot(repo.config().as_ref(), config, &dest)
-        })?;
-
-        Ok(())
+        })
     })?;
 
     with_registry_lock(&shared_store_path, |registry| {
