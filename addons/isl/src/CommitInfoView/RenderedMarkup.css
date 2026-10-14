@@ -31,6 +31,27 @@
   margin: 0;
 }
 
+/*
+ * Commit descriptions render inside the click-to-edit field. Comment bodies share
+ * .rendered-markup but space their blocks with pre-wrap whitespace, so the block spacing
+ * below stays scoped to the field.
+ */
+.commit-info-rendered-textarea .rendered-markup {
+  white-space: normal;
+}
+.commit-info-rendered-textarea .rendered-markup > * {
+  margin-block: 0;
+}
+.commit-info-rendered-textarea .rendered-markup > * + * {
+  margin-top: 0.6em;
+}
+.commit-info-rendered-textarea .rendered-markup code:not(pre code) {
+  background-color: var(--tt-bg);
+  padding-inline: 4px;
+  overflow-wrap: break-word;
+  white-space: break-spaces;
+}
+
 .rendered-markup table {
   border: 1px solid var(--table-border);
   background: var(--table-border);
@@ -81,6 +102,7 @@
   font-style: italic;
   margin: 0;
   display: flex;
+  flex-direction: column;
 }
 .rendered-markup blockquote > p {
   margin: 0;
