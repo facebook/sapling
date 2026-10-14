@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use edenfs_utils::is_active_eden_mount;
+use edenfs_remove::LocalCheckoutState;
 use fail::fail_point;
 use tracing::debug;
 use tracing::warn;
@@ -18,6 +18,7 @@ use tracing::warn;
 use super::types::PathType;
 use super::types::RemoveContext;
 use super::utils;
+use crate::get_edenfs_instance;
 
 // Validate and canonicalize the given path into absolute path with the type of PathBuf.
 // Then determine a type for this path.
@@ -47,30 +48,16 @@ pub async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
 
             debug!("{} is determined as a directory", path.display());
 
-            if is_active_eden_mount(path) {
-                debug!(
-                    "path {} is determined to be an active EdenFS mount",
-                    path.display()
-                );
-
-                return Ok((canonicalized_path, PathType::ActiveEdenMount));
-            }
-
-            debug!("{} is not an active EdenFS mount", path.display());
-
-            if utils::is_inactive_eden_mount(&canonicalized_path).await? {
-                debug!(
-                    "path {} is determined to be an inactive EdenFS mount",
-                    path.display()
-                );
-
-                return Ok((canonicalized_path, PathType::InactiveEdenMount));
-            }
-
-            // It's a directory that is not listed inside config.json
-            // We don't know how to handle it properly, so move to "Unknown" state
-            // and try to handle from there with "the best efforts".
-            Ok((canonicalized_path, PathType::Unknown))
+            let path_type =
+                match edenfs_remove::classify_checkout(get_edenfs_instance(), path).await? {
+                    LocalCheckoutState::Active => PathType::ActiveEdenMount,
+                    LocalCheckoutState::Inactive => PathType::InactiveEdenMount,
+                    // A directory that is not listed inside config.json. We don't know how
+                    // to handle it properly, so try to handle it from here with best efforts.
+                    LocalCheckoutState::Unknown => PathType::Unknown,
+                };
+            debug!("path {} is determined to be {}", path.display(), path_type);
+            Ok((canonicalized_path, path_type))
         }
     }
 }
