@@ -224,6 +224,19 @@ Mainly used for ISL integration.
   	ref=* (glob)
   	active=true
 
+copytrace resolves grepo project paths: a project path answers with itself, and
+so does the nested overlapping one, while an unknown path answers null. Source
+and destination are the same commit, so the trace is degenerate; tracing across
+a range needs path history to resolve content through the same resolver, which
+it does not do yet.
+
+  $ sl debugcopytrace -s . -d . vendor/a
+  {"vendor/a": "vendor/a"}
+  $ sl debugcopytrace -s . -d . vendor/a/sub/c
+  {"vendor/a/sub/c": "vendor/a/sub/c"}
+  $ sl debugcopytrace -s . -d . nosuch/path
+  {"nosuch/path": null}
+
 (bad: blame doesn't work)
   $ sl blame vendor/a
   abort: vendor/a@000000000000: not found in manifest!

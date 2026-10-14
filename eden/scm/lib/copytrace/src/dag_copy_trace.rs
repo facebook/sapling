@@ -19,6 +19,7 @@ use dag::Vertex;
 use hg_metrics::increment_counter;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeResolver;
 use manifest_tree::TreeStore;
 use pathhistory::PathHistory;
 use pathmatcher::Matcher;
@@ -47,6 +48,9 @@ pub struct DagCopyTrace {
     /// Resolve and prefetch trees in batch.
     tree_store: Arc<dyn TreeStore>,
 
+    /// Turn a commit into a manifest.
+    tree_resolver: Arc<dyn TreeResolver>,
+
     // Find renames for given commits
     rename_finder: Arc<dyn RenameFinder + Send + Sync>,
 
@@ -61,6 +65,7 @@ impl DagCopyTrace {
     pub fn new(
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_store: Arc<dyn TreeStore>,
+        tree_resolver: Arc<dyn TreeResolver>,
         rename_finder: Arc<dyn RenameFinder + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
@@ -68,6 +73,7 @@ impl DagCopyTrace {
         let dag_copy_trace = Self {
             root_tree_reader,
             tree_store,
+            tree_resolver,
             rename_finder,
             dag,
             config,
@@ -75,17 +81,9 @@ impl DagCopyTrace {
         Ok(dag_copy_trace)
     }
 
-    async fn vertex_to_tree_manifest(&self, commit: &Vertex) -> Result<TreeManifest> {
+    fn vertex_to_tree_manifest(&self, commit: &Vertex) -> Result<TreeManifest> {
         let commit_id = HgId::from_slice(commit.as_ref())?;
-        let commit_to_tree_id = self
-            .root_tree_reader
-            .read_root_tree_ids(vec![commit_id])
-            .await?;
-        if commit_to_tree_id.is_empty() {
-            return Err(CopyTraceError::RootTreeIdNotFound(commit_id).into());
-        }
-        let (_, tree_id) = commit_to_tree_id[0];
-        Ok(TreeManifest::durable(self.tree_store.clone(), tree_id))
+        self.tree_resolver.get(&commit_id)
     }
 
     async fn trace_rename_commit(
@@ -118,8 +116,8 @@ impl DagCopyTrace {
         }
         // For simplicity, we only check p1.
         let p1 = &parents[0];
-        let old_manifest = self.vertex_to_tree_manifest(p1).await?;
-        let new_manifest = self.vertex_to_tree_manifest(&commit).await?;
+        let old_manifest = self.vertex_to_tree_manifest(p1)?;
+        let new_manifest = self.vertex_to_tree_manifest(&commit)?;
         let (rename, next_commit) = match direction {
             SearchDirection::Backward => {
                 let rename = self
@@ -140,7 +138,7 @@ impl DagCopyTrace {
     }
 
     async fn check_path(&self, target_commit: &Vertex, path: RepoPathBuf) -> Result<TraceResult> {
-        let tree = self.vertex_to_tree_manifest(target_commit).await?;
+        let tree = self.vertex_to_tree_manifest(target_commit)?;
         if tree.get_file_if_visible(&path)?.is_some() {
             Ok(TraceResult::Renamed(path))
         } else {
@@ -172,7 +170,7 @@ impl CopyTrace for DagCopyTrace {
     ) -> Result<TraceResult> {
         tracing::debug!(?src, ?dst, ?src_path, "trace_rename");
 
-        let msrc = self.vertex_to_tree_manifest(&src).await?;
+        let msrc = self.vertex_to_tree_manifest(&src)?;
         if msrc.get_file_if_visible(&src_path)?.is_none() {
             tracing::debug!("src_path not found in src commit");
             return Ok(TraceResult::NotFound);
@@ -318,8 +316,8 @@ impl CopyTrace for DagCopyTrace {
         tracing::debug!(?src, ?dst, "path_copies");
 
         let start_time = Instant::now();
-        let msrc = self.vertex_to_tree_manifest(&src).await?;
-        let mdst = self.vertex_to_tree_manifest(&dst).await?;
+        let msrc = self.vertex_to_tree_manifest(&src)?;
+        let mdst = self.vertex_to_tree_manifest(&dst)?;
 
         // 1. src and dst are adjacent
 

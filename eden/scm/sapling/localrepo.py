@@ -1327,6 +1327,7 @@ class localrepository:
         return bindings.copytrace.dagcopytrace(
             self.changelog.inner,
             self.manifestlog.datastore,
+            self._rsrepo,
             self.fileslog.filestore,
             self.changelog.dag,
             self.ui._rcfg,

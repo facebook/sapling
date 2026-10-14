@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::Result;
 use async_runtime::block_on;
 use configmodel::Config;
 use copytrace::ContentSimilarityRenameFinder;
@@ -25,6 +26,7 @@ use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use dag::DagAlgorithm;
 use dag::Vertex;
+use manifest_tree::TreeResolver;
 use pypathmatcher::extract_matcher;
 use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
@@ -65,12 +67,14 @@ py_class!(pub class dagcopytrace |py| {
         _cls,
         root_tree_reader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
         tree_store: ImplInto<Arc<dyn TreeStore>>,
+        tree_resolver: ImplInto<Result<Arc<dyn TreeResolver>>>,
         file_reader: ImplInto<Arc<dyn FileStore>>,
         dag: ImplInto<Arc<dyn DagAlgorithm + Send + Sync>>,
         config: ImplInto<Arc<dyn Config + Send + Sync>>,
     ) -> PyResult<Self> {
         let root_tree_reader = root_tree_reader.into();
         let tree_store = tree_store.into();
+        let tree_resolver = tree_resolver.into().map_pyerr(py)?;
         let config = config.into();
         let rename_finder: Arc<dyn RenameFinder + Send + Sync> = match tree_store.format() {
             SerializationFormat::Hg => Arc::new(
@@ -83,6 +87,7 @@ py_class!(pub class dagcopytrace |py| {
         let copytrace = DagCopyTrace::new(
             root_tree_reader,
             tree_store,
+            tree_resolver,
             rename_finder,
             dag,
             config,
