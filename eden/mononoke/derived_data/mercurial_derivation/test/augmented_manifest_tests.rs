@@ -7095,6 +7095,57 @@ async fn test_batch_upload_augmented_manifests_are_byte_identical_for_a_merge(
     .await
 }
 
+/// What it tests: a directory whose child directory is named like the ACL
+/// file and holds a restriction, uploaded as a client would.
+///
+/// Why it matters: the tree is valid and canonical derivation builds it. A
+/// rejected batch stores nothing, and every later upload listing the same
+/// subtree then fails with a missing child, because clients never resend trees
+/// the server already has.
+///
+/// FIXME: `acl_node_for_directory` rejects any child directory named like the
+/// ACL file as colliding with the directory's own ACL file, but a name is
+/// either a file or a directory, so here there is no ACL file to collide with.
+/// Once fixed, the batch builds and matches canonical derivation.
+#[mononoke::fbinit_test]
+async fn test_upload_of_a_child_directory_named_like_the_acl_file(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let root = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("d/.slacl/.slacl", TEST_ACL_CONTENT)
+        .add_file("d/file", "file")
+        .commit()
+        .await?;
+
+    let manifest = hg_manifest_id_of(&ctx, &repo, root).await?;
+    let mut uploaded = Vec::new();
+    for path in ["d/.slacl", "d", ""] {
+        uploaded.push(tree_id_at_path(&ctx, &repo, manifest, path).await?);
+    }
+    let overlay: Arc<dyn KeyedBlobstore> = Arc::new(MemWritesKeyedBlobstore::new(
+        DenyGetKeyedBlobstore::missing(
+            repo.repo_blobstore().clone(),
+            uploaded
+                .iter()
+                .map(|id| HgAugmentedManifestId::new(id.into_nodehash()).blobstore_key()),
+        ),
+    ));
+    let err = build_augmented_manifests_for_uploaded_trees(
+        &ctx,
+        &overlay,
+        repo.restricted_paths().config_based(),
+        uploaded_trees_for(&ctx, &repo, &uploaded).await?,
+    )
+    .await
+    .expect_err("FIXME: the batch should build");
+    assert!(
+        format!("{err:#}").contains("collides with acl file name"),
+        "FIXME: d is rejected for its .slacl directory, got: {err:#}"
+    );
+
+    Ok(())
+}
+
 /// A batch whose trees cannot all be built fails outright, and stores nothing.
 ///
 /// A child that is neither in the batch nor already derived means the client
