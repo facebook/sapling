@@ -16,7 +16,7 @@ def debugstatus(ui, repo, **opts):
     try:
         dmap_len = str(len(dmap))
     except RuntimeError:
-        dmap_len = "not supproted"
+        dmap_len = "not supported"
     ui.write(_x("len(dirstate) = %s\n") % (dmap_len,))
 
     nonnormalset = dmap.nonnormalset

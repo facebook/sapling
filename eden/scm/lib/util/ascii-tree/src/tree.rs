@@ -118,7 +118,7 @@ impl<T> Tree<T> {
                     visit(ctx, child_id, extract_key);
                 }
 
-                // Skip merging if any child is interesting, to avoid accidentically hiding
+                // Skip merging if any child is interesting, to avoid accidentally hiding
                 // interesting children.
                 if ctx.tree_spans[child_id].children.iter().any(|&id| {
                     ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[child_id]))

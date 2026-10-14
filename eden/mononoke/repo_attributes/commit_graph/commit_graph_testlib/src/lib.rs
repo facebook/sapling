@@ -1831,7 +1831,7 @@ pub async fn test_segmented_slice_ancestors(
     .await?;
 
     // Each slice is assigned the correct boundary: ("L", "L") depends on nothing,
-    // ("M", "M") depends on "L" and so onn.
+    // ("M", "M") depends on "L" and so on.
     assert_segmented_slice_ancestors_with_per_slice_boundaries(
         &graph,
         &ctx,

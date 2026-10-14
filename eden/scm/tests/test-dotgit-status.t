@@ -68,7 +68,7 @@ Clean up (revert, purge)
 `debugstatus` does not crash
 
   $ sl debugstatus
-  len(dirstate) = not supproted
+  len(dirstate) = not supported
   len(nonnormal) = 0
   len(filtered nonnormal) = 0
   clock = None

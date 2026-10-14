@@ -41,7 +41,7 @@ static BACKTRACE_COLLECTOR: LazyLock<Arc<RwLock<BacktraceCollector>>> =
 /// Global profiling output. Written by [`teardown_profiling`].
 static PROFILING_SUMMARIES: LazyLock<RwLock<Vec<String>>> = LazyLock::new(Default::default);
 
-/// Start global profiling for the current (persumably main) thread.
+/// Start global profiling for the current (presumably main) thread.
 /// Returns `None` if profiling was already set up.
 /// Returns a droppable object that will stop and output profiling result.
 ///

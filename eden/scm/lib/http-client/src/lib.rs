@@ -106,7 +106,7 @@ pub fn init_openssl() {
     // Force openssl to initialize to to work around openssl bug
     // https://github.com/openssl/openssl/issues/6214. Initializing openssl explicitly
     // causes openssl to use OPENSSL_INIT_NO_ATEXIT which avoids shutdown race conditions
-    // (but not shutting down openssl). If we don't explicitly innitialize, curl
+    // (but not shutting down openssl). If we don't explicitly initialize, curl
     // initializes openssl without OPENSSL_INIT_NO_ATEXIT and we get the race conditions.
     openssl::init();
 }

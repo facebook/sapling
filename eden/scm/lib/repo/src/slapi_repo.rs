@@ -199,7 +199,7 @@ impl SlapiRepo {
     pub fn sparse_matcher(&self, manifest: &TreeManifest) -> Result<Option<DynMatcher>> {
         #[cfg(feature = "wdir")]
         match filters::util::filter_paths_from_config(self.config()) {
-            // {""} is a special case that means "null filter" - match eveything.
+            // {""} is a special case that means "null filter" - match everything.
             Some(paths) if !paths.iter().all(|p| p.is_empty()) => {
                 let sparse_root = Root::from_bytes(
                     paths

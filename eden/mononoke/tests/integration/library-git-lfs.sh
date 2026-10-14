@@ -27,7 +27,7 @@ function test_repos_for_lfs_with_upstream {
 EOF
 
     # In this test we're creating another repo that serves only as secondary LFS server - this
-    # way we're showing tha we can deal with the fact that that file contents are uploaded by git
+    # way we're showing that we can deal with the fact that that file contents are uploaded by git
     # to other LFS server and the import will copy them to Mononoke.
     # (at Meta this simulates our legacy dewey-lfs setup)
     REPOID=2 REPONAME=legacy_lfs setup_common_config $REPOTYPE
