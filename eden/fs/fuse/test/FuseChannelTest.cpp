@@ -1192,10 +1192,11 @@ TEST_F(FuseChannelTest, formatting_dir) {
 
 TEST_F(FuseChannelTest, formatting_unknown) {
   FuseChannel::InvalidationEntry entry(InodeNumber(20), 10, 100);
+  const auto originalType = entry.type;
   entry.type = static_cast<FuseChannel::InvalidationType>(11);
   EXPECT_EQ("(unknown invalidation type 11 inode 20)", fmt::to_string(entry));
   // change the type back so the destructor doesn't throw
-  entry.type = FuseChannel::InvalidationType::DIR_ENTRY;
+  entry.type = originalType;
 }
 
 #ifdef FUSE_MAX_PAGES
