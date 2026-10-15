@@ -11,6 +11,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -240,6 +242,22 @@ pub struct ResolveResult {
     pub outcome: ResolveOutcome,
 }
 
+/// Wall time of each `resolve_bookmarks_cross_repo` phase and the sizes behind them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ResolveTimings {
+    /// The per-entry repo lookups through the provider.
+    pub lookup: Duration,
+    /// The bulk bookmark read.
+    pub bookmarks: Duration,
+    /// The bulk git-mapping read.
+    pub mapping: Duration,
+    pub entries: usize,
+    /// Distinct `(repo, bookmark)` pairs the bookmark read was given.
+    pub unique_pairs: usize,
+    /// Distinct served repos among the entries.
+    pub unique_repos: usize,
+}
+
 /// Output mirrors `entries` element-for-element.
 ///
 /// # Precondition
@@ -256,19 +274,40 @@ pub async fn resolve_bookmarks_cross_repo<R>(
 where
     R: RepoIdentityRef + SqlBookmarksRef + Send + Sync,
 {
+    Ok(resolve_bookmarks_cross_repo_timed(ctx, provider, entries)
+        .await?
+        .0)
+}
+
+/// [`resolve_bookmarks_cross_repo`] plus how long each phase took.
+pub async fn resolve_bookmarks_cross_repo_timed<R>(
+    ctx: &CoreContext,
+    provider: &dyn RepoProvider<R>,
+    entries: &[ResolveEntry],
+) -> Result<(Vec<ResolveResult>, ResolveTimings)>
+where
+    R: RepoIdentityRef + SqlBookmarksRef + Send + Sync,
+{
+    let mut timings = ResolveTimings {
+        entries: entries.len(),
+        ..ResolveTimings::default()
+    };
     if entries.is_empty() {
-        return Ok(vec![]);
+        return Ok((vec![], timings));
     }
 
     // resolved: (original_index, repo_id, repo_name, bookmark_name)
     let mut resolved: Vec<(usize, RepositoryId, String, String)> = Vec::new();
     let mut results: Vec<Option<ResolveResult>> = vec![None; entries.len()];
     let mut any_repo: Option<Arc<R>> = None;
+    let mut repo_ids: HashSet<RepositoryId> = HashSet::new();
 
+    let started = Instant::now();
     for (idx, entry) in entries.iter().enumerate() {
         match provider.get_or_load(&entry.repo_name).await {
             Ok(Some(repo)) => {
                 let repo_id = repo.repo_identity().id();
+                repo_ids.insert(repo_id);
                 if any_repo.is_none() {
                     any_repo = Some(repo);
                 }
@@ -307,9 +346,11 @@ where
             }
         }
     }
+    timings.lookup = started.elapsed();
+    timings.unique_repos = repo_ids.len();
 
     if resolved.is_empty() {
-        return Ok(results.into_iter().flatten().collect());
+        return Ok((results.into_iter().flatten().collect(), timings));
     }
 
     // Exact (repo_id, name) tuple IN-clause — no cross-product false positives.
@@ -340,6 +381,8 @@ where
         anyhow::anyhow!("internal error: resolved is non-empty but no repo was found")
     })?;
 
+    timings.unique_pairs = bookmark_pairs.len();
+    let started = Instant::now();
     let bookmark_map: HashMap<(RepositoryId, String), ChangesetId> = bulk_read_bookmarks(
         ctx,
         any_repo.as_ref(),
@@ -350,6 +393,7 @@ where
     .into_iter()
     .map(|((repo_id, name), cs_id)| ((repo_id, name.to_string()), cs_id))
     .collect();
+    timings.bookmarks = started.elapsed();
 
     let mut cs_id_pairs: HashSet<(RepositoryId, ChangesetId)> = HashSet::new();
 
@@ -377,8 +421,10 @@ where
 
     // Bulk git-mapping lookup, same exact-tuple IN-clause.
     let git_pairs: Vec<(RepositoryId, ChangesetId)> = cs_id_pairs.iter().copied().collect();
+    let started = Instant::now();
     let git_map =
         bulk_read_git_sha1s(ctx, any_repo.as_ref(), Freshness::MostRecent, &git_pairs).await?;
+    timings.mapping = started.elapsed();
 
     // Assemble in original request order.
     for (idx, repo_id, repo_name, bookmark_name) in &resolved {
@@ -402,5 +448,5 @@ where
         }
     }
 
-    Ok(results.into_iter().flatten().collect())
+    Ok((results.into_iter().flatten().collect(), timings))
 }

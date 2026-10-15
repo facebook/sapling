@@ -8,6 +8,7 @@
 //! Unit tests for `multi_repo_land_lib`.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use blobstore::Loadable;
@@ -50,8 +51,10 @@ use multi_repo_land_lib::create_manifest_commit;
 use multi_repo_land_lib::log_scribe_bookmark_update;
 use multi_repo_land_lib::prepare_manifest_commit;
 use multi_repo_land_lib::prepare_manifest_commits;
+use multi_repo_land_lib::prepare_manifest_commits_timed;
 use multi_repo_land_lib::repin_manifest_branch;
 use multi_repo_land_lib::resolve_bookmarks_cross_repo;
+use multi_repo_land_lib::resolve_bookmarks_cross_repo_timed;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
@@ -340,7 +343,19 @@ async fn test_resolve_bookmarks_cross_repo_mixed_batch(fb: FacebookInit) -> Resu
         },
     ];
 
-    let results = resolve_bookmarks_cross_repo(&ctx, &repos, &entries).await?;
+    let started = std::time::Instant::now();
+    let (results, timings) = resolve_bookmarks_cross_repo_timed(&ctx, &repos, &entries).await?;
+    let elapsed = started.elapsed();
+
+    // Six entries name two served repos; four valid pairs reach the bookmark
+    // read (the invalid name and the unknown repo never do).
+    assert_eq!(timings.entries, 6);
+    assert_eq!(timings.unique_repos, 2, "ghost is not served");
+    assert_eq!(timings.unique_pairs, 4, "the invalid name is not a pair");
+    assert!(
+        timings.lookup + timings.bookmarks + timings.mapping <= elapsed,
+        "phases are disjoint slices of the call: {timings:?} vs {elapsed:?}"
+    );
 
     // One result per input, in the same order.
     assert_eq!(results.len(), entries.len(), "one result per input entry");
@@ -584,7 +599,23 @@ async fn test_prepare_manifest_commits_keeps_spec_order(fb: FacebookInit) -> Res
         })
         .collect();
 
-    let prepared = prepare_manifest_commits(&ctx, &repo, specs, 2).await?;
+    let started = std::time::Instant::now();
+    let (prepared, timings) = prepare_manifest_commits_timed(&ctx, &repo, specs, 2).await?;
+    let elapsed = started.elapsed();
+
+    assert_eq!(timings.commits, 3);
+    assert!(
+        timings.build + timings.save + timings.derive <= elapsed,
+        "phases are disjoint slices of the call: {timings:?} vs {elapsed:?}"
+    );
+    assert!(
+        timings.derive_p50 <= timings.derive_max && timings.derive_max <= timings.derive,
+        "one derivation cannot outlast the derive phase: {timings:?}"
+    );
+    assert!(
+        timings.derive_max > Duration::ZERO,
+        "three derivations ran: {timings:?}"
+    );
 
     assert_eq!(prepared.len(), 3);
     for (i, (result, head)) in prepared.iter().zip(&heads).enumerate() {

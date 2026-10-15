@@ -8,6 +8,9 @@
 //! Manifest re-pin: build the generated manifest commit for a branch and, in
 //! `repin_manifest_branch`, atomically move the bookmark to it under a CAS check.
 
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::Result;
 use anyhow::anyhow;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -124,6 +127,34 @@ struct OwnedSpec {
 /// Generated commits per `save_changesets` call.
 const SAVE_CHUNK: usize = 100;
 
+/// Wall time of each `prepare_manifest_commits` phase and the spread of the
+/// per-commit git-id derivations, for the caller's telemetry.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PrepareTimings {
+    /// Head reads and commit construction.
+    pub build: Duration,
+    /// The `save_changesets` calls.
+    pub save: Duration,
+    /// The whole git-id derivation phase.
+    pub derive: Duration,
+    /// Median single derivation; zero when nothing was derived.
+    pub derive_p50: Duration,
+    /// Slowest single derivation; zero when nothing was derived.
+    pub derive_max: Duration,
+    pub commits: usize,
+}
+
+impl PrepareTimings {
+    /// Median and maximum of a derivation latency sample.
+    fn derive_spread(mut samples: Vec<Duration>) -> (Duration, Duration) {
+        if samples.is_empty() {
+            return (Duration::ZERO, Duration::ZERO);
+        }
+        samples.sort_unstable();
+        (samples[samples.len() / 2], samples[samples.len() - 1])
+    }
+}
+
 /// [`prepare_manifest_commit`] for many branches at once: content and commits
 /// are built `concurrency` at a time, every commit is saved in ONE
 /// `save_changesets` (one commit-graph write instead of one per branch), then
@@ -144,7 +175,34 @@ where
         + CommitGraphWriterRef
         + RepoDerivedDataRef,
 {
+    Ok(
+        prepare_manifest_commits_timed(ctx, repo, specs, concurrency)
+            .await?
+            .0,
+    )
+}
+
+/// [`prepare_manifest_commits`] plus how long each phase took.
+pub async fn prepare_manifest_commits_timed<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    specs: Vec<ManifestCommitSpec<'_>>,
+    concurrency: usize,
+) -> Result<(Vec<PreparedManifestCommit>, PrepareTimings)>
+where
+    R: RepoIdentityRef
+        + BookmarksRef
+        + RepoBlobstoreRef
+        + FilestoreConfigRef
+        + CommitGraphRef
+        + CommitGraphWriterRef
+        + RepoDerivedDataRef,
+{
     let concurrency = concurrency.max(1);
+    let mut timings = PrepareTimings {
+        commits: specs.len(),
+        ..PrepareTimings::default()
+    };
     // Owned copies: a borrowed spec inside the buffered futures makes the
     // closure higher-ranked over its lifetime, which the Thrift service's
     // `Send` bound rejects.
@@ -160,6 +218,7 @@ where
             baseline: spec.baseline,
         })
         .collect();
+    let started = Instant::now();
     let built: Vec<(ChangesetId, BonsaiChangeset)> = stream::iter(specs)
         .map(|spec| async move {
             let old_cs = match spec.baseline {
@@ -192,9 +251,11 @@ where
         .buffered(concurrency)
         .try_collect()
         .await?;
+    timings.build = started.elapsed();
 
     // `save_changesets` writes every bonsai's blob at once; chunking keeps that
     // burst bounded while still writing the graph a chunk at a time.
+    let started = Instant::now();
     for chunk in built.chunks(SAVE_CHUNK) {
         save_changesets(
             ctx,
@@ -203,23 +264,34 @@ where
         )
         .await?;
     }
+    timings.save = started.elapsed();
 
-    stream::iter(built)
+    let started = Instant::now();
+    let (prepared, samples): (Vec<PreparedManifestCommit>, Vec<Duration>) = stream::iter(built)
         .map(|(old_cs, bcs)| async move {
             let new_cs = bcs.get_changeset_id();
+            let derive_started = Instant::now();
             let mapped_git = repo
                 .repo_derived_data()
                 .derive::<MappedGitCommitId>(ctx, new_cs, DerivationPriority::LOW)
                 .await?;
-            anyhow::Ok(PreparedManifestCommit {
-                old_cs,
-                new_cs,
-                mapped_git,
-            })
+            anyhow::Ok((
+                PreparedManifestCommit {
+                    old_cs,
+                    new_cs,
+                    mapped_git,
+                },
+                derive_started.elapsed(),
+            ))
         })
         .buffered(concurrency)
-        .try_collect()
-        .await
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .unzip();
+    timings.derive = started.elapsed();
+    (timings.derive_p50, timings.derive_max) = PrepareTimings::derive_spread(samples);
+    Ok((prepared, timings))
 }
 
 /// Options for a single-branch re-pin.
