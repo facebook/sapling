@@ -58,6 +58,7 @@ use sql_ext::SqlConnections;
 
 use crate::commit_graph::EphemeralCommitGraphStorage;
 use crate::commit_graph::EphemeralOnlyChangesetStorage;
+use crate::deletion_step_runner::DeletionStepRunner;
 use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
 use crate::view::EphemeralRepoView;
@@ -314,16 +315,27 @@ impl Bubble {
         }
     }
 
-    pub(crate) async fn delete_blobs_in_bubble(&self, ctx: &CoreContext) -> Result<usize> {
+    pub(crate) async fn delete_blobs_in_bubble(
+        &self,
+        ctx: &CoreContext,
+        steps: &DeletionStepRunner,
+    ) -> Result<usize> {
         let key_stream = self.get_keys_in_bubble(ctx, None).await;
         let mut keys_deleted = 0;
         pin_mut!(key_stream);
-        while let Some(keys) = key_stream.try_next().await? {
+        while let Some(keys) = steps
+            .run_step("enumerate keys", key_stream.try_next())
+            .await?
+        {
             // As long as the unlink operation on underlying blobstores is "truly" async
             // (i.e. they yield on cross service I/O), the below will execute the unlinking
             // concurrently and terminate early on the first error encountered.
-            let unlinked_keys =
-                try_join_all(keys.iter().map(|key| self.blobstore.unlink(ctx, key))).await?;
+            let unlinked_keys = steps
+                .run_step(
+                    &format!("unlink {} keys", keys.len()),
+                    try_join_all(keys.iter().map(|key| self.blobstore.unlink(ctx, key))),
+                )
+                .await?;
             keys_deleted += unlinked_keys.len();
         }
         // If the unlinking of all blobs within the bubble was successful, return the

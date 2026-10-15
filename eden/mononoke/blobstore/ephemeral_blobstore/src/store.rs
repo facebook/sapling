@@ -29,6 +29,7 @@ use sql_query_config::SqlQueryConfig;
 use crate::bubble::Bubble;
 use crate::bubble::BubbleId;
 use crate::bubble::ExpiryStatus;
+use crate::deletion_step_runner::DeletionStepRunner;
 use crate::error::EphemeralBlobstoreError;
 
 /// Outcome of extending a bubble's TTL
@@ -475,62 +476,85 @@ impl RepoEphemeralStoreInner {
         if let BubbleDeletionMode::Disabled = self.bubble_deletion_mode {
             return Err(EphemeralBlobstoreError::DeleteBubbleDisabled.into());
         }
+        let steps = DeletionStepRunner::new(bubble_id);
         // Step 1: Mark the bubble as expired in the backing SQL Store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        UpdateExpired::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
-            &ExpiryStatus::Expired,
-            &bubble_id,
-        )
-        .await?;
+        steps
+            .run_step(
+                "mark bubble as expired",
+                UpdateExpired::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &ExpiryStatus::Expired,
+                    &bubble_id,
+                ),
+            )
+            .await?;
         // If only marking is required, exit now.
         if let BubbleDeletionMode::MarkOnly = self.bubble_deletion_mode {
             return Ok(0); // Since 0 blob items were unlinked/removed.
         }
         // Step 2: Delete the blob content within the expired bubble.
-        let bubble = self.open_bubble_raw(ctx, bubble_id, false).await?;
-        let count = bubble.delete_blobs_in_bubble(ctx).await?;
+        let bubble = steps
+            .run_step("open bubble", self.open_bubble_raw(ctx, bubble_id, false))
+            .await?;
+        let count = bubble.delete_blobs_in_bubble(ctx, &steps).await?;
 
         // Step 3: Delete the metadata associated with the bubble from
         // the backing SQL store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        DeleteBubbleChangesetMapping::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
-            &bubble_id,
-        )
-        .await?;
+        steps
+            .run_step(
+                "delete changeset mapping",
+                DeleteBubbleChangesetMapping::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &bubble_id,
+                ),
+            )
+            .await?;
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        DeleteBubbleChangesetParents::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
-            &bubble_id,
-        )
-        .await?;
+        steps
+            .run_step(
+                "delete changeset parents",
+                DeleteBubbleChangesetParents::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &bubble_id,
+                ),
+            )
+            .await?;
         // When invoked through processes, this will always be a no-op. This is useful for
         // manually deleting a bubble regardless of its expiry status.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        DeleteExpiredBubbleLabels::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
-            &bubble_id,
-        )
-        .await?;
+        steps
+            .run_step(
+                "delete labels",
+                DeleteExpiredBubbleLabels::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &bubble_id,
+                ),
+            )
+            .await?;
 
         // Step 4: Delete the bubble itself from the backing SQL store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        DeleteBubble::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
-            &bubble_id,
-        )
-        .await?;
+        steps
+            .run_step(
+                "delete bubble",
+                DeleteBubble::query(
+                    &self.connections.write_connection,
+                    ctx.sql_query_telemetry(),
+                    &bubble_id,
+                ),
+            )
+            .await?;
         Ok(count)
     }
 
