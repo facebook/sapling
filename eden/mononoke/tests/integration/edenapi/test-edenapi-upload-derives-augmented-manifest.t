@@ -17,6 +17,15 @@ rows -- it is only stamped on the terminal `EdenAPI Request Processed` row.
 
   $ configure modern
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
+
+`stack/`, which only scenario 5 creates, is a restricted root, so whatever writes
+that scenario's augmented manifests has to record it in the manifest id store.
+  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<EOF
+  > [restricted_paths_config]
+  > path_restriction_metadata = { "stack" = { repo_region_acl = "REPO_REGION:config_acl" } }
+  > enforcement_enabled = false
+  > acl_manifest_mode = "Disabled"
+  > EOF
   $ cd $TESTTMP
 
 Commit cloud client config, copied from server/test-commitcloud-upload.t. The
@@ -340,15 +349,21 @@ build included.
   >            | "\(.int.EdenapiUploadTreesAugmentedTrees) \(.int.EdenapiUploadTreesAugmentedBuildUs > 0)"'
   1 true
 
-Scenario 6 -- storing ON and changeset-upload derivation ON. Tree upload stores
-an envelope for every tree it receives, root included, before the changeset is
-uploaded. Changeset upload then derives the same commits anyway: it does not use
-what tree upload stored, and its if-absent puts all skip. The stack starts at
-master_bookmark, which scenario 1 derived, so every row below belongs to these
-two commits rather than to the underived commits scenarios 2 to 5 left behind.
+Scenario 6 -- storing ON, changeset-upload derivation ON, root check and mapping
+ON. Tree upload stores an envelope for every tree it receives, root included, so
+changeset upload maps each commit to its stored root and derives nothing. The
+stack starts at master_bookmark, which scenario 1 derived, so every row below
+belongs to these two commits. `root_checks_since` prints the check's counts.
   $ merge_just_knobs <<EOF
-  > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true}}
+  > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true, "scm/mononoke:check_uploaded_root_hg_augmented_manifest": true, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": true}}
   > EOF
+  $ root_checks_since() {
+  >   tail -n +$(($1 + 1)) "$SCUBA" \
+  >     | jq -r 'select(.normal.log_tag == "EdenAPI Request Processed"
+  >                     and .normal.edenapi_method == "upload_hg_changesets")
+  >              | .int | to_entries[] | select(.key | startswith("UploadedRootAugmented"))
+  >              | "\(.key): \(.value)"'
+  > }
   $ force_update_configerator
 
   $ cd "$TESTTMP/client1"
@@ -369,11 +384,15 @@ two commits rather than to the underived commits scenarios 2 to 5 left behind.
   edenapi: uploaded 2 changesets
   $ wait_for_upload "$BEFORE"
   $ derivations_since "$BEFORE"
-  /repo/upload/changesets acl_manifests
-  /repo/upload/changesets hg_augmented_manifests
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedMapped: 2
 
-Each commit's augmented manifest is the envelope at its own root tree, the one
-tree upload already stored.
+Mapping still records each root's restricted directory, as derivation would.
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT CAST(path AS TEXT) FROM restricted_paths_manifest_ids WHERE hex(manifest_type) = hex('HgAugmented')"
+  stack
+  stack
+
+Each commit maps to the envelope tree upload stored at its own root.
   $ CS6=$(sl log -r .^ -T '{node}')
   $ ROOT_MFID_6=$(sl log -r .^ -T '{manifest}')
   $ CS7=$(sl log -r . -T '{node}')
@@ -383,6 +402,12 @@ tree upload already stored.
   1
   $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS7" | grep -c "$ROOT_MFID_7"
   1
+
+With no ACL file in the repo, the mapped ACL manifest is the empty one.
+  $ mononoke_admin derived-data -R repo fetch -T acl_manifests -i "$CS6" | sed 's/.* -> //'
+  RootAclManifestId(AclManifestId(Blake2(ccdc1160ab59cd5c9179719f5f725f2802b9891a2ca6f2f618624ce446b12a1c)))
+  $ mononoke_admin derived-data -R repo fetch -T acl_manifests -B master_bookmark | sed 's/.* -> //'
+  RootAclManifestId(AclManifestId(Blake2(ccdc1160ab59cd5c9179719f5f725f2802b9891a2ca6f2f618624ce446b12a1c)))
 
 Scenario 7 -- storing OFF, changeset-upload derivation still ON. The root envelope
 only ever lands in the tree upload's overlay, so changeset upload has to derive.
@@ -411,8 +436,148 @@ there, it must keep deriving here.
   $ derivations_since "$BEFORE"
   /repo/upload/changesets acl_manifests
   /repo/upload/changesets hg_augmented_manifests
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedMissing: 1
 
   $ CS8=$(sl log -r . -T '{node}')
   $ cd $TESTTMP
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS8"
   Derived: * (glob)
+
+Scenario 8 -- an empty commit with a real commit on top, storing still OFF. The
+empty commit's root is its parent's, stored by derivation in scenario 1, so it is
+mapped; the commit on top has a new root, so it is derived from that mapped
+parent.
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ sl commit -q --config ui.allowemptycommit=true -m "ninth commit, empty"
+  $ mkdir after_empty
+  $ echo nine > after_empty/file9
+  $ sl commit -qAm "tenth commit, on top of an empty one"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  /repo/upload/changesets acl_manifests
+  /repo/upload/changesets hg_augmented_manifests
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedMapped: 1
+  UploadedRootAugmentedMissing: 1
+
+  $ CS9=$(sl log -r .^ -T '{node}')
+  $ CS10=$(sl log -r . -T '{node}')
+  $ ROOT_MFID_A=$(sl log -r master_bookmark -T '{manifest}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo fetch -T hg_augmented_manifests -i "$CS9" | grep -c "$ROOT_MFID_A"
+  1
+  $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS10"
+  Derived: * (glob)
+
+Scenario 9 -- a restricted directory, storing ON, so the mapped ACL manifest is
+not the empty one.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": true}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ mkdir secret
+  $ printf 'repo_region_acl = "REPO_REGION:repos/hg/fbsource/=project1"\n' > secret/.slacl
+  $ echo hidden > secret/file
+  $ sl commit -qAm "eleventh commit, restricted dir"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedMapped: 1
+  $ CS11=$(sl log -r . -T '{node}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo fetch -T acl_manifests -i "$CS11" | sed 's/.* -> //' > acl_11
+
+The stored envelope matches derivation, ACL pointers included.
+  $ BCS11=$(mononoke_admin convert -R repo -f hg -t bonsai "$CS11")
+  $ mononoke_admin derived-data -R repo verify-aug-direct --end-id "$BCS11" --last 1 --batch-size 1 --concurrency 1 && echo success
+  [INFO] verifying up to 1 changesets
+  [INFO] progress: batch=1 size=1 processed=1 direct=1 full-v2-fallback=0
+  done: processed=1 direct=1 full-v2-fallback=0
+  success
+
+The mapped ACL manifest matches the one derived for a twin commit with the same
+tree, uploaded with mapping off.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:map_uploaded_root_hg_augmented_manifest": false}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ mkdir secret
+  $ printf 'repo_region_acl = "REPO_REGION:repos/hg/fbsource/=project1"\n' > secret/.slacl
+  $ echo hidden > secret/file
+  $ sl commit -qAm "twelfth commit, the same restricted dir"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 0 trees for upload
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  /repo/upload/changesets acl_manifests
+  /repo/upload/changesets hg_augmented_manifests
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedStored: 1
+  $ CS12=$(sl log -r . -T '{node}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo fetch -T acl_manifests -i "$CS12" | sed 's/.* -> //' > acl_12
+  $ cmp acl_11 acl_12 && echo same
+  same
+
+Scenario 10 -- changeset-upload derivation OFF, mapping ON. Mapping only stands
+in for derivation, so nothing is mapped or derived; the check still counts.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": false, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": true}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ mkdir late
+  $ echo ten > late/file
+  $ sl commit -qAm "commit with derivation off"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedStored: 1
+  $ CS_OFF=$(sl log -r . -T '{node}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo exists -T acl_manifests -i "$CS_OFF"
+  Not Derived: * (glob)
+  $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_OFF"
+  Not Derived: * (glob)
