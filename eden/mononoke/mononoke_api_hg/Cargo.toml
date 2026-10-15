@@ -34,6 +34,7 @@ phases = { version = "0.1.0", path = "../repo_attributes/phases" }
 remotefilelog = { version = "0.1.0", path = "../repo_client/remotefilelog" }
 repo_blobstore = { version = "0.1.0", path = "../repo_attributes/repo_blobstore" }
 repo_client = { version = "0.1.0", path = "../repo_client" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
 restricted_paths = { version = "0.1.0", path = "../repo_attributes/restricted_paths" }
@@ -55,7 +56,6 @@ metadata = { version = "0.1.0", path = "../common/metadata" }
 mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
 permission_checker = { version = "0.1.0", path = "../common/permission_checker" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
-repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

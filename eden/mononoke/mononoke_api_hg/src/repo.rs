@@ -48,12 +48,14 @@ use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_f
 use mercurial_derivation::upload_augmented_manifest::store_uploaded_tree_envelopes;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStoreRef;
+use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileEnvelopeMut;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
+use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::blobs::UploadHgTreeEntry;
@@ -72,6 +74,7 @@ use phases::PhasesRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::CommitInfo;
 use repo_update_logger::log_new_commits;
@@ -86,6 +89,11 @@ use super::HgTreeContext;
 /// Lets the envelopes built at tree upload reach the blobstore.
 const STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD: &str =
     "scm/mononoke:store_augmented_manifests_at_tree_upload";
+
+/// Counts how many uploaded commits already have a stored root augmented
+/// manifest, without acting on it.
+const CHECK_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST: &str =
+    "scm/mononoke:check_uploaded_root_hg_augmented_manifest";
 
 #[derive(Clone)]
 pub struct HgRepoContext<R> {
@@ -471,7 +479,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         &self,
         changesets: Vec<(HgChangesetId, RevlogChangeset, Option<BonsaiChangeset>)>,
         mutations: Vec<HgMutationEntry>,
-    ) -> Result<Vec<Result<(HgChangesetId, BonsaiChangeset), MononokeError>>, MononokeError> {
+    ) -> Result<Vec<Result<(HgBlobChangeset, BonsaiChangeset), MononokeError>>, MononokeError> {
         let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
         let filelogs = HashMap::new();
         let manifests = HashMap::new();
@@ -498,10 +506,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let mut commits_to_log = Vec::new();
         for (hg_cs_id, handle) in uploaded_changesets {
             let result = match handle.get_completed_changeset().await {
-                Ok((bonsai, _)) => {
+                Ok((bonsai, hg_cs)) => {
                     hg_changesets.insert(hg_cs_id);
                     commits_to_log.push(CommitInfo::new(&bonsai, None));
-                    Ok((hg_cs_id, bonsai))
+                    Ok((hg_cs, bonsai))
                 }
                 Err(e) => Err(MononokeError::from(Error::from(e))),
             };
@@ -532,18 +540,36 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// `UploadIdenticalChangesets`).
     pub async fn ensure_uploaded_augmented_manifests_derived(
         &self,
-        results: &[Result<(HgChangesetId, BonsaiChangeset), MononokeError>],
+        results: &[Result<(HgBlobChangeset, BonsaiChangeset), MononokeError>],
     ) {
+        let stored: Vec<&(HgBlobChangeset, BonsaiChangeset)> = results
+            .iter()
+            .filter_map(|result| result.as_ref().ok())
+            .collect();
+        // Bubbles are skipped: nothing is derived there.
+        let check_roots = justknobs::eval(
+            CHECK_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST,
+            None,
+            Some(self.repo().repo_identity().name()),
+        ) && self
+            .repo()
+            .repo_derived_data()
+            .manager()
+            .bubble_id()
+            .is_none();
+        if check_roots {
+            stream::iter(&stored)
+                .for_each_concurrent(100, |(hg_cs, _)| self.check_uploaded_root(hg_cs))
+                .await;
+        }
+
         // Derive only the heads of the uploaded batch: deriving a head derives
         // all its ancestors, so this covers every uploaded commit without the
         // redundant per-commit fan-out. A commit is a head iff no other uploaded
         // commit lists it as a parent. Computed by set difference, not by order:
         // `results` is NOT topologically sorted (store_hg_changesets builds it
         // from a HashMap) and one request may carry multiple independent stacks.
-        let stored: Vec<&BonsaiChangeset> = results
-            .iter()
-            .filter_map(|result| result.as_ref().ok().map(|(_, bcs)| bcs))
-            .collect();
+        let stored: Vec<&BonsaiChangeset> = stored.into_iter().map(|(_, bcs)| bcs).collect();
         let parents_of_batch: HashSet<ChangesetId> =
             stored.iter().flat_map(|bcs| bcs.parents()).collect();
         let heads: Vec<ChangesetId> = stored
@@ -558,6 +584,38 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                     .ensure_hg_augmented_manifest_derived_at_creation(cs_id)
             })
             .await;
+    }
+
+    /// Counts what the uploaded commit's root tree has in the augmented
+    /// manifest store.
+    async fn check_uploaded_root(&self, hg_cs: &HgBlobChangeset) {
+        let root = HgAugmentedManifestId::new(hg_cs.manifestid().into_nodehash());
+        let lookup = async {
+            let counter = match root.load(self.ctx(), self.repo().repo_blobstore()).await {
+                Err(LoadableError::Missing(_)) => PerfCounterType::UploadedRootAugmentedMissing,
+                Err(err) => return Err(Error::from(err)),
+                // Stored, but derivation would emit this root under another id.
+                Ok(envelope)
+                    if envelope.augmented_manifest.hg_node_id
+                        != envelope.augmented_manifest.computed_node_id =>
+                {
+                    PerfCounterType::UploadedRootAugmentedUnmappable
+                }
+                Ok(_) => PerfCounterType::UploadedRootAugmentedStored,
+            };
+            Ok(counter)
+        };
+        let counter = lookup.await.unwrap_or_else(|err| {
+            self.ctx().scuba().clone().log_with_msg(
+                "Checking uploaded root augmented manifest failed",
+                Some(format!(
+                    "hg_cs_id: {}, err: {err:?}",
+                    hg_cs.get_changeset_id()
+                )),
+            );
+            PerfCounterType::UploadedRootAugmentedFailed
+        });
+        self.ctx().perf_counters().increment_counter(counter);
     }
 
     pub async fn fetch_mutations(

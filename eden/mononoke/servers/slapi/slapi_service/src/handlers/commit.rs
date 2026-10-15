@@ -580,8 +580,8 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
             .await;
 
         let results = stored.into_iter().map(move |r| {
-            r.map(|(hg_cs_id, _bonsai_cs_id)| {
-                let hgid = HgId::from(hg_cs_id.into_nodehash());
+            r.map(|(hg_cs, _bonsai)| {
+                let hgid = HgId::from(hg_cs.get_changeset_id().into_nodehash());
                 UploadTokensResponse {
                     token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
                 }
@@ -1576,9 +1576,9 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
             .clone()
             .into_iter()
             .map(|hg_cs| {
-                let (hg_cs_id, bcs) = hg_cs?;
+                let (hg_cs, bcs) = hg_cs?;
                 Ok(BonsaiHgMappingEntry {
-                    hg_cs_id,
+                    hg_cs_id: hg_cs.get_changeset_id(),
                     bcs_id: bcs.get_changeset_id(),
                 })
             })
@@ -1596,9 +1596,9 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
             .await;
 
         let tokens = hg_changesets.into_iter().map(move |r| {
-            r.map(|(hg_cs_id, _)| {
+            r.map(|(hg_cs, _)| {
                 let hgid: types::hash::AbstractHashType<types::hgid::HgIdTypeInfo, 20> =
-                    HgId::from(hg_cs_id.into_nodehash());
+                    HgId::from(hg_cs.get_changeset_id().into_nodehash());
                 UploadTokensResponse {
                     token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
                 }
