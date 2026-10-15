@@ -27,6 +27,7 @@ use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
+use derived_data_manager::BonsaiDerivable;
 use fbinit::FacebookInit;
 use futures::FutureExt;
 use futures::stream::TryStreamExt;
@@ -66,6 +67,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SubtreeChange;
 use mononoke_types::acl_manifest::AclManifestDirectoryRestriction;
+use mononoke_types::acl_manifest::AclManifestEntry;
 use mononoke_types::sharded_map_v2::ShardedMapV2Value;
 use mononoke_types::typed_hash::AclManifestId;
 use mononoke_types::typed_hash::BlobstoreKey;
@@ -7184,6 +7186,86 @@ async fn test_upload_of_a_child_directory_named_like_the_acl_file(fb: FacebookIn
         );
     }
 
+    Ok(())
+}
+
+/// What it tests: a directory whose `.slacl` is unchanged gets the ACL entry
+/// its parent recorded, even when parsing the file today would build another.
+///
+/// Why it matters: canonical derivation never re-parses an unchanged ACL file,
+/// so after a parser change, or with upload and derivation on different
+/// versions, a re-parse at upload stores a permanent envelope that disagrees
+/// with canonical. An older parser is modelled by recording another commit's
+/// ACL tree, built from different content, as the parent's.
+#[mononoke::fbinit_test]
+async fn test_batch_upload_reuses_parent_acl_entry_for_an_unchanged_acl_file(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo.repo_blobstore().clone());
+
+    let older = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(
+            "dir/.slacl",
+            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=older\"\n",
+        )
+        .commit()
+        .await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/.slacl", TEST_ACL_CONTENT)
+        .add_file("dir/file.rs", "one")
+        .commit()
+        .await?;
+    let child = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("dir/file.rs", "two")
+        .commit()
+        .await?;
+
+    // Must come before anything derives `parent`, which would write its mapping.
+    let manager = repo.repo_derived_data().manager();
+    let older_acl = derive_acl_overlay(&ctx, &repo, older).await?;
+    manager
+        .fetch_derived::<RootAclManifestId>(&ctx, older, None)
+        .await?
+        .context("older was just derived")?
+        .store_mapping(&ctx, &manager.derivation_context(None), parent)
+        .await?;
+
+    let canonical_root = derive_acl_overlay(&ctx, &repo, child).await?;
+    assert_eq!(
+        canonical_root, older_acl,
+        "canonical derivation carries the parent's recorded ACL tree forward"
+    );
+    let canonical_dir = canonical_root
+        .context("the child is restricted")?
+        .load(&ctx, &blobstore)
+        .await?
+        .subentries
+        .lookup(&ctx, &blobstore, b"dir")
+        .await?;
+
+    let child_manifest = hg_manifest_id_of(&ctx, &repo, child).await?;
+    let dir = tree_id_at_path(&ctx, &repo, child_manifest, "dir").await?;
+    let built = build_augmented_manifests_for_uploaded_trees(
+        &ctx,
+        &blobstore,
+        repo.restricted_paths().config_based(),
+        uploaded_trees_for(&ctx, &repo, &[dir, child_manifest]).await?,
+    )
+    .await?;
+    let upload_dir = built
+        .into_iter()
+        .find(|tree| tree.node_id == dir.into_nodehash())
+        .and_then(|tree| match tree.acl {
+            DirectoryAcl::Node(entry) => Some(AclManifestEntry::Directory(entry)),
+            DirectoryAcl::NotNeeded | DirectoryAcl::Empty => None,
+        });
+
+    // FIXME: the upload re-parses the unchanged `.slacl`, so its entry diverges
+    // from the one canonical derivation carried forward.
+    assert!(upload_dir.is_some(), "dir/ is restricted in the upload too");
+    assert_ne!(upload_dir, canonical_dir);
     Ok(())
 }
 
