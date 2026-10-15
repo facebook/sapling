@@ -1056,7 +1056,8 @@ TEST_P(FsInodeCatalogWalTest, version2WalUsesVarintFields) {
     // Every integer is a varint: entryLen, nameLen, mode, inodeNumber,
     // hashLen. Walk the record with an independent decoder.
     size_t offset = FsFileContentStore::kWalVersion2HeaderLength;
-    EXPECT_EQ(bytes.size() - offset - 2, readVarint(bytes, offset));
+    const auto entryLen = readVarint(bytes, offset);
+    EXPECT_EQ(bytes.size() - offset, entryLen);
     EXPECT_EQ(WalOpType::ADD, static_cast<WalOpType>(bytes[offset++]));
     // 128 needs two bytes: 0x80 0x01.
     EXPECT_EQ(0x80, static_cast<uint8_t>(bytes[offset]));
