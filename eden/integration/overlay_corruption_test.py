@@ -378,17 +378,17 @@ EXPECTED_ONLINE_FSCK_OFF = """
 case                 | first              | restart            | fsck                    | mv        | rm          | recreate
 control              | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 base_bad_mode        | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_no_mode         | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
-base_big_inode       | a b:ENOENT s/ s/f  | unchanged          | missing,next-ino,orphan | CRASH     | ok          | ok
-base_root_inode      | CRASH              | unchanged          | -                       | CRASH     | CRASH       | -
-base_zero_inode      | a b:ENOENT s/ s/f  | unchanged          | missing,orphan          | ok        | b:ENOENT    | -
-base_bad_name        | .:EIO              | unchanged          | -                       | b:EIO     | .:EIO       | -
-base_dup_name        | a s/ s/f           | unchanged          | -                       | b:ENOENT  | ok          | ok
+base_no_mode         | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_big_inode       | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_root_inode      | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_zero_inode      | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_bad_name        | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_dup_name        | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
 base_dup_inode       | CRASH              | unchanged          | hardlink                | ok        | CRASH       | -
-base_self_ref        | CRASH              | unchanged          | hardlink                | CRASH     | CRASH       | -
+base_self_ref        | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
 base_unknown_field   | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
 base_trailing        | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_negative_inode  | a s/ s/f           | unchanged          | missing,next-ino,orphan | CRASH     | CRASH       | DOWN
+base_negative_inode  | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
 base_no_stop         | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
 base_truncated       | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
 base_cycle_x         | CRASH              | unchanged          | hardlink                | ok        | CRASH       | -
@@ -396,14 +396,14 @@ base_mode_conflict_x | a b s/ s/f s/g:EIO | unchanged          | hardlink       
 wal_bad_mode         | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_big_inode        | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_shadow_big_inode | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-wal_root_inode       | CRASH              | unchanged          | -                       | CRASH     | CRASH       | -
+wal_root_inode       | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_zero_inode       | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_negative_inode   | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_bad_name         | a s/ s/f           | unchanged          | orphan                  | b:ENOENT  | ok          | ok
 wal_rename_crash     | CRASH              | unchanged          | hardlink                | ok        | ok          | ok
 wal_rename_crash_rev | CRASH              | unchanged          | hardlink                | ok        | ok          | ok
 wal_rename_crash_x   | CRASH              | unchanged          | hardlink                | ok        | ok          | ok
-wal_self_ref         | CRASH              | unchanged          | hardlink                | CRASH     | CRASH       | -
+wal_self_ref         | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_torn             | b s/ s/f           | unchanged          | orphan                  | ok        | ok          | ok
 wal_torn_len         | b s/ s/f           | unchanged          | orphan                  | ok        | ok          | ok
 wal_remove_payload   | b s/ s/f           | unchanged          | orphan                  | ok        | ok          | ok

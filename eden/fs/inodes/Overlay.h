@@ -591,6 +591,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       OverlayEntrySource source,
       folly::fbvector<std::pair<PathComponent, DirEntry>>& entries);
 
+  void validateOverlayEntry(
+      InodeNumber parentInodeNumber,
+      std::string_view name,
+      const overlay::OverlayEntry& entry,
+      std::string_view source) const;
+
   bool tryIncOutstandingIORequests();
   void decOutstandingIORequests();
   void closeAndWaitForOutstandingIO();

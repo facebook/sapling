@@ -1215,6 +1215,34 @@ TEST_P(FsInodeCatalogWalTest, loadWalDelta_skipsEmptyName) {
   EXPECT_EQ(1u, result.rawEntriesParsed);
 }
 
+TEST_P(
+    FsInodeCatalogWalTest,
+    loadWalDelta_skipsInvalidRemoveAndMaterializeNames) {
+  const InodeNumber parent{312};
+  const folly::StringPiece name{"bad/name"};
+  const auto nameLen = static_cast<uint16_t>(name.size());
+  const uint32_t entryLen = kOpByteSize + kNameLenSize + nameLen;
+  for (const auto op : {WalOpType::REMOVE, WalOpType::MATERIALIZE}) {
+    SCOPED_TRACE(static_cast<int>(op));
+    // Keep the frame intact so only its name is invalid. The following ADD
+    // must still be decoded instead of aborting the directory's WAL load.
+    std::string bytes;
+    bytes.append(reinterpret_cast<const char*>(&entryLen), sizeof(entryLen));
+    bytes.push_back(static_cast<char>(op));
+    bytes.append(reinterpret_cast<const char*>(&nameLen), sizeof(nameLen));
+    bytes.append(name.data(), name.size());
+    bytes += makeOldFormatAddWalFrame("ok", 0100644, 2);
+    ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+    auto result = store_->loadWalDelta(parent);
+    ASSERT_EQ(1u, result.delta.size());
+    EXPECT_EQ(WalOpType::ADD, result.delta.at("ok").type);
+    EXPECT_EQ(2, *result.delta.at("ok").entry.inodeNumber());
+    EXPECT_EQ(1u, result.parseErrors);
+    EXPECT_EQ(1u, result.rawEntriesParsed);
+  }
+}
+
 TEST_P(FsInodeCatalogWalTest, loadWalDelta_skipsInvalidUtf8Name) {
   const InodeNumber parent{309};
   std::string bytes = makeOldFormatAddWalFrame("\xff\xfe", 0100644, 1);

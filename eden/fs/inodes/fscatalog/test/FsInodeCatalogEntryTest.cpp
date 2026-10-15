@@ -276,7 +276,16 @@ TEST_F(FsInodeCatalogEntryTest, rejectsDuplicateEntryNames) {
   contents.append(queue.move()->to<std::string>());
   ASSERT_TRUE(folly::writeFile(contents, path.c_str()));
 
-  EXPECT_THROW(catalog_->loadOverlayDir(ino), OverlayDataCorruption);
+  try {
+    catalog_->loadOverlayDir(ino);
+    FAIL() << "expected duplicate-name corruption";
+  } catch (const OverlayDataCorruption& ex) {
+    const std::string message = ex.what();
+    EXPECT_NE(std::string::npos, message.find("for inode 32"));
+    EXPECT_NE(std::string::npos, message.find("hex \"66696c652e747874\""));
+    EXPECT_NE(
+        std::string::npos, message.find("first inode 2, duplicate inode 3"));
+  }
 }
 
 TEST_F(FsInodeCatalogEntryTest, rejectsTrailingDataAfterVisitingValidEntries) {
@@ -294,16 +303,80 @@ TEST_F(FsInodeCatalogEntryTest, rejectsTrailingDataAfterVisitingValidEntries) {
   ASSERT_TRUE(folly::writeFile(contents, path.c_str()));
 
   size_t entriesVisited = 0;
-  EXPECT_THROW(
-      catalog_->loadOverlayEntries(
-          InodeNumber{32},
-          [&](size_t, InodeCatalog::OverlayEntryIterator iterate) {
-            iterate([&](const std::string&, const overlay::OverlayEntry&) {
-              ++entriesVisited;
-            });
-          }),
-      OverlayDataCorruption);
+  try {
+    catalog_->loadOverlayEntries(
+        InodeNumber{32},
+        [&](size_t, InodeCatalog::OverlayEntryIterator iterate) {
+          iterate([&](const std::string&, const overlay::OverlayEntry&) {
+            ++entriesVisited;
+          });
+        });
+    FAIL() << "expected trailing-data corruption";
+  } catch (const OverlayDataCorruption& ex) {
+    const std::string message = ex.what();
+    EXPECT_NE(
+        std::string::npos, message.find("trailing overlay data for inode 32"));
+    EXPECT_NE(std::string::npos, message.find("directory data offset"));
+    EXPECT_NE(std::string::npos, message.find("1 bytes remain"));
+  }
   EXPECT_EQ(1, entriesVisited);
+}
+
+TEST_F(
+    FsInodeCatalogEntryTest,
+    headerErrorsIncludeInodeAndActualAndExpectedValues) {
+  // Construct independent wire bytes: identifier, big-endian version, padding.
+  std::string version{"OVDR\0\0\0\7", 8};
+  version.resize(64, '\0');
+  std::string identifier{"BAD!\0\0\0\1", 8};
+  identifier.resize(64, '\0');
+  const InodeNumber ino{47};
+  catalog_->saveOverlayDir(ino, overlay::OverlayDir{});
+  const auto path = store_->getAbsoluteFilePath(ino);
+  for (const auto& bytes : {std::string{"OV"}, identifier, version}) {
+    SCOPED_TRACE(bytes.size());
+    ASSERT_TRUE(folly::writeFile(bytes, path.c_str()));
+    try {
+      catalog_->loadOverlayDir(ino);
+      FAIL() << "expected corrupt header";
+    } catch (const OverlayDataCorruption& ex) {
+      const std::string message = ex.what();
+      EXPECT_NE(std::string::npos, message.find("inode 47"));
+      if (bytes.size() == 2) {
+        EXPECT_NE(std::string::npos, message.find("size=2"));
+        EXPECT_NE(std::string::npos, message.find("at least 64 bytes"));
+      } else if (bytes == identifier) {
+        EXPECT_NE(std::string::npos, message.find("offset 0"));
+        EXPECT_NE(std::string::npos, message.find("actual hex=42414421"));
+        EXPECT_NE(std::string::npos, message.find("expected hex=4f564452"));
+      } else {
+        EXPECT_NE(std::string::npos, message.find("offset 4"));
+        EXPECT_NE(std::string::npos, message.find("actual=7 expected=1"));
+      }
+    }
+  }
+}
+
+TEST_F(FsInodeCatalogEntryTest, parseErrorsIdentifyInodeOffsetAndStage) {
+  const InodeNumber ino{48};
+  catalog_->saveOverlayDir(ino, overlay::OverlayDir{});
+  const auto path = store_->getAbsoluteFilePath(ino);
+  std::string bytes;
+  ASSERT_TRUE(folly::readFile(path.c_str(), bytes));
+  // 0x1b starts the entries map field but omits its map header.
+  bytes.resize(FsFileContentStore::kHeaderLength);
+  bytes.push_back('\x1b');
+  ASSERT_TRUE(folly::writeFile(bytes, path.c_str()));
+
+  try {
+    catalog_->loadOverlayDir(ino);
+    FAIL() << "expected truncated map header";
+  } catch (const OverlayDataCorruption& ex) {
+    const std::string message = ex.what();
+    EXPECT_NE(std::string::npos, message.find("inode 48"));
+    EXPECT_NE(std::string::npos, message.find("directory data offset 1"));
+    EXPECT_NE(std::string::npos, message.find("while reading entries map"));
+  }
 }
 
 TEST_F(FsInodeCatalogEntryTest, nonExistentReturnsFalse) {

@@ -487,7 +487,7 @@ void loadOverlayEntriesFromData(
   reader.setInput(buf.get());
 
   std::string structName;
-  auto parse = [&](auto&& fn) {
+  auto parse = [&](std::string_view stage, auto&& fn) {
     try {
       fn();
     } catch (const std::bad_alloc&) {
@@ -503,17 +503,23 @@ void loadOverlayEntriesFromData(
           EdenErrorType::POSIX_ERROR,
           "corrupt overlay for inode ",
           inodeNumber,
+          " at directory data offset ",
+          rawData.size() - reader.getCursor().totalLength(),
+          " while reading ",
+          stage,
           ": ",
           ex.what()};
     }
   };
 
-  parse([&] { reader.readStructBegin(structName); });
+  parse("directory struct", [&] { reader.readStructBegin(structName); });
 
   std::string fieldName;
   TType fieldType;
   int16_t fieldId;
-  parse([&] { reader.readFieldBegin(fieldName, fieldType, fieldId); });
+  parse("entries field", [&] {
+    reader.readFieldBegin(fieldName, fieldType, fieldId);
+  });
 
   if (fieldType != TType::T_MAP || fieldId != 1) {
     throw OverlayDataCorruption{
@@ -521,6 +527,8 @@ void loadOverlayEntriesFromData(
         EdenErrorType::POSIX_ERROR,
         "corrupt overlay for inode ",
         inodeNumber,
+        " at directory data offset ",
+        rawData.size() - reader.getCursor().totalLength(),
         ": expected map field with id 1, got type=",
         static_cast<int>(fieldType),
         " id=",
@@ -530,7 +538,8 @@ void loadOverlayEntriesFromData(
   TType keyType;
   TType valueType;
   uint32_t mapSize;
-  parse([&] { reader.readMapBegin(keyType, valueType, mapSize); });
+  parse(
+      "entries map", [&] { reader.readMapBegin(keyType, valueType, mapSize); });
 
   // Compact protocol omits key/value types for empty maps, so only validate
   // types when there are entries.
@@ -541,6 +550,8 @@ void loadOverlayEntriesFromData(
           EdenErrorType::POSIX_ERROR,
           "corrupt overlay for inode ",
           inodeNumber,
+          " at directory data offset ",
+          rawData.size() - reader.getCursor().totalLength(),
           ": expected map<string,struct>, got key=",
           static_cast<int>(keyType),
           " value=",
@@ -556,6 +567,8 @@ void loadOverlayEntriesFromData(
         EdenErrorType::POSIX_ERROR,
         "corrupt overlay for inode ",
         inodeNumber,
+        " at directory data offset ",
+        rawData.size() - reader.getCursor().totalLength(),
         ": map size ",
         mapSize,
         " exceeds data size ",
@@ -566,15 +579,13 @@ void loadOverlayEntriesFromData(
     std::string name;
     for (uint32_t i = 0; i < mapSize; ++i) {
       overlay::OverlayEntry entry;
-      parse([&] {
-        reader.readString(name);
-        entry.read(&reader);
-      });
+      parse("entry name", [&] { reader.readString(name); });
+      parse("entry fields", [&] { entry.read(&reader); });
 
       visitor(name, entry);
     }
 
-    parse([&] {
+    parse("directory end", [&] {
       reader.readMapEnd();
       reader.readFieldEnd();
       reader.readFieldBegin(fieldName, fieldType, fieldId);
@@ -584,15 +595,26 @@ void loadOverlayEntriesFromData(
           EIO,
           EdenErrorType::POSIX_ERROR,
           "unexpected overlay field for inode ",
-          inodeNumber};
+          inodeNumber,
+          " at directory data offset ",
+          rawData.size() - reader.getCursor().totalLength(),
+          ": expected STOP, got type=",
+          static_cast<int>(fieldType),
+          " id=",
+          fieldId};
     }
-    parse([&] { reader.readStructEnd(); });
+    parse("directory struct end", [&] { reader.readStructEnd(); });
     if (!reader.getCursor().isAtEnd()) {
       throw OverlayDataCorruption{
           EIO,
           EdenErrorType::POSIX_ERROR,
           "trailing overlay data for inode ",
-          inodeNumber};
+          inodeNumber,
+          " at directory data offset ",
+          rawData.size() - reader.getCursor().totalLength(),
+          ": ",
+          reader.getCursor().totalLength(),
+          " bytes remain"};
     }
   });
 }
@@ -1673,13 +1695,18 @@ std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
       inodeNumber,
       *raw,
       [&](uint32_t, InodeCatalog::OverlayEntryIterator iterate) {
-        iterate(
-            [&](const std::string& name, const overlay::OverlayEntry& entry) {
-              if (!dir.entries()->emplace(name, entry).second) {
-                throw OverlayDataCorruption{fmt::format(
-                    "duplicate overlay name for inode {}", inodeNumber)};
-              }
-            });
+        iterate([&](const std::string& name,
+                    const overlay::OverlayEntry& entry) {
+          auto [it, inserted] = dir.entries()->emplace(name, entry);
+          if (!inserted) {
+            throw OverlayDataCorruption{fmt::format(
+                "duplicate overlay name (hex \"{}\") for inode {}: first inode {}, duplicate inode {}",
+                folly::hexlify(name),
+                inodeNumber,
+                *it->second.inodeNumber(),
+                *entry.inodeNumber())};
+          }
+        });
       });
   return dir;
 }
@@ -1978,8 +2005,10 @@ void FsFileContentStore::validateHeader(
         inodeNumber,
         ") is too short for header: size=",
         contents.size(),
-        " expected headerId=",
-        headerId);
+        " expected at least ",
+        kHeaderLength,
+        " bytes, expected headerId hex=",
+        folly::hexlify(headerId));
   }
 
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{contents});
@@ -1992,8 +2021,12 @@ void FsFileContentStore::validateHeader(
     throw OverlayDataCorruption(
         EINVAL,
         EdenErrorType::POSIX_ERROR,
-        "unexpected overlay header identifier : ",
-        folly::hexlify(ByteRange{identifier}));
+        "unexpected overlay header identifier for inode ",
+        inodeNumber,
+        " at offset 0: actual hex=",
+        folly::hexlify(ByteRange{identifier}),
+        " expected hex=",
+        folly::hexlify(headerId));
   }
 
   // Validate header version
@@ -2002,8 +2035,14 @@ void FsFileContentStore::validateHeader(
     throw OverlayDataCorruption(
         EINVAL,
         EdenErrorType::POSIX_ERROR,
-        "Unexpected overlay version :",
-        version);
+        "unexpected overlay version for inode ",
+        inodeNumber,
+        " at offset ",
+        kHeaderIdentifierDir.size(),
+        ": actual=",
+        version,
+        " expected=",
+        kHeaderVersion);
   }
 }
 
