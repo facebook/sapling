@@ -406,7 +406,7 @@ wal_rename_crash_x   | CRASH              | unchanged          | hardlink       
 wal_self_ref         | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 wal_torn             | b s/ s/f           | unchanged          | orphan                  | ok        | ok          | ok
 wal_torn_len         | b s/ s/f           | unchanged          | orphan                  | ok        | ok          | ok
-wal_remove_payload   | b s/ s/f           | unchanged          | orphan                  | ok        | ok          | ok
+wal_remove_payload   | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
 file_bad_header      | a b s/ s/f         | unchanged          | data                    | ok        | ok          | ok
 file_truncated       | a b:EIO s/ s/f     | unchanged          | data                    | ok        | b:EIO       | -
 file_missing         | a b:ENOENT s/ s/f  | unchanged          | missing                 | ok        | b:ENOENT    | -

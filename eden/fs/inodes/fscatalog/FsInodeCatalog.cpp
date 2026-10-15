@@ -1457,11 +1457,19 @@ LoadWalResult FsFileContentStore::loadWalDelta(
         }
 
         case WalOpType::REMOVE: {
+          if (entryOffset != entryLen) {
+            valid = false;
+            break;
+          }
           assignDelta(std::move(name), WalDelta{WalOpType::REMOVE, {}});
           break;
         }
 
         case WalOpType::MATERIALIZE: {
+          if (entryOffset != entryLen) {
+            valid = false;
+            break;
+          }
           auto it = delta.find(name);
           if (it == delta.end()) {
             // No prior delta for this name — record the MATERIALIZE so the
@@ -1503,6 +1511,11 @@ LoadWalResult FsFileContentStore::loadWalDelta(
     offset += entryStart + entryLen;
   }
 
+  // This also catches a torn length prefix (one to three trailing bytes).
+  // Do not double-count corruption already reported while parsing a frame.
+  if (offset != data.size() && result.parseErrors == 0) {
+    ++result.parseErrors;
+  }
   return result;
 }
 

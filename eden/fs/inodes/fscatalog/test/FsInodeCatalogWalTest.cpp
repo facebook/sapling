@@ -1169,6 +1169,38 @@ TEST_P(FsInodeCatalogWalTest, appendWalEntry_rejectsFieldsTooLargeForVersion1) {
   EXPECT_EQ(v1Frame, readWal(legacy));
 }
 
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_detectsTornLengthPrefix) {
+  for (size_t tailSize = 1; tailSize < sizeof(uint32_t); ++tailSize) {
+    const InodeNumber parent{340 + tailSize};
+    store_->appendWalEntry(
+        parent, WalOpType::REMOVE, PathComponentPiece{"keep"}, nullptr);
+    auto bytes = readWal(parent);
+    bytes.append(tailSize, '\xab');
+    ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+    auto result = store_->loadWalDelta(parent);
+    EXPECT_EQ(1u, result.parseErrors);
+    EXPECT_EQ(1u, result.rawEntriesParsed);
+    EXPECT_EQ(WalOpType::REMOVE, result.delta.at("keep").type);
+  }
+}
+
+TEST_P(FsInodeCatalogWalTest, loadWalDelta_rejectsRemovePayload) {
+  const InodeNumber parent{344};
+  store_->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"bad"}, nullptr);
+  auto bytes = readWal(parent);
+  auto entryLen = readU32(bytes, 0) + 1;
+  std::memcpy(bytes.data(), &entryLen, sizeof(entryLen));
+  bytes.push_back('\xab');
+  ASSERT_NO_FATAL_FAILURE(writeRawWal(testDir_, parent, bytes));
+
+  auto result = store_->loadWalDelta(parent);
+  EXPECT_EQ(1u, result.parseErrors);
+  EXPECT_EQ(0u, result.rawEntriesParsed);
+  EXPECT_TRUE(result.delta.empty());
+}
+
 TEST_P(FsInodeCatalogWalTest, loadWalDelta_unknownOpIsSkipped) {
   // Forward-compat: an unknown opcode WITH a valid entryLen frame is
   // skipped (advanced by entryLen), not fatal. A subsequent valid REMOVE
