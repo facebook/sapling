@@ -1683,11 +1683,40 @@ function microwave_builder() {
 }
 
 function derivation_pipeline_tailer {
+  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
+  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
+  THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   GLOG_minloglevel=5 "$DERIVATION_PIPELINE_TAILER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
+}
+
+function start_and_wait_for_derivation_pipeline_worker {
+  local addr_file="$TESTTMP/pipeline_worker.addr"
+  rm -f "$addr_file"
+  THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
+  THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
+  THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+  THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
+  GLOG_minloglevel=5 "$DERIVATION_PIPELINE_WORKER" \
+    --port 0 \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --bound-address-file "$addr_file" \
+    --scuba-log-file "$TESTTMP/pipeline_worker_scuba.json" \
+    --tracing-test-format \
+    "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" "$@" \
+    >> "$TESTTMP/pipeline_worker.out" 2>&1 &
+  echo "$!" >> "$DAEMON_PIDS"
+  export PIPELINE_WORKER_PORT
+  wait_for_server "Derivation pipeline worker" PIPELINE_WORKER_PORT \
+    "$TESTTMP/pipeline_worker.out" "$MONONOKE_DDS_DEFAULT_START_TIMEOUT" \
+    "$addr_file" derivation_pipeline_worker_health
+}
+
+function derivation_pipeline_worker_health {
+  DDS_PORT="$PIPELINE_WORKER_PORT" derived_data_client get-status
 }
 
 function derived_data_tailer {
