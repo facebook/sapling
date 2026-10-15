@@ -114,6 +114,7 @@ pub enum ClientEntryPoint {
     LfsServer,
     DerivedDataService,
     DerivationWorker,
+    DerivationPipelineTailer,
     DiffService,
     InteractiveSmartlog,
     ScsClient,
@@ -208,6 +209,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::LfsServer => "lfs",
             ClientEntryPoint::DerivedDataService => "derived_data_service",
             ClientEntryPoint::DerivationWorker => "derivation_worker",
+            ClientEntryPoint::DerivationPipelineTailer => "derivation_pipeline_tailer",
             ClientEntryPoint::InteractiveSmartlog => "isl",
             ClientEntryPoint::ScsClient => "scsc",
             ClientEntryPoint::Walker => "walker",
@@ -255,6 +257,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "lfs" => Ok(ClientEntryPoint::LfsServer),
             "derived_data_service" => Ok(ClientEntryPoint::DerivedDataService),
             "derivation_worker" => Ok(ClientEntryPoint::DerivationWorker),
+            "derivation_pipeline_tailer" => Ok(ClientEntryPoint::DerivationPipelineTailer),
             "isl" => Ok(ClientEntryPoint::InteractiveSmartlog),
             "scsc" => Ok(ClientEntryPoint::ScsClient),
             "walker" => Ok(ClientEntryPoint::Walker),
@@ -366,6 +369,15 @@ mod tests {
             Some(ClientEntryPoint::DerivationWorker),
             ClientEntryPoint::try_from(ClientEntryPoint::DerivationWorker.to_string().as_ref())
                 .ok()
+        );
+        assert_eq!(
+            Some(ClientEntryPoint::DerivationPipelineTailer),
+            ClientEntryPoint::try_from(
+                ClientEntryPoint::DerivationPipelineTailer
+                    .to_string()
+                    .as_ref()
+            )
+            .ok()
         );
         assert_eq!(
             Some(ClientEntryPoint::InteractiveSmartlog),
