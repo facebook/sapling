@@ -579,6 +579,8 @@ pub(crate) fn valid_blob_json(trusted_tier: &str) -> String {
 fn test_runtime() -> tokio::runtime::Runtime {
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(1)
+        // The watcher runs on this runtime and reads knobs, which are thread-local in tests.
+        .on_thread_start(mononoke::override_just_knobs)
         .enable_all()
         .build()
         .expect("test runtime builds")

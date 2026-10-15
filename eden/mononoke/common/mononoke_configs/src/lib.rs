@@ -70,6 +70,8 @@ define_stats! {
     liveness_count: timeseries(Average, Sum, Count),
     spurious_reload_suppressed: timeseries(Average, Sum, Count),
     merge_skipped_no_handle: timeseries(Average, Sum, Count),
+    bulk_reload_spec_reused: timeseries(Sum),
+    bulk_reload_spec_parsed: timeseries(Sum),
     per_repo_refresh_count: timeseries(Average, Sum, Count),
     per_repo_refresh_failure_count: timeseries(Average, Sum, Count),
     ensure_repo_handle_success_count: timeseries(Average, Sum, Count),

@@ -62,6 +62,9 @@ use crate::receiver::ConfigUpdateReceiver;
 
 const LIVENESS_INTERVAL: Duration = Duration::from_secs(300);
 
+/// Kill switch for reusing unchanged `RepoSpec` parses in the bulk manifest pass.
+const INCREMENTAL_RELOAD_KNOB: &str = "scm/mononoke:incremental_manifest_reload";
+
 /// Result of awaiting one per-repo watcher fire. Owns the watcher so the
 /// caller can re-push a fresh wait future for it without re-subscribing.
 type PerRepoWaitResult = (String, Result<Arc<RepoSpec>>, ConfigUpdateWatcher<RepoSpec>);
@@ -388,6 +391,15 @@ struct ReloadState {
     prev_manifest: Option<Arc<TierManifest>>,
     /// Reused on equal re-parse to keep pointer identity stable.
     cached_manifest_storage: Option<Arc<StorageConfigs>>,
+    /// Parse results from the last committed manifest pass, valid against `prev_manifest.storage`.
+    parsed_specs: HashMap<String, ParsedSpec>,
+}
+
+/// A `RepoSpec` and the `RepoConfig` it parsed into, so an unchanged spec skips the re-parse.
+#[derive(Clone)]
+struct ParsedSpec {
+    spec: Arc<RepoSpec>,
+    config: Arc<RepoConfig>,
 }
 
 /// One reload pass, dispatched by source; everything fallible returns before the commit.
@@ -540,6 +552,9 @@ async fn run_manifest_reload_pass(
     };
     state.cached_manifest_storage = Some(storage.clone());
 
+    // Rebuilt every pass so repos that left the manifest or failed to parse drop out.
+    let mut parsed_specs = HashMap::with_capacity(current_manifest.repos.len());
+
     // Scoped so the repo_handles read guard is dropped before any await below.
     let merged = {
         let handles = match repo_handles.read() {
@@ -552,14 +567,47 @@ async fn run_manifest_reload_pass(
         };
         // Served snapshot for per-repo keep-last-known-good below.
         let served = repo_configs.load_full();
+        // Every parse depends on the manifest's storage, so a storage change invalidates them all.
+        let previous_parses = (justknobs::eval(INCREMENTAL_RELOAD_KNOB, None, None)
+            && state
+                .prev_manifest
+                .as_ref()
+                .is_some_and(|prev| prev.storage == current_manifest.storage))
+        .then_some(&state.parsed_specs);
         let mut repos = RepoConfigs::new(HashMap::new(), CommonConfig::default()).repos;
         for entry in &current_manifest.repos {
             if let Some(handle) = handles.get(&entry.repo_name) {
                 let (spec, version_info) = handle.get_with_version();
-                match parse_repo_spec(Arc::unwrap_or_clone(spec), tier, &current_manifest.storage) {
+                let previous = previous_parses.and_then(|parses| parses.get(&entry.repo_name));
+                // Reuse only a parse that is still the one served: the per-repo path and on-demand
+                // loads replace served configs without going through this cache.
+                let reusable = previous.filter(|parsed| {
+                    (Arc::ptr_eq(&parsed.spec, &spec) || *parsed.spec == *spec)
+                        && served
+                            .repos
+                            .get(&entry.repo_name)
+                            .is_some_and(|config| Arc::ptr_eq(config, &parsed.config))
+                });
+                if let Some(parsed) = reusable {
+                    STATS::bulk_reload_spec_reused.add_value(1);
+                    repos.insert(entry.repo_name.clone(), parsed.config.clone());
+                    // Hold the live Arc, not the old one, so a no-op version bump does not pin a duplicate.
+                    parsed_specs.insert(
+                        entry.repo_name.clone(),
+                        ParsedSpec {
+                            spec,
+                            config: parsed.config.clone(),
+                        },
+                    );
+                    continue;
+                }
+                STATS::bulk_reload_spec_parsed.add_value(1);
+                match parse_repo_spec(RepoSpec::clone(&spec), tier, &current_manifest.storage) {
                     Ok(mut config) => {
                         config.config_version = version_info.map(|info| info.version);
-                        repos.insert(entry.repo_name.clone(), Arc::new(config));
+                        let config = Arc::new(config);
+                        repos.insert(entry.repo_name.clone(), config.clone());
+                        parsed_specs.insert(entry.repo_name.clone(), ParsedSpec { spec, config });
                     }
                     Err(e) => {
                         error!(
@@ -571,6 +619,10 @@ async fn run_manifest_reload_pass(
                         // Keep-last-known-good: never drop a served repo on a transient failure.
                         if let Some(served_config) = served.repos.get(&entry.repo_name) {
                             repos.insert(entry.repo_name.clone(), served_config.clone());
+                        }
+                        // Carry the last good parse so a spec fixed back to it is not re-parsed.
+                        if let Some(parsed) = previous {
+                            parsed_specs.insert(entry.repo_name.clone(), parsed.clone());
                         }
                     }
                 }
@@ -600,6 +652,7 @@ async fn run_manifest_reload_pass(
         RepoConfigs::from_arc_map(repos, merged.common.clone())
     });
     state.prev_manifest = Some(current_manifest);
+    state.parsed_specs = parsed_specs;
     storage_configs.store(storage);
     notify_receivers(repo_configs.load_full(), storage_configs, update_receivers).await;
 }

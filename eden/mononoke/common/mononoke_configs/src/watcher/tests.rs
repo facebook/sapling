@@ -559,6 +559,10 @@ async fn test_handle_per_repo_fire_skips_unchanged_spec() {
 
 use cached_config::ModificationTime;
 use cached_config::TestSource;
+use futures::FutureExt;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::with_just_knobs_async;
 use repos::RawCommonConfig;
 
 use crate::tests::TEST_STORAGE;
@@ -938,5 +942,298 @@ async fn test_manifest_reload_retains_served_repo_on_spec_parse_failure() {
             .id(),
         2,
         "repo/y must be served from its freshly parsed spec"
+    );
+}
+
+fn served_config(fx: &ReloadFixture, name: &str) -> Arc<RepoConfig> {
+    fx.repo_configs
+        .load()
+        .repos
+        .get(name)
+        .unwrap_or_else(|| panic!("{name} must be served"))
+        .clone()
+}
+
+// Incremental bulk pass: adding a repo to the manifest parses only the new repo.
+#[mononoke::test]
+async fn test_manifest_reload_reuses_parse_for_unchanged_spec() {
+    const X_PATH: &str = "test/repos/x";
+    const Y_PATH: &str = "test/repos/y";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let x_before = served_config(&fx, "repo/x");
+
+    fx.put_spec(Y_PATH, &valid_repo_spec_json(2, "repo/y"), 1);
+    let v1 = good_manifest(
+        "tier_v0",
+        vec![
+            spec_entry("repo/x", 1, X_PATH),
+            spec_entry("repo/y", 2, Y_PATH),
+        ],
+    );
+    fx.swap_manifest(&v1, 2);
+    fx.run().await;
+
+    assert!(
+        Arc::ptr_eq(&x_before, &served_config(&fx, "repo/x")),
+        "repo/x's spec did not change, so the pass must serve the same parsed config, not a re-parse"
+    );
+    assert_eq!(
+        served_config(&fx, "repo/y").repoid.id(),
+        2,
+        "the newly added repo/y must be parsed and served"
+    );
+    assert_eq!(
+        fx.state.parsed_specs.len(),
+        2,
+        "both repos must be recorded for the next pass"
+    );
+}
+
+// A changed spec is re-parsed by the bulk pass even when its per-repo fire has not been handled.
+#[mononoke::test]
+async fn test_manifest_reload_reparses_changed_spec() {
+    const X_PATH: &str = "test/repos/x";
+    const Y_PATH: &str = "test/repos/y";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let x_before = served_config(&fx, "repo/x");
+
+    fx.put_spec(X_PATH, &valid_repo_spec_json(11, "repo/x"), 1);
+    fx.put_spec(Y_PATH, &valid_repo_spec_json(2, "repo/y"), 1);
+    let v1 = good_manifest(
+        "tier_v0",
+        vec![
+            spec_entry("repo/x", 1, X_PATH),
+            spec_entry("repo/y", 2, Y_PATH),
+        ],
+    );
+    fx.swap_manifest(&v1, 2);
+    fx.run().await;
+
+    let x_after = served_config(&fx, "repo/x");
+    assert!(
+        !Arc::ptr_eq(&x_before, &x_after),
+        "a changed spec must not be served from the previous parse"
+    );
+    assert_eq!(
+        x_after.repoid.id(),
+        11,
+        "repo/x must be served from its new spec"
+    );
+}
+
+// Every parse resolves against the manifest's storage, so a storage change invalidates all reuse.
+#[mononoke::test]
+async fn test_manifest_reload_reparses_all_on_storage_change() {
+    const X_PATH: &str = "test/repos/x";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let x_before = served_config(&fx, "repo/x");
+
+    let mut v1 = v0.clone();
+    let extra = v1.storage[TEST_STORAGE].clone();
+    v1.storage.insert("other_storage".to_string(), extra);
+    fx.swap_manifest(&v1, 1);
+    fx.run().await;
+
+    assert!(
+        !Arc::ptr_eq(&x_before, &served_config(&fx, "repo/x")),
+        "a storage change must re-parse repo/x even though its spec is unchanged"
+    );
+}
+
+// A repo that leaves the manifest must not keep a stale parse that a later re-add could reuse.
+#[mononoke::test]
+async fn test_manifest_reload_drops_parse_for_removed_repo() {
+    const X_PATH: &str = "test/repos/x";
+    const Y_PATH: &str = "test/repos/y";
+
+    let v0 = good_manifest(
+        "tier_v0",
+        vec![
+            spec_entry("repo/x", 1, X_PATH),
+            spec_entry("repo/y", 2, Y_PATH),
+        ],
+    );
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.put_spec(Y_PATH, &valid_repo_spec_json(2, "repo/y"), 0);
+    fx.run().await;
+    assert!(fx.state.parsed_specs.contains_key("repo/y"));
+
+    let v1 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    fx.swap_manifest(&v1, 1);
+    fx.run().await;
+
+    assert!(
+        !fx.state.parsed_specs.contains_key("repo/y"),
+        "repo/y left the manifest, so its parse must be dropped"
+    );
+    assert!(
+        !fx.repo_configs.load().repos.contains_key("repo/y"),
+        "repo/y must no longer be served"
+    );
+}
+
+// A failed pass must not replace the recorded parses, or the retry would re-parse everything.
+#[mononoke::test]
+async fn test_manifest_reload_keeps_parses_on_failed_pass() {
+    const X_PATH: &str = "test/repos/x";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let x_before = served_config(&fx, "repo/x");
+
+    fx.swap_manifest(&unparsable_manifest(vec![]), 1);
+    fx.run().await;
+    assert!(
+        fx.state.parsed_specs.contains_key("repo/x"),
+        "an aborted pass must leave the recorded parses untouched"
+    );
+
+    let v2 = good_manifest("tier_v2", vec![spec_entry("repo/x", 1, X_PATH)]);
+    fx.swap_manifest(&v2, 2);
+    fx.run().await;
+    assert!(
+        Arc::ptr_eq(&x_before, &served_config(&fx, "repo/x")),
+        "the recovering pass must reuse repo/x's parse"
+    );
+}
+
+// A served config replaced outside the bulk pass (per-repo update, on-demand load) is re-parsed, not
+// overwritten with the older cached parse.
+#[mononoke::test]
+async fn test_manifest_reload_reparses_when_served_config_replaced() {
+    const X_PATH: &str = "test/repos/x";
+    const Y_PATH: &str = "test/repos/y";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let cached = served_config(&fx, "repo/x");
+
+    fx.repo_configs.rcu(|current| {
+        let mut next = (**current).clone();
+        next.insert_repo("repo/x".to_string(), repo_config_with_id(1));
+        next
+    });
+    let replaced = served_config(&fx, "repo/x");
+
+    fx.put_spec(Y_PATH, &valid_repo_spec_json(2, "repo/y"), 1);
+    let v1 = good_manifest(
+        "tier_v0",
+        vec![
+            spec_entry("repo/x", 1, X_PATH),
+            spec_entry("repo/y", 2, Y_PATH),
+        ],
+    );
+    fx.swap_manifest(&v1, 2);
+    fx.run().await;
+
+    let x_after = served_config(&fx, "repo/x");
+    assert!(
+        !Arc::ptr_eq(&cached, &x_after),
+        "the cached parse is no longer what is served, so it must not be reused"
+    );
+    assert!(
+        !Arc::ptr_eq(&replaced, &x_after),
+        "repo/x must be freshly parsed from its spec"
+    );
+}
+
+// A transient spec failure keeps the last good parse, so a spec fixed back to it reuses that parse.
+#[mononoke::test]
+async fn test_manifest_reload_carries_parse_across_spec_failure() {
+    const X_PATH: &str = "test/repos/x";
+    const Y_PATH: &str = "test/repos/y";
+    const Z_PATH: &str = "test/repos/z";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let x_good = served_config(&fx, "repo/x");
+
+    // X's spec goes bad; adding Y triggers a bulk pass.
+    fx.put_spec(X_PATH, "{}", 1);
+    fx.put_spec(Y_PATH, &valid_repo_spec_json(2, "repo/y"), 1);
+    let v1 = good_manifest(
+        "tier_v0",
+        vec![
+            spec_entry("repo/x", 1, X_PATH),
+            spec_entry("repo/y", 2, Y_PATH),
+        ],
+    );
+    fx.swap_manifest(&v1, 2);
+    fx.run().await;
+    assert!(
+        Arc::ptr_eq(&x_good, &served_config(&fx, "repo/x")),
+        "a failed spec parse must keep serving the last good config"
+    );
+    assert!(
+        fx.state
+            .parsed_specs
+            .get("repo/x")
+            .is_some_and(|parsed| Arc::ptr_eq(&parsed.config, &x_good)),
+        "the last good parse must be carried into the next pass"
+    );
+
+    // X's spec is fixed back to its original content; adding Z triggers another pass.
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 3);
+    fx.put_spec(Z_PATH, &valid_repo_spec_json(3, "repo/z"), 3);
+    let v2 = good_manifest(
+        "tier_v0",
+        vec![
+            spec_entry("repo/x", 1, X_PATH),
+            spec_entry("repo/y", 2, Y_PATH),
+            spec_entry("repo/z", 3, Z_PATH),
+        ],
+    );
+    fx.swap_manifest(&v2, 4);
+    fx.run().await;
+    assert!(
+        Arc::ptr_eq(&x_good, &served_config(&fx, "repo/x")),
+        "a spec restored to its last good content must reuse the carried parse"
+    );
+}
+
+// With the kill switch off, every pass re-parses every repo.
+#[mononoke::test]
+async fn test_manifest_reload_reparses_all_when_knob_off() {
+    const X_PATH: &str = "test/repos/x";
+
+    let v0 = good_manifest("tier_v0", vec![spec_entry("repo/x", 1, X_PATH)]);
+    let mut fx = ReloadFixture::new(&v0, &[]);
+    fx.put_spec(X_PATH, &valid_repo_spec_json(1, "repo/x"), 0);
+    fx.run().await;
+    let x_before = served_config(&fx, "repo/x");
+
+    let v1 = good_manifest("tier_v1", vec![spec_entry("repo/x", 1, X_PATH)]);
+    fx.swap_manifest(&v1, 1);
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([(
+            INCREMENTAL_RELOAD_KNOB.to_string(),
+            KnobVal::Bool(false),
+        )])),
+        fx.run().boxed(),
+    )
+    .await;
+
+    assert!(
+        !Arc::ptr_eq(&x_before, &served_config(&fx, "repo/x")),
+        "with the kill switch off, an unchanged spec must still be re-parsed"
     );
 }
