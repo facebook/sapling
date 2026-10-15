@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -843,6 +844,24 @@ TEST_P(RawOverlayTest, replacesInvalidInodeReservation) {
   overlay = nullptr;
   ASSERT_EQ(0, unlink(reservationPath.c_str()));
   ASSERT_EQ(0, symlink("invalid", reservationPath.c_str()));
+
+  EXPECT_NO_THROW(loadOverlay());
+  EXPECT_EQ(
+      std::to_string(2 + reservationSize),
+      boost::filesystem::read_symlink(reservationPath).string());
+}
+
+TEST_P(RawOverlayTest, replacesOverflowingInodeReservation) {
+  constexpr uint64_t reservationSize = 4096;
+  const auto reservationPath =
+      (getLocalDir() + "inode-reservation"_pc).asString();
+  overlay->close();
+  overlay = nullptr;
+  ASSERT_EQ(0, unlink(reservationPath.c_str()));
+  const auto overflowingReservation =
+      std::to_string(std::numeric_limits<uint64_t>::max());
+  ASSERT_EQ(
+      0, symlink(overflowingReservation.c_str(), reservationPath.c_str()));
 
   EXPECT_NO_THROW(loadOverlay());
   EXPECT_EQ(

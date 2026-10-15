@@ -678,6 +678,21 @@ class OverlayCorruptionTestBase(testcase.HgRepoTestMixin, testcase.EdenRepoTest)
         self.maxDiff = None
         self.assertEqual(self.expected.strip(), table)
 
+    def test_overflowing_inode_reservation(self) -> None:
+        self.eden.shutdown()
+        reservation = (
+            self.eden.overlay_dir_for_mount(self.mount_path) / "inode-reservation"
+        )
+        reservation.unlink()
+        overflow = (1 << 64) - 1
+        reservation.symlink_to(str(overflow))
+        self.assertEqual(overflow, int(reservation.readlink().name))
+
+        # Restart will detect the bad reservation and restore it.
+        self._start(self.mount_path)
+        self.eden.shutdown()
+        self.assertNotEqual(overflow, int(reservation.readlink().name))
+
 
 class OnlineFsckOffTest(OverlayCorruptionTestBase):
     expected: str = EXPECTED_ONLINE_FSCK_OFF

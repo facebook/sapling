@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <limits>
 
 #ifndef _WIN32
 #include <fcntl.h>
@@ -92,7 +93,9 @@ std::optional<uint64_t> loadInodeReservation(AbsolutePathPiece localDir) {
   const auto result = std::from_chars(
       target.data(), target.data() + size, reservation, /*base=*/10);
   if (result.ec != std::errc{} || result.ptr != target.data() + size ||
-      reservation <= kRootNodeId.get()) {
+      reservation <= kRootNodeId.get() ||
+      reservation >
+          std::numeric_limits<uint64_t>::max() - kInodeReservationSize) {
     XLOGF(WARN, "Invalid inode reservation in {}", path);
     return std::nullopt;
   }
