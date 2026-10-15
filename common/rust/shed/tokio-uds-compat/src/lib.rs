@@ -314,6 +314,21 @@ mod windows {
         }
     }
 
+    /// The stream's socket, for the calls the async wrapper does not make
+    /// itself, such as `WSAIoctl` with `SIO_AF_UNIX_GETPEERPID` to read which
+    /// process holds the other end.
+    impl AsRawSocket for UnixStream {
+        fn as_raw_socket(&self) -> RawSocket {
+            self.0.as_raw_socket()
+        }
+    }
+
+    impl AsSocket for UnixStream {
+        fn as_socket(&self) -> BorrowedSocket<'_> {
+            self.0.as_socket()
+        }
+    }
+
     impl AsyncRead for UnixStream {
         fn poll_read(
             self: Pin<&mut Self>,
@@ -945,6 +960,9 @@ mod windows {
         use std::future::Future;
         use std::io;
         use std::io::ErrorKind;
+        use std::os::windows::io::AsRawSocket;
+        use std::os::windows::io::AsSocket;
+        use std::os::windows::io::RawSocket;
         use std::panic;
         use std::panic::AssertUnwindSafe;
         use std::path::PathBuf;
@@ -1130,6 +1148,29 @@ mod windows {
             }
             let cleanup = SocketCleanup(path.clone());
             (path, cleanup)
+        }
+
+        #[test]
+        fn both_ends_of_a_stream_lend_their_own_valid_socket() {
+            let (path, _cleanup) = unique_socket_path();
+            let listener = UnixListener::bind(&path).expect("bind a Windows AF_UNIX listener");
+            let client = async_io::block_on(UnixStream::connect(&path))
+                .expect("connect a Windows AF_UNIX client");
+            let (accepted, _) =
+                async_io::block_on(listener.accept()).expect("accept the Windows AF_UNIX client");
+            for stream in [&client, &accepted] {
+                assert_eq!(
+                    stream.as_raw_socket(),
+                    stream.as_socket().as_raw_socket(),
+                    "both traits lend the one socket"
+                );
+                assert_ne!(stream.as_raw_socket(), RawSocket::MAX, "not INVALID_SOCKET");
+            }
+            assert_ne!(
+                client.as_raw_socket(),
+                accepted.as_raw_socket(),
+                "each end has its own socket"
+            );
         }
 
         #[test]
