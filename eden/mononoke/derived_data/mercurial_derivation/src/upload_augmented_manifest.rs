@@ -45,7 +45,9 @@ use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::TrieMap;
 use mononoke_types::acl_manifest::AclManifestDirectoryEntry;
+use mononoke_types::acl_manifest::AclManifestDirectoryRestriction;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use mononoke_types::typed_hash::AclManifestId;
 use restricted_paths_common::RestrictedPathsConfigBased;
 use thiserror::Error;
 
@@ -376,15 +378,8 @@ async fn build_uploaded_tree(
     sources: ChildSources<'_>,
 ) -> Result<(BuiltTree, HgAugmentedManifestEnvelope)> {
     let parent = parent_entries(ctx, blobstore, manifest.p1()).await?;
-    let (children, acl) = children_and_acl(
-        ctx,
-        blobstore,
-        restricted_paths,
-        manifest,
-        sources,
-        &parent.directories,
-    )
-    .await?;
+    let (children, acl) =
+        children_and_acl(ctx, blobstore, restricted_paths, manifest, sources, &parent).await?;
     let acl_overlay = acl.node().map(|entry| entry.id);
 
     let files = &manifest.content().files;
@@ -522,6 +517,7 @@ async fn build_uploaded_file_leaf(
 struct ParentEntries {
     leaves: HashMap<MPathElement, HgAugmentedFileLeafNode>,
     directories: HashMap<MPathElement, HgAugmentedDirectoryNode>,
+    acl_manifest_directory_id: Option<AclManifestId>,
 }
 
 /// This directory's entries in the parent commit. An uploaded manifest lists
@@ -544,6 +540,7 @@ async fn parent_entries(
     else {
         return Ok(ParentEntries::default());
     };
+    let acl_manifest_directory_id = envelope.augmented_manifest.acl_manifest_directory_id;
     // One pass over the parent's map, rather than a lookup per entry: the
     // directory is being rebuilt precisely because most of it is unchanged, so
     // nearly every entry is wanted.
@@ -553,7 +550,10 @@ async fn parent_entries(
         .into_entries(ctx, blobstore)
         .and_then(|(name, entry)| async move { Ok((MPathElement::from_smallvec(name)?, entry)) })
         .try_fold(
-            ParentEntries::default(),
+            ParentEntries {
+                acl_manifest_directory_id,
+                ..Default::default()
+            },
             |mut parent, (name, entry)| async move {
                 match entry {
                     HgAugmentedManifestEntry::FileNode(leaf) => {
@@ -576,14 +576,14 @@ async fn children_and_acl(
     restricted_paths: &RestrictedPathsConfigBased,
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
-    parent_directories: &HashMap<MPathElement, HgAugmentedDirectoryNode>,
+    parent: &ParentEntries,
 ) -> Result<(HashMap<MPathElement, ChildNode>, DirectoryAcl)> {
     let children = load_children(
         ctx,
         blobstore,
         manifest.node_id(),
         sources,
-        parent_directories,
+        &parent.directories,
     )
     .await?;
 
@@ -595,15 +595,26 @@ async fn children_and_acl(
             .files
             .get(&acl_file_element)
             .and_then(|entry| match entry {
-                Entry::Leaf((_, filenode_id)) => Some(*filenode_id),
+                Entry::Leaf(leaf) => Some(*leaf),
                 Entry::Tree(_) => None,
             });
 
     let acl = if own_acl_file.is_none() && children.values().all(|child| child.acl.is_none()) {
         DirectoryAcl::NotNeeded
+    } else if let Some(acl) = reuse_parent_acl(
+        ctx,
+        blobstore,
+        parent,
+        &acl_file_element,
+        own_acl_file,
+        &children,
+    )
+    .await?
+    {
+        acl
     } else {
         let own_acl_file = match own_acl_file {
-            Some(filenode_id) => Some(filenode_id.load(ctx, blobstore).await?.content_id()),
+            Some((_, filenode_id)) => Some(filenode_id.load(ctx, blobstore).await?.content_id()),
             None => None,
         };
         let node = acl_node_for_directory(
@@ -626,6 +637,57 @@ async fn children_and_acl(
     };
 
     Ok((children, acl))
+}
+
+/// p1's ACL node, when nothing it is built from changed: the same own ACL file
+/// and the same child pointers. Canonical derivation never re-parses that file.
+async fn reuse_parent_acl(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn KeyedBlobstore>,
+    parent: &ParentEntries,
+    acl_file_element: &MPathElement,
+    own_acl_file: Option<(FileType, HgFileNodeId)>,
+    children: &HashMap<MPathElement, ChildNode>,
+) -> Result<Option<DirectoryAcl>> {
+    let same_acl_file = match (own_acl_file, parent.leaves.get(acl_file_element)) {
+        (None, None) => true,
+        (Some((file_type, filenode_id)), Some(leaf)) => {
+            leaf.filenode == filenode_id.into_nodehash() && leaf.file_type == file_type
+        }
+        _ => false,
+    };
+    let parent_pointer = |name| {
+        parent
+            .directories
+            .get(name)
+            .and_then(|directory| directory.acl_manifest_directory_id)
+    };
+    let same_children = children
+        .iter()
+        .all(|(name, child)| child.directory.acl_manifest_directory_id == parent_pointer(name))
+        && parent.directories.iter().all(|(name, directory)| {
+            directory.acl_manifest_directory_id.is_none() || children.contains_key(name)
+        });
+    if !same_acl_file || !same_children {
+        return Ok(None);
+    }
+
+    match (parent.acl_manifest_directory_id, own_acl_file) {
+        (Some(id), _) => {
+            let node = id.load(ctx, blobstore).await?;
+            Ok(Some(DirectoryAcl::Node(AclManifestDirectoryEntry {
+                id,
+                is_restricted: matches!(
+                    node.restriction,
+                    AclManifestDirectoryRestriction::Restricted(_)
+                ),
+                has_restricted_descendants: node.subentries.rollup_data().has_restricted,
+            })))
+        }
+        // The ACL file did not parse when it last changed.
+        (None, Some(_)) => Ok(Some(DirectoryAcl::Empty)),
+        (None, None) => Ok(None),
+    }
 }
 
 /// Resolve every child directory: from the batch when it arrived there, from

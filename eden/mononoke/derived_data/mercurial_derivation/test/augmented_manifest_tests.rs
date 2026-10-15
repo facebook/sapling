@@ -7262,11 +7262,11 @@ async fn test_batch_upload_reuses_parent_acl_entry_for_an_unchanged_acl_file(
             DirectoryAcl::NotNeeded | DirectoryAcl::Empty => None,
         });
 
-    // FIXME: the upload re-parses the unchanged `.slacl`, so its entry diverges
-    // from the one canonical derivation carried forward.
-    assert!(upload_dir.is_some(), "dir/ is restricted in the upload too");
-    assert_ne!(upload_dir, canonical_dir);
-    Ok(())
+    assert_eq!(
+        upload_dir, canonical_dir,
+        "the upload reuses the parent's ACL entry, id and flags, without re-parsing"
+    );
+    assert_batch_upload_matches_derivation(&ctx, &repo, &[parent], child, &["dir", ""]).await
 }
 
 /// A batch whose trees cannot all be built fails outright, and stores nothing.
