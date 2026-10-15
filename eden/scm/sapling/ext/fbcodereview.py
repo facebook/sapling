@@ -1883,18 +1883,32 @@ def _getnamespace(_repo) -> namespace:
 def _autopullphabdiff(
     repo, name, rewritepullrev: bool = False
 ) -> Optional[pullattempt]:
-    # Automation should use explicit commit hashes and do not depend on the
+    diffid_version = _try_parse_diffid_version(name)
+
+    # Automation should use explicit commit hashes and not depend on the
     # Dxxx autopull behavior.
     if repo.ui.plain(feature="phrevset"):
+        if diffid_version:
+            diffid, version = diffid_version
+            node = diffidtonode(repo, diffid, version=version)
+            repo.ui.metrics.inc("phrevset.automation_diff_id_rejected", 1)
+            message = _(
+                "Differential ID resolution is disabled for automation because "
+                "the resolved commit hash is unstable"
+            )
+            if node is not None:
+                raise error.Abort(
+                    message,
+                    hint=_("%s resolves to %s") % (name, hex(node)),
+                )
+            raise error.Abort(message)
         return
 
     # Phrevset autopull is disabled.
     if not repo.ui.configbool("phrevset", "autopull"):
         return
 
-    if (diffid_version := _try_parse_diffid_version(name)) and (
-        rewritepullrev or name not in repo
-    ):
+    if diffid_version and (rewritepullrev or name not in repo):
         diffid, version = diffid_version
         node = diffidtonode(repo, diffid, version=version)
         if node and (rewritepullrev or node not in repo):

@@ -74,7 +74,24 @@
   abort: unknown revision 'D1234'!
   [255]
 
-# 'pull -r Dxxx' will be rewritten to 'pull -r HASH'
+# Agent automation gets actionable guidance instead of a generic missing-revision error.
+
+  $ HGPLAIN=1 CODING_AGENT_METADATA=id=test_agent sl pull -r D1234 --config paths.default=test:fake_server --config devel.print-metrics=phrevset.automation_diff_id
+  pulling from test:fake_server
+  abort: Differential ID resolution is disabled for automation because the resolved commit hash is unstable
+  (D1234 resolves to 6008bb23d775556ff6c3528541ca5a2177b4bb92)
+  phrevset.automation_diff_id_rejected: 1
+  [255]
+
+# Omit the hint when Phabricator does not resolve the Differential ID.
+
+  $ HGPLAIN=1 CODING_AGENT_METADATA=id=test_agent sl pull -r D1234 --config phrevset.mock-D1234=missing --config paths.default=test:fake_server --config devel.print-metrics=phrevset.automation_diff_id
+  pulling from test:fake_server
+  abort: Differential ID resolution is disabled for automation because the resolved commit hash is unstable
+  phrevset.automation_diff_id_rejected: 1
+  [255]
+
+# 'pull -r Dxxx' will be rewritten to 'pull -r HASH' for interactive users
 
   $ sl pull -r D1234 --config paths.default=test:fake_server
   pulling from test:fake_server
