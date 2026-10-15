@@ -18,10 +18,18 @@ export type SyntaxWorkerRequest =
   | {
       type: 'setBaseUri';
       base: string;
+      /** Ask the main thread to fetch resources instead of fetching them in the worker. */
+      fetchThroughHost?: boolean;
     }
   | {
       type: 'cancel';
       idToCancel: number;
+    }
+  | {
+      type: 'fetchResourceResult';
+      fetchId: number;
+      result?: string | ArrayBuffer;
+      error?: string;
     }
   | {
       type: 'tokenizeContents';
@@ -40,6 +48,12 @@ export type SyntaxWorkerResponse =
   | {
       type: 'cssColorMap';
       colorMap: string[];
+    }
+  | {
+      type: 'fetchResource';
+      fetchId: number;
+      url: string;
+      as: 'text' | 'arrayBuffer';
     }
   | {
       type: 'tokenizeContents';

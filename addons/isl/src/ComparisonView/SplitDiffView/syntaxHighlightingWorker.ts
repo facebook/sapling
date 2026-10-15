@@ -31,6 +31,32 @@ const URL_TO_ONIG_WASM = './generated/textmate/onig.wasm';
  */
 let globalBaseUri: string;
 
+/**
+ * VS Code's webview service worker doesn't serve resource requests made from a WebWorker,
+ * so in VS Code webviews the main thread fetches resources on our behalf.
+ */
+let fetchThroughHost = false;
+let postMessageToHost: ((msg: SyntaxWorkerResponse) => unknown) | undefined;
+let nextFetchId = 0;
+const pendingFetches = new Map<
+  number,
+  {resolve: (result: string | ArrayBuffer) => void; reject: (error: Error) => void}
+>();
+
+function fetchFromHost(url: URL, as: 'text'): Promise<string>;
+function fetchFromHost(url: URL, as: 'arrayBuffer'): Promise<ArrayBuffer>;
+function fetchFromHost(url: URL, as: 'text' | 'arrayBuffer'): Promise<string | ArrayBuffer> {
+  const fetchId = nextFetchId++;
+  return new Promise((resolve, reject) => {
+    pendingFetches.set(fetchId, {resolve, reject});
+    postMessageToHost?.({type: 'fetchResource', fetchId, url: url.href, as});
+  });
+}
+
+function fetchText(url: URL): Promise<string> {
+  return fetchThroughHost ? fetchFromHost(url, 'text') : fetch(url).then(r => r.text());
+}
+
 async function loadGrammar(
   theme: ThemeColor,
   path: string,
@@ -43,7 +69,7 @@ async function loadGrammar(
     return undefined;
   }
 
-  const store = getGrammarStore(theme, globalBaseUri, colorMap => {
+  const store = getGrammarStore(theme, globalBaseUri, fetchText, colorMap => {
     // tell client the newest colorMap
     postMessage({type: 'cssColorMap', colorMap} as SyntaxWorkerResponse);
   });
@@ -99,6 +125,18 @@ export function handleMessage(
   switch (data.type) {
     case 'setBaseUri': {
       globalBaseUri = data.base;
+      fetchThroughHost = data.fetchThroughHost ?? false;
+      postMessageToHost = postMessage;
+      break;
+    }
+    case 'fetchResourceResult': {
+      const pending = pendingFetches.get(data.fetchId);
+      pendingFetches.delete(data.fetchId);
+      if (data.result != null) {
+        pending?.resolve(data.result);
+      } else {
+        pending?.reject(new Error(data.error ?? 'Failed to fetch resource'));
+      }
       break;
     }
     case 'tokenizeContents': {
@@ -203,6 +241,10 @@ function ensureOnigurumaIsLoaded(base: string): Promise<void> {
 
 async function loadOniguruma(base: string): Promise<void> {
   const url = new URL(URL_TO_ONIG_WASM, base);
+  if (fetchThroughHost) {
+    await loadWASM({data: await fetchFromHost(url, 'arrayBuffer')});
+    return;
+  }
   const onigurumaWASMRequest = fetch(url);
   const response = await onigurumaWASMRequest;
 

@@ -18,6 +18,9 @@ import {useEffect, useState} from 'react';
 import {CancellationToken} from 'shared/CancellationToken';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 import {isVscode} from '../../environment';
+// Vite generates this module at build time, so the import plugin can't see its default export.
+// eslint-disable-next-line import/default
+import syntaxHighlightingWorkerUrl from './syntaxHighlightingWorker?worker&url';
 import {SynchronousWorker, WorkerApi} from './workerApi';
 
 // Syntax highlighting is done in a WebWorker. This file contains APIs
@@ -35,6 +38,7 @@ function getWorker(): Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerRespons
   }
   cachedWorkerPromise = (async () => {
     let worker: WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>;
+    let fetchThroughHost = false;
     if (isVscode()) {
       if (process.env.NODE_ENV === 'development') {
         // NOTE: when using vscode in dev mode, because the web worker is not compiled to a single file,
@@ -46,13 +50,14 @@ function getWorker(): Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerRespons
       } else {
         // Production vscode build: webworkers in vscode webviews
         // are very particular and can only be loaded via blob: URL.
-        // Vite will have built a special worker js asset due to the imports in this file.
-        const PATH_TO_WORKER = './worker/syntaxHighlightingWorker.js';
-        const blobUrl = await fetch(PATH_TO_WORKER)
+        const blobUrl = await fetch(syntaxHighlightingWorkerUrl)
           .then(r => r.blob())
           .then(b => URL.createObjectURL(b));
 
         worker = new WorkerApi(new Worker(blobUrl));
+        // VS Code's webview service worker never answers resource requests from a blob worker,
+        // so the worker can't fetch its wasm or grammars itself.
+        fetchThroughHost = true;
       }
     } else if (window.Worker && !forceDisableWorkers) {
       // Non-vscode environments: web workers should work normally
@@ -66,7 +71,26 @@ function getWorker(): Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerRespons
     }
 
     // Explicitly set the base URI so the worker can make fetch requests.
-    worker.worker.postMessage({type: 'setBaseUri', base: document.baseURI} as SyntaxWorkerRequest);
+    worker.worker.postMessage({
+      type: 'setBaseUri',
+      base: document.baseURI,
+      fetchThroughHost,
+    } as SyntaxWorkerRequest);
+
+    if (fetchThroughHost) {
+      worker.listen('fetchResource', async ({fetchId, url, as}) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${url}: ${response.status}`);
+          }
+          const result = as === 'text' ? await response.text() : await response.arrayBuffer();
+          worker.worker.postMessage({type: 'fetchResourceResult', fetchId, result});
+        } catch (err) {
+          worker.worker.postMessage({type: 'fetchResourceResult', fetchId, error: String(err)});
+        }
+      });
+    }
 
     worker.listen('cssColorMap', msg => {
       // During testing-library tear down (ex. syntax highlighting was canceled),

@@ -31,6 +31,7 @@ const config: Config.InitialOptions = {
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       '<rootDir>/src/__mocks__/fileMock.js',
     '\\.css$': '<rootDir>/src/__mocks__/styleMock.ts',
+    '\\?worker&url$': '<rootDir>/src/__mocks__/fileMock.js',
   },
   transform: {
     '^.+\\.tsx?$': '<rootDir>/jest-transformer-import-meta.cjs',
