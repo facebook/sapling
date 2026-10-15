@@ -364,6 +364,11 @@ Overlay::Overlay(
           !folly::kIsWindows && config.overlayInodeReservation.getValue() &&
           (inodeCatalogType == InodeCatalogType::Legacy ||
            inodeCatalogType == InodeCatalogType::LegacyDev)},
+      // Only `Legacy` supports the online fsck config.
+      useOnlineFsck_{
+          useInodeReservation_ &&
+          inodeCatalogType == InodeCatalogType::Legacy &&
+          config.overlayOnlineFsck.getValue()},
       useWal_{config.overlayUseWal.getValue() && inodeCatalog_->supportsWal()},
       backgroundInodeRemoval_{config.overlayBackgroundInodeRemoval.getValue()},
       walCompactionMultiplier_{

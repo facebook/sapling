@@ -2710,8 +2710,8 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Persist an upper bound on allocated inode numbers so an unclean startup
-   * can eventually avoid discovering the next inode number by scanning the
-   * overlay. Only applies to Legacy and LegacyDev catalog types.
+   * can skip startup fsck when online-fsck is enabled and the reservation is
+   * available. Reservation applies to Legacy and LegacyDev catalog types.
    */
   ConfigSetting<bool> overlayInodeReservation{
       "overlay:inode-reservation",
@@ -2726,6 +2726,13 @@ class EdenConfig : private ConfigSettingManager {
       "overlay:use-sigbus-protection",
       false,
       this};
+
+  /**
+   * Validate and recover overlay data on access instead of running startup
+   * fsck. Requires inode reservation and the Legacy catalog. Unvisited
+   * orphan subtrees are left for offline fsck. Disabled by default.
+   */
+  ConfigSetting<bool> overlayOnlineFsck{"overlay:online-fsck", false, this};
 
   /**
    * Multiplier applied to a directory's base size when computing the

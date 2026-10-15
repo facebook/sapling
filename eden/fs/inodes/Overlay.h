@@ -169,6 +169,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   InodeNumber getMaxInodeNumber();
 
+  bool usesOnlineFsck() const {
+    return useOnlineFsck_;
+  }
+
   /**
    * allocateInodeNumber() should only be called by TreeInode.
    *
@@ -694,6 +698,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool useDirectFileWrites_;
 
   bool useInodeReservation_;
+  bool useOnlineFsck_;
 
   bool useWal_{false};
   bool backgroundInodeRemoval_{false};
