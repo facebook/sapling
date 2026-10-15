@@ -28,13 +28,15 @@ from .. import (
     context,
     copies,
     error,
+    extensions,
+    hintutil,
     mutation,
     rewriteutil,
     scmutil,
     treestate,
 )
 from ..i18n import _
-from ..node import nullid
+from ..node import hex, nullid
 from .cmdtable import command
 
 
@@ -54,10 +56,17 @@ def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
     contained in the uncommitted commit become pending changes in the
     working copy.
 
-    :prog:`uncommit` cannot be run on commits that have children. In
-    other words, you cannot uncommit a commit in the middle of a
-    stack. Similarly, by default, you cannot run :prog:`uncommit` if
-    there are pending changes in the working copy.
+    The current commit can be in the middle of a stack. If some of its
+    changes are uncommitted, or all of them with ``--keep``, the commit is
+    rewritten and its descendants are restacked onto the new version as
+    :prog:`amend` restacks them (see ``amend.autorestack``). Descendants
+    whose restack would conflict are left on the old version; run
+    :prog:`restack` to move them. Uncommitting every change of a commit
+    that has descendants requires ``--keep``, which leaves the commit in the
+    stack, empty: without it, nothing would replace the commit.
+
+    By default, you cannot run :prog:`uncommit` if there are pending changes
+    in the working copy.
 
     You can selectively uncommit files from the current commit by optionally
     specifying a list of files to remove. The specified files are removed from
@@ -69,8 +78,7 @@ def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
        Running :prog:`uncommit` is similar to running :prog:`undo --keep`
        immediately after :prog:`commit`. However, unlike :prog:`undo`, which can
        only undo a commit if it was the last operation you performed,
-       :prog:`uncommit` can uncommit any draft commit in the graph that does
-       not have children.
+       :prog:`uncommit` can uncommit any draft commit you check out.
     """
 
     with repo.wlock(), repo.lock():
@@ -80,6 +88,7 @@ def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
         rewriteutil.precheck(repo, [old.rev()], "uncommit")
         if len(old.parents()) > 1:
             raise error.Abort(_("cannot uncommit merge changeset"))
+        descendants = list(repo.nodes("descendants(%n) - %n", old.node(), old.node()))
 
         with repo.transaction("uncommit"):
             match = scmutil.match(old, pats, opts)
@@ -87,6 +96,8 @@ def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
             if newid is None:
                 ui.status(_("nothing to uncommit\n"))
                 return 1
+            if descendants and newid == old.p1().node():
+                raise _removalabort()
 
             mapping = {}
             if newid != old.p1().node():
@@ -102,6 +113,54 @@ def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
                 repo.dirstate.setparents(newid, nullid)
                 s = repo.status(old.p1(), old, match=match)
                 fixdirstate(repo, old, repo[newid], s)
+
+        if descendants and newid != old.p1().node():
+            _restack(ui, repo, old, descendants)
+
+
+def _removalabort():
+    """The error for uncommitting every change of a commit with descendants"""
+    return error.Abort(
+        _("cannot uncommit every change of a commit that has descendants"),
+        hint=_("use --keep to leave the commit in the stack, empty"),
+    )
+
+
+def _restack(ui, repo, old, descendants) -> None:
+    """Rebase ``descendants`` of the rewritten commit ``old`` onto its new
+    version if ``amend.autorestack`` restacks changed commits, or hint that
+    they were left behind.
+
+    The working copy holds the uncommitted changes, so the rebase is done in
+    memory and never stops for a conflict: descendants that would conflict
+    stay on ``old``.
+    """
+    try:
+        amend = extensions.find("amend")
+    except KeyError:
+        return
+    if amend.autorestackconf(ui) not in (
+        amend.RESTACK_NO_CONFLICT,
+        amend.RESTACK_ALWAYS,
+    ) or not ui.configbool("rebase", "experimental.inmemory"):
+        hintutil.trigger("amend-restack", old.node())
+        return
+    # internal config: amend.autorestackmsg
+    msg = ui.config(
+        "amend",
+        "autorestackmsg",
+        _("restacking children automatically (unless they conflict)"),
+    )
+    if msg:
+        ui.status("%s\n" % msg)
+    noconflictmsg = _(
+        "restacking would create conflicts (%s in %s), so you must run it manually\n"
+        "(run `@prog@ restack` manually to restack this commit's children)"
+    )
+    with ui.configoverride({("rebase", "noconflictmsg"): noconflictmsg}, "uncommit"):
+        amend.restack.restack(
+            ui, repo, rev=[hex(node) for node in descendants], noconflict=True
+        )
 
 
 def commitfilteredctx(repo, ctx, match, allowempty):
