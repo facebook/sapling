@@ -250,7 +250,11 @@ TEST_F(RenameCaseVariantTest, replaceTakesRequestedSpelling) {
   mount_->remount();
   root_ = mount_->getEdenMount()->getRootInode();
   EXPECT_EQ((Names{"B", "src"}), rootNames());
+#ifndef _WIN32
+  // Windows remount runs ProjFS fsck. TestMount has no projected disk state,
+  // so fsck restores this unmaterialized entry from SCM.
   EXPECT_EQ("new\n", mount_->readFile("B"));
+#endif
 }
 
 TEST_F(RenameCaseVariantTest, caseOnlyFileRename) {
