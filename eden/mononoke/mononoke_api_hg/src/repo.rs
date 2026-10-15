@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
+use acl_manifest::RootAclManifestId;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::format_err;
@@ -28,6 +29,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
 use dag_types::Location;
+use derived_data_manager::BonsaiDerivable;
 use edenapi_types::AnyId;
 use edenapi_types::UploadToken;
 use ephemeral_blobstore::Bubble;
@@ -40,9 +42,11 @@ use filestore::StoreRequest;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
 use futures::stream;
 use futures_util::try_join;
 use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_derivation::upload_augmented_manifest::UploadTreeAugmented;
 use mercurial_derivation::upload_augmented_manifest::build_augmented_manifests_for_uploaded_trees;
 use mercurial_derivation::upload_augmented_manifest::store_uploaded_tree_envelopes;
@@ -94,6 +98,11 @@ const STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD: &str =
 /// manifest, without acting on it.
 const CHECK_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST: &str =
     "scm/mononoke:check_uploaded_root_hg_augmented_manifest";
+
+/// Maps uploaded commits whose root augmented manifest is stored to that root
+/// instead of deriving them. Implies the check above.
+const MAP_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST: &str =
+    "scm/mononoke:map_uploaded_root_hg_augmented_manifest";
 
 #[derive(Clone)]
 pub struct HgRepoContext<R> {
@@ -542,26 +551,46 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         &self,
         results: &[Result<(HgBlobChangeset, BonsaiChangeset), MononokeError>],
     ) {
-        let stored: Vec<&(HgBlobChangeset, BonsaiChangeset)> = results
-            .iter()
-            .filter_map(|result| result.as_ref().ok())
-            .collect();
-        // Bubbles are skipped: nothing is derived there.
-        let check_roots = justknobs::eval(
-            CHECK_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST,
+        let uploaded = results.iter().filter_map(|result| result.as_ref().ok());
+        let repo_name = self.repo().repo_identity().name();
+        // Mapping only stands in for derivation, so it cannot bring augmented
+        // manifests to a repo that has them off.
+        let map_roots = justknobs::eval(
+            MAP_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST,
             None,
-            Some(self.repo().repo_identity().name()),
+            Some(repo_name),
         ) && self
-            .repo()
-            .repo_derived_data()
-            .manager()
-            .bubble_id()
-            .is_none();
-        if check_roots {
-            stream::iter(&stored)
-                .for_each_concurrent(100, |(hg_cs, _)| self.check_uploaded_root(hg_cs))
-                .await;
-        }
+            .repo_ctx()
+            .derive_hg_augmented_manifest_at_creation_enabled();
+        // Bubbles are skipped: nothing is derived there.
+        let check_roots = (map_roots
+            || justknobs::eval(
+                CHECK_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST,
+                None,
+                Some(repo_name),
+            ))
+            && self
+                .repo()
+                .repo_derived_data()
+                .manager()
+                .bubble_id()
+                .is_none();
+        // A commit mapped to its stored root is not derived.
+        let stored: Vec<&BonsaiChangeset> = if check_roots {
+            let checks: Vec<_> = uploaded
+                .map(|(hg_cs, bcs)| async move {
+                    let mapped = self.check_uploaded_root(hg_cs, bcs, map_roots).await;
+                    (!mapped).then_some(bcs)
+                })
+                .collect();
+            stream::iter(checks)
+                .buffer_unordered(100)
+                .filter_map(future::ready)
+                .collect()
+                .await
+        } else {
+            uploaded.map(|(_, bcs)| bcs).collect()
+        };
 
         // Derive only the heads of the uploaded batch: deriving a head derives
         // all its ancestors, so this covers every uploaded commit without the
@@ -569,7 +598,6 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         // commit lists it as a parent. Computed by set difference, not by order:
         // `results` is NOT topologically sorted (store_hg_changesets builds it
         // from a HashMap) and one request may carry multiple independent stacks.
-        let stored: Vec<&BonsaiChangeset> = stored.into_iter().map(|(_, bcs)| bcs).collect();
         let parents_of_batch: HashSet<ChangesetId> =
             stored.iter().flat_map(|bcs| bcs.parents()).collect();
         let heads: Vec<ChangesetId> = stored
@@ -587,8 +615,14 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     }
 
     /// Counts what the uploaded commit's root tree has in the augmented
-    /// manifest store.
-    async fn check_uploaded_root(&self, hg_cs: &HgBlobChangeset) {
+    /// manifest store and, with `map_roots`, maps the commit to a stored root.
+    /// Returns whether it was mapped.
+    async fn check_uploaded_root(
+        &self,
+        hg_cs: &HgBlobChangeset,
+        bcs: &BonsaiChangeset,
+        map_roots: bool,
+    ) -> bool {
         let root = HgAugmentedManifestId::new(hg_cs.manifestid().into_nodehash());
         let lookup = async {
             let counter = match root.load(self.ctx(), self.repo().repo_blobstore()).await {
@@ -601,13 +635,36 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 {
                     PerfCounterType::UploadedRootAugmentedUnmappable
                 }
+                Ok(envelope) if map_roots => {
+                    let derivation_ctx = self
+                        .repo()
+                        .repo_derived_data()
+                        .manager()
+                        .derivation_context(None);
+                    // The augmented manifest depends on the ACL manifest, so
+                    // that is mapped first.
+                    RootAclManifestId::from_augmented_root_pointer(
+                        envelope.augmented_manifest.acl_manifest_directory_id,
+                    )
+                    .store_mapping(self.ctx(), &derivation_ctx, bcs.get_changeset_id())
+                    .await?;
+                    RootHgAugmentedManifestId::new(root)
+                        .store_prebuilt_mapping(
+                            self.ctx(),
+                            &derivation_ctx,
+                            hg_cs.get_changeset_id(),
+                            bcs.get_changeset_id(),
+                        )
+                        .await?;
+                    PerfCounterType::UploadedRootAugmentedMapped
+                }
                 Ok(_) => PerfCounterType::UploadedRootAugmentedStored,
             };
             Ok(counter)
         };
         let counter = lookup.await.unwrap_or_else(|err| {
             self.ctx().scuba().clone().log_with_msg(
-                "Checking uploaded root augmented manifest failed",
+                "Checking or mapping uploaded root augmented manifest failed",
                 Some(format!(
                     "hg_cs_id: {}, err: {err:?}",
                     hg_cs.get_changeset_id()
@@ -616,6 +673,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             PerfCounterType::UploadedRootAugmentedFailed
         });
         self.ctx().perf_counters().increment_counter(counter);
+        matches!(counter, PerfCounterType::UploadedRootAugmentedMapped)
     }
 
     pub async fn fetch_mutations(
