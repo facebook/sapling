@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <new>
 
 #include <boost/filesystem.hpp>
 
@@ -486,69 +487,113 @@ void loadOverlayEntriesFromData(
   reader.setInput(buf.get());
 
   std::string structName;
-  reader.readStructBegin(structName);
+  auto parse = [&](auto&& fn) {
+    try {
+      fn();
+    } catch (const std::bad_alloc&) {
+      // An allocation failure is transient, not evidence of on-disk
+      // corruption. Let it propagate so online fsck does not persistently
+      // replace valid data with a partially parsed prefix.
+      throw;
+    } catch (const OverlayDataCorruption&) {
+      throw;
+    } catch (const std::exception& ex) {
+      throw OverlayDataCorruption{
+          EIO,
+          EdenErrorType::POSIX_ERROR,
+          "corrupt overlay for inode ",
+          inodeNumber,
+          ": ",
+          ex.what()};
+    }
+  };
+
+  parse([&] { reader.readStructBegin(structName); });
 
   std::string fieldName;
   TType fieldType;
   int16_t fieldId;
-  reader.readFieldBegin(fieldName, fieldType, fieldId);
+  parse([&] { reader.readFieldBegin(fieldName, fieldType, fieldId); });
 
   if (fieldType != TType::T_MAP || fieldId != 1) {
-    throw_<std::runtime_error>(
+    throw OverlayDataCorruption{
+        EIO,
+        EdenErrorType::POSIX_ERROR,
         "corrupt overlay for inode ",
         inodeNumber,
         ": expected map field with id 1, got type=",
         static_cast<int>(fieldType),
         " id=",
-        fieldId);
+        fieldId};
   }
 
   TType keyType;
   TType valueType;
   uint32_t mapSize;
-  reader.readMapBegin(keyType, valueType, mapSize);
+  parse([&] { reader.readMapBegin(keyType, valueType, mapSize); });
 
   // Compact protocol omits key/value types for empty maps, so only validate
   // types when there are entries.
   if (mapSize > 0) {
     if (keyType != TType::T_STRING || valueType != TType::T_STRUCT) {
-      throw_<std::runtime_error>(
+      throw OverlayDataCorruption{
+          EIO,
+          EdenErrorType::POSIX_ERROR,
           "corrupt overlay for inode ",
           inodeNumber,
           ": expected map<string,struct>, got key=",
           static_cast<int>(keyType),
           " value=",
-          static_cast<int>(valueType));
+          static_cast<int>(valueType)};
     }
   }
 
   // Each map entry is at least a few bytes (varint string length + struct
   // stop field), so mapSize cannot plausibly exceed the raw data size.
   if (mapSize > rawData.size()) {
-    throw_<std::runtime_error>(
+    throw OverlayDataCorruption{
+        EIO,
+        EdenErrorType::POSIX_ERROR,
         "corrupt overlay for inode ",
         inodeNumber,
         ": map size ",
         mapSize,
         " exceeds data size ",
-        rawData.size());
+        rawData.size()};
   }
 
   loader(mapSize, [&](InodeCatalog::OverlayEntryVisitor visitor) {
     std::string name;
     for (uint32_t i = 0; i < mapSize; ++i) {
-      reader.readString(name);
-
       overlay::OverlayEntry entry;
-      entry.read(&reader);
+      parse([&] {
+        reader.readString(name);
+        entry.read(&reader);
+      });
 
       visitor(name, entry);
     }
 
-    reader.readMapEnd();
-    reader.readFieldEnd();
-    reader.readFieldBegin(fieldName, fieldType, fieldId);
-    reader.readStructEnd();
+    parse([&] {
+      reader.readMapEnd();
+      reader.readFieldEnd();
+      reader.readFieldBegin(fieldName, fieldType, fieldId);
+    });
+    if (fieldType != TType::T_STOP) {
+      throw OverlayDataCorruption{
+          EIO,
+          EdenErrorType::POSIX_ERROR,
+          "unexpected overlay field for inode ",
+          inodeNumber};
+    }
+    parse([&] { reader.readStructEnd(); });
+    if (!reader.getCursor().isAtEnd()) {
+      throw OverlayDataCorruption{
+          EIO,
+          EdenErrorType::POSIX_ERROR,
+          "trailing overlay data for inode ",
+          inodeNumber};
+    }
   });
 }
 
@@ -1623,7 +1668,20 @@ std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
   if (!raw) {
     return std::nullopt;
   }
-  return CompactSerializer::deserialize<overlay::OverlayDir>(*raw);
+  overlay::OverlayDir dir;
+  loadOverlayEntriesFromData(
+      inodeNumber,
+      *raw,
+      [&](uint32_t, InodeCatalog::OverlayEntryIterator iterate) {
+        iterate(
+            [&](const std::string& name, const overlay::OverlayEntry& entry) {
+              if (!dir.entries()->emplace(name, entry).second) {
+                throw OverlayDataCorruption{fmt::format(
+                    "duplicate overlay name for inode {}", inodeNumber)};
+              }
+            });
+      });
+  return dir;
 }
 
 std::optional<std::string> FsFileContentStore::loadRawOverlayDir(

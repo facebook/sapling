@@ -8,16 +8,21 @@
 #ifndef _WIN32
 
 #include <gtest/gtest.h>
+#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include <folly/FileUtil.h>
+#include <folly/io/IOBufQueue.h>
 #include <folly/testing/TestUtil.h>
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/utils/EdenError.h"
 
 using namespace facebook::eden;
+using apache::thrift::CompactProtocolWriter;
 using apache::thrift::CompactSerializer;
+using apache::thrift::protocol::TType;
 
 class FsInodeCatalogEntryTest : public ::testing::Test {
  protected:
@@ -234,6 +239,71 @@ TEST_F(FsInodeCatalogEntryTest, emptyDirectory) {
   auto loadedDir = catalog_->loadOverlayDir(InodeNumber{30});
   ASSERT_TRUE(loadedDir.has_value());
   EXPECT_EQ(loadedDir->entries()->size(), 0);
+}
+
+TEST_F(FsInodeCatalogEntryTest, rejectsDuplicateEntryNames) {
+  constexpr InodeNumber ino{32};
+  catalog_->saveOverlayDir(ino, overlay::OverlayDir{});
+
+  folly::IOBufQueue queue;
+  CompactProtocolWriter writer;
+  writer.setOutput(&queue);
+  writer.writeStructBegin("OverlayDir");
+  writer.writeFieldBegin("entries", TType::T_MAP, 1);
+  writer.writeMapBegin(TType::T_STRING, TType::T_STRUCT, 2);
+  for (uint64_t inodeNumber : {2, 3}) {
+    writer.writeString("file.txt");
+    writer.writeStructBegin("OverlayEntry");
+    writer.writeFieldBegin("mode", TType::T_I32, 1);
+    writer.writeI32(S_IFREG | 0644);
+    writer.writeFieldEnd();
+    writer.writeFieldBegin("inodeNumber", TType::T_I64, 2);
+    writer.writeI64(inodeNumber);
+    writer.writeFieldEnd();
+    writer.writeFieldStop();
+    writer.writeStructEnd();
+  }
+  writer.writeMapEnd();
+  writer.writeFieldEnd();
+  writer.writeFieldStop();
+  writer.writeStructEnd();
+
+  auto path = store_->getAbsoluteFilePath(ino);
+  std::string contents;
+  ASSERT_TRUE(folly::readFile(path.c_str(), contents));
+  ASSERT_GE(contents.size(), FsFileContentStore::kHeaderLength);
+  contents.resize(FsFileContentStore::kHeaderLength);
+  contents.append(queue.move()->to<std::string>());
+  ASSERT_TRUE(folly::writeFile(contents, path.c_str()));
+
+  EXPECT_THROW(catalog_->loadOverlayDir(ino), OverlayDataCorruption);
+}
+
+TEST_F(FsInodeCatalogEntryTest, rejectsTrailingDataAfterVisitingValidEntries) {
+  overlay::OverlayDir odir;
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = 2;
+  odir.entries()->emplace("file.txt", std::move(entry));
+  catalog_->saveOverlayDir(InodeNumber{32}, std::move(odir));
+
+  auto path = store_->getAbsoluteFilePath(InodeNumber{32});
+  std::string contents;
+  ASSERT_TRUE(folly::readFile(path.c_str(), contents));
+  contents.push_back('\0');
+  ASSERT_TRUE(folly::writeFile(contents, path.c_str()));
+
+  size_t entriesVisited = 0;
+  EXPECT_THROW(
+      catalog_->loadOverlayEntries(
+          InodeNumber{32},
+          [&](size_t, InodeCatalog::OverlayEntryIterator iterate) {
+            iterate([&](const std::string&, const overlay::OverlayEntry&) {
+              ++entriesVisited;
+            });
+          }),
+      OverlayDataCorruption);
+  EXPECT_EQ(1, entriesVisited);
 }
 
 TEST_F(FsInodeCatalogEntryTest, nonExistentReturnsFalse) {

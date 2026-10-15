@@ -386,8 +386,8 @@ base_bad_name        | .:EIO              | unchanged          | -              
 base_dup_name        | a s/ s/f           | unchanged          | -                       | b:ENOENT  | ok          | ok
 base_dup_inode       | CRASH              | unchanged          | hardlink                | ok        | CRASH       | -
 base_self_ref        | CRASH              | unchanged          | hardlink                | CRASH     | CRASH       | -
-base_unknown_field   | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
-base_trailing        | a b s/ s/f         | unchanged          | -                       | ok        | ok          | ok
+base_unknown_field   | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
+base_trailing        | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
 base_negative_inode  | a s/ s/f           | unchanged          | missing,next-ino,orphan | CRASH     | CRASH       | DOWN
 base_no_stop         | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
 base_truncated       | .:EIO              | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
