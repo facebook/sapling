@@ -12,10 +12,8 @@
 use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
-use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::KeyedBlobstore;
 use blobstore::Storable;
@@ -26,31 +24,20 @@ use derived_data_manager::DerivableUntopologically;
 use derived_data_manager::DerivationContext;
 use derived_data_manager::dependencies;
 use filestore::FetchKey;
-use futures::TryStreamExt;
 use futures::future;
 use manifest::Entry;
-use manifest::ManifestOps;
-use manifest::PathOrPrefix;
 use manifest::derive_manifest_from_predecessor;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
-use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::DerivableUntopologicallyVariant;
-use mononoke_types::RepoPath;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::typed_hash::AclManifestId;
-use restricted_paths_common::ArcRestrictedPathsConfigBased;
-use restricted_paths_common::ManifestIdStoreWriteCallsite;
-use restricted_paths_common::ManifestType;
-use restricted_paths_common::RestrictedPathManifestIdEntry;
-use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
-use tracing::error;
 
 use crate::acl_overlay_manifest::AclOverlayHgManifestId;
 use crate::derive_hg_augmented_manifest::assert_root_acl_pointer_invariant;
@@ -93,7 +80,7 @@ impl DerivableUntopologically for RootHgAugmentedManifestId {
         .await?;
 
         // Track restricted paths for the derived HgAugmentedManifest
-        track_all_restricted_paths(
+        crate::derive_hg_augmented_manifest::track_all_restricted_paths(
             ctx,
             derivation_ctx.restricted_paths(),
             hg_changeset_id,
@@ -104,87 +91,6 @@ impl DerivableUntopologically for RootHgAugmentedManifestId {
 
         Ok(Self::new(root))
     }
-}
-
-/// Asynchronously track HgAugmentedManifest IDs for all restricted paths in a commit.
-///
-/// This is used for derive_from_predecessor.  We don't know which restricted paths were changed
-/// or introduced by this commit as the parent may not have been derived yet.  Instead, we log all
-/// of them.  This is ok as derive_from_predecessor is only used for backfilling.
-async fn track_all_restricted_paths(
-    ctx: &CoreContext,
-    restricted_paths: ArcRestrictedPathsConfigBased,
-    hg_cs_id: HgChangesetId,
-    root_hg_aug_mfid: HgAugmentedManifestId,
-    blobstore: Arc<dyn KeyedBlobstore>,
-) -> Result<()> {
-    // Check if restricted paths tracking is enabled via justknobs
-    let restricted_paths_enabled = justknobs::eval(
-        "scm/mononoke:enabled_restricted_paths_access_logging",
-        None, // hashing
-        // Adding a switch value to be able to disable writes only
-        Some("hg_augmented_manifest_write"),
-    );
-
-    if !restricted_paths_enabled {
-        return Ok(());
-    }
-
-    // Get the configured restricted paths. Skip read-only roots: derivation must
-    // not record new manifest-id-store entries for them.
-    let restricted_dirs: Vec<PathOrPrefix> = restricted_paths
-        .config()
-        .path_restriction_metadata
-        .iter()
-        .filter(|(_, metadata)| !metadata.read_only)
-        .map(|(non_root_mpath, _)| PathOrPrefix::Path(non_root_mpath.clone().into()))
-        .collect();
-
-    if restricted_dirs.is_empty() {
-        return Ok(());
-    }
-
-    // Find all directory entries for the restricted paths and store their
-    // HgAugmentedManifest IDs in the manifest id store
-    let entries: Vec<RestrictedPathManifestIdEntry> = root_hg_aug_mfid
-        .find_entries(ctx.clone(), blobstore, restricted_dirs)
-        .try_filter_map(|(path, manif_entry)| async move {
-            match manif_entry {
-                Entry::Tree(hg_aug_manifest_id) => {
-                    let repo_path = RepoPath::dir(path).context("Expected NonRootMPath")?;
-
-                    let entry = RestrictedPathManifestIdEntry::new(
-                        ManifestType::HgAugmented,
-                        hg_aug_manifest_id.to_string().into(),
-                        repo_path,
-                    )?;
-                    Ok(Some(entry))
-                }
-                Entry::Leaf(_) => bail!("Path {path} is not a directory"),
-            }
-        })
-        .try_collect::<Vec<RestrictedPathManifestIdEntry>>()
-        .await
-        .context("Building restricted path manifest entries")?;
-
-    if entries.is_empty() {
-        return Ok(());
-    }
-
-    if let Err(e) = restricted_paths
-        .manifest_id_store()
-        .add_entries(ctx, &entries)
-        .await
-        .with_context(|| format!("Failed to track restricted paths for changeset {hg_cs_id}"))
-    {
-        error!(changeset = %hg_cs_id, error = %e, "Failed to track restricted paths");
-        maybe_propagate_manifest_id_store_write_error(
-            e,
-            ManifestIdStoreWriteCallsite::TrackAllRestrictedPaths,
-        )?;
-    }
-
-    Ok(())
 }
 
 pub async fn derive_from_full_hg_manifest(

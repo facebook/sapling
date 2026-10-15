@@ -33,6 +33,7 @@ use manifest::LeafInfo;
 use manifest::ManifestComparison;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
+use manifest::PathOrPrefix;
 use manifest::Span;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
@@ -40,6 +41,7 @@ use manifest::derive_manifest_with_known_entries;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
@@ -2124,6 +2126,96 @@ pub(crate) fn assert_root_acl_pointer_invariant(pointer: &Option<AclManifestId>)
              This indicates broken sparse-tree normalization."
         );
     }
+    Ok(())
+}
+
+/// Records in the manifest id store the HgAugmentedManifest id of every
+/// non-read-only restricted root in the commit's tree.
+///
+/// Incremental derivation records a restricted root only when it stores a new
+/// envelope for it, so a commit pays only for the roots it changed. This is used
+/// where the augmented manifest was not derived from its parents' and which roots
+/// changed is unknown, for example backfilling with `derive_from_predecessor`, or
+/// mapping an uploaded commit to the root tree upload already stored. It walks to
+/// every restricted root instead; the store ignores entries it already has.
+///
+/// Each call walks to every non-read-only restricted root and does one
+/// `INSERT IGNORE`, even when the commit changed nothing restricted. As of
+/// 14 Oct 2026 every production restricted root is read-only, so this is free
+/// today.
+pub(crate) async fn track_all_restricted_paths(
+    ctx: &CoreContext,
+    restricted_paths: ArcRestrictedPathsConfigBased,
+    hg_cs_id: HgChangesetId,
+    root_hg_aug_mfid: HgAugmentedManifestId,
+    blobstore: Arc<dyn KeyedBlobstore>,
+) -> Result<()> {
+    // Check if restricted paths tracking is enabled via justknobs
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None, // hashing
+        // Adding a switch value to be able to disable writes only
+        Some("hg_augmented_manifest_write"),
+    );
+
+    if !restricted_paths_enabled {
+        return Ok(());
+    }
+
+    // Get the configured restricted paths. Skip read-only roots: derivation must
+    // not record new manifest-id-store entries for them.
+    let restricted_dirs: Vec<PathOrPrefix> = restricted_paths
+        .config()
+        .path_restriction_metadata
+        .iter()
+        .filter(|(_, metadata)| !metadata.read_only)
+        .map(|(non_root_mpath, _)| PathOrPrefix::Path(non_root_mpath.clone().into()))
+        .collect();
+
+    if restricted_dirs.is_empty() {
+        return Ok(());
+    }
+
+    // Find all directory entries for the restricted paths and store their
+    // HgAugmentedManifest IDs in the manifest id store
+    let entries: Vec<RestrictedPathManifestIdEntry> = root_hg_aug_mfid
+        .find_entries(ctx.clone(), blobstore, restricted_dirs)
+        .try_filter_map(|(path, manif_entry)| async move {
+            match manif_entry {
+                Entry::Tree(hg_aug_manifest_id) => {
+                    let repo_path = RepoPath::dir(path).context("Expected NonRootMPath")?;
+
+                    let entry = RestrictedPathManifestIdEntry::new(
+                        ManifestType::HgAugmented,
+                        hg_aug_manifest_id.to_string().into(),
+                        repo_path,
+                    )?;
+                    Ok(Some(entry))
+                }
+                Entry::Leaf(_) => bail!("Path {path} is not a directory"),
+            }
+        })
+        .try_collect::<Vec<RestrictedPathManifestIdEntry>>()
+        .await
+        .context("Building restricted path manifest entries")?;
+
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    if let Err(e) = restricted_paths
+        .manifest_id_store()
+        .add_entries(ctx, &entries)
+        .await
+        .with_context(|| format!("Failed to track restricted paths for changeset {hg_cs_id}"))
+    {
+        error!(changeset = %hg_cs_id, error = %e, "Failed to track restricted paths");
+        maybe_propagate_manifest_id_store_write_error(
+            e,
+            ManifestIdStoreWriteCallsite::TrackAllRestrictedPaths,
+        )?;
+    }
+
     Ok(())
 }
 
