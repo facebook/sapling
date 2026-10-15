@@ -39,6 +39,7 @@ use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
 use tokio::task::JoinHandle;
 
+use crate::DenyingRestriction;
 use crate::ManifestType;
 use crate::RestrictedManifestId;
 use crate::RestrictedPaths;
@@ -58,12 +59,10 @@ pub(crate) enum AccessEnforcementOutcome {
     /// No enforcement condition set matched the access, so it is allowed
     /// whatever the caller's authorization.
     NotEnforced,
-    /// An enforcement condition set matched the access. The permission request
-    /// group is present when the caller is unauthorized and the access must be
+    /// An enforcement condition set matched the access. The denying restriction
+    /// is present when the caller is unauthorized and the access must be
     /// denied, and absent when the caller is authorized.
-    Enforced {
-        denial_permission_request_group: Option<PermissionRequestGroup>,
-    },
+    Enforced { denial: Option<DenyingRestriction> },
     /// An enforcement condition set matched the access, but so did an
     /// enforcement exemption set, so the access is allowed whatever the
     /// caller's authorization.
@@ -81,14 +80,11 @@ impl AccessEnforcementOutcome {
         }
     }
 
-    /// The group a denied caller should request access to, if the access is
-    /// denied.
-    pub(crate) fn denial_permission_request_group(&self) -> Option<&PermissionRequestGroup> {
+    /// The denying restriction, if the access is denied.
+    pub(crate) fn denial(&self) -> Option<&DenyingRestriction> {
         match self {
             Self::NotEnforced | Self::Exempted => None,
-            Self::Enforced {
-                denial_permission_request_group,
-            } => denial_permission_request_group.as_ref(),
+            Self::Enforced { denial } => denial.as_ref(),
         }
     }
 }
@@ -1190,19 +1186,21 @@ where
         return Ok(AccessEnforcementOutcome::NotEnforced);
     }
 
-    let denial_permission_request_group = result
+    let denial = result
         .as_ref()
         .iter()
         .filter(|check| !check.authorization().has_authorization())
         // Multiple denied checks can be returned by one source. Pick a stable
-        // permission request group so error messages do not depend on source
+        // denying restriction so error messages do not depend on source
         // result ordering.
         .min_by(|left, right| compare_denied_checks(*left, *right))
-        .map(|check| check.permission_request_group().clone());
+        .map(|check| DenyingRestriction {
+            restriction_root: check.restriction_root().cloned(),
+            repo_region_acl: check.repo_region_identity().clone(),
+            permission_request_group: check.permission_request_group().clone(),
+        });
 
-    Ok(AccessEnforcementOutcome::Enforced {
-        denial_permission_request_group,
-    })
+    Ok(AccessEnforcementOutcome::Enforced { denial })
 }
 
 /// Combine authoritative source enforcement outcomes.
@@ -1221,15 +1219,13 @@ pub(crate) fn authoritative_sources_enforcement_outcome(
 
     if let Some(denial) = outcomes
         .into_iter()
-        .find(|outcome| outcome.denial_permission_request_group().is_some())
+        .find(|outcome| outcome.denial().is_some())
     {
         return Ok(denial);
     }
     match errors.into_iter().next() {
         Some(error) => Err(error),
-        None if enforced => Ok(AccessEnforcementOutcome::Enforced {
-            denial_permission_request_group: None,
-        }),
+        None if enforced => Ok(AccessEnforcementOutcome::Enforced { denial: None }),
         None => Ok(AccessEnforcementOutcome::NotEnforced),
     }
 }

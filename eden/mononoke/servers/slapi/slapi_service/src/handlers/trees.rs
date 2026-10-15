@@ -932,6 +932,8 @@ impl SaplingRemoteApiHandler for CheckPathPermissionHandler {
 mod tests {
     use anyhow::Result;
     use mononoke_macros::mononoke;
+    use mononoke_types::NonRootMPath;
+    use restricted_paths::DenyingRestriction;
     use restricted_paths::PermissionRequestGroup;
     use restricted_paths::RestrictedManifestId;
     use restricted_paths::RestrictedPathAccess;
@@ -1015,10 +1017,20 @@ mod tests {
         denial_message: Option<&str>,
     ) -> Result<Error> {
         let permission_request_group: PermissionRequestGroup = permission_request_group.parse()?;
+        // Mirror production: path denials know their restriction root (the
+        // traversal walked through it); manifest denials may not.
+        let restriction_root = match &access {
+            RestrictedPathAccess::Path(path) => NonRootMPath::try_from(path.clone()).ok(),
+            RestrictedPathAccess::Manifest(_) => None,
+        };
         Ok(Error::new(MononokeError::RestrictedPathsAuthorizationError(
             RestrictedPathsAuthorizationError::new(
                 access,
-                permission_request_group,
+                DenyingRestriction {
+                    restriction_root,
+                    repo_region_acl: permission_request_group.clone(),
+                    permission_request_group,
+                },
                 denial_message.map(str::to_string),
             ),
         ))

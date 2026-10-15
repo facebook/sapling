@@ -61,38 +61,63 @@ pub enum RestrictedPathAccess {
     Path(MPath),
 }
 
+/// The restriction that denied an access: the restriction root
+/// when the denying source knows it, the repo-region ACL, and the group the
+/// caller should request. Selected deterministically from the denied checks,
+/// so a denial always names one stable restriction.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DenyingRestriction {
+    /// Root path of the denying restriction (directory containing `.slacl`).
+    /// `None` when the source cannot report one (manifest denials).
+    pub restriction_root: Option<NonRootMPath>,
+    /// Repo-region ACL of the denying restriction.
+    pub repo_region_acl: MononokeIdentity,
+    /// Group the caller should request for access.
+    pub permission_request_group: PermissionRequestGroup,
+}
+
 #[derive(Clone, Debug, Error)]
 pub struct RestrictedPathsAuthorizationError {
     access: RestrictedPathAccess,
-    // Boxed because `PermissionRequestGroup` is a `MononokeIdentity`, i.e. a whole
-    // `AuthenticatedIdentity` thrift struct, which would otherwise make every
-    // `Result<_, MononokeError>` in the codebase 248 bytes wide.
+    // Boxed because the denying restriction holds `MononokeIdentity`s, i.e. whole
+    // `AuthenticatedIdentity` thrift structs, which would otherwise make every
+    // `Result<_, MononokeError>` in the codebase much wider.
     details: Box<RestrictedPathsDenialDetails>,
 }
 
 #[derive(Clone, Debug)]
 struct RestrictedPathsDenialDetails {
-    permission_request_group: PermissionRequestGroup,
+    denial: DenyingRestriction,
     denial_message: Option<String>,
 }
 
 impl RestrictedPathsAuthorizationError {
     pub fn new(
         access: RestrictedPathAccess,
-        permission_request_group: PermissionRequestGroup,
+        denial: DenyingRestriction,
         denial_message: Option<String>,
     ) -> Self {
         Self {
             access,
             details: Box::new(RestrictedPathsDenialDetails {
-                permission_request_group,
+                denial,
                 denial_message,
             }),
         }
     }
 
     pub fn permission_request_group(&self) -> &PermissionRequestGroup {
-        &self.details.permission_request_group
+        &self.details.denial.permission_request_group
+    }
+
+    /// Root of the denying restriction, when the source reported one.
+    pub fn restriction_root(&self) -> Option<&NonRootMPath> {
+        self.details.denial.restriction_root.as_ref()
+    }
+
+    /// Repo-region ACL of the denying restriction.
+    pub fn repo_region_acl(&self) -> &MononokeIdentity {
+        &self.details.denial.repo_region_acl
     }
 
     /// Repo-configured text appended to the error message, if any.
@@ -774,10 +799,10 @@ pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
                 })
                 .flatten(),
         },
-        move |permission_request_group, denial_message| {
+        move |denial, denial_message| {
             RestrictedPathsError::AuthorizationError(RestrictedPathsAuthorizationError::new(
                 RestrictedPathAccess::Path((*path).clone()),
-                permission_request_group,
+                denial,
                 denial_message,
             ))
         },
@@ -864,10 +889,10 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
                 })
                 .flatten(),
         },
-        move |permission_request_group, denial_message| {
+        move |denial, denial_message| {
             RestrictedPathsError::AuthorizationError(RestrictedPathsAuthorizationError::new(
                 RestrictedPathAccess::Manifest(manifest_id),
-                permission_request_group,
+                denial,
                 denial_message,
             ))
         },
@@ -923,7 +948,7 @@ async fn spawn_enforce_restricted_access<T>(
     access_type: &'static str,
     access_data: access_log::RestrictedPathAccessData,
     build_handles: impl FnOnce(SourceFetches) -> SourceHandles<T>,
-    authorization_error: impl FnOnce(PermissionRequestGroup, Option<String>) -> RestrictedPathsError,
+    authorization_error: impl FnOnce(DenyingRestriction, Option<String>) -> RestrictedPathsError,
 ) -> Result<(), RestrictedPathsError>
 where
     T: SourceRestrictionCheck + Send + Sync + 'static,
@@ -1005,15 +1030,10 @@ where
 
     match enforcement_outcome? {
         AccessEnforcementOutcome::Enforced {
-            denial_permission_request_group: Some(permission_request_group),
-        } => Err(authorization_error(
-            permission_request_group,
-            config.denial_message.clone(),
-        )),
+            denial: Some(denial),
+        } => Err(authorization_error(denial, config.denial_message.clone())),
         AccessEnforcementOutcome::NotEnforced
-        | AccessEnforcementOutcome::Enforced {
-            denial_permission_request_group: None,
-        }
+        | AccessEnforcementOutcome::Enforced { denial: None }
         | AccessEnforcementOutcome::Exempted => Ok(()),
     }
 }
@@ -1278,8 +1298,12 @@ mod tests {
                 false,
             )
             .await?
-            .denial_permission_request_group(),
-            Some(&MononokeIdentity::from_str("REPO_REGION:denied")?),
+            .denial(),
+            Some(&DenyingRestriction {
+                restriction_root: Some(NonRootMPath::new("restricted")?),
+                repo_region_acl: MononokeIdentity::from_str("REPO_REGION:denied")?,
+                permission_request_group: MononokeIdentity::from_str("REPO_REGION:denied")?,
+            }),
             "without an exemption the denial should still win over the source error",
         );
         Ok(())
@@ -1294,8 +1318,12 @@ mod tests {
         assert_eq!(
             enforce_with_results(Ok(vec![denied_check()?]), Ok(vec![]), false)
                 .await?
-                .denial_permission_request_group(),
-            Some(&MononokeIdentity::from_str("REPO_REGION:denied")?),
+                .denial(),
+            Some(&DenyingRestriction {
+                restriction_root: Some(NonRootMPath::new("restricted")?),
+                repo_region_acl: MononokeIdentity::from_str("REPO_REGION:denied")?,
+                permission_request_group: MononokeIdentity::from_str("REPO_REGION:denied")?,
+            }),
             "without an exemption the unauthorized access should be denied",
         );
         assert_eq!(
@@ -1311,15 +1339,20 @@ mod tests {
     #[mononoke::test]
     fn test_authorization_error_display_appends_denial_message() -> Result<()> {
         let access = RestrictedPathAccess::Path(MPath::new("restricted/file")?);
-        let group: PermissionRequestGroup = "REPO_REGION:test_acl".parse()?;
+        let acl: PermissionRequestGroup = "REPO_REGION:test_acl".parse()?;
+        let denial = DenyingRestriction {
+            restriction_root: Some(NonRootMPath::new("restricted")?),
+            repo_region_acl: acl.clone(),
+            permission_request_group: acl,
+        };
         let base = "Access denied: unauthorized access to restricted path: restricted/file";
 
-        let without = RestrictedPathsAuthorizationError::new(access.clone(), group.clone(), None);
+        let without = RestrictedPathsAuthorizationError::new(access.clone(), denial.clone(), None);
         assert_eq!(without.to_string(), base);
 
         let with = RestrictedPathsAuthorizationError::new(
             access,
-            group,
+            denial,
             Some("see https://fburl.com/example".to_string()),
         );
         assert_eq!(

@@ -27,9 +27,12 @@ use permission_checker::MononokeIdentitySet;
 use super::AccessEnforcementOutcome;
 use super::AuthorizationCheckResult;
 use super::EnforcementDecision;
+use super::ManifestRestrictionCheckResult;
 use super::PathRestrictionCheckResult;
 use super::SharedFetchHandle;
 use super::SourceRestrictionSummary;
+use crate::DenyingRestriction;
+use crate::restriction_info::ManifestRestrictionInfo;
 use crate::restriction_info::PathRestrictionInfo;
 
 // What it tests: cloned source fetch handles share one spawned fetch result.
@@ -69,13 +72,12 @@ async fn test_shared_fetch_handle_awaits_one_spawned_fetch() -> Result<()> {
     Ok(())
 }
 
-// What it tests: denied checks select a stable permission request group independent of the
-// source's original result order.
-// Expected: the permission request group for the lexicographically first known
-// restriction root is returned.
+// What it tests: denied checks select a stable denying restriction independent
+// of the source's original result order.
+// Expected: the lexicographically first known restriction root
+// is returned, carrying its root, ACL, and permission request group.
 #[tokio::test]
-async fn test_source_enforcement_outcome_denial_permission_request_group_is_deterministic()
--> Result<()> {
+async fn test_source_enforcement_outcome_denying_restriction_is_deterministic() -> Result<()> {
     let handle = SharedFetchHandle::from_result(Ok(vec![
         path_restriction_check_with("restricted/z", "REPO_REGION:z_acl", false)?,
         path_restriction_check_with("restricted/a", "REPO_REGION:a_acl", false)?,
@@ -85,10 +87,55 @@ async fn test_source_enforcement_outcome_denial_permission_request_group_is_dete
         super::source_enforcement_outcome(&handle, &[], &super::PreFilterVariant::Definite).await?;
 
     assert_eq!(
-        outcome.denial_permission_request_group(),
-        Some(&MononokeIdentity::from_str("REPO_REGION:a_acl")?)
+        outcome.denial(),
+        Some(&DenyingRestriction {
+            restriction_root: Some(NonRootMPath::new("restricted/a")?),
+            repo_region_acl: MononokeIdentity::from_str("REPO_REGION:a_acl")?,
+            permission_request_group: MononokeIdentity::from_str("REPO_REGION:a_acl")?,
+        }),
     );
     Ok(())
+}
+
+// What it tests: a manifest denial whose source reports no restriction root
+// still produces a denying restriction carrying the ACL and group.
+// Expected: `restriction_root` is None; ACL and group are populated.
+#[tokio::test]
+async fn test_source_enforcement_outcome_manifest_denial_without_root() -> Result<()> {
+    let acl = MononokeIdentity::from_str("REPO_REGION:manifest_acl")?;
+    let handle = SharedFetchHandle::from_result(Ok(vec![ManifestRestrictionCheckResult::new(
+        ManifestRestrictionInfo {
+            restriction_root: None,
+            repo_region_acl: acl.to_string(),
+            permission_request_group: acl.clone(),
+            rollout_allowlist_group: None,
+        },
+        AuthorizationCheckResult::new(false, false, false, false),
+        acl.clone(),
+    )]));
+
+    let outcome =
+        super::source_enforcement_outcome(&handle, &[], &super::PreFilterVariant::Definite).await?;
+
+    assert_eq!(
+        outcome.denial(),
+        Some(&DenyingRestriction {
+            restriction_root: None,
+            repo_region_acl: acl.clone(),
+            permission_request_group: acl,
+        }),
+    );
+    Ok(())
+}
+
+/// A denying restriction for a `restricted` root denied under `REPO_REGION:deny_acl`.
+fn denying_restriction() -> Result<DenyingRestriction> {
+    let acl = MononokeIdentity::from_str("REPO_REGION:deny_acl")?;
+    Ok(DenyingRestriction {
+        restriction_root: Some(NonRootMPath::new("restricted")?),
+        repo_region_acl: acl.clone(),
+        permission_request_group: acl,
+    })
 }
 
 // What it tests: a matching exemption only changes an enforced outcome.
@@ -96,13 +143,10 @@ async fn test_source_enforcement_outcome_denial_permission_request_group_is_dete
 // `NotEnforced` is unchanged and nothing changes when no exemption matched.
 #[mononoke::test]
 fn test_access_enforcement_outcome_exempt_if() -> Result<()> {
-    let denial_group = MononokeIdentity::from_str("REPO_REGION:deny_acl")?;
     let denied = AccessEnforcementOutcome::Enforced {
-        denial_permission_request_group: Some(denial_group),
+        denial: Some(denying_restriction()?),
     };
-    let allowed = AccessEnforcementOutcome::Enforced {
-        denial_permission_request_group: None,
-    };
+    let allowed = AccessEnforcementOutcome::Enforced { denial: None };
 
     assert_eq!(
         denied.clone().exempt_if(true),
@@ -130,7 +174,7 @@ fn test_access_enforcement_outcome_exempt_if() -> Result<()> {
         "without an exemption an enforced allow should be unchanged",
     );
     assert_eq!(
-        AccessEnforcementOutcome::Exempted.denial_permission_request_group(),
+        AccessEnforcementOutcome::Exempted.denial(),
         None,
         "an exempted access should carry no denial",
     );
@@ -138,22 +182,19 @@ fn test_access_enforcement_outcome_exempt_if() -> Result<()> {
 }
 
 // What it tests: authoritative source aggregation keeps deny-over-error
-// semantics after carrying the permission request group through the denial.
+// semantics after carrying the denying restriction through.
 // Expected: any denial wins over sibling source errors, while a no-deny error
 // is propagated.
 #[tokio::test]
 async fn test_authoritative_source_enforcement_outcome_preserves_error_semantics() -> Result<()> {
-    let permission_request_group = MononokeIdentity::from_str("REPO_REGION:deny_acl")?;
+    let denial = denying_restriction()?;
     let denied = super::authoritative_sources_enforcement_outcome(vec![
         Err(anyhow::anyhow!("source failed")),
         Ok(AccessEnforcementOutcome::Enforced {
-            denial_permission_request_group: Some(permission_request_group.clone()),
+            denial: Some(denial.clone()),
         }),
     ])?;
-    assert_eq!(
-        denied.denial_permission_request_group(),
-        Some(&permission_request_group)
-    );
+    assert_eq!(denied.denial(), Some(&denial));
 
     let no_denial = super::authoritative_sources_enforcement_outcome(vec![
         Ok(AccessEnforcementOutcome::NotEnforced),
@@ -497,9 +538,7 @@ fn test_enforcement_decision_from_outcome() {
             },
         ),
         (
-            Ok(AccessEnforcementOutcome::Enforced {
-                denial_permission_request_group: None,
-            }),
+            Ok(AccessEnforcementOutcome::Enforced { denial: None }),
             false,
             EnforcementDecision::Enforced,
         ),
