@@ -61,7 +61,15 @@ def split(ui, repo, *revs, **opts):
 
     Operates on the current revision by default. Use ``--rev`` to split a given
     commit instead.
+
+    Each new commit starts with the original commit message in your editor.
     """
+    if opts.get("message") or opts.get("logfile"):
+        raise error.Abort(
+            _("interactive split does not support --message or --logfile"),
+            hint=_("each new commit's message is edited in your editor"),
+        )
+
     newcommits = []
 
     revarg = (list(revs) + opts.get("rev")) or ["."]

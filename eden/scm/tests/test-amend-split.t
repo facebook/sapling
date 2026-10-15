@@ -381,3 +381,14 @@ Test the hint for Phabricator Diffs being duplicated
   @  b696183283c3 Differential Revision: http://example.com/D1234
   │
   o  6add538b4b79 Differential Revision: http://example.com/D1234
+
+Interactive split edits each message in the editor, so --message and
+--logfile are rejected rather than silently ignored.
+  $ sl split -m 'split part'
+  abort: interactive split does not support --message or --logfile
+  (each new commit's message is edited in your editor)
+  [255]
+  $ sl split -l $TESTTMP/msg
+  abort: interactive split does not support --message or --logfile
+  (each new commit's message is edited in your editor)
+  [255]
