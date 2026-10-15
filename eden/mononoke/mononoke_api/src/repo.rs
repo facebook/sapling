@@ -981,7 +981,7 @@ impl<R: RepoDerivedDataRef + RepoIdentityRef> RepoContext<R> {
     /// or a commit uploaded then checked out by raw hash). Without it, serving the
     /// augmented manifest in place of the original would fail closed for those
     /// commits.
-    fn derive_hg_augmented_manifest_at_creation_enabled(&self) -> bool {
+    pub fn derive_hg_augmented_manifest_at_creation_enabled(&self) -> bool {
         self.repo()
             .repo_derived_data()
             .config()

@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use acl_manifest::RootAclManifestId;
 use anyhow::Context;
@@ -318,12 +319,35 @@ pub(crate) async fn get_subtree_change_sources(
 pub struct RootHgAugmentedManifestId(HgAugmentedManifestId);
 
 impl RootHgAugmentedManifestId {
-    pub(crate) fn new(hg_augmented_manifest_id: HgAugmentedManifestId) -> Self {
+    pub fn new(hg_augmented_manifest_id: HgAugmentedManifestId) -> Self {
         RootHgAugmentedManifestId(hg_augmented_manifest_id)
     }
 
     pub fn hg_augmented_manifest_id(&self) -> HgAugmentedManifestId {
         self.0
+    }
+
+    /// Map `changeset_id` to this root when its envelopes were built outside
+    /// derivation, e.g. at tree upload. Records the root's restricted
+    /// directories first, as derivation would have. The augmented manifest
+    /// depends on the ACL manifest, so the caller maps `RootAclManifestId`
+    /// before calling this.
+    pub async fn store_prebuilt_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        hg_cs_id: HgChangesetId,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        crate::derive_hg_augmented_manifest::track_all_restricted_paths(
+            ctx,
+            derivation_ctx.restricted_paths(),
+            hg_cs_id,
+            self.0,
+            Arc::clone(derivation_ctx.blobstore()),
+        )
+        .await?;
+        self.store_mapping(ctx, derivation_ctx, changeset_id).await
     }
 }
 

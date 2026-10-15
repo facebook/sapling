@@ -26,6 +26,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
 use mononoke_types::ThriftConvert;
+use mononoke_types::acl_manifest::AclManifest;
 use mononoke_types::typed_hash::AclManifestId;
 
 use crate::derive::derive_from_scratch;
@@ -66,6 +67,13 @@ impl RootAclManifestId {
     }
     pub fn inner_id(&self) -> &AclManifestId {
         &self.0
+    }
+
+    /// The root ACL manifest an augmented manifest root points at through
+    /// `acl_manifest_directory_id`, where `None` stands for the canonical empty
+    /// manifest.
+    pub fn from_augmented_root_pointer(acl_manifest_directory_id: Option<AclManifestId>) -> Self {
+        RootAclManifestId(acl_manifest_directory_id.unwrap_or_else(AclManifest::empty_id))
     }
 }
 
