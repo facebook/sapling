@@ -65,7 +65,7 @@ pub enum RestrictedPathAccess {
 /// when the denying source knows it, the repo-region ACL, and the group the
 /// caller should request. Selected deterministically from the denied checks,
 /// so a denial always names one stable restriction.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DenyingRestriction {
     /// Root path of the denying restriction (directory containing `.slacl`).
     /// `None` when the source cannot report one (manifest denials).
@@ -108,6 +108,11 @@ impl RestrictedPathsAuthorizationError {
 
     pub fn permission_request_group(&self) -> &PermissionRequestGroup {
         &self.details.denial.permission_request_group
+    }
+
+    /// The denying restriction.
+    pub fn denying_restriction(&self) -> &DenyingRestriction {
+        &self.details.denial
     }
 
     /// Root of the denying restriction, when the source reported one.

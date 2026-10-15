@@ -61,9 +61,9 @@ pub fn unordered_max_paths() -> Result<usize> {
 /// parent changeset using `find_commit_compare_parent`.
 ///
 /// How restricted-path denials are handled is governed by `policy`:
-/// `Strict` fails the whole diff on any denial; `SkipAndCount` omits or
-/// downgrades denied entries per the per-side absent rule, counting them
-/// in the shared counter.
+/// `Strict` fails the whole diff on any denial; `SkipAndCollect` omits or
+/// downgrades denied entries per the per-side absent rule, recording them
+/// against their denying restriction.
 ///
 /// Limit semantics: filtering happens before the page budget, so denied
 /// entries never consume `limit`/`max_paths` and an all-denied page still

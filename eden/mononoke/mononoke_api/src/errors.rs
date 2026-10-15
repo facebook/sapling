@@ -126,6 +126,14 @@ impl MononokeError {
     pub fn is_restricted_path_denial(&self) -> bool {
         matches!(self, MononokeError::RestrictedPathsAuthorizationError(_))
     }
+
+    /// The restricted-path denial, if this error is one.
+    pub fn restricted_paths_denial(&self) -> Option<&RestrictedPathsAuthorizationError> {
+        match self {
+            Self::RestrictedPathsAuthorizationError(e) => Some(e),
+            _ => None,
+        }
+    }
 }
 
 impl From<Error> for MononokeError {
@@ -305,9 +313,43 @@ mod tests {
     use mercurial_types::HgChangesetId;
     use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
+    use permission_checker::MononokeIdentity;
+    use restricted_paths::DenyingRestriction;
+    use restricted_paths::RestrictedPathAccess;
     use shared_error::anyhow::SharedError;
 
     use super::*;
+
+    /// What it tests: `restricted_paths_denial` exposes the denial error.
+    /// Expected: `Some` carrying the error for restricted-path denials,
+    /// `None` for repo-auth denials and everything else.
+    #[mononoke::test]
+    fn test_restricted_paths_denial_returns_error_for_denials_only() -> Result<()> {
+        let acl = MononokeIdentity::from_str("REPO_REGION:acl")?;
+        let denial = RestrictedPathsAuthorizationError::new(
+            RestrictedPathAccess::Path(MPath::new("restricted/file")?),
+            DenyingRestriction {
+                restriction_root: Some(NonRootMPath::new("restricted")?),
+                repo_region_acl: acl.clone(),
+                permission_request_group: acl,
+            },
+            None,
+        );
+        let denial_error = MononokeError::RestrictedPathsAuthorizationError(denial);
+        assert!(denial_error.is_restricted_path_denial());
+        let back = denial_error
+            .restricted_paths_denial()
+            .expect("a denial should expose its error");
+        assert_eq!(
+            back.restriction_root(),
+            Some(&NonRootMPath::new("restricted")?)
+        );
+
+        let repo_denial = MononokeError::AuthorizationError("repo denied".to_string());
+        assert!(!repo_denial.is_restricted_path_denial());
+        assert!(repo_denial.restricted_paths_denial().is_none());
+        Ok(())
+    }
 
     /// What it tests: an unauthorized `.slacl` change rejected while creating
     /// an Hg changeset, reported through a child commit's shared error.

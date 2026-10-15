@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
 use context::CoreContext;
 use mononoke_types::NonRootMPath;
+use restricted_paths::DenyingRestriction;
 use restricted_paths::PathRestrictionInfo;
 use restricted_paths::PermissionRequestGroup;
 
@@ -67,10 +70,41 @@ pub struct RestrictedChangeGroup {
 pub enum RestrictedPathsPolicy {
     /// Denials fail the whole request.
     Strict,
-    /// Skip (streams) or omit-or-downgrade (diffs) denied paths, counting
-    /// them in the shared counter. Repo-auth denials and all other errors
-    /// still fail the whole request.
-    SkipAndCount(Arc<AtomicUsize>),
+    /// Skip (streams) or omit-or-downgrade (diffs) denied paths, recording
+    /// each against its denying restriction in the shared collector.
+    /// Repo-auth denials and all other errors still fail the whole request.
+    SkipAndCollect(Arc<OmissionCollector>),
+}
+
+/// Shared omission state for `SkipAndCollect`: the total omitted count plus
+/// per-restriction counts keyed by the denying restriction.
+#[derive(Debug, Default)]
+pub struct OmissionCollector {
+    omitted: AtomicUsize,
+    groups: Mutex<BTreeMap<DenyingRestriction, usize>>,
+}
+
+impl OmissionCollector {
+    /// Total omitted paths recorded so far.
+    pub fn omitted_count(&self) -> usize {
+        self.omitted.load(Ordering::Relaxed)
+    }
+
+    /// Omitted-path counts grouped by denying restriction.
+    pub fn omitted_groups(&self) -> BTreeMap<DenyingRestriction, usize> {
+        self.groups.lock().expect("lock poisoned").clone()
+    }
+
+    /// Record one omitted path, attributed to its denying restriction.
+    pub fn record(&self, restriction: &DenyingRestriction) {
+        self.omitted.fetch_add(1, Ordering::Relaxed);
+        *self
+            .groups
+            .lock()
+            .expect("lock poisoned")
+            .entry(restriction.clone())
+            .or_default() += 1;
+    }
 }
 
 /// JustKnobs gate for partial SCS responses. A client gets skipping
@@ -101,7 +135,7 @@ impl RestrictedPathsPolicy {
         let client_opt_in = ctx.metadata().partial_responses_opt_in();
         let knob_on = justknobs::eval(SCS_ENABLE_PARTIAL_RESPONSES_JK, None, Some(repo_name));
         if client_opt_in || knob_on {
-            Self::SkipAndCount(Arc::new(AtomicUsize::new(0)))
+            Self::SkipAndCollect(Arc::new(OmissionCollector::default()))
         } else {
             Self::Strict
         }
@@ -109,8 +143,15 @@ impl RestrictedPathsPolicy {
 
     /// Record one omitted path.
     pub fn record_omission(&self) {
-        if let Self::SkipAndCount(omitted) = self {
-            omitted.fetch_add(1, Ordering::Relaxed);
+        if let Self::SkipAndCollect(collector) = self {
+            collector.omitted.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Record one omitted path, attributed to its denying restriction.
+    pub fn record_denial(&self, restriction: &DenyingRestriction) {
+        if let Self::SkipAndCollect(collector) = self {
+            collector.record(restriction);
         }
     }
 
@@ -119,7 +160,16 @@ impl RestrictedPathsPolicy {
     pub fn omitted_count(&self) -> Option<usize> {
         match self {
             Self::Strict => None,
-            Self::SkipAndCount(omitted) => Some(omitted.load(Ordering::Relaxed)),
+            Self::SkipAndCollect(collector) => Some(collector.omitted_count()),
+        }
+    }
+
+    /// Omitted-path counts grouped by denying restriction, or `None` when
+    /// partial responses are not allowed.
+    pub fn omitted_groups(&self) -> Option<BTreeMap<DenyingRestriction, usize>> {
+        match self {
+            Self::Strict => None,
+            Self::SkipAndCollect(collector) => Some(collector.omitted_groups()),
         }
     }
 
@@ -134,6 +184,7 @@ impl RestrictedPathsPolicy {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::str::FromStr;
 
     use fbinit::FacebookInit;
     use futures::FutureExt;
@@ -142,6 +193,7 @@ mod tests {
     use justknobs::test_helpers::with_just_knobs_async;
     use metadata::Metadata;
     use mononoke_macros::mononoke;
+    use permission_checker::MononokeIdentity;
 
     use super::*;
 
@@ -238,5 +290,52 @@ mod tests {
             .boxed(),
         )
         .await
+    }
+
+    #[mononoke::test]
+    fn collect_attributes_counts_by_restriction() -> Result<(), anyhow::Error> {
+        let collector = OmissionCollector::default();
+        let tent_a = denying_restriction("tent_a", "REPO_REGION:a_acl")?;
+        let tent_b = denying_restriction("tent_b", "REPO_REGION:b_acl")?;
+        collector.record(&tent_a);
+        collector.record(&tent_b);
+        collector.record(&tent_a);
+
+        assert_eq!(collector.omitted_count(), 3);
+        assert_eq!(
+            collector.omitted_groups(),
+            BTreeMap::from([(tent_a, 2), (tent_b, 1)]),
+        );
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn policy_collects_groups_and_ignores_strict() -> Result<(), anyhow::Error> {
+        let policy = RestrictedPathsPolicy::SkipAndCollect(Arc::new(OmissionCollector::default()));
+        let restriction = denying_restriction("tent", "REPO_REGION:tent_acl")?;
+        policy.record_denial(&restriction);
+        policy.record_denial(&restriction);
+
+        assert_eq!(policy.omitted_count(), Some(2));
+        assert_eq!(
+            policy.omitted_groups(),
+            Some(BTreeMap::from([(restriction, 2)])),
+        );
+
+        let strict = RestrictedPathsPolicy::Strict;
+        strict.record_denial(&denying_restriction("tent", "REPO_REGION:tent_acl")?);
+        strict.record_omission();
+        assert_eq!(strict.omitted_count(), None);
+        assert_eq!(strict.omitted_groups(), None);
+        Ok(())
+    }
+
+    fn denying_restriction(root: &str, acl: &str) -> Result<DenyingRestriction, anyhow::Error> {
+        let acl = MononokeIdentity::from_str(acl)?;
+        Ok(DenyingRestriction {
+            restriction_root: Some(NonRootMPath::new(root)?),
+            repo_region_acl: acl.clone(),
+            permission_request_group: acl,
+        })
     }
 }

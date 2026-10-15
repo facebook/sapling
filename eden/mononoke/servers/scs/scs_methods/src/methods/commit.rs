@@ -1018,9 +1018,9 @@ impl SourceControlServiceImpl {
             }
         };
 
-        // Under Strict, denials fail the whole request; under SkipAndCount,
+        // Under Strict, denials fail the whole request; under SkipAndCollect,
         // entries denied by restricted-path enforcement are omitted or
-        // downgraded, and counted in the shared counter.
+        // downgraded, and recorded against their denying restriction.
         let policy = RestrictedPathsPolicy::for_scs_request(&ctx, repo.name());
         let result = commit_compare::operations::commit_compare(
             &ctx,
@@ -2117,15 +2117,15 @@ mod run_as_tests {
 #[cfg(test)]
 mod find_files_filter_tests {
     use std::sync::Arc;
-    use std::sync::atomic::AtomicUsize;
 
     use futures::stream;
+    use mononoke_api::OmissionCollector;
     use mononoke_macros::mononoke;
 
     use super::*;
 
     fn counting_policy() -> RestrictedPathsPolicy {
-        RestrictedPathsPolicy::SkipAndCount(Arc::new(AtomicUsize::new(0)))
+        RestrictedPathsPolicy::SkipAndCollect(Arc::new(OmissionCollector::default()))
     }
 
     fn numbered_paths(n: usize) -> Vec<MPath> {

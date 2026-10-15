@@ -14,8 +14,6 @@ use std::future::Future;
 use std::iter;
 use std::ops::Bound;
 use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 
 use acl_regions::AclRegionsRef;
 use anyhow::anyhow;
@@ -112,6 +110,7 @@ use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
 use crate::repo::RepoWithBubble;
+use crate::restricted_paths::OmissionCollector;
 use crate::restricted_paths::PathAccessInfo;
 use crate::restricted_paths::RestrictedChangeGroup;
 use crate::restricted_paths::RestrictedPathsChangesInfo;
@@ -304,10 +303,10 @@ pub enum PathVisibility<R> {
 
 /// Classify one side of a diff pair under partial-response semantics.
 ///
-/// `Strict` propagates any error. `SkipAndCount` converts only
-/// restricted-path denials into `None` (counting them); repo-auth
-/// denials and all other errors still fail. Callers map `None` to
-/// omit-or-downgrade per the per-side absent rule.
+/// `Strict` propagates any error. `SkipAndCollect` converts only
+/// restricted-path denials into `None` (recording them against the denying
+/// restriction); repo-auth denials and all other errors still fail. Callers
+/// map `None` to omit-or-downgrade per the per-side absent rule.
 async fn policy_side<R, F>(
     fut: F,
     policy: &RestrictedPathsPolicy,
@@ -318,8 +317,10 @@ where
     match fut.await {
         Ok(ctx) => Ok(Some(ctx)),
         Err(e) => match policy {
-            RestrictedPathsPolicy::SkipAndCount(omitted) if e.is_restricted_path_denial() => {
-                omitted.fetch_add(1, Ordering::Relaxed);
+            RestrictedPathsPolicy::SkipAndCollect(collector)
+                if let Some(denial) = e.restricted_paths_denial() =>
+            {
+                collector.record(denial.denying_restriction());
                 Ok(None)
             }
             _ => Err(e),
@@ -327,22 +328,26 @@ where
     }
 }
 
-/// Map a fallible stream item into an optional, counting restricted-path
-/// denials and dropping those items. All other errors still fail the
-/// stream.
+/// Map a fallible stream item into an optional, recording restricted-path
+/// denials against their denying restriction and dropping those items. All
+/// other errors still fail the stream.
 fn skip_restricted_denials<S, T>(
     stream: S,
-    omitted: Arc<AtomicUsize>,
+    collector: Arc<OmissionCollector>,
 ) -> impl Stream<Item = Result<T, MononokeError>>
 where
     S: Stream<Item = Result<T, MononokeError>>,
 {
     stream.filter_map(move |res| match res {
-        Err(e) if e.is_restricted_path_denial() => {
-            omitted.fetch_add(1, Ordering::Relaxed);
-            futures::future::ready(None)
+        Err(e) => {
+            if let Some(denial) = e.restricted_paths_denial() {
+                collector.record(denial.denying_restriction());
+                futures::future::ready(None)
+            } else {
+                futures::future::ready(Some(Err(e)))
+            }
         }
-        res => futures::future::ready(Some(res)),
+        Ok(item) => futures::future::ready(Some(Ok(item))),
     })
 }
 
@@ -1157,8 +1162,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// contexts only for **paths which exist**.
     ///
     /// How restricted-path denials are handled is governed by `policy`:
-    /// `Strict` fails the stream on any denial, `SkipAndCount` skips
-    /// denied paths and counts them in the shared counter.
+    /// `Strict` fails the stream on any denial, `SkipAndCollect` skips
+    /// denied paths, recording each against its denying restriction.
     pub async fn paths_with_history<T: Iterator<Item = MPath>>(
         &self,
         paths: T,
@@ -1189,8 +1194,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             });
         match policy {
             RestrictedPathsPolicy::Strict => Ok(stream.left_stream()),
-            RestrictedPathsPolicy::SkipAndCount(omitted) => {
-                Ok(skip_restricted_denials(stream, omitted.clone()).right_stream())
+            RestrictedPathsPolicy::SkipAndCollect(collector) => {
+                Ok(skip_restricted_denials(stream, collector.clone()).right_stream())
             }
         }
     }
@@ -1201,8 +1206,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// contexts only for **paths which exist**.
     ///
     /// How restricted-path denials are handled is governed by `policy`:
-    /// `Strict` fails the stream on any denial, `SkipAndCount` skips
-    /// denied paths and counts them in the shared counter.
+    /// `Strict` fails the stream on any denial, `SkipAndCollect` skips
+    /// denied paths, recording each against its denying restriction.
     pub async fn paths_with_content<T: Iterator<Item = MPath>>(
         &self,
         paths: T,
@@ -1236,8 +1241,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             });
         match policy {
             RestrictedPathsPolicy::Strict => Ok(stream.left_stream()),
-            RestrictedPathsPolicy::SkipAndCount(omitted) => {
-                Ok(skip_restricted_denials(stream, omitted.clone()).right_stream())
+            RestrictedPathsPolicy::SkipAndCollect(collector) => {
+                Ok(skip_restricted_denials(stream, collector.clone()).right_stream())
             }
         }
     }
@@ -1331,8 +1336,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// contexts only for **deleted paths which have existed previously**.
     ///
     /// How restricted-path denials are handled is governed by `policy`:
-    /// `Strict` fails the stream on any denial, `SkipAndCount` skips
-    /// denied paths and counts them in the shared counter.
+    /// `Strict` fails the stream on any denial, `SkipAndCollect` skips
+    /// denied paths, recording each against its denying restriction.
     pub async fn deleted_paths(
         &self,
         paths: impl Iterator<Item = MPath> + 'static,
@@ -1344,8 +1349,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let stream = self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths);
         match policy {
             RestrictedPathsPolicy::Strict => Ok(stream.left_stream()),
-            RestrictedPathsPolicy::SkipAndCount(omitted) => {
-                Ok(skip_restricted_denials(stream, omitted.clone()).right_stream())
+            RestrictedPathsPolicy::SkipAndCollect(collector) => {
+                Ok(skip_restricted_denials(stream, collector.clone()).right_stream())
             }
         }
     }
@@ -1574,12 +1579,12 @@ where
     /// `diff_items` what to include in the output (files, dirs or both)
     ///
     /// How restricted-path denials are handled is governed by `policy`:
-    /// `Strict` fails the whole diff on any denial; `SkipAndCount` applies
+    /// `Strict` fails the whole diff on any denial; `SkipAndCollect` applies
     /// the per-side absent rule instead (a denied new side downgrades
     /// `Changed` to `Removed` and drops copy info from `Added`, a denied old
     /// side downgrades `Changed` to `Added`, an entry denied on both sides is
-    /// omitted), counting denials in the shared counter. Repo-auth denials
-    /// and all other errors still fail the whole diff.
+    /// omitted), recording denials against their denying restriction.
+    /// Repo-auth denials and all other errors still fail the whole diff.
     pub async fn diff(
         &self,
         other: &ChangesetContext<R>,
@@ -2250,9 +2255,9 @@ where
     /// `diff_items` what to include in the output (files, dirs or both)
     ///
     /// How restricted-path denials are handled is governed by `policy`:
-    /// `Strict` fails the whole diff on any denial; `SkipAndCount` omits
-    /// denied entries, counting them in the shared counter. Repo-auth
-    /// denials and all other errors still fail.
+    /// `Strict` fails the whole diff on any denial; `SkipAndCollect` omits
+    /// denied entries, recording them against their denying restriction.
+    /// Repo-auth denials and all other errors still fail.
     pub async fn diff_root(
         &self,
         path_restrictions: Option<Vec<MPath>>,
