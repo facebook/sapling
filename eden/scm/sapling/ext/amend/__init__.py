@@ -539,10 +539,14 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
         scmutil.cleanupnodes(repo, {dest.node(): mapping.pop(dest.node())}, "amend")
         scmutil.cleanupnodes(repo, mapping, "rebase")
 
+        amendedfiles = wctx.files()
+        if matcher is not None:
+            amendedfiles = [f for f in amendedfiles if matcher(f)]
         with repo.dirstate.parentchange():
-            # Update dirstate status of amended files.
+            # Unmatched files have the same content in the new parent, so their
+            # pending adds, removes and copies are still valid and must be kept.
             repo.dirstate.rebuild(
-                parentnode, repo[parentnode].manifest(), wctx.files(), exact=True
+                parentnode, repo[parentnode].manifest(), amendedfiles, exact=True
             )
 
     if amendednode != dest.node():

@@ -838,6 +838,7 @@ Test pending adds, removes and copies of files not passed to --to
   b
   more
   $ sl status -C
-  ! r
-  ? c2
-  ? new
+  A c2
+    c
+  A new
+  R r
