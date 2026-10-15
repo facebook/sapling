@@ -17,6 +17,7 @@
 #include "eden/scm/lib/backingstore/SaplingBackingStoreError.h"
 
 namespace facebook::eden {
+
 /*
  * Helper functions for constructing thrift EdenError objects.
  */
@@ -41,6 +42,20 @@ EdenError newEdenError(
   e.errorType() = errorType;
   return e;
 }
+
+class OverlayDataCorruption : public EdenError {
+ public:
+  explicit OverlayDataCorruption(std::string_view message)
+      : OverlayDataCorruption(EIO, EdenErrorType::POSIX_ERROR, message) {}
+
+  template <class Arg1, class... Args>
+  OverlayDataCorruption(
+      int errorCode,
+      EdenErrorType errorType,
+      const Arg1& msg,
+      const Args&... args)
+      : EdenError(newEdenError(errorCode, errorType, msg, args...)) {}
+};
 
 /**
  * Construct an EdenError with an error message and error type but no error

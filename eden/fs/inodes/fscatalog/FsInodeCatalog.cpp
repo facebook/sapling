@@ -1913,7 +1913,7 @@ void FsFileContentStore::validateHeader(
     folly::StringPiece headerId) {
   if (contents.size() < kHeaderLength) {
     // Something wrong with the file (may be corrupted)
-    throw newEdenError(
+    throw OverlayDataCorruption(
         EIO,
         EdenErrorType::POSIX_ERROR,
         "Overlay file (inode ",
@@ -1931,7 +1931,7 @@ void FsFileContentStore::validateHeader(
   auto id = cursor.readFixedString(kHeaderIdentifierDir.size());
   StringPiece identifier{id};
   if (identifier.compare(headerId) != 0) {
-    throw newEdenError(
+    throw OverlayDataCorruption(
         EINVAL,
         EdenErrorType::POSIX_ERROR,
         "unexpected overlay header identifier : ",
@@ -1941,7 +1941,7 @@ void FsFileContentStore::validateHeader(
   // Validate header version
   auto version = cursor.readBE<uint32_t>();
   if (version != kHeaderVersion) {
-    throw newEdenError(
+    throw OverlayDataCorruption(
         EINVAL,
         EdenErrorType::POSIX_ERROR,
         "Unexpected overlay version :",
