@@ -945,7 +945,27 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        let bubble_id = BubbleId::new(request.bubble_id);
+        let bubble_id = match (request.snapshot_id, request.bubble_id) {
+            (Some(snapshot_id), _) => {
+                let cs_id = ChangesetId::from(snapshot_id);
+                repo.ephemeral_store()
+                    .bubble_from_changeset(repo.ctx(), &cs_id)
+                    .await
+                    .context("Failure in fetching bubble from changeset")?
+                    .ok_or_else(|| {
+                        HttpError::e404(MononokeError::NotAvailable(format!(
+                            "Snapshot for changeset {cs_id} not found in bubble"
+                        )))
+                    })?
+            }
+            (None, Some(bubble_id)) => BubbleId::new(bubble_id),
+            (None, None) => {
+                return Err(HttpError::e400(anyhow!(
+                    "Either snapshot_id or bubble_id must be provided"
+                ))
+                .into());
+            }
+        };
         let custom_duration = request.custom_duration_secs.map(Duration::from_secs);
 
         // Extend the bubble's TTL using the new method
@@ -981,7 +1001,7 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
         };
 
         let response = EphemeralExtendResponse {
-            bubble_id: request.bubble_id,
+            bubble_id: bubble_id.into(),
             result: api_outcome,
         };
 

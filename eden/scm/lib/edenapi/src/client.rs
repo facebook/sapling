@@ -883,8 +883,9 @@ impl Client {
         }
         let url = self.build_url(paths::EPHEMERAL_EXTEND)?;
         let req = EphemeralExtendRequest {
-            bubble_id,
+            bubble_id: Some(bubble_id),
             custom_duration_secs,
+            snapshot_id: None,
         }
         .to_wire();
         let request = self
