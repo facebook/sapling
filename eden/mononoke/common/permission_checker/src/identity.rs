@@ -294,23 +294,16 @@ pub enum TenantInfo {
     },
     DevEnv {
         client_id: Option<String>,
-        on_demand_type: Option<String>,
-        client_region: Option<String>,
-        client_hostname: Option<String>,
     },
     CiSandcastle {
         client_id: Option<String>,
         ci_purpose: Option<String>,
-        sandcastle_job_id: Option<String>,
     },
     SandcastleAutomation {
         client_id: Option<String>,
     },
     Mast {
         client_id: Option<String>,
-        data_project: Option<String>,
-        offline_job_root_run_id: Option<String>,
-        offline_job_leaf_run_id: Option<String>,
     },
     FaaS {
         client_id: Option<String>,
@@ -346,10 +339,10 @@ impl TenantInfo {
         match self {
             Self::HealthCheck { client_id }
             | Self::InteractiveDev { client_id }
-            | Self::DevEnv { client_id, .. }
+            | Self::DevEnv { client_id }
             | Self::CiSandcastle { client_id, .. }
             | Self::SandcastleAutomation { client_id }
-            | Self::Mast { client_id, .. }
+            | Self::Mast { client_id }
             | Self::FaaS { client_id, .. }
             | Self::Automation { client_id }
             | Self::Unknown { client_id } => client_id.as_deref(),
@@ -359,65 +352,6 @@ impl TenantInfo {
     pub fn ci_purpose(&self) -> Option<&str> {
         match self {
             Self::CiSandcastle { ci_purpose, .. } => ci_purpose.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn sandcastle_job_id(&self) -> Option<&str> {
-        match self {
-            Self::CiSandcastle {
-                sandcastle_job_id, ..
-            } => sandcastle_job_id.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn on_demand_type(&self) -> Option<&str> {
-        match self {
-            Self::DevEnv { on_demand_type, .. } => on_demand_type.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn client_region(&self) -> Option<&str> {
-        match self {
-            Self::DevEnv { client_region, .. } => client_region.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn client_hostname(&self) -> Option<&str> {
-        match self {
-            Self::DevEnv {
-                client_hostname, ..
-            } => client_hostname.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn data_project(&self) -> Option<&str> {
-        match self {
-            Self::Mast { data_project, .. } => data_project.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn offline_job_root_run_id(&self) -> Option<&str> {
-        match self {
-            Self::Mast {
-                offline_job_root_run_id,
-                ..
-            } => offline_job_root_run_id.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn offline_job_leaf_run_id(&self) -> Option<&str> {
-        match self {
-            Self::Mast {
-                offline_job_leaf_run_id,
-                ..
-            } => offline_job_leaf_run_id.as_deref(),
             _ => None,
         }
     }
@@ -450,9 +384,9 @@ impl TenantInfo {
         }
     }
 
-    /// RIM tenancy hierarchy path: root -> category -> client id. `None` when
+    /// Legacy RIM tenancy path: root -> category -> client id. `None` when
     /// there is no `client_id` to attribute to (no meaningful RIM path).
-    pub fn tenancy_path(&self) -> Option<Vec<String>> {
+    pub fn legacy_tenancy_path(&self) -> Option<Vec<String>> {
         let client_id = self.client_id()?;
         Some(vec![
             "root".to_string(),
@@ -460,67 +394,15 @@ impl TenantInfo {
             client_id.to_string(),
         ])
     }
-
-    pub fn tenancy_path_v2(&self) -> Option<Vec<String>> {
-        let (level_3, level_4, level_5) = match self {
-            Self::CiSandcastle {
-                client_id,
-                ci_purpose,
-                sandcastle_job_id,
-            } => (
-                ci_purpose.as_deref()?,
-                client_id.as_deref()?,
-                sandcastle_job_id.as_deref()?,
-            ),
-            Self::DevEnv {
-                on_demand_type,
-                client_region,
-                client_hostname,
-                ..
-            } => (
-                on_demand_type.as_deref()?,
-                client_region.as_deref()?,
-                client_hostname.as_deref()?,
-            ),
-            Self::Mast {
-                data_project,
-                offline_job_root_run_id,
-                offline_job_leaf_run_id,
-                ..
-            } => (
-                data_project.as_deref()?,
-                offline_job_root_run_id.as_deref()?,
-                offline_job_leaf_run_id.as_deref()?,
-            ),
-            Self::FaaS {
-                client_id,
-                atlas_purpose,
-                atlas_env_id,
-                ..
-            } => (
-                atlas_purpose.as_deref()?,
-                client_id.as_deref()?,
-                atlas_env_id.as_deref()?,
-            ),
-            _ => {
-                let client_id = self.client_id()?;
-                (client_id, client_id, client_id)
-            }
-        };
-
-        Some(vec![
-            "root".to_string(),
-            self.category().as_str().to_string(),
-            level_3.to_string(),
-            level_4.to_string(),
-            level_5.to_string(),
-        ])
-    }
 }
 
 impl fmt::Display for TenantInfo {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{}", self.tenancy_path().unwrap_or_default().join("/"))
+        write!(
+            fmt,
+            "{}",
+            self.legacy_tenancy_path().unwrap_or_default().join("/")
+        )
     }
 }
 
@@ -536,191 +418,19 @@ mod tests {
         assert_eq!(id.id_data(), "2621:10d:c1a8:12c9::1162");
     }
 
-    fn tenant_info(category: ClientCategory, client_id: &str) -> TenantInfo {
-        let client_id = Some(client_id.to_string());
-        match category {
-            ClientCategory::HealthCheck => TenantInfo::HealthCheck { client_id },
-            ClientCategory::InteractiveDev => TenantInfo::InteractiveDev { client_id },
-            ClientCategory::DevEnv => TenantInfo::DevEnv {
-                client_id,
-                on_demand_type: None,
-                client_region: None,
-                client_hostname: None,
-            },
-            ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
-                client_id,
-                ci_purpose: None,
-                sandcastle_job_id: None,
-            },
-            ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
-            ClientCategory::Mast => TenantInfo::Mast {
-                client_id,
-                data_project: None,
-                offline_job_root_run_id: None,
-                offline_job_leaf_run_id: None,
-            },
-            ClientCategory::FaaS => TenantInfo::FaaS {
-                client_id,
-                atlas_env_id: None,
-                atlas_rl: None,
-                atlas_purpose: None,
-                faas_job_name: None,
-            },
-            ClientCategory::Automation => TenantInfo::Automation { client_id },
-            ClientCategory::Unknown => TenantInfo::Unknown { client_id },
-        }
-    }
-
     #[mononoke::test]
-    fn test_tenancy_path_v2() {
-        let interactive = tenant_info(ClientCategory::InteractiveDev, "USER:alice");
+    fn test_legacy_tenancy_path() {
+        let interactive = TenantInfo::InteractiveDev {
+            client_id: Some("USER:alice".to_owned()),
+        };
         assert_eq!(
-            interactive.tenancy_path(),
+            interactive.legacy_tenancy_path(),
             Some(vec![
                 "root".to_string(),
                 "interactive_dev".to_string(),
                 "USER:alice".to_string(),
             ])
         );
-        assert_eq!(
-            interactive.tenancy_path_v2(),
-            Some(vec![
-                "root".to_string(),
-                "interactive_dev".to_string(),
-                "USER:alice".to_string(),
-                "USER:alice".to_string(),
-                "USER:alice".to_string(),
-            ])
-        );
-    }
-
-    #[mononoke::test]
-    fn test_ci_sandcastle_tenancy_path_v2() {
-        let ci = TenantInfo::CiSandcastle {
-            client_id: Some("ALIAS:continuous".to_string()),
-            ci_purpose: Some("ci_fbsource".to_string()),
-            sandcastle_job_id: Some("1234".to_string()),
-        };
-        assert_eq!(
-            ci.tenancy_path_v2(),
-            Some(vec![
-                "root".to_string(),
-                "ci_sandcastle".to_string(),
-                "ci_fbsource".to_string(),
-                "ALIAS:continuous".to_string(),
-                "1234".to_string(),
-            ])
-        );
-
-        assert_eq!(
-            tenant_info(ClientCategory::CiSandcastle, "ALIAS:continuous").tenancy_path_v2(),
-            None
-        );
-    }
-
-    #[mononoke::test]
-    fn test_dev_env_tenancy_path_v2() {
-        let dev_env = TenantInfo::DevEnv {
-            client_id: Some("SERVICE_IDENTITY:ondemand_worker".to_string()),
-            on_demand_type: Some("www_fbsource_configerator".to_string()),
-            client_region: Some("lla3".to_string()),
-            client_hostname: Some("od1689.lla3.facebook.com".to_string()),
-        };
-        assert_eq!(
-            dev_env.tenancy_path_v2(),
-            Some(vec![
-                "root".to_string(),
-                "dev_env".to_string(),
-                "www_fbsource_configerator".to_string(),
-                "lla3".to_string(),
-                "od1689.lla3.facebook.com".to_string(),
-            ])
-        );
-        assert_eq!(
-            tenant_info(ClientCategory::DevEnv, "SERVICE_IDENTITY:ondemand_worker")
-                .tenancy_path_v2(),
-            None
-        );
-    }
-
-    #[mononoke::test]
-    fn test_mast_tenancy_path_v2() {
-        let mast = TenantInfo::Mast {
-            client_id: Some("DATA_PROJECT:genai_llm_research-agents".to_string()),
-            data_project: Some("DATA_PROJECT:genai_llm_research-agents".to_string()),
-            offline_job_root_run_id: Some("OFFLINE_JOB_ROOT_RUN_ID:mast-job-run/root".to_string()),
-            offline_job_leaf_run_id: Some(
-                "OFFLINE_JOB_LEAF_RUN_ID:mast-job-run/root.0".to_string(),
-            ),
-        };
-        assert_eq!(
-            mast.tenancy_path_v2(),
-            Some(vec![
-                "root".to_string(),
-                "mast".to_string(),
-                "DATA_PROJECT:genai_llm_research-agents".to_string(),
-                "OFFLINE_JOB_ROOT_RUN_ID:mast-job-run/root".to_string(),
-                "OFFLINE_JOB_LEAF_RUN_ID:mast-job-run/root.0".to_string(),
-            ])
-        );
-        assert_eq!(
-            tenant_info(
-                ClientCategory::Mast,
-                "DATA_PROJECT:genai_llm_research-agents"
-            )
-            .tenancy_path_v2(),
-            None
-        );
-    }
-
-    #[mononoke::test]
-    fn test_faas_tenancy_path_v2() {
-        for workload in ["ASYNC_JOB_ID:1234", "CREWMATE:5678"] {
-            let faas = TenantInfo::FaaS {
-                client_id: Some(workload.to_string()),
-                atlas_purpose: Some("general".to_string()),
-                atlas_env_id: Some("atlas-1234".to_string()),
-                atlas_rl: None,
-                faas_job_name: None,
-            };
-            assert_eq!(
-                faas.tenancy_path_v2(),
-                Some(vec![
-                    "root".to_string(),
-                    "faas".to_string(),
-                    "general".to_string(),
-                    workload.to_string(),
-                    "atlas-1234".to_string(),
-                ])
-            );
-        }
-        assert_eq!(
-            tenant_info(ClientCategory::FaaS, "ASYNC_JOB_ID:1234").tenancy_path_v2(),
-            None
-        );
-    }
-
-    #[mononoke::test]
-    fn test_tenancy_path_v2_repeats_client_id_for_all_categories() {
-        for category in [
-            ClientCategory::HealthCheck,
-            ClientCategory::InteractiveDev,
-            ClientCategory::SandcastleAutomation,
-            ClientCategory::Automation,
-            ClientCategory::Unknown,
-        ] {
-            let tenant = tenant_info(category, "CLIENT:id");
-            assert_eq!(
-                tenant.tenancy_path_v2(),
-                Some(vec![
-                    "root".to_string(),
-                    category.as_str().to_string(),
-                    "CLIENT:id".to_string(),
-                    "CLIENT:id".to_string(),
-                    "CLIENT:id".to_string(),
-                ])
-            );
-        }
     }
 
     #[mononoke::test]

@@ -7,6 +7,7 @@
 
 pub mod security;
 
+use std::iter::once;
 use std::net::IpAddr;
 use std::time::Duration;
 
@@ -40,6 +41,29 @@ impl ClientPathAclCompatibility {
             Self::ReadyV1 => "ready_v1",
             Self::Malformed => "malformed",
         }
+    }
+}
+
+/// Identity-derived RIM attribution with a fixed workload/instance hierarchy.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RimTenancyPath {
+    region: Option<String>,
+    category: ClientCategory,
+    workload: String,
+    instance: String,
+}
+
+impl RimTenancyPath {
+    /// Convert to the ordered components expected by the RIM client.
+    pub fn into_vec(self) -> Vec<String> {
+        once("root".to_owned())
+            .chain(self.region)
+            .chain([
+                self.category.as_str().to_owned(),
+                self.workload,
+                self.instance,
+            ])
+            .collect()
     }
 }
 
@@ -282,13 +306,6 @@ impl Metadata {
         self.client_hostname.as_deref()
     }
 
-    pub fn client_region(&self) -> Option<&str> {
-        self.client_hostname()?
-            .split('.')
-            .nth(1)
-            .filter(|region| !region.is_empty())
-    }
-
     pub fn set_client_hostname(mut self, client_hostname: Option<String>) -> Self {
         self.client_hostname = client_hostname;
         self
@@ -354,30 +371,13 @@ impl Metadata {
         match self.identities.client_category(self.sandcastle_alias()) {
             ClientCategory::HealthCheck => TenantInfo::HealthCheck { client_id },
             ClientCategory::InteractiveDev => TenantInfo::InteractiveDev { client_id },
-            ClientCategory::DevEnv => TenantInfo::DevEnv {
-                client_id,
-                on_demand_type: self.identities.on_demand_type().map(str::to_owned),
-                client_region: self.client_region().map(str::to_owned),
-                client_hostname: self.client_hostname().map(str::to_owned),
-            },
+            ClientCategory::DevEnv => TenantInfo::DevEnv { client_id },
             ClientCategory::CiSandcastle => TenantInfo::CiSandcastle {
                 client_id,
                 ci_purpose: self.ci_purpose().map(str::to_owned),
-                sandcastle_job_id: self.identities.sandcastle_job_id().map(str::to_owned),
             },
             ClientCategory::SandcastleAutomation => TenantInfo::SandcastleAutomation { client_id },
-            ClientCategory::Mast => TenantInfo::Mast {
-                client_id,
-                data_project: self
-                    .identities
-                    .identity_type_filtered_concat("DATA_PROJECT"),
-                offline_job_root_run_id: self
-                    .identities
-                    .identity_type_filtered_concat("OFFLINE_JOB_ROOT_RUN_ID"),
-                offline_job_leaf_run_id: self
-                    .identities
-                    .identity_type_filtered_concat("OFFLINE_JOB_LEAF_RUN_ID"),
-            },
+            ClientCategory::Mast => TenantInfo::Mast { client_id },
             ClientCategory::FaaS => TenantInfo::FaaS {
                 client_id,
                 atlas_env_id: self.clientinfo_atlas_env_id().map(str::to_owned),
@@ -387,6 +387,69 @@ impl Metadata {
             },
             ClientCategory::Automation => TenantInfo::Automation { client_id },
             ClientCategory::Unknown => TenantInfo::Unknown { client_id },
+        }
+    }
+
+    /// RIM workload/instance attribution, derived independently of request `main_id`.
+    /// An optional serving region groups categories under that region.
+    pub fn rim_tenancy_path(&self, region: Option<&str>) -> RimTenancyPath {
+        let category = self.identities.client_category(self.sandcastle_alias());
+        let identity = |types: &[&str]| {
+            types
+                .iter()
+                .find_map(|ty| self.identities.identity_type_filtered_concat(ty))
+        };
+        let workload = match category {
+            ClientCategory::DevEnv => self
+                .identities
+                .on_demand_type()
+                .or_else(|| {
+                    self.identities.iter().find_map(|id| {
+                        if id.id_type() != "SERVICE_IDENTITY" {
+                            return None;
+                        }
+                        id.id_data().strip_prefix("ondemand_").filter(|ty| {
+                            !matches!(*ty, "" | "intask_service" | "session" | "worker")
+                        })
+                    })
+                })
+                .map(str::to_owned),
+            ClientCategory::InteractiveDev => identity(&["USER"]),
+            ClientCategory::CiSandcastle => self
+                .sandcastle_alias()
+                .map(|alias| format!("ALIAS:{alias}")),
+            ClientCategory::Mast => identity(&["DATA_PROJECT"]),
+            ClientCategory::FaaS => identity(&["CREWMATE", "ASYNC_JOB_ID"]),
+            ClientCategory::HealthCheck
+            | ClientCategory::SandcastleAutomation
+            | ClientCategory::Automation
+            | ClientCategory::Unknown => None,
+        }
+        .or_else(|| {
+            identity(&[
+                "SERVICE_IDENTITY",
+                "ROOT_MACHINE_TIER",
+                "CORP_SERVICE",
+                "MACHINE_TIER",
+                "MACHINE",
+            ])
+        })
+        .filter(|workload| !workload.is_empty())
+        .unwrap_or_else(|| "unknown".to_owned());
+        // Every category must have the same depth; a single default child adds no sharing.
+        let instance = if category == ClientCategory::DevEnv {
+            self.identities
+                .hostname()
+                .filter(|hostname| !hostname.is_empty())
+                .unwrap_or("unknown")
+        } else {
+            "default"
+        };
+        RimTenancyPath {
+            region: region.map(str::to_owned),
+            category,
+            workload,
+            instance: instance.to_owned(),
         }
     }
 
@@ -485,5 +548,145 @@ impl Metadata {
             .iter()
             .find(|identity| identity.id_type() == "MACHINE_TIER")
             .map(|identity| identity.id_data())
+    }
+}
+
+#[cfg(all(test, fbcode_build))]
+mod tests {
+    use clientinfo::ClientEntryPoint;
+    use mononoke_macros::mononoke;
+    use permission_checker::MononokeIdentity;
+
+    use super::*;
+
+    fn metadata(identities: &[(&str, &str)]) -> Metadata {
+        Metadata {
+            identities: identities
+                .iter()
+                .map(|(ty, value)| MononokeIdentity::from_legacy_type_data(*ty, *value))
+                .collect(),
+            ..Metadata::default()
+        }
+    }
+
+    #[mononoke::test]
+    fn rim_attribution_is_independent_of_main_id() {
+        let mut metadata = metadata(&[
+            ("SERVICE_IDENTITY", "ondemand_worker"),
+            ("SERVICE_IDENTITY", "ondemand_www_fbsource_configerator"),
+            ("MACHINE", "od1.ldc.facebook.com"),
+        ]);
+        let expected = RimTenancyPath {
+            region: None,
+            category: ClientCategory::DevEnv,
+            workload: "www_fbsource_configerator".to_owned(),
+            instance: "od1.ldc.facebook.com".to_owned(),
+        };
+        assert_eq!(metadata.rim_tenancy_path(None), expected);
+        for main_id in ["legacy-client-a", "legacy-client-b"] {
+            metadata.add_client_info(ClientInfo {
+                request_info: Some(ClientRequestInfo {
+                    main_id: Some(main_id.to_owned()),
+                    entry_point: ClientEntryPoint::SaplingRemoteApi,
+                    correlator: "test".to_owned(),
+                }),
+                ..ClientInfo::default()
+            });
+            assert_eq!(metadata.rim_tenancy_path(None), expected);
+            assert_eq!(metadata.tenant_info().client_id(), Some(main_id));
+            assert_eq!(
+                metadata.client_request_info().unwrap().main_id.as_deref(),
+                Some(main_id)
+            );
+        }
+    }
+
+    #[mononoke::test]
+    fn rim_separates_machines_within_an_ondemand_type() {
+        for machine in ["od1.ldc.facebook.com", "od2.ldc.facebook.com"] {
+            let metadata = metadata(&[
+                ("SERVICE_IDENTITY", "ondemand_www_fbsource_configerator"),
+                ("MACHINE", machine),
+            ]);
+            assert_eq!(
+                metadata.rim_tenancy_path(None).into_vec(),
+                vec!["root", "dev_env", "www_fbsource_configerator", machine]
+            );
+        }
+        let missing_machine =
+            metadata(&[("SERVICE_IDENTITY", "ondemand_www_fbsource_configerator")]);
+        assert_eq!(
+            missing_machine.rim_tenancy_path(None).into_vec(),
+            vec!["root", "dev_env", "www_fbsource_configerator", "unknown"]
+        );
+    }
+
+    #[mononoke::test]
+    fn rim_workload_identity_depends_on_category() {
+        for (identities, expected) in [
+            (
+                vec![("USER", "alice"), ("MACHINE", "dev1")],
+                vec!["root", "interactive_dev", "USER:alice", "default"],
+            ),
+            (
+                vec![
+                    ("OFFLINE_JOB_LEAF_RUN_ID", "mast-job-run/123"),
+                    ("DATA_PROJECT", "project"),
+                ],
+                vec!["root", "mast", "DATA_PROJECT:project", "default"],
+            ),
+            (
+                vec![
+                    ("SERVICE_IDENTITY", "faas"),
+                    ("ASYNC_JOB_ID", "123"),
+                    ("CREWMATE", "456"),
+                ],
+                vec!["root", "faas", "CREWMATE:456", "default"],
+            ),
+            (
+                vec![("SERVICE_IDENTITY", "automation")],
+                vec![
+                    "root",
+                    "automation",
+                    "SERVICE_IDENTITY:automation",
+                    "default",
+                ],
+            ),
+            (vec![], vec!["root", "unknown", "unknown", "default"]),
+        ] {
+            assert_eq!(
+                metadata(&identities).rim_tenancy_path(None).into_vec(),
+                expected
+            );
+        }
+    }
+
+    #[mononoke::test]
+    fn rim_uses_ci_alias_without_request_main_id() {
+        let mut metadata = metadata(&[("SERVICE_IDENTITY", "sandcastle.worker.warmed")]);
+        metadata.add_client_info(ClientInfo::from_json(r#"{"sandcastle_alias":"build"}"#).unwrap());
+        assert_eq!(
+            metadata.rim_tenancy_path(None).into_vec(),
+            vec!["root", "ci_sandcastle", "ALIAS:build", "default"]
+        );
+    }
+
+    #[mononoke::test]
+    fn rim_groups_categories_under_the_serving_region() {
+        let metadata = metadata(&[
+            ("SERVICE_IDENTITY", "ondemand_www_fbsource_configerator"),
+            ("MACHINE", "od1.prn.facebook.com"),
+        ])
+        .set_client_hostname(Some("od1.prn.facebook.com".to_owned()));
+        assert_eq!(
+            metadata.rim_tenancy_path(Some("ldc")).into_vec(),
+            vec![
+                "root",
+                "ldc",
+                "dev_env",
+                "www_fbsource_configerator",
+                "od1.prn.facebook.com",
+            ]
+        );
     }
 }

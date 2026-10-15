@@ -103,6 +103,9 @@ struct MononokeServerArgs {
     /// Additional RIM backend for per-serving-region EdenAPI rate limiting
     #[clap(long, requires = "rim_backend")]
     rim_regional_backend: Option<i32>,
+    /// Use workload/instance tenancy; requires backends configured with the new schema
+    #[clap(long, requires = "rim_backend")]
+    rim_workload_tenancy: bool,
     /// Mark this instance as a shadow tier. Shadow tiers never forward
     /// shadow traffic, preventing forwarding loops.
     #[clap(long, default_value_t = false)]
@@ -396,6 +399,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 rate_limit_config_path,
                 args.rim_backend,
                 args.rim_regional_backend,
+                args.rim_workload_tenancy,
             )
             .await
         }

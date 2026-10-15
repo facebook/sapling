@@ -24,7 +24,6 @@ use metadata::Metadata;
 use observability::ObservabilityContext;
 use observability::ScubaLoggingDecisionFields;
 pub use observability::ScubaVerbosityLevel;
-use permission_checker::TenantInfo;
 pub use sampling::Sampling;
 #[cfg(fbcode_build)]
 pub use schematized_logging::CommonMetadata;
@@ -172,8 +171,8 @@ impl MononokeScubaSampleBuilder {
     }
 
     /// Log the tenancy-relevant client fields to Scuba
-    pub fn add_tenant_info(&mut self, tenant: &TenantInfo) -> &mut Self {
-        let tenancy_path_v2 = tenant.tenancy_path_v2().map(|path| path.join("/"));
+    pub fn add_tenant_info(&mut self, metadata: &Metadata) -> &mut Self {
+        let tenant = metadata.tenant_info();
 
         self.inner
             .add("client_category", tenant.category().as_str());
@@ -185,8 +184,10 @@ impl MononokeScubaSampleBuilder {
             .add_opt("client_atlas_purpose", tenant.atlas_purpose());
         self.inner
             .add_opt("client_faas_job_name", tenant.faas_job_name());
-        self.inner
-            .add_opt("rim_tenancy_path_v2", tenancy_path_v2.as_deref());
+        self.inner.add(
+            "rim_workload_tenancy_path",
+            metadata.rim_tenancy_path(None).into_vec().join("/"),
+        );
         self
     }
 
@@ -260,7 +261,7 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add_opt("client_atlas", metadata.clientinfo_atlas());
 
-        self.add_tenant_info(&metadata.tenant_info());
+        self.add_tenant_info(metadata);
 
         self.inner.add_opt("fetch_cause", metadata.fetch_cause());
         self.inner.add(
@@ -556,5 +557,26 @@ impl<T> FutureStatsScubaExt for (FutureStats, T) {
         scuba.add_future_stats(&stats);
         scuba.log_with_msg(log_tag, msg);
         res
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn http_and_full_metadata_logging_include_rim_attribution() {
+        let metadata = Metadata::default();
+        let mut http = MononokeScubaSampleBuilder::with_discard();
+        http.add_tenant_info(&metadata);
+        let mut full = MononokeScubaSampleBuilder::with_discard();
+        full.add_metadata(&metadata);
+
+        let expected: ScubaValue = "root/unknown/unknown/default".into();
+        for scuba in [http, full] {
+            assert_eq!(scuba.get("rim_workload_tenancy_path"), Some(&expected));
+        }
     }
 }

@@ -94,7 +94,7 @@
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
-      "rim_tenancy_path_v2": "root/unknown/*/*/*", (glob)
+      "rim_workload_tenancy_path": "root/unknown/unknown/default",
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
       "sandcastle_vcs": null,
@@ -166,7 +166,7 @@
       "method": "upload",
       "repository": "lfs1",
       "request_id": "*", (glob)
-      "rim_tenancy_path_v2": "root/unknown/*/*/*", (glob)
+      "rim_workload_tenancy_path": "root/unknown/unknown/default",
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
       "sandcastle_vcs": null,
@@ -242,7 +242,7 @@
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
-      "rim_tenancy_path_v2": "root/unknown/*/*/*", (glob)
+      "rim_workload_tenancy_path": "root/unknown/unknown/default",
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
       "sandcastle_vcs": null,
@@ -321,7 +321,7 @@
       "repository": "lfs1",
       "request_id": "*", (glob)
       "response_content_encoding": "zstd",
-      "rim_tenancy_path_v2": "root/unknown/*/*/*", (glob)
+      "rim_workload_tenancy_path": "root/unknown/unknown/default",
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
       "sandcastle_vcs": null,
@@ -384,7 +384,7 @@
       "kernel": "*", (glob) (?)
       "likely_agentic": "false",
       "request_id": "*", (glob)
-      "rim_tenancy_path_v2": "root/unknown/*/*/*", (glob)
+      "rim_workload_tenancy_path": "root/unknown/unknown/default",
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
       "sandcastle_vcs": null,

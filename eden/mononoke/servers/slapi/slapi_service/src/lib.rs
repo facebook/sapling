@@ -73,7 +73,23 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     tls_ca_path: Option<&Path>,
     rim_backend: Option<i32>,
     rim_regional_backend: Option<i32>,
+    rim_workload_tenancy: bool,
 ) -> Result<SaplingRemoteApi, Error> {
+    #[cfg(fbcode_build)]
+    anyhow::ensure!(
+        !rim_workload_tenancy
+            || ![rim_backend, rim_regional_backend]
+                .into_iter()
+                .flatten()
+                .any(|backend| {
+                    [
+                        RimBackend::MONONOKE_SERVER.0,
+                        RimBackend::MONONOKE_SERVER_REGIONAL.0,
+                    ]
+                    .contains(&backend)
+                }),
+        "Workload tenancy requires separate RIM backends with workload/instance schemas"
+    );
     #[cfg(fbcode_build)]
     let rim_backend = rim_backend
         .map(RimBackend)
@@ -95,7 +111,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
         .transpose()?;
 
     #[cfg(not(fbcode_build))]
-    let _ = (rim_backend, rim_regional_backend);
+    let _ = (rim_backend, rim_regional_backend, rim_workload_tenancy);
 
     let ctx = ServerContext::new(mononoke, will_exit);
 
@@ -157,6 +173,8 @@ pub fn build<R: Send + Sync + Clone + 'static>(
             rim_backend,
             #[cfg(fbcode_build)]
             rim_regional_backend,
+            #[cfg(fbcode_build)]
+            rim_workload_tenancy,
         ))
         .add(LoadMiddleware::new())
         .add(log_middleware)

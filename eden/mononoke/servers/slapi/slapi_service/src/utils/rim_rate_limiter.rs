@@ -31,8 +31,11 @@ pub(crate) enum RimDecision {
     FailOpen,
 }
 
-pub(crate) fn tenancy_path(tenant: &TenantInfo, region: Option<&str>) -> Option<Vec<String>> {
-    let mut path = tenant.tenancy_path()?;
+pub(crate) fn legacy_tenancy_path(
+    tenant: &TenantInfo,
+    region: Option<&str>,
+) -> Option<Vec<String>> {
+    let mut path = tenant.legacy_tenancy_path()?;
     if let Some(region) = region {
         path.insert(2, region.to_owned());
     }
@@ -148,27 +151,23 @@ mod tests {
     use mononoke_macros::mononoke;
     use permission_checker::TenantInfo;
 
-    use super::tenancy_path;
+    use super::legacy_tenancy_path;
 
     #[mononoke::test]
     fn global_and_regional_paths_preserve_category_and_client() {
         let tenant = TenantInfo::DevEnv {
             client_id: Some("MACHINE:devserver.example.com".to_owned()),
-            on_demand_type: None,
-            client_region: Some("prn".to_owned()),
-            client_hostname: None,
         };
         assert_eq!(
-            tenancy_path(&tenant, None),
+            legacy_tenancy_path(&tenant, None),
             Some(vec![
                 "root".to_owned(),
                 "dev_env".to_owned(),
                 "MACHINE:devserver.example.com".to_owned()
             ]),
         );
-        // The region comes from the serving task, not the client's region.
         assert_eq!(
-            tenancy_path(&tenant, Some("ldc")),
+            legacy_tenancy_path(&tenant, Some("ldc")),
             Some(vec![
                 "root".to_owned(),
                 "dev_env".to_owned(),
@@ -181,7 +180,7 @@ mod tests {
     #[mononoke::test]
     fn missing_client_has_no_global_or_regional_path() {
         let tenant = TenantInfo::Unknown { client_id: None };
-        assert_eq!(tenancy_path(&tenant, None), None);
-        assert_eq!(tenancy_path(&tenant, Some("ldc")), None);
+        assert_eq!(legacy_tenancy_path(&tenant, None), None);
+        assert_eq!(legacy_tenancy_path(&tenant, Some("ldc")), None);
     }
 }

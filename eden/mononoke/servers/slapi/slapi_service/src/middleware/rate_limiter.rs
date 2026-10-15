@@ -40,9 +40,9 @@ use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::check_rate_limit;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::report_load;
+use crate::utils::rim_rate_limiter::legacy_tenancy_path;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::tenancy_path;
+use crate::utils::rim_rate_limiter::report_load;
 
 #[cfg(fbcode_build)]
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
@@ -119,17 +119,22 @@ pub struct ThrottleMiddleware {
     rim_backend: Option<RimBackend>,
     #[cfg(fbcode_build)]
     rim_regional_backend: Option<(RimBackend, String)>,
+    #[cfg(fbcode_build)]
+    rim_workload_tenancy: bool,
 }
 impl ThrottleMiddleware {
     pub fn new(
         #[cfg(fbcode_build)] rim_backend: Option<RimBackend>,
         #[cfg(fbcode_build)] rim_regional_backend: Option<(RimBackend, String)>,
+        #[cfg(fbcode_build)] rim_workload_tenancy: bool,
     ) -> Self {
         Self {
             #[cfg(fbcode_build)]
             rim_backend,
             #[cfg(fbcode_build)]
             rim_regional_backend,
+            #[cfg(fbcode_build)]
+            rim_workload_tenancy,
         }
     }
 }
@@ -152,10 +157,24 @@ impl Middleware for ThrottleMiddleware {
 
         #[cfg(fbcode_build)]
         if self.rim_backend.is_some() || self.rim_regional_backend.is_some() {
-            let tenant = state
-                .try_borrow::<MetadataState>()
-                .map(|metadata| metadata.metadata().tenant_info());
-            if let Some(tenant) = tenant {
+            let scopes = [
+                self.rim_regional_backend
+                    .as_ref()
+                    .map(|(backend, region)| (*backend, Some(region.as_str()))),
+                self.rim_backend.map(|backend| (backend, None)),
+            ];
+            let paths = state.try_borrow::<MetadataState>().map(|metadata| {
+                scopes.map(|scope| {
+                    let (backend, region) = scope?;
+                    let path = if self.rim_workload_tenancy {
+                        metadata.metadata().rim_tenancy_path(region).into_vec()
+                    } else {
+                        legacy_tenancy_path(&metadata.metadata().tenant_info(), region)?
+                    };
+                    Some((backend, path))
+                })
+            });
+            if let Some(paths) = paths {
                 // Older clients keep QPS-only accounting. Fetch counts are advisory.
                 let fetches = (Method::borrow_from(state) == Method::POST)
                     .then(|| {
@@ -183,17 +202,8 @@ impl Middleware for ThrottleMiddleware {
                     .flatten()
                     .map(|(resource, units)| (resource.to_owned(), units))
                     .collect();
-                let scopes = [
-                    self.rim_regional_backend
-                        .as_ref()
-                        .map(|(backend, region)| (*backend, Some(region.as_str()))),
-                    self.rim_backend.map(|backend| (backend, None)),
-                ];
                 // Global accounting sees only traffic that proceeds past the regional stage.
-                for (backend, region) in scopes.into_iter().flatten() {
-                    let Some(path) = tenancy_path(&tenant, region) else {
-                        continue;
-                    };
+                for (backend, path) in paths.into_iter().flatten() {
                     if let Some(response) =
                         apply_rim_decision(state, &ctx, &path, backend, &requirements).await
                     {

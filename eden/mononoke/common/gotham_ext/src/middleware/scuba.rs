@@ -366,7 +366,7 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         // Tenancy-relevant columns (client_category, ci_purpose, atlas_*, faas)
         // are logged in one place, shared with the wireproto path.
-        scuba.add_tenant_info(&metadata.tenant_info());
+        scuba.add_tenant_info(metadata);
 
         // The EdenAPI path does not call MononokeScubaSampleBuilder::add_metadata,
         // so the metadata-derived columns below are populated here by hand to
