@@ -724,6 +724,9 @@ class mempatchbackend(abstractbackend):
         return fname in self.ctx
 
     def setfile(self, fname, data, mode, copysource):
+        if data is None:
+            # Mode-only change: keep the existing content.
+            data = self.ctx[fname].data()
         self.store.setfile(fname, data, mode, copysource)
 
 

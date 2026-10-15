@@ -1325,8 +1325,8 @@ Invalid patch
   
   patching file editedfile
   Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file editedfile.rej
-  abort: patch failed to apply
+  abort: selected changes do not apply to editedfile
+  (an edited hunk no longer matches the file; select it again without editing, or keep its context lines unchanged)
   [255]
   $ cat editedfile
   This change will not be committed
@@ -1336,16 +1336,12 @@ Invalid patch
   This is the first line
   This change will be committed
   This is the third line
-  $ cat editedfile.rej
-  --- editedfile
-  +++ editedfile
-  @@ -1,3 +1,3 @@
-  -That is the first line
-  -That change will be committed
-  -That is the third line
-  +That change will not be committed
-  +That is the second line
-  +That line has been added
+
+The selection is applied in memory, so no rejects file is written to the
+working copy.
+
+  $ test -f editedfile.rej
+  [1]
 
 Malformed patch - error handling
 

@@ -1784,7 +1784,15 @@ def _docommit(ui, repo, *pats, **opts):
     if opts.get(r"interactive"):
         opts.pop(r"interactive")
         ret = cmdutil.dorecord(
-            ui, repo, commit, None, False, cmdutil.recordfilter, *pats, **opts
+            ui,
+            repo,
+            commit,
+            None,
+            False,
+            cmdutil.recordfilter,
+            *pats,
+            inmemory=True,
+            **opts,
         )
         # ret can be 0 (no changes to record) or the value returned by
         # commit(), 1 if nothing changed or None on success.

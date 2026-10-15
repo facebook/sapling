@@ -61,6 +61,7 @@ from . import (
     templater,
     util,
     vfs as vfsmod,
+    wcoverlay,
 )
 from .i18n import _, _x
 from .node import bin, hex, nullid, nullrev, short
@@ -378,7 +379,23 @@ def recordfilter(ui, originalhunks, operation=None):
     return newchunks, newopts
 
 
-def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opts):
+def dorecord(
+    ui,
+    repo,
+    commitfunc,
+    cmdsuggest,
+    backupall,
+    filterfn,
+    *pats,
+    inmemory=False,
+    **opts,
+):
+    """Select changes with ``filterfn`` and pass them to ``commitfunc``.
+
+    With ``inmemory``, ``commitfunc`` sees the selected content through a
+    working copy overlay and the files on disk are left untouched. Otherwise
+    the working copy is temporarily rewritten to the selected content.
+    """
     if not ui.interactive():
         if cmdsuggest:
             msg = _("running non-interactively, use %s instead") % cmdsuggest
@@ -454,6 +471,11 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         if not newfiles:
             ui.status(_("no changes to record\n"))
             return 0
+
+        if inmemory and ui.configbool("record", "inmemory", True):
+            ui.metrics.inc("record.inmemory", 1)
+            return _commitselectedinmemory(ui, repo, commitfunc, chunks, newfiles, opts)
+        ui.metrics.inc("record.workingcopy", 1)
 
         modified = set(status.modified)
 
@@ -587,6 +609,60 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             return recordfunc(ui, repo, message, match, opts)
 
     return commit(ui, repo, recordinwlock, pats, opts)
+
+
+def _commitselectedinmemory(ui, repo, commitfunc, chunks, newfiles, opts):
+    """Run ``commitfunc`` with the selected chunks overlaid on the working copy"""
+    fp = io.BytesIO()
+    for c in chunks:
+        c.write(fp)
+    patchdata = fp.getvalue()
+
+    if opts.get("review", False):
+        patchtext = (
+            crecordmod.diffhelptext + crecordmod.patchhelptext + patchdata.decode()
+        )
+        patchdata = ui.edit(patchtext, "", action="diff", repopath=repo.path).encode()
+
+    overlay = selectedcontents(ui, repo, patchdata, newfiles)
+    with wcoverlay.applied(repo, overlay):
+        return commitfunc(ui, repo, *[repo.wjoin(f) for f in newfiles], **opts)
+
+
+def selectedcontents(ui, repo, patchdata, paths):
+    """Apply a patch to the working copy parent in memory.
+
+    Return {path: (data, flags)} for each of ``paths`` that exists after the
+    patch. Paths removed by the patch are omitted.
+    """
+    p1 = repo["."]
+
+    def p1filectx(_repo, _memctx, path):
+        return p1[path] if path in p1 else None
+
+    mctx = context.memctx(repo, [p1], "", [], p1filectx)
+    store = patch.mempatchstore(mctx)
+    backend = patch.mempatchbackend(ui, mctx, store)
+    try:
+        ret = patch.applydiff(ui, io.BytesIO(patchdata), backend, store)
+    except error.PatchError as err:
+        raise error.Abort(str(err)) from err
+    if ret < 0:
+        # Only a hunk edited during selection can fail to apply.
+        raise error.Abort(
+            _("selected changes do not apply to %s") % ", ".join(backend.rejs),
+            hint=_(
+                "an edited hunk no longer matches the file; select it again "
+                "without editing, or keep its context lines unchanged"
+            ),
+        )
+
+    contents = {}
+    for path in paths:
+        fctx = mctx[path]
+        if fctx is not None:
+            contents[path] = (fctx.data(), fctx.flags())
+    return contents
 
 
 class dirnode:
@@ -4271,7 +4347,7 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
         # and modified in the amend to "normal" in the dirstate.
         normalfiles = set(status.modified + status.added) & filestoamend
         for f in normalfiles:
-            dirstate.normal(f)
+            wcoverlay.marknormal(repo, f)
 
         # Update the state of files which were removed in the amend
         # to "removed" in the dirstate.

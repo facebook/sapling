@@ -1,6 +1,9 @@
   $ enable amend
   $ setconfig diff.git=true
 
+The backup and restore logic only applies to the legacy implementation.
+  $ setconfig record.inmemory=false
+
 Extension to inject two errors:
 - Applying patch to working copy fails.
 - Restoring the first backup file fails.

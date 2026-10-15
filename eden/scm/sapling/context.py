@@ -36,6 +36,7 @@ from . import (
     revlog,
     scmutil,
     util,
+    wcoverlay,
 )
 from .i18n import _
 from .node import (
@@ -1567,7 +1568,15 @@ class committablectx(basectx):
 
     @propertycache
     def _flagfunc(self):
-        func = self._repo.dirstate.flagfunc(self._buildflagfunc)
+        repo = self._repo
+        dirstateflags = repo.dirstate.flagfunc(self._buildflagfunc)
+
+        def func(path, orig=dirstateflags):
+            overlaid = wcoverlay.lookup(repo, path)
+            if overlaid is not None:
+                return overlaid[1]
+            return orig(path)
+
         if git.isgitformat(self._repo):
             # change submodule flags to 'm'
             submodules = git.parsesubmodules(self)
@@ -1837,7 +1846,7 @@ class committablectx(basectx):
 
         with self._repo.dirstate.parentchange():
             for f in self.modified() + self.added():
-                self._repo.dirstate.normal(f)
+                wcoverlay.marknormal(self._repo, f)
             for f in self.removed():
                 self._repo.dirstate.delete(f)
             self._repo.dirstate.setparents(node)
@@ -2260,6 +2269,9 @@ class workingfilectx(committablefilectx):
         return self._filenode
 
     def data(self):
+        overlaid = wcoverlay.lookup(self._repo, self._path)
+        if overlaid is not None:
+            return overlaid[0]
         try:
             return self._repo.wread(self._path)
         except IOError as e:
@@ -2277,6 +2289,9 @@ class workingfilectx(committablefilectx):
         return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
 
     def size(self):
+        overlaid = wcoverlay.lookup(self._repo, self._path)
+        if overlaid is not None:
+            return len(overlaid[0])
         return self._repo.wvfs.lstat(self._path).st_size
 
     def date(self):

@@ -325,7 +325,15 @@ def amend(ui, repo, *pats, **opts):
             # Strip the interactive flag to avoid infinite recursive loop
             opts.pop("interactive")
             cmdutil.dorecord(
-                ui, repo, amend, None, False, cmdutil.recordfilter, *pats, **opts
+                ui,
+                repo,
+                amend,
+                None,
+                False,
+                cmdutil.recordfilter,
+                *pats,
+                inmemory=True,
+                **opts,
             )
             return
 
