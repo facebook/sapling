@@ -13,7 +13,7 @@ use std::sync::atomic::Ordering;
 
 use context::CoreContext;
 use mononoke_types::NonRootMPath;
-use restricted_paths::DenyingRestriction;
+pub use restricted_paths::DenyingRestriction;
 use restricted_paths::PathRestrictionInfo;
 use restricted_paths::PermissionRequestGroup;
 
@@ -138,13 +138,6 @@ impl RestrictedPathsPolicy {
             Self::SkipAndCollect(Arc::new(OmissionCollector::default()))
         } else {
             Self::Strict
-        }
-    }
-
-    /// Record one omitted path.
-    pub fn record_omission(&self) {
-        if let Self::SkipAndCollect(collector) = self {
-            collector.omitted.fetch_add(1, Ordering::Relaxed);
         }
     }
 
@@ -324,7 +317,6 @@ mod tests {
 
         let strict = RestrictedPathsPolicy::Strict;
         strict.record_denial(&denying_restriction("tent", "REPO_REGION:tent_acl")?);
-        strict.record_omission();
         assert_eq!(strict.omitted_count(), None);
         assert_eq!(strict.omitted_groups(), None);
         Ok(())

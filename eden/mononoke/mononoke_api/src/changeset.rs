@@ -90,6 +90,7 @@ use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
+use restricted_paths::DenyingRestriction;
 use restricted_paths::RestrictedPathsArc;
 use restricted_paths::check_path_restriction_infos;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -296,9 +297,8 @@ fn to_vec1<X>(maybe_vec: Option<Vec<X>>) -> Option<Vec1<X>> {
 pub enum PathVisibility<R> {
     /// Caller is entitled: content context for the visible side.
     Present(ChangesetPathContentContext<R>),
-    /// Restricted-path denial: the side becomes None and the caller sets
-    /// the partial-response flag.
-    Denied,
+    /// Restricted-path denial, carrying the denying restriction.
+    Denied(DenyingRestriction),
 }
 
 /// Classify one side of a diff pair under partial-response semantics.
@@ -1107,8 +1107,10 @@ where
     ) -> Result<PathVisibility<R>, MononokeError> {
         match self.path_with_content(path.clone()).await {
             Ok(ctx) => Ok(PathVisibility::Present(ctx)),
-            Err(e) if e.is_restricted_path_denial() => Ok(PathVisibility::Denied),
-            Err(e) => Err(e),
+            Err(e) => match e.restricted_paths_denial() {
+                Some(denial) => Ok(PathVisibility::Denied(denial.denying_restriction().clone())),
+                None => Err(e),
+            },
         }
     }
 }

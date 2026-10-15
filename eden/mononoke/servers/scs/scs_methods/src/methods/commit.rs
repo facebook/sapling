@@ -39,6 +39,7 @@ use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CopyInfo;
+use mononoke_api::DenyingRestriction;
 use mononoke_api::FingerprintVersion;
 use mononoke_api::MetadataDiff;
 use mononoke_api::MononokeError;
@@ -306,14 +307,15 @@ fn filter_visible_paths<S, F, Fut>(
 where
     S: Stream<Item = Result<MPath, MononokeError>> + Send,
     F: FnMut(MPath) -> Fut + Send,
-    Fut: Future<Output = Result<Option<String>, MononokeError>> + Send,
+    Fut:
+        Future<Output = Result<(Option<String>, Option<DenyingRestriction>), MononokeError>> + Send,
 {
     paths
         .map_ok(check)
         .try_buffered(50)
-        .try_filter_map(move |kept| {
-            if kept.is_none() {
-                policy.record_omission();
+        .try_filter_map(move |(kept, denial)| {
+            if let Some(restriction) = denial {
+                policy.record_denial(&restriction);
             }
             futures::future::ready(Ok(kept))
         })
@@ -665,7 +667,7 @@ impl SourceControlServiceImpl {
                                         ))
                                         .into());
                                     }
-                                    PathVisibility::Denied => (None, true),
+                                    PathVisibility::Denied(_) => (None, true),
                                 },
                             },
                             None => (None, false),
@@ -690,7 +692,7 @@ impl SourceControlServiceImpl {
                                                     ))
                                                     .into());
                                                 }
-                                                PathVisibility::Denied => (None, true),
+                                                PathVisibility::Denied(_) => (None, true),
                                             },
                                         }
                                     }
@@ -722,7 +724,7 @@ impl SourceControlServiceImpl {
                                                 ))
                                                 .into());
                                             }
-                                            PathVisibility::Denied => (None, true),
+                                            PathVisibility::Denied(_) => (None, true),
                                         }
                                     }
                                 }
@@ -844,7 +846,7 @@ impl SourceControlServiceImpl {
         Ok(thrift::CommitFileDiffsResponse {
             path_diffs,
             stopped_at_pair,
-            partial_info: super::partial_response_info(policy.omitted_count()),
+            partial_info: super::partial_response_info(&policy),
             ..Default::default()
         })
     }
@@ -1042,7 +1044,7 @@ impl SourceControlServiceImpl {
         // context flag. Remote path returns early above with diff_service's
         // own verdict untouched.
         let mut response = result.response;
-        response.partial_info = super::partial_response_info(policy.omitted_count());
+        response.partial_info = super::partial_response_info(&policy);
         Ok(response)
     }
 
@@ -1098,8 +1100,8 @@ impl SourceControlServiceImpl {
                 let changeset = changeset.clone();
                 async move {
                     match changeset.check_path_visibility(&path).await {
-                        Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
-                        Ok(PathVisibility::Denied) => Ok(None),
+                        Ok(PathVisibility::Present(_)) => Ok((Some(path.to_string()), None)),
+                        Ok(PathVisibility::Denied(restriction)) => Ok((None, Some(restriction))),
                         Err(e) => Err(e),
                     }
                 }
@@ -1117,7 +1119,7 @@ impl SourceControlServiceImpl {
 
         Ok(thrift::CommitFindFilesResponse {
             files,
-            partial_info: super::partial_response_info(policy.omitted_count()),
+            partial_info: super::partial_response_info(&policy),
             ..Default::default()
         })
     }
@@ -1188,8 +1190,8 @@ impl SourceControlServiceImpl {
                     let changeset = changeset.clone();
                     async move {
                         match changeset.check_path_visibility(&path).await {
-                            Ok(PathVisibility::Present(_)) => Ok(Some(path.to_string())),
-                            Ok(PathVisibility::Denied) => Ok(None),
+                            Ok(PathVisibility::Present(_)) => Ok((Some(path.to_string()), None)),
+                            Ok(PathVisibility::Denied(restriction)) => Ok((None, Some(restriction))),
                             Err(e) => Err(e),
                         }
                     }
@@ -1220,7 +1222,7 @@ impl SourceControlServiceImpl {
                 policy.set_partial_if_omitted(&ctx);
                 yield Ok(thrift::CommitFindFilesStreamItem {
                     files: vec![],
-                    partial_info: super::partial_response_info(policy.omitted_count()),
+                    partial_info: super::partial_response_info(&policy),
                     ..Default::default()
                 });
             }
@@ -2116,16 +2118,28 @@ mod run_as_tests {
 
 #[cfg(test)]
 mod find_files_filter_tests {
+    use std::str::FromStr;
     use std::sync::Arc;
 
     use futures::stream;
     use mononoke_api::OmissionCollector;
     use mononoke_macros::mononoke;
+    use mononoke_types::NonRootMPath;
+    use restricted_paths::DenyingRestriction;
 
     use super::*;
 
     fn counting_policy() -> RestrictedPathsPolicy {
         RestrictedPathsPolicy::SkipAndCollect(Arc::new(OmissionCollector::default()))
+    }
+
+    fn denying_restriction() -> DenyingRestriction {
+        let acl = MononokeIdentity::from_str("REPO_REGION:test_acl").expect("test ACL parses");
+        DenyingRestriction {
+            restriction_root: Some(NonRootMPath::new("restricted").expect("test root parses")),
+            repo_region_acl: acl.clone(),
+            permission_request_group: acl,
+        }
     }
 
     fn numbered_paths(n: usize) -> Vec<MPath> {
@@ -2152,9 +2166,9 @@ mod find_files_filter_tests {
                     for _ in 0..100 {
                         tokio::task::yield_now().await;
                     }
-                    Ok(Some(path.to_string()))
+                    Ok((Some(path.to_string()), None))
                 } else {
-                    Ok(None)
+                    Ok((None, Some(denying_restriction())))
                 }
             },
         )
@@ -2163,6 +2177,10 @@ mod find_files_filter_tests {
         .expect("filtering succeeds");
         assert_eq!(files, vec!["file000".to_string()]);
         assert_eq!(policy.omitted_count(), Some(0));
+        assert_eq!(
+            policy.omitted_groups(),
+            Some(std::collections::BTreeMap::new()),
+        );
     }
 
     #[mononoke::test]
@@ -2187,9 +2205,9 @@ mod find_files_filter_tests {
                     for _ in 0..100 {
                         tokio::task::yield_now().await;
                     }
-                    Ok(Some(path.to_string()))
+                    Ok((Some(path.to_string()), None))
                 } else {
-                    Ok(None)
+                    Ok((None, Some(denying_restriction())))
                 }
             },
         )
@@ -2198,5 +2216,12 @@ mod find_files_filter_tests {
         .expect("filtering succeeds");
         assert_eq!(files.len(), 3);
         assert_eq!(policy.omitted_count(), Some(3));
+        assert_eq!(
+            policy.omitted_groups(),
+            Some(std::collections::BTreeMap::from([(
+                denying_restriction(),
+                3
+            )])),
+        );
     }
 }

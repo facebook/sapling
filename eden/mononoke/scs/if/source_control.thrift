@@ -2515,12 +2515,30 @@ union RepoUpdateSubmoduleExpansionResult {
   2: MegarepoAsynchronousRequestError error;
 }
 
+/// Omitted paths grouped by the restriction that denied them. Entries are
+/// deduplicated by restriction: even thousands of omissions collapse to a
+/// handful of groups. Clients map a denied path to its group by longest
+/// `restriction_root` prefix match.
+struct OmittedRestrictionGroup {
+  /// Restriction root (directory containing the `.slacl`). Absent when the
+  /// denying source cannot report one (manifest denials).
+  1: optional string restriction_root;
+  /// Repo-region ACL of the denying restriction, e.g. "REPO_REGION:...".
+  2: string repo_region_acl;
+  /// Group the caller should request for access.
+  3: string permission_request_group;
+  /// Omitted paths denied under this restriction.
+  4: i64 omitted_count;
+}
+
 /// Partial-response signal: when the server omits entries due to
 /// restricted-path denials instead of failing the request, it sets this
 /// field so typed clients get an exact verdict. `partial` is true iff
 /// entries were omitted; `omitted_restricted_paths_count` carries the count
 /// when known up front (unary) and is absent when the count lives only in
-/// Scuba (streams). The field is populated when partial responses are
+/// Scuba (streams). `omitted_by_restriction` breaks the count down by
+/// denying restriction, and is absent when the server did not collect
+/// groups for this request. The field is populated when partial responses are
 /// allowed for the request: the `scs_enable_partial_responses` killswitch
 /// is on for the repo, or the client sent the opt-in request header,
 /// unless the client sent the opt-out request header. Its
@@ -2531,6 +2549,7 @@ union RepoUpdateSubmoduleExpansionResult {
 struct PartialResponseInfo {
   1: bool partial;
   2: optional i64 omitted_restricted_paths_count;
+  3: optional list<OmittedRestrictionGroup> omitted_by_restriction;
 }
 
 struct CommitCompareResponse {

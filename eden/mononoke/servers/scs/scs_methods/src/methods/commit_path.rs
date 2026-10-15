@@ -162,7 +162,7 @@ impl SourceControlServiceImpl {
 
         Ok(thrift::CommitMultiplePathInfoResponse {
             path_info: result,
-            partial_info: super::partial_response_info(policy.omitted_count()),
+            partial_info: super::partial_response_info(&policy),
             ..Default::default()
         })
     }
@@ -762,7 +762,7 @@ impl SourceControlServiceImpl {
 
         Ok(thrift::CommitMultiplePathLastChangedResponse {
             path_last_change,
-            partial_info: super::partial_response_info(policy.omitted_count()),
+            partial_info: super::partial_response_info(&policy),
             ..Default::default()
         })
     }

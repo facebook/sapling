@@ -95,6 +95,7 @@ pub use crate::repo::create_changeset::CreateInfo;
 pub use crate::repo::land_stack::PushrebaseOutcome;
 pub use crate::repo::update_submodule_expansion::SubmoduleExpansionUpdate;
 pub use crate::repo::update_submodule_expansion::SubmoduleExpansionUpdateCommitInfo;
+pub use crate::restricted_paths::DenyingRestriction;
 pub use crate::restricted_paths::OmissionCollector;
 pub use crate::restricted_paths::PathAccessInfo;
 pub use crate::restricted_paths::RestrictedChangeGroup;

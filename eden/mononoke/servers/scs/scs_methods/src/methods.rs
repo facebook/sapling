@@ -8,6 +8,7 @@
 use context::CoreContext;
 use itertools::Itertools;
 use metaconfig_types::CommitIdentityScheme;
+use mononoke_api::RestrictedPathsPolicy;
 use source_control as thrift;
 
 use crate::from_request::FromRequest;
@@ -27,20 +28,41 @@ pub(crate) mod megarepo;
 pub(crate) mod repo;
 pub(crate) mod tree;
 
-/// Partial-response verdict for a unary method, from the method's total
-/// omitted-restricted count. `Some` carrying the exact signal when partial
-/// responses are allowed for this request (`None`, field unset, when not).
-/// The caller sets `nocache: 1` from the same flag, so a cached partial can
-/// never be served to an entitled caller.
+/// Partial-response verdict for a unary method, from the request's omission
+/// policy. `Some` carrying the exact signal when partial responses are
+/// allowed for this request (`None`, field unset, when not). Group counts
+/// reconcile with the total by construction: every recorded omission carries
+/// its denying restriction. The caller sets `nocache: 1` from the same flag,
+/// so a cached partial can never be served to an entitled caller.
 pub(crate) fn partial_response_info(
-    omitted_restricted_paths_count: Option<usize>,
+    policy: &RestrictedPathsPolicy,
 ) -> Option<thrift::PartialResponseInfo> {
-    omitted_restricted_paths_count.map(|omitted_restricted_paths_count| {
-        thrift::PartialResponseInfo {
-            partial: omitted_restricted_paths_count > 0,
-            omitted_restricted_paths_count: Some(omitted_restricted_paths_count as i64),
-            ..Default::default()
-        }
+    let omitted_restricted_paths_count = policy.omitted_count()?;
+    let omitted_by_restriction = policy
+        .omitted_groups()
+        .map(|collected| {
+            collected
+                .into_iter()
+                .map(
+                    |(restriction, omitted_count)| thrift::OmittedRestrictionGroup {
+                        restriction_root: restriction.restriction_root.map(|root| root.to_string()),
+                        repo_region_acl: restriction.repo_region_acl.to_string(),
+                        permission_request_group: restriction
+                            .permission_request_group
+                            .id_data()
+                            .to_string(),
+                        omitted_count: omitted_count as i64,
+                        ..Default::default()
+                    },
+                )
+                .collect::<Vec<_>>()
+        })
+        .filter(|groups| !groups.is_empty());
+    Some(thrift::PartialResponseInfo {
+        partial: omitted_restricted_paths_count > 0,
+        omitted_restricted_paths_count: Some(omitted_restricted_paths_count as i64),
+        omitted_by_restriction,
+        ..Default::default()
     })
 }
 
@@ -92,22 +114,80 @@ impl SourceControlServiceImpl {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+    use std::sync::Arc;
+
+    use mononoke_api::OmissionCollector;
     use mononoke_macros::mononoke;
+    use mononoke_types::NonRootMPath;
+    use permission_checker::MononokeIdentity;
+    use restricted_paths::DenyingRestriction;
 
     use super::*;
 
+    fn collecting_policy() -> RestrictedPathsPolicy {
+        RestrictedPathsPolicy::SkipAndCollect(Arc::new(OmissionCollector::default()))
+    }
+
+    fn denying_restriction(
+        root: Option<&str>,
+        acl: &str,
+        group: &str,
+    ) -> anyhow::Result<DenyingRestriction> {
+        Ok(DenyingRestriction {
+            restriction_root: root.map(NonRootMPath::new).transpose()?,
+            repo_region_acl: MononokeIdentity::from_str(acl)?,
+            permission_request_group: MononokeIdentity::from_str(group)?,
+        })
+    }
+
     #[mononoke::test]
-    fn test_partial_response_info() {
+    fn test_partial_response_info() -> anyhow::Result<()> {
         // Not allowed: no field.
-        assert!(partial_response_info(None).is_none());
+        assert!(partial_response_info(&RestrictedPathsPolicy::Strict).is_none());
         // Allowed: always populated; `partial` iff count is positive,
         // agreeing with the `nocache` decision (set iff count positive) by
-        // construction.
-        let complete = partial_response_info(Some(0)).expect("populated when allowed");
+        // construction. A complete response carries no groups.
+        let complete = partial_response_info(&collecting_policy()).expect("populated when allowed");
         assert!(!complete.partial);
         assert_eq!(complete.omitted_restricted_paths_count, Some(0));
-        let partial = partial_response_info(Some(3)).expect("populated when allowed");
+        assert_eq!(complete.omitted_by_restriction, None);
+
+        // Denials are grouped by restriction; group counts sum to the total.
+        // A group whose source reports no root omits it; the request group
+        // renders as its data portion.
+        let policy = collecting_policy();
+        let tent_a = denying_restriction(Some("tent_a"), "REPO_REGION:a_acl", "GROUP:a_group")?;
+        let rootless =
+            denying_restriction(None, "REPO_REGION:manifest_acl", "REPO_REGION:manifest_acl")?;
+        policy.record_denial(&tent_a);
+        policy.record_denial(&rootless);
+        policy.record_denial(&tent_a);
+        let partial = partial_response_info(&policy).expect("populated when allowed");
         assert!(partial.partial);
         assert_eq!(partial.omitted_restricted_paths_count, Some(3));
+        let groups = partial
+            .omitted_by_restriction
+            .expect("partial response carries groups");
+        assert_eq!(groups.len(), 2);
+        assert_eq!(
+            groups.iter().map(|group| group.omitted_count).sum::<i64>(),
+            3,
+        );
+        let tent_group = groups
+            .iter()
+            .find(|group| group.restriction_root.as_deref() == Some("tent_a"))
+            .expect("tent_a group present");
+        assert_eq!(tent_group.repo_region_acl, "REPO_REGION:a_acl");
+        assert_eq!(tent_group.permission_request_group, "a_group");
+        assert_eq!(tent_group.omitted_count, 2);
+        let rootless_group = groups
+            .iter()
+            .find(|group| group.restriction_root.is_none())
+            .expect("rootless group present");
+        assert_eq!(rootless_group.repo_region_acl, "REPO_REGION:manifest_acl");
+        assert_eq!(rootless_group.permission_request_group, "manifest_acl");
+        assert_eq!(rootless_group.omitted_count, 1);
+        Ok(())
     }
 }
