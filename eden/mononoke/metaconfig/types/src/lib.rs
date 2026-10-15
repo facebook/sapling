@@ -186,8 +186,6 @@ pub struct RepoConfig {
     pub enabled: bool,
     /// Persistent storage for this repo
     pub storage_config: StorageConfig,
-    /// How large a cache to use (in bytes) for RepoGenCache derived information
-    pub generation_cache_size: usize,
     /// Numerical repo id of the repo.
     pub repoid: RepositoryId,
     /// Scuba table for logging hook executions
@@ -208,8 +206,6 @@ pub struct RepoConfig {
     pub pushrebase: PushrebaseParams,
     /// LFS configuration options
     pub lfs: LfsParams,
-    /// What percent of read request verifies that returned content matches the hash
-    pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
     pub readonly: RepoReadOnly,
     /// Should files be checked for redaction
@@ -292,8 +288,6 @@ pub struct RepoConfig {
     pub git_configs: GitConfigs,
     /// Configuration for the modern sync job
     pub modern_sync_config: Option<ModernSyncConfig>,
-    /// Expose continuous stats about repo contents, this is for when mononoke server is the receiving end of a sync
-    pub log_repo_stats: bool,
     /// Configuration controlling the caching mechanism used for different types of Mononoke metadata
     /// (e.g. bookmarks, bonsai hash mappings, git symref mappings, etc.)
     pub metadata_cache_config: Option<MetadataCacheConfig>,
@@ -405,9 +399,6 @@ pub struct DerivedDataConfig {
 
     /// All available configs for derived data types
     pub available_configs: HashMap<String, DerivedDataTypesConfig>,
-
-    /// Name of scuba table to log all derivation queue operations
-    pub derivation_queue_scuba_table: Option<String>,
 
     /// Name of scuba table to log every bonsai<->hg mapping write to
     pub bonsai_hg_mapping_scuba_table: Option<String>,
@@ -878,11 +869,6 @@ pub struct BookmarkParams {
     /// bookmark. That also implies that it's not longer possible to
     /// pushrebase to these bookmarks.
     pub ensure_ancestor_of: Option<BookmarkKey>,
-    /// This option allows moving a bookmark to a commit that's already
-    /// public while bypassing all the hooks. Note that should be fine,
-    /// because commit is already public, meaning that hooks already
-    /// should have been run when the commit was first made public.
-    pub allow_move_to_public_commits_without_hooks: bool,
 }
 
 /// The type of the hook

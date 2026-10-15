@@ -287,9 +287,6 @@ impl Convert for RawBookmarkConfig {
             .map(BookmarkKey::new)
             .collect::<Result<Vec<_>, _>>()?;
         let ensure_ancestor_of = self.ensure_ancestor_of.map(BookmarkKey::new).transpose()?;
-        let allow_move_to_public_commits_without_hooks = self
-            .allow_move_to_public_commits_without_hooks
-            .unwrap_or(false);
 
         Ok(BookmarkParams {
             bookmark: bookmark_or_regex,
@@ -300,7 +297,6 @@ impl Convert for RawBookmarkConfig {
             rewrite_dates,
             hooks_skip_ancestors_of,
             ensure_ancestor_of,
-            allow_move_to_public_commits_without_hooks,
         })
     }
 }
@@ -721,7 +717,6 @@ impl Convert for RawDerivedDataConfig {
                 .into_iter()
                 .map(|(s, raw_config)| Ok((s, raw_config.convert()?)))
                 .collect::<Result<_, anyhow::Error>>()?,
-            derivation_queue_scuba_table: self.derivation_queue_scuba_table,
             bonsai_hg_mapping_scuba_table: self.bonsai_hg_mapping_scuba_table,
             remote_derivation_config: self
                 .remote_derivation_config

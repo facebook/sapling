@@ -427,13 +427,11 @@ fn build_repo_config(
         hooks,
         redaction,
         mirror_upload_redaction_bypass_enabled,
-        generation_cache_size,
         scuba_table_hooks,
         cache_warmup,
         push,
         pushrebase,
         lfs,
-        hash_validation_percentage,
         infinitepush,
         list_keys_patterns_max,
         filestore,
@@ -465,7 +463,6 @@ fn build_repo_config(
         mononoke_cas_sync_config,
         git_configs,
         modern_sync_config,
-        log_repo_stats,
         metadata_cache_config,
         directory_branch_cluster_config,
         restricted_paths_config,
@@ -510,11 +507,6 @@ fn build_repo_config(
 
     let lfs = lfs.convert()?.unwrap_or_default();
 
-    let hash_validation_percentage = hash_validation_percentage
-        .map(|v| v.try_into())
-        .transpose()?
-        .unwrap_or(0);
-
     let redaction = if redaction.unwrap_or(true) {
         Redaction::Enabled
     } else {
@@ -525,11 +517,6 @@ fn build_repo_config(
         mirror_upload_redaction_bypass_enabled.unwrap_or(false);
 
     let infinitepush = infinitepush.convert()?.unwrap_or_default();
-
-    let generation_cache_size: usize = generation_cache_size
-        .map(|v| v.try_into())
-        .transpose()?
-        .unwrap_or(10 * 1024 * 1024);
 
     let list_keys_patterns_max: u64 = list_keys_patterns_max
         .map(|v| v.try_into())
@@ -574,7 +561,6 @@ fn build_repo_config(
     let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
     let mononoke_cas_sync_config = mononoke_cas_sync_config.convert()?;
     let modern_sync_config = modern_sync_config.convert()?;
-    let log_repo_stats = log_repo_stats.unwrap_or(false);
     let objects_count_multiplier = objects_count_multiplier.map(ObjectsCountMultiplier::new);
     let metadata_cache_config = metadata_cache_config
         .map(|cache_config| cache_config.convert())
@@ -594,7 +580,6 @@ fn build_repo_config(
     Ok(RepoConfig {
         enabled: metadata.enabled,
         storage_config,
-        generation_cache_size,
         repoid: metadata.repoid,
         scuba_table_hooks,
         scuba_local_path_hooks,
@@ -605,7 +590,6 @@ fn build_repo_config(
         push,
         pushrebase,
         lfs,
-        hash_validation_percentage,
         readonly: metadata.readonly,
         redaction,
         mirror_upload_redaction_bypass_enabled,
@@ -642,7 +626,6 @@ fn build_repo_config(
         mononoke_cas_sync_config,
         git_configs,
         modern_sync_config,
-        log_repo_stats,
         metadata_cache_config,
         enable_git_bundle_uri: metadata.enable_git_bundle_uri,
         directory_branch_cluster_config,
@@ -1242,7 +1225,6 @@ mod test {
     #[mononoke::test]
     fn test_read_manifest() {
         let fbsource_content = r#"
-            generation_cache_size=1048576
             scuba_table_hooks="scm_hooks"
             storage_config="main"
             list_keys_patterns_max=123
@@ -1283,7 +1265,6 @@ mod test {
             [[bookmarks]]
             regex="[^/]*/stable"
             ensure_ancestor_of="master"
-            allow_move_to_public_commits_without_hooks=true
 
             [[hooks]]
             name="hook1"
@@ -1328,9 +1309,6 @@ mod test {
 
             [source_control_service_monitoring]
             bookmarks_to_report_age= ["master", "master2"]
-
-            [repo_client_knobs]
-            allow_short_getpack_history = true
 
             [walker_config]
             scrub_enabled = true
@@ -1589,7 +1567,6 @@ mod test {
                 default_commit_identity_scheme: CommitIdentityScheme::default(),
                 directory_branch_cluster_config: None,
                 storage_config: main_storage_config.clone(),
-                generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
                 scuba_table_hooks: Some("scm_hooks".to_string()),
                 scuba_local_path_hooks: None,
@@ -1613,7 +1590,6 @@ mod test {
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
                         ensure_ancestor_of: None,
-                        allow_move_to_public_commits_without_hooks: false,
                     },
                     BookmarkParams {
                         bookmark: ComparableRegex::new("[^/]*/stable").unwrap().into(),
@@ -1624,7 +1600,6 @@ mod test {
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
                         ensure_ancestor_of: Some(BookmarkKey::new("master").unwrap()),
-                        allow_move_to_public_commits_without_hooks: true,
                     },
                 ],
                 hooks: vec![
@@ -1697,7 +1672,6 @@ mod test {
                     rollout_percentage: 56,
                     use_upstream_lfs_server: false,
                 },
-                hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
                 mirror_upload_redaction_bypass_enabled: false,
@@ -1753,7 +1727,6 @@ mod test {
                         xdb_mapping_shard_ids: Default::default(),
                     },],
                     scuba_table: None,
-                    derivation_queue_scuba_table: None,
                     bonsai_hg_mapping_scuba_table: None,
                     remote_derivation_config: None,
                     blocked_derivation: hashmap! {
@@ -1847,7 +1820,6 @@ mod test {
                     preloaded_cgdm_blobstore_key: None,
                 },
                 modern_sync_config: None,
-                log_repo_stats: false,
                 metadata_cache_config: Some(MetadataCacheConfig {
                     wbc_update_mode: Some(MetadataCacheUpdateMode::Tailing {
                         category: "scribe_category".to_string(),
@@ -1892,7 +1864,6 @@ mod test {
                         path: "/tmp/www".into(),
                     },
                 },
-                generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
                 scuba_table_hooks: Some("scm_hooks".to_string()),
                 scuba_local_path_hooks: None,
@@ -1903,7 +1874,6 @@ mod test {
                 push: Default::default(),
                 pushrebase: Default::default(),
                 lfs: Default::default(),
-                hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
                 mirror_upload_redaction_bypass_enabled: false,
@@ -1945,7 +1915,6 @@ mod test {
                     preloaded_cgdm_blobstore_key: None,
                 },
                 modern_sync_config: None,
-                log_repo_stats: false,
                 metadata_cache_config: None,
                 restricted_paths_config: RestrictedPathsConfig::default(),
                 remote_diff_config: None,
@@ -2277,7 +2246,6 @@ mod test {
                     },
                 },
                 repoid: RepositoryId::new(123),
-                generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 ..Default::default()
@@ -2420,7 +2388,6 @@ mod test {
                     mutable_blobstore: BlobConfig::Disabled,
                 },
                 repoid: RepositoryId::new(123),
-                generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 ..Default::default()

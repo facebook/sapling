@@ -846,7 +846,6 @@ def setup_mononoke_repo_config(
 
     append_config(
         f"""
-hash_validation_percentage=100
 everstore_local_path="{everstore_local_path}"
 """,
         "w",
@@ -873,9 +872,6 @@ hipster_acl="{env.getenv("ACL_NAME", "default")}"
     ## if hgchangesets are not derived let's use git
     elif "hgchangesets" not in derived_data_types:
         append_def_config("\ndefault_commit_identity_scheme=3\n")
-
-    if env.getenv("SCUBA_LOGGING_PATH"):
-        append_config(f'\nscuba_local_path="{env.getenv("SCUBA_LOGGING_PATH")}"\n')
 
     if env.getenv("HOOKS_SCUBA_LOGGING_PATH"):
         append_config(
