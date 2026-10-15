@@ -67,12 +67,13 @@ pub async fn load_draft_stack(
 }
 
 /// Rewrites `stack` (bottom first) with `edit` applied to each commit and
-/// saves the results; unchanged commits are skipped. Deterministic.
+/// saves the results. `edit` is told whether a parent was already rewritten;
+/// a commit it leaves alone on unchanged parents is skipped. Deterministic.
 pub async fn rewrite_stack(
     ctx: &CoreContext,
     repo: &(impl CommitGraphRef + CommitGraphWriterRef + RepoBlobstoreRef + RepoIdentityRef),
     stack: Vec<BonsaiChangeset>,
-    mut edit: impl FnMut(ChangesetId, &mut BonsaiChangesetMut) -> Result<()>,
+    mut edit: impl FnMut(ChangesetId, &mut BonsaiChangesetMut, bool) -> Result<()>,
 ) -> Result<Vec<RewrittenCommit>> {
     let mut remap: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mut rewritten = Vec::with_capacity(stack.len());
@@ -80,6 +81,7 @@ pub async fn rewrite_stack(
     for bcs in stack {
         let original = bcs.get_changeset_id();
         let mut bcs = bcs.into_mut();
+        let parents_changed = bcs.parents.iter().any(|parent| remap.contains_key(parent));
         bcs.parents = bcs
             .parents
             .into_iter()
@@ -103,10 +105,16 @@ pub async fn rewrite_stack(
         for key in MUTATION_KEYS {
             bcs.hg_extra.remove(*key);
         }
-        edit(original, &mut bcs)?;
+        // Stripping mutation keys alone must not mint a commit.
+        let unedited = if parents_changed {
+            None
+        } else {
+            Some(bcs.clone().freeze()?.get_changeset_id())
+        };
+        edit(original, &mut bcs, parents_changed)?;
         let bcs = bcs.freeze()?;
         let new_id = bcs.get_changeset_id();
-        if new_id == original {
+        if new_id == original || unedited == Some(new_id) {
             continue;
         }
         remap.insert(original, new_id);

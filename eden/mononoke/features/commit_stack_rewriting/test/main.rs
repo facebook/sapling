@@ -122,7 +122,7 @@ async fn rewrite_replaces_messages_reparents_and_is_deterministic(fb: FacebookIn
         .await?;
 
     let stack = load_draft_stack(&ctx, &repo, top, |cs| cs != base).await?;
-    let edit = |_: ChangesetId, bcs: &mut mononoke_types::BonsaiChangesetMut| {
+    let edit = |_: ChangesetId, bcs: &mut mononoke_types::BonsaiChangesetMut, _: bool| {
         bcs.message = format!("{}\n\nReviewed By: r", bcs.message);
         Ok(())
     };
@@ -158,7 +158,7 @@ async fn rewrite_of_an_empty_stack_is_a_no_op(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
     let rewritten: Vec<RewrittenCommit> =
-        rewrite_stack(&ctx, &repo, Vec::new(), |_, _| Ok(())).await?;
+        rewrite_stack(&ctx, &repo, Vec::new(), |_, _, _| Ok(())).await?;
     assert!(rewritten.is_empty());
     Ok(())
 }
@@ -178,7 +178,9 @@ async fn rewrite_skips_commits_the_edit_leaves_unchanged(fb: FacebookInit) -> Re
         .commit()
         .await?;
     let stack = load_draft_stack(&ctx, &repo, top, |_| true).await?;
-    let rewritten = rewrite_stack(&ctx, &repo, stack, |cs, bcs| {
+    let mut seen: Vec<(ChangesetId, bool)> = Vec::new();
+    let rewritten = rewrite_stack(&ctx, &repo, stack, |cs, bcs, parents_changed| {
+        seen.push((cs, parents_changed));
         if cs == top {
             bcs.message = "changed".to_string();
         }
@@ -192,5 +194,68 @@ async fn rewrite_skips_commits_the_edit_leaves_unchanged(fb: FacebookInit) -> Re
         .load(&ctx, repo.repo_blobstore())
         .await?;
     assert_eq!(top_bcs.parents().collect::<Vec<_>>(), vec![bottom]);
+    assert_eq!(seen, vec![(bottom, false), (top, false)]);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rewrite_with_a_no_op_edit_records_nothing_even_with_mutation_keys(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let bottom = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("one", "one")
+        .add_extra("mutpred", b"x".to_vec())
+        .commit()
+        .await?;
+    let top = CreateCommitContext::new(&ctx, &repo, vec![bottom])
+        .add_file("two", "two")
+        .commit()
+        .await?;
+    let stack = load_draft_stack(&ctx, &repo, top, |_| true).await?;
+    let rewritten = rewrite_stack(&ctx, &repo, stack, |_, _, _| Ok(())).await?;
+    assert!(rewritten.is_empty(), "nothing the caller sees changed");
+    let top_bcs = top.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(top_bcs.parents().collect::<Vec<_>>(), vec![bottom]);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn rewrite_tells_the_edit_when_a_parent_was_rewritten(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let bottom = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("one", "one")
+        .commit()
+        .await?;
+    let top = CreateCommitContext::new(&ctx, &repo, vec![bottom])
+        .add_file("two", "two")
+        .commit()
+        .await?;
+    let stack = load_draft_stack(&ctx, &repo, top, |_| true).await?;
+    let mut seen: Vec<(ChangesetId, bool)> = Vec::new();
+    let rewritten = rewrite_stack(&ctx, &repo, stack, |cs, bcs, parents_changed| {
+        seen.push((cs, parents_changed));
+        if cs == bottom {
+            bcs.message = "changed".to_string();
+        }
+        Ok(())
+    })
+    .await?;
+    assert_eq!(seen, vec![(bottom, false), (top, true)]);
+    assert_eq!(
+        rewritten.iter().map(|r| r.original).collect::<Vec<_>>(),
+        vec![bottom, top],
+        "a reparented commit is rewritten even when the edit leaves it alone"
+    );
+    let top_bcs = rewritten[1]
+        .rewritten
+        .load(&ctx, repo.repo_blobstore())
+        .await?;
+    assert_eq!(
+        top_bcs.parents().collect::<Vec<_>>(),
+        vec![rewritten[0].rewritten]
+    );
     Ok(())
 }
