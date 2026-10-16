@@ -2030,6 +2030,97 @@ mod test {
         assert!(msg.contains("InvalidPushvar"));
     }
 
+    /// Load a minimal config set whose only repo has one hook, `hook1`, with
+    /// `hook1_fields` appended to its `[[hooks]]` entry.
+    fn load_configs_with_hook1(hook1_fields: &str) -> Result<RepoConfigs> {
+        let storage = r#"
+            [sqlite.metadata.local]
+            local_db_path = "/tmp/fbsource"
+
+            [sqlite.blobstore.blob_files]
+            path = "/tmp/fbsource"
+
+            [sqlite.mutable_blobstore.blob_files]
+            path = "/tmp/fbsource"
+        "#;
+
+        let common = r#"
+            [redaction_config]
+            blobstore = "sqlite"
+            redaction_sets_location = "loc"
+
+            [internal_identity]
+            identity_type = "SERVICE_IDENTITY"
+            identity_data = "internal"
+        "#;
+
+        let content = format!(
+            r#"
+            storage_config = "sqlite"
+
+            [[hooks]]
+            name="hook1"
+            {hook1_fields}
+        "#
+        );
+
+        let content_def = r#"
+            repo_id = 0
+            repo_name = "fbsource"
+            repo_config = "fbsource"
+        "#;
+
+        let paths = btreemap! {
+            "common/storage.toml" => storage,
+            "common/common.toml" => common,
+            "common/commitsyncmap.toml" => "",
+            "repos/fbsource/server.toml" => content.as_str(),
+            "repo_definitions/fbsource/server.toml" => content_def,
+        };
+
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
+        let tmp_dir = write_files(&paths);
+        load_repo_configs(tmp_dir.path(), &config_store)
+    }
+
+    #[mononoke::test]
+    fn test_hook_bypass_flags_parse() {
+        let configs = load_configs_with_hook1(
+            r#"
+            bypass_permission_group="group1"
+            bypass_implicit_for_group=true
+            allow_agent_bypass=true
+            "#,
+        )
+        .expect("config should parse");
+
+        assert_eq!(
+            configs.repos["fbsource"].hooks[0].config.bypass,
+            Some(
+                HookBypass::new_implicit()
+                    .with_permission_group(Some("group1".into()))
+                    .with_implicit_for_group(true)
+                    .with_allow_agent(true)
+            )
+        );
+    }
+
+    /// Without a permission group the flags are inert: the config still loads
+    /// (a load error here would stop the whole repo from initialising) and no
+    /// marker-less bypass is created.
+    #[mononoke::test]
+    fn test_hook_bypass_flags_without_group_are_inert() {
+        let configs = load_configs_with_hook1(
+            r#"
+            bypass_implicit_for_group=true
+            allow_agent_bypass=true
+            "#,
+        )
+        .expect("config should parse");
+
+        assert_eq!(configs.repos["fbsource"].hooks[0].config.bypass, None);
+    }
+
     #[mononoke::test]
     fn test_broken_common_config() {
         fn check_fails(common: &str, expect: &str) {

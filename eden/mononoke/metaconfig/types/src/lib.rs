@@ -902,6 +902,10 @@ pub struct HookBypass {
     /// AMP group restricting who can use bypass. When set, only group members
     /// can bypass this hook.
     permission_group: Option<String>,
+    /// Group members bypass without the commit message or pushvar marker.
+    implicit_for_group: bool,
+    /// A group member's bypass is honored even when the pusher is an agent.
+    allow_agent: bool,
 }
 
 impl HookBypass {
@@ -911,6 +915,8 @@ impl HookBypass {
             commit_message_bypass: Some(msg),
             pushvar_name_and_value: None,
             permission_group: None,
+            implicit_for_group: false,
+            allow_agent: false,
         }
     }
 
@@ -920,6 +926,8 @@ impl HookBypass {
             commit_message_bypass: None,
             pushvar_name_and_value: Some((name, value)),
             permission_group: None,
+            implicit_for_group: false,
+            allow_agent: false,
         }
     }
 
@@ -933,6 +941,19 @@ impl HookBypass {
             commit_message_bypass: Some(msg),
             pushvar_name_and_value: Some((pushvar_name, pushvar_value)),
             permission_group: None,
+            implicit_for_group: false,
+            allow_agent: false,
+        }
+    }
+
+    /// Bypass with no marker: only meaningful with a permission group.
+    pub fn new_implicit() -> Self {
+        Self {
+            commit_message_bypass: None,
+            pushvar_name_and_value: None,
+            permission_group: None,
+            implicit_for_group: true,
+            allow_agent: false,
         }
     }
 
@@ -957,6 +978,28 @@ impl HookBypass {
     /// Get the permission group
     pub fn permission_group(&self) -> Option<&str> {
         self.permission_group.as_deref()
+    }
+
+    /// Set whether group members bypass without a marker (builder pattern)
+    pub fn with_implicit_for_group(mut self, implicit: bool) -> Self {
+        self.implicit_for_group = implicit;
+        self
+    }
+
+    /// Whether group members bypass without a marker
+    pub fn implicit_for_group(&self) -> bool {
+        self.implicit_for_group
+    }
+
+    /// Set whether agents may use a group member's bypass (builder pattern)
+    pub fn with_allow_agent(mut self, allow: bool) -> Self {
+        self.allow_agent = allow;
+        self
+    }
+
+    /// Whether agents may use a group member's bypass
+    pub fn allow_agent(&self) -> bool {
+        self.allow_agent
     }
 }
 

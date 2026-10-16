@@ -212,6 +212,12 @@ impl Convert for RawHookConfig {
             .transpose()?;
 
         let permission_group = self.bypass_permission_group;
+        // Both flags only mean something for a group-gated bypass; without a
+        // group they are inert rather than a load error, so a config mistake
+        // cannot stop the repo from initialising.
+        let implicit_for_group =
+            self.bypass_implicit_for_group.unwrap_or_default() && permission_group.is_some();
+        let allow_agent = self.allow_agent_bypass.unwrap_or_default();
 
         let bypass = match (bypass_commit_message, bypass_pushvar) {
             (Some(msg), None) => Some(HookBypass::new_with_commit_msg(msg)),
@@ -219,9 +225,14 @@ impl Convert for RawHookConfig {
             (Some(msg), Some((name, value))) => Some(HookBypass::new_with_commit_msg_and_pushvar(
                 msg, name, value,
             )),
+            (None, None) if implicit_for_group => Some(HookBypass::new_implicit()),
             (None, None) => None,
         };
-        let bypass = bypass.map(|b| b.with_permission_group(permission_group));
+        let bypass = bypass.map(|b| {
+            b.with_permission_group(permission_group)
+                .with_implicit_for_group(implicit_for_group)
+                .with_allow_agent(allow_agent)
+        });
 
         let config = HookConfig {
             bypass,
