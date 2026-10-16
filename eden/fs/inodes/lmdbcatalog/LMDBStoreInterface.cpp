@@ -472,11 +472,15 @@ FileOffset LMDBStoreInterface::preadBlob(
         lockedConn->mdb_txn_, lockedConn->mdb_dbi_, &mdb_key, &mdb_value);
 
     if (result == MDB_SUCCESS) {
-      if (offset + n > mdb_value.mv_size) {
+      if (offset >= static_cast<FileOffset>(mdb_value.mv_size)) {
+        n = 0;
+      } else if (offset + n > mdb_value.mv_size) {
         n = mdb_value.mv_size - offset;
       }
-      void* copyStart = static_cast<char*>(mdb_value.mv_data) + offset;
-      memcpy(buf, copyStart, n);
+      if (n > 0) {
+        void* copyStart = static_cast<char*>(mdb_value.mv_data) + offset;
+        memcpy(buf, copyStart, n);
+      }
       ret = n;
     } else {
       ret = -1;

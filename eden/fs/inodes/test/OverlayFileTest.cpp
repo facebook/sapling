@@ -429,17 +429,16 @@ TEST_F(OverlayFileTest, readFile) {
 }
 
 TEST_F(OverlayFileTest, preadPastEndOfLmdbBlob) {
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
   const auto& [fsFile, lmdbFile] = generateOverlayFiles();
   char buf[16] = {};
   auto fsRead = fsFile.preadNoInt(
       buf, sizeof(buf), FsFileContentStore::kHeaderLength + 20);
   ASSERT_TRUE(fsRead.hasValue());
   EXPECT_EQ(fsRead.value(), 0);
-  EXPECT_DEATH(
-      (void)lmdbFile.preadNoInt(
-          buf, sizeof(buf), FsFileContentStore::kHeaderLength + 20),
-      "AddressSanitizer|negative-size|SEGV|SIGBUS");
+  auto lmdbRead = lmdbFile.preadNoInt(
+      buf, sizeof(buf), FsFileContentStore::kHeaderLength + 20);
+  ASSERT_TRUE(lmdbRead.hasValue());
+  EXPECT_EQ(lmdbRead.value(), 0);
 }
 
 #endif
