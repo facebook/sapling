@@ -16,6 +16,8 @@
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
+#include <optional>
+
 #include <sys/stat.h>
 
 #ifdef __APPLE__
@@ -101,10 +103,13 @@ class NfsDispatcher {
   virtual ImmediateFuture<folly::Unit> markGcRef(InodeNumber ino) = 0;
 
   /**
-   * Find the given file in the passed in directory. It's InodeNumber and
-   * attributes are returned.
+   * Find the given name in the passed in directory. Its InodeNumber and
+   * attributes are returned, or nullopt when the directory has no such entry.
+   * Clients look a name up before every create and mkdir, so a missing name
+   * is the common outcome and is a value rather than an ENOENT error.
    */
-  virtual ImmediateFuture<std::tuple<InodeNumber, struct stat>> lookup(
+  virtual ImmediateFuture<std::optional<std::tuple<InodeNumber, struct stat>>>
+  lookup(
       InodeNumber dir,
       PathComponent name,
       const ObjectFetchContextPtr& context) = 0;

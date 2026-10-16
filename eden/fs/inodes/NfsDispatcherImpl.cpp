@@ -98,24 +98,30 @@ ImmediateFuture<folly::Unit> NfsDispatcherImpl::markGcRef(InodeNumber ino) {
       });
 }
 
-ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
+ImmediateFuture<std::optional<std::tuple<InodeNumber, struct stat>>>
+NfsDispatcherImpl::lookup(
     InodeNumber dir,
     PathComponent name,
     const ObjectFetchContextPtr& context) {
+  using Result = std::optional<std::tuple<InodeNumber, struct stat>>;
   return inodeMap_->lookupTreeInode(dir)
       .thenValue([name = std::move(name),
                   context = context.copy()](const TreeInodePtr& inode) {
-        return inode->getOrLoadChild(name, context);
+        return inode->getOrLoadChildIfExists(name, context);
       })
-      .thenValue([context = context.copy()](InodePtr&& inode) {
-        auto statFut = statHelper(inode, context);
-        return std::move(statFut).thenValue(
-            [inode = std::move(inode)](
-                struct stat stat) -> std::tuple<InodeNumber, struct stat> {
-              inode->incFsRefcount();
-              return {inode->getNodeId(), stat};
-            });
-      });
+      .thenValue(
+          [context =
+               context.copy()](InodePtr&& inode) -> ImmediateFuture<Result> {
+            if (!inode) {
+              return Result{};
+            }
+            auto statFut = statHelper(inode, context);
+            return std::move(statFut).thenValue(
+                [inode = std::move(inode)](struct stat stat) -> Result {
+                  inode->incFsRefcount();
+                  return std::make_tuple(inode->getNodeId(), stat);
+                });
+          });
 }
 
 ImmediateFuture<std::string> NfsDispatcherImpl::readlink(

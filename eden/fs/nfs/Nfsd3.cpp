@@ -695,13 +695,15 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
   }
 
   return makeImmediateFutureWith([this, args = std::move(args), &context]() {
+           using LookupResult =
+               std::optional<std::tuple<InodeNumber, struct stat>>;
            if (args.what.name == ".") {
              return dispatcher_
                  ->getattr(args.what.dir.ino, context.getObjectFetchContext())
                  .thenValue(
-                     [ino = args.what.dir.ino](struct stat&& stat)
-                         -> std::tuple<InodeNumber, struct stat> {
-                       return {ino, std::move(stat)};
+                     [ino = args.what.dir.ino](
+                         struct stat&& stat) -> LookupResult {
+                       return std::make_tuple(ino, std::move(stat));
                      });
            } else if (args.what.name == "..") {
              return dispatcher_
@@ -709,11 +711,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                  .thenValue([this, &context](InodeNumber ino) {
                    return dispatcher_
                        ->getattr(ino, context.getObjectFetchContext())
-                       .thenValue(
-                           [ino](struct stat&& stat)
-                               -> std::tuple<InodeNumber, struct stat> {
-                             return {ino, std::move(stat)};
-                           });
+                       .thenValue([ino](struct stat&& stat) -> LookupResult {
+                         return std::make_tuple(ino, std::move(stat));
+                       });
                  });
            } else {
              return extractPathComponent(std::move(args.what.name))
@@ -724,51 +724,64 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                  });
            }
          })
-      .thenTry([this,
-                ser = std::move(ser),
-                dirAttrFut = std::move(dirAttrFut),
-                stats = dispatcher_->getStats().copy(),
-                ino = dirIno,
-                &context](
-                   folly::Try<std::tuple<InodeNumber, struct stat>>&&
-                       lookupTry) mutable {
-        return std::move(dirAttrFut)
-            .thenTry([this,
-                      ser = std::move(ser),
-                      lookupTry = std::move(lookupTry),
-                      stats = std::move(stats),
-                      ino,
-                      &context](
-                         const folly::Try<struct stat>& dirStat) mutable {
-              if (lookupTry.hasException()) {
-                auto error = exceptionToNfsError(lookupTry.exception(), stats);
-                // Whatever the error, no entry was handed out.
-                context.markNegativeLookup();
-                detail::logNfsError(
-                    error,
-                    lookupTry.exception(),
-                    errorLogger_,
-                    ino.get(),
-                    mountPath_);
-                LOOKUP3res res{
-                    {{error, LOOKUP3resfail{statToPostOpAttr(dirStat)}}}};
-                XdrTrait<LOOKUP3res>::serialize(ser, res);
-              } else {
-                const auto& [lookupIno, stat] = lookupTry.value();
-                LOOKUP3res res{
-                    {{nfsstat3::NFS3_OK,
-                      LOOKUP3resok{
-                          /*object*/ nfs_fh3{lookupIno},
-                          /*obj_attributes*/
-                          post_op_attr{statToFattr3(stat)},
-                          /*dir_attributes*/
-                          statToPostOpAttr(dirStat),
-                      }}}};
-                XdrTrait<LOOKUP3res>::serialize(ser, res);
-              }
-              return folly::unit;
-            });
-      });
+      .thenTry(
+          [this,
+           ser = std::move(ser),
+           dirAttrFut = std::move(dirAttrFut),
+           stats = dispatcher_->getStats().copy(),
+           ino = dirIno,
+           &context](
+              folly::Try<std::optional<std::tuple<InodeNumber, struct stat>>>&&
+                  lookupTry) mutable {
+            return std::move(dirAttrFut)
+                .thenTry([this,
+                          ser = std::move(ser),
+                          lookupTry = std::move(lookupTry),
+                          stats = std::move(stats),
+                          ino,
+                          &context](
+                             const folly::Try<struct stat>& dirStat) mutable {
+                  if (lookupTry.hasException()) {
+                    auto error =
+                        exceptionToNfsError(lookupTry.exception(), stats);
+                    // Whatever the error, no entry was handed out.
+                    context.markNegativeLookup();
+                    detail::logNfsError(
+                        error,
+                        lookupTry.exception(),
+                        errorLogger_,
+                        ino.get(),
+                        mountPath_);
+                    LOOKUP3res res{
+                        {{error, LOOKUP3resfail{statToPostOpAttr(dirStat)}}}};
+                    XdrTrait<LOOKUP3res>::serialize(ser, res);
+                  } else if (!lookupTry->has_value()) {
+                    // No such entry: the usual answer to the lookup a client
+                    // sends before create and mkdir, so it arrives as a value
+                    // rather than an exception. It is counted and recorded like
+                    // any other NOENT reply.
+                    stats->increment(&NfsStats::nfsErrorNoEnt);
+                    context.markNegativeLookup();
+                    LOOKUP3res res{
+                        {{nfsstat3::NFS3ERR_NOENT,
+                          LOOKUP3resfail{statToPostOpAttr(dirStat)}}}};
+                    XdrTrait<LOOKUP3res>::serialize(ser, res);
+                  } else {
+                    const auto& [lookupIno, stat] = **lookupTry;
+                    LOOKUP3res res{
+                        {{nfsstat3::NFS3_OK,
+                          LOOKUP3resok{
+                              /*object*/ nfs_fh3{lookupIno},
+                              /*obj_attributes*/
+                              post_op_attr{statToFattr3(stat)},
+                              /*dir_attributes*/
+                              statToPostOpAttr(dirStat),
+                          }}}};
+                    XdrTrait<LOOKUP3res>::serialize(ser, res);
+                  }
+                  return folly::unit;
+                });
+          });
 }
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::access(

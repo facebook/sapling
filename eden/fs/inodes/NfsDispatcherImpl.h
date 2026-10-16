@@ -32,7 +32,7 @@ class NfsDispatcherImpl : public NfsDispatcher {
 
   ImmediateFuture<folly::Unit> markGcRef(InodeNumber ino) override;
 
-  ImmediateFuture<std::tuple<InodeNumber, struct stat>> lookup(
+  ImmediateFuture<std::optional<std::tuple<InodeNumber, struct stat>>> lookup(
       InodeNumber dir,
       PathComponent name,
       const ObjectFetchContextPtr& context) override;
