@@ -990,11 +990,9 @@ TEST_P(FsckTest, testHardLink) {
               "found hard linked inode {}:\n- src/foo/also_z.txt\n- src/foo/x/y/z.txt",
               layout.src_foo_x_y_zTxt.number())));
 
-  // FIXME: nothing says which link is newer, so the repair should keep
-  // src/foo/also_z.txt, the first path in sorted order, and remove the other
-  // link. Today the error is unfixable.
-  auto [result, fsckLog] = performRepair(checker, 1, 0);
-  EXPECT_THAT(fsckLog, HasSubstr("unable to repair error 1"));
+  // Nothing says which link is newer, so the first path in sorted order stays.
+  auto [result, fsckLog] = performRepair(checker, 1, 1);
+  EXPECT_THAT(fsckLog, HasSubstr("kept src/foo/also_z.txt;"));
   auto foo =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo.number());
   ASSERT_TRUE(foo.has_value());
@@ -1002,7 +1000,7 @@ TEST_P(FsckTest, testHardLink) {
   auto y =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo_x_y.number());
   ASSERT_TRUE(y.has_value());
-  EXPECT_EQ(1u, y->entries()->count("z.txt"));
+  EXPECT_EQ(0u, y->entries()->count("z.txt"));
   EXPECT_TRUE(
       testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
@@ -1034,24 +1032,20 @@ TEST_P(FsckTest, hardLinkRepairKeepsTheTrackedName) {
       lookup,
       testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
-  // FIXME: the second line should name z.txt.tmp; the message repeats the
-  // first name it finds for each parent entry.
   EXPECT_THAT(
       errorMessages(checker),
       ElementsAre(
           fmt::format(
-              "found hard linked inode {}:\n- src/foo/x/y/z.txt\n- src/foo/x/y/z.txt",
+              "found hard linked inode {}:\n- src/foo/x/y/z.txt\n- src/foo/x/y/z.txt.tmp",
               layout.src_foo_x_y_zTxt.number())));
 
-  // FIXME: the repair should keep z.txt, the name source control knows, and
-  // remove z.txt.tmp. Today the error is unfixable.
-  auto [result, fsckLog] = performRepair(checker, 1, 0);
-  EXPECT_THAT(fsckLog, HasSubstr("unable to repair error 1"));
+  auto [result, fsckLog] = performRepair(checker, 1, 1);
+  EXPECT_THAT(fsckLog, HasSubstr("kept src/foo/x/y/z.txt;"));
   auto y =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo_x_y.number());
   ASSERT_TRUE(y.has_value());
   EXPECT_EQ(1u, y->entries()->count("z.txt"));
-  EXPECT_EQ(1u, y->entries()->count("z.txt.tmp"));
+  EXPECT_EQ(0u, y->entries()->count("z.txt.tmp"));
   EXPECT_TRUE(
       testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
@@ -1439,10 +1433,8 @@ TEST(FsckWalTest, hardLinkRepairKeepsTheLinkTheWalAdded) {
       nextInode,
       lookup,
       testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
-  // FIXME: the repair should keep src/foo/moved_z.txt, the link the WAL
-  // added, and remove src/foo/x/y/z.txt. Today the error is unfixable.
-  auto [result, fsckLog] = performRepair(checker, 1, 0);
-  EXPECT_THAT(fsckLog, HasSubstr("unable to repair error 1"));
+  auto [result, fsckLog] = performRepair(checker, 1, 1);
+  EXPECT_THAT(fsckLog, HasSubstr("kept src/foo/moved_z.txt;"));
   auto foo =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo.number());
   ASSERT_TRUE(foo.has_value());
@@ -1450,7 +1442,7 @@ TEST(FsckWalTest, hardLinkRepairKeepsTheLinkTheWalAdded) {
   auto y =
       testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo_x_y.number());
   ASSERT_TRUE(y.has_value());
-  EXPECT_EQ(1u, y->entries()->count("z.txt"));
+  EXPECT_EQ(0u, y->entries()->count("z.txt"));
   EXPECT_TRUE(
       testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());

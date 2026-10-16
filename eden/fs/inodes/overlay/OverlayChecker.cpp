@@ -17,8 +17,12 @@
 #include <array>
 #include <atomic>
 #include <ctime>
+#include <map>
 #include <mutex>
+#include <optional>
+#include <set>
 #include <utility>
+#include <vector>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
@@ -90,6 +94,10 @@ struct OverlayChecker::Impl {
   bool scanIncludedWalChildren{false};
   folly::F14FastSet<InodeNumber> walBackedDirs;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
+  // (child, parent) pairs for the directory entries that a WAL ADD introduced
+  // during recoverWalFiles(). Such an entry is newer than any other entry for
+  // the same child.
+  std::set<std::pair<InodeNumber, InodeNumber>> walAddedEntries;
 
   Impl(
       InodeCatalog* inodeCatalog,
@@ -825,27 +833,179 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
  public:
   explicit HardLinkedInode(const InodeInfo& info) : number_(info.number) {
-    parents_.insert(parents_.end(), info.parents.begin(), info.parents.end());
-    // Sort the parent inode numbers, just to ensure deterministic ordering
-    // of paths in the error message so we can check it more easily in the unit
-    // tests.
-    std::sort(parents_.begin(), parents_.end());
+    // info.parents is sorted and holds one element per directory entry, so a
+    // directory with two names for the inode appears twice in a row.
+    for (auto parent : info.parents) {
+      if (parents_.empty() || parents_.back() != parent) {
+        parents_.push_back(parent);
+      }
+    }
   }
 
   string getMessage(OverlayChecker* checker) const override {
     auto msg = fmt::format("found hard linked inode {}:", number_);
-    for (auto parent : parents_) {
-      msg += "\n- " + checker->computePath(parent, number_).toString();
+    for (const auto& link : findLinks(checker)) {
+      msg += "\n- " + link.path.toString();
     }
     return msg;
   }
 
-  bool repair(RepairState& /* repair */) const override {
-    // TODO: split the inode into 2 separate copies
-    return false;
+  /**
+   * EdenFS has no hard links, so two entries with one inode number come from
+   * a rename interrupted between its two directory writes. Keep one link and
+   * remove the others; the inode's data stays under the kept name.
+   */
+  bool repair(RepairState& repair) const override {
+    auto* checker = repair.checker();
+    auto links = findLinks(checker);
+    if (links.size() < 2) {
+      repair.log("  ! could not list the directory entries of inode ", number_);
+      return false;
+    }
+
+    std::string reason;
+    const Link& keep = chooseLinkToKeep(checker, links, reason);
+    // Load every directory before writing any, so a directory that cannot be
+    // read leaves all of them as they were. A directory holding several of
+    // the links is written once.
+    struct Removal {
+      overlay::OverlayDir dir;
+      std::vector<const Link*> links;
+    };
+    std::map<InodeNumber, Removal> removals;
+    for (const auto& link : links) {
+      if (&link == &keep) {
+        continue;
+      }
+      auto removal = removals.find(link.parent);
+      if (removal == removals.end()) {
+        auto loaded = checker->impl_->inodeCatalog->loadOverlayDir(link.parent);
+        if (!loaded.has_value()) {
+          repair.log(
+              "  ! could not load directory inode ",
+              link.parent,
+              " to remove ",
+              link.path.toString());
+          return false;
+        }
+        removal = removals.emplace(link.parent, Removal{std::move(*loaded), {}})
+                      .first;
+      }
+      removal->second.dir.entries()->erase(link.name.asString());
+      removal->second.links.push_back(&link);
+    }
+    for (auto& [parent, removal] : removals) {
+      checker->impl_->inodeCatalog->saveOverlayDir(
+          parent, std::move(removal.dir));
+      auto* parentInfo = checker->getInodeInfo(parent);
+      for (const auto* link : removal.links) {
+        if (parentInfo && parentInfo->children) {
+          parentInfo->children->entries()->erase(link->name.asString());
+        }
+        repair.log(
+            "  kept ",
+            keep.path.toString(),
+            "; removed ",
+            link->path.toString(),
+            " (",
+            reason,
+            ")");
+      }
+    }
+    if (auto* info = checker->getInodeInfo(number_)) {
+      info->parents.clear();
+      info->parents.push_back(keep.parent);
+    }
+    // Paths cached through the removed links, the inode's own and those of
+    // anything below it, are stale.
+    checker->pathCache_.clear();
+    return true;
   }
 
  private:
+  struct Link {
+    InodeNumber parent;
+    PathComponent name;
+    PathInfo path;
+  };
+
+  std::vector<Link> findLinks(OverlayChecker* checker) const {
+    std::vector<Link> links;
+    for (auto parent : parents_) {
+      auto* parentInfo = checker->getInodeInfo(parent);
+      if (!parentInfo) {
+        continue;
+      }
+      auto names = checker->findChildNames(*parentInfo, number_);
+      if (!names.has_value()) {
+        continue;
+      }
+      for (auto& name : *names) {
+        auto path = checker->computePath(parent, name.piece());
+        links.push_back(Link{parent, std::move(name), std::move(path)});
+      }
+    }
+    return links;
+  }
+
+  /**
+   * The link a WAL ADD introduced is the newest. Among the rest, a link
+   * reachable from the root beats one below an unlinked directory, and a path
+   * source control knows beats the temporary name it was renamed from. The
+   * first path in sorted order settles what is left.
+   */
+  const Link& chooseLinkToKeep(
+      OverlayChecker* checker,
+      const std::vector<Link>& links,
+      std::string& reason) const {
+    std::vector<const Link*> candidates;
+    candidates.reserve(links.size());
+    for (const auto& link : links) {
+      candidates.push_back(&link);
+    }
+    // Keep the candidates that pass the rule when there are any, and return
+    // the link when one is left.
+    auto narrow = [&](std::string_view why, auto&& passes) -> const Link* {
+      std::vector<const Link*> passing;
+      passing.reserve(candidates.size());
+      for (const auto* link : candidates) {
+        if (passes(*link)) {
+          passing.push_back(link);
+        }
+      }
+      if (!passing.empty()) {
+        candidates = std::move(passing);
+        reason = why;
+      }
+      return candidates.size() == 1 ? candidates.at(0) : nullptr;
+    };
+    auto reachable = [](const Link& link) {
+      return link.path.parent == kRootNodeId;
+    };
+    if (const auto* only =
+            narrow("the WAL added it last", [&](const Link& link) {
+              return checker->impl_->walAddedEntries.contains(
+                  {number_, link.parent});
+            })) {
+      return *only;
+    }
+    if (const auto* only = narrow("it is reachable from the root", reachable)) {
+      return *only;
+    }
+    if (const auto* only =
+            narrow("source control has that path", [&](const Link& link) {
+              return reachable(link) &&
+                  checker->lookup(link.path.path).getTry().hasValue();
+            })) {
+      return *only;
+    }
+    reason = "first path in sorted order";
+    return **std::min_element(
+        candidates.begin(), candidates.end(), [](const Link* a, const Link* b) {
+          return a->path.toString() < b->path.toString();
+        });
+  }
+
   InodeNumber number_;
   std::vector<InodeNumber> parents_;
 };
@@ -929,6 +1089,12 @@ bool OverlayChecker::recoverWalFiles() {
       // captured by fsck's own structured logs, not OverlayStats.
       auto walResult =
           impl_->fcs->replayWal(ino, *dirData, impl_->caseSensitive);
+      for (const auto& [name, op] : walResult.delta) {
+        if (op.type == WalOpType::ADD) {
+          impl_->walAddedEntries.emplace(
+              InodeNumber::fromThrift(*op.entry.inodeNumber()), ino);
+        }
+      }
       // On missing base, only ADDs grow an empty dir; parse count would
       // lie on REMOVE-only WALs and synthesize a useless empty base.
       const bool shouldSave = baseWasMissing ? !dirData->entries()->empty()
@@ -1027,6 +1193,7 @@ void OverlayChecker::scanForErrors(
 
   impl_->inodes.clear();
   impl_->walBackedDirs.clear();
+  impl_->walAddedEntries.clear();
   impl_->scanIncludedWalChildren = includeWalChildren;
   errors_.clear();
   pathCache_.clear();
@@ -1257,78 +1424,75 @@ void forEachEntryInDir(const overlay::OverlayDir& dir, Visitor&& visitor) {
 }
 } // namespace
 
-PathComponent OverlayChecker::findChildName(
+std::optional<std::vector<PathComponent>> OverlayChecker::findChildNames(
     const InodeInfo& parentInfo,
     InodeNumber child) {
-  if (impl_->useMemoryEfficientScan) {
-    std::optional<PathComponent> childName;
-    bool loaded = true;
-    const auto unreadableChild = [&] {
-      return PathComponent(fmt::format("[unreadable_child({})]", child));
-    };
-    try {
-      if (impl_->scanIncludedWalChildren &&
-          impl_->walBackedDirs.contains(parentInfo.number)) {
-        auto dirData = impl_->inodeCatalog->loadOverlayDir(parentInfo.number);
-        if (!dirData.has_value()) {
-          dirData.emplace();
-        }
-        impl_->fcs->replayWal(
-            parentInfo.number, *dirData, impl_->caseSensitive);
-        forEachEntryInDir(
-            *dirData, [&](const std::string& name, const auto& entry) {
-              if (!childName &&
-                  static_cast<uint64_t>(*entry.inodeNumber()) == child.get()) {
-                childName.emplace(name);
-              }
-            });
-      } else {
-        loaded = impl_->inodeCatalog->loadOverlayEntries(
-            parentInfo.number,
-            [&](size_t, InodeCatalog::OverlayEntryIterator iterate) {
-              iterate([&](const std::string& name, const auto& entry) {
-                if (!childName &&
-                    static_cast<uint64_t>(*entry.inodeNumber()) ==
-                        child.get()) {
-                  childName.emplace(name);
-                }
-              });
-            });
-      }
-      if (!loaded) {
-        XLOGF(
-            WARN,
-            "unable to load directory inode {} while computing path for child {}",
-            parentInfo.number,
-            child);
-        return unreadableChild();
-      }
-      if (childName) {
-        return std::move(*childName);
-      }
-    } catch (const std::exception& ex) {
-      XLOGF(
-          WARN,
-          "error reading directory inode {} while computing path for child {}: {}",
-          parentInfo.number,
-          child,
-          folly::exceptionStr(ex));
-      return unreadableChild();
+  std::vector<PathComponent> names;
+  auto collect = [&](const std::string& name, const auto& entry) {
+    if (static_cast<uint64_t>(*entry.inodeNumber()) == child.get()) {
+      names.emplace_back(name);
     }
-  } else {
+  };
+  if (!impl_->useMemoryEfficientScan) {
     if (!parentInfo.children) {
       XLOGF(
           DFATAL,
           "bug in fsck code: parent {} of child {} has no loaded directory contents",
           parentInfo.number,
           child);
-      return PathComponent(fmt::format("[missing_child({})]", child));
+      return std::nullopt;
     }
-    for (const auto& entry : *parentInfo.children->entries()) {
-      if (static_cast<uint64_t>(*entry.second.inodeNumber()) == child.get()) {
-        return PathComponent(entry.first);
+    forEachEntryInDir(*parentInfo.children, collect);
+    return names;
+  }
+  try {
+    if (impl_->scanIncludedWalChildren &&
+        impl_->walBackedDirs.contains(parentInfo.number)) {
+      auto dirData = impl_->inodeCatalog->loadOverlayDir(parentInfo.number);
+      if (!dirData.has_value()) {
+        dirData.emplace();
       }
+      impl_->fcs->replayWal(parentInfo.number, *dirData, impl_->caseSensitive);
+      forEachEntryInDir(*dirData, collect);
+      return names;
     }
+    bool loaded = impl_->inodeCatalog->loadOverlayEntries(
+        parentInfo.number,
+        [&](size_t, InodeCatalog::OverlayEntryIterator iterate) {
+          iterate(collect);
+        });
+    if (!loaded) {
+      XLOGF(
+          WARN,
+          "unable to load directory inode {} while computing path for child {}",
+          parentInfo.number,
+          child);
+      return std::nullopt;
+    }
+    return names;
+  } catch (const std::exception& ex) {
+    XLOGF(
+        WARN,
+        "error reading directory inode {} while computing path for child {}: {}",
+        parentInfo.number,
+        child,
+        folly::exceptionStr(ex));
+    return std::nullopt;
+  }
+}
+
+PathComponent OverlayChecker::findChildName(
+    const InodeInfo& parentInfo,
+    InodeNumber child) {
+  auto names = findChildNames(parentInfo, child);
+  if (!names.has_value()) {
+    if (impl_->useMemoryEfficientScan) {
+      return PathComponent(fmt::format("[unreadable_child({})]", child));
+    }
+    return PathComponent(fmt::format("[missing_child({})]", child));
+  }
+  if (!names->empty()) {
+    return std::move(names->front());
   }
 
   // This shouldn't ever happen unless we have a bug in the fsck code somehow.

@@ -11,6 +11,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <folly/CppAttributes.h>
 
@@ -211,6 +212,13 @@ class OverlayChecker {
 
   PathInfo computePath(const fsck::InodeInfo& info);
   PathComponent findChildName(
+      const fsck::InodeInfo& parentInfo,
+      InodeNumber child);
+  /**
+   * All names in the parent directory that refer to the child inode, in
+   * directory order. Nullopt when the directory could not be read.
+   */
+  std::optional<std::vector<PathComponent>> findChildNames(
       const fsck::InodeInfo& parentInfo,
       InodeNumber child);
   template <typename Fn>
