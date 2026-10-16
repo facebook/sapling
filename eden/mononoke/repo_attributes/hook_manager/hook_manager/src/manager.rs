@@ -339,7 +339,8 @@ impl HookManager {
     ///
     /// Restricting a bypass to a permission group makes using it a human
     /// judgement call, so an authorized bypass is downgraded when the pusher is
-    /// an agent. Two things about where this sits matter:
+    /// an agent, unless the hook opts out with `allow_agent_bypass`. Two things
+    /// about where this sits matter:
     ///
     /// * It runs *after* the membership check, so an agent that is not in the
     ///   group still gets the more specific "not a member" rejection — that is
@@ -362,7 +363,7 @@ impl HookManager {
 
         Ok(match result {
             BypassAuthorizationResult::Bypassed { reason, check }
-                if ctx.metadata().likely_an_agent() =>
+                if ctx.metadata().likely_an_agent() && !hook.allows_agent_bypass() =>
             {
                 BypassAuthorizationResult::UnauthorizedAgent {
                     reason,
@@ -1302,6 +1303,14 @@ impl Hook {
             .bypass
             .as_ref()
             .and_then(|bypass| bypass.permission_group())
+    }
+
+    /// Whether this hook's group-gated bypass may also be used by an agent.
+    pub(crate) fn allows_agent_bypass(&self) -> bool {
+        self.get_config()
+            .bypass
+            .as_ref()
+            .is_some_and(|bypass| bypass.allow_agent())
     }
 
     pub fn get_futures_for_bookmark_hooks<'a: 'cs, 'cs>(

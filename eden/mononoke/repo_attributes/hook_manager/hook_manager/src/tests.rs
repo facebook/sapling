@@ -895,6 +895,18 @@ fn bypass_config_with_group() -> HookConfig {
     }
 }
 
+/// A group-gated commit-message bypass that agents in the group may also use.
+fn bypass_config_with_group_allowing_agents() -> HookConfig {
+    HookConfig {
+        bypass: Some(
+            HookBypass::new_with_commit_msg("@bypass_hook".to_string())
+                .with_permission_group(Some("test_bypass_group".to_string()))
+                .with_allow_agent(true),
+        ),
+        ..Default::default()
+    }
+}
+
 /// A group-gated bypass with no marker: membership alone bypasses the hook.
 fn implicit_bypass_config_with_group() -> HookConfig {
     HookConfig {
@@ -1348,6 +1360,22 @@ async fn test_human_in_bypass_group_still_bypasses(fb: FacebookInit) {
     let res = BypassScenario {
         checker: Some(AlwaysMember::new().into()),
         client_identities: user_identities(&["client_user"]),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_bypassed(&res);
+}
+
+/// A hook that sets `allow_agent_bypass` accepts the bypass from an agent that
+/// is in the group; the refusal above is the default, not a rule.
+#[cfg(fbcode_build)]
+#[mononoke::fbinit_test]
+async fn test_agent_in_bypass_group_bypasses_when_hook_allows_agents(fb: FacebookInit) {
+    let res = BypassScenario {
+        bypass_config: bypass_config_with_group_allowing_agents(),
+        checker: Some(AlwaysMember::new().into()),
+        client_identities: agent_identities("client_user"),
         ..Default::default()
     }
     .run(fb)
