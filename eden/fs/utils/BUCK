@@ -308,6 +308,7 @@ cpp_library(
     exported_deps = [
         "//eden/common/utils:path",
         "//folly:network_address",
+        "//folly:portability",
     ],
 )
 

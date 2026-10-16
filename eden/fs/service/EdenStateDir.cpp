@@ -182,8 +182,12 @@ AbsolutePath EdenStateDir::getRestartSentinelLockPath() const {
   return path_ + kRestartSentinelLockName;
 }
 
+AbsolutePath EdenStateDir::getClientsDir() const {
+  return path_ + PathComponent("clients");
+}
+
 AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {
-  return path_ + PathComponent("clients") + PathComponent(checkoutID);
+  return getClientsDir() + PathComponent(checkoutID);
 }
 
 StringPiece EdenStateDir::getHeartbeatFileNamePrefix() const {

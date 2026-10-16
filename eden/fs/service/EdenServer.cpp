@@ -2012,7 +2012,39 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
       XLOG(DBG7, "Initializing mountd from scratch");
       std::optional<AbsolutePath> unixSocketPath;
       if (useUnixSocket) {
-        unixSocketPath = edenDir_.getMountdSocketPath();
+        // Every mount of this daemon follows the mountd's transport, so a
+        // socket path that would not fit anywhere means TCP for all of them,
+        // and so does a directory map that cannot be read to size them.
+        std::optional<std::string> why;
+        std::vector<std::string> checkoutIds;
+        try {
+          // The map has to outlive the loop: items() refers to it.
+          const auto dirs =
+              CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
+          for (const auto& client : dirs.items()) {
+            checkoutIds.push_back(client.second.asString());
+          }
+        } catch (const std::exception& ex) {
+          why = fmt::format(
+              "the directory map could not be read to size the socket paths: {}",
+              ex.what());
+        }
+        if (!why) {
+          why = whyNfsCannotUseUnixSockets(
+              edenDir_.getMountdSocketPath(),
+              edenDir_.getClientsDir(),
+              checkoutIds);
+        }
+        if (why) {
+          logger->warn(
+              "Serving NFS over TCP although nfs:use-uds is set: ", *why);
+          XLOGF(
+              WARN,
+              "Serving NFS over TCP although nfs:use-uds is set: {}",
+              *why);
+        } else {
+          unixSocketPath = edenDir_.getMountdSocketPath();
+        }
       }
       runInEventBaseThreadAndRethrow(nfsEventBase, [&] {
         nfsServer->initialize(

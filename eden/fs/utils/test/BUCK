@@ -28,6 +28,17 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "nfs_socket",
+    srcs = ["NfsSocketTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/utils:nfs_socket",
+    ],
+)
+
+cpp_unittest(
     name = "eden_error_test",
     srcs = ["EdenErrorTest.cpp"],
     network_access = network_access_utils.none(),

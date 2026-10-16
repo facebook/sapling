@@ -149,6 +149,11 @@ class EdenStateDir {
   AbsolutePath getCheckoutStateDir(folly::StringPiece checkoutID) const;
 
   /**
+   * Get the directory that holds the state directories of all checkouts.
+   */
+  AbsolutePath getClientsDir() const;
+
+  /**
    * Get the FileName prefix for the heartbeat file. The heartbeat file consists
    * of a prefix and a pid. For example, the heartbeat file for pid 1234 is
    * "heartbeat_1234"
