@@ -26,6 +26,10 @@ use anyhow::Result;
 pub use facebook::scribe_listener::ScribeListener;
 #[cfg(fbcode_build)]
 pub use facebook::scribe_repo_event_publisher::ScribeRepoEventPublisher;
+#[cfg(fbcode_build)]
+pub use mononoke_bookmark_event_notification::BookmarkCategory;
+#[cfg(fbcode_build)]
+pub use mononoke_bookmark_event_notification::BookmarkEventNotification;
 pub use notification_filter::AllBookmarksFilter;
 #[cfg(not(fbcode_build))]
 pub use oss::UnsupportedRepoEventPublisher;

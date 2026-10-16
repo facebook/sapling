@@ -20,8 +20,8 @@ pub trait NotificationFilter<T> {
 
 pub struct AllBookmarksFilter;
 
-impl NotificationFilter<PlainBookmarkInfo> for AllBookmarksFilter {
-    fn should_notify(&self, _payload: &PlainBookmarkInfo) -> bool {
+impl<T> NotificationFilter<T> for AllBookmarksFilter {
+    fn should_notify(&self, _payload: &T) -> bool {
         true
     }
 }

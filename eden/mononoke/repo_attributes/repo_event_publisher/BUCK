@@ -18,6 +18,7 @@ rust_library(
         []
         if rust_oss.is_oss_build()
         else [
+            "//configerator/structs/serverless/event_router/catalog/events/schemas:mononoke_bookmark_event_notification-rust",
             "//eden/mononoke/metaconfig:metaconfig_parser",
             "//eden/mononoke/metaconfig:metaconfig_types",
             "//eden/mononoke/common/mononoke_configs:mononoke_configs",
@@ -27,6 +28,7 @@ rust_library(
             "//eden/mononoke/common/rust/justknobs_ext:justknobs",
             "//common/rust/scribe/consumer:scribe_api_consumer",
             "//common/rust/shed/cloned:cloned",
+            "//thrift/lib/rust:fbthrift",
             "fbsource//third-party/rust:bytes",
             "fbsource//third-party/rust:dashmap",
             "fbcode//dsi/logger/thrift_schemas/mononoke_git_content_ref:mononoke_git_content_ref_logger_schema-rust",
