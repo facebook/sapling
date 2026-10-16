@@ -403,17 +403,33 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
         write_args_error: Optional[OSError] = None,
         systemd: bool = False,
         privhelper_restart: bool = True,
+        force_takeover: bool = False,
+        only_if_idle: bool = False,
+        write_args: Optional[MagicMock] = None,
+        reload_error: Optional[Exception] = None,
+        writes_before_reload: Optional[List[int]] = None,
     ) -> Tuple[int, MagicMock, MagicMock]:
         """Run _start_edenfs_service with its collaborators stubbed out.
 
         Returns its exit code, the `write_daemon_args_file` mock and the
-        `subprocess.call` mock.
+        `subprocess.call` mock. `writes_before_reload` receives the number of
+        args file writes that preceded the systemd reload.
         """
         instance.get_config_bool.side_effect = (
             lambda key, default: privhelper_restart
             if key == "privhelper.restart-edenfs-on-crash"
             else default
         )
+        if write_args is None:
+            write_args = MagicMock(side_effect=write_args_error)
+
+        def reload(*args: object, **kwargs: object) -> int:
+            if writes_before_reload is not None:
+                writes_before_reload.append(write_args.call_count)
+            if reload_error is not None:
+                raise reload_error
+            return 0
+
         with (
             patch.object(daemon.sys, "platform", platform),
             patch.object(
@@ -443,16 +459,17 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
                 return_value=systemd,
             ),
             patch.object(daemon, "_try_setup_systemd_env", return_value=systemd),
-            patch.object(daemon, "_systemctl_start_or_reload", return_value=0),
+            patch.object(daemon, "_systemctl_start_or_reload", side_effect=reload),
             patch.object(daemon, "maybe_edensparse_migration"),
             patch.object(daemon.subprocess, "call", return_value=0) as call,
-            patch.object(
-                daemon.daemon_util,
-                "write_daemon_args_file",
-                side_effect=write_args_error,
-            ) as write_args,
+            patch.object(daemon.daemon_util, "write_daemon_args_file", new=write_args),
         ):
-            exit_code = daemon._start_edenfs_service(instance, takeover=True)
+            exit_code = daemon._start_edenfs_service(
+                instance,
+                takeover=True,
+                force_takeover=force_takeover,
+                only_if_idle=only_if_idle,
+            )
         return exit_code, write_args, call
 
     def test_start_writes_the_args_file_without_systemd(self) -> None:
@@ -533,6 +550,80 @@ class EdenFSSystemdEnvironmentTest(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertIn("read-only file system", print_stderr.call_args.args[0])
+
+    def test_forced_takeover_under_systemd_drops_the_force_flag_after_reload(
+        self,
+    ) -> None:
+        # systemd replays the args file on every reload, so the flag must not
+        # outlive the one takeover that asked for it.
+        instance: MagicMock = MagicMock(spec=EdenInstance)
+
+        writes_before_reload: List[int] = []
+        with tempfile.TemporaryDirectory() as temp_dir:
+            instance.state_dir = Path(temp_dir)
+            exit_code, write_args, _call = self._start_edenfs_service(
+                instance,
+                platform="linux",
+                systemd=True,
+                force_takeover=True,
+                only_if_idle=True,
+                writes_before_reload=writes_before_reload,
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(write_args.call_count, 2)
+        # The reload replays the first write; the second comes after it.
+        self.assertEqual(writes_before_reload, [1])
+        armed_cmd = write_args.call_args_list[0].args[1]
+        self.assertIn("--takeover", armed_cmd)
+        self.assertIn("--forceTakeover", armed_cmd)
+        self.assertIn("--takeoverOnlyIfIdle", armed_cmd)
+        self.assertIn("--undefok=forceTakeover,takeoverOnlyIfIdle", armed_cmd)
+        disarmed_cmd = write_args.call_args_list[1].args[1]
+        self.assertIn("--takeover", disarmed_cmd)
+        self.assertNotIn("--forceTakeover", disarmed_cmd)
+        self.assertNotIn("--takeoverOnlyIfIdle", disarmed_cmd)
+        self.assertNotIn("--undefok=forceTakeover,takeoverOnlyIfIdle", disarmed_cmd)
+
+    def test_takeover_flags_are_dropped_even_when_the_reload_raises(self) -> None:
+        instance: MagicMock = MagicMock(spec=EdenInstance)
+        write_args = MagicMock()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            instance.state_dir = Path(temp_dir)
+            with self.assertRaises(RuntimeError):
+                self._start_edenfs_service(
+                    instance,
+                    platform="linux",
+                    systemd=True,
+                    force_takeover=True,
+                    write_args=write_args,
+                    reload_error=RuntimeError("systemd-escape is missing"),
+                )
+
+        self.assertEqual(write_args.call_count, 2)
+        self.assertNotIn("--forceTakeover", write_args.call_args_list[1].args[1])
+
+    def test_a_failed_disarming_write_leaves_the_args_file_alone(self) -> None:
+        instance: MagicMock = MagicMock(spec=EdenInstance)
+        # The armed write succeeds, the disarming one fails.
+        write_args = MagicMock(side_effect=[None, OSError("read-only file system")])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            instance.state_dir = Path(temp_dir)
+            with patch.object(daemon, "print_stderr") as print_stderr:
+                exit_code, _write_args, _call = self._start_edenfs_service(
+                    instance,
+                    platform="linux",
+                    systemd=True,
+                    force_takeover=True,
+                    write_args=write_args,
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(write_args.call_count, 2)
+        self.assertIn("read-only file system", print_stderr.call_args.args[0])
+        self.assertIn("would replay", print_stderr.call_args.args[0])
 
     def test_start_removes_a_stale_args_file_when_the_write_fails(self) -> None:
         instance: MagicMock = MagicMock(spec=EdenInstance)

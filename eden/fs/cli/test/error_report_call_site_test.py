@@ -41,6 +41,7 @@ class RestartErrorReportTest(ErrorReportCallSiteTest):
             daemon_binary=None,
             force_restart=False,
             migrate_to=None,
+            only_if_idle=False,
             only_if_running=False,
             preserved_vars=None,
             prompt=False,

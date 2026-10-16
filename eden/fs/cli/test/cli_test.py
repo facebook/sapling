@@ -226,6 +226,7 @@ class RestartTest(unittest.TestCase):
             daemon_binary=None,
             force_restart=False,
             migrate_to=None,
+            only_if_idle=False,
             preserved_vars=None,
             prompt=False,
         )
@@ -285,6 +286,30 @@ class RestartTest(unittest.TestCase):
             "devfuse_to_io_uring",
             telemetry_sample.strings["transport_name"],
         )
+
+    def test_graceful_restart_reports_a_refused_takeover(self) -> None:
+        restart_cmd = self.make_restart_cmd()
+        telemetry_logger = self.make_telemetry_logger()
+        instance = MagicMock()
+        instance.state_dir = Path("/home/test/.eden")
+        instance.get_telemetry_logger.return_value = telemetry_logger
+        instance.check_health.return_value = MagicMock(pid=1234)
+
+        with (
+            patch.object(config_mod, "get_transport_mismatches", return_value=[]),
+            patch.object(main_mod, "remove_legacyephemeral_checkouts"),
+            patch.object(
+                main_mod.daemon, "gracefully_restart_edenfs_service", return_value=1
+            ),
+            patch.object(main_mod.daemon, "takeover_was_refused", return_value=True),
+            patch.object(main_mod, "wait_for_instance_healthy"),
+        ):
+            self.assertEqual(
+                main_mod.daemon.TAKEOVER_REFUSED_EXIT_CODE,
+                restart_cmd._graceful_restart(instance),
+            )
+
+        self.assertEqual(1, len(telemetry_logger.samples))
 
     def test_graceful_restart_falls_back_on_nfs_transport_mismatch(self) -> None:
         restart_cmd = self.make_restart_cmd()

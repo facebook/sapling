@@ -345,11 +345,18 @@ def gracefully_restart_edenfs_service(
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
     preserved_env: Optional[List[str]] = None,
+    force_takeover: bool = False,
+    only_if_idle: bool = False,
 ) -> int:
     """
     Gracefully restart the EdenFS service
     This function ensures a seamless transition from the old EdenFS instance to the new one.
     It prevents the auto unmount recovery task from interfering with the restart process.
+
+    The running daemon refuses a takeover while it is serving long Thrift
+    requests. With force_takeover, it cancels them and proceeds. With
+    only_if_idle, it also refuses while it has served a checkout or a mount
+    recently.
     """
     # Set the intentionally unmounted flag for all mounts to prevent auto unmount recovery
     # during the restart process. This ensures that the old EdenFS mounts are not recovered
@@ -362,11 +369,121 @@ def gracefully_restart_edenfs_service(
         edenfs_args=edenfs_args,
         preserved_env=preserved_env,
         takeover=True,
+        force_takeover=force_takeover,
+        only_if_idle=only_if_idle,
     )
     # Clear the intentionally unmounted flag after the restart is complete.
     # This allows the auto unmount recovery task to resume its normal operation.
     instance.clear_intentionally_unmounted_for_all_mounts()
     return result
+
+
+# Flags that apply to one takeover only. They travel with --undefok so that a
+# daemon binary from an older package ignores them instead of refusing to
+# start.
+_UNDEFOK_TAKEOVER_FLAGS = "--undefok=forceTakeover,takeoverOnlyIfIdle"
+_FORCE_TAKEOVER_FLAG = "--forceTakeover"
+_ONLY_IF_IDLE_FLAG = "--takeoverOnlyIfIdle"
+_TAKEOVER_ONLY_ARGS = [
+    _UNDEFOK_TAKEOVER_FLAGS,
+    _FORCE_TAKEOVER_FLAG,
+    _ONLY_IF_IDLE_FLAG,
+]
+
+# Exit status of `eden restart --graceful` when the running daemon refused the
+# takeover and kept serving, so that a caller that retries later, such as the
+# restarter, can tell it from a restart that failed. This is EX_TEMPFAIL.
+TAKEOVER_REFUSED_EXIT_CODE = 75
+
+# The running daemon's refusal reaches the new daemon's startup log through
+# the takeover error. Both refusal messages carry these words; the daemon
+# keeps them in kTakeoverRefusedPhrase in EdenServer.cpp.
+_TAKEOVER_REFUSED_MARKER = "refused the graceful restart"
+
+# The error the daemon reported the last time a start failed, if any.
+_last_daemon_error: Optional[str] = None
+
+
+def _remember_daemon_error(daemon_error: Optional[str]) -> None:
+    global _last_daemon_error
+    _last_daemon_error = daemon_error
+
+
+def takeover_was_refused() -> bool:
+    """Whether the last daemon start failed because the running daemon refused
+    the takeover."""
+    return (
+        _last_daemon_error is not None
+        and _TAKEOVER_REFUSED_MARKER in _last_daemon_error
+    )
+
+
+def _takeover_only_flags(force_takeover: bool, only_if_idle: bool) -> List[str]:
+    """The daemon flags that apply to one takeover."""
+    if not (force_takeover or only_if_idle):
+        return []
+    flags = [_UNDEFOK_TAKEOVER_FLAGS]
+    if force_takeover:
+        flags.append(_FORCE_TAKEOVER_FLAG)
+    if only_if_idle:
+        flags.append(_ONLY_IF_IDLE_FLAG)
+    return flags
+
+
+def _drop_takeover_only_flags(
+    instance: EdenInstance,
+    cmd: List[str],
+    eden_env: Dict[str, str],
+    restart_cmd: List[str],
+) -> None:
+    """Rewrite the daemon args file without the flags meant for one takeover.
+
+    systemd replays the file on every later reload, whether or not this one
+    succeeded. A rewrite that fails leaves the file as it is: removing it would
+    leave systemd nothing to start the daemon from.
+    """
+    plain_cmd = [arg for arg in cmd if arg not in _TAKEOVER_ONLY_ARGS]
+    try:
+        daemon_util.write_daemon_args_file(
+            instance.state_dir, plain_cmd, eden_env, restart_cmd
+        )
+    except Exception as e:
+        args_file = instance.state_dir / daemon_util.DAEMON_ARGS_FILENAME
+        error_report.record(
+            f"could not drop the takeover flags from the daemon args file: {e}"
+        )
+        print_stderr(
+            "warning: could not drop the takeover flags from the daemon args "
+            f"file {args_file}: {e}. A later systemctl reload of edenfs would "
+            f"replay them. Remove {_FORCE_TAKEOVER_FLAG} and "
+            f"{_ONLY_IF_IDLE_FLAG} from that file by hand, or run "
+            "`eden restart --graceful` again once it is writable, which "
+            "rewrites it."
+        )
+
+
+def _start_edenfs_with_systemd(
+    instance: EdenInstance,
+    systemd_env: Dict[str, str],
+    takeover: bool,
+    cmd: List[str],
+    eden_env: Dict[str, str],
+    restart_cmd: List[str],
+    args_file_error: Optional[str],
+) -> int:
+    """Start or reload the daemon through systemd, which launches it from the
+    daemon args file written just before."""
+    if args_file_error is not None:
+        # systemd launches the daemon from the file rather than from this
+        # command, so there is nothing left for it to start.
+        print_stderr(f"error: failed to write the daemon args file: {args_file_error}")
+        error_report.record(f"failed to write the daemon args file: {args_file_error}")
+        return 1
+    try:
+        return _systemctl_start_or_reload(instance, systemd_env, takeover)
+    finally:
+        if any(arg in _TAKEOVER_ONLY_ARGS for arg in cmd):
+            _drop_takeover_only_flags(instance, cmd, eden_env, restart_cmd)
 
 
 def _daemon_args_file(instance: EdenInstance) -> Path:
@@ -423,8 +540,11 @@ def _start_edenfs_service(
     edenfs_args: Optional[List[str]] = None,
     preserved_env: Optional[List[str]] = None,
     takeover: bool = False,
+    force_takeover: bool = False,
+    only_if_idle: bool = False,
 ) -> int:
     """Get the command and environment to use to start edenfs."""
+    _remember_daemon_error(None)
     daemon_binary = daemon_util.find_daemon_binary(daemon_binary)
     cmd, privhelper = get_edenfs_cmd(instance, daemon_binary)
 
@@ -435,6 +555,10 @@ def _start_edenfs_service(
 
     if takeover:
         cmd.append("--takeover")
+        # The args file written below is replayed by systemd, possibly by a
+        # daemon binary from an older package after a downgrade, which the
+        # --undefok in these flags accounts for.
+        cmd.extend(_takeover_only_flags(force_takeover, only_if_idle))
     if edenfs_args:
         # A restarted daemon should behave like the one it replaces.
         cmd.extend(edenfs_args)
@@ -466,17 +590,15 @@ def _start_edenfs_service(
     )
 
     if use_systemd:
-        if args_file_error is not None:
-            # systemd launches the daemon from the file rather than from this
-            # command, so there is nothing left for it to start.
-            print_stderr(
-                f"error: failed to write the daemon args file: {args_file_error}"
-            )
-            error_report.record(
-                f"failed to write the daemon args file: {args_file_error}"
-            )
-            return 1
-        return _systemctl_start_or_reload(instance, systemd_env, takeover)
+        return _start_edenfs_with_systemd(
+            instance,
+            systemd_env,
+            takeover,
+            cmd,
+            eden_env,
+            restart_cmd,
+            args_file_error,
+        )
 
     if args_file_error is not None:
         _warn_daemon_args_file_failure(instance, args_file_error)
@@ -497,6 +619,7 @@ def _start_edenfs_service(
 
     maybe_edensparse_migration(instance, EdensparseMigrationStep.PRE_EDEN_START)
     exit_code, daemon_error = _launch_daemon(instance, cmd, launch_env)
+    _remember_daemon_error(daemon_error)
     maybe_edensparse_migration(instance, EdensparseMigrationStep.POST_EDEN_START)
     if exit_code != 0:
         error_report.record(
@@ -757,6 +880,7 @@ def _systemctl_start_or_reload(
             daemon_error = _extract_daemon_error(startup_log_content)
             if daemon_error:
                 sample_kwargs["daemon_startup_log"] = daemon_error
+        _remember_daemon_error(daemon_error)
         error_report.record(
             daemon_error or result.stderr or f"systemctl {action} {unit} failed"
         )

@@ -2736,8 +2736,19 @@ class RestartCmd(Subcmd):
             dest="force_restart",
             default=False,
             action="store_true",
-            help="Force a full restart, even if the existing edenfs daemon is "
-            "still in the middle of starting or stopping.",
+            help="With --graceful, make a busy daemon cancel its in-flight "
+            "requests instead of refusing the takeover. Without --graceful, "
+            "force a full restart even if the existing edenfs daemon is still "
+            "in the middle of starting or stopping.",
+        )
+        parser.add_argument(
+            "--only-if-idle",
+            action="store_true",
+            default=False,
+            help="With --graceful, let the running edenfs daemon refuse the "
+            "restart while it has served a checkout or a mount within the last "
+            "few minutes, on top of refusing while requests are in flight. Meant "
+            "for unattended restarts.",
         )
         parser.add_argument(
             "--daemon-binary", "-d", help="Path to the binary for the edenfs daemon."
@@ -2798,6 +2809,10 @@ class RestartCmd(Subcmd):
         if args.restart_type is None:
             # Default to a full restart for now
             args.restart_type = RESTART_MODE_FULL
+
+        if args.only_if_idle and args.restart_type != RESTART_MODE_GRACEFUL:
+            print("error: --only-if-idle requires --graceful", file=sys.stderr)
+            return 1
 
         if args.migrate_to is not None:
             if args.restart_type == RESTART_MODE_GRACEFUL:
@@ -2903,7 +2918,25 @@ class RestartCmd(Subcmd):
             # waiting for in process thrift calls to finish, so we
             # want to wait for a reasonable time before we force
             # kill the process (if it is stuck somewhere)
-            wait_for_instance_healthy(instance, 600)
+            if not daemon.takeover_was_refused():
+                wait_for_instance_healthy(instance, 600)
+            if daemon.takeover_was_refused():
+                _fail_restart(
+                    telemetry_sample,
+                    "Graceful restart refused by the running EdenFS",
+                )
+                hint = (
+                    ""
+                    if self.args.force_restart
+                    else " Retry later, or pass --force to have it cancel its "
+                    "in-flight requests."
+                )
+                print(
+                    "error: the running edenfs daemon refused the graceful "
+                    f"restart and kept serving.{hint}",
+                    file=sys.stderr,
+                )
+                return daemon.TAKEOVER_REFUSED_EXIT_CODE
             _fail_restart(
                 telemetry_sample,
                 "Graceful restart failed, and old EdenFS process resumed",
@@ -3054,6 +3087,8 @@ class RestartCmd(Subcmd):
                 instance,
                 daemon_binary=self.args.daemon_binary,
                 preserved_env=self.args.preserved_vars,
+                force_takeover=self.args.force_restart,
+                only_if_idle=self.args.only_if_idle,
             )
             success = status == 0
             if success:
