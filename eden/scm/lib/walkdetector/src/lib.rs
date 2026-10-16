@@ -638,9 +638,10 @@ impl Detector {
             .is_some()
     }
 
-    /// Record that a certain number of files have been preloaded. This has no functional purpose -
-    /// it is purely to measure the efficiency of this library when paired with a prefetch
-    /// mechanism. Returns total number of files preloaded and read (i.e. cache hits) so far.
+    /// Record that `preload_count` files were prefetched for the walk rooted at `walk_root`.
+    /// Returns the total files preloaded and the total files the walker has read, cached or
+    /// remote, so prefetching can be paced against the walker's progress. A walker can read files
+    /// in a different order from the prefetch, so its remote reads count as progress too.
     pub fn files_preloaded(
         &self,
         walk_root: impl AsRef<RepoPath>,
@@ -658,7 +659,8 @@ impl Detector {
                     .fetch_add(preload_count, Ordering::Relaxed);
                 return (
                     prev_preload + preload_count,
-                    walk.file_reads.load(Ordering::Relaxed),
+                    walk.file_reads.load(Ordering::Relaxed)
+                        + walk.file_loads.load(Ordering::Relaxed),
                 );
             }
         }

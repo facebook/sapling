@@ -341,8 +341,8 @@ impl BackingStore {
 
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
             let prefetch_config = prefetch::Config {
-                // Pause prefetch if ratio of cache hits to prefetches is below min_ratio AND
-                // prefetches - cache hits is greater than max_initial_lag.
+                // Pause prefetch if ratio of walker reads to prefetches is below min_ratio AND
+                // prefetches - reads is greater than max_initial_lag.
                 min_ratio: config.get_or("backingstore", "walk-prefetch-min-ratio", || 0.1)?,
                 max_initial_lag: config.get_or(
                     "backingstore",

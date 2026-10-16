@@ -765,7 +765,7 @@ fn prefetch_with_limiter(
 }
 
 /// Determine whether prefetching for `walk_root` should be paused by considering how much we have
-/// prefetched so far, and how much of our prefetched data has actually been read by the walker.
+/// prefetched so far and how much progress the walker has made.
 fn should_pause_prefetch(
     detector: &walkdetector::Detector,
     config: &Config,
@@ -787,7 +787,7 @@ fn should_pause_prefetch(
     // Ratio isn't good - check if the absolute value of lag is too big. There is no guarantee that
     // files are read in the order we prefetch them, so we need to allow for sizeable lag. At the
     // same time, we want to prevent crazy over prefetching.
-    config.max_initial_lag > 0 && prefetch_count - read_count > config.max_initial_lag
+    config.max_initial_lag > 0 && prefetch_count.saturating_sub(read_count) > config.max_initial_lag
 }
 
 // A pathmatcher::Matcher impl that matches a simple directory prefix along with a depth filter.
@@ -1745,7 +1745,7 @@ mod test {
         assert!(!should_pause_prefetch(&detector, &config, &walk_root));
 
         // Now we are paused
-        detector.files_preloaded(&walk_root, 10);
+        detector.files_preloaded(&walk_root, 20);
         assert!(should_pause_prefetch(&detector, &config, &walk_root));
 
         for i in 0..100 {
@@ -1759,6 +1759,31 @@ mod test {
         detector.files_preloaded(&walk_root, 700);
         assert!(should_pause_prefetch(&detector, &config, &walk_root));
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_remote_reads_resume_prefetch() -> anyhow::Result<()> {
+        let config = Config {
+            min_ratio: 0.5,
+            max_initial_lag: 20,
+            ..Default::default()
+        };
+        let mut detector = walkdetector::Detector::new();
+        detector.set_walk_threshold(2);
+        let root = RepoPath::from_str("root")?;
+        detector.file_loaded(RepoPath::from_str("root/a")?, 0);
+        detector.file_loaded(RepoPath::from_str("root/b")?, 0);
+        detector.files_preloaded(root, 100);
+        assert!(should_pause_prefetch(&detector, &config, root));
+
+        for i in 0..49 {
+            detector.file_loaded(RepoPath::from_str(&format!("root/{i}"))?, 0);
+        }
+        assert!(!should_pause_prefetch(&detector, &config, root));
+
+        detector.files_preloaded(root, 100);
+        assert!(should_pause_prefetch(&detector, &config, root));
         Ok(())
     }
 }

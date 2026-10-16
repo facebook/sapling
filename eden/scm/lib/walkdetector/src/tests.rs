@@ -686,7 +686,8 @@ fn test_counters() {
 
     detector.files_preloaded(p("dir1"), 1);
     let (preloaded, read) = detector.files_preloaded(p("dir1"), 1);
-    assert_eq!(read, 1);
+    // Two remote loads plus one cached read.
+    assert_eq!(read, 3);
     assert_eq!(preloaded, 2);
 
     assert_eq!(get_counters(p("dir1"), WalkType::File), (2, 1, 2, 3, 1));
