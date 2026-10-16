@@ -25,6 +25,7 @@ pub use crate::predecessor_hop::RecordedPredecessorHop;
 pub use crate::predecessor_hop::describe_commit_for_client;
 pub use crate::predecessor_hop::differential_revision;
 pub use crate::repin::CasBaseline;
+pub use crate::repin::GitIdDerivation;
 pub use crate::repin::ManifestCommitSpec;
 pub use crate::repin::PrepareTimings;
 pub use crate::repin::PreparedManifestCommit;

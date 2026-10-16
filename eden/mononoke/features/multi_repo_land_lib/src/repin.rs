@@ -8,12 +8,16 @@
 //! Manifest re-pin: build the generated manifest commit for a branch and, in
 //! `repin_manifest_branch`, atomically move the bookmark to it under a CAS check.
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::bail;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
@@ -106,9 +110,10 @@ where
         + FilestoreConfigRef
         + CommitGraphRef
         + CommitGraphWriterRef
-        + RepoDerivedDataRef,
+        + RepoDerivedDataRef
+        + BonsaiGitMappingRef,
 {
-    prepare_manifest_commits(ctx, repo, vec![spec], 1)
+    prepare_manifest_commits(ctx, repo, vec![spec], 1, GitIdDerivation::PerCommit)
         .await?
         .pop()
         .ok_or_else(|| anyhow!("prepare_manifest_commits returned nothing for one spec"))
@@ -127,6 +132,20 @@ struct OwnedSpec {
 /// Generated commits per `save_changesets` call.
 const SAVE_CHUNK: usize = 100;
 
+/// Upper bound on generated commits per local batch derivation call; a safety
+/// valve on one call's bonsai loads, not a tuning knob. A land fits in one.
+const LOCAL_DERIVE_BATCH_MAX: usize = 500;
+
+/// How `prepare_manifest_commits` obtains each generated commit's git identity.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GitIdDerivation {
+    /// One derivation per commit through the repo's derivation path.
+    PerCommit,
+    /// One concurrent batch over the siblings whose parents already have git
+    /// ids; the rest, and the whole batch if it fails, go `PerCommit`.
+    LocalBatch,
+}
+
 /// Wall time of each `prepare_manifest_commits` phase and the spread of the
 /// per-commit git-id derivations, for the caller's telemetry.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -137,11 +156,17 @@ pub struct PrepareTimings {
     pub save: Duration,
     /// The whole git-id derivation phase.
     pub derive: Duration,
-    /// Median single derivation; zero when nothing was derived.
+    /// Median per-commit derivation; a batch call's time is split evenly over
+    /// its commits. Zero when nothing was derived.
     pub derive_p50: Duration,
-    /// Slowest single derivation; zero when nothing was derived.
+    /// Slowest per-commit derivation, split the same way; zero when nothing
+    /// was derived.
     pub derive_max: Duration,
     pub commits: usize,
+    /// Commits a parent without a git id kept out of the batches.
+    pub derive_unbatchable_commits: usize,
+    /// Commits whose batch failed and were re-derived one at a time.
+    pub derive_fallback_commits: usize,
 }
 
 impl PrepareTimings {
@@ -158,13 +183,14 @@ impl PrepareTimings {
 /// [`prepare_manifest_commit`] for many branches at once: content and commits
 /// are built `concurrency` at a time, every commit is saved in ONE
 /// `save_changesets` (one commit-graph write instead of one per branch), then
-/// git identities are derived `concurrency` at a time. Results are in `specs`
-/// order.
+/// git identities are derived per `git_ids`: `concurrency` at a time, or in
+/// one local batch. Results are in `specs` order.
 pub async fn prepare_manifest_commits<R>(
     ctx: &CoreContext,
     repo: &R,
     specs: Vec<ManifestCommitSpec<'_>>,
     concurrency: usize,
+    git_ids: GitIdDerivation,
 ) -> Result<Vec<PreparedManifestCommit>>
 where
     R: RepoIdentityRef
@@ -173,10 +199,11 @@ where
         + FilestoreConfigRef
         + CommitGraphRef
         + CommitGraphWriterRef
-        + RepoDerivedDataRef,
+        + RepoDerivedDataRef
+        + BonsaiGitMappingRef,
 {
     Ok(
-        prepare_manifest_commits_timed(ctx, repo, specs, concurrency)
+        prepare_manifest_commits_timed(ctx, repo, specs, concurrency, git_ids)
             .await?
             .0,
     )
@@ -188,6 +215,7 @@ pub async fn prepare_manifest_commits_timed<R>(
     repo: &R,
     specs: Vec<ManifestCommitSpec<'_>>,
     concurrency: usize,
+    git_ids: GitIdDerivation,
 ) -> Result<(Vec<PreparedManifestCommit>, PrepareTimings)>
 where
     R: RepoIdentityRef
@@ -196,7 +224,8 @@ where
         + FilestoreConfigRef
         + CommitGraphRef
         + CommitGraphWriterRef
-        + RepoDerivedDataRef,
+        + RepoDerivedDataRef
+        + BonsaiGitMappingRef,
 {
     let concurrency = concurrency.max(1);
     let mut timings = PrepareTimings {
@@ -267,7 +296,46 @@ where
     timings.save = started.elapsed();
 
     let started = Instant::now();
-    let (prepared, samples): (Vec<PreparedManifestCommit>, Vec<Duration>) = stream::iter(built)
+    let derived = match git_ids {
+        GitIdDerivation::PerCommit => {
+            let (prepared, samples) = derive_per_commit(ctx, repo, built, concurrency).await?;
+            Derived {
+                prepared,
+                samples,
+                unbatchable_commits: 0,
+                fallback_commits: 0,
+            }
+        }
+        GitIdDerivation::LocalBatch => derive_local_batches(ctx, repo, built, concurrency).await?,
+    };
+    timings.derive = started.elapsed();
+    timings.derive_unbatchable_commits = derived.unbatchable_commits;
+    timings.derive_fallback_commits = derived.fallback_commits;
+    (timings.derive_p50, timings.derive_max) = PrepareTimings::derive_spread(derived.samples);
+    Ok((derived.prepared, timings))
+}
+
+/// The derive phase's output: prepared commits in input order and one
+/// latency sample per commit.
+struct Derived {
+    prepared: Vec<PreparedManifestCommit>,
+    samples: Vec<Duration>,
+    unbatchable_commits: usize,
+    fallback_commits: usize,
+}
+
+/// One derivation per commit; returns the commits in input order with each
+/// commit's derivation latency.
+async fn derive_per_commit<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    built: Vec<(ChangesetId, BonsaiChangeset)>,
+    concurrency: usize,
+) -> Result<(Vec<PreparedManifestCommit>, Vec<Duration>)>
+where
+    R: RepoDerivedDataRef,
+{
+    stream::iter(built)
         .map(|(old_cs, bcs)| async move {
             let new_cs = bcs.get_changeset_id();
             let derive_started = Instant::now();
@@ -286,12 +354,134 @@ where
         })
         .buffered(concurrency)
         .try_collect::<Vec<_>>()
-        .await?
+        .await
+        .map(|prepared| prepared.into_iter().unzip())
+}
+
+/// The independent siblings are derived here in one concurrent batch: one
+/// bonsai load, one blob flush and one mapping write for the land instead of
+/// per commit. One mapping read over every distinct parent first routes
+/// commits whose parent has no git id (the batch precondition) to the
+/// per-commit path, and a batch that fails is derived one commit at a time
+/// instead, so a land never fails for the batch path alone.
+async fn derive_local_batches<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    built: Vec<(ChangesetId, BonsaiChangeset)>,
+    concurrency: usize,
+) -> Result<Derived>
+where
+    R: RepoDerivedDataRef + BonsaiGitMappingRef,
+{
+    let order: Vec<(ChangesetId, ChangesetId)> = built
+        .iter()
+        .map(|(old_cs, bcs)| (*old_cs, bcs.get_changeset_id()))
+        .collect();
+
+    let parents: Vec<ChangesetId> = built
+        .iter()
+        .flat_map(|(_, bcs)| bcs.parents())
+        .collect::<HashSet<_>>()
         .into_iter()
-        .unzip();
-    timings.derive = started.elapsed();
-    (timings.derive_p50, timings.derive_max) = PrepareTimings::derive_spread(samples);
-    Ok((prepared, timings))
+        .collect();
+    let mapped_parents: HashSet<ChangesetId> = if parents.is_empty() {
+        HashSet::new()
+    } else {
+        repo.bonsai_git_mapping()
+            .get(ctx, BonsaisOrGitShas::Bonsai(parents))
+            .await?
+            .into_iter()
+            .map(|entry| entry.bcs_id)
+            .collect()
+    };
+    let (batchable, mut per_commit): (Vec<_>, Vec<_>) = built
+        .into_iter()
+        .partition(|(_, bcs)| bcs.parents().all(|parent| mapped_parents.contains(&parent)));
+    let unbatchable_commits = per_commit.len();
+
+    // The batch is concurrent inside the manager, so calls run one at a time.
+    let mut mapped: HashMap<ChangesetId, MappedGitCommitId> = HashMap::new();
+    let mut samples: Vec<Duration> = Vec::new();
+    for batch in batchable.chunks(LOCAL_DERIVE_BATCH_MAX) {
+        let started = Instant::now();
+        let csids: Vec<ChangesetId> = batch
+            .iter()
+            .map(|(_, bcs)| bcs.get_changeset_id())
+            .collect();
+        match derive_batch(ctx, repo, csids).await {
+            Ok(batch_mapped) => {
+                let per_commit = started.elapsed() / batch_mapped.len() as u32;
+                samples.extend(std::iter::repeat_n(per_commit, batch_mapped.len()));
+                mapped.extend(batch_mapped);
+            }
+            Err(e) => {
+                ctx.scuba()
+                    .clone()
+                    .add("log_tag", "local_batch_git_derivation_failed")
+                    .add("commits", batch.len())
+                    .add("error", format!("{e:#}"))
+                    .unsampled()
+                    .log();
+                per_commit.extend(batch.iter().cloned());
+            }
+        }
+    }
+    let fallback_commits = per_commit.len() - unbatchable_commits;
+    let (fallback_prepared, fallback_samples) =
+        derive_per_commit(ctx, repo, per_commit, concurrency).await?;
+    samples.extend(fallback_samples);
+    mapped.extend(
+        fallback_prepared
+            .into_iter()
+            .map(|prepared| (prepared.new_cs, prepared.mapped_git)),
+    );
+
+    let prepared = order
+        .into_iter()
+        .map(|(old_cs, new_cs)| {
+            let mapped_git = mapped
+                .get(&new_cs)
+                .cloned()
+                .ok_or_else(|| anyhow!("no git id derived for {new_cs}"))?;
+            Ok(PreparedManifestCommit {
+                old_cs,
+                new_cs,
+                mapped_git,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(Derived {
+        prepared,
+        samples,
+        unbatchable_commits,
+        fallback_commits,
+    })
+}
+
+/// One local batch over the still-underived commits. The manager only
+/// returns a duration and persists whatever the derivable's `derive_batch`
+/// hands back without checking it covers every input, so the ids are read
+/// back from the mapping, and a gap is an error here so the caller's
+/// per-commit fallback covers it instead of the land failing later.
+async fn derive_batch<R>(
+    ctx: &CoreContext,
+    repo: &R,
+    csids: Vec<ChangesetId>,
+) -> Result<HashMap<ChangesetId, MappedGitCommitId>>
+where
+    R: RepoDerivedDataRef,
+{
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_underived_batch::<MappedGitCommitId>(ctx, csids.clone(), None)
+        .await?;
+    let mapped = manager
+        .fetch_derived_batch::<MappedGitCommitId>(ctx, csids.clone(), None)
+        .await?;
+    if let Some(missing) = csids.iter().find(|csid| !mapped.contains_key(csid)) {
+        bail!("git id for {missing} is not in bonsai_git_mapping after batch derivation");
+    }
+    Ok(mapped)
 }
 
 /// Options for a single-branch re-pin.
