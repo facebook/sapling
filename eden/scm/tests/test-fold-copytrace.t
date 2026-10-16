@@ -1,3 +1,9 @@
+#testcases tree-store tree-manifest
+
+#if tree-manifest
+  $ setconfig experimental.pathhistory-treemanifest=true
+#endif
+
   $ setconfig copytrace.fallback-to-content-similarity=True
 
 test fold skipping content similarity check for large files

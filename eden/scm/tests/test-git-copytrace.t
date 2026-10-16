@@ -1,5 +1,11 @@
 #require git no-eden
 
+#testcases tree-store tree-manifest
+
+#if tree-manifest
+  $ setconfig experimental.pathhistory-treemanifest=true
+#endif
+
   $ eagerepo
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=True

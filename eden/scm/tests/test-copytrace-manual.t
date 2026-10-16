@@ -8,6 +8,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+#testcases tree-store tree-manifest
+
+#if tree-manifest
+  $ setconfig experimental.pathhistory-treemanifest=true
+#endif
+
   $ eagerepo
   $ enable rebase 
   $ newclientrepo

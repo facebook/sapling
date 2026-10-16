@@ -1,3 +1,8 @@
+#testcases tree-store tree-manifest
+
+#if tree-manifest
+  $ setconfig experimental.pathhistory-treemanifest=true
+#endif
 
   $ configure mutation-norecord
   $ enable amend rebase shelve

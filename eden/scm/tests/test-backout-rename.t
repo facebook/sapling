@@ -1,6 +1,12 @@
 
 #require no-eden
 
+#testcases tree-store tree-manifest
+
+#if tree-manifest
+  $ setconfig experimental.pathhistory-treemanifest=true
+#endif
+
   $ setconfig copytrace.dagcopytrace=True
   $ setconfig diff.git=true
 

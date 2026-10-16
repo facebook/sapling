@@ -1,3 +1,9 @@
+#testcases tree-store tree-manifest
+
+#if tree-manifest
+  $ setconfig experimental.pathhistory-treemanifest=true
+#endif
+
   $ setconfig diff.git=true
   $ enable morestatus
   $ setconfig morestatus.show=true
