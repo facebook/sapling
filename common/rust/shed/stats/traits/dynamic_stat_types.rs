@@ -196,42 +196,53 @@ impl<T> DynamicHistogram<'static, T> for LocalKey<DynamicStat<T, BoxLocalHistogr
 }
 
 /// Similar to the SingletonCounter trait, but accepts the args parameter for accessing dynamic
-/// histograms created at runtime.
-pub trait DynamicSingletonCounter<'a, T> {
+/// counters created at runtime.
+pub trait DynamicSingletonCounter<'a, T, Init = FacebookInit> {
     /// Dynamic version of `SingletonCounter::set_value`
-    fn set_value(&'a self, fb: FacebookInit, value: i64, args: T);
+    fn set_value(&'a self, init: Init, value: i64, args: T);
 
     /// Dynamic version of `SingletonCounter::get_value`
-    fn get_value(&'a self, fb: FacebookInit, args: T) -> Option<i64>;
+    fn get_value(&'a self, init: Init, args: T) -> Option<i64>;
 
     /// Dynamic version of `SingletonCounter::increment_value`
-    fn increment_value(&'a self, fb: FacebookInit, value: i64, args: T);
+    fn increment_value(&'a self, init: Init, value: i64, args: T);
 }
 
-impl<'a, T> DynamicSingletonCounter<'a, T> for DynamicStat<T, BoxSingletonCounter> {
-    fn set_value(&'a self, fb: FacebookInit, value: i64, args: T) {
-        self.get_or_default(args, |s| s.set_value(fb, value));
+impl<'a, T, Init> DynamicSingletonCounter<'a, T, Init> for DynamicStat<T, BoxSingletonCounter>
+where
+    BoxSingletonCounter: SingletonCounter<Init>,
+{
+    fn set_value(&'a self, init: Init, value: i64, args: T) {
+        self.get_or_default(args, |s| {
+            SingletonCounter::<Init>::set_value(s, init, value)
+        });
     }
 
-    fn get_value(&'a self, fb: FacebookInit, args: T) -> Option<i64> {
-        self.get_or_default(args, |s| s.get_value(fb))
+    fn get_value(&'a self, init: Init, args: T) -> Option<i64> {
+        self.get_or_default(args, |s| SingletonCounter::<Init>::get_value(s, init))
     }
 
-    fn increment_value(&'a self, fb: FacebookInit, value: i64, args: T) {
-        self.get_or_default(args, |s| s.increment_value(fb, value))
+    fn increment_value(&'a self, init: Init, value: i64, args: T) {
+        self.get_or_default(args, |s| {
+            SingletonCounter::<Init>::increment_value(s, init, value)
+        })
     }
 }
 
-impl<T> DynamicSingletonCounter<'static, T> for LocalKey<DynamicStat<T, BoxSingletonCounter>> {
-    fn set_value(&'static self, fb: FacebookInit, value: i64, args: T) {
-        self.with(|s| s.set_value(fb, value, args))
+impl<T, Init> DynamicSingletonCounter<'static, T, Init>
+    for LocalKey<DynamicStat<T, BoxSingletonCounter>>
+where
+    BoxSingletonCounter: SingletonCounter<Init>,
+{
+    fn set_value(&'static self, init: Init, value: i64, args: T) {
+        self.with(|s| DynamicSingletonCounter::<T, Init>::set_value(s, init, value, args))
     }
 
-    fn get_value(&'static self, fb: FacebookInit, args: T) -> Option<i64> {
-        self.with(|s| s.get_value(fb, args))
+    fn get_value(&'static self, init: Init, args: T) -> Option<i64> {
+        self.with(|s| DynamicSingletonCounter::<T, Init>::get_value(s, init, args))
     }
 
-    fn increment_value(&'static self, fb: FacebookInit, value: i64, args: T) {
-        self.with(|s| s.increment_value(fb, value, args))
+    fn increment_value(&'static self, init: Init, value: i64, args: T) {
+        self.with(|s| DynamicSingletonCounter::<T, Init>::increment_value(s, init, value, args))
     }
 }
