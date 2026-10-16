@@ -2888,6 +2888,12 @@ def memfilefrompatch(patchstore):
     return getfilectx
 
 
+def _gitfilenode(fctx):
+    """Return the Git object ID for a file or submodule."""
+    fnode = git.submodule_node_from_fctx(fctx)
+    return fnode if fnode is not None else git.hashobj(b"blob", fctx.data())
+
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
@@ -3093,7 +3099,7 @@ class memctx(committablectx):
         for f in self._status.modified:
             fctx = self[f]
             if git.isgitformat(self._repo):
-                filenode = git.hashobj(b"blob", fctx.data())
+                filenode = _gitfilenode(fctx)
             else:
                 p1node = nullid
                 p2node = nullid
@@ -3108,7 +3114,7 @@ class memctx(committablectx):
         for f in self._status.added:
             fctx = self[f]
             if git.isgitformat(self._repo):
-                filenode = git.hashobj(b"blob", fctx.data())
+                filenode = _gitfilenode(fctx)
             else:
                 filenode = revlog.hash(fctx.data(), nullid, nullid)
             man.set(f, filenode, fctx.flags())

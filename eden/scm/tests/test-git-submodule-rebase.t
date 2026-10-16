@@ -43,6 +43,22 @@ Main test cases:
       > A      # A/.gitmodules=[submodule "m"]\n path=m\n url=file://$TESTTMP/sub/.sl/store/git
       > EOS
     
+      # In-memory mirrors retain the submodule commit ID and type.
+      # A adds m; B modifies it.
+    
+      $ cat > "$TESTTMP/check-manifest.py" << 'EOS'
+      > import sys
+      > from sapling import context
+      > for name, node in zip(("A", "B"), sys.argv[1:]):
+      >     original = repo[node]
+      >     mirrored = context.memctx.mirror(original)
+      >     manifest = mirrored.manifest()
+      >     print(name, manifest.flags("m"), manifest["m"] == original.manifest()["m"])
+      > EOS
+      $ sl dbsh "$TESTTMP/check-manifest.py" "$A" "$B"
+      A m True
+      B m True
+    
       # Sanity check on submodule:
     
       $ sl goto -q $B
