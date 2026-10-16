@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'struct |bool|Option<|Arc<AtomicBool>|is_.*:.*bool|enum '
+name: type-safety-impossible-states
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'struct |bool|Option<|Arc<AtomicBool>|is_.*:.*bool|enum '
 ---
 
 # Make Impossible States Unrepresentable
