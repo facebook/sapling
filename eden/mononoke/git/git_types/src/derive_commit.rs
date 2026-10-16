@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -63,6 +64,44 @@ fn get_name_and_email<'a>(input: &'a str) -> Result<(&'a str, &'a str)> {
         .as_str();
     let email = captures.name("email").map_or("", |m| m.as_str()); // The email can be empty
     Ok((name, email))
+}
+
+/// Commits derived at once when a batch has no in-batch dependencies.
+const INDEPENDENT_BATCH_CONCURRENCY: usize = 50;
+
+/// True when no commit in the batch is a parent or subtree source of another.
+fn batch_is_independent(bonsais: &[BonsaiChangeset]) -> bool {
+    let csids: HashSet<ChangesetId> = bonsais.iter().map(|b| b.get_changeset_id()).collect();
+    bonsais.iter().all(|bonsai| {
+        let parents = bonsai.parents();
+        let subtree_sources = bonsai
+            .subtree_changes()
+            .values()
+            .filter_map(|change| change.source());
+        parents
+            .chain(subtree_sources)
+            .all(|dep| !csids.contains(&dep))
+    })
+}
+
+/// The trait's default: one commit at a time, each seeing the ones before it.
+async fn derive_batch_sequentially(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsais: Vec<BonsaiChangeset>,
+) -> Result<HashMap<ChangesetId, MappedGitCommitId>> {
+    let mut res = HashMap::new();
+    for bonsai in bonsais {
+        let csid = bonsai.get_changeset_id();
+        let parents = derivation_ctx
+            .fetch_unknown_parents(ctx, Some(&res), &bonsai)
+            .await?;
+        let derived =
+            MappedGitCommitId::derive_single(ctx, derivation_ctx, bonsai, parents, Some(&res))
+                .await?;
+        res.insert(csid, derived);
+    }
+    Ok(res)
 }
 
 #[async_trait]
@@ -153,6 +192,31 @@ impl BonsaiDerivable for MappedGitCommitId {
         upload_non_blob_git_object(ctx, &derivation_ctx.blobstore(), &oid, raw_commit_bytes)
             .await?;
         GitSha1::from_object_id(&oid).map(Self::new)
+    }
+
+    /// Independent commits (no parent or subtree source inside the batch) are
+    /// derived concurrently; anything else takes the sequential default.
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        if !batch_is_independent(&bonsais) {
+            return derive_batch_sequentially(ctx, derivation_ctx, bonsais).await;
+        }
+        stream::iter(bonsais)
+            .map(|bonsai| async move {
+                let csid = bonsai.get_changeset_id();
+                let parents = derivation_ctx
+                    .fetch_unknown_parents(ctx, None, &bonsai)
+                    .await?;
+                let derived =
+                    Self::derive_single(ctx, derivation_ctx, bonsai, parents, None).await?;
+                anyhow::Ok((csid, derived))
+            })
+            .buffer_unordered(INDEPENDENT_BATCH_CONCURRENCY)
+            .try_collect()
+            .await
     }
 
     async fn store_mapping(
