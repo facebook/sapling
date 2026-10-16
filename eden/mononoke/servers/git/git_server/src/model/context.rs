@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::time::Instant;
 
 use anyhow::Result;
 use context::CoreContext;
@@ -33,6 +34,7 @@ use crate::GitRepos;
 use crate::Repo;
 use crate::UpstreamLfsUrlFormat;
 use crate::errors::GitServerContextErrorKind;
+use crate::scuba::MononokeGitScubaKey;
 
 define_stats! {
     prefix = "mononoke.git.server";
@@ -276,13 +278,23 @@ impl GitServerContext {
 
                 // Add it dynamically - this is done outside the lock since add_repo is async
                 let repo_name = method_info.repo.clone();
-                let repo = match repo_mgr.add_repo(&repo_name).await {
+                let mut scuba = ctx.scuba().clone();
+                scuba
+                    .add(MononokeGitScubaKey::Repo, repo_name.as_str())
+                    .add(MononokeGitScubaKey::Method, method_info.method.to_string())
+                    .unsampled();
+                let start = Instant::now();
+                let result = repo_mgr.add_repo(&repo_name).await;
+                scuba.add("duration_ms", start.elapsed().as_millis() as u64);
+                let repo = match result {
                     Ok(repo) => {
                         STATS::repo_added_on_demand.add_value(1);
+                        scuba.log_with_msg("Repo loaded on demand", None);
                         repo
                     }
                     Err(e) => {
                         STATS::repo_added_on_demand_failed.add_value(1);
+                        scuba.log_with_msg("Repo load on demand failed", format!("{e:#}"));
                         return Err(GitServerContextErrorKind::RepoSetupError {
                             repo_name,
                             error: e.to_string(),
