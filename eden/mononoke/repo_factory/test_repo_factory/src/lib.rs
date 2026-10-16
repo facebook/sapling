@@ -9,6 +9,7 @@
 #![deny(missing_docs)]
 
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use acl_regions::ArcAclRegions;
@@ -79,8 +80,11 @@ use megarepo_mapping::MegarepoMapping;
 use memblob::Memblob;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
+use metaconfig_parser::RepoConfigs;
+use metaconfig_parser::StorageConfigs;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlameVersion;
+use metaconfig_types::CommonConfig;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
@@ -93,6 +97,7 @@ use metaconfig_types::InfinitepushParams;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::UnodeVersion;
+use mononoke_configs::MononokeConfigs;
 use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 use mutable_blobstore::ArcMutableRepoBlobstore;
@@ -1026,8 +1031,20 @@ impl TestRepoFactory {
     ) -> Result<ArcRepoEventPublisher> {
         #[cfg(fbcode_build)]
         {
-            let event_publisher =
-                ScribeRepoEventPublisher::new(self.fb, repo_config.metadata_cache_config.as_ref())?;
+            let configs = Arc::new(MononokeConfigs::new_static(
+                RepoConfigs::new(
+                    HashMap::from([(self.name.clone(), repo_config.as_ref().clone())]),
+                    CommonConfig::default(),
+                ),
+                StorageConfigs {
+                    storage: HashMap::new(),
+                },
+            ));
+            let event_publisher = ScribeRepoEventPublisher::new(
+                self.fb,
+                configs,
+                repo_config.metadata_cache_config.as_ref(),
+            )?;
             Ok(Arc::new(event_publisher))
         }
         #[cfg(not(fbcode_build))]

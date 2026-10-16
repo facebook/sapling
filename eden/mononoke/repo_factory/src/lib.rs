@@ -159,6 +159,7 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
 #[cfg(fbcode_build)]
 use metaconfig_types::ZelosConfig;
+use mononoke_configs::MononokeConfigs;
 use mutable_blobstore::ArcMutableRepoBlobstore;
 use mutable_blobstore::MutableRepoBlobstore;
 use mutable_counters::ArcMutableCounters;
@@ -349,6 +350,7 @@ pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
 #[derive(Clone)]
 pub struct RepoFactory {
     pub env: Arc<MononokeEnvironment>,
+    configs: Arc<MononokeConfigs>,
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
@@ -364,7 +366,7 @@ pub struct RepoFactory {
 }
 
 impl RepoFactory {
-    pub fn new(env: Arc<MononokeEnvironment>) -> RepoFactory {
+    pub fn new(env: Arc<MononokeEnvironment>, configs: Arc<MononokeConfigs>) -> RepoFactory {
         RepoFactory {
             sql_factories: RepoFactoryCache::new(env.fb, "sql_factories"),
             blobstores: RepoFactoryCache::new(env.fb, "blobstore"),
@@ -377,6 +379,7 @@ impl RepoFactory {
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             bonsai_hg_mapping_overwrite: false,
+            configs,
             env,
             derived_data_scuba_table_overwrite: None,
         }
@@ -2195,6 +2198,7 @@ impl RepoFactory {
                 {
                     let event_publisher = ScribeRepoEventPublisher::new(
                         self.env.fb,
+                        self.configs.clone(),
                         repo_config.metadata_cache_config.as_ref(),
                     )?;
                     Ok(Arc::new(event_publisher) as ArcRepoEventPublisher)

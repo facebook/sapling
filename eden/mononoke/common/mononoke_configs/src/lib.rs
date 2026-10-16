@@ -236,6 +236,22 @@ impl MononokeConfigs {
         })
     }
 
+    /// Creates an instance backed by fixed in-memory configurations.
+    pub fn new_static(repo_configs: RepoConfigs, storage_configs: StorageConfigs) -> Self {
+        Self {
+            repo_configs: Arc::new(ArcSwap::from_pointee(repo_configs)),
+            storage_configs: Arc::new(ArcSwap::from_pointee(storage_configs)),
+            update_receivers: Arc::new(ArcSwap::from_pointee(vec![])),
+            maybe_config_updater: None,
+            maybe_liveness_updater: None,
+            maybe_manifest_handle: None,
+            repo_handles: Arc::new(RwLock::new(HashMap::new())),
+            config_store: None,
+            tier_name: None,
+            repo_handle_event_tx: None,
+        }
+    }
+
     /// The latest repo configs fetched from the underlying configuration store.
     pub fn repo_configs(&self) -> Arc<RepoConfigs> {
         // Load full since there could be lots of calls to repo_configs.

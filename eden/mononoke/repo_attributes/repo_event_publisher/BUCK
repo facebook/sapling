@@ -18,7 +18,9 @@ rust_library(
         []
         if rust_oss.is_oss_build()
         else [
+            "//eden/mononoke/metaconfig:metaconfig_parser",
             "//eden/mononoke/metaconfig:metaconfig_types",
+            "//eden/mononoke/common/mononoke_configs:mononoke_configs",
             "//eden/mononoke/common/mononoke_macros:mononoke_macros",
             "//common/rust/shed/fbinit:fbinit",
             "//common/rust/shed/stats:stats",
@@ -45,7 +47,10 @@ rust_unittest(
             ":repo_event_publisher",
             "//eden/mononoke/features/repo_update_logger:repo_update_logger",
             "fbsource//third-party/rust:anyhow",
+            "//eden/mononoke/common/mononoke_configs:mononoke_configs",
             "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+            "//eden/mononoke/metaconfig:metaconfig_parser",
+            "//eden/mononoke/metaconfig:metaconfig_types",
             "//common/rust/shed/fbinit:fbinit",
             "//common/rust/shed/fbinit:fbinit-tokio",
             "//common/rust/scribe/api:scribe_api",

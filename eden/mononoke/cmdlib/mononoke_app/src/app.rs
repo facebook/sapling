@@ -125,7 +125,7 @@ impl MononokeApp {
         let configs = ConfigArgs::from_arg_matches(&args)?
             .create_mononoke_configs(runtime.handle().clone(), &env.as_ref().config_store)?;
 
-        let repo_factory = Arc::new(RepoFactory::new(env.clone()));
+        let repo_factory = Arc::new(RepoFactory::new(env.clone(), configs.clone()));
 
         Ok(MononokeApp {
             fb,

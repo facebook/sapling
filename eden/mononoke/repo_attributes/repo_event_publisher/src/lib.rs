@@ -18,6 +18,7 @@ mod from_scuba_json;
 mod notification_filter;
 #[cfg(not(fbcode_build))]
 mod oss;
+#[cfg(fbcode_build)]
 mod repo_name_provider;
 
 use anyhow::Result;

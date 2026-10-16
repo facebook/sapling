@@ -1,9 +1,14 @@
 // (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
 
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;
 
 use fbinit::FacebookInit;
+use metaconfig_parser::RepoConfigs;
+use metaconfig_parser::StorageConfigs;
+use metaconfig_types::CommonConfig;
+use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
 use repo_event_publisher::AllBookmarksFilter;
 use repo_event_publisher::ScribeListener;
@@ -15,10 +20,24 @@ use scribe_api::inmemory::create_consumer_producer_pair;
 use scribe_api::producer::ScribeProducer;
 use scribe_api::producer::ScribeProducerOptions;
 
+fn mononoke_configs() -> Arc<MononokeConfigs> {
+    Arc::new(MononokeConfigs::new_static(
+        RepoConfigs::new(HashMap::new(), CommonConfig::default()),
+        StorageConfigs {
+            storage: HashMap::new(),
+        },
+    ))
+}
+
 #[mononoke::fbinit_test]
 async fn test_basic_listener_creation(fb: FacebookInit) -> anyhow::Result<()> {
-    ScribeListener::<PlainBookmarkInfo, _>::new(fb, "test_category", AllBookmarksFilter {})
-        .expect("Failed to create scribe listener");
+    ScribeListener::<PlainBookmarkInfo, _>::new(
+        fb,
+        mononoke_configs(),
+        "test_category",
+        AllBookmarksFilter {},
+    )
+    .expect("Failed to create scribe listener");
     Ok(())
 }
 
@@ -59,6 +78,7 @@ async fn test_listener_with_single_subscriber(fb: FacebookInit) -> anyhow::Resul
     let consumer = Arc::new(consumer);
     let mut listener = ScribeListener::<PlainBookmarkInfo, _>::new_with_client(
         fb,
+        mononoke_configs(),
         consumer.clone(),
         "test_category".to_string(),
         AllBookmarksFilter {},
@@ -173,6 +193,7 @@ async fn test_listener_with_multiple_subscriber_same_repo(fb: FacebookInit) -> a
     "#;
     let mut listener = ScribeListener::<PlainBookmarkInfo, _>::new_with_client(
         fb,
+        mononoke_configs(),
         Arc::new(consumer),
         "test_category".to_string(),
         AllBookmarksFilter {},
@@ -231,6 +252,7 @@ async fn test_listener_with_multiple_subscriber_multiple_repo(
     "#;
     let mut listener = ScribeListener::<PlainBookmarkInfo, _>::new_with_client(
         fb,
+        mononoke_configs(),
         Arc::new(consumer),
         "test_category".to_string(),
         AllBookmarksFilter {},
