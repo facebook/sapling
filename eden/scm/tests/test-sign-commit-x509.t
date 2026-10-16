@@ -1,4 +1,4 @@
-#require git openssl no-tsan no-windows
+#require git openssl no-windows
 #debugruntest-incompatible
 
   $ export HGIDENTITY=sl
