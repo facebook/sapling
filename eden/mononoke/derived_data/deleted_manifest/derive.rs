@@ -31,11 +31,9 @@ use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use manifest::BonsaiDiffFileChange;
 use manifest::Diff;
 use manifest::ManifestOps;
 use manifest::PathTree;
-use manifest::bonsai_diff;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
@@ -153,38 +151,6 @@ struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
     known_entries: PathTree<Option<Option<Manifest::Id>>>,
 }
 
-async fn get_changes_bonsai(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn KeyedBlobstore>,
-    bonsai: &BonsaiChangeset,
-    unode: ManifestUnodeId,
-    parents: impl Iterator<Item = ManifestUnodeId>,
-) -> Result<PathTree<()>, Error> {
-    if bonsai.has_manifest_altering_subtree_changes() {
-        // This bonsai includes subtree operations that alter the manifest.
-        // Recompute the bonsai changes ignoring the subtree operations.
-        Ok(PathTree::from_iter(
-            bonsai_diff(ctx.clone(), blobstore.clone(), unode, parents.collect())
-                .map_ok(|diff| async move {
-                    match diff {
-                        BonsaiDiffFileChange::Changed(path, _) => Ok((path, ())),
-                        BonsaiDiffFileChange::ChangedReusedId(path, _) => Ok((path, ())),
-                        BonsaiDiffFileChange::Deleted(path) => Ok((path, ())),
-                    }
-                })
-                .try_buffered(100)
-                .try_collect::<Vec<_>>()
-                .await?,
-        ))
-    } else {
-        Ok(PathTree::from_iter(
-            bonsai
-                .file_changes()
-                .map(|(path, _change)| (path.clone(), ())),
-        ))
-    }
-}
-
 impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     /// Derives a Deleted Manifest for a single commit (canonical, whole-tree).
     /// Thin wrapper over `derive_subtree` seeded at the repo root with no
@@ -196,14 +162,11 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         parents: Vec<(ChangesetId, Manifest::Id, ManifestUnodeId)>,
         current_unode: ManifestUnodeId,
     ) -> Result<Manifest::Id, Error> {
-        let changes: PathTree<()> = get_changes_bonsai(
-            ctx,
-            blobstore,
-            &bonsai,
-            current_unode,
-            parents.iter().map(|(_, _, unode)| *unode),
-        )
-        .await?;
+        let changes: PathTree<()> = PathTree::from_iter(
+            bonsai
+                .file_changes()
+                .map(|(path, _change)| (path.clone(), ())),
+        );
         let cs_id = bonsai.get_changeset_id();
         let parent_deleted_manifests = parents
             .iter()

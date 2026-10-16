@@ -46,10 +46,8 @@ use crate::augmented_derivation::AugmentedManifestRoot;
 use crate::augmented_derivation::fetch_augmented_roots_with_fallback;
 use crate::augmented_manifest_v2::RootHgAugmentedManifestV2Id;
 use crate::augmented_manifest_v2::should_publish_shared_mapping;
-use crate::derive_hg_augmented_manifest::build_augmented_subtree_replacements;
 use crate::derive_hg_augmented_manifest::derive_augmented_manifest_entry_from_bonsai;
 use crate::derive_hg_augmented_manifest::finalize_augmented_manifest_root;
-use crate::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use crate::mapping::RootHgAugmentedManifestId;
 use crate::mapping::format_key;
 
@@ -353,19 +351,10 @@ where
                 !stage_path.is_prefix_of(copy_path) && is_hg_parent(copy_csid)
             })
             .map(|(_, copy_csid)| *copy_csid)
-            .chain(subtree_copy_source_changesets(bonsai, stage_path))
             .collect();
         let source_aug_roots =
             fetch_source_augmented_roots::<Root>(ctx, derivation, source_csids).await?;
-        let subtree_replacements_fut = build_augmented_subtree_replacements(
-            ctx,
-            derivation.blobstore(),
-            bonsai,
-            stage_path,
-            &source_aug_roots,
-        );
-        let (content_metadata, subtree_replacements) =
-            futures::future::try_join(content_metadata_fut, subtree_replacements_fut).await?;
+        let content_metadata = content_metadata_fut.await?;
 
         let output = derive_augmented_manifest_entry_from_bonsai(
             ctx,
@@ -374,7 +363,7 @@ where
             parent_entries,
             known_entries,
             file_changes,
-            subtree_replacements,
+            Vec::new(),
             parent_bonsai_csids,
             &source_aug_roots,
             &content_metadata,

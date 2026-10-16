@@ -9,9 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::Error;
-use anyhow::format_err;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
@@ -22,14 +20,10 @@ use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::future::try_join_all;
-use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
-use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
-use manifest::PathOrPrefix;
-use manifest::PathTree;
 use manifest::TreeInfo;
 use manifest::derive_manifest;
 use manifest::derive_manifest_with_known_entries;
@@ -47,13 +41,11 @@ use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::path::MPath;
-use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::RootUnodeManifestId;
 use crate::UnodeDerivationError;
 
 pub(crate) async fn derive_unode_manifest_stack(
@@ -134,136 +126,6 @@ pub(crate) async fn derive_unode_entry(
     derive_fut.await
 }
 
-/// Process subtree changes for unode derivation, synthesizing file changes
-/// and manifest replacements.
-///
-/// For unodes, subtree copies require synthesizing file changes because
-/// unodes are unique per commit (they can't reuse source entries like
-/// content-addressed manifests can). This is an O(N) operation.
-///
-/// Returns additional file changes and manifest parent replacements.
-pub(crate) async fn get_unode_subtree_changes(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootUnodeManifestId>>,
-    subtree_changes: &SortedVectorMap<MPath, SubtreeChange>,
-    changes: &[(NonRootMPath, Option<(ContentId, FileType)>)],
-) -> Result<
-    (
-        Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-        Vec<ManifestParentReplacement<ManifestUnodeId, FileUnodeId>>,
-    ),
-    Error,
-> {
-    let blobstore = derivation_ctx.blobstore();
-    let mut manifest_replacements = Vec::new();
-    let mut additional_changes = Vec::new();
-    for (to_path, subtree_change) in subtree_changes.iter() {
-        if let Some((from_cs_id, from_path)) = subtree_change.copy_source() {
-            let from_unode = derivation_ctx
-                .fetch_unknown_dependency::<RootUnodeManifestId>(ctx, known, from_cs_id)
-                .await?
-                .manifest_unode_id()
-                .find_entry(ctx.clone(), blobstore.clone(), from_path.clone())
-                .await
-                .with_context(|| {
-                    format!("Failed to fetch subtree copy source {from_cs_id}:{from_path}")
-                })?
-                .ok_or_else(|| format_err!("No subtree copy source {from_cs_id}:{from_path}"))?;
-            manifest_replacements.push(ManifestParentReplacement {
-                path: to_path.clone(),
-                replacements: Vec::new(),
-            });
-
-            match from_unode {
-                Entry::Tree(from_unode) => {
-                    let mut changed_paths = changes
-                        .iter()
-                        .filter_map(|(change_path, _change)| {
-                            if to_path.is_prefix_of(change_path) {
-                                Some((
-                                    MPath::from(change_path.remove_prefix_component(to_path)),
-                                    true,
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<PathTree<_>>();
-                    for (other_to_path, other_subtree_change) in subtree_changes.iter() {
-                        if other_to_path != to_path && other_subtree_change.copy_source().is_some()
-                        {
-                            if to_path.is_prefix_of(other_to_path) {
-                                let subpath = other_to_path.remove_prefix_component(to_path);
-                                changed_paths.insert(subpath, true);
-                            }
-                        }
-                    }
-                    let changed_paths = Arc::new(changed_paths);
-                    let filter_changed_paths =
-                        move |path: &MPath| changed_paths.get(path).is_none_or(|x| !x);
-                    from_unode
-                        .find_entries_filtered(
-                            ctx.clone(),
-                            blobstore.clone(),
-                            Some(PathOrPrefix::Prefix(MPath::ROOT)),
-                            {
-                                cloned!(filter_changed_paths);
-                                move |path, _mf_id| filter_changed_paths(path)
-                            },
-                        )
-                        .map_ok(|(path, entry)| {
-                            let include = filter_changed_paths(&path);
-                            async move {
-                                match entry {
-                                    Entry::Leaf(file_unode) if include => {
-                                        let file_unode = file_unode.load(ctx, blobstore).await?;
-                                        Ok(Some((
-                                            to_path.join(&path),
-                                            Some((
-                                                *file_unode.content_id(),
-                                                *file_unode.file_type(),
-                                            )),
-                                        )))
-                                    }
-                                    _ => Ok(None),
-                                }
-                            }
-                        })
-                        .try_buffered(100)
-                        .try_for_each(|change| {
-                            if let Some((path, change)) = change {
-                                if let Some(path) = path.into_optional_non_root_path() {
-                                    additional_changes.push((path, change));
-                                }
-                            }
-                            future::ready(Ok(()))
-                        })
-                        .await?;
-                }
-                Entry::Leaf(from_unode) => {
-                    if !changes
-                        .iter()
-                        .any(|(change_path, _change)| to_path == <&MPath>::from(change_path))
-                    {
-                        let from_unode = from_unode.load(ctx, blobstore).await?;
-                        additional_changes.push((
-                            to_path
-                                .clone()
-                                .into_optional_non_root_path()
-                                .ok_or_else(|| {
-                                    format_err!("Subtree copy for root cannot copy from a file")
-                                })?,
-                            Some((*from_unode.content_id(), *from_unode.file_type())),
-                        ));
-                    }
-                }
-            }
-        }
-    }
-    Ok((additional_changes, manifest_replacements))
-}
-
 /// Derives unode manifests for bonsai changeset `cs_id` given parent unode manifests.
 /// Note that `derive_manifest()` does a lot of the heavy lifting for us, and this crate has to
 /// provide only functions to create a single unode file or single unode tree (
@@ -271,25 +133,19 @@ pub(crate) async fn get_unode_subtree_changes(
 pub(crate) async fn derive_unode_manifest_with_subtree_changes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootUnodeManifestId>>,
     cs_id: ChangesetId,
     parents: Vec<ManifestUnodeId>,
-    mut changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-    subtree_changes: &SortedVectorMap<MPath, SubtreeChange>,
+    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
 ) -> Result<ManifestUnodeId, Error> {
     let parents: Vec<_> = parents.into_iter().collect();
     let blobstore = derivation_ctx.blobstore();
-
-    let (mut additional_changes, manifest_replacements) =
-        get_unode_subtree_changes(ctx, derivation_ctx, known, subtree_changes, &changes).await?;
-    changes.append(&mut additional_changes);
 
     let maybe_tree_id = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
         changes,
-        manifest_replacements,
+        Vec::new(),
         {
             cloned!(ctx, blobstore);
             move |tree_info| create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info)
@@ -638,16 +494,8 @@ mod tests {
         parents: Vec<ManifestUnodeId>,
         changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
     ) -> Result<ManifestUnodeId, Error> {
-        derive_unode_manifest_with_subtree_changes(
-            ctx,
-            derivation_ctx,
-            None,
-            cs_id,
-            parents,
-            changes,
-            &SortedVectorMap::new(),
-        )
-        .await
+        derive_unode_manifest_with_subtree_changes(ctx, derivation_ctx, cs_id, parents, changes)
+            .await
     }
 
     #[mononoke::fbinit_test]

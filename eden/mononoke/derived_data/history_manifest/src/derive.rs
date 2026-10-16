@@ -10,10 +10,8 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use anyhow::format_err;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
@@ -27,9 +25,6 @@ use futures::future;
 use futures::future::FutureExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use manifest::Entry;
-use manifest::ManifestOps;
-use manifest::PathOrPrefix;
 use manifest::PathTree;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
@@ -757,170 +752,6 @@ async fn do_fold(
     }
 }
 
-/// Process subtree copies from a bonsai changeset.
-///
-/// Each subtree copy from `(from_cs_id, from_path)` to `to_path` becomes:
-/// - A "replacement path" at `to_path`, whose parent entries are cleared
-///   during the traversal so the destination subtree is rebuilt from
-///   scratch.
-/// - Synthetic file changes enumerating every live file in the source
-///   directory (or the source file itself), excluding paths already
-///   changed in this commit or covered by a nested subtree copy.
-///
-/// History manifest entries are unique to each commit (their `linknode`
-/// records which commit they belong to), so the source entries cannot be
-/// reused directly; every file under the source must be re-materialized
-/// at the destination. The cost of the copy is therefore linear in the
-/// size of the source subtree.
-async fn process_subtree_copies(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootHistoryManifestDirectoryId>>,
-    bonsai: &BonsaiChangeset,
-    file_changes: &[(NonRootMPath, Option<(ContentId, FileType)>)],
-) -> Result<(
-    Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-    BTreeSet<MPath>,
-)> {
-    let blobstore = derivation_ctx.blobstore();
-    let subtree_changes = bonsai.subtree_changes();
-
-    let mut replacement_paths: BTreeSet<MPath> = BTreeSet::new();
-    let mut additional_changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)> = Vec::new();
-
-    for (to_path, subtree_change) in subtree_changes.iter() {
-        let Some((from_cs_id, from_path)) = subtree_change.copy_source() else {
-            continue;
-        };
-        let from_root = derivation_ctx
-            .fetch_unknown_dependency::<RootHistoryManifestDirectoryId>(ctx, known, from_cs_id)
-            .await?
-            .into_history_manifest_directory_id();
-        let from_entry = from_root
-            .find_entry(ctx.clone(), blobstore.clone(), from_path.clone())
-            .await
-            .with_context(|| {
-                format!("Failed to fetch subtree copy source {from_cs_id}:{from_path}")
-            })?
-            .ok_or_else(|| format_err!("No subtree copy source {from_cs_id}:{from_path}"))?;
-
-        replacement_paths.insert(to_path.clone());
-
-        match from_entry {
-            Entry::Tree(from_dir_id) => {
-                // Build the set of paths (relative to to_path) that are
-                // either changed in the current commit or covered by a
-                // nested subtree copy. These should not be synthesized.
-                let mut changed_paths: PathTree<bool> = file_changes
-                    .iter()
-                    .filter_map(|(change_path, _)| {
-                        let change_mpath: &MPath = change_path.into();
-                        if to_path.is_prefix_of(change_mpath) {
-                            Some((change_mpath.remove_prefix_component(to_path), true))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                for (other_to_path, other_subtree_change) in subtree_changes.iter() {
-                    if other_to_path != to_path
-                        && other_subtree_change.copy_source().is_some()
-                        && to_path.is_prefix_of(other_to_path)
-                    {
-                        let subpath = other_to_path.remove_prefix_component(to_path);
-                        changed_paths.insert(subpath, true);
-                    }
-                }
-
-                let changed_paths = Arc::new(changed_paths);
-                let filter_changed_paths =
-                    move |path: &MPath| changed_paths.get(path).is_none_or(|x| !x);
-                from_dir_id
-                    .find_entries_filtered(
-                        ctx.clone(),
-                        blobstore.clone(),
-                        Some(PathOrPrefix::Prefix(MPath::ROOT)),
-                        {
-                            cloned!(filter_changed_paths);
-                            move |path, _mf_id| filter_changed_paths(path)
-                        },
-                    )
-                    .map_ok(|(path, entry)| {
-                        let include = filter_changed_paths(&path);
-                        async move {
-                            match entry {
-                                Entry::Leaf(file_id) if include => {
-                                    let file = load_blob(ctx, blobstore, file_id).await?;
-                                    Ok(Some((
-                                        to_path.join(&path),
-                                        Some((file.content_id, file.file_type)),
-                                    )))
-                                }
-                                _ => Ok(None),
-                            }
-                        }
-                    })
-                    .try_buffered(100)
-                    .try_for_each(|change| {
-                        if let Some((path, change)) = change {
-                            if let Some(path) = path.into_optional_non_root_path() {
-                                additional_changes.push((path, change));
-                            }
-                        }
-                        future::ready(Ok(()))
-                    })
-                    .await?;
-            }
-            Entry::Leaf(from_file_id) => {
-                // Only synthesize if the destination is not already
-                // changed in this commit.
-                let already_changed = file_changes.iter().any(|(change_path, _)| {
-                    let change_mpath: &MPath = change_path.into();
-                    change_mpath == to_path
-                });
-                if !already_changed {
-                    let from_file = load_blob(ctx, blobstore, from_file_id).await?;
-                    let to_non_root =
-                        to_path
-                            .clone()
-                            .into_optional_non_root_path()
-                            .ok_or_else(|| {
-                                format_err!("Subtree copy for root cannot copy from a file")
-                            })?;
-                    additional_changes.push((
-                        to_non_root,
-                        Some((from_file.content_id, from_file.file_type)),
-                    ));
-                }
-            }
-        }
-    }
-
-    // Every replacement path must end up with at least one file entry
-    // once all subtree copies and the bonsai's own file changes are
-    // considered. Otherwise the destination would have no content in the
-    // combined PathTree, and `merge_subtrees` would silently carry over
-    // the parent's content at that path via its `reused` output — giving
-    // the subtree copy no effect.
-    for rp in &replacement_paths {
-        let has_content = file_changes
-            .iter()
-            .chain(additional_changes.iter())
-            .any(|(p, _)| {
-                let p: &MPath = p.into();
-                rp.is_prefix_of(p) || p == rp
-            });
-        if !has_content {
-            return Err(format_err!(
-                "Subtree copy destination {rp} has no content after processing: the copy \
-                 source has no live entries and no file changes cover the destination"
-            ));
-        }
-    }
-
-    Ok((additional_changes, replacement_paths))
-}
-
 /// Derive the history manifest entry at an arbitrary subtree path.
 ///
 /// Derives only the subtree rooted at `prefix`. Parent entries are at the
@@ -940,10 +771,10 @@ pub(crate) async fn derive_history_manifest_entry(
 ) -> Result<Option<HistoryManifestEntry>> {
     let blobstore = derivation_ctx.blobstore();
 
-    // 1. Collect ALL file changes (unfiltered) — process_subtree_copies
-    //    needs the full set to correctly detect overlaps and replacements.
-    let all_file_changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)> = bonsai
+    // 1. Collect file changes, scoped to the prefix.
+    let file_changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)> = bonsai
         .file_changes()
+        .filter(|(path, _)| prefix.is_prefix_of(path.as_mpath()))
         .map(|(path, change)| {
             (
                 path.clone(),
@@ -956,25 +787,7 @@ pub(crate) async fn derive_history_manifest_entry(
         })
         .collect();
 
-    // 2. Process subtree copies with the full file changes, then scope
-    //    everything to the prefix.
-    let (additional_changes, replacement_paths) =
-        process_subtree_copies(ctx, derivation_ctx, None, bonsai, &all_file_changes).await?;
-
-    let mut file_changes: Vec<_> = all_file_changes
-        .into_iter()
-        .filter(|(path, _)| prefix.is_prefix_of(path.as_mpath()))
-        .collect();
-    let additional_changes: Vec<_> = additional_changes
-        .into_iter()
-        .filter(|(path, _)| prefix.is_prefix_of(path.as_mpath()))
-        .collect();
-    file_changes.extend(additional_changes);
-
-    let replacement_paths: BTreeSet<MPath> = replacement_paths
-        .into_iter()
-        .filter(|path| prefix.is_prefix_of(path) || path.is_prefix_of(&prefix))
-        .collect();
+    let replacement_paths: BTreeSet<MPath> = BTreeSet::new();
 
     // 3. Build PathTree from scoped file changes and navigate to prefix.
     let changes: PathTree<Option<Option<(ContentId, FileType)>>> = PathTree::from_iter(
@@ -1142,7 +955,7 @@ pub(crate) async fn derive_history_manifest_entry(
 pub(crate) async fn derive_history_manifest(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootHistoryManifestDirectoryId>>,
+    _known: Option<&HashMap<ChangesetId, RootHistoryManifestDirectoryId>>,
     cs_id: ChangesetId,
     bonsai: &BonsaiChangeset,
     parents: Vec<HistoryManifestDirectoryId>,
@@ -1150,7 +963,7 @@ pub(crate) async fn derive_history_manifest(
     let blobstore = derivation_ctx.blobstore();
 
     // 1. Collect file changes from the bonsai changeset.
-    let mut file_changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)> = bonsai
+    let file_changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)> = bonsai
         .file_changes()
         .map(|(path, change)| {
             (
@@ -1164,14 +977,9 @@ pub(crate) async fn derive_history_manifest(
         })
         .collect();
 
-    // 2. Process subtree copies: synthesize additional file changes from
-    //    each copy source and collect the set of destination paths whose
-    //    parent entries will be replaced during the traversal.
-    let (additional_changes, replacement_paths) =
-        process_subtree_copies(ctx, derivation_ctx, known, bonsai, &file_changes).await?;
-    file_changes.extend(additional_changes);
+    let replacement_paths: BTreeSet<MPath> = BTreeSet::new();
 
-    // 3. Build PathTree from combined file changes.
+    // 3. Build PathTree from file changes.
     let changes: PathTree<Option<Option<(ContentId, FileType)>>> = PathTree::from_iter(
         file_changes
             .into_iter()

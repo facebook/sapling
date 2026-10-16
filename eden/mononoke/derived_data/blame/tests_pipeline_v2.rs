@@ -261,11 +261,12 @@ async fn test_is_chokepoint(fb: FacebookInit) -> Result<()> {
     // Subtree-change commit: a chokepoint. `freeze` only checks internal
     // consistency, so it needs no JustKnobs (unlike `save_changesets`).
     let mut subtree_bcs = CreateCommitContext::new(ctx, repo, vec![base])
+        .add_file("dir/copied/file_in", "content in")
         .create_commit_object()
         .await?;
     subtree_bcs.subtree_changes = [(
         MPath::new("dir/copied")?,
-        SubtreeChange::copy(MPath::new("dir")?, base),
+        SubtreeChange::deep_copy(MPath::new("dir")?, base),
     )]
     .into_iter()
     .collect();

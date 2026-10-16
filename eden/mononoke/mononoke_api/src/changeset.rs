@@ -1748,7 +1748,7 @@ where
             let results: Vec<_> = stream::iter(subtree_changes.into_iter().filter_map(
                 |(path, change)| {
                     change
-                        .copy_or_deep_copy_source()
+                        .deep_copy_source()
                         .map(|(from_cs_id, from_path)| (path, from_cs_id, from_path.clone()))
                 },
             ))

@@ -37,7 +37,6 @@ use mononoke_types::MPath;
 use mononoke_types::SubtreeChange;
 use mononoke_types::content_manifest::ContentManifestEntry;
 use mononoke_types::content_manifest::ContentManifestRollupData;
-use mononoke_types::subtree_change::SubtreeCopy;
 use mononoke_types::subtree_change::SubtreeCrossRepoMerge;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
 use mononoke_types::subtree_change::SubtreeImport;
@@ -534,11 +533,7 @@ impl AsyncIntoResponseWith<BTreeMap<String, thrift::SubtreeChange>>
         self.into_iter()
             .map(|(path, change)| {
                 let change = match change {
-                    SubtreeChange::SubtreeCopy(SubtreeCopy {
-                        from_cs_id,
-                        from_path,
-                    })
-                    | SubtreeChange::SubtreeDeepCopy(SubtreeDeepCopy {
+                    SubtreeChange::SubtreeDeepCopy(SubtreeDeepCopy {
                         from_cs_id,
                         from_path,
                     }) => thrift::SubtreeChange::subtree_copy(thrift::SubtreeCopy {

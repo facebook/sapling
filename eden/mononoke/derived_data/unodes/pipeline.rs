@@ -79,7 +79,7 @@ impl PipelineDerivable for RootUnodeManifestId {
 
         for bonsai in bonsais {
             let cs_id = bonsai.get_changeset_id();
-            let mut all_changes = get_file_changes(&bonsai);
+            let all_changes = get_file_changes(&bonsai);
 
             // Build parent entries for this changeset.
             let parent_entries: Vec<Entry<ManifestUnodeId, FileUnodeId>> = bonsai
@@ -109,24 +109,13 @@ impl PipelineDerivable for RootUnodeManifestId {
                     })
                     .unwrap_or_default();
 
-            let (mut additional_changes, manifest_replacements) =
-                crate::derive::get_unode_subtree_changes(
-                    ctx,
-                    derivation,
-                    None,
-                    bonsai.subtree_changes(),
-                    &all_changes,
-                )
-                .await?;
-            all_changes.append(&mut additional_changes);
-
             let entry = derive_unode_entry(
                 ctx,
                 derivation,
                 cs_id,
                 parent_entries,
                 all_changes,
-                manifest_replacements,
+                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

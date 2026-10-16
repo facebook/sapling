@@ -147,7 +147,6 @@ async fn derive_hg(
             repo.restricted_paths_arc().config_based().clone(),
             bcs.clone(),
             parent_manifests,
-            None,
         )
         .await?;
 

@@ -393,7 +393,6 @@ fn subcommmand_hg_manifest_verify(
                             repo.restricted_paths_arc().config_based().clone(),
                             bonsai.clone(),
                             parents,
-                            None,
                         )
                         .map_ok(move |result| {
                             if result != expected {

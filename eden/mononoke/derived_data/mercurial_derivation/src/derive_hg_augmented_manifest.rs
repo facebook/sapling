@@ -56,7 +56,6 @@ use mercurial_types::calculate_hg_node_ids_multi;
 use mercurial_types::preloaded_augmented_manifest::serialize_manifest_entry;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
-use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -772,77 +771,6 @@ where
     .await
 }
 
-fn subtree_change_overlaps_stage(dest_path: &MPath, stage_path: &MPath) -> bool {
-    stage_path.is_prefix_of(dest_path) || dest_path.is_prefix_of(stage_path)
-}
-
-pub fn subtree_copy_source_changesets(
-    bonsai: &BonsaiChangeset,
-    stage_path: &MPath,
-) -> Vec<ChangesetId> {
-    let mut sources = Vec::new();
-    let mut seen_sources = HashSet::new();
-    for (dest_path, change) in bonsai.subtree_changes() {
-        if !subtree_change_overlaps_stage(dest_path, stage_path) {
-            continue;
-        }
-        let Some((from_cs_id, _from_path)) = change.copy_source() else {
-            continue;
-        };
-        if seen_sources.insert(from_cs_id) {
-            sources.push(from_cs_id);
-        }
-    }
-    sources
-}
-
-/// Build manifest replacements for `SubtreeCopy` entries using already-derived
-/// source augmented roots. Only destinations that overlap `stage_path` affect the
-/// stage. Other subtree-change variants are metadata-only for manifests, matching
-/// `HgSubtreeChanges::to_manifest_replacements`.
-pub async fn build_augmented_subtree_replacements<Store>(
-    ctx: &CoreContext,
-    blobstore: &Store,
-    bonsai: &mononoke_types::BonsaiChangeset,
-    stage_path: &MPath,
-    source_aug_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
-) -> Result<AugmentedSubtreeReplacements>
-where
-    Store: KeyedBlobstore + Clone + 'static,
-{
-    let mut replacements = Vec::new();
-    for (dest_path, change) in bonsai.subtree_changes() {
-        if !subtree_change_overlaps_stage(dest_path, stage_path) {
-            continue;
-        }
-        let Some((from_cs_id, from_path)) = change.copy_source() else {
-            continue;
-        };
-        let source_aug_root = source_aug_roots.get(&from_cs_id).copied().ok_or_else(|| {
-            anyhow!(
-                "Subtree copy source augmented manifest for changeset {from_cs_id} not found; \
-                 it must be derived before the changeset that copies from it",
-            )
-        })?;
-
-        let entry = source_aug_root
-            .find_entry(ctx.clone(), blobstore.clone(), from_path.clone())
-            .await?
-            .ok_or_else(|| {
-                anyhow!(
-                    "Subtree copy source {from_cs_id}:{from_path} not found in augmented manifest"
-                )
-            })?;
-
-        replacements.push(ManifestParentReplacement {
-            path: dest_path.clone(),
-            replacements: vec![entry],
-        });
-    }
-
-    Ok(replacements)
-}
-
 /// Decision for a leaves-only merge conflict.
 #[derive(Debug)]
 pub(crate) enum LeafConflictResolution {
@@ -1539,7 +1467,6 @@ pub async fn derive_augmented_manifest_from_bonsai_changeset<Store>(
     blobstore: &Store,
     bonsai: &mononoke_types::BonsaiChangeset,
     parents: Vec<HgAugmentedManifestId>,
-    source_aug_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
     acl_root_overlay: Option<AclManifestId>,
 ) -> Result<HgAugmentedManifestId>
@@ -1571,25 +1498,14 @@ where
         (parents.next(), parents.next())
     };
 
-    let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
-    let (content_metadata, subtree_replacements) = future::try_join(
-        content_metadata_fut,
-        build_augmented_subtree_replacements(
-            ctx,
-            blobstore,
-            bonsai,
-            &MPath::ROOT,
-            source_aug_roots,
-        ),
-    )
-    .await?;
+    let content_metadata = prefetch_content_metadata(ctx, blobstore, content_ids).await?;
 
     derive_augmented_manifest_from_bonsai(
         ctx,
         blobstore,
         parents,
         file_changes,
-        subtree_replacements,
+        Vec::new(),
         parent_bonsai_csids,
         &content_metadata,
         restricted_paths,

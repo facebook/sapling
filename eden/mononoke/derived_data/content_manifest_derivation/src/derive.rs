@@ -23,7 +23,6 @@ use futures::future::FutureExt;
 use futures::stream;
 use manifest::Entry;
 use manifest::LeafInfo;
-use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
@@ -68,49 +67,6 @@ pub(crate) fn get_changes(
             )
         })
         .collect()
-}
-
-pub async fn get_content_manifest_subtree_changes(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootContentManifestId>>,
-    bcs: &BonsaiChangeset,
-) -> Result<Vec<ManifestParentReplacement<ContentManifestId, ContentManifestFile>>> {
-    let copy_sources = bcs
-        .subtree_changes()
-        .iter()
-        .filter_map(|(path, change)| {
-            let (from_cs_id, from_path) = change.copy_source()?;
-            Some((path, from_cs_id, from_path))
-        })
-        .collect::<Vec<_>>();
-    stream::iter(copy_sources)
-        .map(|(path, from_cs_id, from_path)| {
-            cloned!(ctx);
-            let blobstore = derivation_ctx.blobstore().clone();
-            async move {
-                let root = derivation_ctx
-                    .fetch_unknown_dependency::<RootContentManifestId>(&ctx, known, from_cs_id)
-                    .await?
-                    .into_content_manifest_id();
-                let entry = root
-                    .find_entry(ctx, blobstore, from_path.clone())
-                    .await?
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
-                        )
-                    })?;
-                Ok(ManifestParentReplacement {
-                    path: path.clone(),
-                    replacements: vec![entry],
-                })
-            }
-        })
-        .buffered(100)
-        .try_collect()
-        .boxed()
-        .await
 }
 
 pub(crate) async fn empty_directory(
@@ -251,19 +207,17 @@ pub(crate) async fn derive_content_manifest(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<ContentManifestId>,
-    known: Option<&HashMap<ChangesetId, RootContentManifestId>>,
+    _known: Option<&HashMap<ChangesetId, RootContentManifestId>>,
 ) -> Result<ContentManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let restricted_paths = derivation_ctx.restricted_paths();
     let changes = get_changes(&bonsai);
-    let subtree_changes =
-        get_content_manifest_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
     let derive_fut = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
         changes,
-        subtree_changes,
+        Vec::new(),
         {
             cloned!(blobstore, ctx, restricted_paths);
             move |tree_info| {

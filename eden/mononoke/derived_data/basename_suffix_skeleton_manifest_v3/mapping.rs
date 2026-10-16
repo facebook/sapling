@@ -84,9 +84,6 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
         parents: Vec<Self>,
         _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        let skeleton_manifest = derivation_ctx
-            .fetch_dependency::<RootSkeletonManifestId>(ctx, bonsai.get_changeset_id())
-            .await?;
         let parent_skeleton_manifests = stream::iter(bonsai.parents())
             .map(|parent| derivation_ctx.fetch_dependency::<RootSkeletonManifestId>(ctx, parent))
             .buffered(100)
@@ -98,7 +95,6 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
             derivation_ctx,
             bonsai,
             parents,
-            skeleton_manifest,
             parent_skeleton_manifests,
         )
         .await

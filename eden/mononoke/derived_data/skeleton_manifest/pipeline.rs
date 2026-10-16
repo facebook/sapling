@@ -35,7 +35,6 @@ use crate::RootSkeletonManifestId;
 use crate::derive::derive_skeleton_manifest_entry;
 use crate::format_key;
 use crate::mapping::get_file_changes;
-use crate::mapping::get_skeleton_manifest_subtree_changes;
 
 fn stage_blobstore_key(stage_path: &MPath, key_prefix: &str, cs_id: ChangesetId) -> String {
     format!(
@@ -101,15 +100,12 @@ impl PipelineDerivable for RootSkeletonManifestId {
                     })
                     .unwrap_or_default();
 
-            let subtree_changes =
-                get_skeleton_manifest_subtree_changes(ctx, derivation, None, &bonsai).await?;
-
             let entry = derive_skeleton_manifest_entry(
                 ctx,
                 derivation,
                 parent_entries,
                 all_changes,
-                subtree_changes,
+                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

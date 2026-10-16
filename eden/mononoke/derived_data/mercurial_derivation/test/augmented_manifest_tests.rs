@@ -3191,7 +3191,6 @@ impl<B: KeyedBlobstore + Clone + 'static> V1V2Parity<B> {
             &self.v2_store,
             &bonsai,
             v2_parents,
-            &HashMap::new(),
             restricted_paths,
             acl_root_overlay,
         )
@@ -4045,47 +4044,14 @@ async fn derive_into_overlay<B>(
 where
     B: blobstore::KeyedBlobstore + Clone + 'static,
 {
-    derive_into_overlay_with_subtrees(
-        ctx,
-        repo,
-        overlay,
-        cs_id,
-        aug_parents,
-        bonsai_parents,
-        &HashMap::new(),
-    )
-    .await
-}
-
-async fn derive_into_overlay_with_subtrees<B>(
-    ctx: &CoreContext,
-    repo: &Repo,
-    overlay: &B,
-    cs_id: ChangesetId,
-    aug_parents: Vec<HgAugmentedManifestId>,
-    bonsai_parents: (Option<ChangesetId>, Option<ChangesetId>),
-    subtree_source_augs: &HashMap<ChangesetId, HgAugmentedManifestId>,
-) -> Result<HgAugmentedManifestId>
-where
-    B: blobstore::KeyedBlobstore + Clone + 'static,
-{
     let acl_root_overlay = derive_acl_overlay(ctx, repo, cs_id).await?;
-    let bonsai: mononoke_types::BonsaiChangeset = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let file_changes = file_changes_from_bonsai(ctx, repo, cs_id).await?;
-    let subtree_replacements = derive_hg_augmented_manifest::build_augmented_subtree_replacements(
-        ctx,
-        overlay,
-        &bonsai,
-        &MPath::ROOT,
-        subtree_source_augs,
-    )
-    .await?;
     derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai(
         ctx,
         overlay,
         aug_parents,
         file_changes,
-        subtree_replacements,
+        Vec::new(),
         bonsai_parents,
         &Default::default(),
         repo.restricted_paths().config_based(),
@@ -4838,16 +4804,8 @@ async fn assert_direct_derivation_parity(
         let bonsai_parents = (parents.next(), parents.next());
 
         let old_id = derive_existing_into_overlay(ctx, repo, &*old_bs, *cs_id, old_parents).await?;
-        let new_id = derive_into_overlay_with_subtrees(
-            ctx,
-            repo,
-            &*new_bs,
-            *cs_id,
-            new_parents,
-            bonsai_parents,
-            &new_augs,
-        )
-        .await?;
+        let new_id =
+            derive_into_overlay(ctx, repo, &*new_bs, *cs_id, new_parents, bonsai_parents).await?;
 
         assert_eq!(old_id, new_id, "Root ID mismatch for {cs_id}");
 

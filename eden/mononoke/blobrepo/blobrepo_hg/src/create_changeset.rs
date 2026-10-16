@@ -15,7 +15,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::format_err;
-use blobstore::KeyedBlobstore;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use cloned::cloned;
@@ -29,7 +28,6 @@ use futures::future::TryFutureExt;
 use futures::stream::BoxStream;
 use futures_ext::FbTryFutureExt;
 use futures_stats::TimedTryFutureExt;
-use manifest::ManifestParentReplacement;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -41,7 +39,6 @@ use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::subtree_change::SubtreeChange;
@@ -214,12 +211,6 @@ impl CreateChangeset {
                     // We are trusting the callee to provide a list of changed files, used
                     // by the import job
                     expected_files
-                } else if subtree_changes
-                    .as_ref()
-                    .is_some_and(|(changes, _)| !changes.copies.is_empty())
-                {
-                    // Presence of subtree copies means the file list is expected to be empty.
-                    Vec::new()
                 } else {
                     STATS::create_changeset_compute_cf.add_value(1);
                     compute_changed_files(
@@ -232,9 +223,7 @@ impl CreateChangeset {
                     .await?
                 };
 
-                let (subtree_replacements, subtree_changes) =
-                    resolve_subtree_changes(&ctx, blobstore.clone(), subtree_changes.as_ref())
-                        .await?;
+                let subtree_changes = resolve_subtree_changes(subtree_changes.as_ref()).await?;
 
                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
                 let hg_cs = make_new_changeset(parents, root_mf_id, cs_metadata, files)?;
@@ -247,7 +236,7 @@ impl CreateChangeset {
                             hg_cs.clone(),
                             parent_manifest_hashes.clone(),
                             bonsai_parents,
-                            subtree_replacements,
+                            Vec::new(),
                             subtree_changes,
                             &blobstore,
                         )
@@ -403,15 +392,10 @@ impl CreateChangeset {
     }
 }
 
-/// Convert Mercurial subtree changes into manifest replacements and bonsai subtree changes
+/// Convert Mercurial subtree changes into bonsai subtree changes
 async fn resolve_subtree_changes(
-    ctx: &CoreContext,
-    blobstore: Arc<dyn KeyedBlobstore>,
     subtree_changes: Option<&(HgSubtreeChanges, HashMap<HgChangesetId, ChangesetHandle>)>,
-) -> Result<(
-    Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>,
-    SortedVectorMap<MPath, SubtreeChange>,
-)> {
+) -> Result<SortedVectorMap<MPath, SubtreeChange>> {
     if let Some((changes, sources)) = subtree_changes {
         let sources = future::try_join_all(sources.iter().map(|(id, handle)| async move {
             let (bcs, _hg_cs_id, _hg_mf_id) = handle.get_changeset_ids().await?;
@@ -420,17 +404,7 @@ async fn resolve_subtree_changes(
         .await?
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let manifest_replacements = changes.to_manifest_replacements(ctx, &blobstore).await?;
         let mut subtree_changes = Vec::new();
-        for copy in changes.copies.iter() {
-            let from_cs_id = sources.get(&copy.from_commit).ok_or_else(|| {
-                anyhow!("Subtree copy source commit not found: {}", copy.from_commit)
-            })?;
-            subtree_changes.push((
-                copy.to_path.clone(),
-                SubtreeChange::copy(copy.from_path.clone(), *from_cs_id),
-            ));
-        }
         for deep_copy in changes.deep_copies.iter() {
             let from_cs_id = sources.get(&deep_copy.from_commit).ok_or_else(|| {
                 anyhow!(
@@ -475,10 +449,9 @@ async fn resolve_subtree_changes(
                 ),
             ))
         }
-        let subtree_changes = SortedVectorMap::from_iter(subtree_changes);
-        Ok((manifest_replacements, subtree_changes))
+        Ok(SortedVectorMap::from_iter(subtree_changes))
     } else {
-        Ok((Vec::new(), SortedVectorMap::new()))
+        Ok(SortedVectorMap::new())
     }
 }
 
@@ -523,51 +496,45 @@ mod tests {
         a_handle.clone().get_completed_changeset().await?;
         b_handle.clone().get_completed_changeset().await?;
 
-        let (replacements, subtree_changes) = resolve_subtree_changes(
-            &ctx,
-            repo.repo_blobstore_arc(),
-            Some(&(
-                HgSubtreeChanges {
-                    copies: vec![],
-                    deep_copies: vec![
-                        HgSubtreeDeepCopy {
-                            from_path: MPath::new("dir1/dir2")?,
-                            from_commit: a_id,
-                            to_path: MPath::new("dir1/dir2a")?,
-                        },
-                        HgSubtreeDeepCopy {
-                            from_path: MPath::new("dir1/dir3")?,
-                            from_commit: b_id,
-                            to_path: MPath::new("dir1/dir3a")?,
-                        },
-                    ],
-                    merges: vec![HgSubtreeMerge {
+        let subtree_changes = resolve_subtree_changes(Some(&(
+            HgSubtreeChanges {
+                deep_copies: vec![
+                    HgSubtreeDeepCopy {
                         from_path: MPath::new("dir1/dir2")?,
                         from_commit: a_id,
-                        to_path: MPath::new("dir1/dir3")?,
-                    }],
-                    imports: vec![HgSubtreeImport {
-                        from_path: MPath::new("otherdir")?,
-                        from_commit: "other commit".to_string(),
-                        url: "other:repo".to_string(),
-                        to_path: MPath::new("dir4")?,
-                    }],
-                    cross_repo_merges: vec![HgSubtreeCrossRepoMerge {
-                        from_path: MPath::new("xmergedir")?,
-                        from_commit: "xmerge commit".to_string(),
-                        url: "xmerge:repo".to_string(),
-                        to_path: MPath::new("dir5")?,
-                    }],
-                },
-                hashmap! {
-                    a_id => a_handle,
-                    b_id => b_handle,
-                },
-            )),
-        )
+                        to_path: MPath::new("dir1/dir2a")?,
+                    },
+                    HgSubtreeDeepCopy {
+                        from_path: MPath::new("dir1/dir3")?,
+                        from_commit: b_id,
+                        to_path: MPath::new("dir1/dir3a")?,
+                    },
+                ],
+                merges: vec![HgSubtreeMerge {
+                    from_path: MPath::new("dir1/dir2")?,
+                    from_commit: a_id,
+                    to_path: MPath::new("dir1/dir3")?,
+                }],
+                imports: vec![HgSubtreeImport {
+                    from_path: MPath::new("otherdir")?,
+                    from_commit: "other commit".to_string(),
+                    url: "other:repo".to_string(),
+                    to_path: MPath::new("dir4")?,
+                }],
+                cross_repo_merges: vec![HgSubtreeCrossRepoMerge {
+                    from_path: MPath::new("xmergedir")?,
+                    from_commit: "xmerge commit".to_string(),
+                    url: "xmerge:repo".to_string(),
+                    to_path: MPath::new("dir5")?,
+                }],
+            },
+            hashmap! {
+                a_id => a_handle,
+                b_id => b_handle,
+            },
+        )))
         .await?;
 
-        assert!(replacements.is_empty());
         assert_eq!(
             subtree_changes,
             sorted_vector_map! {

@@ -26,9 +26,7 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 
-use crate::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use crate::mapping::RootHgAugmentedManifestId;
 
 /// The canonical and rollout augmented-manifest types run the same derivation
@@ -76,31 +74,6 @@ pub(crate) async fn fetch_augmented_roots_with_fallback<Root: AugmentedManifestR
         );
     }
     Ok(roots)
-}
-
-async fn get_subtree_source_aug_roots<Root: AugmentedManifestRoot>(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    bonsai: &BonsaiChangeset,
-    known_aug_roots: Option<&HashMap<ChangesetId, Root>>,
-) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
-    let source_csids = subtree_copy_source_changesets(bonsai, &MPath::ROOT);
-    let roots = source_csids
-        .iter()
-        .filter_map(|csid| {
-            known_aug_roots
-                .and_then(|known| known.get(csid))
-                .map(|root| (*csid, root.root_id()))
-        })
-        .collect();
-    fetch_augmented_roots_with_fallback::<Root>(
-        ctx,
-        derivation_ctx,
-        source_csids,
-        roots,
-        "Subtree copy source",
-    )
-    .await
 }
 
 async fn lookup_mapped_root_hg_manifest_ids(
@@ -183,21 +156,18 @@ pub(crate) async fn derive_from_mapped_hg_manifest(
     .await
 }
 
-async fn derive_direct<Root: AugmentedManifestRoot>(
+async fn derive_direct(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
     aug_parents: Vec<HgAugmentedManifestId>,
-    known_aug_roots: Option<&HashMap<ChangesetId, Root>>,
 ) -> Result<HgAugmentedManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let csid = bonsai.get_changeset_id();
 
-    let (acl_root, source_aug_roots) = future::try_join(
-        derivation_ctx.fetch_dependency::<RootAclManifestId>(ctx, csid),
-        get_subtree_source_aug_roots(ctx, derivation_ctx, bonsai, known_aug_roots),
-    )
-    .await?;
+    let acl_root = derivation_ctx
+        .fetch_dependency::<RootAclManifestId>(ctx, csid)
+        .await?;
 
     let acl_root_overlay = crate::derive_hg_augmented_manifest::normalize_acl_root(&acl_root)?;
 
@@ -206,7 +176,6 @@ async fn derive_direct<Root: AugmentedManifestRoot>(
         blobstore,
         bonsai,
         aug_parents,
-        &source_aug_roots,
         &derivation_ctx.restricted_paths(),
         acl_root_overlay,
     )
@@ -221,7 +190,7 @@ pub(crate) async fn derive_single_root<Root: AugmentedManifestRoot>(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<Root>,
-    known: Option<&HashMap<ChangesetId, Root>>,
+    _known: Option<&HashMap<ChangesetId, Root>>,
 ) -> Result<Root> {
     let csid = bonsai.get_changeset_id();
     let aug_parents = parents.iter().map(Root::root_id).collect();
@@ -231,7 +200,7 @@ pub(crate) async fn derive_single_root<Root: AugmentedManifestRoot>(
         derive_from_mapped_hg_manifest(ctx, derivation_ctx, &bonsai, hg_manifest_id, aug_parents)
             .await?
     } else {
-        derive_direct(ctx, derivation_ctx, &bonsai, aug_parents, known).await?
+        derive_direct(ctx, derivation_ctx, &bonsai, aug_parents).await?
     };
     Ok(Root::from_root_id(root))
 }
@@ -263,7 +232,7 @@ pub(crate) async fn derive_batch_roots<Root: AugmentedManifestRoot>(
             derive_from_mapped_hg_manifest(ctx, derivation_ctx, bonsai, hg_manifest_id, aug_parents)
                 .await?
         } else {
-            derive_direct(ctx, derivation_ctx, bonsai, aug_parents, Some(&res)).await?
+            derive_direct(ctx, derivation_ctx, bonsai, aug_parents).await?
         };
         res.insert(csid, Root::from_root_id(root));
     }

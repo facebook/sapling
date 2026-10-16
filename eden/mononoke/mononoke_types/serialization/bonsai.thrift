@@ -181,21 +181,6 @@ struct GitLfs {
   // one version: v1.
 }
 
-// A subtree copy marks an entire subtree as *copied* from a path in a
-// different commit.  History operations for these files should divert
-// down the history of the source commit.
-//
-// The copy is a "shallow" copy, which means the manifest from the copy
-// source should be reused, and only additional changes are listed in
-// the file_changes.
-struct SubtreeCopy {
-  // Path in the source commit the subtree is copied form.
-  1: path.MPath from_path;
-
-  // Source commit.  This may or may not be an ancestor.
-  2: id.ChangesetId from_cs_id;
-}
-
 // A subtree deep copy marks an entire subtree as *copied* from a path in a
 // different commit.  History operations for these files should divert
 // down the history of the source commit.
@@ -259,24 +244,15 @@ struct SubtreeCrossRepoMerge {
 
 // A change that applies to a whole subtree.
 //
-// Subtree changes can have two kinds of effects:
+// Subtree changes are "history modifying": history for the subtree (the
+// directory and all files and directories inside it) is in some way altered or
+// diverted.
 //
-//   - "History modifying" means that history for the subtree (the directory and
-//     all files and directories inside it) is in some way altered or diverted.
-//
-//   - "Manifest altering" means the effective manifest (i.e. what files and trees
-//     are present) of the repository is altered by the presence of the subtree
-//     copy.  Manifest alterations should be applied *before* the file changes.
+// Subtree changes never alter the manifest: the file changes contain every
+// change to the files and trees of the repository.
 union SubtreeChange {
-  // This subtree is copied from another location in the repository.
+  // Field 1 must not be reused: changesets using it can no longer be parsed.
   //
-  // This change is history modifying: history should be diverted to the copy source.
-  //
-  // This change is manifest altering: the source subtree should be reused instead
-  // of any subtree that is already there.  That is, this copy implicitly deletes
-  // all files at the destination and replaces them with all files located at the
-  // source.
-  1: SubtreeCopy subtree_copy;
   // This subtree is copied from another location in the repository.
   //
   // This change is history modifying: history should be diverted to the copy source.

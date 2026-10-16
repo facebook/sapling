@@ -101,15 +101,12 @@ impl PipelineDerivable for RootFsnodeId {
                     })
                     .unwrap_or_default();
 
-            let subtree_changes =
-                crate::mapping::get_fsnode_subtree_changes(ctx, derivation, None, &bonsai).await?;
-
             let entry = derive_fsnode_entry(
                 ctx,
                 derivation,
                 parent_entries,
                 all_changes,
-                subtree_changes,
+                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

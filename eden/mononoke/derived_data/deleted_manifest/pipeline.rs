@@ -22,18 +22,14 @@ use fbthrift::compact_protocol;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
-use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
-use manifest::ManifestOps;
 use manifest::PathTree;
-use manifest::bonsai_diff;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
-use mononoke_types::NonRootMPath;
 use mononoke_types::PipelineDerivableVariant;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
@@ -72,65 +68,6 @@ fn to_unode_entry(entry: &Entry<ManifestUnodeId, FileUnodeId>) -> UnodeEntry {
     match entry {
         Entry::Tree(id) => UnodeEntry::Directory(*id),
         Entry::Leaf(id) => UnodeEntry::File(*id),
-    }
-}
-
-/// Change set under a stage for a subtree-altering (chokepoint) commit. Subtree
-/// ops move paths that aren't listed in `file_changes`, so we recompute the same
-/// way canonical `get_changes_bonsai` does — by diffing unode trees — but scoped
-/// to the stage subtree. Returned paths are relative to the stage root. Stays
-/// within the stage unode outputs (the declared dependency), never the root.
-async fn subtree_op_change_set(
-    ctx: &CoreContext,
-    blobstore: &std::sync::Arc<dyn blobstore::KeyedBlobstore>,
-    current_unode: Option<&UnodeEntry>,
-    parent_unode_outputs: &HashMap<ChangesetId, Option<Entry<ManifestUnodeId, FileUnodeId>>>,
-) -> Result<PathTree<()>> {
-    let parent_trees: Vec<ManifestUnodeId> = parent_unode_outputs
-        .values()
-        .filter_map(|entry| (*entry).and_then(Entry::into_tree))
-        .collect();
-    match current_unode {
-        // Diff the current stage tree against the parent stage trees; captures
-        // paths moved into/within the stage by the subtree op.
-        Some(UnodeEntry::Directory(cur_tree)) => {
-            let changed: Vec<NonRootMPath> = bonsai_diff(
-                ctx.clone(),
-                blobstore.clone(),
-                *cur_tree,
-                parent_trees.into_iter().collect(),
-            )
-            .map_ok(|diff| match diff {
-                BonsaiDiffFileChange::Changed(path, _)
-                | BonsaiDiffFileChange::ChangedReusedId(path, _)
-                | BonsaiDiffFileChange::Deleted(path) => path,
-            })
-            .try_collect()
-            .await?;
-            Ok(PathTree::from_iter(
-                changed.into_iter().map(|path| (path, ())),
-            ))
-        }
-        // The stage root became a file: `do_unfold` expands the
-        // file-replacing-directory case itself from the parent trees.
-        Some(UnodeEntry::File(_)) => Ok(PathTree::default()),
-        // The stage subtree was removed entirely: every parent path is deleted.
-        None => {
-            let mut paths: Vec<NonRootMPath> = Vec::new();
-            for parent_tree in parent_trees {
-                let mut entries: Vec<NonRootMPath> = parent_tree
-                    .list_all_entries(ctx.clone(), blobstore.clone())
-                    .try_filter_map(
-                        |(path, _)| async move { Ok(Option::<NonRootMPath>::from(path)) },
-                    )
-                    .try_collect()
-                    .await?;
-                paths.append(&mut entries);
-            }
-            Ok(PathTree::from_iter(
-                paths.into_iter().map(|path| (path, ())),
-            ))
-        }
     }
 }
 
@@ -221,25 +158,13 @@ impl PipelineDerivable for RootDeletedManifestV2Id {
                 }
             }
 
-            // Change set under S, relative to S. Subtree-altering (chokepoint)
-            // commits move paths not listed in `file_changes`, so diff the stage
-            // unode trees; everything else reads `file_changes` directly.
-            let changes: PathTree<()> = if bonsai.has_manifest_altering_subtree_changes() {
-                subtree_op_change_set(
-                    ctx,
-                    blobstore,
-                    current_unode.as_ref(),
-                    &parent_unode_outputs,
-                )
-                .await?
-            } else {
-                PathTree::from_iter(
-                    bonsai
-                        .file_changes()
-                        .filter_map(|(path, _)| path.remove_prefix_component(stage_path))
-                        .map(|rel| (rel, ())),
-                )
-            };
+            // Change set under S, relative to S.
+            let changes: PathTree<()> = PathTree::from_iter(
+                bonsai
+                    .file_changes()
+                    .filter_map(|(path, _)| path.remove_prefix_component(stage_path))
+                    .map(|rel| (rel, ())),
+            );
 
             // Child-stage boundaries, keyed relative to S.
             let known_entries: HashMap<MPath, Option<DeletedManifestV2Id>> = dependency_outputs

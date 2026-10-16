@@ -332,7 +332,6 @@ async fn apply_diff(
         repo.restricted_paths_arc().config_based().clone(),
         manifestids,
         changes,
-        None,
     )
     .await?;
     Ok(manifest_id.into_nodehash())

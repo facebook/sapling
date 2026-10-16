@@ -38,7 +38,6 @@ use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest::cached_acl_overlay_map;
 use mercurial_derivation::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai_changeset;
 use mercurial_derivation::derive_hg_augmented_manifest::normalize_acl_root;
-use mercurial_derivation::derive_hg_augmented_manifest::subtree_copy_source_changesets;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedManifestEntry;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedManifestEnvelope;
@@ -128,39 +127,6 @@ impl<'a> Verifier<'a> {
         self.manager
             .with_replaced_blobstore(mem_repo_blobstore)
             .with_replaced_restricted_paths(self.restricted_paths.clone())
-    }
-
-    async fn fetch_subtree_source_aug_roots(
-        &self,
-        derivation_ctx: &DerivationContext,
-        bonsai: &BonsaiChangeset,
-    ) -> Result<HashMap<ChangesetId, HgAugmentedManifestId>> {
-        let source_csids = subtree_copy_source_changesets(bonsai, &MPath::ROOT);
-        if source_csids.is_empty() {
-            return Ok(HashMap::new());
-        }
-
-        let source_roots = derivation_ctx
-            .fetch_derived_batch::<RootHgAugmentedManifestId>(self.ctx, source_csids.clone())
-            .await
-            .with_context(|| {
-                format!(
-                    "fetching subtree source augmented roots for {}",
-                    bonsai.get_changeset_id()
-                )
-            })?;
-
-        let mut roots = HashMap::new();
-        for from_cs_id in source_csids {
-            let source_root = source_roots.get(&from_cs_id).ok_or_else(|| {
-                anyhow!(
-                    "Subtree copy source augmented manifest for changeset {from_cs_id} not found; \
-                     it must be derived before the changeset that copies from it",
-                )
-            })?;
-            roots.insert(from_cs_id, source_root.hg_augmented_manifest_id());
-        }
-        Ok(roots)
     }
 
     pub(crate) async fn verify_one(&mut self, cs_id: ChangesetId) -> Result<VerifyOneOutcome> {
@@ -268,20 +234,12 @@ impl<'a> Verifier<'a> {
             .into_iter()
             .map(|p| p.hg_augmented_manifest_id())
             .collect();
-        let source_aug_roots = if bonsai.has_subtree_changes() {
-            self.fetch_subtree_source_aug_roots(derivation_ctx, bonsai)
-                .await
-                .with_context(|| format!("fetching subtree source augmented roots for {cs_id}"))?
-        } else {
-            HashMap::new()
-        };
         let restricted_paths = derivation_ctx.restricted_paths();
         derive_augmented_manifest_from_bonsai_changeset(
             self.ctx,
             computed_blobstore,
             bonsai,
             aug_parents,
-            &source_aug_roots,
             &restricted_paths,
             acl_overlay,
         )

@@ -216,13 +216,6 @@ pub async fn find_unode_rename_sources(
 
     let subtree_ops = PathTree::from_iter(bonsai.subtree_changes().iter().map(
         |(to_path, change)| match change {
-            SubtreeChange::SubtreeCopy(copy) => (
-                to_path.clone(),
-                Some(SubtreeOpSource::Copy(SubtreeCopySource {
-                    parent: copy.from_cs_id,
-                    from_path: copy.from_path.clone(),
-                })),
-            ),
             SubtreeChange::SubtreeDeepCopy(copy) => (
                 to_path.clone(),
                 Some(SubtreeOpSource::Copy(SubtreeCopySource {

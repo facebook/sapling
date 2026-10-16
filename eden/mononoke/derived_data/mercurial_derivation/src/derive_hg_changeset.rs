@@ -225,7 +225,6 @@ pub async fn get_manifest_from_bonsai(
     restricted_paths: ArcRestrictedPathsConfigBased,
     bcs: BonsaiChangeset,
     parent_manifests: Vec<HgManifestId>,
-    subtree_changes: Option<&HgSubtreeChanges>,
 ) -> Result<HgManifestId, Error> {
     let parent_entries: Vec<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>> =
         parent_manifests
@@ -238,7 +237,6 @@ pub async fn get_manifest_from_bonsai(
         restricted_paths,
         bcs,
         parent_entries,
-        subtree_changes,
         MPath::ROOT,
         HashMap::new(),
         HashMap::new(),
@@ -274,7 +272,6 @@ pub async fn get_manifest_entry_from_bonsai(
     restricted_paths: ArcRestrictedPathsConfigBased,
     bcs: BonsaiChangeset,
     parent_entries: Vec<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>>,
-    subtree_changes: Option<&HgSubtreeChanges>,
     stage_path: MPath,
     known_entries: HashMap<
         MPath,
@@ -470,7 +467,6 @@ pub async fn get_manifest_entry_from_bonsai(
         restricted_paths,
         parent_entries,
         changes,
-        subtree_changes,
         stage_path,
         known_entries,
     )
@@ -508,25 +504,19 @@ pub(crate) async fn derive_from_parents(
         restricted_paths,
         bonsai.clone(),
         parent_manifests,
-        subtree_changes.as_ref(),
     )
     .await?;
 
     let parent_hg_cs_ids: Vec<HgChangesetId> =
         parents.iter().map(|p| p.get_changeset_id()).collect();
-    // Subtree copies make generate_hg_changeset drop the file list, so skip the diff then.
-    let files = if subtree_changes.as_ref().is_none_or(|s| s.copies.is_empty()) {
-        compute_changed_files(
-            ctx.clone(),
-            blobstore.clone(),
-            manifest_id,
-            parents.first().map(|p| p.manifestid()),
-            parents.get(1).map(|p| p.manifestid()),
-        )
-        .await?
-    } else {
-        Vec::new()
-    };
+    let files = compute_changed_files(
+        ctx.clone(),
+        blobstore.clone(),
+        manifest_id,
+        parents.first().map(|p| p.manifestid()),
+        parents.get(1).map(|p| p.manifestid()),
+    )
+    .await?;
     let (hg_cs_id, _) = generate_hg_changeset(
         ctx,
         blobstore,
@@ -658,14 +648,6 @@ pub(crate) async fn generate_hg_changeset(
 
     // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
     let step_parents = parents;
-
-    // The changed-file list is computed by the caller (in parallel for batches);
-    // a subtree copy keeps the commit-text file list empty.
-    let files = if subtree_changes.as_ref().is_none_or(|s| s.copies.is_empty()) {
-        files
-    } else {
-        Vec::new()
-    };
 
     let mut metadata = ChangesetMetadata {
         user: bcs.author().to_string(),
@@ -870,7 +852,6 @@ mod pipeline_equivalence_tests {
             restricted_paths,
             bcs,
             vec![parent_root_manifest],
-            None,
         )
         .await
     }
@@ -911,7 +892,6 @@ mod pipeline_equivalence_tests {
             restricted_paths,
             bcs,
             parent_entries,
-            None,
             stage_path,
             known_entries,
             HashMap::new(),
@@ -949,7 +929,6 @@ mod pipeline_equivalence_tests {
             restricted_paths,
             bcs,
             parent_entries,
-            None,
             stage_path,
             HashMap::new(),
             cross_stage_copy_sources,
@@ -1263,7 +1242,6 @@ mod pipeline_equivalence_tests {
                 p2_root,
                 parent_root_manifest(&ctx, &repo, p3).await?,
             ],
-            None,
         )
         .await?;
 

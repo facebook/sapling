@@ -796,7 +796,6 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             repo.restricted_paths_arc().config_based().clone(),
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
-            None,
         ))
         .await;
         assert!(
@@ -815,7 +814,6 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             repo.restricted_paths_arc().config_based().clone(),
             make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
-            None,
         ))
         .await
         .expect("merge should have succeeded");
@@ -855,7 +853,6 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             repo.restricted_paths_arc().config_based().clone(),
             bcs,
             vec![ms1, ms2],
-            None,
         ))
         .await
         .expect("adding new file should not produce conflict");

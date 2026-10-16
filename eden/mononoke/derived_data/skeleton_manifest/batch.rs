@@ -26,7 +26,6 @@ use crate::SkeletonManifestId;
 use crate::derive::derive_skeleton_manifest_stack;
 use crate::derive::derive_skeleton_manifest_with_subtree_changes;
 use crate::mapping::get_file_changes;
-use crate::mapping::get_skeleton_manifest_subtree_changes;
 
 define_stats! {
     prefix = "mononoke.derived_data.skeleton_manifest";
@@ -104,13 +103,6 @@ pub async fn new_batch_derivation(
             let parents = derivation_ctx
                 .fetch_unknown_parents(ctx, Some(already_derived), &bonsai)
                 .await?;
-            let subtree_changes = get_skeleton_manifest_subtree_changes(
-                ctx,
-                derivation_ctx,
-                Some(already_derived),
-                &bonsai,
-            )
-            .await?;
             let derived = derive_skeleton_manifest_with_subtree_changes(
                 ctx,
                 derivation_ctx,
@@ -119,7 +111,7 @@ pub async fn new_batch_derivation(
                     .map(RootSkeletonManifestId::into_skeleton_manifest_id)
                     .collect(),
                 get_file_changes(&bonsai),
-                subtree_changes,
+                Vec::new(),
             )
             .await?;
             already_derived.insert(item.cs_id, RootSkeletonManifestId(derived));

@@ -37,7 +37,6 @@ use crate::RootAclManifestId;
 use crate::derive::derive_acl_manifest_entry;
 use crate::derive::empty_root_acl_manifest_id;
 use crate::derive::get_acl_file_changes;
-use crate::derive::get_acl_manifest_subtree_changes;
 use crate::derive::prepare_acl_file_changes;
 use crate::mapping::format_key;
 
@@ -133,15 +132,12 @@ impl PipelineDerivable for RootAclManifestId {
             let derive_changes =
                 prepare_acl_file_changes(ctx, blobstore, changes, &acl_file_name).await?;
 
-            let subtree_changes =
-                get_acl_manifest_subtree_changes(ctx, derivation, &bonsai, None).await?;
-
             let entry = derive_acl_manifest_entry(
                 ctx,
                 blobstore,
                 parent_entries,
                 derive_changes,
-                subtree_changes,
+                Vec::new(),
                 known_entries,
                 stage_path.clone(),
                 &acl_file_name,

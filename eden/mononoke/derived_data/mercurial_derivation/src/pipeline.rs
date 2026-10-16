@@ -379,21 +379,6 @@ impl PipelineDerivable for MappedHgChangesetId {
                 })
                 .unwrap_or_default();
 
-            // Subtree changes are an orthogonal Mercurial feature, but each
-            // stage must consider them because file changes under `stage_path`
-            // may reference subtree-copy sources. The `derivation_pipeline_tailer`
-            // splits batches so any commit with manifest-altering subtree changes
-            // arrives in a single-commit batch, after its subtree-copy sources
-            // have been fully derived in an earlier batch. So we never have
-            // in-batch sources to short-circuit — `bonsai_hg_mapping` always
-            // has every source we need.
-            let subtree_change_sources =
-                get_subtree_change_sources(ctx, derivation, &bonsai, &HashMap::new()).await?;
-            let subtree_changes = HgSubtreeChanges::from_bonsai_subtree_changes(
-                bonsai.subtree_changes(),
-                subtree_change_sources,
-            )?;
-
             // Resolve cross-stage copy sources: a file change under
             // `cur_stage_path` whose `copy_from` source is a real parent
             // (p1/p2) but lies outside `cur_stage_path`. The source filenode
@@ -415,7 +400,6 @@ impl PipelineDerivable for MappedHgChangesetId {
                 derivation.restricted_paths(),
                 bonsai.clone(),
                 parent_entries,
-                subtree_changes.as_ref(),
                 cur_stage_path.clone(),
                 known_entries,
                 cross_stage_copy_sources,
@@ -675,7 +659,6 @@ async fn finalize_stage_batch(
         HgManifestId,
         Option<HgManifestId>,
         Option<HgManifestId>,
-        bool,
     )> = bonsais
         .iter()
         .map(|bonsai| {
@@ -685,27 +668,17 @@ async fn finalize_stage_batch(
             let mut parent_mfs = bonsai.parents().map(|p| manifest_id_of(&p));
             let mf_p1 = parent_mfs.next().flatten();
             let mf_p2 = parent_mfs.next().flatten();
-            // Subtree copies make generate_hg_changeset drop the file list, so skip the diff then.
-            let has_subtree_copies = bonsai
-                .subtree_changes()
-                .iter()
-                .any(|(_, change)| change.copy_source().is_some());
-            Ok((cs_id, manifest_id, mf_p1, mf_p2, has_subtree_copies))
+            Ok((cs_id, manifest_id, mf_p1, mf_p2))
         })
         .collect::<Result<_>>()?;
 
     let mut files_by_cs: HashMap<ChangesetId, Vec<NonRootMPath>> = stream::iter(file_inputs)
-        .map(
-            |(cs_id, manifest_id, mf_p1, mf_p2, has_subtree_copies)| async move {
-                let files = if has_subtree_copies {
-                    Vec::new()
-                } else {
-                    compute_changed_files(ctx.clone(), blobstore.clone(), manifest_id, mf_p1, mf_p2)
-                        .await?
-                };
-                anyhow::Ok((cs_id, files))
-            },
-        )
+        .map(|(cs_id, manifest_id, mf_p1, mf_p2)| async move {
+            let files =
+                compute_changed_files(ctx.clone(), blobstore.clone(), manifest_id, mf_p1, mf_p2)
+                    .await?;
+            anyhow::Ok((cs_id, files))
+        })
         .buffer_unordered(100)
         .try_collect()
         .await?;

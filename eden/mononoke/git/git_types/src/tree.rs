@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
@@ -15,7 +13,6 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data_manager::DerivationContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use futures::FutureExt;
@@ -31,13 +28,11 @@ use gix_object::Tree;
 use gix_object::tree;
 use manifest::Entry;
 use manifest::Manifest;
-use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::derive_manifest;
 use manifest::flatten_subentries;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
@@ -50,7 +45,6 @@ use sorted_vector_map::SortedVectorMap;
 
 use crate::DeltaObjectKind;
 use crate::GitIdentifier;
-use crate::MappedGitCommitId;
 use crate::errors::MononokeGitError;
 use crate::fetch_non_blob_git_object;
 use crate::git_lfs::generate_and_store_git_lfs_pointer;
@@ -395,46 +389,6 @@ pub(crate) async fn get_git_file_changes<B: KeyedBlobstore + Clone + 'static>(
             }
         })
         .try_buffer_unordered(100)
-        .try_collect()
-        .boxed()
-        .await
-}
-
-pub(crate) async fn get_git_subtree_changes(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, MappedGitCommitId>>,
-    bcs: &BonsaiChangeset,
-) -> Result<Vec<ManifestParentReplacement<GitTreeId, GitLeaf>>> {
-    let copy_sources = bcs.subtree_changes().iter().filter_map(|(path, change)| {
-        let (from_cs_id, from_path) = change.copy_source()?;
-        Some((path, from_cs_id, from_path))
-    });
-    stream::iter(copy_sources)
-        .map(|(path, from_cs_id, from_path)| {
-            cloned!(ctx);
-            let blobstore = derivation_ctx.blobstore().clone();
-            async move {
-                let root_tree_id = derivation_ctx
-                    .fetch_unknown_dependency::<MappedGitCommitId>(&ctx, known, from_cs_id)
-                    .await?
-                    .fetch_root_tree(&ctx, &blobstore)
-                    .await?;
-                let entry = root_tree_id
-                    .find_entry(ctx, blobstore, from_path.clone())
-                    .await?
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
-                        )
-                    })?;
-                Ok(ManifestParentReplacement {
-                    path: path.clone(),
-                    replacements: vec![entry],
-                })
-            }
-        })
-        .buffered(100)
         .try_collect()
         .boxed()
         .await

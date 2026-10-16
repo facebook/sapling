@@ -38,7 +38,6 @@ use crate::fetch_non_blob_git_object;
 use crate::git_object_bytes_with_hash;
 use crate::tree::derive_git_tree;
 use crate::tree::get_git_file_changes;
-use crate::tree::get_git_subtree_changes;
 use crate::upload_non_blob_git_object;
 
 fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
@@ -80,7 +79,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        known: Option<&HashMap<ChangesetId, Self>>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         if bonsai.is_snapshot() {
             bail!("Can't derive MappedGitCommitId for snapshot")
@@ -137,16 +136,8 @@ impl BonsaiDerivable for MappedGitCommitId {
         let file_changes =
             get_git_file_changes(&blobstore, derivation_ctx.filestore_config(), ctx, &bonsai)
                 .await?;
-        let subtree_changes = get_git_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
-
-        let commit_tree_id = derive_git_tree(
-            ctx,
-            blobstore,
-            parent_tree_ids,
-            file_changes,
-            subtree_changes,
-        )
-        .await?;
+        let commit_tree_id =
+            derive_git_tree(ctx, blobstore, parent_tree_ids, file_changes, Vec::new()).await?;
 
         let git_commit = Commit {
             tree: commit_tree_id.0,

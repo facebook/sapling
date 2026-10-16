@@ -251,22 +251,6 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    for (path, change) in cs.subtree_changes.iter() {
-        if change.alters_manifest() {
-            match path.clone().into_optional_non_root_path() {
-                None => {
-                    bail!(
-                        "Subtree changes for the root are not supported in commit transformation"
-                    );
-                }
-                Some(dst_path) => {
-                    if mover.conflicts_with(&dst_path)? {
-                        bail!("Subtree change for {path:?} overlaps with commit transformation");
-                    }
-                }
-            }
-        }
-    }
     if !cs.subtree_changes.is_empty() || cs.hg_extra.contains_key("subtree") {
         cs.subtree_changes.clear();
         cs.hg_extra.remove("subtree");

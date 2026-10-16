@@ -24,10 +24,6 @@ use serde::Serializer;
 #[derive(Serialize)]
 #[serde(tag = "type")]
 pub enum DisplaySubtreeChange {
-    SubtreeCopy {
-        from_path: String,
-        from_cs_id: ChangesetId,
-    },
     SubtreeDeepCopy {
         from_path: String,
         from_cs_id: ChangesetId,
@@ -51,10 +47,6 @@ pub enum DisplaySubtreeChange {
 impl DisplaySubtreeChange {
     fn from_subtree_change(change: &SubtreeChange) -> Self {
         match change {
-            SubtreeChange::SubtreeCopy(copy) => DisplaySubtreeChange::SubtreeCopy {
-                from_path: copy.from_path.to_string(),
-                from_cs_id: copy.from_cs_id,
-            },
             SubtreeChange::SubtreeDeepCopy(copy) => DisplaySubtreeChange::SubtreeDeepCopy {
                 from_path: copy.from_path.to_string(),
                 from_cs_id: copy.from_cs_id,
@@ -200,10 +192,6 @@ pub fn display_file_change(path: &String, change: &FileChange) -> String {
 
 pub fn display_subtree_change(path: &String, change: &DisplaySubtreeChange) -> String {
     match change {
-        DisplaySubtreeChange::SubtreeCopy {
-            from_path,
-            from_cs_id,
-        } => format!("\t SUBTREE_COPY: {path} (from {from_path} @ {from_cs_id})"),
         DisplaySubtreeChange::SubtreeDeepCopy {
             from_path,
             from_cs_id,

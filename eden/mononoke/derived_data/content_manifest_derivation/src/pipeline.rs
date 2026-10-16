@@ -37,7 +37,6 @@ use crate::RootContentManifestId;
 use crate::derive::derive_content_manifest_entry;
 use crate::derive::empty_directory;
 use crate::derive::get_changes;
-use crate::derive::get_content_manifest_subtree_changes;
 use crate::mapping::format_key;
 
 fn stage_blobstore_key(stage_path: &MPath, key_prefix: &str, cs_id: ChangesetId) -> String {
@@ -109,15 +108,12 @@ impl PipelineDerivable for RootContentManifestId {
                 })
                 .unwrap_or_default();
 
-            let subtree_changes =
-                get_content_manifest_subtree_changes(ctx, derivation, None, &bonsai).await?;
-
             let entry = derive_content_manifest_entry(
                 ctx,
                 derivation,
                 parent_entries,
                 all_changes,
-                subtree_changes,
+                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

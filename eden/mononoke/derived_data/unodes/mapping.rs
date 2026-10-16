@@ -99,14 +99,12 @@ impl BonsaiDerivable for RootUnodeManifestId {
         derive_unode_manifest_with_subtree_changes(
             ctx,
             derivation_ctx,
-            None,
             csid,
             parents
                 .into_iter()
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
                 .collect(),
             get_file_changes(&bonsai),
-            bonsai.subtree_changes(),
         )
         .map_ok(RootUnodeManifestId)
         .await
@@ -161,14 +159,12 @@ impl BonsaiDerivable for RootUnodeManifestId {
                     let derived = derive_unode_manifest_with_subtree_changes(
                         ctx,
                         derivation_ctx,
-                        Some(&res),
                         bonsai.get_changeset_id(),
                         parents
                             .into_iter()
                             .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
                             .collect(),
                         get_file_changes(&bonsai),
-                        bonsai.subtree_changes(),
                     )
                     .await?;
                     res.insert(item.cs_id, RootUnodeManifestId(derived));

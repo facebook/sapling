@@ -22,7 +22,6 @@ use futures::stream;
 use itertools::Either;
 use manifest::Entry;
 use manifest::LeafInfo;
-use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
@@ -31,7 +30,6 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::CaseConflictSkeletonManifestId;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrieMap;
 use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
@@ -49,56 +47,6 @@ async fn get_ccsm_path_changes(bcs: &BonsaiChangeset) -> Vec<(NonRootMPath, Opti
                 .map(|path| (path.into_raw(), file_change.simplify().map(|_| ())))
         })
         .collect()
-}
-
-async fn get_ccsm_subtree_changes(
-    ctx: &CoreContext,
-    derivation_context: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootCaseConflictSkeletonManifestId>>,
-    bcs: &BonsaiChangeset,
-) -> Result<Vec<ManifestParentReplacement<CaseConflictSkeletonManifest, ()>>> {
-    let copy_sources = bcs
-        .subtree_changes()
-        .iter()
-        .filter_map(|(path, change)| {
-            let (from_cs_id, from_path) = change.copy_source()?;
-            Some((
-                MPath::from(CcsmPath::transform_mpath(path.clone())?.into_raw()),
-                from_cs_id,
-                MPath::from(CcsmPath::transform_mpath(from_path.clone())?.into_raw()),
-            ))
-        })
-        .collect::<Vec<_>>();
-    stream::iter(copy_sources)
-        .map(|(path, from_cs_id, from_path)| {
-            cloned!(ctx);
-            let blobstore = derivation_context.blobstore().clone();
-            async move {
-                let from_cssm = derivation_context
-                    .fetch_unknown_dependency::<RootCaseConflictSkeletonManifestId>(
-                        &ctx, known, from_cs_id,
-                    )
-                    .await?
-                    .into_inner_id()
-                    .load(&ctx, &blobstore)
-                    .await?;
-                let entry = from_cssm
-                    .find_entry(ctx, blobstore, from_path.clone())
-                    .await?
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
-                        )
-                    })?;
-                Ok(ManifestParentReplacement {
-                    path,
-                    replacements: vec![entry],
-                })
-            }
-        })
-        .buffered(100)
-        .try_collect()
-        .await
 }
 
 async fn empty_directory_id(
@@ -182,19 +130,17 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootCaseConflictSkeletonManifestId>,
-    known: Option<&HashMap<ChangesetId, RootCaseConflictSkeletonManifestId>>,
+    _known: Option<&HashMap<ChangesetId, RootCaseConflictSkeletonManifestId>>,
 ) -> Result<RootCaseConflictSkeletonManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let changes = get_ccsm_path_changes(&bonsai).await;
-    let subtree_changes = get_ccsm_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
-
     let parents = stream::iter(parents)
         .map(|parent| async move { parent.0.load(ctx, blobstore).await })
         .buffered(100)
         .try_collect::<Vec<_>>()
         .await?;
 
-    let root_directory = inner_derive(ctx, blobstore, parents, changes, subtree_changes).await?;
+    let root_directory = inner_derive(ctx, blobstore, parents, changes, Vec::new()).await?;
 
     Ok(RootCaseConflictSkeletonManifestId(match root_directory {
         Some(directory) => {

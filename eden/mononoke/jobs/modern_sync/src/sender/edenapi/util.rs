@@ -7,7 +7,6 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::bail;
 use anyhow::ensure;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -147,7 +146,7 @@ pub fn to_identical_changeset(
         "Unexpected git annotated tag found"
     );
 
-    // Convert subtree changes, but error out if there's a shallow copy (SubtreeCopy)
+    // Convert subtree changes.
     let converted_subtree_changes = if subtree_changes.is_empty() {
         None
     } else {
@@ -174,9 +173,6 @@ pub fn to_identical_changeset(
                         from_commit: cross_repo_merge.from_commit,
                         from_repo_url: cross_repo_merge.from_repo_url,
                     }
-                }
-                SubtreeChange::SubtreeCopy(_) => {
-                    bail!("Shallow subtree copy (SubtreeCopy) is not supported in modern sync")
                 }
             };
             changes.push((repo_path, edenapi_change));

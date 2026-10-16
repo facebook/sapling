@@ -549,7 +549,6 @@ pub async fn compute_cluster_changes(
         let dest_mpath = dest_path.clone();
 
         let (operation_type, from_path) = match change {
-            SubtreeChange::SubtreeCopy(copy) => (SubtreeOperationType::Copy, &copy.from_path),
             SubtreeChange::SubtreeDeepCopy(copy) => (SubtreeOperationType::Copy, &copy.from_path),
             SubtreeChange::SubtreeMerge(merge) => (SubtreeOperationType::Merge, &merge.from_path),
             SubtreeChange::SubtreeImport(_) => {

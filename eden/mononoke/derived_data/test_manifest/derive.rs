@@ -15,12 +15,7 @@ use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
-use futures::FutureExt;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use futures::stream;
 use manifest::Entry;
-use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::derive_manifest;
 use manifest::flatten_subentries;
@@ -54,49 +49,6 @@ fn get_changes(bcs: &BonsaiChangeset) -> Vec<(NonRootMPath, Option<()>)> {
         .into_iter()
         .map(|(path, content)| (path, content.map(|_| ())))
         .collect()
-}
-
-pub async fn get_test_manifest_subtree_changes(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    known: Option<&HashMap<ChangesetId, RootTestManifestDirectory>>,
-    bcs: &BonsaiChangeset,
-) -> Result<Vec<ManifestParentReplacement<TestManifestDirectory, ()>>> {
-    let copy_sources = bcs
-        .subtree_changes()
-        .iter()
-        .filter_map(|(path, change)| {
-            let (from_cs_id, from_path) = change.copy_source()?;
-            Some((path, from_cs_id, from_path))
-        })
-        .collect::<Vec<_>>();
-    stream::iter(copy_sources)
-        .map(|(path, from_cs_id, from_path)| {
-            cloned!(ctx);
-            let blobstore = derivation_ctx.blobstore().clone();
-            async move {
-                let root = derivation_ctx
-                    .fetch_unknown_dependency::<RootTestManifestDirectory>(&ctx, known, from_cs_id)
-                    .await?
-                    .into_inner();
-                let entry = root
-                    .find_entry(ctx, blobstore, from_path.clone())
-                    .await?
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Subtree copy source {from_path} does not exist in {from_cs_id}"
-                        )
-                    })?;
-                Ok(ManifestParentReplacement {
-                    path: path.clone(),
-                    replacements: vec![entry],
-                })
-            }
-        })
-        .buffered(100)
-        .try_collect()
-        .boxed()
-        .await
 }
 
 async fn create_test_manifest_directory(
@@ -168,18 +120,16 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootTestManifestDirectory>,
-    known: Option<&HashMap<ChangesetId, RootTestManifestDirectory>>,
+    _known: Option<&HashMap<ChangesetId, RootTestManifestDirectory>>,
 ) -> Result<RootTestManifestDirectory> {
     let parents = parents
         .into_iter()
         .map(|root| root.into_inner())
         .collect::<Vec<_>>();
     let changes = get_changes(&bonsai);
-    let subtree_changes =
-        get_test_manifest_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
     let blobstore = derivation_ctx.blobstore();
 
-    let root = inner_derive(ctx, blobstore, parents, changes, subtree_changes).await?;
+    let root = inner_derive(ctx, blobstore, parents, changes, Vec::new()).await?;
 
     Ok(RootTestManifestDirectory(match root {
         Some(root) => root,

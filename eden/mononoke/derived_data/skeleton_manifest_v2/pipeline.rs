@@ -38,7 +38,6 @@ use mononoke_types::thrift::skeleton_manifest as skmf_thrift;
 use crate::RootSkeletonManifestV2Id;
 use crate::derive::derive_skeleton_manifest_v2_entry;
 use crate::derive::get_file_changes;
-use crate::derive::get_skeleton_manifest_subtree_changes;
 use crate::format_key;
 
 fn stage_blobstore_key(stage_path: &MPath, key_prefix: &str, cs_id: ChangesetId) -> String {
@@ -105,15 +104,12 @@ impl PipelineDerivable for RootSkeletonManifestV2Id {
                     })
                     .unwrap_or_default();
 
-            let subtree_changes =
-                get_skeleton_manifest_subtree_changes(ctx, derivation, None, &bonsai).await?;
-
             let entry = derive_skeleton_manifest_v2_entry(
                 ctx,
                 derivation,
                 parent_entries,
                 all_changes,
-                subtree_changes,
+                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

@@ -37,6 +37,7 @@ use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::blobs::ChangesetMetadata;
 use mercurial_types::subtree::HgSubtreeChanges;
+use mercurial_types::subtree::ShallowSubtreeCopiesUnsupported;
 use mononoke_types::BonsaiChangeset;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
@@ -305,11 +306,14 @@ pub async fn upload_changeset(
     let p2 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2);
 
     let subtree_changes = if let Some(subtree) = cs_metadata.extra.get(b"subtree".as_slice()) {
-        let subtree_changes = HgSubtreeChanges::from_json(subtree)?;
-        if !subtree_changes.copies.is_empty() {
-            STATS::rejected_shallow_subtree_copy.add_value(1);
-            return Err(ShallowSubtreeCopyRejected(node).into());
-        }
+        let subtree_changes = HgSubtreeChanges::from_json(subtree).map_err(|e| {
+            if e.is::<ShallowSubtreeCopiesUnsupported>() {
+                STATS::rejected_shallow_subtree_copy.add_value(1);
+                ShallowSubtreeCopyRejected(node).into()
+            } else {
+                e
+            }
+        })?;
         let hg_cs_ids = subtree_changes.source_changeset_ids();
         let sources = hg_cs_ids
             .into_iter()

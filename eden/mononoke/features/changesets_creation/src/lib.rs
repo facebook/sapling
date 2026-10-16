@@ -53,13 +53,6 @@ pub async fn save_changesets(
         return Err(anyhow!("Subtree changes are disabled"));
     }
 
-    if bonsai_changesets
-        .iter()
-        .any(|bcs| bcs.has_manifest_altering_subtree_changes())
-    {
-        return Err(anyhow!("Shallow subtree copies are not supported"));
-    }
-
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
     for bcs in &bonsai_changesets {
         parents_to_check.extend(bcs.parents());

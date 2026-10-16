@@ -89,7 +89,7 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootAclManifestId>,
-    known: Option<&HashMap<ChangesetId, RootAclManifestId>>,
+    _known: Option<&HashMap<ChangesetId, RootAclManifestId>>,
 ) -> Result<RootAclManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let acl_file_name = derivation_ctx
@@ -111,10 +111,6 @@ pub(crate) async fn derive_single(
     )
     .await?;
 
-    // Get subtree changes (for subtree copies/merges).
-    let subtree_changes =
-        get_acl_manifest_subtree_changes(ctx, derivation_ctx, &bonsai, known).await?;
-
     let derive_changes = prepare_acl_file_changes(ctx, blobstore, changes, &acl_file_name).await?;
 
     let result = inner_derive(
@@ -122,7 +118,7 @@ pub(crate) async fn derive_single(
         blobstore,
         parent_ids,
         derive_changes,
-        subtree_changes,
+        Vec::new(),
         &acl_file_name,
     )
     .await?;
@@ -543,47 +539,6 @@ pub(crate) async fn get_acl_file_changes(
         .into_iter()
         .chain(implicit_deletes)
         .collect())
-}
-
-/// Collect subtree changes for subtree copies/merges.
-pub(crate) async fn get_acl_manifest_subtree_changes(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    bonsai: &BonsaiChangeset,
-    known: Option<&HashMap<ChangesetId, RootAclManifestId>>,
-) -> Result<Vec<ManifestParentReplacement<AclManifestId, AclManifestRestriction>>> {
-    let copy_sources: Vec<_> = bonsai
-        .subtree_changes()
-        .iter()
-        .filter_map(|(path, change)| {
-            let (from_cs_id, from_path) = change.copy_source()?;
-            Some((path.clone(), from_cs_id, from_path.clone()))
-        })
-        .collect();
-
-    stream::iter(copy_sources)
-        .then(|(path, from_cs_id, from_path)| {
-            cloned!(ctx);
-            let blobstore = derivation_ctx.blobstore().clone();
-            async move {
-                let root_id = derivation_ctx
-                    .fetch_unknown_dependency::<RootAclManifestId>(&ctx, known, from_cs_id)
-                    .await?
-                    .into_inner_id();
-                // The subtree copy source may not exist in the AclManifest if
-                // the source path has no .slacl files. In that case, use an
-                // empty replacement to clear any existing entries at the
-                // destination path.
-                let replacements = root_id
-                    .find_entry(ctx, blobstore, from_path.clone())
-                    .await?
-                    .into_iter()
-                    .collect();
-                Ok(ManifestParentReplacement { path, replacements })
-            }
-        })
-        .try_collect()
-        .await
 }
 
 // ---------------------------------------------------------------------------
