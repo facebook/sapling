@@ -10,8 +10,8 @@ use std::fmt;
 use std::io;
 use std::result;
 
-use anyhow::Context as _;
 use anyhow::bail;
+use anyhow::Context as _;
 use byteorder::ByteOrder;
 use byteorder::NativeEndian;
 
@@ -210,18 +210,24 @@ where
         len: usize,
         scratch: &'s mut Vec<u8>,
     ) -> anyhow::Result<Reference<'de, 's, [u8]>> {
-        scratch.resize(len, 0);
-        let mut idx = 0;
-        if self.peeked.is_some() {
-            idx += 1;
-        }
-        if idx < len {
-            self.reader.read_exact(&mut scratch[idx..len])?;
-            debug_bytes!("{:x}", ByteBuf(&scratch[idx..len]));
-            self.read_count += len - idx;
-        }
+        // Grow the scratch buffer in bounded chunks instead of pre-allocating
+        // `len` bytes, so a wire-supplied length that is far larger than the
+        // stream can ever provide yields an EOF error rather than a capacity
+        // overflow panic.
+        scratch.clear();
         if let Some(peeked) = self.peeked.take() {
-            scratch[0] = peeked;
+            scratch.push(peeked);
+        }
+        let mut buf = [0u8; 4096];
+        while scratch.len() < len {
+            let want = (len - scratch.len()).min(buf.len());
+            let n = self.reader.read(&mut buf[..want])?;
+            if n == 0 {
+                bail!("eof while reading bytes/string");
+            }
+            debug_bytes!("{:x}", ByteBuf(&buf[..n]));
+            scratch.extend_from_slice(&buf[..n]);
+            self.read_count += n;
         }
         Ok(Reference::Copied(&scratch[0..len]))
     }
