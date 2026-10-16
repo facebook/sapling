@@ -28,6 +28,7 @@ itertools = "0.15.0"
 justknobs_ext = { version = "0.1.0", path = "../../common/rust/justknobs_ext" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
+repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 thiserror = "2.0.21"

@@ -17,10 +17,10 @@ use bulk_derivation::BulkDerivation;
 use cloned::cloned;
 use commit_graph::ChangesetSegment;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
-use derived_data_manager::DerivedDataManager;
-use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
 use futures::future;
 use futures::future::FutureExt;
 use futures::join;
@@ -31,6 +31,7 @@ use futures_stats::futures03::TimedFutureExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use parking_lot::Mutex;
+use repo_blobstore::RepoBlobstoreRef;
 use tracing::debug;
 use tracing::error;
 
@@ -170,23 +171,22 @@ fn parent_batch_root(
         .root)
 }
 
+/// Build batches in the request queue's context, resolving other bubbles from `persistent_repo`.
 pub async fn build_underived_batched_graph<'a>(
     ctx: &'a CoreContext,
-    queue: Arc<dyn DerivationQueue + Send + Sync>,
-    ddm: &'a DerivedDataManager,
+    request_queue: Arc<dyn DerivationQueue + Send + Sync>,
+    persistent_repo: &'a (impl CommitGraphArc + RepoBlobstoreRef + RepoEphemeralStoreRef + Sync),
     derived_data_type: DerivableType,
     head: ChangesetId,
-    bubble_id: Option<BubbleId>,
     batch_size: u64,
     priority: Option<DerivationPriority>,
 ) -> Result<Option<EnqueueResponse>> {
     let (stats, build_result) = build_underived_batched_graph_impl(
         ctx,
-        queue,
-        ddm,
+        request_queue,
+        persistent_repo,
         derived_data_type,
         head,
-        bubble_id,
         batch_size,
         priority,
     )
@@ -210,18 +210,19 @@ pub async fn build_underived_batched_graph<'a>(
 
 async fn build_underived_batched_graph_impl<'a>(
     ctx: &'a CoreContext,
-    queue: Arc<dyn DerivationQueue + Send + Sync>,
-    ddm: &'a DerivedDataManager,
+    request_queue: Arc<dyn DerivationQueue + Send + Sync>,
+    persistent_repo: &'a (impl CommitGraphArc + RepoBlobstoreRef + RepoEphemeralStoreRef + Sync),
     derived_data_type: DerivableType,
     head: ChangesetId,
-    bubble_id: Option<BubbleId>,
     batch_size: u64,
     priority: Option<DerivationPriority>,
 ) -> Result<UnderivedGraphBuildResult> {
+    let ddm = request_queue.derived_data_manager();
+    let bubble_id = ddm.bubble_id();
     let priority = priority.unwrap_or(DerivationPriority::LOW);
     let repo_id = ddm.repo_id();
     let config_name = ddm.config_name();
-    let commit_graph = ddm.commit_graph_arc();
+    let request_commit_graph = ddm.commit_graph_arc();
     let items_enqueued = Arc::new(AtomicU64::new(0));
     let watch = Arc::new(Mutex::new(Some(EnqueueResponse::new(
         future::ok(false).boxed(),
@@ -231,7 +232,7 @@ async fn build_underived_batched_graph_impl<'a>(
         return Err(anyhow!("batch size must be greater than zero"));
     }
 
-    let parents_derived = stream::iter(commit_graph.changeset_parents(ctx, head).await?)
+    let parents_derived = stream::iter(request_commit_graph.changeset_parents(ctx, head).await?)
         .map(|parent| async move {
             anyhow::Ok((
                 parent,
@@ -263,7 +264,7 @@ async fn build_underived_batched_graph_impl<'a>(
         )
     } else {
         let known_parents = parents_derived.iter().copied().collect::<HashMap<_, _>>();
-        let derived_frontier = commit_graph
+        let derived_frontier = request_commit_graph
             .ancestors_frontier_with(ctx, underived_parents, |cs_id| {
                 let known_parents = &known_parents;
                 async move {
@@ -282,7 +283,7 @@ async fn build_underived_batched_graph_impl<'a>(
                     .map(|(parent, _)| *parent),
             )
             .collect::<Vec<_>>();
-        let segments = commit_graph
+        let segments = request_commit_graph
             .ancestors_difference_segments(ctx, vec![head], derived_frontier)
             .await?;
         if segments.is_empty() {
@@ -296,7 +297,7 @@ async fn build_underived_batched_graph_impl<'a>(
         let commits_walked = segments.iter().map(|segment| segment.length).sum::<u64>();
         let segments = stream::iter(segments)
             .map(|segment| {
-                split_segment_into_batches(ctx, commit_graph.clone(), segment, batch_size)
+                split_segment_into_batches(ctx, request_commit_graph.clone(), segment, batch_size)
             })
             .buffer_unordered(100)
             .try_collect::<Vec<_>>()
@@ -372,8 +373,8 @@ async fn build_underived_batched_graph_impl<'a>(
             cloned!(
                 derived_data_type,
                 config_name,
-                queue,
-                commit_graph,
+                request_queue,
+                request_commit_graph,
                 watch,
                 items_enqueued
             );
@@ -416,7 +417,7 @@ async fn build_underived_batched_graph_impl<'a>(
                         tokio::time::sleep(backoff_time).await;
                     }
                     let maybe_inserted = {
-                        let enqueue_res = queue.enqueue(ctx, item.clone()).await;
+                        let enqueue_res = request_queue.enqueue(ctx, item.clone()).await;
                         match enqueue_res {
                             Ok(resp) => {
                                 items_enqueued.fetch_add(1, Ordering::Relaxed);
@@ -427,7 +428,7 @@ async fn build_underived_batched_graph_impl<'a>(
                                 let existing_item_id = item.id().clone();
                                 if *existing == item {
                                     *watch.lock() = Some(
-                                        queue
+                                        request_queue
                                             .watch_existing(ctx, existing_item_id.clone())
                                             .await?,
                                     );
@@ -440,12 +441,26 @@ async fn build_underived_batched_graph_impl<'a>(
                                             .stage_payload()
                                             .and_then(|p| p.path().cloned()),
                                     };
+                                    let existing_commit_graph = match existing.bubble_id() {
+                                        Some(bubble_id) => {
+                                            let bubble = persistent_repo
+                                                .repo_ephemeral_store()
+                                                .open_bubble(ctx, bubble_id)
+                                                .await?;
+                                            Arc::new(bubble.commit_graph(
+                                                existing.repo_id(),
+                                                persistent_repo.repo_blobstore().clone(),
+                                                &persistent_repo.commit_graph_arc(),
+                                            ))
+                                        }
+                                        None => persistent_repo.commit_graph_arc(),
+                                    };
                                     let maybe_dedup = deduplicate(
                                         ctx,
                                         item,
+                                        &request_commit_graph,
                                         *existing,
-                                        bubble_id,
-                                        commit_graph.clone(),
+                                        &existing_commit_graph,
                                     )
                                     .await?;
                                     if maybe_dedup.is_none() {
@@ -453,24 +468,24 @@ async fn build_underived_batched_graph_impl<'a>(
                                         // for the existing batch, which may have a later head.
                                         upstream_dep = existing_dep;
                                         *watch.lock() = Some(
-                                            queue.watch_existing(ctx, existing_item_id).await?,
+                                            request_queue.watch_existing(ctx, existing_item_id).await?,
                                         );
                                     }
                                     maybe_dedup
                                 }
                             }
                             Err(e) => {
-                                let root_generation = commit_graph
+                                let root_generation = request_commit_graph
                                     .changeset_generation(ctx, item.root_cs_id())
                                     .await?;
-                                let derived_ancestors_or_parents = commit_graph
+                                let derived_ancestors_or_parents = request_commit_graph
                                     .ancestors_frontier_with(
                                         ctx,
                                         vec![item.head_cs_id()],
                                         |cs_id| {
-                                            cloned!(commit_graph);
+                                            cloned!(request_commit_graph);
                                             async move {
-                                                if commit_graph
+                                                if request_commit_graph
                                                     .changeset_generation(ctx, cs_id)
                                                     .await?
                                                     < root_generation
@@ -491,7 +506,7 @@ async fn build_underived_batched_graph_impl<'a>(
                                     )
                                     .await?;
 
-                                let mut underived_batch = commit_graph
+                                let mut underived_batch = request_commit_graph
                                     .ancestors_difference(
                                         ctx,
                                         vec![item.head_cs_id()],
@@ -562,9 +577,9 @@ async fn build_underived_batched_graph_impl<'a>(
 async fn deduplicate(
     ctx: &CoreContext,
     rejected: DerivationDagItem,
+    rejected_commit_graph: &CommitGraph,
     existing: DerivationDagItem,
-    bubble_id: Option<BubbleId>,
-    commit_graph: Arc<CommitGraph>,
+    existing_commit_graph: &CommitGraph,
 ) -> Result<Option<DerivationDagItem>> {
     assert_eq!(
         rejected.root_cs_id(),
@@ -572,11 +587,11 @@ async fn deduplicate(
         "Root cs_id of the duplicated items should be equal"
     );
     let (rejected_ids, existing_ids) = join!(
-        commit_graph
+        rejected_commit_graph
             .range_stream(ctx, rejected.root_cs_id(), rejected.head_cs_id())
             .await?
             .collect::<Vec<_>>(),
-        commit_graph
+        existing_commit_graph
             .range_stream(ctx, existing.root_cs_id(), existing.head_cs_id())
             .await?
             .collect::<Vec<_>>(),
@@ -609,7 +624,7 @@ async fn deduplicate(
             rejected.derived_data_type().clone(),
             dedup_root,
             dedup_head,
-            bubble_id,
+            rejected.bubble_id(),
             vec![DagItemDep {
                 dag_item_id: existing.id().clone(),
                 head_cs_id: existing.head_cs_id(),

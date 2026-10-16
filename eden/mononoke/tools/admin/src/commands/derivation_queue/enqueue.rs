@@ -97,10 +97,9 @@ pub async fn enqueue(
     let response = build_underived_batched_graph(
         ctx,
         Arc::clone(&derivation_queue),
-        ddm,
+        repo,
         derived_data_type,
         cs_id,
-        None, // bubble_id - not supporting ephemeral derivation for now
         batch_size,
         Some(priority),
     )

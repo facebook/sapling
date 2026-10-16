@@ -19,13 +19,16 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
+use commit_graph::CommitGraph;
 use enqueue::EnqueueArgs;
+use ephemeral_blobstore::RepoEphemeralStore;
 use inspect::InspectArgs;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use nuke::NukeArgs;
+use repo_blobstore::RepoBlobstore;
 use repo_derivation_queues::RepoDerivationQueues;
 use repo_identity::RepoIdentity;
 use summary::SummaryArgs;
@@ -61,6 +64,15 @@ pub enum DerivationQueueSubcommand {
 
 #[facet::container]
 pub struct Repo {
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_ephemeral_store: RepoEphemeralStore,
+
     #[facet]
     repo_derivation_queues: RepoDerivationQueues,
 
