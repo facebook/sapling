@@ -236,7 +236,6 @@ impl CreateChangeset {
                             hg_cs.clone(),
                             parent_manifest_hashes.clone(),
                             bonsai_parents,
-                            Vec::new(),
                             subtree_changes,
                             &blobstore,
                         )

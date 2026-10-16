@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -22,14 +21,12 @@ use futures::stream;
 use itertools::Either;
 use manifest::Entry;
 use manifest::LeafInfo;
-use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::CaseConflictSkeletonManifestId;
-use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrieMap;
 use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
@@ -95,7 +92,6 @@ pub(crate) async fn inner_derive(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<CaseConflictSkeletonManifest>,
     changes: Vec<(NonRootMPath, Option<()>)>,
-    subtree_changes: Vec<ManifestParentReplacement<CaseConflictSkeletonManifest, ()>>,
 ) -> Result<Option<CaseConflictSkeletonManifest>> {
     type Leaf = ();
     type LeafChange = ();
@@ -107,7 +103,6 @@ pub(crate) async fn inner_derive(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |info: TreeInfo<TreeId, Leaf, Ctx, LoadableShardedMapV2Node<CcsmEntry>>| {
@@ -130,7 +125,6 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootCaseConflictSkeletonManifestId>,
-    _known: Option<&HashMap<ChangesetId, RootCaseConflictSkeletonManifestId>>,
 ) -> Result<RootCaseConflictSkeletonManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let changes = get_ccsm_path_changes(&bonsai).await;
@@ -140,7 +134,7 @@ pub(crate) async fn derive_single(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let root_directory = inner_derive(ctx, blobstore, parents, changes, Vec::new()).await?;
+    let root_directory = inner_derive(ctx, blobstore, parents, changes).await?;
 
     Ok(RootCaseConflictSkeletonManifestId(match root_directory {
         Some(directory) => {

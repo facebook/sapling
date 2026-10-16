@@ -80,9 +80,9 @@ impl BonsaiDerivable for RootCaseConflictSkeletonManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        known: Option<&HashMap<ChangesetId, Self>>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        derive_single(ctx, derivation_ctx, bonsai, parents, known).await
+        derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
     async fn store_mapping(

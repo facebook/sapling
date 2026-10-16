@@ -28,7 +28,6 @@ use gix_object::Tree;
 use gix_object::tree;
 use manifest::Entry;
 use manifest::Manifest;
-use manifest::ManifestParentReplacement;
 use manifest::derive_manifest;
 use manifest::flatten_subentries;
 use mononoke_types::BasicFileChange;
@@ -399,14 +398,12 @@ pub(crate) async fn derive_git_tree<B: KeyedBlobstore + Clone + 'static>(
     blobstore: B,
     parents: Vec<GitTreeId>,
     changes: Vec<(NonRootMPath, Option<GitLeaf>)>,
-    subtree_changes: Vec<ManifestParentReplacement<GitTreeId, GitLeaf>>,
 ) -> Result<GitTreeId> {
     let tree_id = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |tree_info| {

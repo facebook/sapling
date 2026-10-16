@@ -28,7 +28,6 @@ use itertools::EitherOrBoth;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestOps;
-use manifest::ManifestParentReplacement;
 use manifest::PathOrPrefix;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
@@ -37,7 +36,6 @@ use manifest::derive_manifest_with_known_entries;
 use metaconfig_types::RestrictedPathsAclFile;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileContents;
 use mononoke_types::MPath;
@@ -89,7 +87,6 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootAclManifestId>,
-    _known: Option<&HashMap<ChangesetId, RootAclManifestId>>,
 ) -> Result<RootAclManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let acl_file_name = derivation_ctx
@@ -113,15 +110,7 @@ pub(crate) async fn derive_single(
 
     let derive_changes = prepare_acl_file_changes(ctx, blobstore, changes, &acl_file_name).await?;
 
-    let result = inner_derive(
-        ctx,
-        blobstore,
-        parent_ids,
-        derive_changes,
-        Vec::new(),
-        &acl_file_name,
-    )
-    .await?;
+    let result = inner_derive(ctx, blobstore, parent_ids, derive_changes, &acl_file_name).await?;
 
     match result {
         Some(id) => Ok(RootAclManifestId(id)),
@@ -201,15 +190,7 @@ pub(crate) async fn derive_from_scratch(
             .await?;
 
     // Call derive_manifest with empty parents.
-    let result = inner_derive(
-        ctx,
-        blobstore,
-        vec![],
-        derive_changes,
-        vec![],
-        &acl_file_name,
-    )
-    .await?;
+    let result = inner_derive(ctx, blobstore, vec![], derive_changes, &acl_file_name).await?;
 
     match result {
         Some(id) => Ok(RootAclManifestId(id)),
@@ -274,7 +255,6 @@ async fn inner_derive(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<AclManifestId>,
     changes: Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)>,
-    subtree_changes: Vec<ManifestParentReplacement<AclManifestId, AclManifestRestriction>>,
     acl_file_name: &str,
 ) -> Result<Option<AclManifestId>> {
     let acl_file_bytes: Vec<u8> = acl_file_name.as_bytes().to_vec();
@@ -284,7 +264,6 @@ async fn inner_derive(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         acl_create_tree_callback(ctx.clone(), blobstore.clone(), acl_file_bytes),
         acl_create_leaf_callback(ctx.clone(), blobstore.clone()),
     )
@@ -300,7 +279,6 @@ pub(crate) async fn derive_acl_manifest_entry(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<Entry<AclManifestId, AclManifestRestriction>>,
     changes: Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)>,
-    subtree_changes: Vec<ManifestParentReplacement<AclManifestId, AclManifestRestriction>>,
     known_entries: HashMap<MPath, Option<Entry<AclManifestId, AclManifestRestriction>>>,
     stage_path: MPath,
     acl_file_name: &str,
@@ -312,7 +290,6 @@ pub(crate) async fn derive_acl_manifest_entry(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         known_entries,
         stage_path,
         acl_create_tree_callback(ctx.clone(), blobstore.clone(), acl_file_bytes),

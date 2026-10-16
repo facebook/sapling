@@ -11,7 +11,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 use anyhow::Error;
-use anyhow::anyhow;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
@@ -27,15 +26,12 @@ use maplit::hashset;
 use mononoke_macros::mononoke;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
-use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::fsnode::FsnodeFile;
 
 use crate::Entry;
 use crate::Manifest;
-use crate::PathTree;
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, PartialOrd, Ord)]
 pub enum BonsaiDiffFileChange<Leaf> {
@@ -130,21 +126,6 @@ where
         }
     }
 
-    fn replace(
-        &mut self,
-        replacements: PathTree<Option<Vec<Entry<ManifestId, Leaf>>>>,
-    ) -> Vec<(MPathElement, PathTree<Option<Vec<Entry<ManifestId, Leaf>>>>)> {
-        let (value, children) = replacements.deconstruct();
-        if let Some(value) = value {
-            self.manifests.clear();
-            self.files.clear();
-            for entry in value {
-                self.insert(entry);
-            }
-        }
-        children
-    }
-
     fn into_parts(self) -> (Option<HashSet<ManifestId>>, Option<HashSet<Leaf>>) {
         let manifests = if self.manifests.is_empty() {
             None
@@ -171,8 +152,6 @@ where
 {
     entry: Option<Entry<ManifestId, Leaf>>,
     parents: CompositeEntry<ManifestId, Leaf>,
-    subtree_replacements:
-        Option<Vec<(MPathElement, PathTree<Option<Vec<Entry<ManifestId, Leaf>>>>)>>,
 }
 
 impl<ManifestId, Leaf> WorkEntry<ManifestId, Leaf>
@@ -184,7 +163,6 @@ where
         Self {
             entry: None,
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         }
     }
 }
@@ -201,7 +179,6 @@ async fn recurse_trees<ManifestId, Store, Leaf>(
     path: Option<&NonRootMPath>,
     node: Option<ManifestId>,
     parents: HashSet<ManifestId>,
-    subtree_replacements: Vec<(MPathElement, PathTree<Option<Vec<Entry<ManifestId, Leaf>>>>)>,
 ) -> Result<WorkEntrySet<ManifestId, Leaf>, Error>
 where
     Store: Send + Sync + Clone + 'static,
@@ -211,10 +188,7 @@ where
     Leaf: ManifestLeaf + Hash + Eq,
 {
     // If there is a single parent, and it's unchanged, then we don't need to recurse.
-    if parents.len() == 1
-        && node.as_ref() == parents.iter().next()
-        && subtree_replacements.is_empty()
-    {
+    if parents.len() == 1 && node.as_ref() == parents.iter().next() {
         return Ok(HashMap::new());
     }
 
@@ -250,14 +224,6 @@ where
                 .or_insert_with(WorkEntry::empty)
                 .parents
                 .insert(entry);
-        }
-    }
-
-    for (path, replacements) in subtree_replacements {
-        let entry = ret.entry(path).or_insert_with(WorkEntry::empty);
-        let children = entry.parents.replace(replacements);
-        if !children.is_empty() {
-            entry.subtree_replacements = Some(children);
         }
     }
 
@@ -333,7 +299,6 @@ where
                 Some(&path),
                 Some(node),
                 manifests.unwrap_or_default(),
-                work.subtree_replacements.unwrap_or_default(),
             )
             .await?;
 
@@ -349,10 +314,6 @@ where
             (change, recurse)
         }
         Some(Entry::Leaf(node)) => {
-            if work.subtree_replacements.is_some() {
-                anyhow::bail!("Invalid subtree replacement: overlaps file");
-            }
-
             // We have a file here. We won't need to recurse into the parents: the presence of this
             // file implicitly deletes all descendent files (if any exist).
             let recurse = hashmap! {};
@@ -372,23 +333,12 @@ where
             (change, recurse)
         }
         None => {
-            if work.subtree_replacements.is_some() {
-                anyhow::bail!("Invalid subtree replacement: destination does not exist");
-            }
-
             // We don't have anything at this path, but our parents do: we need to recursively
             // delete everything in this tree.
             let (manifests, files) = work.parents.into_parts();
 
-            let recurse = recurse_trees(
-                ctx,
-                store,
-                Some(&path),
-                None,
-                manifests.unwrap_or_default(),
-                vec![],
-            )
-            .await?;
+            let recurse =
+                recurse_trees(ctx, store, Some(&path), None, manifests.unwrap_or_default()).await?;
 
             let change = if files.is_some() {
                 Some(BonsaiDiffFileChange::Deleted(path))
@@ -417,59 +367,12 @@ where
         Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
     Leaf: ManifestLeaf + Hash + Eq + Send + Sync + Clone + 'static,
 {
-    bonsai_diff_with_subtree_changes(ctx, store, node, parents, vec![])
-}
-
-/// Diff a manifest against its parents to produce a stream of bonsai changes, taking into account
-/// subtree operations.
-pub fn bonsai_diff_with_subtree_changes<ManifestId, Store, Leaf>(
-    ctx: CoreContext,
-    store: Store,
-    node: ManifestId,
-    parents: HashSet<ManifestId>,
-    subtree_replacements: Vec<ManifestParentReplacement<ManifestId, Leaf>>,
-) -> impl Stream<Item = Result<BonsaiDiffFileChange<Leaf>, Error>>
-where
-    ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
-    Store: Send + Sync + Clone + 'static,
-    <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
-    Leaf: ManifestLeaf + Hash + Eq + Send + Sync + Clone + 'static,
-{
     // NOTE: `async move` blocks are used below to own CoreContext and Store for the (static)
     // lifetime of the stream we're returning here (recurse_trees and bonsai_diff_unfold don't
     // require those).
     {
         cloned!(ctx, store);
-        async move {
-            let subtree_replacements = subtree_replacements
-                .into_iter()
-                .map(|r| (r.path, Some(r.replacements)))
-                .collect::<PathTree<_>>();
-            let (root_replacement, subtree_replacements) = subtree_replacements.deconstruct();
-            let parents = if let Some(root_replacement) = root_replacement {
-                root_replacement
-                    .into_iter()
-                    .map(|e| {
-                        e.into_tree().ok_or_else(|| {
-                            anyhow!("Invalid root subtree operation source: not a tree")
-                        })
-                    })
-                    .collect::<Result<HashSet<_>, Error>>()?
-            } else {
-                parents
-            };
-
-            recurse_trees(
-                &ctx,
-                &store,
-                None,
-                Some(node),
-                parents,
-                subtree_replacements,
-            )
-            .await
-        }
+        async move { recurse_trees(&ctx, &store, None, Some(node), parents).await }
     }
     .map_ok(|seed| {
         bounded_traversal::bounded_traversal_stream(256, seed, move |(path, work)| {
@@ -523,37 +426,6 @@ impl ManifestLeaf for () {
     }
 }
 
-/// Parent replacement for implementation of subtree operations.
-///
-/// When diffing a manifest taking into account subtree operations, we
-/// replace the manifest parents at the point in the tree where the
-/// subtree operation is applied.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ManifestParentReplacement<ManifestId, Leaf> {
-    pub path: MPath,
-    pub replacements: Vec<Entry<ManifestId, Leaf>>,
-}
-
-impl<ManifestId, Leaf> ManifestParentReplacement<ManifestId, Leaf> {
-    pub fn map<NewManifestId, NewLeaf>(
-        self,
-        mut mf_fn: impl FnMut(ManifestId) -> NewManifestId,
-        mut leaf_fn: impl FnMut(Leaf) -> NewLeaf,
-    ) -> ManifestParentReplacement<NewManifestId, NewLeaf> {
-        ManifestParentReplacement {
-            path: self.path,
-            replacements: self
-                .replacements
-                .into_iter()
-                .map(|entry| match entry {
-                    Entry::Tree(id) => Entry::Tree(mf_fn(id)),
-                    Entry::Leaf(leaf) => Entry::Leaf(leaf_fn(leaf)),
-                })
-                .collect(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::sync::Arc;
@@ -599,7 +471,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: Some(Entry::Leaf((FileType::Regular, leaf_id))),
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         // Start with no parent. The file should be added.
@@ -661,7 +532,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: Some(Entry::Leaf((FileType::Regular, leaf_id))),
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         // Add a parent with a different mode. We can reuse it.
@@ -692,7 +562,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: Some(Entry::Leaf((FileType::Regular, leaf_id))),
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         let tree_id = TestManifest::new().store(&ctx, &store).await?;
@@ -765,7 +634,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: Some(Entry::Tree(tree1_id)),
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         // No parents. We need to recurse in this directory.
@@ -778,7 +646,6 @@ mod test {
                 NonRootMPath::new("a/p1")? => WorkEntry {
                     entry: Some(Entry::Leaf((FileType::Regular, leaf1_id))),
                     parents: CompositeEntry::empty(),
-                    subtree_replacements: None,
                 },
             }
         );
@@ -805,12 +672,10 @@ mod test {
                         (FileType::Regular, leaf1_id),
                         (FileType::Executable, leaf2_id)
                     }),
-                    subtree_replacements: None,
                 },
                 NonRootMPath::new("a/p2")? => WorkEntry {
                     entry: None,
                     parents: CompositeEntry::manifests(hashset! { tree1_id }),
-                    subtree_replacements: None,
                 },
             }
         );
@@ -829,7 +694,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: Some(Entry::Tree(tree_id)),
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         // Parent has a file. Delete it.
@@ -856,7 +720,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: None,
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         // Parent has a file, delete it.
@@ -892,7 +755,6 @@ mod test {
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
             entry: None,
             parents: CompositeEntry::empty(),
-            subtree_replacements: None,
         };
 
         // Parent has a directory, recurse into it.
@@ -906,7 +768,6 @@ mod test {
                 NonRootMPath::new("a/p1")? => WorkEntry {
                     entry: None,
                     parents: CompositeEntry::manifests(hashset! { tree2_id }),
-                    subtree_replacements: None,
                 },
             }
         );
@@ -922,109 +783,10 @@ mod test {
                 NonRootMPath::new("a/p1")? => WorkEntry {
                     entry: None,
                     parents: CompositeEntry::manifests(hashset! { tree2_id }),
-                    subtree_replacements: None,
                 },
                 NonRootMPath::new("a/p2")? => WorkEntry {
                     entry: None,
                     parents: CompositeEntry::manifests(hashset! { tree3_id }),
-                    subtree_replacements: None,
-                },
-            }
-        );
-
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_unfold_subtree_replacements(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
-        let root = NonRootMPath::new("a")?;
-
-        let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;
-        let tree4_id = TestManifest::new()
-            .insert("file", Entry::Leaf((FileType::Regular, leaf2_id)))
-            .store(&ctx, &store)
-            .await?;
-        let tree3_id = TestManifest::new()
-            .insert("b", Entry::Tree(tree4_id))
-            .store(&ctx, &store)
-            .await?;
-        let leaf1_id = TestLeaf::new("1").store(&ctx, &store).await?;
-        let tree2_id = TestManifest::new()
-            .insert("file", Entry::Leaf((FileType::Regular, leaf1_id)))
-            .store(&ctx, &store)
-            .await?;
-        let tree1_id = TestManifest::new()
-            .insert("b", Entry::Tree(tree2_id))
-            .store(&ctx, &store)
-            .await?;
-
-        let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
-            entry: Some(Entry::Tree(tree3_id)),
-            parents: CompositeEntry::empty(),
-            subtree_replacements: None,
-        };
-
-        // No replacements. We recurse into the parent.
-        work_entry.parents.insert(Entry::Tree(tree1_id));
-        let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
-        assert_eq!(change, None);
-        assert_eq!(
-            work,
-            hashmap! {
-                NonRootMPath::new("a/b")? => WorkEntry {
-                    entry: Some(Entry::Tree(tree4_id)),
-                    parents: CompositeEntry::manifests(hashset! { tree2_id }),
-                    subtree_replacements: None,
-                },
-            }
-        );
-
-        let leaf3_id = TestLeaf::new("3").store(&ctx, &store).await?;
-        let tree6_id = TestManifest::new()
-            .insert("file", Entry::Leaf((FileType::Regular, leaf3_id)))
-            .store(&ctx, &store)
-            .await?;
-
-        // Replace the parent with a different manifest. We recurse into that manifest.
-        work_entry.subtree_replacements = Some(vec![(
-            MPathElement::new_from_slice(b"b".as_slice())?,
-            PathTree::from_iter(vec![(MPath::ROOT, Some(vec![Entry::Tree(tree6_id)]))]),
-        )]);
-        let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
-        assert_eq!(change, None);
-        assert_eq!(
-            work,
-            hashmap! {
-                NonRootMPath::new("a/b")? => WorkEntry {
-                    entry: Some(Entry::Tree(tree4_id)),
-                    parents: CompositeEntry::manifests(hashset! { tree6_id }),
-                    subtree_replacements: None,
-                },
-            }
-        );
-
-        // Add a subtree replacement further down the tree and show it is unfolded.
-        work_entry.subtree_replacements = Some(vec![(
-            MPathElement::new_from_slice(b"b".as_slice())?,
-            PathTree::from_iter(vec![(MPath::new("c")?, Some(vec![Entry::Tree(tree6_id)]))]),
-        )]);
-        let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
-        assert_eq!(change, None);
-        assert_eq!(
-            work,
-            hashmap! {
-                NonRootMPath::new("a/b")? => WorkEntry {
-                    entry: Some(Entry::Tree(tree4_id)),
-                    parents: CompositeEntry::manifests(hashset! { tree2_id }),
-                    subtree_replacements: Some(vec![(
-                            MPathElement::new_from_slice(b"c".as_slice())?,
-                            PathTree::from_iter(vec![(MPath::ROOT, Some(vec![Entry::Tree(tree6_id)]))])
-                    )]),
                 },
             }
         );

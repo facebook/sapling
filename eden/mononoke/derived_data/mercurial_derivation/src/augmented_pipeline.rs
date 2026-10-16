@@ -363,7 +363,6 @@ where
             parent_entries,
             known_entries,
             file_changes,
-            Vec::new(),
             parent_bonsai_csids,
             &source_aug_roots,
             &content_metadata,

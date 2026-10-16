@@ -32,7 +32,6 @@ use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestComparison;
 use manifest::ManifestOps;
-use manifest::ManifestParentReplacement;
 use manifest::PathOrPrefix;
 use manifest::Span;
 use manifest::TreeInfo;
@@ -926,19 +925,6 @@ async fn indexed_augmented_directory_from_id<Store: KeyedBlobstore>(
     })
 }
 
-async fn indexed_entry_from_augmented_entry<Store: KeyedBlobstore>(
-    ctx: &CoreContext,
-    blobstore: &Store,
-    entry: Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode>,
-) -> Result<IndexedAugmentedEntry> {
-    match entry {
-        Entry::Tree(id) => Ok(Entry::Tree(
-            indexed_augmented_directory_from_id(ctx, blobstore, id, None).await?,
-        )),
-        Entry::Leaf(node) => Ok(Entry::Leaf(IndexedAugmentedFile { node, index: None })),
-    }
-}
-
 fn select_hg_parents<T>(
     parents: impl Iterator<Item = (Option<ParentIndex>, T)>,
 ) -> (Option<T>, Option<T>) {
@@ -1095,13 +1081,6 @@ async fn create_augmented_leaf(
 type AugmentedSubentriesMap =
     TrieMap<Either<HgAugmentedManifestEntry, LoadableShardedMapV2Node<HgAugmentedManifestEntry>>>;
 
-/// Subtree replacements resolved from source augmented manifests.
-pub type AugmentedSubtreeReplacements =
-    Vec<ManifestParentReplacement<HgAugmentedManifestId, HgAugmentedFileLeafNode>>;
-
-type IndexedAugmentedSubtreeReplacements =
-    Vec<ManifestParentReplacement<IndexedAugmentedDirectory, IndexedAugmentedFile>>;
-
 /// Shape of `tree_info.subentries` for the augmented-manifest tree callback.
 type AugmentedTreeCallbackSubentries = TreeInfoSubentries<
     IndexedAugmentedDirectory,
@@ -1115,25 +1094,6 @@ fn augmented_entry_from_indexed(entry: IndexedAugmentedEntry) -> HgAugmentedMani
         Entry::Tree(dir) => HgAugmentedManifestEntry::DirectoryNode(dir.node),
         Entry::Leaf(file) => HgAugmentedManifestEntry::FileNode(file.node),
     }
-}
-
-async fn index_augmented_subtree_replacements<Store: KeyedBlobstore>(
-    ctx: &CoreContext,
-    blobstore: &Store,
-    replacements: AugmentedSubtreeReplacements,
-) -> Result<IndexedAugmentedSubtreeReplacements> {
-    let mut indexed_replacements = Vec::with_capacity(replacements.len());
-    for replacement in replacements {
-        let mut entries = Vec::with_capacity(replacement.replacements.len());
-        for entry in replacement.replacements {
-            entries.push(indexed_entry_from_augmented_entry(ctx, blobstore, entry).await?);
-        }
-        indexed_replacements.push(ManifestParentReplacement {
-            path: replacement.path,
-            replacements: entries,
-        });
-    }
-    Ok(indexed_replacements)
 }
 
 pub(crate) fn validate_augmented_manifest_element(key: &[u8]) -> Result<()> {
@@ -1505,7 +1465,6 @@ where
         blobstore,
         parents,
         file_changes,
-        Vec::new(),
         parent_bonsai_csids,
         &content_metadata,
         restricted_paths,
@@ -1527,7 +1486,6 @@ pub async fn derive_augmented_manifest_entry_from_bonsai<Store>(
     parents: Vec<Option<HgAugmentedManifestEntry>>,
     known_entries: HashMap<MPath, Option<HgAugmentedManifestEntry>>,
     file_changes: Vec<(NonRootMPath, Option<TrackedFileChange>)>,
-    subtree_replacements: AugmentedSubtreeReplacements,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
     external_copy_parent_roots: &HashMap<ChangesetId, HgAugmentedManifestId>,
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
@@ -1555,19 +1513,10 @@ where
         // directory's immediate child pointers.
         Some(root_id) if parents.len() >= 2 => (Arc::new(HashMap::new()), Some(root_id)),
         // Single-parent and root commits rebuild exactly the directories on the
-        // ancestor paths of `file_changes`, plus — for a subtree copy — the path
-        // down to each replacement destination. Scope the overlay load to that
+        // ancestor paths of `file_changes`. Scope the overlay load to that
         // frontier so the cost is O(commit size), not O(total ACL tree size).
-        // The copied subtree's interior is reused from the source envelope and
-        // never consulted, so the destination's own ACL node is included but we
-        // do not need to walk beneath it.
         Some(root_id) => {
-            let mut target_dirs = changed_ancestor_dirs(&file_changes);
-            for replacement in &subtree_replacements {
-                for dir in replacement.path.clone().into_ancestors() {
-                    target_dirs.insert(dir);
-                }
-            }
+            let target_dirs = changed_ancestor_dirs(&file_changes);
             (
                 Arc::new(
                     targeted_acl_overlay_map(ctx, blobstore, &acl_root_path, root_id, &target_dirs)
@@ -1605,9 +1554,6 @@ where
             )
         })
         .collect();
-    let subtree_replacements =
-        index_augmented_subtree_replacements(ctx, blobstore, subtree_replacements).await?;
-
     let blobstore_arc: Arc<dyn KeyedBlobstore> = Arc::new(blobstore.clone());
     let content_metadata_arc = Arc::new(content_metadata_cache.clone());
     let copy_from_arc = Arc::new(copy_from_filenodes);
@@ -1618,7 +1564,6 @@ where
         blobstore.clone(),
         parents,
         file_changes,
-        subtree_replacements,
         known_entries,
         stage_path,
         {
@@ -1692,7 +1637,6 @@ pub async fn derive_augmented_manifest_from_bonsai<Store>(
     blobstore: &Store,
     parents: Vec<HgAugmentedManifestId>,
     file_changes: Vec<(NonRootMPath, Option<TrackedFileChange>)>,
-    subtree_replacements: AugmentedSubtreeReplacements,
     parent_bonsai_csids: (Option<ChangesetId>, Option<ChangesetId>),
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
     restricted_paths: &ArcRestrictedPathsConfigBased,
@@ -1720,7 +1664,6 @@ where
         parent_entries.clone(),
         HashMap::new(),
         file_changes,
-        subtree_replacements,
         parent_bonsai_csids,
         &HashMap::new(),
         content_metadata_cache,

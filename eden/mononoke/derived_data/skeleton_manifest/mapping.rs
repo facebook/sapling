@@ -28,7 +28,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 
 use crate::batch::derive_skeleton_manifests_in_batch;
-use crate::derive::derive_skeleton_manifest_with_subtree_changes;
+use crate::derive::derive_skeleton_manifest;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootSkeletonManifestId(pub(crate) SkeletonManifestId);
@@ -85,7 +85,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         parents: Vec<Self>,
         _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self, Error> {
-        let id = derive_skeleton_manifest_with_subtree_changes(
+        let id = derive_skeleton_manifest(
             ctx,
             derivation_ctx,
             parents
@@ -93,7 +93,6 @@ impl BonsaiDerivable for RootSkeletonManifestId {
                 .map(RootSkeletonManifestId::into_skeleton_manifest_id)
                 .collect(),
             get_file_changes(&bonsai),
-            Vec::new(),
         )
         .await?;
         Ok(RootSkeletonManifestId(id))

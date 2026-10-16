@@ -136,8 +136,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         let file_changes =
             get_git_file_changes(&blobstore, derivation_ctx.filestore_config(), ctx, &bonsai)
                 .await?;
-        let commit_tree_id =
-            derive_git_tree(ctx, blobstore, parent_tree_ids, file_changes, Vec::new()).await?;
+        let commit_tree_id = derive_git_tree(ctx, blobstore, parent_tree_ids, file_changes).await?;
 
         let git_commit = Commit {
             tree: commit_tree_id.0,

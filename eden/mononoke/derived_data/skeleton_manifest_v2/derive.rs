@@ -23,14 +23,12 @@ use futures::stream;
 use itertools::Either;
 use manifest::Entry;
 use manifest::LeafInfo;
-use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
 use manifest::derive_manifest_with_known_entries;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestV2Id;
 use mononoke_types::TrieMap;
@@ -97,7 +95,6 @@ pub(crate) async fn inner_derive(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<SkeletonManifestV2>,
     changes: Vec<(NonRootMPath, Option<()>)>,
-    subtree_changes: Vec<ManifestParentReplacement<SkeletonManifestV2, ()>>,
 ) -> Result<Option<SkeletonManifestV2>> {
     type Leaf = ();
     type LeafChange = ();
@@ -109,7 +106,6 @@ pub(crate) async fn inner_derive(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |info: TreeInfo<
@@ -137,7 +133,6 @@ pub(crate) async fn derive_skeleton_manifest_v2_entry(
     derivation_ctx: &DerivationContext,
     parents: Vec<Entry<SkeletonManifestV2, ()>>,
     changes: Vec<(NonRootMPath, Option<()>)>,
-    subtree_changes: Vec<ManifestParentReplacement<SkeletonManifestV2, ()>>,
     known_entries: HashMap<MPath, Option<Entry<SkeletonManifestV2, ()>>>,
     prefix: MPath,
 ) -> Result<Option<Entry<SkeletonManifestV2, ()>>> {
@@ -153,7 +148,6 @@ pub(crate) async fn derive_skeleton_manifest_v2_entry(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         known_entries,
         prefix,
         {
@@ -183,7 +177,6 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootSkeletonManifestV2Id>,
-    _known: Option<&HashMap<ChangesetId, RootSkeletonManifestV2Id>>,
 ) -> Result<RootSkeletonManifestV2Id> {
     let blobstore = derivation_ctx.blobstore();
     let changes = get_file_changes(&bonsai);
@@ -193,7 +186,7 @@ pub(crate) async fn derive_single(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let root_manifest = inner_derive(ctx, blobstore, parents, changes, Vec::new()).await?;
+    let root_manifest = inner_derive(ctx, blobstore, parents, changes).await?;
 
     Ok(RootSkeletonManifestV2Id(match root_manifest {
         Some(manifest) => {

@@ -79,7 +79,7 @@ impl BonsaiDerivable for RootContentManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        known: Option<&HashMap<ChangesetId, Self>>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         let content_manifest_id = derive_content_manifest(
             ctx,
@@ -89,7 +89,6 @@ impl BonsaiDerivable for RootContentManifestId {
                 .into_iter()
                 .map(|id| id.into_content_manifest_id())
                 .collect(),
-            known,
         )
         .await?;
         Ok(RootContentManifestId(content_manifest_id))

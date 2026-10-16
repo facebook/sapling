@@ -106,7 +106,6 @@ impl PipelineDerivable for RootFsnodeId {
                 derivation,
                 parent_entries,
                 all_changes,
-                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

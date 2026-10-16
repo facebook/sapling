@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -16,12 +15,10 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use manifest::Entry;
-use manifest::ManifestParentReplacement;
 use manifest::derive_manifest;
 use manifest::flatten_subentries;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::test_manifest::TestManifest;
@@ -89,14 +86,12 @@ async fn inner_derive(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<TestManifestDirectory>,
     changes: Vec<(NonRootMPath, Option<()>)>,
-    subtree_changes: Vec<ManifestParentReplacement<TestManifestDirectory, ()>>,
 ) -> Result<Option<TestManifestDirectory>> {
     derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |tree_info| {
@@ -120,7 +115,6 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootTestManifestDirectory>,
-    _known: Option<&HashMap<ChangesetId, RootTestManifestDirectory>>,
 ) -> Result<RootTestManifestDirectory> {
     let parents = parents
         .into_iter()
@@ -129,7 +123,7 @@ pub(crate) async fn derive_single(
     let changes = get_changes(&bonsai);
     let blobstore = derivation_ctx.blobstore();
 
-    let root = inner_derive(ctx, blobstore, parents, changes, Vec::new()).await?;
+    let root = inner_derive(ctx, blobstore, parents, changes).await?;
 
     Ok(RootTestManifestDirectory(match root {
         Some(root) => root,

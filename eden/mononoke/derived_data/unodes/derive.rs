@@ -23,7 +23,6 @@ use futures::future::try_join_all;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
-use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use manifest::derive_manifest;
 use manifest::derive_manifest_with_known_entries;
@@ -99,7 +98,6 @@ pub(crate) async fn derive_unode_entry(
     cs_id: ChangesetId,
     parents: Vec<Entry<ManifestUnodeId, FileUnodeId>>,
     changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-    subtree_changes: Vec<ManifestParentReplacement<ManifestUnodeId, FileUnodeId>>,
     known_entries: HashMap<MPath, Option<Entry<ManifestUnodeId, FileUnodeId>>>,
     prefix: MPath,
 ) -> Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
@@ -110,7 +108,6 @@ pub(crate) async fn derive_unode_entry(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         known_entries,
         prefix,
         {
@@ -130,7 +127,7 @@ pub(crate) async fn derive_unode_entry(
 /// Note that `derive_manifest()` does a lot of the heavy lifting for us, and this crate has to
 /// provide only functions to create a single unode file or single unode tree (
 /// `create_unode_manifest` and `create_unode_file`).
-pub(crate) async fn derive_unode_manifest_with_subtree_changes(
+pub(crate) async fn derive_unode_manifest(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     cs_id: ChangesetId,
@@ -145,7 +142,6 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
         blobstore.clone(),
         parents.clone(),
         changes,
-        Vec::new(),
         {
             cloned!(ctx, blobstore);
             move |tree_info| create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info)
@@ -486,17 +482,6 @@ mod tests {
     use crate::mapping::RootUnodeManifestId;
     use crate::mapping::get_file_changes;
     use crate::tests::TestRepo;
-
-    async fn derive_unode_manifest(
-        ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
-        cs_id: ChangesetId,
-        parents: Vec<ManifestUnodeId>,
-        changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-    ) -> Result<ManifestUnodeId, Error> {
-        derive_unode_manifest_with_subtree_changes(ctx, derivation_ctx, cs_id, parents, changes)
-            .await
-    }
 
     #[mononoke::fbinit_test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
@@ -1214,7 +1199,6 @@ mod tests {
             bcs_id,
             dir1_parents,
             changes.clone(),
-            Default::default(),
             HashMap::new(),
             MPath::new("dir1").unwrap(),
         )
@@ -1237,7 +1221,6 @@ mod tests {
             bcs_id,
             dir2_parents,
             changes.clone(),
-            Default::default(),
             HashMap::new(),
             MPath::new("dir2").unwrap(),
         )
@@ -1257,7 +1240,6 @@ mod tests {
             bcs_id,
             vec![Entry::Tree(parent_unode_id)],
             changes,
-            Default::default(),
             known_entries,
             MPath::ROOT,
         )
@@ -1352,7 +1334,6 @@ mod tests {
             bcs_id,
             subdir1_parents,
             changes.clone(),
-            Default::default(),
             HashMap::new(),
             MPath::new("dir1/subdir1").unwrap(),
         )
@@ -1377,7 +1358,6 @@ mod tests {
             bcs_id,
             dir1_parents,
             changes.clone(),
-            Default::default(),
             dir1_known_entries,
             MPath::new("dir1").unwrap(),
         )
@@ -1394,7 +1374,6 @@ mod tests {
             bcs_id,
             vec![Entry::Tree(parent_unode_id)],
             changes,
-            Default::default(),
             root_known_entries,
             MPath::ROOT,
         )

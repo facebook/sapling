@@ -105,7 +105,6 @@ impl PipelineDerivable for RootSkeletonManifestId {
                 derivation,
                 parent_entries,
                 all_changes,
-                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

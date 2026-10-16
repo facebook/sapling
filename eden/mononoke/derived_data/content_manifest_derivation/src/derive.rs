@@ -23,13 +23,11 @@ use futures::future::FutureExt;
 use futures::stream;
 use manifest::Entry;
 use manifest::LeafInfo;
-use manifest::ManifestParentReplacement;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
 use manifest::derive_manifest_with_known_entries;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
@@ -50,7 +48,6 @@ use restricted_paths_common::RestrictedPathsConfigBased;
 use restricted_paths_common::maybe_propagate_manifest_id_store_write_error;
 
 use crate::ContentManifestDerivationError;
-use crate::RootContentManifestId;
 
 pub(crate) fn get_changes(
     bcs: &BonsaiChangeset,
@@ -207,7 +204,6 @@ pub(crate) async fn derive_content_manifest(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<ContentManifestId>,
-    _known: Option<&HashMap<ChangesetId, RootContentManifestId>>,
 ) -> Result<ContentManifestId> {
     let blobstore = derivation_ctx.blobstore();
     let restricted_paths = derivation_ctx.restricted_paths();
@@ -217,7 +213,6 @@ pub(crate) async fn derive_content_manifest(
         blobstore.clone(),
         parents.clone(),
         changes,
-        Vec::new(),
         {
             cloned!(blobstore, ctx, restricted_paths);
             move |tree_info| {
@@ -250,7 +245,6 @@ pub(crate) async fn derive_content_manifest_entry(
     derivation_ctx: &DerivationContext,
     parents: Vec<Entry<ContentManifestId, ContentManifestFile>>,
     changes: Vec<(NonRootMPath, Option<ContentManifestFile>)>,
-    subtree_changes: Vec<ManifestParentReplacement<ContentManifestId, ContentManifestFile>>,
     known_entries: HashMap<MPath, Option<Entry<ContentManifestId, ContentManifestFile>>>,
     prefix: MPath,
 ) -> Result<Option<Entry<ContentManifestId, ContentManifestFile>>> {
@@ -261,7 +255,6 @@ pub(crate) async fn derive_content_manifest_entry(
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         known_entries,
         prefix,
         {

@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -47,7 +46,6 @@ use mononoke_types::typed_hash::HistoryManifestDirectoryId;
 use smallvec::SmallVec;
 
 use crate::HistoryManifestDerivationError;
-use crate::mapping::RootHistoryManifestDirectoryId;
 use crate::merge_subtrees::merge_subtrees;
 
 /// What the unfold decided for this path.
@@ -405,7 +403,6 @@ async fn do_unfold(
     blobstore: &Arc<dyn KeyedBlobstore>,
     _cs_id: ChangesetId,
     node: UnfoldNode,
-    replacement_paths: &BTreeSet<MPath>,
 ) -> Result<((Option<MPathElement>, UnfoldAction, MPath), Vec<UnfoldNode>)> {
     let UnfoldNode {
         path_element,
@@ -574,13 +571,8 @@ async fn do_unfold(
         merge_subtrees(ctx, blobstore, &parent_dirs, recurse_children.keys()).await?;
 
     // Attach parent entries found during the traversal to the changed names.
-    // For children whose path is itself a replacement target, leave the
-    // parent info empty so the subtree is rebuilt from scratch.
     for (name, parent_entries) in merge_result.changed_parent_entries {
         if let Some(child_node) = recurse_children.get_mut(&name) {
-            if replacement_paths.contains(&child_node.path) {
-                continue;
-            }
             for (parent_cs_id, entry) in &parent_entries {
                 if let Some(dir_id) = get_directory_id(entry) {
                     let dir = load_blob(ctx, blobstore, dir_id).await?;
@@ -787,8 +779,6 @@ pub(crate) async fn derive_history_manifest_entry(
         })
         .collect();
 
-    let replacement_paths: BTreeSet<MPath> = BTreeSet::new();
-
     // 3. Build PathTree from scoped file changes and navigate to prefix.
     let changes: PathTree<Option<Option<(ContentId, FileType)>>> = PathTree::from_iter(
         file_changes
@@ -830,21 +820,6 @@ pub(crate) async fn derive_history_manifest_entry(
     let (change, children) = subtree.deconstruct();
     let has_changes = change.is_some() || !children.is_empty();
 
-    // If the prefix (or an ancestor) is a subtree-copy destination, the
-    // subtree is rebuilt from scratch: the parent entries no longer apply, so
-    // clear them before any parent-based short-circuit. Without this, a stage
-    // under a copy destination that the copy removed (e.g. `top1/sub` when
-    // `top1` is replaced by a `top2` that has no `sub`) would wrongly reuse
-    // the pre-copy parent entry instead of resolving to "removed".
-    let is_replacement = replacement_paths
-        .iter()
-        .any(|rp| rp.is_prefix_of(&prefix) || *rp == prefix);
-    let (parent_dirs, parent_entries) = if is_replacement {
-        (vec![], vec![])
-    } else {
-        (parent_dirs, parent_entries)
-    };
-
     // 5. No changes, no parents, no live known entries at this prefix → doesn't exist.
     //    known_entries with all-None values (dependency stages where the path
     //    doesn't exist) are treated as empty.
@@ -868,8 +843,7 @@ pub(crate) async fn derive_history_manifest_entry(
     //    again.
     let known_entry_map: HashMap<MPath, Option<HistoryManifestEntry>> = known_entries;
 
-    // 8. Run bounded_traversal from the prefix node. `parent_dirs` /
-    //    `parent_entries` were already cleared above if this is a replacement.
+    // 8. Run bounded_traversal from the prefix node.
     let root_node = UnfoldNode {
         path_element: prefix.basename().cloned(),
         path: prefix.clone(),
@@ -883,7 +857,7 @@ pub(crate) async fn derive_history_manifest_entry(
     let ctx_ref = ctx;
     cloned!(ctx, blobstore);
     let traversal_handle = mononoke::spawn_task(async move {
-        borrowed!(ctx, blobstore, replacement_paths, known_entry_map);
+        borrowed!(ctx, blobstore, known_entry_map);
 
         let result: (Option<MPathElement>, HistoryManifestEntry) = bounded_traversal(
             256,
@@ -898,8 +872,7 @@ pub(crate) async fn derive_history_manifest_entry(
                             let action = UnfoldAction::Reuse(entry.clone());
                             return Ok(((node.path_element, action, node.path), vec![]));
                         }
-                        let (info, children) =
-                            do_unfold(ctx, blobstore, cs_id, node, replacement_paths).await?;
+                        let (info, children) = do_unfold(ctx, blobstore, cs_id, node).await?;
                         // Drop children a dependency stage computed as empty
                         // (`None`) so we neither recurse into them nor add
                         // them to this directory's subentries.
@@ -955,7 +928,6 @@ pub(crate) async fn derive_history_manifest_entry(
 pub(crate) async fn derive_history_manifest(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    _known: Option<&HashMap<ChangesetId, RootHistoryManifestDirectoryId>>,
     cs_id: ChangesetId,
     bonsai: &BonsaiChangeset,
     parents: Vec<HistoryManifestDirectoryId>,
@@ -976,8 +948,6 @@ pub(crate) async fn derive_history_manifest(
             )
         })
         .collect();
-
-    let replacement_paths: BTreeSet<MPath> = BTreeSet::new();
 
     // 3. Build PathTree from file changes.
     let changes: PathTree<Option<Option<(ContentId, FileType)>>> = PathTree::from_iter(
@@ -1023,7 +993,7 @@ pub(crate) async fn derive_history_manifest(
 
     cloned!(ctx, blobstore);
     let traversal_handle = mononoke::spawn_task(async move {
-        borrowed!(ctx, blobstore, replacement_paths);
+        borrowed!(ctx, blobstore);
 
         let result = bounded_traversal(
             256,
@@ -1031,8 +1001,7 @@ pub(crate) async fn derive_history_manifest(
             // unfold
             {
                 move |node: UnfoldNode| {
-                    async move { do_unfold(ctx, blobstore, cs_id, node, replacement_paths).await }
-                        .boxed()
+                    async move { do_unfold(ctx, blobstore, cs_id, node).await }.boxed()
                 }
             },
             // fold

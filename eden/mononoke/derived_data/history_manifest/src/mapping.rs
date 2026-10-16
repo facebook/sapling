@@ -76,19 +76,13 @@ impl BonsaiDerivable for RootHistoryManifestDirectoryId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        known: Option<&HashMap<ChangesetId, Self>>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         let cs_id = bonsai.get_changeset_id();
         let parent_ids = parents.into_iter().map(|p| p.0).collect();
-        let id = crate::derive::derive_history_manifest(
-            ctx,
-            derivation_ctx,
-            known,
-            cs_id,
-            &bonsai,
-            parent_ids,
-        )
-        .await?;
+        let id =
+            crate::derive::derive_history_manifest(ctx, derivation_ctx, cs_id, &bonsai, parent_ids)
+                .await?;
         Ok(RootHistoryManifestDirectoryId(id))
     }
 

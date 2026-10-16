@@ -224,7 +224,6 @@ pub(crate) async fn derive_hg_manifest_with_known_entries(
         blobstore.clone(),
         parents.clone(),
         changes,
-        Vec::new(),
         known_entries,
         stage_path.clone(),
         {

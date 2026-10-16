@@ -14,7 +14,6 @@ use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use borrowed::borrowed;
-use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
@@ -35,19 +34,14 @@ pub(crate) use crate::Entry;
 pub(crate) use crate::Manifest;
 pub(crate) use crate::ManifestOps;
 pub(crate) use crate::ManifestOrderedOps;
-pub(crate) use crate::ManifestParentReplacement;
 pub(crate) use crate::PathOrPrefix;
-pub(crate) use crate::TreeInfo;
-pub(crate) use crate::derive_manifest_with_known_entries;
 pub(crate) use crate::find_intersection_of_diffs;
 use crate::find_intersection_of_diffs_and_parents_pruned;
-pub(crate) use crate::flatten_subentries;
 
 pub mod test_manifest;
 
 use self::test_manifest::TestLeaf;
 use self::test_manifest::TestLeafId;
-use self::test_manifest::TestManifest;
 use self::test_manifest::TestManifestId;
 use self::test_manifest::derive_stack_of_test_manifests;
 use self::test_manifest::derive_test_manifest;
@@ -1875,254 +1869,6 @@ async fn test_derive_manifest_with_prefix(fb: FacebookInit) -> Result<()> {
 
         assert_eq!(files(expected_dir_id).await?, files(dir_entry).await?);
     }
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn test_derive_manifest_with_subtree_changes(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
-    let ctx = CoreContext::test_mock(fb);
-    borrowed!(ctx, blobstore);
-
-    let derive = {
-        move |parents, changes| async move {
-            derive_test_manifest(ctx, blobstore, parents, changes)
-                .await
-                .map(|mf| mf.expect("expect non empty manifest"))
-        }
-    };
-
-    let files = move |manifest_id| list_test_manifest(ctx, blobstore, manifest_id);
-
-    // Create a source manifest with files at src/a and src/b.
-    let source_mf = derive(
-        vec![],
-        btreemap! {
-            "/src/a" => Some("sa"),
-            "/src/b" => Some("sb"),
-        },
-    )
-    .await?;
-
-    // Create a parent manifest with files at dest/x and other/y.
-    let parent_mf = derive(
-        vec![],
-        btreemap! {
-            "/dest/x" => Some("dx"),
-            "/other/y" => Some("oy"),
-        },
-    )
-    .await?;
-
-    // Extract the source's "src" subtree entry.
-    let src_entry = lookup_entry(ctx, blobstore, source_mf, "src").await?;
-
-    // Derive from parent with a subtree_change that replaces "dest" with source's "src" entry.
-    // This simulates a subtree copy: dest/ should get the contents of src/.
-    let subtree_change = ManifestParentReplacement {
-        path: MPath::new("dest")?,
-        replacements: vec![src_entry],
-    };
-
-    // Changes applied on top of the subtree replacement:
-    // - delete dest/a (exists in source, proving deletions work on replaced subtree)
-    // - add dest/z (new file, proving additions work on replaced subtree)
-    // dest/b is NOT in the changes, so it can only appear via subtree replacement.
-    let changes: BTreeMap<&str, Option<&str>> = btreemap! {
-        "/dest/a" => None,
-        "/dest/z" => Some("zz"),
-    };
-
-    let result = derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
-        vec![Entry::Tree(parent_mf)],
-        {
-            let mut changes_vec = Vec::new();
-            for (path, change) in &changes {
-                let path = NonRootMPath::new(*path)?;
-                changes_vec.push((path, change.map(TestLeaf::new)));
-            }
-            changes_vec
-        },
-        vec![subtree_change],
-        HashMap::new(),
-        MPath::ROOT,
-        {
-            cloned!(ctx, blobstore);
-            move |TreeInfo { subentries, .. }| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let id = TestManifest(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
-                    Ok(((), id))
-                }
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info| {
-                cloned!(ctx, blobstore);
-                async move {
-                    match leaf_info.change {
-                        None => Err(anyhow::Error::msg("leaf only conflict")),
-                        Some(change) => {
-                            let id = change.store(&ctx, &blobstore).await?;
-                            Ok(((), (FileType::Regular, id)))
-                        }
-                    }
-                }
-            }
-        },
-    )
-    .await?
-    .and_then(|entry| entry.into_tree())
-    .expect("expect non empty manifest");
-
-    // dest/b: "sb" from subtree replacement (proves replacement worked, parent didn't have it)
-    // dest/a: deleted by file change (proves deletions apply on top of replacement)
-    // dest/z: "zz" from file change (proves additions apply on top of replacement)
-    // other/y: "oy" unchanged from parent
-    assert_eq!(
-        files(result).await?,
-        files_reference(btreemap! {
-            "dest/b" => "sb",
-            "dest/z" => "zz",
-            "other/y" => "oy",
-        })?
-    );
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn test_derive_manifest_with_subtree_changes_and_prefix(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
-    let ctx = CoreContext::test_mock(fb);
-    borrowed!(ctx, blobstore);
-
-    let derive = {
-        move |parents, changes| async move {
-            derive_test_manifest(ctx, blobstore, parents, changes)
-                .await
-                .map(|mf| mf.expect("expect non empty manifest"))
-        }
-    };
-
-    let files = move |manifest_id| list_test_manifest(ctx, blobstore, manifest_id);
-
-    // Create a source manifest with files at dir/a and dir/b.
-    let source_mf = derive(
-        vec![],
-        btreemap! {
-            "/dir/a" => Some("da"),
-            "/dir/b" => Some("db"),
-        },
-    )
-    .await?;
-
-    // Create a parent manifest with files at dir/x and other/y.
-    let parent_mf = derive(
-        vec![],
-        btreemap! {
-            "/dir/x" => Some("dx"),
-            "/other/y" => Some("oy"),
-        },
-    )
-    .await?;
-
-    // Extract the source's "dir" subtree entry to use as replacement.
-    let source_dir_entry = lookup_entry(ctx, blobstore, source_mf, "dir").await?;
-
-    // Extract the parent's "dir" subtree entry as the parent for prefixed derivation.
-    let parent_dir_entry = lookup_entry(ctx, blobstore, parent_mf, "dir").await?;
-
-    // Derive with prefix "dir", passing a subtree_change at path "dir".
-    // With prefix stripping, the subtree_change path "dir" should become ROOT,
-    // meaning the replacement applies to the root of the prefixed derivation.
-    let subtree_change = ManifestParentReplacement {
-        path: MPath::new("dir")?,
-        replacements: vec![source_dir_entry.clone()],
-    };
-
-    // Changes applied on top of the subtree replacement:
-    // - delete dir/b (exists in source, proving deletions work on replaced subtree)
-    // - add dir/z (new file, proving additions work on replaced subtree)
-    // dir/a is NOT in the changes, so it can only appear via subtree replacement.
-    let changes: BTreeMap<&str, Option<&str>> = btreemap! {
-        "/dir/b" => None,
-        "/dir/z" => Some("zz"),
-    };
-
-    let result = derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
-        vec![parent_dir_entry],
-        {
-            let mut changes_vec = Vec::new();
-            for (path, change) in &changes {
-                let path = NonRootMPath::new(*path)?;
-                changes_vec.push((path, change.map(TestLeaf::new)));
-            }
-            changes_vec
-        },
-        vec![subtree_change],
-        HashMap::new(),
-        MPath::new("dir")?,
-        {
-            cloned!(ctx, blobstore);
-            move |TreeInfo { subentries, .. }| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let id = TestManifest(
-                        flatten_subentries(&ctx, &(), subentries)
-                            .await?
-                            .map(|(path, (_ctx, entry))| (path, entry))
-                            .collect(),
-                    )
-                    .store(&ctx, &blobstore)
-                    .await?;
-                    Ok(((), id))
-                }
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info| {
-                cloned!(ctx, blobstore);
-                async move {
-                    match leaf_info.change {
-                        None => Err(anyhow::Error::msg("leaf only conflict")),
-                        Some(change) => {
-                            let id = change.store(&ctx, &blobstore).await?;
-                            Ok(((), (FileType::Regular, id)))
-                        }
-                    }
-                }
-            }
-        },
-    )
-    .await?
-    .and_then(|entry| entry.into_tree())
-    .expect("expect non empty manifest");
-
-    // dir/a: "da" from subtree replacement (proves replacement worked, parent didn't have it)
-    // dir/b: deleted by file change (proves deletions apply on top of replacement)
-    // dir/z: "zz" from file change (proves additions apply on top of replacement)
-    assert_eq!(
-        files(result).await?,
-        files_reference(btreemap! {
-            "a" => "da",
-            "z" => "zz",
-        })?
-    );
 
     Ok(())
 }

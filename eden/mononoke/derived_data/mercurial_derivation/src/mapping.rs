@@ -416,10 +416,9 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        known: Option<&HashMap<ChangesetId, Self>>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        crate::augmented_derivation::derive_single_root(ctx, derivation_ctx, bonsai, parents, known)
-            .await
+        crate::augmented_derivation::derive_single_root(ctx, derivation_ctx, bonsai, parents).await
     }
 
     async fn derive_batch(

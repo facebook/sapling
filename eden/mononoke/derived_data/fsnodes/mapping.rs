@@ -91,7 +91,6 @@ impl BonsaiDerivable for RootFsnodeId {
                 .map(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
                 .collect(),
             get_file_changes(&bonsai),
-            Vec::new(),
         )
         .await?;
         Ok(RootFsnodeId(fsnode_id))

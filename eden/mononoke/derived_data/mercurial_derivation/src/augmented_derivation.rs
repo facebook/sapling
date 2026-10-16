@@ -190,7 +190,6 @@ pub(crate) async fn derive_single_root<Root: AugmentedManifestRoot>(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<Root>,
-    _known: Option<&HashMap<ChangesetId, Root>>,
 ) -> Result<Root> {
     let csid = bonsai.get_changeset_id();
     let aug_parents = parents.iter().map(Root::root_id).collect();

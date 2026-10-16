@@ -137,7 +137,6 @@ impl PipelineDerivable for RootAclManifestId {
                 blobstore,
                 parent_entries,
                 derive_changes,
-                Vec::new(),
                 known_entries,
                 stage_path.clone(),
                 &acl_file_name,

@@ -18,8 +18,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::BonsaiDiffFileChange;
 use manifest::ManifestOps;
-use manifest::ManifestParentReplacement;
-use manifest::bonsai_diff_with_subtree_changes;
+use manifest::bonsai_diff;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -33,7 +32,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::MPath;
 use mononoke_types::subtree_change::SubtreeChange;
@@ -46,7 +44,6 @@ pub async fn create_bonsai_changeset_object(
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
     bonsai_parents: Vec<ChangesetId>,
-    subtree_replacements: Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>,
     subtree_changes: SortedVectorMap<MPath, SubtreeChange>,
     blobstore: &RepoBlobstore,
 ) -> Result<BonsaiChangeset, Error> {
@@ -56,7 +53,6 @@ pub async fn create_bonsai_changeset_object(
         parent_manifests,
         blobstore,
         bonsai_parents.clone(),
-        subtree_replacements,
     )
     .await?;
 
@@ -108,14 +104,12 @@ async fn find_file_changes(
     parent_manifests: Vec<HgManifestId>,
     blobstore: &RepoBlobstore,
     bonsai_parents: Vec<ChangesetId>,
-    subtree_replacements: Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>,
 ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
-    let diff: Result<_, Error> = bonsai_diff_with_subtree_changes(
+    let diff: Result<_, Error> = bonsai_diff(
         ctx.clone(),
         blobstore.clone(),
         cs.manifestid(),
         parent_manifests.iter().cloned().collect(),
-        subtree_replacements,
     )
     .map_ok(|diff| {
         cloned!(parent_manifests, bonsai_parents);

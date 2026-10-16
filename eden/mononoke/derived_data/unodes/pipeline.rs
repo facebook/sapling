@@ -115,7 +115,6 @@ impl PipelineDerivable for RootUnodeManifestId {
                 cs_id,
                 parent_entries,
                 all_changes,
-                Vec::new(),
                 known_entries,
                 stage_path.clone(),
             )

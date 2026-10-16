@@ -404,7 +404,6 @@ pub(crate) async fn derive_test_manifest_with_known_entries(
         blobstore.clone(),
         parents,
         changes,
-        None,
         known_entries,
         prefix,
         {

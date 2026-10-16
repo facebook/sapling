@@ -143,14 +143,11 @@ pub(crate) async fn inner_derive(
     type TreeId = BssmV3Directory;
     type Ctx = ();
 
-    // We already flattened any subtree changes out into normal changes, so no
-    // need to apply subtree changes here.
     derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
         changes,
-        None,
         {
             cloned!(ctx, blobstore);
             move |info: TreeInfo<TreeId, Leaf, Ctx, LoadableShardedMapV2Node<BssmV3Entry>>| {

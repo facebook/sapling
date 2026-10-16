@@ -6,7 +6,6 @@
  */
 
 //! See docs/basename_suffix_skeleton_manifest.md for more information
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -17,12 +16,10 @@ use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use itertools::Either;
 use manifest::Entry;
-use manifest::ManifestParentReplacement;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrieMap;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
@@ -109,14 +106,12 @@ async fn inner_derive(
     blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<TestShardedManifestDirectory>,
     changes: Vec<(NonRootMPath, Option<()>)>,
-    subtree_changes: Vec<ManifestParentReplacement<TestShardedManifestDirectory, ()>>,
 ) -> Result<Option<TestShardedManifestDirectory>> {
     derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
         changes,
-        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |info| {
@@ -139,7 +134,6 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootTestShardedManifestDirectory>,
-    _known: Option<&HashMap<ChangesetId, RootTestShardedManifestDirectory>>,
 ) -> Result<RootTestShardedManifestDirectory> {
     let parents = parents
         .into_iter()
@@ -148,7 +142,7 @@ pub(crate) async fn derive_single(
     let changes = get_changes(&bonsai);
     let blobstore = derivation_ctx.blobstore();
 
-    let root = inner_derive(ctx, blobstore, parents, changes, Vec::new()).await?;
+    let root = inner_derive(ctx, blobstore, parents, changes).await?;
 
     Ok(RootTestShardedManifestDirectory(match root {
         Some(root) => root,

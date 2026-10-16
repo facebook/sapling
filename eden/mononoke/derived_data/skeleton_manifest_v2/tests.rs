@@ -23,11 +23,9 @@ use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::Entry;
 use manifest::ManifestOps;
-use manifest::ManifestParentReplacement;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
-use mononoke_types::NonRootMPath;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use pretty_assertions::assert_eq;
@@ -44,7 +42,6 @@ use tests_utils::drawdag::create_from_dag_with_changes;
 use super::*;
 use crate::derive::derive_skeleton_manifest_v2_entry;
 use crate::derive::get_file_changes;
-use crate::derive::inner_derive;
 
 #[facet::container]
 struct TestRepo(
@@ -417,7 +414,6 @@ async fn test_derivation_pipeline_independent_dirs(fb: FacebookInit) -> Result<(
             &derivation_ctx,
             parents,
             changes.clone(),
-            Default::default(),
             HashMap::new(),
             prefix.clone(),
         )
@@ -431,7 +427,6 @@ async fn test_derivation_pipeline_independent_dirs(fb: FacebookInit) -> Result<(
         &derivation_ctx,
         vec![Entry::Tree(parent_manifest)],
         changes,
-        Default::default(),
         known_entries,
         MPath::ROOT,
     )
@@ -494,7 +489,6 @@ async fn test_derivation_pipeline_nested_dirs(fb: FacebookInit) -> Result<()> {
         &derivation_ctx,
         subdir1_parents,
         changes.clone(),
-        Default::default(),
         HashMap::new(),
         subdir1.clone(),
     )
@@ -517,7 +511,6 @@ async fn test_derivation_pipeline_nested_dirs(fb: FacebookInit) -> Result<()> {
         &derivation_ctx,
         dir1_parents,
         changes.clone(),
-        Default::default(),
         dir1_known,
         dir1.clone(),
     )
@@ -532,101 +525,6 @@ async fn test_derivation_pipeline_nested_dirs(fb: FacebookInit) -> Result<()> {
         &derivation_ctx,
         vec![Entry::Tree(parent_manifest)],
         changes,
-        Default::default(),
-        root_known,
-        MPath::ROOT,
-    )
-    .await?
-    .expect("root stage should produce an entry");
-
-    let pipeline_id = root_entry
-        .into_tree()
-        .expect("root entry should be a tree")
-        .into_blob()
-        .store(&ctx, &blobstore)
-        .await?;
-
-    assert_eq!(pipeline_id, expected_id);
-
-    Ok(())
-}
-
-/// Pipeline: a subtree-copy (ManifestParentReplacement) staged derivation must equal full.
-#[mononoke::fbinit_test]
-async fn test_derivation_pipeline_with_subtree_copy(fb: FacebookInit) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
-    let (repo, changesets) = init_repo(&ctx).await?;
-    let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
-    let blobstore = repo.repo_blobstore().clone();
-
-    // Commit B's manifest (has both dir1 and dir2) is the parent.
-    let parent_manifest = repo
-        .repo_derived_data()
-        .derive::<RootSkeletonManifestV2Id>(&ctx, changesets["B"], DerivationPriority::LOW)
-        .await?
-        .into_inner_id()
-        .load(&ctx, &blobstore)
-        .await?;
-
-    // Replace dir2 with dir1's subtree.
-    let dir1_entry = parent_manifest
-        .find_entry(ctx.clone(), blobstore.clone(), MPath::new("dir1")?)
-        .await?
-        .expect("dir1 should exist in parent");
-    let subtree_changes = vec![ManifestParentReplacement {
-        path: MPath::new("dir2")?,
-        replacements: vec![dir1_entry],
-    }];
-
-    // On top of the replacement: delete a copied file, add a new one.
-    let changes: Vec<(NonRootMPath, Option<()>)> = vec![
-        (NonRootMPath::new("dir2/subdir1/subsubdir1/file1")?, None),
-        (NonRootMPath::new("dir2/new_file")?, Some(())),
-    ];
-
-    // Full derivation with the subtree replacement.
-    let expected_id = inner_derive(
-        &ctx,
-        derivation_ctx.blobstore(),
-        vec![parent_manifest.clone()],
-        changes.clone(),
-        subtree_changes.clone(),
-    )
-    .await?
-    .expect("expected manifest")
-    .into_blob()
-    .store(&ctx, &blobstore)
-    .await?;
-
-    // Staged: derive dir2 with the replacement, then assemble the root.
-    let dir2 = MPath::new("dir2")?;
-    let dir2_parents = match parent_manifest
-        .find_entry(ctx.clone(), blobstore.clone(), dir2.clone())
-        .await?
-    {
-        Some(entry) => vec![entry],
-        None => vec![],
-    };
-    let dir2_entry = derive_skeleton_manifest_v2_entry(
-        &ctx,
-        &derivation_ctx,
-        dir2_parents,
-        changes.clone(),
-        subtree_changes.clone(),
-        HashMap::new(),
-        dir2.clone(),
-    )
-    .await?
-    .expect("dir2 stage should produce an entry");
-
-    let root_known: HashMap<MPath, Option<Entry<SkeletonManifestV2, ()>>> =
-        HashMap::from([(dir2, Some(dir2_entry))]);
-    let root_entry = derive_skeleton_manifest_v2_entry(
-        &ctx,
-        &derivation_ctx,
-        vec![Entry::Tree(parent_manifest)],
-        changes,
-        subtree_changes,
         root_known,
         MPath::ROOT,
     )
