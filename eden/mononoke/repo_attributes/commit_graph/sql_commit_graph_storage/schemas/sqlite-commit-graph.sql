@@ -10,10 +10,10 @@ CREATE TABLE IF NOT EXISTS `commit_graph_edges` (
   `repo_id` INTEGER NOT NULL,
   `cs_id` VARBINARY(32) NOT NULL,
   `gen` BIGINT NOT NULL,
-  `subtree_source_gen` BIGINT NULL, -- NULL if same as gen
+  `subtree_source_gen` BIGINT NOT NULL,
   `skip_tree_depth` BIGINT NOT NULL,
   `p1_linear_depth` BIGINT NOT NULL,
-  `subtree_source_depth` BIGINT NULL, -- NULL if same as skip_tree_depth
+  `subtree_source_depth` BIGINT NOT NULL,
   `parent_count` INTEGER NOT NULL,
   `subtree_source_count` INTEGER NOT NULL,
   `p1_parent` INTEGER NULL,

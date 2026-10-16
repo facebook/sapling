@@ -9,6 +9,7 @@
 
 use std::num::NonZeroU32;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use commit_graph_thrift as thrift;
@@ -74,16 +75,20 @@ impl ChangesetNode {
     }
 
     pub fn from_thrift(node: thrift::ChangesetNode) -> Result<Self> {
+        let cs_id = ChangesetId::from_thrift(node.cs_id)?;
+        let subtree_source_generation = node
+            .subtree_source_generation
+            .with_context(|| format!("Missing subtree source generation for {cs_id}"))?;
+        let subtree_source_depth = node
+            .subtree_source_depth
+            .with_context(|| format!("Missing subtree source depth for {cs_id}"))?;
         Ok(Self {
-            cs_id: ChangesetId::from_thrift(node.cs_id)?,
+            cs_id,
             generation: Generation::new(node.generation.0 as u64),
-            subtree_source_generation: Generation::new(
-                node.subtree_source_generation
-                    .map_or(node.generation.0, |r#gen| r#gen.0) as u64,
-            ),
+            subtree_source_generation: Generation::new(subtree_source_generation.0 as u64),
             skip_tree_depth: node.skip_tree_depth as u64,
             p1_linear_depth: node.p1_linear_depth as u64,
-            subtree_source_depth: node.subtree_source_depth.unwrap_or(node.skip_tree_depth) as u64,
+            subtree_source_depth: subtree_source_depth as u64,
         })
     }
 
@@ -456,14 +461,24 @@ impl CompactChangesetEdges {
     }
 
     pub fn from_thrift(edges: thrift::CompactChangesetEdges) -> Result<Self> {
+        let subtree_source_generation = edges.subtree_source_generation.with_context(|| {
+            format!(
+                "Missing subtree source generation for preloaded edges of unique id {}",
+                edges.unique_id
+            )
+        })?;
+        let subtree_source_depth = edges.subtree_source_depth.with_context(|| {
+            format!(
+                "Missing subtree source depth for preloaded edges of unique id {}",
+                edges.unique_id
+            )
+        })?;
         Ok(Self {
             generation: edges.generation as u32,
-            subtree_source_generation: edges.subtree_source_generation.unwrap_or(edges.generation)
-                as u32,
+            subtree_source_generation: subtree_source_generation as u32,
             skip_tree_depth: edges.skip_tree_depth as u32,
             p1_linear_depth: edges.p1_linear_depth as u32,
-            subtree_source_depth: edges.subtree_source_depth.unwrap_or(edges.skip_tree_depth)
-                as u32,
+            subtree_source_depth: subtree_source_depth as u32,
             parents: edges
                 .parents
                 .into_iter()
@@ -653,5 +668,95 @@ impl EdgeType for FirstParentLinear {
 
     fn skip_tree_skew_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
         edges.inner.p1_linear_skew_ancestor.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn test_node() -> ChangesetNode {
+        ChangesetNode::new(
+            ChangesetId::from_bytes([1; 32]).expect("32 bytes should be a valid changeset id"),
+            Generation::new(5),
+            Generation::new(7),
+            3,
+            4,
+            6,
+        )
+    }
+
+    #[mononoke::test]
+    fn test_changeset_node_thrift_round_trip() -> Result<()> {
+        let node = test_node();
+        assert_eq!(ChangesetNode::from_thrift(node.to_thrift())?, node);
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_changeset_node_missing_subtree_source_values() {
+        let mut thrift_node = test_node().to_thrift();
+        thrift_node.subtree_source_generation = None;
+        assert!(
+            ChangesetNode::from_thrift(thrift_node).is_err(),
+            "a node without a subtree source generation should not deserialize"
+        );
+
+        let mut thrift_node = test_node().to_thrift();
+        thrift_node.subtree_source_depth = None;
+        assert!(
+            ChangesetNode::from_thrift(thrift_node).is_err(),
+            "a node without a subtree source depth should not deserialize"
+        );
+    }
+
+    fn test_compact_edges() -> thrift::CompactChangesetEdges {
+        CompactChangesetEdges {
+            generation: 5,
+            subtree_source_generation: 7,
+            skip_tree_depth: 3,
+            p1_linear_depth: 4,
+            subtree_source_depth: 6,
+            parents: SmallVec::new(),
+            subtree_sources: SmallVec::new(),
+            merge_ancestor_or_root: None,
+            skip_tree_parent: None,
+            skip_tree_skew_ancestor: None,
+            p1_linear_skew_ancestor: None,
+            subtree_or_merge_ancestor: None,
+            subtree_source_parent: None,
+            subtree_source_skew_ancestor: None,
+        }
+        .to_thrift(
+            ChangesetId::from_bytes([1; 32]).expect("32 bytes should be a valid changeset id"),
+            NonZeroU32::new(1).expect("1 is non-zero"),
+        )
+    }
+
+    #[mononoke::test]
+    fn test_compact_edges_thrift_round_trip() -> Result<()> {
+        let edges = CompactChangesetEdges::from_thrift(test_compact_edges())?;
+        assert_eq!(edges.subtree_source_generation, 7);
+        assert_eq!(edges.subtree_source_depth, 6);
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_compact_edges_missing_subtree_source_values() {
+        let mut thrift_edges = test_compact_edges();
+        thrift_edges.subtree_source_generation = None;
+        assert!(
+            CompactChangesetEdges::from_thrift(thrift_edges).is_err(),
+            "compact edges without a subtree source generation should not deserialize"
+        );
+
+        let mut thrift_edges = test_compact_edges();
+        thrift_edges.subtree_source_depth = None;
+        assert!(
+            CompactChangesetEdges::from_thrift(thrift_edges).is_err(),
+            "compact edges without a subtree source depth should not deserialize"
+        );
     }
 }
