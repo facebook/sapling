@@ -383,6 +383,32 @@ impl TreeManifest {
         DfsCursor::new(&self.store, RepoPathBuf::new(), &self.root)
     }
 
+    /// Files matching `matcher` in depth-first order: the entries of a directory in name order,
+    /// with a subdirectory's contents visited before the entries after it. Trees are fetched in
+    /// batches ahead of the traversal. With `start_after`, iteration continues as a walk that
+    /// stopped at that path would: after a file, or inside a directory it had entered.
+    pub fn files_dfs<'a, M: 'static + Matcher + Sync + Send>(
+        &'a self,
+        matcher: M,
+        start_after: Option<&RepoPath>,
+    ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
+        let matcher = self.maybe_wrap_matcher(matcher);
+        let start_after = match (&self.path_translator, start_after) {
+            (Some(translator), Some(after)) => match translator.encode_file(after) {
+                Ok(after) => Some(after),
+                Err(err) => return Box::new(std::iter::once(Err(err))),
+            },
+            (None, Some(after)) => Some(after.to_owned()),
+            (_, None) => None,
+        };
+        let files =
+            iter::dfs_iter(self.store.clone(), &self.root, matcher, start_after).into_iter();
+        Box::new(files.map(move |result| {
+            let file = result?;
+            Ok(File::new(self.maybe_decode_path(file.path)?, file.meta))
+        }))
+    }
+
     /// Returns manifest entries using inline results for small traversals and streamed batches
     /// after the traversal fans out.
     pub fn iter<M: 'static + Matcher + Sync + Send>(&self, matcher: M) -> iter::BfsItems {
