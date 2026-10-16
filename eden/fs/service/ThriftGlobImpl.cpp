@@ -209,6 +209,10 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   auto globTries =
       co_await folly::coro::collectAllTryRange(std::move(globTasks));
 
+  // The per-task errors below are only examined when a file list is wanted,
+  // so a cancelled glob with suppressFileList would otherwise look complete.
+  fetchContext->throwIfCanceled();
+
   // Post-process: sort and dedup results
   std::vector<GlobResult> sortedResults;
   if (!suppressFileList) {
@@ -281,6 +285,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               [store, curRange, fetchContext = fetchContext.copy()]()
                   -> folly::coro::Task<void> {
                 co_await folly::coro::co_reschedule_on_current_executor;
+                fetchContext->throwIfCanceled();
                 co_await store->prefetchBlobs(curRange, fetchContext);
               }));
     }
@@ -290,6 +295,7 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               [store, range, fetchContext = fetchContext.copy()]()
                   -> folly::coro::Task<void> {
                 co_await folly::coro::co_reschedule_on_current_executor;
+                fetchContext->throwIfCanceled();
                 co_await store->prefetchBlobs(range, fetchContext);
               }));
     }
@@ -298,6 +304,9 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     // to match the futures glob implementation — partial prefetching
     // is still useful.
     co_await folly::coro::collectAllTryRange(std::move(prefetchTasks));
+    // Batches skipped by a cancellation leave the prefetch incomplete, which
+    // must not be reported as success.
+    fetchContext->throwIfCanceled();
   }
 
   co_return out;

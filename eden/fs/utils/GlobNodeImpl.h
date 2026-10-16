@@ -171,6 +171,9 @@ class GlobNodeImpl {
       const RootId& originRootId,
       size_t currentDepth = 0) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateRecursiveComponentImpl"};
+    // Checked once per directory, so a cancelled glob stops before it loads
+    // the next tree instead of walking the rest of the repository.
+    context->throwIfCanceled();
     const GlobPathBuilder pathBuilder;
     std::vector<RelativePath> subDirNames;
     std::vector<folly::coro::Task<void>> tasks;
@@ -331,6 +334,7 @@ class GlobNodeImpl {
       ResultList* globResult,
       const RootId& originRootId) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateImpl"};
+    context->throwIfCanceled();
     const GlobPathBuilder pathBuilder;
     std::vector<std::pair<PathComponentPiece, GlobNodeImpl*>> recurse;
     std::vector<folly::coro::Task<void>> tasks;

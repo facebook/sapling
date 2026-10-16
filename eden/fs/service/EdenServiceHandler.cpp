@@ -532,6 +532,9 @@ class ThriftRequestScope {
     if (auto handler = handler_.lock()) {
       if (enableCancellation) {
         folly::CancellationSource cancellationSource;
+        auto token = cancellationSource.getToken();
+        thriftFetchContext_->setCancellationToken(token);
+        prefetchFetchContext_->setCancellationToken(std::move(token));
         handler->insertCancellationSource(
             requestId_,
             std::move(cancellationSource),
@@ -611,6 +614,17 @@ class ThriftRequestScope {
 
   uint64_t getRequestId() const {
     return requestId_;
+  }
+
+  /**
+   * Record that this request's work continues after its response was sent,
+   * so that a graceful restart does not wait for it and a stop deadline does
+   * not blame it.
+   */
+  void markBackground() {
+    if (auto handler = handler_.lock()) {
+      handler->markRequestAsBackground(requestId_);
+    }
   }
 
  private:
@@ -820,6 +834,18 @@ facebook::eden::InodePtr inodeFromUserPath(
       false,                                                                \
       enableStats,                                                          \
       ObjectFetchContext::Cause::Thrift,                                    \
+      __VA_ARGS__)
+
+#define INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS_AND_CANCELLATION( \
+    level, enableStats, requestContext, ...)                         \
+  INSTRUMENT_THRIFT_CALL_IMPL(                                       \
+      level,                                                         \
+      nullptr,                                                       \
+      nullptr,                                                       \
+      requestContext,                                                \
+      true,                                                          \
+      enableStats,                                                   \
+      ObjectFetchContext::Cause::Thrift,                             \
       __VA_ARGS__)
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
@@ -1117,10 +1143,6 @@ EdenServiceHandler::co_checkOutRevisionImpl(
                                            : "(unspecified hg root manifest)",
       rootIdOptions.fid().has_value() ? folly::hexlify(*rootIdOptions.fid())
                                       : "no fid provided");
-  auto cancellationToken = getCancellationToken(helper->getRequestId());
-  if (cancellationToken.has_value()) {
-    helper->getThriftFetchContext().setCancellationToken(*cancellationToken);
-  }
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
   auto& fetchContext = helper->getFetchContext();
 
@@ -1163,10 +1185,6 @@ EdenServiceHandler::semifuture_checkOutRevisionImpl(
                                            : "(unspecified hg root manifest)",
       rootIdOptions.fid().has_value() ? folly::hexlify(*rootIdOptions.fid())
                                       : "no fid provided");
-  auto cancellationToken = getCancellationToken(helper->getRequestId());
-  if (cancellationToken.has_value()) {
-    helper->getThriftFetchContext().setCancellationToken(*cancellationToken);
-  }
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
   auto& fetchContext = helper->getFetchContext();
 
@@ -2618,8 +2636,13 @@ ImmediateFuture<folly::Unit> diffBetweenRoots(
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamChangesSince(
     std::unique_ptr<StreamChangesSinceParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
-      DBG3, &ThriftStats::streamChangesSince, *params->mountPoint());
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(
+      DBG3,
+      &ThriftStats::streamChangesSince,
+      true,
+      requestContext,
+      *params->mountPoint());
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition();
   auto& fetchContext = helper->getFetchContext();
@@ -2663,6 +2686,14 @@ EdenServiceHandler::streamChangesSince(
   }
 
   auto cancellationSource = std::make_shared<folly::CancellationSource>();
+  // Cancelling the request, which EdenFS does for a forced restart, stops the
+  // diffs the same way a client disconnect does.
+  std::shared_ptr<folly::CancellationCallback> onRequestCancel;
+  if (auto requestToken = getCancellationToken(helper->getRequestId())) {
+    onRequestCancel = std::make_shared<folly::CancellationCallback>(
+        std::move(*requestToken),
+        [cancellationSource] { cancellationSource->requestCancellation(); });
+  }
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<ChangedFileResult>::createPublisher(
           [cancellationSource] { cancellationSource->requestCancellation(); });
@@ -2726,6 +2757,7 @@ EdenServiceHandler::streamChangesSince(
                  sharedPublisherLock,
                  callback = std::move(callback),
                  helper = std::move(helper),
+                 onRequestCancel = std::move(onRequestCancel),
                  cancellationSource](
                     folly::Try<std::vector<folly::Unit>>&& result) mutable {
                   if (result.hasException()) {
@@ -2733,6 +2765,16 @@ EdenServiceHandler::streamChangesSince(
                         std::move(*sharedPublisherLock->wlock());
                     std::move(sharedPublisher)
                         .next(newEdenError(std::move(result).exception()));
+                  } else if (cancellationSource->getToken()
+                                 .isCancellationRequested()) {
+                    // A cancelled diff stops early. A client that is still
+                    // connected must not take the stream for complete.
+                    auto sharedPublisher =
+                        std::move(*sharedPublisherLock->wlock());
+                    std::move(sharedPublisher)
+                        .next(newEdenError(
+                            folly::make_exception_wrapper<
+                                folly::OperationCancelled>()));
                   }
                 })
             .semi());
@@ -3407,9 +3449,12 @@ void EdenServiceHandler::sendNotification(
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamSelectedChangesSince(
     std::unique_ptr<StreamSelectedChangesSinceParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(
       DBG3,
       &ThriftStats::streamSelectedChangesSince,
+      true,
+      requestContext,
       *params->changesParams()->mountPoint());
   auto mountHandle = lookupMount(params->changesParams()->mountPoint().value());
   const auto& fromPosition = *params->changesParams()->fromPosition();
@@ -3439,6 +3484,14 @@ EdenServiceHandler::streamSelectedChangesSince(
   }
 
   auto cancellationSource = std::make_shared<folly::CancellationSource>();
+  // Cancelling the request, which EdenFS does for a forced restart, stops the
+  // diffs the same way a client disconnect does.
+  std::shared_ptr<folly::CancellationCallback> onRequestCancel;
+  if (auto requestToken = getCancellationToken(helper->getRequestId())) {
+    onRequestCancel = std::make_shared<folly::CancellationCallback>(
+        std::move(*requestToken),
+        [cancellationSource] { cancellationSource->requestCancellation(); });
+  }
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<ChangedFileResult>::createPublisher(
           [cancellationSource] { cancellationSource->requestCancellation(); });
@@ -3522,6 +3575,7 @@ EdenServiceHandler::streamSelectedChangesSince(
                  sharedPublisherLock,
                  callback = std::move(callback),
                  helper = std::move(helper),
+                 onRequestCancel = std::move(onRequestCancel),
                  cancellationSource](
                     folly::Try<std::vector<folly::Unit>>&& result) mutable {
                   if (result.hasException()) {
@@ -3529,6 +3583,16 @@ EdenServiceHandler::streamSelectedChangesSince(
                         std::move(*sharedPublisherLock->wlock());
                     std::move(sharedPublisher)
                         .next(newEdenError(std::move(result).exception()));
+                  } else if (cancellationSource->getToken()
+                                 .isCancellationRequested()) {
+                    // A cancelled diff stops early. A client that is still
+                    // connected must not take the stream for complete.
+                    auto sharedPublisher =
+                        std::move(*sharedPublisherLock->wlock());
+                    std::move(sharedPublisher)
+                        .next(newEdenError(
+                            folly::make_exception_wrapper<
+                                folly::OperationCancelled>()));
                   }
                 })
             .semi());
@@ -4114,6 +4178,7 @@ folly::coro::now_task<DirListAttributeDataOrError> co_getAllEntryAttributes(
     const EdenMount& edenMount,
     std::string path,
     const ObjectFetchContextPtr& fetchContext) {
+  fetchContext->throwIfCanceled();
   // Capture lastCheckoutTime before any co_await so synthetic tree mtimes
   // are stable across concurrent checkout.
   auto lastCheckoutTime = edenMount.getLastCheckoutTime().toTimespec();
@@ -4176,8 +4241,11 @@ folly::coro::Task<std::unique_ptr<ReaddirResult>>
 EdenServiceHandler::co_readdir(std::unique_ptr<ReaddirParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   auto paths = *params->directoryPaths();
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG3,
+      true,
+      requestContext,
       *params->mountPoint(),
       getSyncTimeout(*params->sync()),
       toLogArg(paths));
@@ -4209,6 +4277,9 @@ EdenServiceHandler::co_readdir(std::unique_ptr<ReaddirParams> params) {
   }
 
   auto results = co_await folly::coro::collectAllRange(std::move(tasks));
+  // A cancellation that lands while the directories are being read shows up
+  // as per-entry errors; fail the request instead of returning them.
+  fetchContext->throwIfCanceled();
 
   auto res = std::make_unique<ReaddirResult>();
   res->dirLists() = std::move(results);
@@ -4295,6 +4366,10 @@ EdenServiceHandler::co_getEntryAttributes(
   }
 
   auto allRes = co_await folly::coro::collectAllTryRange(std::move(tasks));
+  // Each path that was cancelled holds an error in its slot. The request as a
+  // whole must fail rather than hand back a response that looks like per-path
+  // failures.
+  fetchContext->throwIfCanceled();
 
   if (!reqBitmask.containsAnyOf(kAclPathAttributes)) {
     co_return allRes;
@@ -4349,6 +4424,9 @@ EdenServiceHandler::getEntryAttributesImpl(
                     std::vector<folly::Try<EntryAttributes>> allRes) mutable
                     -> ImmediateFuture<
                         std::vector<folly::Try<EntryAttributes>>> {
+                  // A cancelled request fails as a whole; see
+                  // co_getEntryAttributes.
+                  fetchContext->throwIfCanceled();
                   if (!reqBitmask.containsAnyOf(kAclPathAttributes)) {
                     return allRes;
                   }
@@ -4427,6 +4505,7 @@ EdenServiceHandler::co_getEntryAttributesForPath(
     AttributesRequestScope reqScope,
     std::string_view path,
     const ObjectFetchContextPtr& fetchContext) {
+  fetchContext->throwIfCanceled();
   if (path.empty()) {
     co_yield folly::coro::co_error(newEdenError(
         EINVAL,
@@ -4535,8 +4614,11 @@ EdenServiceHandler::co_getAttributesFromFilesV2Impl(
       static_cast<std::underlying_type_t<FileAttributes>>(
           *params->requestedAttributes()));
   std::vector<std::string>& paths = params->paths().value();
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG3,
+      true,
+      requestContext,
       *params->mountPoint(),
       getSyncTimeout(*params->sync()),
       toLogArg(paths));
@@ -4574,8 +4656,11 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2Impl(
       static_cast<std::underlying_type_t<FileAttributes>>(
           *params->requestedAttributes()));
   std::vector<std::string>& paths = params->paths().value();
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG3,
+      true,
+      requestContext,
       *params->mountPoint(),
       getSyncTimeout(*params->sync()),
       toLogArg(paths));
@@ -4832,6 +4917,9 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   // cache exchange by materializing smaller random reads, and not prevent
   // execution starting by read large files on the background.
   bool background = *params->background();
+  if (background) {
+    helper->markBackground();
+  }
 
   auto waitForPendingWritesFuture =
       waitForPendingWrites(mountHandle.getEdenMount(), *params->sync());
@@ -4913,11 +5001,14 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
   auto requestContext = getRequestContext();
   auto helper = INSTRUMENT_THRIFT_GLOB_CALL_WITH_CANCELLATION(
       DBG3,
-      false,
+      true,
       requestContext,
       *params->mountPoint(),
       toLogArg(*params->globs()),
       globber.logString());
+  if (*params->background()) {
+    helper->markBackground();
+  }
   auto& context = helper->getFetchContext();
 
   co_await folly::coro::co_reschedule_on_current_executor;
@@ -4952,11 +5043,17 @@ folly::coro::Task<void> EdenServiceHandler::co_prefetchFiles(
 
   auto serverState = server_->getServerState();
   ThriftGlobImpl globber{*params};
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG2,
+      true,
+      requestContext,
       *params->mountPoint(),
       toLogArg(*params->globs()),
       globber.logString());
+  if (isBackground) {
+    helper->markBackground();
+  }
 
   // Capture everything the work needs as guards; the detached task must not
   // touch the raw server_, which EdenServer can destroy during shutdown.
@@ -5227,12 +5324,17 @@ EdenServiceHandler::prefetchFilesV2Impl(
         resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
   }
   ThriftGlobImpl globber{*params};
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_PREFETCH_STATS_AND_CANCELLATION(
       DBG2,
       params->returnStats().value(),
+      requestContext,
       *params->mountPoint(),
       toLogArg(*params->globs()),
       globber.logString());
+  if (*params->background()) {
+    helper->markBackground();
+  }
   auto& context = helper->getFetchContext();
   auto returnPrefetchedFiles = *params->returnPrefetchedFiles();
 
@@ -5389,7 +5491,7 @@ EdenServiceHandler::co_getScmStatusV2(
   static const std::string kNoFidSentinel = "(none)";
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG3,
-      false,
+      true,
       context,
       *scmParams->mountPoint(),
       folly::to<string>("commitHash=", logHash(*scmParams->commit())),
@@ -5415,13 +5517,23 @@ EdenServiceHandler::co_getScmStatusV2(
                                    ->getEdenConfig()
                                    ->enforceParents.getValue();
 
+  // The connection token fires when the client goes away, the request token
+  // when EdenFS cancels the request, for example for a forced restart.
+  auto requestToken = fetchContext->getCancellationToken();
   auto status = co_await mountHandle.getEdenMount().co_diff(
       mountHandle.getRootInode(),
       rootId,
-      context->getConnectionContext()->getCancellationToken(),
+      folly::cancellation_token_merge(
+          context->getConnectionContext()->getCancellationToken(),
+          requestToken),
       fetchContext,
       *scmParams->listIgnored(),
       enforceParents);
+  // A cancelled diff returns what it had walked so far. A client that is
+  // still connected must not take that for the full status.
+  if (requestToken.isCancellationRequested()) {
+    throw folly::OperationCancelled{};
+  }
 
   auto result = std::make_unique<GetScmStatusResult>();
   result->status() = std::move(*status);
@@ -5435,8 +5547,10 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
     unique_ptr<string> oldHash,
     unique_ptr<string> newHash) {
   auto* context = getRequestContext();
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG2,
+      true,
+      context,
       *mountPoint,
       folly::to<string>("oldHash=", logHash(*oldHash)),
       folly::to<string>("newHash=", logHash(*newHash)));
@@ -5453,18 +5567,26 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
       resolveRootIdWithLastFilter(std::move(*newHash), mountHandle);
 
   auto callback = std::make_unique<ScmStatusDiffCallback>();
+  auto requestToken = fetchContext->getCancellationToken();
   auto diffFuture = diffBetweenRoots(
       mountHandle.getObjectStore().parseRootId(resolvedOldId),
       mountHandle.getObjectStore().parseRootId(resolvedNewId),
       *mountHandle.getEdenMount().getCheckoutConfig(),
       mountHandle.getObjectStorePtr(),
-      context->getConnectionContext()->getCancellationToken(),
+      folly::cancellation_token_merge(
+          context->getConnectionContext()->getCancellationToken(),
+          requestToken),
       fetchContext,
       callback.get());
   return wrapImmediateFuture(
              std::move(helper),
              std::move(diffFuture)
-                 .thenValue([callback = std::move(callback)](auto&&) {
+                 .thenValue([callback = std::move(callback),
+                             requestToken = std::move(requestToken)](auto&&) {
+                   // A cancelled diff holds a partial status.
+                   if (requestToken.isCancellationRequested()) {
+                     throw folly::OperationCancelled{};
+                   }
                    return std::make_unique<ScmStatus>(
                        callback->extractStatus());
                  }))
@@ -6518,6 +6640,7 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
 
   ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
   if (*params->background()) {
+    helper->markBackground();
     backgroundFuture = makeNotReadyImmediateFuture();
   }
 
