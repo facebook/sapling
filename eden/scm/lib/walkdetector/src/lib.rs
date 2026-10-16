@@ -21,6 +21,7 @@ use std::sync::OnceLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
@@ -489,7 +490,7 @@ impl Detector {
             my_dir.seen_files.insert(base_name.to_owned());
 
             let seen_count = my_dir.seen_files.len();
-            if my_dir.is_walked(WalkType::File, seen_count, 0, walk_threshold, walk_ratio) {
+            if my_dir.is_walked(WalkType::File, seen_count, 0, walk_threshold, walk_ratio, 0) {
                 my_dir.seen_files.clear();
                 inner.insert_walk(
                     &self.config,
@@ -591,14 +592,12 @@ impl Detector {
                 0,
                 walk_threshold,
                 walk_ratio,
+                0,
             ) {
+                let walk = Walk::for_type(WalkType::Directory, 0, seen_count as u64, pid);
+                walk.credit_breadth(my_dir.total_dirs().unwrap_or_default());
                 my_dir.seen_dirs.clear();
-                inner.insert_walk(
-                    &self.config,
-                    WalkType::Directory,
-                    Walk::for_type(WalkType::Directory, 0, seen_count as u64, pid),
-                    dir_path,
-                );
+                inner.insert_walk(&self.config, WalkType::Directory, walk, dir_path);
 
                 walk_changed = true;
             }
@@ -774,6 +773,14 @@ impl Inner {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
+        // A walk rooted inside an existing walk's coverage (merged or split off from it) was
+        // justified by that walk's breadth proofs, so it keeps the credit.
+        if let Some((owner, _)) = self.node.get_owning_node(walk_type, dir) {
+            if let Some(owner_walk) = owner.get_dominating_walk(walk_type) {
+                walk.credit_breadth(owner_walk.credited_breadth());
+            }
+        }
+
         let walk_node = self
             .node
             .insert_walk(config, walk_type, dir, walk, dir.depth());
@@ -799,10 +806,12 @@ impl Inner {
         }
 
         // Check if we have a containing walk whose depth boundary should be increased.
-        if let Some((ancestor_dir, new_depth)) =
+        if let Some((ancestor_dir, new_depth, crossed)) =
             self.should_advance_ancestor_walk(config, walk_type, dir)
         {
-            self.insert_walk(config, walk_type, Walk::new(new_depth), ancestor_dir);
+            let walk = Walk::new(new_depth);
+            walk.credit_breadth(crossed);
+            self.insert_walk(config, walk_type, walk, ancestor_dir);
         }
     }
 
@@ -818,7 +827,7 @@ impl Inner {
         let parent_dir = dir.parent()?;
         let parent_node = self.node.get_node(parent_dir)?;
 
-        let walk_depth = should_merge_into_ancestor(
+        let walk = should_merge_into_ancestor(
             walk_threshold(config, parent_dir.depth()),
             config.walk_ratio,
             walk_type,
@@ -827,7 +836,7 @@ impl Inner {
             1,
         )?;
 
-        self.insert_walk(config, walk_type, Walk::new(walk_depth), parent_dir);
+        self.insert_walk(config, walk_type, walk, parent_dir);
 
         Some(())
     }
@@ -856,7 +865,7 @@ impl Inner {
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
 
-        let walk_depth = should_merge_into_ancestor(
+        let walk = should_merge_into_ancestor(
             walk_threshold(config, grandparent_dir.depth()),
             config.walk_ratio,
             walk_type,
@@ -865,19 +874,19 @@ impl Inner {
             2,
         )?;
 
-        self.insert_walk(config, walk_type, Walk::new(walk_depth), grandparent_dir);
+        self.insert_walk(config, walk_type, walk, grandparent_dir);
 
         Some(())
     }
 
     /// If a walk at `dir` suggests we can advance the depth of a containing walk, return
-    /// (containing_dir, new_depth).
+    /// (containing_dir, new_depth, breadth credited to the new walk).
     fn should_advance_ancestor_walk<'a>(
         &mut self,
         config: &Config,
         walk_type: WalkType,
         dir: &'a RepoPath,
-    ) -> Option<(&'a RepoPath, usize)> {
+    ) -> Option<(&'a RepoPath, usize, usize)> {
         let parent_dir = dir.parent()?;
         let (ancestor, suffix) = self.node.get_owning_node_mut(walk_type, parent_dir)?;
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
@@ -913,9 +922,9 @@ impl Inner {
             "should_advance_ancestor_walk",
         );
 
-        let ancestor_walk_depth = ancestor
-            .get_dominating_walk(walk_type)
-            .map_or(0, |w| w.depth);
+        let ancestor_walk = ancestor.get_dominating_walk(walk_type);
+        let ancestor_walk_depth = ancestor_walk.map_or(0, |w| w.depth);
+        let credit = ancestor_walk.map_or(0, |w| w.credited_breadth());
 
         // Check that both:
         //    - We are walked at depth=0 based on num_advanced_children. This ensures the walk is
@@ -928,18 +937,31 @@ impl Inner {
             0,
             threshold,
             config.walk_ratio,
+            credit,
         ) && ancestor.is_walked(
             WalkType::Directory,
             num_advanced_descendants,
             ancestor_walk_depth,
             threshold,
             config.walk_ratio,
+            credit,
         );
 
         if is_walked {
             let depth = ancestor_walk_depth + 1;
-            tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
-            return Some((ancestor_dir, depth));
+            let crossed = credit
+                .max(
+                    ancestor
+                        .total_count(WalkType::Directory, 0)
+                        .unwrap_or_default(),
+                )
+                .max(
+                    ancestor
+                        .total_count(WalkType::Directory, ancestor_walk_depth)
+                        .unwrap_or_default(),
+                );
+            tracing::debug!(dir=%ancestor_dir, depth, crossed, "expanding walk boundary");
+            return Some((ancestor_dir, depth, crossed));
         } else if !suffix.is_empty() {
             // If suffix isn't empty (i.e. dir isn't a direct child of ancestor), check if
             // ancestor's direct child `name` should be split off into a separate walk. This helps
@@ -953,7 +975,8 @@ impl Inner {
             let split_off_child = match ancestor.get_node(head.as_ref()) {
                 // If we have directory size hints, use them.
                 Some(child) => {
-                    child.get_walk_for_type(walk_type).is_none()
+                    let child_depth = ancestor_walk_depth.saturating_sub(1);
+                    (child.get_walk_for_type(walk_type).is_none()
                         // Similar to above, check for evidence of advanced walk activity for
                         // direct children and at depth N+1.
                         && child.is_walked(
@@ -962,26 +985,38 @@ impl Inner {
                             0,
                             threshold,
                             config.walk_ratio,
+                            0,
                         )
                         && child.is_walked(
                             WalkType::Directory,
                             child_seen_count,
-                            ancestor_walk_depth.saturating_sub(1),
+                            child_depth,
                             threshold,
                             config.walk_ratio,
-                        )
+                            0,
+                        ))
+                    .then(|| {
+                        child
+                            .total_count(WalkType::Directory, 0)
+                            .unwrap_or_default()
+                            .max(
+                                child
+                                    .total_count(WalkType::Directory, child_depth)
+                                    .unwrap_or_default(),
+                            )
+                    })
                 }
                 // Otherwise use default threshold.
-                None => child_seen_count >= threshold,
+                None => (child_seen_count >= threshold).then_some(0),
             };
 
-            if split_off_child {
+            if let Some(crossed) = split_off_child {
                 // If parent=ancestor/foo/bar/parent and suffix=foo/bar/parent,
                 // we want "ancestor/foo", so strip suffix[1:] from parent.
                 let child_path =
                     parent_dir.strip_suffix(suffix.split_first_component()?.1, true)?;
                 tracing::debug!(%child_path, depth=ancestor_walk_depth, "splitting off walk for child");
-                return Some((child_path, ancestor_walk_depth));
+                return Some((child_path, ancestor_walk_depth, crossed));
             }
         }
 
@@ -1062,7 +1097,7 @@ fn walk_threshold(config: &Config, walk_root_depth: usize) -> usize {
 }
 
 /// Check if existing walks at nodes `ancestor_distance` below `ancestor` should be "merged" into a
-/// new walk at `ancestor`. Returns depth of new walk to be inserted, if any.
+/// new walk at `ancestor`. Returns the new walk to be inserted, if any.
 fn should_merge_into_ancestor(
     walk_threshold: usize,
     walk_ratio: f64,
@@ -1070,7 +1105,7 @@ fn should_merge_into_ancestor(
     dir: &RepoPath,
     ancestor: &WalkNode,
     ancestor_distance: usize,
-) -> Option<usize> {
+) -> Option<Walk> {
     let mut kin_count = 0;
     ancestor.iter(|node, depth| -> bool {
         if depth == ancestor_distance {
@@ -1098,6 +1133,9 @@ fn should_merge_into_ancestor(
         ancestor_distance - 1,
         walk_threshold,
         walk_ratio,
+        ancestor
+            .get_dominating_walk(walk_type)
+            .map_or(0, |w| w.credited_breadth()),
     ) {
         tracing::debug!(
             %dir,
@@ -1108,7 +1146,13 @@ fn should_merge_into_ancestor(
             total_dirs=ancestor.total_dirs(),
             "combining with collateral kin",
         );
-        Some(ancestor_distance)
+        let walk = Walk::new(ancestor_distance);
+        walk.credit_breadth(
+            ancestor
+                .total_count(WalkType::Directory, ancestor_distance - 1)
+                .unwrap_or_default(),
+        );
+        Some(walk)
     } else {
         None
     }
@@ -1182,6 +1226,10 @@ pub struct Walk {
     // How many light/cached dir fetches we've observed under this walk.
     dir_reads: AtomicU64,
 
+    // Largest directory count this walk has satisfied `walk_ratio` against. Advancing across
+    // levels no wider than this only needs the base walk threshold.
+    credited_breadth: AtomicUsize,
+
     // Most commonly seen pid for this walk. Wrapped in an Arc so it can be shared with the
     // background thread that resolves pid_detail (see spawn_pid_detail_resolution).
     pid: Arc<AtomicU64>,
@@ -1240,6 +1288,20 @@ impl Walk {
         };
         counter.fetch_add(initial_loads, Ordering::Relaxed);
         w
+    }
+
+    fn credited_breadth(&self) -> usize {
+        self.credited_breadth.load(Ordering::Relaxed)
+    }
+
+    fn credit_breadth(&self, breadth: usize) {
+        self.credited_breadth.fetch_max(breadth, Ordering::Relaxed);
+    }
+
+    /// Take over `other`'s credit. Only for a walk replacing `other` at the same root; a
+    /// descendant's crossing says nothing about the rest of this walk's subtree.
+    fn absorb_credit(&self, other: &Self) {
+        self.credit_breadth(other.credited_breadth());
     }
 
     fn absorb_counters(&self, other: &Self) {

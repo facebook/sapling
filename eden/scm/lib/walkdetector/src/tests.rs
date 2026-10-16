@@ -1035,6 +1035,43 @@ fn test_advance_depth_across_wide_dir() {
 }
 
 #[test]
+fn test_breadth_credit() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+    detector.set_walk_ratio(0.1);
+
+    // "big" has 100 directories, so detecting its walk takes 10 of them.
+    detector.dir_loaded(p("big"), 0, 100, 0);
+    for i in 0..10 {
+        detector.dir_loaded(p(format!("big/d{i}")), 0, 0, 0);
+    }
+    assert_eq!(detector.dir_walks(), vec![(p("big"), 0)]);
+
+    // The walk already crossed 100 children, so advancing needs only the base threshold.
+    insert_walk(&detector, p("big/d0"), WalkType::Directory, 0);
+    insert_walk(&detector, p("big/d1"), WalkType::Directory, 0);
+    assert_eq!(detector.dir_walks(), vec![(p("big"), 1)]);
+
+    // A wider level than any crossed so far still needs the ratio: big/d0 has 1000 directories.
+    detector.dir_loaded(p("big/d0"), 0, 1000, 0);
+    insert_walk(&detector, p("big/d0/x"), WalkType::Directory, 0);
+    insert_walk(&detector, p("big/d1/x"), WalkType::Directory, 0);
+    assert_eq!(
+        detector.dir_walks(),
+        vec![(p("big"), 1), (p("big/d0/x"), 0), (p("big/d1/x"), 0)]
+    );
+
+    // A walk rooted inside big's coverage inherits big's credit: big/d2 and big/d2/x each have 100
+    // directories, no wider than the 100 already crossed, so two kin walks suffice to deepen it.
+    detector.dir_loaded(p("big/d2"), 0, 100, 0);
+    detector.dir_loaded(p("big/d2/x"), 0, 100, 0);
+    insert_walk(&detector, p("big/d2"), WalkType::Directory, 1);
+    insert_walk(&detector, p("big/d2/x/q"), WalkType::Directory, 0);
+    insert_walk(&detector, p("big/d2/y/q"), WalkType::Directory, 0);
+    assert!(detector.dir_walks().contains(&(p("big/d2"), 2)));
+}
+
+#[test]
 fn test_might_have_walk() {
     let mut detector = Detector::new();
     detector.set_gc_timeout(Duration::from_secs(1));

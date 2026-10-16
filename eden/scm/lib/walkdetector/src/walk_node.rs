@@ -276,7 +276,12 @@ impl WalkNode {
                     walk.depth + 1,
                     threshold,
                     walk_ratio,
+                    walk.credited_breadth(),
                 ) {
+                    walk.credit_breadth(
+                        self.total_count(WalkType::Directory, walk.depth + 1)
+                            .unwrap_or_default(),
+                    );
                     walk.depth += 1;
                     tracing::debug!(
                         new_depth = walk.depth,
@@ -336,7 +341,7 @@ impl WalkNode {
             WalkType::Directory => self.file_walk.as_ref().or(self.dir_walk.as_ref()),
         };
 
-        walk.filter(|&walk| !self.expired())
+        walk.filter(|&_walk| !self.expired())
     }
 
     pub(crate) fn get_walk_for_type(&self, walk_type: WalkType) -> Option<&Walk> {
@@ -345,7 +350,7 @@ impl WalkNode {
             WalkType::Directory => self.dir_walk.as_ref(),
         };
 
-        walk.filter(|&walk| !self.expired())
+        walk.filter(|&_walk| !self.expired())
     }
 
     /// Set walk of `walk_type` to new_walk. Returns old walk, if any.
@@ -362,6 +367,7 @@ impl WalkNode {
                 ),
             ) if depth >= dir_depth => {
                 new_walk.absorb_counters(dir_walk);
+                new_walk.absorb_credit(dir_walk);
                 self.dir_walk = None;
             }
             _ => {}
@@ -374,6 +380,7 @@ impl WalkNode {
 
         if let (Some(old), Some(new)) = (&old_walk, &new_walk) {
             new.absorb_counters(old);
+            new.absorb_credit(old);
         }
 
         std::mem::replace(old_walk, new_walk)
@@ -617,7 +624,9 @@ impl WalkNode {
             .is_some_and(|w| w.depth >= (path.depth() + depth))
     }
 
-    /// Return whether this Dir should be considered "walked".
+    /// Return whether this Dir should be considered "walked". `credit` is the largest directory
+    /// count the relevant walk has already satisfied `walk_ratio` against; the ratio only raises
+    /// the threshold for counts beyond it.
     pub(crate) fn is_walked(
         &self,
         walk_type: WalkType,
@@ -625,18 +634,14 @@ impl WalkNode {
         depth: usize,
         mut walk_threshold: usize,
         walk_ratio: f64,
+        credit: usize,
     ) -> bool {
         if seen_count == 0 {
             return false;
         }
 
-        let total_count = match walk_type {
-            WalkType::File => self.total_files_at_depth(depth),
-            WalkType::Directory => self.total_dirs_at_depth(depth),
-        };
-
         // If we have the total size hint, adjust the threshold for extreme cases.
-        if let Some(total) = total_count {
+        if let Some(total) = self.total_count(walk_type, depth) {
             // If dir is too small we know we will never reach the threshold. Adjust threshold down
             // until it is smaller than dir size.
             while walk_threshold > total {
@@ -646,13 +651,21 @@ impl WalkNode {
             // Conversely, if directory is very large we don't want to detect a walk too
             // aggressively. Ensure the threshold is at least `walk_ratio` of the total directory
             // size. For example, a if `walk_ratio` is 0.1 and the directory size is 10_000, we will
-            // raise the `walk_threshold` to 1_000.
-            if total > 0 && (walk_threshold as f64) / (total as f64) < walk_ratio {
+            // raise the `walk_threshold` to 1_000. A walk that already crossed a level at least
+            // this wide has proven itself, so the ratio does not apply to it again.
+            if total > credit && (walk_threshold as f64) / (total as f64) < walk_ratio {
                 walk_threshold = ((total as f64) * walk_ratio) as usize;
             }
         }
 
         seen_count >= walk_threshold
+    }
+
+    pub(crate) fn total_count(&self, walk_type: WalkType, depth: usize) -> Option<usize> {
+        match walk_type {
+            WalkType::File => self.total_files_at_depth(depth),
+            WalkType::Directory => self.total_dirs_at_depth(depth),
+        }
     }
 
     pub(crate) fn iter(&self, mut cb: impl FnMut(&WalkNode, usize) -> bool) {
