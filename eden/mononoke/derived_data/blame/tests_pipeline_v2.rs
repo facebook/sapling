@@ -278,23 +278,6 @@ async fn test_is_chokepoint(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-/// JustKnobs with the prod-mapping OFF (so the pipeline writes blame to the
-/// namespaced key and verify_stage compares namespaced vs canonical blobs)
-/// plus the manifest-altering subtree-change knob enabled so a subtree-change
-/// bonsai can be saved.
-fn namespaced_subtree_test_knobs() -> JustKnobsInMemory {
-    JustKnobsInMemory::new(HashMap::from([
-        (
-            "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping".to_string(),
-            KnobVal::Bool(false),
-        ),
-        (
-            "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
-            KnobVal::Bool(true),
-        ),
-    ]))
-}
-
 /// JustKnobs with the prod-mapping OFF, so the pipeline writes blame to the
 /// namespaced key and verify_stage compares namespaced vs canonical blobs.
 fn namespaced_test_knobs() -> JustKnobsInMemory {
@@ -616,18 +599,19 @@ async fn test_subtree_copy_rename_resolution(fb: FacebookInit) -> Result<()> {
     // `copied/file_in` has no file_changes copy_from; the source lives only
     // in subtree_changes.
     let mut bcs = CreateCommitContext::new(ctx, repo, vec![c1])
+        .add_file("copied/file_in", "content in")
         .create_commit_object()
         .await?;
     bcs.subtree_changes = [(
         MPath::new("copied")?,
-        SubtreeChange::copy(MPath::new("dir")?, c1),
+        SubtreeChange::deep_copy(MPath::new("dir")?, c1),
     )]
     .into_iter()
     .collect();
     let bcs = bcs.freeze()?;
     let c2 = bcs.get_changeset_id();
     with_just_knobs_async(
-        namespaced_subtree_test_knobs(),
+        namespaced_test_knobs(),
         async { save_changesets(ctx, repo, vec![bcs]).await }.boxed(),
     )
     .await?;
@@ -642,7 +626,7 @@ async fn test_subtree_copy_rename_resolution(fb: FacebookInit) -> Result<()> {
     // empty-prefix (canonical) blame blobs and also derives the canonical
     // unodes that the full-root rename resolution depends on.
     with_just_knobs_async(
-        namespaced_subtree_test_knobs(),
+        namespaced_test_knobs(),
         async {
             for csid in [c1, c2] {
                 repo.repo_derived_data()
@@ -675,13 +659,13 @@ async fn test_subtree_copy_rename_resolution(fb: FacebookInit) -> Result<()> {
     // namespaced blame at the root stage) for the chain, so verify_stage
     // compares two distinct blobs.
     with_just_knobs_async(
-        namespaced_subtree_test_knobs(),
+        namespaced_test_knobs(),
         async { derive_namespaced_root_stage(ctx, &derivation_ctx, repo, &[c1, c2]).await }.boxed(),
     )
     .await?;
 
     let verified = with_just_knobs_async(
-        namespaced_subtree_test_knobs(),
+        namespaced_test_knobs(),
         async {
             RootBlameV2::verify_stage(
                 ctx,

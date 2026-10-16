@@ -545,10 +545,8 @@ mod tests {
     use fixtures::AugmentedManifestV2P3PlusParentsNoHgMapping;
     use fixtures::CrossStageDirectoryCopy;
     use fixtures::CrossStageFileCopy;
-    use fixtures::NestedAncestorSubtreeCopy;
     use fixtures::NestedDirectories;
     use fixtures::NestedSubtreeCopy;
-    use fixtures::SubtreeCopyRemovesStage;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -692,28 +690,6 @@ mod tests {
             vec![
                 ("", vec!["top1", "top2"]),
                 ("top1", vec![]),
-                ("top2", vec![]),
-            ]
-        }
-    }
-
-    impl PipelineTestFixture for NestedAncestorSubtreeCopy {
-        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
-            vec![
-                ("", vec!["top1", "top2"]),
-                ("top1", vec!["sub"]),
-                ("top1/sub", vec![]),
-                ("top2", vec![]),
-            ]
-        }
-    }
-
-    impl PipelineTestFixture for SubtreeCopyRemovesStage {
-        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
-            vec![
-                ("", vec!["top1", "top2"]),
-                ("top1", vec!["sub"]),
-                ("top1/sub", vec![]),
                 ("top2", vec![]),
             ]
         }
@@ -922,19 +898,6 @@ mod tests {
         )
         .await
         .map(|_| ())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_pipeline_matches_canonical_ancestor_subtree_copy(fb: FacebookInit) -> Result<()> {
-        verify_pipeline_matches_canonical::<NestedAncestorSubtreeCopy>(fb).await
-    }
-
-    // A subtree copy that removes a deeper stage's subtree entirely, exercising
-    // the stage-subtree-absent branch of the deleted-manifest subtree-op change
-    // set (`top1/sub` is deleted because the copied `top2` has no `sub`).
-    #[mononoke::fbinit_test]
-    async fn test_pipeline_subtree_copy_removes_stage(fb: FacebookInit) -> Result<()> {
-        verify_pipeline_matches_canonical::<SubtreeCopyRemovesStage>(fb).await
     }
 
     // Regression coverage for cross-stage copy-source resolution: the tip commit

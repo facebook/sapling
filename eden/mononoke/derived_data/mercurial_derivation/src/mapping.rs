@@ -475,7 +475,6 @@ mod test {
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
     use borrowed::borrowed;
-    use changesets_creation::save_changesets;
     use cloned::cloned;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
@@ -499,13 +498,9 @@ mod test {
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::with_just_knobs_async;
-    use manifest::Entry;
-    use manifest::ManifestOps;
     use mercurial_types::HgAugmentedManifestEnvelope;
     use mercurial_types::HgManifestId;
     use mononoke_macros::mononoke;
-    use mononoke_types::MPath;
-    use mononoke_types::SubtreeChange;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
@@ -615,50 +610,6 @@ mod test {
         }
 
         Ok(())
-    }
-
-    async fn save_bonsai_with_subtree_changes(
-        ctx: &CoreContext,
-        repo: &TestRepo,
-        parents: Vec<ChangesetId>,
-        subtree_changes: Vec<(MPath, SubtreeChange)>,
-    ) -> Result<ChangesetId> {
-        with_just_knobs_async(
-            JustKnobsInMemory::new(HashMap::from([
-                (
-                    "scm/mononoke:enable_subtree_changes".to_string(),
-                    KnobVal::Bool(true),
-                ),
-                (
-                    "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
-                    KnobVal::Bool(true),
-                ),
-            ])),
-            async move {
-                let mut bonsai = CreateCommitContext::new(ctx, repo, parents)
-                    .set_message("subtree change commit")
-                    .create_commit_object()
-                    .await?;
-                bonsai.subtree_changes = subtree_changes.into_iter().collect();
-                let bonsai = bonsai.freeze()?;
-                let cs_id = bonsai.get_changeset_id();
-                save_changesets(ctx, repo, vec![bonsai]).await?;
-                Ok(cs_id)
-            }
-            .boxed(),
-        )
-        .await
-    }
-
-    fn subtree_copy(
-        to_path: &str,
-        from_path: &str,
-        from_cs_id: ChangesetId,
-    ) -> Result<(MPath, SubtreeChange)> {
-        Ok((
-            MPath::new(to_path)?,
-            SubtreeChange::copy(MPath::new(from_path)?, from_cs_id),
-        ))
     }
 
     #[mononoke::fbinit_test]
@@ -1144,76 +1095,6 @@ mod test {
             aug_envelope.augmented_manifest.hg_node_id, expected_root,
             "v2 derive_single should use the mapped Hg root",
         );
-
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_augmented_manifest_mapped_hg_branch_handles_subtree_changes(
-        fb: FacebookInit,
-    ) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
-
-        // Given: a commit with manifest-altering subtree changes and a
-        // Bonsai-to-Hg mapping, so derivation takes the mapped-Hg branch.
-        let source = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("src/a.txt", "copied content")
-            .commit()
-            .await?;
-        let child = save_bonsai_with_subtree_changes(
-            &ctx,
-            &repo,
-            vec![source],
-            vec![subtree_copy("dst", "src", source)?],
-        )
-        .await?;
-        let csids = vec![source, child];
-        let manager = repo.repo_derived_data().manager();
-        manager
-            .derive_exactly_batch::<MappedHgChangesetId>(&ctx, csids.clone(), None)
-            .await?;
-        manager
-            .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
-            .await?;
-
-        // When: deriving the canonical type through the manager.
-        manager
-            .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
-            .await?;
-
-        // Then: the subtree-copy result is present and matches the canonical
-        // Hg manifest of the mapped Hg changeset.
-        let child_aug = manager
-            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, child, None)
-            .await?
-            .context("Missing RootHgAugmentedManifestId for subtree child")?
-            .hg_augmented_manifest_id();
-        let mapped_child = manager
-            .fetch_derived::<MappedHgChangesetId>(&ctx, child, None)
-            .await?
-            .context("Missing MappedHgChangesetId for subtree child")?;
-        let expected_hg_manifest =
-            Loadable::load(&mapped_child.hg_changeset_id(), &ctx, &repo.repo_blobstore)
-                .await?
-                .manifestid();
-        let copied_path = MPath::new("dst/a.txt")?;
-        let aug_leaf = child_aug
-            .find_entry(
-                ctx.clone(),
-                repo.repo_blobstore.clone(),
-                copied_path.clone(),
-            )
-            .await?
-            .and_then(Entry::into_leaf)
-            .context("subtree copy should appear in the augmented manifest")?;
-        let hg_leaf = expected_hg_manifest
-            .find_entry(ctx.clone(), repo.repo_blobstore.clone(), copied_path)
-            .await?
-            .and_then(Entry::into_leaf)
-            .context("subtree copy should appear in the Hg manifest")?;
-        assert_eq!(aug_leaf.file_type, hg_leaf.0);
-        assert_eq!(aug_leaf.filenode, hg_leaf.1.into_nodehash());
 
         Ok(())
     }

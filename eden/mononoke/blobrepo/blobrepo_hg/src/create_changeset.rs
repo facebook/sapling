@@ -484,20 +484,16 @@ async fn resolve_subtree_changes(
 
 #[cfg(test)]
 mod tests {
-    use blobstore::Loadable;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use manifest::ManifestOps;
     use maplit::hashmap;
     use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::subtree::HgSubtreeChanges;
-    use mercurial_types::subtree::HgSubtreeCopy;
     use mercurial_types::subtree::HgSubtreeCrossRepoMerge;
     use mercurial_types::subtree::HgSubtreeDeepCopy;
     use mercurial_types::subtree::HgSubtreeImport;
     use mercurial_types::subtree::HgSubtreeMerge;
     use mononoke_macros::mononoke;
-    use repo_blobstore::RepoBlobstoreRef;
     use sorted_vector_map::sorted_vector_map;
     use tests_utils::BasicTestRepo;
     use tests_utils::drawdag::extend_from_dag_with_actions;
@@ -532,11 +528,7 @@ mod tests {
             repo.repo_blobstore_arc(),
             Some(&(
                 HgSubtreeChanges {
-                    copies: vec![HgSubtreeCopy {
-                        from_path: MPath::new("dir1")?,
-                        from_commit: a_id,
-                        to_path: MPath::new("dir1a")?,
-                    }],
+                    copies: vec![],
                     deep_copies: vec![
                         HgSubtreeDeepCopy {
                             from_path: MPath::new("dir1/dir2")?,
@@ -575,27 +567,13 @@ mod tests {
         )
         .await?;
 
-        assert_eq!(
-            replacements,
-            vec![ManifestParentReplacement {
-                path: MPath::new("dir1a")?,
-                replacements: vec![
-                    a_id.load(&ctx, repo.repo_blobstore())
-                        .await?
-                        .manifestid()
-                        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), MPath::new("dir1")?)
-                        .await?
-                        .unwrap()
-                ],
-            }]
-        );
+        assert!(replacements.is_empty());
         assert_eq!(
             subtree_changes,
             sorted_vector_map! {
                 MPath::new("dir1/dir2a")? => SubtreeChange::deep_copy(MPath::new("dir1/dir2")?, commits["A"]),
                 MPath::new("dir1/dir3")? => SubtreeChange::merge( MPath::new("dir1/dir2")?, commits["A"] ),
                 MPath::new("dir1/dir3a")? => SubtreeChange::deep_copy(MPath::new("dir1/dir3")?, commits["B"]),
-                MPath::new("dir1a")? =>  SubtreeChange::copy( MPath::new("dir1")?, commits["A"]),
                 MPath::new("dir4")? => SubtreeChange::import(MPath::new("otherdir")?, "other commit".to_string(), "other:repo".to_string()),
                 MPath::new("dir5")? => SubtreeChange::cross_repo_merge(MPath::new("xmergedir")?, "xmerge commit".to_string(), "xmerge:repo".to_string()),
             }
