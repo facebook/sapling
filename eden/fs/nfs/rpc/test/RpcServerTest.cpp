@@ -93,6 +93,22 @@ opaque_auth makeAuthSysCred(const authsys_parms& creds) {
       auth_flavor::AUTH_SYS, OpaqueBytes{bytes.begin(), bytes.end()}};
 }
 
+std::unique_ptr<folly::IOBuf> splitIntoTwoFragments(
+    std::unique_ptr<folly::IOBuf> request) {
+  auto bytes = request->coalesce();
+  auto payload = bytes.subpiece(sizeof(uint32_t));
+  auto firstLength = payload.size() / 2;
+  auto secondLength = payload.size() - firstLength;
+
+  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender appender(&queue, 256);
+  appender.writeBE<uint32_t>(static_cast<uint32_t>(firstLength));
+  appender.push(payload.data(), firstLength);
+  appender.writeBE<uint32_t>(0x80000000u | static_cast<uint32_t>(secondLength));
+  appender.push(payload.data() + firstLength, secondLength);
+  return queue.move();
+}
+
 std::unique_ptr<folly::IOBuf> buildNullRpcRequest(uint32_t xid) {
   return buildRpcRequest(xid, 0);
 }
@@ -483,6 +499,38 @@ TEST_F(RpcServerTest, normal_proc_not_fast_pathed) {
 
   EXPECT_TRUE(pollForReply(clientFd, 1000))
       << "Reply should arrive after cranking the thread pool";
+
+  cleanup(clientFd, server);
+}
+
+TEST_F(RpcServerTest, request_split_into_two_fragments) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  EXPECT_DEATH(
+      {
+        auto server = createTestServerWithManualExecutor(
+            std::make_shared<TestServerProcessor>());
+        auto clientFd = connectClient(*server);
+        sendRequest(
+            clientFd, splitIntoTwoFragments(buildRpcRequest(77, /*proc=*/1)));
+        for (int i = 0; i < 20; ++i) {
+          manualExecutor_->run();
+          evb.loopOnce(EVLOOP_NONBLOCK);
+        }
+        std::exit(0);
+      },
+      "Check failed: isLast");
+}
+
+TEST_F(RpcServerTest, null_request_split_into_two_fragments_with_fast_path) {
+  auto server = createTestServerWithManualExecutor(
+      std::make_shared<TestFastPathProcessor>());
+  auto clientFd = connectClient(*server);
+
+  auto reply =
+      sendAndReceive(clientFd, splitIntoTwoFragments(buildNullRpcRequest(78)));
+  EXPECT_EQ(readBigEndianU32(reply, 4), 78u); // xid
+  EXPECT_EQ(readBigEndianU32(reply, 8), 1u); // msg_type::REPLY
+  EXPECT_EQ(readBigEndianU32(reply, 24), 3u); // accept_stat::PROC_UNAVAIL
 
   cleanup(clientFd, server);
 }
