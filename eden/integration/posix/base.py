@@ -4,12 +4,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""Shared setup for the tests ported from pjdfstest.
+"""Shared setup for the POSIX file system tests.
 
-pjdfstest (https://github.com/pjd/pjdfstest, BSD-2-Clause) is a POSIX file
-system test suite. The test modules next to this file are translations of
-its ``tests/*/*.t`` scripts; ``README.md`` explains the translation and lists
-the cases that were left out.
+The test modules next to this file come from two sources: pjdfstest
+(https://github.com/pjd/pjdfstest, BSD-2-Clause), a POSIX file system test
+suite whose ``tests/*/*.t`` scripts check path-based semantics, and CPython's
+``Lib/test/test_posix.py``, ``Lib/test/test_os.py``, ``Lib/test/test_fcntl.py``
+and ``Lib/test/test_mmap.py`` (PSF license, 3.12), whose file system tests
+check fd-based I/O, the ``*at()`` calls, space, locks, mmap, names, xattrs and
+directory iteration. ``README.md`` explains both translations and lists the
+cases that were left out.
 
 The tests call the ``posix`` module, the direct binding of the POSIX system
 calls, rather than the portable ``os`` layer on top of it.
@@ -28,6 +32,11 @@ from eden.integration.lib import testcase
 
 
 UTIME_OMIT: tuple[int, int] = (0, (1 << 30) - 2)
+
+# ``posix`` binds SEEK_DATA and SEEK_HOLE but leaves these three to ``os``.
+SEEK_SET: int = 0
+SEEK_CUR: int = 1
+SEEK_END: int = 2
 
 _AT_FDCWD = -100
 
@@ -89,6 +98,37 @@ class PosixTestBase(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         """``create_file socket``: ``bind(2)`` an AF_UNIX socket at ``path``."""
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
             sock.bind(path)
+
+    def create_file(self, path: str | bytes, data: bytes = b"") -> None:
+        """CPython's ``create_file``: create or truncate ``path`` with ``data``.
+
+        (``EdenRepoTest.write_file`` takes a path relative to the mount and
+        text; this one takes the scratch-relative path and bytes.)
+        """
+        fd = posix.open(path, posix.O_WRONLY | posix.O_CREAT | posix.O_TRUNC, 0o644)
+        try:
+            posix.write(fd, data)
+        finally:
+            posix.close(fd)
+
+    def read_bytes(self, path: str | bytes) -> bytes:
+        """The whole content of ``path``."""
+        with self.open_fd(path, posix.O_RDONLY) as fd:
+            chunks = []
+            while chunk := posix.read(fd, 65536):
+                chunks.append(chunk)
+            return b"".join(chunks)
+
+    @contextlib.contextmanager
+    def open_fd(
+        self, path: str | bytes, flags: int, mode: int = 0o644
+    ) -> Generator[int, None, None]:
+        """``posix.open`` with the ``posix.close`` in a ``finally``."""
+        fd = posix.open(path, flags, mode)
+        try:
+            yield fd
+        finally:
+            posix.close(fd)
 
     def mkdir_p(self, path: str) -> None:
         """The scripts' ``mkdir -p``."""

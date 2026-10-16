@@ -169,3 +169,111 @@ python_integration_test(
         "//eden/integration/lib:lib",
     ],
 )
+
+python_integration_test(
+    name = "io",
+    srcs = ["io_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "space",
+    srcs = ["space_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "dirfd",
+    srcs = ["dirfd_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "fd",
+    srcs = ["fd_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "lock",
+    srcs = ["lock_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "mmap",
+    srcs = ["mmap_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "scandir",
+    srcs = ["scandir_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "names",
+    srcs = ["names_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "xattr",
+    srcs = ["xattr_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
