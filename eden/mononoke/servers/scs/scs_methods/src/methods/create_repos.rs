@@ -527,11 +527,26 @@ async fn ensure_acls_allow_repo_creation(
 }
 
 #[cfg(fbcode_build)]
-fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
+fn hipster_identity(id_type: &str, id_data: &str) -> Identity {
+    Identity {
+        id_type: id_type.to_string(),
+        id_data: id_data.to_string(),
+        ..Default::default()
+    }
+}
+
+#[cfg(fbcode_build)]
+fn initial_acl_grants(maintainers: &[Identity], writers: &[Identity]) -> Vec<AclPermissionChange> {
+    let standard = |identities: &[(&str, &str)]| -> Vec<Identity> {
+        identities
+            .iter()
+            .map(|(id_type, id_data)| hipster_identity(id_type, id_data))
+            .collect()
+    };
     [
         (
             "read",
-            vec![
+            standard(&[
                 (AUTH_SET, "cocomatic_service_identities"),
                 (AUTH_SET, "coding_crewmates"),
                 (AUTH_SET, "svcscm_read_all"),
@@ -544,21 +559,25 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
                 (SANDCASTLE_TAG, "tpms_sandcastle_tag"),
                 (SANDCASTLE_CMD, "SandcastleLandCommand"),
                 (SANDCASTLE_CMD, "SandcastlePushCommand"),
-            ],
+            ]),
         ),
         (
             "write",
-            vec![
-                (AUTH_SET, "svnuser"),
-                (SANDCASTLE_CMD, "SandcastleLandCommand"),
-                (SANDCASTLE_CMD, "SandcastlePushCommand"),
-            ],
+            [
+                standard(&[
+                    (AUTH_SET, "svnuser"),
+                    (SANDCASTLE_CMD, "SandcastleLandCommand"),
+                    (SANDCASTLE_CMD, "SandcastlePushCommand"),
+                ]),
+                writers.to_vec(),
+            ]
+            .concat(),
         ),
         (
             "bypass_readonly",
-            vec![(AUTH_SET, "scm"), (SERVICE_IDENTITY, "gitremoteimport")],
+            standard(&[(AUTH_SET, "scm"), (SERVICE_IDENTITY, "gitremoteimport")]),
         ),
-        ("maintainers", vec![(AUTH_SET, hipster_group)]),
+        ("maintainers", maintainers.to_vec()),
     ]
     .into_iter()
     .map(|(action, identities)| AclPermissionChange {
@@ -566,12 +585,8 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
         operation: ChangeOperation::ADD,
         entry_changes: identities
             .into_iter()
-            .map(|(id_type, id_data)| EntryChange {
-                entry: Identity {
-                    id_type: id_type.to_string(),
-                    id_data: id_data.to_string(),
-                    ..Default::default()
-                },
+            .map(|entry| EntryChange {
+                entry,
                 operation: ChangeOperation::ADD,
                 ..Default::default()
             })
@@ -585,14 +600,11 @@ fn initial_acl_grants(hipster_group: &str) -> Vec<AclPermissionChange> {
 fn make_initial_acl_creation_request(
     acl_name: &str,
     oncall_name: &str,
-    hipster_group: &str,
+    maintainers: &[Identity],
+    writers: &[Identity],
 ) -> CommitChangeSpecificationRequest {
-    let grants = initial_acl_grants(hipster_group);
-    let repo_group = Identity {
-        id_type: REPO.to_string(),
-        id_data: acl_name.to_string(),
-        ..Default::default()
-    };
+    let grants = initial_acl_grants(maintainers, writers);
+    let repo_group = hipster_identity(REPO, acl_name);
     let acl_change = AclChange {
         acl: repo_group,
         permission_changes: grants,
@@ -621,9 +633,10 @@ async fn create_repo_acl(
     ctx: CoreContext,
     acl_name: &str,
     oncall_name: &str,
-    hipster_group: &str,
+    maintainers: &[Identity],
+    writers: &[Identity],
 ) -> Result<(), scs_errors::ServiceError> {
-    let request = make_initial_acl_creation_request(acl_name, oncall_name, hipster_group);
+    let request = make_initial_acl_creation_request(acl_name, oncall_name, maintainers, writers);
     let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     thrift_client
@@ -844,7 +857,8 @@ async fn validate_and_process_custom_acl(
             ctx,
             &acl_name,
             &repo_creation_request.oncall_name,
-            &custom_acl.hipster_group,
+            &[hipster_identity(AUTH_SET, &custom_acl.hipster_group)],
+            &[],
         )
         .await?;
     }
@@ -853,16 +867,96 @@ async fn validate_and_process_custom_acl(
 }
 
 #[cfg(fbcode_build)]
-async fn validate_top_level_acl_exists(
-    ctx: CoreContext,
-    repo_name: &str,
+fn to_hipster_identity(identity: &thrift::AclIdentity) -> Identity {
+    hipster_identity(&identity.id_type, &identity.id_data)
+}
+
+/// The ACL shape checks that need no Hipster call, run over the whole batch
+/// before any ACL is created so an invalid request has no side effects.
+#[cfg(fbcode_build)]
+fn validate_acl_request_shape(
+    request: &thrift::RepoCreationRequest,
 ) -> Result<(), scs_errors::ServiceError> {
-    let acl_name = make_top_level_acl_name_from_repo_name(repo_name);
-    if try_fetching_repo_acl(ctx, &acl_name).await?.is_none() {
+    let Some(org_acl) = &request.org_acl else {
+        return Ok(());
+    };
+    if request.custom_acl.is_some() {
+        return Err(scs_errors::invalid_request(format!(
+            "{}: custom_acl and org_acl cannot both be set",
+            request.repo_name
+        ))
+        .into());
+    }
+    if org_acl.maintainers.is_empty() {
+        return Err(scs_errors::invalid_request(format!(
+            "{}: org_acl needs at least one maintainer",
+            request.repo_name
+        ))
+        .into());
+    }
+    Ok(())
+}
+
+/// The repo inherits `repos/git/<org>`; create it from `org_acl` when it is
+/// missing, else refuse as before. A concurrent first repo in the same org
+/// can win the create; the ACL being there afterwards is what matters.
+#[cfg(fbcode_build)]
+async fn ensure_top_level_acl(
+    ctx: CoreContext,
+    repo_creation_request: &thrift::RepoCreationRequest,
+    valid_oncall_names_cache: &mut HashSet<String>,
+    valid_hipster_groups_cache: &mut HashSet<String>,
+) -> Result<(), scs_errors::ServiceError> {
+    let acl_name = make_top_level_acl_name_from_repo_name(&repo_creation_request.repo_name);
+    if try_fetching_repo_acl(ctx.clone(), &acl_name)
+        .await?
+        .is_some()
+    {
+        return Ok(());
+    }
+    let Some(org_acl) = &repo_creation_request.org_acl else {
         return Err(scs_errors::invalid_request(format!(
             "Top level acl {acl_name} does not exist!"
         ))
         .into());
+    };
+    if !is_valid_oncall_name(ctx.clone(), &org_acl.oncall_name, valid_oncall_names_cache).await? {
+        return Err(scs_errors::invalid_request(format!(
+            "Invalid oncall name: {}",
+            org_acl.oncall_name
+        ))
+        .into());
+    }
+    let maintainers: Vec<Identity> = org_acl
+        .maintainers
+        .iter()
+        .map(to_hipster_identity)
+        .collect();
+    let writers: Vec<Identity> = org_acl.writers.iter().map(to_hipster_identity).collect();
+    for group in maintainers
+        .iter()
+        .chain(&writers)
+        .filter(|identity| identity.id_type == AUTH_SET)
+    {
+        if !is_valid_hipster_group(ctx.clone(), &group.id_data, valid_hipster_groups_cache).await? {
+            return Err(scs_errors::invalid_request(format!(
+                "Invalid hipster group: {}",
+                group.id_data
+            ))
+            .into());
+        }
+    }
+    if let Err(e) = create_repo_acl(
+        ctx.clone(),
+        &acl_name,
+        &org_acl.oncall_name,
+        &maintainers,
+        &writers,
+    )
+    .await
+        && try_fetching_repo_acl(ctx, &acl_name).await?.is_none()
+    {
+        return Err(e);
     }
     Ok(())
 }
@@ -876,6 +970,11 @@ async fn update_repos_acls(
     ctx: CoreContext,
     params: &thrift::CreateReposParams,
 ) -> Result<(), scs_errors::ServiceError> {
+    params
+        .repos
+        .iter()
+        .try_for_each(validate_acl_request_shape)?;
+
     let mut valid_oncall_names_cache = HashSet::new();
     let mut valid_hipster_groups_cache = HashSet::new();
 
@@ -890,7 +989,13 @@ async fn update_repos_acls(
             )
             .await?;
         } else {
-            validate_top_level_acl_exists(ctx.clone(), &repo_creation_request.repo_name).await?;
+            ensure_top_level_acl(
+                ctx.clone(),
+                repo_creation_request,
+                &mut valid_oncall_names_cache,
+                &mut valid_hipster_groups_cache,
+            )
+            .await?;
         }
     }
     Ok(())

@@ -281,7 +281,7 @@ fn test_initial_acl_grants_include_coding_crewmates_read() {
     // -per-repo-onboarding-friction commitment made after the
     // provide_gitimport_read_access.sh backfill; grep for that script
     // name before deleting this assertion.
-    let grants = initial_acl_grants("some_hipster_group");
+    let grants = initial_acl_grants(&[hipster_identity(AUTH_SET, "some_hipster_group")], &[]);
     let read = grants
         .iter()
         .find(|g| g.action == "read")
@@ -302,7 +302,7 @@ fn test_initial_acl_grants_include_intern_graphql_controller_read() {
     // Phabricator diff pages read the repo through the intern GraphQL
     // controller with no user identity attached; without this grant every
     // `jf submit` against a fresh repo fails on the metadata read.
-    let grants = initial_acl_grants("some_hipster_group");
+    let grants = initial_acl_grants(&[hipster_identity(AUTH_SET, "some_hipster_group")], &[]);
     let read = grants
         .iter()
         .find(|g| g.action == "read")
@@ -314,6 +314,114 @@ fn test_initial_acl_grants_include_intern_graphql_controller_read() {
         }),
         "initial_acl_grants read action must grant INTERN_CONTROLLER:XInternGraphGraphQLController",
     );
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_initial_acl_grants_take_maintainers_and_writers_from_the_request() {
+    let maintainers = [
+        hipster_identity(AUTH_SET, "luisa_maintainers"),
+        hipster_identity(AUTH_SET, "scm"),
+    ];
+    let writers = [hipster_identity(ONCALL_GROUP_TYPE, "oncall_luisa")];
+    let grants = initial_acl_grants(&maintainers, &writers);
+
+    let entries = |action: &str| -> Vec<(String, String)> {
+        grants
+            .iter()
+            .find(|g| g.action == action)
+            .unwrap_or_else(|| panic!("initial_acl_grants must contain a {action} action"))
+            .entry_changes
+            .iter()
+            .map(|e| (e.entry.id_type.clone(), e.entry.id_data.clone()))
+            .collect()
+    };
+    assert_eq!(
+        entries("maintainers"),
+        vec![
+            (AUTH_SET.to_string(), "luisa_maintainers".to_string()),
+            (AUTH_SET.to_string(), "scm".to_string()),
+        ],
+        "maintainers are exactly the requested ones",
+    );
+    let write = entries("write");
+    assert!(
+        write.contains(&(ONCALL_GROUP_TYPE.to_string(), "oncall_luisa".to_string())),
+        "requested writers are granted write",
+    );
+    assert!(
+        write.contains(&(AUTH_SET.to_string(), "svnuser".to_string())),
+        "standard write grants stay",
+    );
+    assert!(
+        !entries("read")
+            .iter()
+            .any(|(_, data)| data == "oncall_luisa"),
+        "writers are not granted read on their own",
+    );
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_to_hipster_identity_keeps_type_and_data() {
+    let identity = to_hipster_identity(&thrift::AclIdentity {
+        id_type: "ONCALL_GROUP".to_string(),
+        id_data: "oncall_luisa".to_string(),
+        ..Default::default()
+    });
+    assert_eq!(identity.id_type, "ONCALL_GROUP");
+    assert_eq!(identity.id_data, "oncall_luisa");
+}
+
+#[cfg(fbcode_build)]
+fn org_acl_request(
+    custom_acl: Option<&str>,
+    maintainers: Vec<thrift::AclIdentity>,
+) -> thrift::RepoCreationRequest {
+    thrift::RepoCreationRequest {
+        repo_name: "luisa/first".to_string(),
+        oncall_name: "luisa".to_string(),
+        custom_acl: custom_acl.map(|group| thrift::CustomAclParams {
+            hipster_group: group.to_string(),
+            ..Default::default()
+        }),
+        org_acl: Some(thrift::OrgAclParams {
+            oncall_name: "luisa".to_string(),
+            maintainers,
+            writers: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+#[cfg(fbcode_build)]
+fn acl_identity(id_type: &str, id_data: &str) -> thrift::AclIdentity {
+    thrift::AclIdentity {
+        id_type: id_type.to_string(),
+        id_data: id_data.to_string(),
+        ..Default::default()
+    }
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_validate_acl_request_shape() {
+    let scm = acl_identity(AUTH_SET, "scm");
+    assert!(
+        validate_acl_request_shape(&org_acl_request(None, vec![scm.clone()])).is_ok(),
+        "org_acl with a maintainer and no custom_acl is accepted",
+    );
+    assert!(
+        validate_acl_request_shape(&thrift::RepoCreationRequest::default()).is_ok(),
+        "a request without org_acl is not this check's business",
+    );
+    let both = validate_acl_request_shape(&org_acl_request(Some("group"), vec![scm]))
+        .expect_err("custom_acl and org_acl together are refused");
+    assert!(format!("{both:?}").contains("cannot both be set"));
+    let no_maintainers = validate_acl_request_shape(&org_acl_request(None, vec![]))
+        .expect_err("an org ACL without maintainers is refused");
+    assert!(format!("{no_maintainers:?}").contains("at least one maintainer"));
 }
 
 #[mononoke::test]

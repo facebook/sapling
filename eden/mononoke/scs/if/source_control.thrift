@@ -2066,6 +2066,26 @@ struct CustomAclParams {
   1: string hipster_group;
 }
 
+/// A Hipster identity, as `<id_type>:<id_data>` spells it (e.g. AUTH_SET:scm).
+struct AclIdentity {
+  1: string id_type;
+  2: string id_data;
+}
+
+/// How to create the org ACL `repos/git/<org>` when the repo inherits it and
+/// it does not exist yet. Ignored when the ACL exists; the request still
+/// fails when the ACL is missing and these are not given.
+struct OrgAclParams {
+  /// Point of contact of the new ACL (oncall short name).
+  1: string oncall_name;
+  /// Maintainers of the new ACL, on top of the standard grants. At least one.
+  2: list<AclIdentity> maintainers;
+  /// Identities granted `write`, on top of the standard grants.
+  /// `AUTH_SET` entries here and above are checked to exist before the
+  /// create; other identity types are validated by Hipster.
+  3: list<AclIdentity> writers;
+}
+
 enum RepoSizeBucket {
   /// <100MB
   EXTRA_SMALL = 0,
@@ -2103,6 +2123,9 @@ struct RepoCreationRequest {
   /// repo's ACL; the GitHub mirror sync does, and passes gitimport
   /// --bypass-readonly. Defaults to false (writable).
   7: optional bool readonly;
+  /// Create the org ACL `repos/git/<org>` if it does not exist yet. Only
+  /// meaningful without `custom_acl`.
+  8: optional OrgAclParams org_acl;
 }
 
 struct CreateReposParams {
