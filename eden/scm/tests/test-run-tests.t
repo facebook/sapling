@@ -759,10 +759,14 @@ Accept the fix
   ----------------------------------------------------------------------
   # Ran 2 tests, 0 skipped, 0 failed.
 
+Keep the placeholder split so the legacy shell does not expand it in the Python
+heredoc.
+
   >>> data = open("test-failure.t").read()
-  >>> data.count("saved backup bundle to $TESTTMP/foo.hg")
+  >>> bundle_message = "saved backup bundle to $" + "TESTTMP/"
+  >>> data.count(bundle_message + "foo.hg")
   5
-  >>> "saved backup bundle to $TESTTMP/*.hg (glob)" in data
+  >>> bundle_message + "*.hg (glob)" in data
   True
 
 Race condition - test file was modified when test is running
