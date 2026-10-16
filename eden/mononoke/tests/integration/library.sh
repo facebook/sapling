@@ -1683,9 +1683,6 @@ function microwave_builder() {
 }
 
 function derivation_pipeline_tailer {
-  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
-  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
-  THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   GLOG_minloglevel=5 "$DERIVATION_PIPELINE_TAILER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
