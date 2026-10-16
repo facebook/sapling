@@ -339,7 +339,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             )
             .await;
         if result.is_ok() && compare_partial {
-            crate::util::print_partial_note();
+            crate::util::print_partial_note(crate::util::partial_groups(&response.partial_info));
         }
         return result;
     }
@@ -401,7 +401,9 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         )
         .await;
     if result.is_ok() && (compare_partial || conn.is_partial()) {
-        crate::util::print_partial_note();
+        let mut groups = crate::util::partial_groups(&response.partial_info);
+        groups.extend(conn.partial_groups());
+        crate::util::print_partial_note(groups);
     }
     result
 }

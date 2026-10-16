@@ -7,6 +7,7 @@
 
 use std::io::Write;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
@@ -105,17 +106,22 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         // stream is consumed.
         let terminal_partial = Arc::new(AtomicBool::new(false));
         let observed = terminal_partial.clone();
+        let terminal_groups = Arc::new(Mutex::new(Vec::new()));
+        let collected = terminal_groups.clone();
         let response = response_stream
             .map_ok(move |entry| {
                 if crate::util::is_partial_verdict(&entry.partial_info) {
                     observed.store(true, Ordering::Relaxed);
+                    *collected.lock().expect("lock poisoned") =
+                        crate::util::partial_groups(&entry.partial_info);
                 }
                 FileListOutput(entry.files)
             })
             .map_err(Into::into);
         let result = app.target.render(&args, response).await;
         if result.is_ok() && terminal_partial.load(Ordering::Relaxed) {
-            crate::util::print_partial_note();
+            let groups = terminal_groups.lock().expect("lock poisoned").clone();
+            crate::util::print_partial_note(groups);
         }
         result
     } else {
@@ -129,7 +135,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .render_one(&args, FileListOutput(response.files))
             .await;
         if result.is_ok() && files_partial {
-            crate::util::print_partial_note();
+            crate::util::print_partial_note(crate::util::partial_groups(&response.partial_info));
         }
         result
     }

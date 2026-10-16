@@ -302,7 +302,7 @@ async fn multiple_path_info(
     });
     let result = app.target.render(&args, output).await;
     if result.is_ok() && info_partial {
-        crate::util::print_partial_note();
+        crate::util::print_partial_note(crate::util::partial_groups(&response.partial_info));
     }
     result
 }

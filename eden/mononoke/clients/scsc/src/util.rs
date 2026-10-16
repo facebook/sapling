@@ -7,6 +7,8 @@
 
 //! Utility traits and functions.
 
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use chrono::DateTime;
 use chrono::NaiveDateTime;
@@ -25,11 +27,67 @@ pub(crate) fn is_partial_verdict(
     partial_info.as_ref().is_some_and(|info| info.partial)
 }
 
-/// Print the partial-response note to stderr. Always stderr so stdout
-/// (including `--json`) stays machine-readable. Call once, after rendering
-/// output succeeds.
-pub(crate) fn print_partial_note() {
+/// Omission groups carried by a `partial_info` verdict, if any.
+pub(crate) fn partial_groups(
+    partial_info: &Option<scs_client_raw::thrift::PartialResponseInfo>,
+) -> Vec<scs_client_raw::thrift::OmittedRestrictionGroup> {
+    partial_info
+        .as_ref()
+        .and_then(|info| info.omitted_by_restriction.clone())
+        .unwrap_or_default()
+}
+
+/// Merge omission groups from several responses into one deduplicated list:
+/// groups naming the same restriction (root, ACL, request group) combine
+/// their counts. Sorted for stable output.
+pub(crate) fn merge_partial_groups(
+    groups: Vec<scs_client_raw::thrift::OmittedRestrictionGroup>,
+) -> Vec<scs_client_raw::thrift::OmittedRestrictionGroup> {
+    let mut combined: BTreeMap<(Option<String>, String, String), i64> = BTreeMap::new();
+    for group in groups {
+        *combined
+            .entry((
+                group.restriction_root,
+                group.repo_region_acl,
+                group.permission_request_group,
+            ))
+            .or_default() += group.omitted_count;
+    }
+    combined
+        .into_iter()
+        .map(
+            |((restriction_root, repo_region_acl, permission_request_group), omitted_count)| {
+                scs_client_raw::thrift::OmittedRestrictionGroup {
+                    restriction_root,
+                    repo_region_acl,
+                    permission_request_group,
+                    omitted_count,
+                    ..Default::default()
+                }
+            },
+        )
+        .collect()
+}
+
+/// Print the partial-response note to stderr, with one line per denying
+/// restriction. Always stderr so stdout (including `--json`) stays
+/// machine-readable. Call once, after rendering output succeeds.
+pub(crate) fn print_partial_note(groups: Vec<scs_client_raw::thrift::OmittedRestrictionGroup>) {
     eprintln!("note: response is partial: some paths were omitted due to restricted-path access");
+    for group in merge_partial_groups(groups) {
+        let count = group.omitted_count;
+        let paths = plural(count, "path", "paths");
+        match &group.restriction_root {
+            Some(root) => eprintln!(
+                "note: omitted {count} {paths} under {root} ({}; request access to: {})",
+                group.repo_region_acl, group.permission_request_group,
+            ),
+            None => eprintln!(
+                "note: omitted {count} {paths} ({}; request access to: {})",
+                group.repo_region_acl, group.permission_request_group,
+            ),
+        }
+    }
 }
 
 fn byte_count(size: i64, unit_single: &str, unit_plural: &str, multiple: &[&str]) -> String {
@@ -85,4 +143,59 @@ pub(crate) fn convert_to_ts(date_str: Option<&str>) -> Result<Option<i64>> {
     }
 
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn group(
+        root: Option<&str>,
+        acl: &str,
+        request_group: &str,
+        count: i64,
+    ) -> scs_client_raw::thrift::OmittedRestrictionGroup {
+        scs_client_raw::thrift::OmittedRestrictionGroup {
+            restriction_root: root.map(str::to_string),
+            repo_region_acl: acl.to_string(),
+            permission_request_group: request_group.to_string(),
+            omitted_count: count,
+            ..Default::default()
+        }
+    }
+
+    #[mononoke::test]
+    fn merge_combines_same_restriction_and_sorts() {
+        let merged = merge_partial_groups(vec![
+            group(Some("tent_b"), "REPO_REGION:b", "b", 1),
+            group(Some("tent_a"), "REPO_REGION:a", "a", 2),
+            group(Some("tent_a"), "REPO_REGION:a", "a", 3),
+            group(None, "REPO_REGION:m", "m", 1),
+        ]);
+        let summary: Vec<_> = merged
+            .iter()
+            .map(|group| (group.restriction_root.clone(), group.omitted_count))
+            .collect();
+        // Rootless groups sort first; tent_a's counts combine.
+        assert_eq!(
+            summary,
+            vec![
+                (None, 1),
+                (Some("tent_a".to_string()), 5),
+                (Some("tent_b".to_string()), 1),
+            ],
+        );
+    }
+
+    #[mononoke::test]
+    fn merge_distinguishes_request_group() {
+        // Same root and ACL but different request groups stay separate.
+        let merged = merge_partial_groups(vec![
+            group(Some("tent"), "REPO_REGION:acl", "group_one", 1),
+            group(Some("tent"), "REPO_REGION:acl", "group_two", 1),
+        ]);
+        assert_eq!(merged.len(), 2);
+    }
 }
