@@ -22,10 +22,12 @@ import {t} from '../i18n';
 import {Internal} from '../Internal';
 import platform from '../platform';
 import {optimisticMergeConflicts} from '../previews';
-import {repositoryInfo} from '../serverAPIState';
+import {repositoryInfo, useSupportsAgentPrompts} from '../serverAPIState';
+import {showToast} from '../toast';
 import type {CommitInfo, PlatformSpecificClientToServerMessages} from '../types';
 import {bumpSmartAction, useSortedActions} from './smartActionsOrdering';
 import type {ActionContext, ActionMenuItem, SmartActionConfig} from './types';
+import {withUserContext} from './userContext';
 
 const smartActionsConfig = [
   // Internal actions
@@ -88,6 +90,7 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   const repo = useAtomValue(repositoryInfo);
   const conflicts = useAtomValue(optimisticMergeConflicts);
   const featureFlagsLoadable = useAtomValue(loadableFeatureFlagsAtom);
+  const agentPrompts = useSupportsAgentPrompts();
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
   const isMenuOpen = useAtomValue(contextMenuState) != null;
   const wasMenuOpenOnPointerDown = useRef(false);
@@ -117,6 +120,7 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
             config,
             context,
             config.featureFlag ? featureFlags[config.featureFlag as string] : true,
+            agentPrompts,
           )
         ) {
           items.push({
@@ -129,7 +133,7 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
     }
 
     return items;
-  }, [featureFlagsLoadable, context, featureFlags]);
+  }, [featureFlagsLoadable, context, featureFlags, agentPrompts]);
 
   const sortedActionItems = useSortedActions(availableActionItems);
 
@@ -320,12 +324,18 @@ function shouldShowSmartAction(
   config: SmartActionConfig,
   context: ActionContext,
   passesFeatureFlag: boolean,
+  supportsAgentPrompts: boolean,
 ): boolean {
   if (!passesFeatureFlag) {
     return false;
   }
 
-  if (config.platformRestriction && !config.platformRestriction?.includes(platform.platformName)) {
+  const usesAgentPrompt = supportsAgentPrompts && config.getAgentPrompt != null;
+  if (
+    !usesAgentPrompt &&
+    config.platformRestriction &&
+    !config.platformRestriction?.includes(platform.platformName)
+  ) {
     return false;
   }
 
@@ -345,6 +355,29 @@ function runSmartAction(config: SmartActionConfig, context: ActionContext): void
   tracker.track('SmartActionClicked', {
     extras: {action: config.trackEventName, withUserContext: context.userContext != null},
   });
+  if (config.getAgentPrompt != null && platform.supportsAgentPrompts?.()) {
+    const {displayPrompt, modelPrompt} = withUserContext(
+      config.getAgentPrompt(context),
+      context.userContext,
+    );
+    platform
+      .promptAgent?.({
+        actionId: config.id,
+        displayPrompt,
+        modelPrompt,
+        awaitResponse: config.onAgentResponse != null,
+      })
+      .then(response => config.onAgentResponse?.(response ?? ''))
+      .catch((error: Error) =>
+        showToast(
+          t('$action failed: $error', {replace: {$action: config.label, $error: error.message}}),
+          {
+            durationMs: 8000,
+          },
+        ),
+      );
+    return;
+  }
   if (config.getMessagePayload) {
     const payload = config.getMessagePayload(context);
     serverAPI.postMessage({

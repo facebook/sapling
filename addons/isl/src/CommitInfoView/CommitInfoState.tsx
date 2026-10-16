@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
+import type {Hash, ServerToClientMessage} from '../types';
 import type {CommitMessageFields} from './types';
 
 import {ErrorNotice} from 'isl-components/ErrorNotice';
@@ -130,49 +130,55 @@ export const __TEST__ = {
 };
 registerCleanup(successionTracker, updateEditedCommitMessagesFromSuccessions, import.meta.hot);
 
-// Handle updateDraftCommitMessage messages
+export function updateDraftCommitMessage(
+  event: Extract<ServerToClientMessage, {type: 'updateDraftCommitMessage'}>,
+) {
+  const title = event.title;
+  const description = event.description;
+  const mode = event.mode ?? 'commit'; // Default to 'commit' if not specified
+  const hash = event.hash ?? readAtom(latestHeadCommit)?.hash ?? 'head';
+  // If a specific hash is provided, ensure the commit exists and select it
+  const commit = readAtom(dagWithPreviews).get(hash);
+  if (mode !== 'commit' && commit?.phase === 'public') {
+    showToast(
+      <ErrorNotice
+        title="Cannot update commit message"
+        error={
+          new Error(
+            `Commit ${hash} is a public commit and cannot be modified. Please select a draft commit or use commit mode instead.`,
+          )
+        }
+      />,
+      {durationMs: 8000},
+    );
+    return;
+  }
+
+  const schema = readAtom(commitMessageFieldsSchema);
+  if (schema == null) {
+    return;
+  }
+  const fields = parseCommitMessageFields(schema, title, description);
+
+  const key = mode === 'commit' ? 'head' : hash;
+  const currentMessage = readAtom(editedCommitMessages(key));
+  // Non-empty fields replace existing values, empty fields preserve current values.
+  // By passing fields first, mergeOnlyEmptyMessageFields will prefer the new fields when non-empty.
+  writeAtom(
+    editedCommitMessages(key),
+    mergeOnlyEmptyMessageFields(schema, fields, currentMessage as CommitMessageFields),
+  );
+
+  if (event.preserveFocus !== true) {
+    expandCommitInfoView();
+    writeAtom(selectedCommits, new Set([hash]));
+    writeAtom(rawCommitMode, mode);
+  }
+}
+
 registerDisposable(
   serverAPI,
-  serverAPI.onMessageOfType('updateDraftCommitMessage', event => {
-    const title = event.title;
-    const description = event.description;
-    const mode = event.mode ?? 'commit'; // Default to 'commit' if not specified
-    const hash = event.hash ?? readAtom(latestHeadCommit)?.hash ?? 'head';
-    // If a specific hash is provided, ensure the commit exists and select it
-    const commit = readAtom(dagWithPreviews).get(hash);
-    if (mode !== 'commit' && commit?.phase === 'public') {
-      showToast(
-        <ErrorNotice
-          title="Cannot update commit message"
-          error={
-            new Error(
-              `Commit ${hash} is a public commit and cannot be modified. Please select a draft commit or use commit mode instead.`,
-            )
-          }
-        />,
-        {durationMs: 8000},
-      );
-      return;
-    }
-
-    const schema = readAtom(commitMessageFieldsSchema);
-    const fields = parseCommitMessageFields(schema, title, description);
-
-    const key = mode === 'commit' ? 'head' : hash;
-    const currentMessage = readAtom(editedCommitMessages(key));
-    // Non-empty fields replace existing values, empty fields preserve current values.
-    // By passing fields first, mergeOnlyEmptyMessageFields will prefer the new fields when non-empty.
-    writeAtom(
-      editedCommitMessages(key),
-      mergeOnlyEmptyMessageFields(schema, fields, currentMessage as CommitMessageFields),
-    );
-
-    if (event.preserveFocus !== true) {
-      expandCommitInfoView();
-      writeAtom(selectedCommits, new Set([hash]));
-      writeAtom(rawCommitMode, mode);
-    }
-  }),
+  serverAPI.onMessageOfType('updateDraftCommitMessage', updateDraftCommitMessage),
 );
 
 registerDisposable(

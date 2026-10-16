@@ -934,6 +934,18 @@ export type PlatformSpecificServerToClientMessages =
       error?: string;
     };
 
+/** A prompt for the embedding host's AI agent. See `Platform.promptAgent`. */
+export type AgentPrompt = {
+  /** Smart action id, e.g. 'review-code'. Used for telemetry. */
+  actionId: string;
+  /** Short human-readable label. */
+  displayPrompt: string;
+  /** The full prompt sent to the agent. */
+  modelPrompt: string;
+  /** Wait for the agent's final response, instead of only starting a chat. */
+  awaitResponse?: boolean;
+};
+
 export type CodeReviewProviderSpecificClientToServerMessages =
   never | InternalTypes['PhabricatorClientToServerMessages'];
 

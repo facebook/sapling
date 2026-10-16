@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo} from '../types';
+import type {CommitInfo, Hash} from '../types';
 import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
@@ -13,7 +13,6 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {LinkButton} from 'isl-components/LinkButton';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {useCallback} from 'react';
 import {cn} from 'shared/cn';
 import {useContextMenu} from 'shared/ContextMenu';
 import {layout} from '../../../components/theme/layout';
@@ -26,12 +25,9 @@ import {Internal} from '../Internal';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {dagWithPreviews} from '../previews';
-import {showConfirmation, useModal} from '../useModal';
-import {
-  commitMessageTemplate,
-  editedCommitMessages,
-  getDefaultEditedCommitMessage,
-} from './CommitInfoState';
+import {useSupportsAgentPrompts} from '../serverAPIState';
+import {showConfirmation, showModal} from '../useModal';
+import {commitMessageTemplate, editedCommitMessages} from './CommitInfoState';
 import {
   commitMessageFieldsSchema,
   findConflictingFieldsWhenMerging,
@@ -107,8 +103,59 @@ const fillCommitMessageMethods: Array<{
   ...(Internal.fillCommitMessageMethods ?? []),
 ];
 
+/**
+ * Fill `newMessage` into the edited message for `hashOrHead`, asking the user how to combine it
+ * with any conflicting fields they already wrote.
+ */
+async function fillCommitMessage(hashOrHead: Hash | 'head', newMessage: CommitMessageFields) {
+  const schema = readAtom(commitMessageFieldsSchema);
+  const existing = readAtom(editedCommitMessages(hashOrHead));
+  if (schema == null) {
+    return;
+  }
+  if (existing == null) {
+    writeAtom(editedCommitMessages(hashOrHead), newMessage);
+    return;
+  }
+  const oldMessage = existing as CommitMessageFields;
+  const buttons = [
+    {label: t('Cancel')},
+    {label: t('Overwrite')},
+    {label: t('Merge')},
+    {label: t('Only Fill Empty'), primary: true},
+  ] as const;
+  let answer: (typeof buttons)[number] | undefined = buttons[2]; // merge if no conflicts
+  const conflictingFields = findConflictingFieldsWhenMerging(schema, oldMessage, newMessage);
+  if (conflictingFields.length > 0) {
+    answer = await showModal({
+      type: 'confirm',
+      title: t('Commit Messages Conflict'),
+      icon: 'warning',
+      message: (
+        <MessageConflictWarning
+          conflictingFields={conflictingFields}
+          oldMessage={oldMessage}
+          newMessage={newMessage}
+        />
+      ),
+      buttons,
+    });
+  }
+  if (answer === buttons[3]) {
+    const merged = mergeOnlyEmptyMessageFields(schema, oldMessage, newMessage);
+    writeAtom(editedCommitMessages(hashOrHead), merged);
+    return;
+  } else if (answer === buttons[2]) {
+    const merged = mergeCommitMessageFields(schema, oldMessage, newMessage);
+    writeAtom(editedCommitMessages(hashOrHead), merged);
+    return;
+  } else if (answer === buttons[1]) {
+    writeAtom(editedCommitMessages(hashOrHead), newMessage);
+    return;
+  }
+}
+
 export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: CommitInfoMode}) {
-  const showModal = useModal();
   const menu = useContextMenu(() => [
     {
       label: t('Clear commit message'),
@@ -123,63 +170,12 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
       },
     },
   ]);
-  const fillMessage = useCallback(
-    async (newMessage: CommitMessageFields) => {
-      const hashOrHead = mode === 'commit' ? 'head' : commit.hash;
-      // TODO: support amending a message
-
-      const schema = readAtom(commitMessageFieldsSchema);
-      const existing = readAtom(editedCommitMessages(hashOrHead));
-      if (schema == null) {
-        return;
-      }
-      if (existing == null) {
-        writeAtom(editedCommitMessages(hashOrHead), getDefaultEditedCommitMessage());
-        return;
-      }
-      const oldMessage = existing as CommitMessageFields;
-      const buttons = [
-        {label: t('Cancel')},
-        {label: t('Overwrite')},
-        {label: t('Merge')},
-        {label: t('Only Fill Empty'), primary: true},
-      ] as const;
-      let answer: (typeof buttons)[number] | undefined = buttons[2]; // merge if no conflicts
-      const conflictingFields = findConflictingFieldsWhenMerging(schema, oldMessage, newMessage);
-      if (conflictingFields.length > 0) {
-        answer = await showModal({
-          type: 'confirm',
-          title: t('Commit Messages Conflict'),
-          icon: 'warning',
-          message: (
-            <MessageConflictWarning
-              conflictingFields={conflictingFields}
-              oldMessage={oldMessage}
-              newMessage={newMessage}
-            />
-          ),
-          buttons,
-        });
-      }
-      if (answer === buttons[3]) {
-        const merged = mergeOnlyEmptyMessageFields(schema, oldMessage, newMessage);
-        writeAtom(editedCommitMessages(hashOrHead), merged);
-        return;
-      } else if (answer === buttons[2]) {
-        const merged = mergeCommitMessageFields(schema, oldMessage, newMessage);
-        writeAtom(editedCommitMessages(hashOrHead), merged);
-        return;
-      } else if (answer === buttons[1]) {
-        writeAtom(editedCommitMessages(hashOrHead), newMessage);
-        return;
-      }
-    },
-    [commit, mode, showModal],
-  );
-
+  const supportsAgentPrompts = useSupportsAgentPrompts();
   const showDevmate =
     useFeatureFlagSync(Internal.featureFlags?.AIGenerateCommitMessage) &&
-    (platform.platformName === 'vscode' || platform.platformName === 'browser');
+    (platform.platformName === 'vscode' ||
+      platform.platformName === 'browser' ||
+      supportsAgentPrompts);
 
   const methods = (
     <>
@@ -203,7 +199,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
                     if (newMessage == null) {
                       return;
                     }
-                    fillMessage(newMessage);
+                    fillCommitMessage(mode === 'commit' ? 'head' : commit.hash, newMessage);
                   },
                 );
               }}>

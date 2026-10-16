@@ -25,6 +25,14 @@ export type SmartActionConfig = {
   trackEventName: string;
   featureFlag?: FeatureFlagKey;
   platformRestriction?: PlatformRestriction;
+  /**
+   * On platforms with their own agent (`Platform.supportsAgentPrompts`), the action sends this
+   * prompt instead of `getMessagePayload`, regardless of `platformRestriction`.
+   * `context.userContext` is appended to it afterwards.
+   */
+  getAgentPrompt?: (context: ActionContext) => {displayPrompt: string; modelPrompt: string};
+  /** Receives the agent's final response to `getAgentPrompt`. */
+  onAgentResponse?: (response: string) => void;
   shouldShow?: (context: ActionContext) => boolean;
   getMessagePayload: (context: ActionContext) => PlatformSpecificClientToServerMessages;
 };

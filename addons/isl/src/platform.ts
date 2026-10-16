@@ -12,6 +12,7 @@ import type {MessageBus} from './MessageBus';
 import type {ThemeColor} from './theme';
 import type {
   AbsolutePath,
+  AgentPrompt,
   Disposable,
   OneIndexedLineNumber,
   PageVisibility,
@@ -102,6 +103,17 @@ export interface Platform {
   messageBus: MessageBus;
   /** In browser-like platforms, some ISL parameters are passed via URL query params */
   initialUrlParams?: Map<InitialParamKeys, string>;
+
+  /**
+   * Whether `promptAgent` is available. This may change whenever the connection to the host opens.
+   * When true, AI smart actions send their prompts to the host's agent instead of Devmate.
+   */
+  supportsAgentPrompts?(): boolean;
+  /**
+   * Send a prompt to the embedding host's AI agent, which decides how to run it.
+   * With `awaitResponse`, resolves with the agent's final response; otherwise once it is sent.
+   */
+  promptAgent?(prompt: AgentPrompt): Promise<string | undefined>;
 
   /** If the platform has a notion of AI code review, methods for listening to them. */
   aiCodeReview?: {
