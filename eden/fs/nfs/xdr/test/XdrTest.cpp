@@ -9,6 +9,9 @@
 
 #include "eden/fs/nfs/xdr/Xdr.h"
 #include <folly/container/Array.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include "eden/fs/nfs/testharness/XdrTestUtils.h"
 
@@ -31,6 +34,32 @@ TEST(XdrSerialize, integers) {
 
   auto fixedNumbers = folly::make_array<uint32_t>(3, 2, 1);
   roundtrip(fixedNumbers);
+}
+
+TEST(XdrDeserialize, lengthPrefixBeyondBuffer) {
+  auto buf = folly::IOBuf::copyBuffer(
+      std::string("\x00\x10\x00\x00", 4) + std::string(8, 'x'));
+  {
+    folly::io::Cursor cursor(buf.get());
+    EXPECT_THROW_RE(
+        XdrTrait<std::vector<uint8_t>>::deserialize(cursor),
+        std::out_of_range,
+        "underflow");
+  }
+  {
+    folly::io::Cursor cursor(buf.get());
+    EXPECT_THROW_RE(
+        XdrTrait<std::string>::deserialize(cursor),
+        std::out_of_range,
+        "underflow");
+  }
+  {
+    folly::io::Cursor cursor(buf.get());
+    EXPECT_THROW_RE(
+        XdrTrait<std::vector<uint32_t>>::deserialize(cursor),
+        std::out_of_range,
+        "underflow");
+  }
 }
 
 struct MySerializableStruct {
