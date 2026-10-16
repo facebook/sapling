@@ -25,7 +25,6 @@ use crate::Walk;
 use crate::WalkType;
 use crate::important_metadata;
 use crate::interesting_metadata;
-use crate::walk_threshold;
 
 pub(crate) struct GcResult {
     pub(crate) deleted_nodes: usize,
@@ -225,7 +224,6 @@ impl WalkNode {
         walk_type: WalkType,
         walk_root: &RepoPath,
         mut walk: Walk,
-        root_depth: usize,
     ) -> &mut Self {
         if self.get_walk_for_type(walk_type).is_some() {
             // Refresh our last_access_time as we see a descendant walk getting inserted. In general
@@ -252,16 +250,16 @@ impl WalkNode {
                     self.children
                         .get_mut(head)
                         .unwrap()
-                        .insert_walk(config, walk_type, tail, walk, root_depth)
+                        .insert_walk(config, walk_type, tail, walk)
                 } else {
                     self.children
                         .entry(head.to_owned())
                         .or_insert_with(|| Self::new(config.gc_timeout))
-                        .insert_walk(config, walk_type, tail, walk, root_depth)
+                        .insert_walk(config, walk_type, tail, walk)
                 }
             }
             None => {
-                let threshold = walk_threshold(config, root_depth);
+                let threshold = config.walk_threshold;
                 let walk_ratio = config.walk_ratio;
 
                 self.clear_advanced_children(walk_type);
@@ -287,7 +285,7 @@ impl WalkNode {
                         new_depth = walk.depth,
                         "advancing walk after removing descendants"
                     );
-                    self.insert_walk(config, walk_type, walk_root, walk, root_depth)
+                    self.insert_walk(config, walk_type, walk_root, walk)
                 } else {
                     self.set_walk_for_type(walk_type, Some(walk));
                     self

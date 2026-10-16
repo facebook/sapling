@@ -361,14 +361,6 @@ impl BackingStore {
             walk_detector.set_walk_threshold(threshold);
         }
 
-        if let Some(depth) = config.get_opt("backingstore", "walk-lax-depth")? {
-            walk_detector.set_lax_depth(depth);
-        }
-
-        if let Some(depth) = config.get_opt("backingstore", "walk-strict-multiplier")? {
-            walk_detector.set_strict_multiplier(depth);
-        }
-
         if let Some(threshold) = config.get_opt("backingstore", "walk-ratio")? {
             walk_detector.set_walk_ratio(threshold);
         }
@@ -397,7 +389,7 @@ impl BackingStore {
             let prefetch_config = prefetch::Config {
                 // Pause prefetch if ratio of walker reads to prefetches is below min_ratio AND
                 // prefetches - reads is greater than max_initial_lag.
-                min_ratio: config.get_or("backingstore", "walk-prefetch-min-ratio", || 0.1)?,
+                min_ratio: config.get_or("backingstore", "walk-prefetch-min-ratio", || 0.25)?,
                 max_initial_lag: config.get_or(
                     "backingstore",
                     "walk-prefetch-max-initial-lag",
@@ -411,7 +403,7 @@ impl BackingStore {
                 file_batch_size: config.get_or(
                     "backingstore",
                     "walk-prefetch-file-batch-size",
-                    || 4_096,
+                    || 2_048,
                 )?,
                 max_concurrent_file_fetches: config
                     .get_or(

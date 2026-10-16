@@ -27,12 +27,6 @@ define_flags! {
         /// Walk ratio
         walk_ratio: Option<String>,
 
-        /// Lax depth
-        lax_depth: Option<i64>,
-
-        /// Strict multiplier
-        strict_multiplier: Option<i64>,
-
         /// Read directory info and inject into walk detector. Assumes input paths are relative to CWD.
         inject_dir_hints: bool = false,
 
@@ -68,14 +62,6 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
 
     if let Some(ratio) = &ctx.opts.walk_ratio {
         detector.set_walk_ratio(ratio.parse()?);
-    }
-
-    if let Some(lax_depth) = ctx.opts.lax_depth {
-        detector.set_lax_depth(lax_depth as usize);
-    }
-
-    if let Some(multiplier) = ctx.opts.strict_multiplier {
-        detector.set_strict_multiplier(multiplier as usize);
     }
 
     let detector = Arc::new(detector);

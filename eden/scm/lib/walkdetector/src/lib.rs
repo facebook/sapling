@@ -126,14 +126,6 @@ impl Detector {
         self.config.walk_threshold = threshold;
     }
 
-    pub fn set_lax_depth(&mut self, depth: usize) {
-        self.config.lax_depth = depth;
-    }
-
-    pub fn set_strict_multiplier(&mut self, multiplier: usize) {
-        self.config.strict_multiplier = multiplier;
-    }
-
     pub fn set_walk_ratio(&mut self, threshold: f64) {
         if threshold <= 0.0 {
             return;
@@ -470,7 +462,7 @@ impl Detector {
         let mut walk_changed = self.maybe_gc();
         let mut inner = self.inner.write();
 
-        let walk_threshold = walk_threshold(&self.config, dir_path.depth());
+        let walk_threshold = self.config.walk_threshold;
         let walk_ratio = self.config.walk_ratio;
 
         let (owner, suffix) =
@@ -574,7 +566,7 @@ impl Detector {
 
         let mut inner = self.inner.write();
 
-        let walk_threshold = walk_threshold(&self.config, dir_path.depth());
+        let walk_threshold = self.config.walk_threshold;
         let walk_ratio = self.config.walk_ratio;
 
         let (owner, suffix) =
@@ -812,9 +804,7 @@ impl Inner {
             }
         }
 
-        let walk_node = self
-            .node
-            .insert_walk(config, walk_type, dir, walk, dir.depth());
+        let walk_node = self.node.insert_walk(config, walk_type, dir, walk);
         walk_node.last_access.bump();
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -859,7 +849,7 @@ impl Inner {
         let parent_node = self.node.get_node(parent_dir)?;
 
         let walk = should_merge_into_ancestor(
-            walk_threshold(config, parent_dir.depth()),
+            config.walk_threshold,
             config.walk_ratio,
             walk_type,
             dir,
@@ -897,7 +887,7 @@ impl Inner {
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
 
         let walk = should_merge_into_ancestor(
-            walk_threshold(config, grandparent_dir.depth()),
+            config.walk_threshold,
             config.walk_ratio,
             walk_type,
             dir,
@@ -932,8 +922,7 @@ impl Inner {
             suffix.split_first_component()?.0
         };
 
-        let ancestor_depth = ancestor_dir.depth();
-        let threshold = walk_threshold(config, ancestor_depth);
+        let threshold = config.walk_threshold;
 
         // Check if the containing walk's node has N children with descendants that
         // have pushed to the next depth. The idea is we want some confidence before
@@ -1002,7 +991,7 @@ impl Inner {
             // "foo/bar" allows all the activity under "foo/bar" to be consolidated easily to a
             // single walk.
 
-            let threshold = walk_threshold(config, ancestor_depth + 1);
+            let threshold = config.walk_threshold;
             let split_off_child = match ancestor.get_node(head.as_ref()) {
                 // If we have directory size hints, use them.
                 Some(child) => {
@@ -1117,16 +1106,6 @@ struct PersistedMetadata<'a> {
     dirs: usize,
 }
 
-fn walk_threshold(config: &Config, walk_root_depth: usize) -> usize {
-    // Add a threshold multiplier for walk roots that are shallower than `lax_depth`. This
-    // makes it harder for walks to percolate "too high".
-    if walk_root_depth < config.lax_depth {
-        (config.strict_multiplier * config.walk_threshold).max(config.walk_threshold)
-    } else {
-        config.walk_threshold
-    }
-}
-
 /// Check if existing walks at nodes `ancestor_distance` below `ancestor` should be "merged" into a
 /// new walk at `ancestor`. Returns the new walk to be inserted, if any.
 fn should_merge_into_ancestor(
@@ -1192,12 +1171,6 @@ fn should_merge_into_ancestor(
 // How many children must be accessed in a directory to consider the directory "walked".
 const DEFAULT_WALK_THRESHOLD: usize = 3;
 
-// Walk threshold multiplier for walks near the top of the repo.
-const DEFAULT_STRICT_MULTIPLIER: usize = 20;
-
-// Depth at which we no longer get the strict multiplier. 0 means we never get the multiplier.
-const DEFAULT_LAX_DEPTH: usize = 0;
-
 // If we know the total dir size, make sure walk threshold is at least 3% of dir size.
 // This avoids detecting walks for enormous directories too quickly.
 const DEFAULT_WALK_RATIO: f64 = 0.03;
@@ -1207,17 +1180,13 @@ const DEFAULT_WALK_RATIO: f64 = 0.03;
 const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(10);
 
 // How stale a walk must be before we remove it.
-const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(5);
+const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Clone)]
 struct Config {
     // "How many children must be accessed before we consider parent walked?"
     // This is the main threshold to tune detector aggro.
     walk_threshold: usize,
-    // Walks with depth < lax_depth will use a stricter walk_threshold.
-    lax_depth: usize,
-    // Walk threshold multiplier for walks rooted shallower than lax_depth.
-    strict_multiplier: usize,
     // A minimum walk threshold as ratio of total directory size. This only applies when we know the
     // size of the directory. This slows down walk detection in humongous directories.
     walk_ratio: f64,
@@ -1232,8 +1201,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             walk_threshold: DEFAULT_WALK_THRESHOLD,
-            lax_depth: DEFAULT_LAX_DEPTH,
-            strict_multiplier: DEFAULT_STRICT_MULTIPLIER,
             walk_ratio: DEFAULT_WALK_RATIO,
             gc_interval: DEFAULT_GC_INTERVAL,
             gc_timeout: DEFAULT_GC_TIMEOUT,
