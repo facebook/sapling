@@ -67,6 +67,7 @@ add_fb_python_unittest(
 
 add_subdirectory(hg)
 add_subdirectory(helpers)
+add_subdirectory(posix)
 
 if(IS_FB_BUILD)
   add_subdirectory(facebook/lib)

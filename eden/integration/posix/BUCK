@@ -1,0 +1,171 @@
+load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
+load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("scm_client_infra")
+
+artifacts = get_integration_test_env_and_deps()
+
+python_library(
+    name = "base",
+    srcs = ["base.py"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "chmod",
+    srcs = ["chmod_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "chown",
+    srcs = ["chown_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "truncate",
+    srcs = ["truncate_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "link",
+    srcs = ["link_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "mkdir",
+    srcs = ["mkdir_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "mkfifo",
+    srcs = ["mkfifo_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "mknod",
+    srcs = ["mknod_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "open",
+    srcs = ["open_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "rename",
+    srcs = ["rename_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "rmdir",
+    srcs = ["rmdir_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "symlink",
+    srcs = ["symlink_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "unlink",
+    srcs = ["unlink_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
+    name = "utimensat",
+    srcs = ["utimensat_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        ":base",
+        "//eden/integration/lib:lib",
+    ],
+)
