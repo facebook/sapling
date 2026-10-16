@@ -43,6 +43,22 @@ class TestFastPathProcessor : public RpcServerProcessor {
   }
 };
 
+class TestEchoProcessor : public RpcServerProcessor {
+ public:
+  ImmediateFuture<folly::Unit> dispatchRpc(
+      folly::io::Cursor /*deser*/,
+      folly::io::QueueAppender ser,
+      uint32_t xid,
+      uint32_t /*progNumber*/,
+      uint32_t /*progVersion*/,
+      uint32_t procNumber,
+      const std::optional<authsys_parms>& /*authSysCreds*/) override {
+    serializeReply(ser, accept_stat::SUCCESS, xid);
+    XdrTrait<uint32_t>::serialize(ser, procNumber);
+    return folly::unit;
+  }
+};
+
 std::unique_ptr<folly::IOBuf>
 buildRpcRequestWithCred(uint32_t xid, uint32_t proc, opaque_auth cred) {
   folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
@@ -106,6 +122,20 @@ std::unique_ptr<folly::IOBuf> splitIntoTwoFragments(
   appender.push(payload.data(), firstLength);
   appender.writeBE<uint32_t>(0x80000000u | static_cast<uint32_t>(secondLength));
   appender.push(payload.data() + firstLength, secondLength);
+  return queue.move();
+}
+
+/**
+ * Put an empty, non-final fragment in front of a single-fragment request.
+ */
+std::unique_ptr<folly::IOBuf> prependEmptyFragment(
+    std::unique_ptr<folly::IOBuf> request) {
+  auto bytes = request->coalesce();
+
+  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender appender(&queue, 256);
+  appender.writeBE<uint32_t>(0);
+  appender.push(bytes.data(), bytes.size());
   return queue.move();
 }
 
@@ -256,6 +286,23 @@ struct RpcServerTest : ::testing::Test {
       std::unique_ptr<folly::IOBuf> request,
       const char* failMsg = "Expected an RPC reply") {
     sendRequest(clientFd, std::move(request));
+    EXPECT_TRUE(pollForReply(clientFd, 1000)) << failMsg;
+    return readReply(clientFd);
+  }
+
+  /**
+   * Like sendAndReceive, for a request that the server dispatches on the
+   * manual executor rather than answering inline on the EventBase.
+   */
+  std::vector<uint8_t> sendAndReceiveOnExecutor(
+      int clientFd,
+      std::unique_ptr<folly::IOBuf> request,
+      const char* failMsg = "Expected an RPC reply") {
+    sendRequest(clientFd, std::move(request));
+    for (int i = 0; i < 20; ++i) {
+      manualExecutor_->run();
+      evb.loopOnce(EVLOOP_NONBLOCK);
+    }
     EXPECT_TRUE(pollForReply(clientFd, 1000)) << failMsg;
     return readReply(clientFd);
   }
@@ -504,21 +551,33 @@ TEST_F(RpcServerTest, normal_proc_not_fast_pathed) {
 }
 
 TEST_F(RpcServerTest, request_split_into_two_fragments) {
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  EXPECT_DEATH(
-      {
-        auto server = createTestServerWithManualExecutor(
-            std::make_shared<TestServerProcessor>());
-        auto clientFd = connectClient(*server);
-        sendRequest(
-            clientFd, splitIntoTwoFragments(buildRpcRequest(77, /*proc=*/1)));
-        for (int i = 0; i < 20; ++i) {
-          manualExecutor_->run();
-          evb.loopOnce(EVLOOP_NONBLOCK);
-        }
-        std::exit(0);
-      },
-      "Check failed: isLast");
+  auto server =
+      createTestServerWithManualExecutor(std::make_shared<TestEchoProcessor>());
+  auto clientFd = connectClient(*server);
+
+  auto reply = sendAndReceiveOnExecutor(
+      clientFd, splitIntoTwoFragments(buildRpcRequest(77, /*proc=*/1)));
+  EXPECT_EQ(readBigEndianU32(reply, 4), 77u); // xid
+  EXPECT_EQ(readBigEndianU32(reply, 8), 1u); // msg_type::REPLY
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
+  EXPECT_EQ(readBigEndianU32(reply, 28), 1u); // echoed procedure number
+
+  cleanup(clientFd, server);
+}
+
+TEST_F(RpcServerTest, request_with_an_empty_first_fragment) {
+  auto server =
+      createTestServerWithManualExecutor(std::make_shared<TestEchoProcessor>());
+  auto clientFd = connectClient(*server);
+
+  auto reply = sendAndReceiveOnExecutor(
+      clientFd, prependEmptyFragment(buildRpcRequest(79, /*proc=*/2)));
+  EXPECT_EQ(readBigEndianU32(reply, 4), 79u); // xid
+  EXPECT_EQ(readBigEndianU32(reply, 8), 1u); // msg_type::REPLY
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
+  EXPECT_EQ(readBigEndianU32(reply, 28), 2u); // echoed procedure number
+
+  cleanup(clientFd, server);
 }
 
 TEST_F(RpcServerTest, null_request_split_into_two_fragments_with_fast_path) {
@@ -530,7 +589,7 @@ TEST_F(RpcServerTest, null_request_split_into_two_fragments_with_fast_path) {
       sendAndReceive(clientFd, splitIntoTwoFragments(buildNullRpcRequest(78)));
   EXPECT_EQ(readBigEndianU32(reply, 4), 78u); // xid
   EXPECT_EQ(readBigEndianU32(reply, 8), 1u); // msg_type::REPLY
-  EXPECT_EQ(readBigEndianU32(reply, 24), 3u); // accept_stat::PROC_UNAVAIL
+  EXPECT_EQ(readBigEndianU32(reply, 24), 0u); // accept_stat::SUCCESS
 
   cleanup(clientFd, server);
 }

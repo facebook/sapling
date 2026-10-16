@@ -294,6 +294,40 @@ std::unique_ptr<folly::IOBuf> finalizeFragment(
       folly::hexDump(resultBuffer->data(), resultBuffer->length()));
   return resultBuffer;
 }
+
+/**
+ * Rebuild a record received as several fragments into a single fragment, so
+ * that the rest of the server only ever sees one fragment header followed by
+ * the whole call. The payload buffers move from the record into the result;
+ * only a buffer that holds a fragment boundary is shared, nothing is copied.
+ */
+std::unique_ptr<folly::IOBuf> coalesceFragments(
+    std::unique_ptr<folly::IOBuf> record) {
+  folly::IOBufQueue fragments{folly::IOBufQueue::cacheChainLength()};
+  fragments.append(std::move(record));
+
+  folly::IOBufQueue result{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender appender(&result, sizeof(uint32_t));
+  XdrTrait<uint32_t>::serialize(appender, 0); // fragment header placeholder
+
+  while (true) {
+    const auto fragmentHeader =
+        folly::io::Cursor(fragments.front()).readBE<uint32_t>();
+    fragments.trimStart(sizeof(uint32_t));
+    if (const auto len = fragmentHeader & 0x7fffffff; len != 0) {
+      result.append(fragments.split(len));
+    }
+    if ((fragmentHeader & 0x80000000) != 0) {
+      break;
+    }
+  }
+
+  auto len = uint32_t(result.chainLength() - sizeof(uint32_t));
+  auto resultBuffer = result.move();
+  auto fragment = (uint32_t*)resultBuffer->writableData();
+  *fragment = folly::Endian::big(len | 0x80000000);
+  return resultBuffer;
+}
 } // namespace
 
 template <typename F>
@@ -404,10 +438,8 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
         uint32_t fragmentHeader = c.readBE<uint32_t>();
         bool isLast = (fragmentHeader & 0x80000000) != 0;
 
-        // Supporting multiple fragments is expensive and requires playing
-        // with IOBuf to avoid copying data. Since neither macOS nor Linux
-        // are sending requests spanning multiple segments, let's not
-        // support these.
+        // readOneRequest() rebuilds multi-fragment records into a single
+        // fragment, so the worker only ever sees the last fragment.
         XCHECK(isLast);
       }
 
@@ -438,6 +470,7 @@ std::unique_ptr<folly::IOBuf> RpcConnectionHandler::readOneRequest() noexcept {
     return nullptr;
   }
   folly::io::Cursor c(readBuf_.front());
+  size_t fragmentCount = 0;
   while (true) {
     uint32_t fragmentHeader;
     if (!c.tryReadBE<uint32_t>(fragmentHeader)) {
@@ -451,11 +484,16 @@ std::unique_ptr<folly::IOBuf> RpcConnectionHandler::readOneRequest() noexcept {
       return nullptr;
     }
     c.skip(len);
+    fragmentCount++;
     if (isLast) {
       break;
     }
   }
-  return readBuf_.split(c.getCurrentPosition());
+  auto record = readBuf_.split(c.getCurrentPosition());
+  if (fragmentCount == 1) {
+    return record;
+  }
+  return coalesceFragments(std::move(record));
 }
 
 void RpcConnectionHandler::recordParsingError(
