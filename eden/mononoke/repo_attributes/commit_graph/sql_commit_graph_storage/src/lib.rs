@@ -1245,7 +1245,6 @@ type FetchedEdgesRow = (
 impl SqlCommitGraphStorage {
     fn collect_changeset_edges_impl(
         fetched_rows: &[FetchedEdgesRow],
-        should_apply_fallback: bool,
     ) -> HashMap<(ChangesetId, Option<ChangesetId>), (u64, FetchedChangesetEdges)> {
         let option_fields_to_option_node =
             |cs_id,
@@ -1364,7 +1363,7 @@ impl SqlCommitGraphStorage {
                         p1_linear_skew_ancestor_p1_linear_depth,
                         p1_linear_skew_ancestor_subtree_source_depth,
                     );
-                    let mut subtree_or_merge_ancestor = option_fields_to_option_node(
+                    let subtree_or_merge_ancestor = option_fields_to_option_node(
                         subtree_or_merge_ancestor,
                         subtree_or_merge_ancestor_gen,
                         subtree_or_merge_ancestor_subtree_source_gen,
@@ -1372,7 +1371,7 @@ impl SqlCommitGraphStorage {
                         subtree_or_merge_ancestor_p1_linear_depth,
                         subtree_or_merge_ancestor_subtree_source_depth,
                     );
-                    let mut subtree_source_parent = option_fields_to_option_node(
+                    let subtree_source_parent = option_fields_to_option_node(
                         subtree_source_parent,
                         subtree_source_parent_gen,
                         subtree_source_parent_subtree_source_gen,
@@ -1380,7 +1379,7 @@ impl SqlCommitGraphStorage {
                         subtree_source_parent_p1_linear_depth,
                         subtree_source_parent_subtree_source_depth,
                     );
-                    let mut subtree_source_skew_ancestor = option_fields_to_option_node(
+                    let subtree_source_skew_ancestor = option_fields_to_option_node(
                         subtree_source_skew_ancestor,
                         subtree_source_skew_ancestor_gen,
                         subtree_source_skew_ancestor_subtree_source_gen,
@@ -1388,18 +1387,6 @@ impl SqlCommitGraphStorage {
                         subtree_source_skew_ancestor_p1_linear_depth,
                         subtree_source_skew_ancestor_subtree_source_depth,
                     );
-
-                    // Apply conditional fallback based on JustKnob
-                    if should_apply_fallback {
-                        if subtree_source_count == 0 {
-                            subtree_or_merge_ancestor =
-                                subtree_or_merge_ancestor.or_else(|| merge_ancestor.clone());
-                        }
-                        subtree_source_parent =
-                            subtree_source_parent.or_else(|| skip_tree_parent.clone());
-                        subtree_source_skew_ancestor = subtree_source_skew_ancestor
-                            .or_else(|| skip_tree_skew_ancestor.clone());
-                    }
 
                     cs_id_and_origin_to_edges.insert(
                         (cs_id, origin_cs_id),
@@ -1509,10 +1496,8 @@ impl SqlCommitGraphStorage {
     /// Group edges by their `cs_id`, deduplicating edges that differ only by their `origin_cs_id`.
     fn collect_changeset_edges(
         fetched_rows: &[FetchedEdgesRow],
-        should_apply_fallback: bool,
     ) -> HashMap<ChangesetId, FetchedChangesetEdges> {
-        let cs_id_and_origin_to_edges =
-            Self::collect_changeset_edges_impl(fetched_rows, should_apply_fallback);
+        let cs_id_and_origin_to_edges = Self::collect_changeset_edges_impl(fetched_rows);
         cs_id_and_origin_to_edges
             .into_iter()
             .map(|((cs_id, _origin_cs_id), (_id, edges))| (cs_id, edges))
@@ -1522,9 +1507,8 @@ impl SqlCommitGraphStorage {
     /// Group edges by their `origin_cs_id`.
     fn collect_prefetched_changeset_edges(
         fetched_rows: &[FetchedEdgesRow],
-        should_apply_fallback: bool,
     ) -> HashMap<ChangesetId, Vec<FetchedChangesetEdges>> {
-        let edges = Self::collect_changeset_edges_impl(fetched_rows, should_apply_fallback);
+        let edges = Self::collect_changeset_edges_impl(fetched_rows);
         edges
             .into_iter()
             .flat_map(|((_cs_id, origin_cs_id), (_id, edges))| {
@@ -1547,7 +1531,6 @@ impl SqlCommitGraphStorage {
         }
 
         let sql_query_tel = ctx.sql_query_telemetry();
-        let should_apply_fallback = self.should_apply_fallback();
 
         if let Some(target) = prefetch.target() {
             let steps_limit =
@@ -1614,7 +1597,6 @@ impl SqlCommitGraphStorage {
                                         anyhow::Ok(
                                             Self::collect_prefetched_changeset_edges(
                                                 &fetched_rows,
-                                                should_apply_fallback,
                                             )
                                             .into_iter()
                                             .map(|(origin, edges)| ((origin, target), edges))
@@ -1659,10 +1641,7 @@ impl SqlCommitGraphStorage {
                                             &cs_ids,
                                         )
                                         .await?;
-                                    Ok(Self::collect_prefetched_changeset_edges(
-                                        &fetched_rows,
-                                        should_apply_fallback,
-                                    ))
+                                    Ok(Self::collect_prefetched_changeset_edges(&fetched_rows))
                                 }
                             })
                             .await?
@@ -1685,10 +1664,7 @@ impl SqlCommitGraphStorage {
                                         &cs_ids,
                                     )
                                     .await?;
-                                    Ok(Self::collect_prefetched_changeset_edges(
-                                        &fetched_rows,
-                                        should_apply_fallback,
-                                    ))
+                                    Ok(Self::collect_prefetched_changeset_edges(&fetched_rows))
                                 }
                             })
                             .await?
@@ -1717,10 +1693,7 @@ impl SqlCommitGraphStorage {
                             cs_ids.as_slice(),
                         )
                         .await?;
-                        Ok(Self::collect_changeset_edges(
-                            &fetched_edges,
-                            should_apply_fallback,
-                        ))
+                        Ok(Self::collect_changeset_edges(&fetched_edges))
                     }
                 })
                 .await?;
@@ -1776,8 +1749,7 @@ impl SqlCommitGraphStorage {
             &limit,
         )
         .await?;
-        let cs_id_and_origin_to_edges =
-            Self::collect_changeset_edges_impl(&fetched_rows, self.should_apply_fallback());
+        let cs_id_and_origin_to_edges = Self::collect_changeset_edges_impl(&fetched_rows);
         Ok(cs_id_and_origin_to_edges
             .into_iter()
             .map(|((cs_id, _origin_cs_id), (id, edges))| (cs_id, (id, ChangesetEdges::from(edges))))
@@ -2104,17 +2076,6 @@ impl SqlCommitGraphStorage {
             .increment_counter(PerfCounterType::SqlWrites);
 
         Ok(modified.try_into()?)
-    }
-}
-
-impl SqlCommitGraphStorage {
-    /// Check if fallback should be applied for this repository
-    fn should_apply_fallback(&self) -> bool {
-        !justknobs::eval(
-            "scm/mononoke:commit_graph_disable_subtree_source_fallback",
-            None,
-            Some(self.repo_identity.name()),
-        )
     }
 }
 

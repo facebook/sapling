@@ -127,17 +127,13 @@ impl PreloadedEdges {
         ))
     }
 
-    pub fn get(
-        &self,
-        cs_id: &ChangesetId,
-        should_apply_fallback: bool,
-    ) -> Result<Option<ChangesetEdges>> {
+    pub fn get(&self, cs_id: &ChangesetId) -> Result<Option<ChangesetEdges>> {
         let compact_edges = match self.cs_id_to_edges.get(cs_id) {
             Some(edges) => edges,
             None => return Ok(None),
         };
 
-        let mut edges = ChangesetEdgesMut {
+        let edges = ChangesetEdgesMut {
             node: ChangesetNode::new(
                 *cs_id,
                 Generation::new(compact_edges.generation as u64),
@@ -186,10 +182,6 @@ impl PreloadedEdges {
                 .transpose()?,
         }
         .freeze();
-
-        if should_apply_fallback {
-            edges.apply_subtree_source_fallback();
-        }
 
         Ok(Some(edges))
     }
@@ -360,15 +352,6 @@ impl PreloadedCommitGraphStorage {
             persistent_storage,
         }))
     }
-
-    /// Check if fallback should be applied for this repository
-    fn should_apply_fallback(&self) -> bool {
-        !justknobs::eval(
-            "scm/mononoke:commit_graph_disable_subtree_source_fallback",
-            None,
-            Some(self.repo_name()),
-        )
-    }
 }
 
 #[async_trait]
@@ -386,11 +369,7 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
     }
 
     async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
-        match self
-            .preloaded_edges
-            .load()
-            .get(&cs_id, self.should_apply_fallback())?
-        {
+        match self.preloaded_edges.load().get(&cs_id)? {
             Some(edges) => Ok(edges),
             None => self.persistent_storage.fetch_edges(ctx, cs_id).await,
         }
@@ -401,11 +380,7 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>> {
-        match self
-            .preloaded_edges
-            .load()
-            .get(&cs_id, self.should_apply_fallback())?
-        {
+        match self.preloaded_edges.load().get(&cs_id)? {
             Some(edges) => Ok(Some(edges)),
             None => self.persistent_storage.maybe_fetch_edges(ctx, cs_id).await,
         }
@@ -434,12 +409,11 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let preloaded_edges = self.preloaded_edges.load();
-        let should_apply_fallback = self.should_apply_fallback();
         let mut fetched_edges: HashMap<_, _> = cs_ids
             .iter()
             .filter_map(|cs_id| {
                 preloaded_edges
-                    .get(cs_id, should_apply_fallback)
+                    .get(cs_id)
                     .map(|edges| edges.map(|edges| (*cs_id, edges.into())))
                     .transpose()
             })

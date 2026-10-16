@@ -39,9 +39,9 @@ struct ChangesetEdges {
   5: optional ChangesetNode skip_tree_skew_ancestor;
   6: optional ChangesetNode p1_linear_skew_ancestor;
   7: optional list<ChangesetNode> subtree_sources;
-  8: optional ChangesetNode subtree_or_merge_ancestor; // omitted if the same as merge_ancestor
-  9: optional ChangesetNode subtree_source_parent; // omitted if the same as skip_tree_parent
-  10: optional ChangesetNode subtree_source_skew_ancestor; // omitted if the same as skip_tree_skew_ancestor
+  8: optional ChangesetNode subtree_or_merge_ancestor;
+  9: optional ChangesetNode subtree_source_parent;
+  10: optional ChangesetNode subtree_source_skew_ancestor;
 }
 
 @rust.Exhaustive
@@ -71,7 +71,7 @@ struct CompactChangesetEdges {
   11: optional i32 subtree_source_generation; // omitted if the same as generation
   12: optional i32 subtree_source_depth; // omitted if the same as skip_tree_depth
   13: optional list<i32> subtree_sources; // omitted if empty
-  14: optional i32 subtree_or_merge_ancestor; // omitted if the same as merge_ancestor
-  15: optional i32 subtree_source_parent; // omitted if the same as skip_tree_parent
-  16: optional i32 subtree_source_skew_ancestor; // omitted if the same as skip_tree_skew_ancestor
+  14: optional i32 subtree_or_merge_ancestor;
+  15: optional i32 subtree_source_parent;
+  16: optional i32 subtree_source_skew_ancestor;
 }

@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS `commit_graph_edges` (
   `skip_tree_parent` INTEGER NULL,
   `skip_tree_skew_ancestor` INTEGER NULL,
   `p1_linear_skew_ancestor` INTEGER NULL,
-  `subtree_or_merge_ancestor` INTEGER NULL, -- NULL if same as merge_ancestor
-  `subtree_source_parent` INTEGER NULL, -- NULL if same as skip_tree_parent
-  `subtree_source_skew_ancestor` INTEGER NULL, -- NULL if same as skip_tree_skew_ancestor
+  `subtree_or_merge_ancestor` INTEGER NULL,
+  `subtree_source_parent` INTEGER NULL,
+  `subtree_source_skew_ancestor` INTEGER NULL,
   UNIQUE (`repo_id`, `cs_id`)
 );
 

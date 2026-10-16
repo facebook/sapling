@@ -391,20 +391,6 @@ impl ChangesetEdges {
             f(n.cs_id);
         }
     }
-
-    /// Apply subtree source fallback to edges that were deserialized without it.
-    /// This mutates the edges in-place.
-    pub fn apply_subtree_source_fallback(&mut self) {
-        if self.inner.subtree_or_merge_ancestor.is_none() && self.inner.subtree_sources.is_empty() {
-            self.inner.subtree_or_merge_ancestor = self.inner.merge_ancestor_or_root.clone();
-        }
-        if self.inner.subtree_source_parent.is_none() {
-            self.inner.subtree_source_parent = self.inner.skip_tree_parent.clone();
-        }
-        if self.inner.subtree_source_skew_ancestor.is_none() {
-            self.inner.subtree_source_skew_ancestor = self.inner.skip_tree_skew_ancestor.clone();
-        }
-    }
 }
 
 /// A smaller version of ChangesetEdges for use in cases where
