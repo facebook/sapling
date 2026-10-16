@@ -30,8 +30,11 @@ class LogRedactionTest(unittest.TestCase):
         )
 
         written = sink.getvalue().decode()
-        self.assertIn(token, written)
-        self.assertNotIn("<ACCESS_TOKEN_REDACTED>", written)
+        self.assertNotIn(token, written)
+        self.assertIn("<ACCESS_TOKEN_REDACTED>", written)
+        self.assertEqual(
+            len(written), len(body) - len(token) + len("<ACCESS_TOKEN_REDACTED>")
+        )
 
     def test_token_inside_one_read(self) -> None:
         token = "ghp_" + (string.digits + string.ascii_lowercase)[:36]

@@ -679,8 +679,14 @@ def print_log_file(
                 LOG_AMOUNT = tail_limit
                 size = logfile.seek(0, io.SEEK_END)
                 logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
+            unfinished_line = b""
             for data in read_chunk(logfile):
-                out.write(data.decode("utf-8", errors="backslashreplace"))
+                data = unfinished_line + data
+                line_end = data.rfind(b"\n") + 1
+                unfinished_line = data[line_end:]
+                out.write(data[:line_end].decode("utf-8", errors="backslashreplace"))
+            if unfinished_line:
+                out.write(unfinished_line.decode("utf-8", errors="backslashreplace"))
     except Exception as e:
         out.write(f"Error reading the log file: {e}\n")
 
