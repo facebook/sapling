@@ -128,7 +128,7 @@ globalopts = cmdutil._typedflags(
             "y",
             "noninteractive",
             False,
-            _("do not prompt, automatically pick the first choice for all prompts"),
+            _("do not prompt, use the default answer for all prompts"),
         ),
         ("q", "quiet", False, _("suppress output")),
         ("v", "verbose", False, _("enable additional output")),

@@ -16,7 +16,7 @@ define_flags! {
         /// change working directory
         cwd: String,
 
-        /// do not prompt, automatically pick the first choice for all prompts
+        /// do not prompt, use the default answer for all prompts
         #[short('y')]
         noninteractive: bool,
 

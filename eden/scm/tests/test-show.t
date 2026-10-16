@@ -523,8 +523,8 @@ Confirm that --help works (it didn't when we used an alias)
    -R --repository REPO       repository root directory or name of overlay
                               bundle file
       --cwd DIR               change working directory
-   -y --noninteractive        do not prompt, automatically pick the first choice
-                              for all prompts
+   -y --noninteractive        do not prompt, use the default answer for all
+                              prompts
    -q --quiet                 suppress output
    -v --verbose               enable additional output
       --color TYPE            when to colorize (boolean, always, auto, never, or
