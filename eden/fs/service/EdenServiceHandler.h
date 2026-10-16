@@ -9,6 +9,7 @@
 
 #include <fb303/BaseService.h>
 #include <folly/CancellationToken.h>
+#include <folly/Executor.h>
 #include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
 #include <atomic>
@@ -61,20 +62,38 @@ struct RequestCancellationInfo {
   std::optional<folly::CancellationSource> cancellationSource;
   RequestStatus status = RequestStatus::ACTIVE;
   std::optional<std::chrono::steady_clock::time_point> cancellationRequestedAt;
-  std::string endpoint;
+  // The Thrift method, pointing at its static name.
+  std::string_view endpoint;
+  OptionalProcessId clientPid;
+  std::chrono::steady_clock::time_point startedAt =
+      std::chrono::steady_clock::now();
+  // A streaming request stays open until the client disconnects or the
+  // request is cancelled, so it is not counted as a long-running request.
+  bool stream = false;
+  // Work that continues after its Thrift response, such as a background glob
+  // or prefetch. It is cancelled with everything else, but nothing waits for
+  // it and it holds no connection, so it is not counted as long-running or
+  // reported at the stop deadline.
+  bool background = false;
 
   RequestCancellationInfo() = default;
 
   RequestCancellationInfo(
       folly::CancellationSource source,
-      std::string endpoint)
+      std::string_view endpoint,
+      OptionalProcessId clientPid = std::nullopt)
       : cancellationSource(std::move(source)),
         status(RequestStatus::ACTIVE),
-        endpoint(std::move(endpoint)) {}
+        endpoint(endpoint),
+        clientPid(clientPid) {}
 
-  static RequestCancellationInfo createUncancelable() {
+  static RequestCancellationInfo createUncancelable(
+      std::string_view endpoint = {},
+      OptionalProcessId clientPid = std::nullopt) {
     RequestCancellationInfo info;
     info.status = RequestStatus::UNCANCELABLE;
+    info.endpoint = endpoint;
+    info.clientPid = clientPid;
     return info;
   }
 
@@ -447,7 +466,8 @@ class EdenServiceHandler
   /**
    * Snapshot of the Thrift requests that have started and not yet finished.
    */
-  std::vector<ThriftRequestTraceEvent> getOutstandingThriftRequests() const;
+  std::vector<ThriftRequestTraceEvent> getOutstandingThriftRequests(
+      bool includeBackground = true) const;
 
   bool debugLogError() override;
 
@@ -635,7 +655,8 @@ class EdenServiceHandler
   void insertCancellationSource(
       uint64_t requestId,
       folly::CancellationSource cancellationSource,
-      std::string endpoint);
+      std::string_view endpoint,
+      OptionalProcessId clientPid = std::nullopt);
 
   std::optional<folly::CancellationSource> getCancellationSource(
       uint64_t requestId);
@@ -646,7 +667,41 @@ class EdenServiceHandler
 
   size_t getActiveCancellationSourceCount() const;
 
-  void insertUncancelableRequest(uint64_t requestId);
+  void insertUncancelableRequest(
+      uint64_t requestId,
+      std::string_view endpoint = {},
+      OptionalProcessId clientPid = std::nullopt);
+
+  /**
+   * Record that a request is a stream that stays open until its client
+   * disconnects. Cancelling the request ends the stream.
+   */
+  void markRequestAsStream(uint64_t requestId);
+
+  /**
+   * Record that a request's work continues after its response was sent, see
+   * RequestCancellationInfo::background.
+   */
+  void markRequestAsBackground(uint64_t requestId);
+
+  /**
+   * End every open stream that was marked with markRequestAsStream(). EdenFS
+   * does this when it stops, because the Thrift server cannot shut down while
+   * a stream keeps its connection busy.
+   */
+  void closeTraceStreams();
+
+  struct LongRunningRequest {
+    std::string method;
+    OptionalProcessId clientPid;
+    std::chrono::steady_clock::duration age;
+  };
+
+  /**
+   * The requests, streams excluded, that started at least minAge ago.
+   */
+  std::vector<LongRunningRequest> getRequestsRunningLongerThan(
+      std::chrono::steady_clock::duration minAge) const;
 
   std::optional<RequestStatus> getRequestStatus(uint64_t requestId);
 
@@ -668,6 +723,12 @@ class EdenServiceHandler
 
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
+
+  /**
+   * Where a trace stream's request scope is destroyed once the stream ends,
+   * since that may otherwise happen on a TraceBus thread.
+   */
+  std::shared_ptr<folly::Executor> getTraceStreamExecutor();
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);
   EdenMountHandle lookupMount(apache::thrift::field_ref<std::string&> mountId);
   EdenMountHandle lookupMount(

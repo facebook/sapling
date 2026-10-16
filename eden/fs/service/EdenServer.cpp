@@ -1744,7 +1744,10 @@ void EdenServer::reportThriftStopTimeout() {
   if (!handler) {
     return;
   }
-  auto requests = handler->getOutstandingThriftRequests();
+  // Background work holds no connection, so it cannot be what the stop waits
+  // on.
+  auto requests =
+      handler->getOutstandingThriftRequests(/*includeBackground=*/false);
   if (requests.empty()) {
     // The stop can also wait on a connection that is busy for a reason the
     // handler does not track, such as a request that finished between the

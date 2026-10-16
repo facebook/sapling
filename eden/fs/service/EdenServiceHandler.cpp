@@ -535,9 +535,11 @@ class ThriftRequestScope {
         handler->insertCancellationSource(
             requestId_,
             std::move(cancellationSource),
-            std::string(sourceLocation_.function_name()));
+            sourceLocation_.function_name(),
+            pid);
       } else {
-        handler->insertUncancelableRequest(requestId_);
+        handler->insertUncancelableRequest(
+            requestId_, sourceLocation_.function_name(), pid);
       }
     }
 
@@ -894,6 +896,10 @@ EdenServiceHandler::EdenServiceHandler(
 }
 
 EdenServiceHandler::~EdenServiceHandler() = default;
+
+std::shared_ptr<folly::Executor> EdenServiceHandler::getTraceStreamExecutor() {
+  return server_->getServerState()->getThreadPool();
+}
 
 EdenMountHandle EdenServiceHandler::lookupMount(const MountId& mountId) {
   return lookupMount(mountId.mountPoint());
@@ -1767,6 +1773,87 @@ class ThriftStreamPublisherOwner {
   apache::thrift::ServerStreamPublisher<T> publisher;
 };
 
+/**
+ * What keeps a trace stream open: the request scope, so the stream counts as
+ * an outstanding Thrift request for as long as it is open, and the TraceBus
+ * subscription whose subscriber owns the stream publisher.
+ *
+ * The stream ends when the subscription is dropped: the bus thread destroys
+ * the subscriber, and the ThriftStreamPublisherOwner it holds completes the
+ * publisher. That happens when the client disconnects, which destroys this
+ * object, and when the request is cancelled, which EdenServiceHandler does for
+ * every stream when EdenFS stops.
+ */
+template <typename Subscription>
+class TraceStreamSubscription {
+ public:
+  TraceStreamSubscription(
+      std::unique_ptr<ThriftRequestScope> helper,
+      std::optional<folly::CancellationToken> cancellationToken,
+      std::shared_ptr<folly::Executor> executor)
+      : helper_{std::move(helper)}, executor_{std::move(executor)} {
+    if (cancellationToken) {
+      onCancel_.emplace(std::move(*cancellationToken), [this] { close(); });
+    }
+  }
+
+  TraceStreamSubscription(const TraceStreamSubscription&) = delete;
+  TraceStreamSubscription(TraceStreamSubscription&&) = delete;
+  TraceStreamSubscription& operator=(const TraceStreamSubscription&) = delete;
+  TraceStreamSubscription& operator=(TraceStreamSubscription&&) = delete;
+
+  ~TraceStreamSubscription() {
+    // Completing the publisher can run the stream's completion callback, and
+    // with it this destructor, on the TraceBus thread. The request scope's
+    // destructor publishes to the Thrift request bus, which may be that very
+    // bus, so it must not run there.
+    executor_->add([helper = std::move(helper_)]() mutable { helper.reset(); });
+  }
+
+  /**
+   * Store the subscription that feeds the stream. A subscription that arrives
+   * after the request was cancelled is dropped right away, which ends the
+   * stream before the client sees an event.
+   */
+  void subscribe(Subscription subscription) {
+    auto state = state_.wlock();
+    if (!state->closed) {
+      state->subscription.emplace(std::move(subscription));
+    }
+  }
+
+ private:
+  void close() {
+    auto state = state_.wlock();
+    state->closed = true;
+    state->subscription.reset();
+  }
+
+  struct State {
+    bool closed = false;
+    std::optional<Subscription> subscription;
+  };
+
+  std::unique_ptr<ThriftRequestScope> helper_;
+  // Owned rather than kept alive: the pool does not hand out a keep-alive.
+  std::shared_ptr<folly::Executor> executor_;
+  folly::Synchronized<State> state_;
+  std::optional<folly::CancellationCallback> onCancel_;
+};
+
+template <typename Subscription>
+std::shared_ptr<TraceStreamSubscription<Subscription>>
+makeTraceStreamSubscription(
+    EdenServiceHandler& handler,
+    std::shared_ptr<folly::Executor> executor,
+    std::unique_ptr<ThriftRequestScope> helper) {
+  auto requestId = helper->getRequestId();
+  handler.markRequestAsStream(requestId);
+  auto cancellationToken = handler.getCancellationToken(requestId);
+  return std::make_shared<TraceStreamSubscription<Subscription>>(
+      std::move(helper), std::move(cancellationToken), std::move(executor));
+}
+
 } // namespace
 
 #ifndef _WIN32
@@ -1881,58 +1968,61 @@ void convertThriftRequestTraceEventToThriftRequestEvent(
 
 apache::thrift::ServerStream<ThriftRequestEvent>
 EdenServiceHandler::traceThriftRequestEvents() {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+  auto requestContext = getRequestContext();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(DBG3, true, requestContext);
 
-  struct SubscriptionHandleOwner {
-    TraceBus<ThriftRequestTraceEvent>::SubscriptionHandle handle;
-  };
-
-  auto h = std::make_shared<SubscriptionHandleOwner>();
+  auto stream = makeTraceStreamSubscription<
+      TraceBus<ThriftRequestTraceEvent>::SubscriptionHandle>(
+      *this, getTraceStreamExecutor(), std::move(helper));
 
   auto [serverStream, publisher] =
-      apache::thrift::ServerStream<ThriftRequestEvent>::createPublisher([h] {
-        // on disconnect, release subscription handle
-      });
+      apache::thrift::ServerStream<ThriftRequestEvent>::createPublisher(
+          [stream] {
+            // on disconnect, release the subscription and the request scope
+          });
 
-  h->handle = thriftRequestTraceBus_->subscribeFunction(
+  stream->subscribe(thriftRequestTraceBus_->subscribeFunction(
       "Live Thrift request tracing",
       [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)}](
           const ThriftRequestTraceEvent& event) mutable {
         ThriftRequestEvent thriftEvent;
         convertThriftRequestTraceEventToThriftRequestEvent(event, thriftEvent);
         publisher_2.next(thriftEvent);
-      });
+      }));
 
   return std::move(serverStream);
 }
 
 apache::thrift::ServerStream<TaskEvent> EdenServiceHandler::traceTaskEvents(
     std::unique_ptr<::facebook::eden::TraceTaskEventsRequest> /* request */) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
-  struct SubscriptionHandleOwner {
-    TraceBus<TaskTraceEvent>::SubscriptionHandle handle;
-  };
+  auto requestContext = getRequestContext();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(DBG3, true, requestContext);
 
-  auto h = std::make_shared<SubscriptionHandleOwner>();
+  auto stream =
+      makeTraceStreamSubscription<TraceBus<TaskTraceEvent>::SubscriptionHandle>(
+          *this, getTraceStreamExecutor(), std::move(helper));
 
   auto [serverStream, publisher] =
-      apache::thrift::ServerStream<TaskEvent>::createPublisher([h] {
-        // on disconnect, release subscription handle
+      apache::thrift::ServerStream<TaskEvent>::createPublisher([stream] {
+        // on disconnect, release the subscription and the request scope
       });
 
-  h->handle = TaskTraceEvent::getTraceBus()->subscribeFunction(
-      "Live Thrift request tracing",
-      [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)}](
-          const TaskTraceEvent& event) mutable {
-        TaskEvent taskEvent;
-        taskEvent.times() = thriftTraceEventTimes(event);
-        taskEvent.name() = event.name;
-        taskEvent.threadName() = event.threadName;
-        taskEvent.threadId() = event.threadId;
-        taskEvent.duration() = event.duration.count();
-        taskEvent.start() = event.start.count();
-        publisher_2.next(taskEvent);
-      });
+  stream->subscribe(
+      TaskTraceEvent::getTraceBus()->subscribeFunction(
+          "Live Thrift request tracing",
+          [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)}](
+              const TaskTraceEvent& event) mutable {
+            TaskEvent taskEvent;
+            taskEvent.times() = thriftTraceEventTimes(event);
+            taskEvent.name() = event.name;
+            taskEvent.threadName() = event.threadName;
+            taskEvent.threadId() = event.threadId;
+            taskEvent.duration() = event.duration.count();
+            taskEvent.start() = event.start.count();
+            publisher_2.next(taskEvent);
+          }));
 
   return std::move(serverStream);
 }
@@ -1940,7 +2030,9 @@ apache::thrift::ServerStream<TaskEvent> EdenServiceHandler::traceTaskEvents(
 apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     std::unique_ptr<std::string> mountPoint,
     int64_t eventCategoryMask) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+      DBG3, true, requestContext, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
   auto& edenMount = mountHandle.getEdenMount();
 
@@ -1951,7 +2043,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     eventCategoryMask = ~0;
   }
 
-  struct Context {
+  struct FsTraceSubscription {
     // While subscribed to FuseChannel's TraceBus, request detailed argument
     // strings.
     TraceDetailedArgumentsHandle argHandle;
@@ -1965,11 +2057,11 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 #endif // _WIN32
   };
 
-  auto context = std::make_shared<Context>();
+  FsTraceSubscription subscription;
 #ifdef _WIN32
   auto prjfsChannel = edenMount.getPrjfsChannel()->getInner();
   if (prjfsChannel) {
-    context->argHandle = prjfsChannel->traceDetailedArguments();
+    subscription.argHandle = prjfsChannel->traceDetailedArguments();
   } else {
     EDEN_BUG() << "tracing isn't supported yet for the "
                << fmt::underlying(
@@ -1980,9 +2072,9 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   auto* fuseChannel = edenMount.getFuseChannel();
   auto* nfsdChannel = edenMount.getNfsdChannel();
   if (fuseChannel) {
-    context->argHandle = fuseChannel->traceDetailedArguments();
+    subscription.argHandle = fuseChannel->traceDetailedArguments();
   } else if (nfsdChannel) {
-    context->argHandle = nfsdChannel->traceDetailedArguments();
+    subscription.argHandle = nfsdChannel->traceDetailedArguments();
   } else {
     EDEN_BUG() << "tracing isn't supported yet for the "
                << fmt::underlying(
@@ -1991,14 +2083,17 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   }
 #endif // _WIN32
 
+  auto stream = makeTraceStreamSubscription<FsTraceSubscription>(
+      *this, getTraceStreamExecutor(), std::move(helper));
+
   auto [serverStream, publisher] =
-      apache::thrift::ServerStream<FsEvent>::createPublisher([context] {
-        // on disconnect, release context and the TraceSubscriptionHandle
+      apache::thrift::ServerStream<FsEvent>::createPublisher([stream] {
+        // on disconnect, release the subscription and the request scope
       });
 
 #ifdef _WIN32
   if (prjfsChannel) {
-    context->subHandle = prjfsChannel->getTraceBusPtr()->subscribeFunction(
+    subscription.subHandle = prjfsChannel->getTraceBusPtr()->subscribeFunction(
         fmt::format("strace-{}", edenMount.getPath().basename()),
         [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
             const PrjfsTraceEvent& event) {
@@ -2035,7 +2130,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   }
 #else
   if (fuseChannel) {
-    context->subHandle = fuseChannel->getTraceBus().subscribeFunction(
+    subscription.subHandle = fuseChannel->getTraceBus().subscribeFunction(
         fmt::format("strace-{}", edenMount.getPath().basename()),
         [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
          serverState = server_->getServerState(),
@@ -2076,7 +2171,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           publisher_2.next(te);
         });
   } else if (nfsdChannel) {
-    context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
+    subscription.subHandle = nfsdChannel->getTraceBus().subscribeFunction(
         fmt::format("strace-{}", edenMount.getPath().basename()),
         [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
          eventCategoryMask](const NfsTraceEvent& event) {
@@ -2112,6 +2207,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
         });
   }
 #endif // _WIN32
+  stream->subscribe(std::move(subscription));
   return std::move(serverStream);
 }
 
@@ -2264,25 +2360,25 @@ void convertHgImportTraceEventToHgEvent(
 
 apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
     std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+      DBG3, true, requestContext, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
   auto backingStore = mountHandle.getObjectStore().getBackingStore();
   std::shared_ptr<SaplingBackingStore> saplingBackingStore =
       castToSaplingBackingStore(
           backingStore, mountHandle.getEdenMount().getPath());
 
-  struct Context {
-    TraceSubscriptionHandle<HgImportTraceEvent> subHandle;
-  };
-
-  auto context = std::make_shared<Context>();
+  auto stream =
+      makeTraceStreamSubscription<TraceSubscriptionHandle<HgImportTraceEvent>>(
+          *this, getTraceStreamExecutor(), std::move(helper));
 
   auto [serverStream, publisher] =
-      apache::thrift::ServerStream<HgEvent>::createPublisher([context] {
-        // on disconnect, release context and the TraceSubscriptionHandle
+      apache::thrift::ServerStream<HgEvent>::createPublisher([stream] {
+        // on disconnect, release the subscription and the request scope
       });
 
-  context->subHandle = saplingBackingStore->getTraceBus().subscribeFunction(
+  stream->subscribe(saplingBackingStore->getTraceBus().subscribeFunction(
       fmt::format(
           "hgtrace-{}", mountHandle.getEdenMount().getPath().basename()),
       [publisher_2 = ThriftStreamPublisherOwner{std::move(publisher)},
@@ -2293,7 +2389,7 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
         convertHgImportTraceEventToHgEvent(
             event, *processInfoCache, thriftEvent);
         publisher_2.next(thriftEvent);
-      });
+      }));
 
   return std::move(serverStream);
 }
@@ -2321,22 +2417,22 @@ void ConvertInodeTraceEventToThriftInodeEvent(
 
 apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
     std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+      DBG3, true, requestContext, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
   auto inodeMap = mountHandle.getEdenMount().getInodeMap();
 
-  struct Context {
-    TraceSubscriptionHandle<InodeTraceEvent> subHandle;
-  };
-
-  auto context = std::make_shared<Context>();
+  auto stream =
+      makeTraceStreamSubscription<TraceSubscriptionHandle<InodeTraceEvent>>(
+          *this, getTraceStreamExecutor(), std::move(helper));
 
   auto [serverStream, publisher] =
-      apache::thrift::ServerStream<InodeEvent>::createPublisher([context] {
-        // on disconnect, release context and the TraceSubscriptionHandle
+      apache::thrift::ServerStream<InodeEvent>::createPublisher([stream] {
+        // on disconnect, release the subscription and the request scope
       });
 
-  context->subHandle =
+  stream->subscribe(
       mountHandle.getEdenMount().getInodeTraceBus().subscribeFunction(
           fmt::format(
               "inodetrace-{}", mountHandle.getEdenMount().getPath().basename()),
@@ -2355,7 +2451,7 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
               thriftEvent.path() = event.getPath();
             }
             publisher_2.next(thriftEvent);
-          });
+          }));
 
   return std::move(serverStream);
 }
@@ -6125,12 +6221,23 @@ void EdenServiceHandler::debugOutstandingThriftRequests(
 }
 
 std::vector<ThriftRequestTraceEvent>
-EdenServiceHandler::getOutstandingThriftRequests() const {
+EdenServiceHandler::getOutstandingThriftRequests(bool includeBackground) const {
+  std::unordered_set<uint64_t> background;
+  if (!includeBackground) {
+    const auto store = requestCancellationStore_.rlock();
+    for (const auto& [requestId, info] : *store) {
+      if (info.background) {
+        background.insert(requestId);
+      }
+    }
+  }
   std::vector<ThriftRequestTraceEvent> requests;
   const auto requestsLockedPtr = outstandingThriftRequests_.rlock();
   requests.reserve(requestsLockedPtr->size());
   for (const auto& item : *requestsLockedPtr) {
-    requests.push_back(item.second);
+    if (background.count(item.first) == 0) {
+      requests.push_back(item.second);
+    }
   }
   return requests;
 }
@@ -7238,12 +7345,13 @@ OptionalProcessId EdenServiceHandler::getAndRegisterClientPid(
 void EdenServiceHandler::insertCancellationSource(
     uint64_t requestId,
     folly::CancellationSource cancellationSource,
-    std::string endpoint) {
+    std::string_view endpoint,
+    OptionalProcessId clientPid) {
   auto lockedStore = requestCancellationStore_.wlock();
   lockedStore->emplace(
       requestId,
       RequestCancellationInfo(
-          std::move(cancellationSource), std::move(endpoint)));
+          std::move(cancellationSource), endpoint, clientPid));
   XLOGF(
       DBG6,
       "Inserted cancellation source for request ID: {}. Total active: {}",
@@ -7299,7 +7407,7 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
 
       server_->getServerState()->getEdenFsEventsLogger()->logEvent(
           ThriftCancellation{
-              it->second.endpoint,
+              std::string{it->second.endpoint},
               success,
               static_cast<double>(elapsed.count())});
     }
@@ -7337,15 +7445,72 @@ size_t EdenServiceHandler::getActiveCancellationSourceCount() const {
   return lockedStore->size();
 }
 
-void EdenServiceHandler::insertUncancelableRequest(uint64_t requestId) {
+void EdenServiceHandler::insertUncancelableRequest(
+    uint64_t requestId,
+    std::string_view endpoint,
+    OptionalProcessId clientPid) {
   auto lockedStore = requestCancellationStore_.wlock();
   lockedStore->emplace(
-      requestId, RequestCancellationInfo::createUncancelable());
+      requestId,
+      RequestCancellationInfo::createUncancelable(endpoint, clientPid));
   XLOGF(
       DBG6,
       "Inserted uncancelable request for request ID: {}. Total active: {}",
       requestId,
       lockedStore->size());
+}
+
+void EdenServiceHandler::markRequestAsStream(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.wlock();
+  auto it = lockedStore->find(requestId);
+  if (it != lockedStore->end()) {
+    it->second.stream = true;
+  }
+}
+
+void EdenServiceHandler::markRequestAsBackground(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.wlock();
+  auto it = lockedStore->find(requestId);
+  if (it != lockedStore->end()) {
+    it->second.background = true;
+  }
+}
+
+void EdenServiceHandler::closeTraceStreams() {
+  size_t closed = 0;
+  {
+    auto lockedStore = requestCancellationStore_.wlock();
+    for (auto& [requestId, cancellationInfo] : *lockedStore) {
+      if (cancellationInfo.stream && cancellationInfo.requestCancellation()) {
+        ++closed;
+      }
+    }
+  }
+  XLOGF(DBG3, "Closed {} trace streams", closed);
+}
+
+std::vector<EdenServiceHandler::LongRunningRequest>
+EdenServiceHandler::getRequestsRunningLongerThan(
+    std::chrono::steady_clock::duration minAge) const {
+  std::vector<LongRunningRequest> requests;
+  const auto now = std::chrono::steady_clock::now();
+  {
+    auto lockedStore = requestCancellationStore_.rlock();
+    for (const auto& [requestId, cancellationInfo] : *lockedStore) {
+      auto age = now - cancellationInfo.startedAt;
+      if (!cancellationInfo.stream && !cancellationInfo.background &&
+          age >= minAge) {
+        requests.push_back(
+            {std::string{cancellationInfo.endpoint},
+             cancellationInfo.clientPid,
+             age});
+      }
+    }
+  }
+  std::sort(requests.begin(), requests.end(), [](auto& a, auto& b) {
+    return a.age > b.age;
+  });
+  return requests;
 }
 
 std::optional<RequestStatus> EdenServiceHandler::getRequestStatus(
