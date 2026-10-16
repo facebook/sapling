@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::format_err;
 use assembly_line::TryAssemblyLine;
+use backsyncer::advance_bookmark_counter;
 use backsyncer::get_bookmark_counter_or_initialize;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -150,7 +151,7 @@ async fn resolve_start_id(
 ) -> Result<Option<PollingState>> {
     let counter_names = mode.counter_names(bookmark)?;
     let configured_start_id = start_id_arg.map(BookmarkUpdateLogId);
-    let cursor = match mode {
+    let mut cursor = match mode {
         PollingMode::Legacy => match configured_start_id {
             Some(start_id) => start_id,
             None => counters
@@ -192,6 +193,39 @@ async fn resolve_start_id(
             configured_start_id.unwrap_or(durable_counter)
         }
     };
+
+    if configured_start_id.is_none() {
+        let other_counter_names = match mode {
+            PollingMode::Legacy => PollingMode::Bookmark.counter_names(bookmark)?,
+            PollingMode::Bookmark => PollingMode::Legacy.counter_names(bookmark)?,
+        };
+        let other_cursor: Option<BookmarkUpdateLogId> = counters
+            .get_counter(ctx, &other_counter_names.completed_entry)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()?;
+
+        if let Some(other_cursor) = other_cursor
+            && other_cursor > cursor
+        {
+            tracing::info!(
+                "Advancing {:?} polling cursor {} from {} to {} during mode handoff",
+                mode,
+                counter_names.completed_entry,
+                cursor,
+                other_cursor,
+            );
+            advance_bookmark_counter(
+                ctx,
+                counters,
+                &counter_names.completed_entry,
+                &mut cursor,
+                other_cursor,
+            )
+            .await?;
+        }
+    }
+
     Ok(Some(PollingState {
         mode,
         cursor,
@@ -396,24 +430,31 @@ pub async fn sync(
             }
             tracing::info!("{} entries left after filtering", entries.len());
 
-            if app_args.flatten_bul && !entries.is_empty() {
+            let grouped_entries = if app_args.flatten_bul && !entries.is_empty() {
                 let original_size = entries.len();
-                let flattened_bul = bul_util::group_entries(entries);
+                let grouped_entries = bul_util::group_entries(entries);
                 tracing::info!(
                     "Grouped {} entries into {} macro-entries",
                     original_size,
-                    flattened_bul.len()
+                    grouped_entries.len()
                 );
-                entries = flattened_bul;
-            }
+                grouped_entries
+            } else {
+                entries
+                    .into_iter()
+                    .map(bul_util::GroupedBookmarkUpdateLogEntry::single)
+                    .collect()
+            };
 
-            for entry in entries {
+            for grouped_entry in grouped_entries {
+                let entry = &grouped_entry.upload_entry;
                 let now = std::time::Instant::now();
                 process_bookmark_update_log_entry(
                     &ctx,
                     &config,
                     &repo,
-                    &entry,
+                    entry,
+                    &grouped_entry.bookmark_entries,
                     &send_manager,
                     sender.clone(),
                     config.chunk_size as u64,
@@ -424,13 +465,13 @@ pub async fn sync(
                 )
                 .await
                 .inspect(|_| {
-                    stat::log_bookmark_update_entry_done(&ctx, &repo_name, &entry, now.elapsed());
+                    stat::log_bookmark_update_entry_done(&ctx, &repo_name, entry, now.elapsed());
                 })
                 .inspect_err(|e| {
                     stat::log_bookmark_update_entry_error(
                         &ctx,
                         &repo_name,
-                        &entry,
+                        entry,
                         e,
                         now.elapsed(),
                     );
@@ -509,6 +550,7 @@ pub async fn process_bookmark_update_log_entry(
     config: &ModernSyncConfig,
     repo: &Repo,
     entry: &BookmarkUpdateLogEntry,
+    bookmark_entries: &[BookmarkUpdateLogEntry],
     send_manager: &SendManager,
     sender: Arc<dyn EdenapiSender + Send + Sync>,
     chunk_size: u64,
@@ -746,16 +788,18 @@ pub async fn process_bookmark_update_log_entry(
         })
         .await?;
 
-    send_manager
-        .send_changeset(ChangesetMessage::FinishEntry(BookmarkInfo {
-            name: entry.bookmark_name.name().to_string(),
-            from_cs_id: entry.from_changeset_id,
-            to_cs_id: entry.to_changeset_id,
-            log_id: entry.id.0 as i64,
-            reason: entry.reason,
-            counter_names,
-        }))
-        .await?;
+    for bookmark_entry in bookmark_entries {
+        send_manager
+            .send_changeset(ChangesetMessage::FinishEntry(BookmarkInfo {
+                name: bookmark_entry.bookmark_name.name().to_string(),
+                from_cs_id: bookmark_entry.from_changeset_id,
+                to_cs_id: bookmark_entry.to_changeset_id,
+                log_id: bookmark_entry.id.0 as i64,
+                reason: bookmark_entry.reason,
+                counter_names: counter_names.clone(),
+            }))
+            .await?;
+    }
 
     // FIXME(acampi) Temporarily disable to fix stuck sync: https://fb.workplace.com/groups/1708850869939124/permalink/1994176751406533/
     // bul_util::update_remaining_moves(

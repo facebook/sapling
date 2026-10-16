@@ -71,7 +71,7 @@ The bookmark mode reads only the two configured-bookmark rows, across the
 intervening unrelated rows. It advances its own cursor while leaving the
 rollback cursor frozen.
 
-  $ quiet mononoke_modern_sync "" sync-once orig dest
+  $ quiet mononoke_modern_sync "--flatten-bul" sync-once orig dest
   $ mononoke_admin mutable-counters -R orig get modern_sync_by_bookmark_v1_branch_master_bookmark
   Some(4)
   $ mononoke_admin mutable-counters -R orig get modern_sync
@@ -82,10 +82,14 @@ rollback cursor frozen.
   4
   2
 
-Rollback replays from the frozen legacy cursor. Identical log ids make the
-replay idempotent, and the legacy cursor catches up without adding replica
-bookmark-log rows.
+Rollback must start after the bookmark-mode cursor, not the frozen legacy cursor.
+Add one new master move so replaying from zero would mix already-applied moves with
+a new suffix in one destination transaction.
 
+  $ echo rollback-next > rollback-next
+  $ hg add rollback-next
+  $ hg commit -qm "move before rollback"
+  $ hg push -q -r . --to master_bookmark
   $ merge_just_knobs <<EOF
   > {
   >   "bools": {
@@ -93,9 +97,12 @@ bookmark-log rows.
   >   }
   > }
   > EOF
-  $ quiet mononoke_modern_sync "" sync-once orig dest
+  $ quiet mononoke_modern_sync "--flatten-bul" sync-once orig dest
   $ mononoke_admin mutable-counters -R orig get modern_sync
+  Some(5)
+  $ mononoke_admin mutable-counters -R orig get modern_sync_by_bookmark_v1_branch_master_bookmark
   Some(4)
   $ mononoke_admin bookmarks -R dest log master_bookmark -S hg | cut -d' ' -f1
+  5
   4
   2

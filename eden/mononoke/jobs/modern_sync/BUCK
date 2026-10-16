@@ -8,7 +8,10 @@ rust_binary(
     srcs = glob([
         "src/**/*.rs",
     ]),
-    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = (
         [
             "fbsource//third-party/rust:anyhow",

@@ -14,6 +14,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use backsyncer::advance_bookmark_counter;
+use bookmarks::BookmarkUpdateLogId;
 use context::CoreContext;
 use futures::channel::oneshot;
 use itertools::Itertools;
@@ -21,6 +23,7 @@ use mercurial_types::blobs::HgBlobChangeset;
 use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
+use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCounters;
 use stats::define_stats;
 use stats::prelude::*;
@@ -46,6 +49,30 @@ define_stats! {
     changesets_queue_capacity: dynamic_singleton_counter("{}.changesets.queue_capacity", (repo: String)),
     changesets_queue_len: dynamic_quantile_stat("{}.changesets.queue_len", (repo: String); Average; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     changesets_queue_max_capacity: dynamic_singleton_counter("{}.changesets.queue_max_capacity", (repo: String)),
+}
+
+async fn advance_completed_counter(
+    ctx: &CoreContext,
+    counters: &ArcMutableCounters,
+    counter_name: &str,
+    target: i64,
+) -> Result<BookmarkUpdateLogId> {
+    let target = BookmarkUpdateLogId(target.try_into()?);
+    loop {
+        let Some(counter) = counters.get_counter(ctx, counter_name).await? else {
+            if counters
+                .set_counter_if_absent(ctx, counter_name, target.try_into()?)
+                .await?
+            {
+                return Ok(target);
+            }
+            continue;
+        };
+
+        let mut counter = counter.try_into()?;
+        advance_bookmark_counter(ctx, counters, counter_name, &mut counter, target).await?;
+        return Ok(counter);
+    }
 }
 
 pub(crate) struct ChangesetManager {
@@ -167,12 +194,14 @@ impl ChangesetManager {
 
         for (counter_names, id) in latest_entry_ids.drain() {
             tracing::info!("Marking entry {} as done", id);
-            let res = mc
-                .set_counter(ctx, &counter_names.completed_entry, id, None)
-                .await?;
-
-            if !res {
-                tracing::warn!("Failed to mark entry {} as synced", id);
+            let completed =
+                advance_completed_counter(ctx, &mc, &counter_names.completed_entry, id).await?;
+            if completed.0 as i64 > id {
+                tracing::info!(
+                    "Completed cursor {} is already at {}",
+                    counter_names.completed_entry,
+                    completed,
+                );
             }
         }
 
@@ -348,5 +377,108 @@ impl Manager for ChangesetManager {
 
             Ok(())
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::RwLock;
+
+    use async_trait::async_trait;
+    use fbinit::FacebookInit;
+
+    use super::*;
+
+    #[derive(Default)]
+    struct TestMutableCounters {
+        counters: RwLock<HashMap<String, i64>>,
+    }
+
+    #[async_trait]
+    impl MutableCounters for TestMutableCounters {
+        async fn get_counter(&self, _ctx: &CoreContext, name: &str) -> Result<Option<i64>> {
+            Ok(self
+                .counters
+                .read()
+                .expect("test counter lock poisoned")
+                .get(name)
+                .copied())
+        }
+
+        async fn get_maybe_stale_counter(
+            &self,
+            ctx: &CoreContext,
+            name: &str,
+        ) -> Result<Option<i64>> {
+            self.get_counter(ctx, name).await
+        }
+
+        async fn set_counter(
+            &self,
+            _ctx: &CoreContext,
+            name: &str,
+            value: i64,
+            prev_value: Option<i64>,
+        ) -> Result<bool> {
+            let mut counters = self.counters.write().expect("test counter lock poisoned");
+            if let Some(prev_value) = prev_value
+                && counters.get(name).copied() != Some(prev_value)
+            {
+                return Ok(false);
+            }
+            counters.insert(name.to_string(), value);
+            Ok(true)
+        }
+
+        async fn set_counter_if_absent(
+            &self,
+            _ctx: &CoreContext,
+            name: &str,
+            value: i64,
+        ) -> Result<bool> {
+            let mut counters = self.counters.write().expect("test counter lock poisoned");
+            if counters.contains_key(name) {
+                return Ok(false);
+            }
+            counters.insert(name.to_string(), value);
+            Ok(true)
+        }
+
+        async fn get_all_counters(&self, _ctx: &CoreContext) -> Result<Vec<(String, i64)>> {
+            Ok(self
+                .counters
+                .read()
+                .expect("test counter lock poisoned")
+                .iter()
+                .map(|(name, value)| (name.clone(), *value))
+                .collect())
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    async fn completed_counter_never_regresses(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let counters: ArcMutableCounters = Arc::new(TestMutableCounters::default());
+
+        assert_eq!(
+            advance_completed_counter(&ctx, &counters, "completed", 100).await?,
+            BookmarkUpdateLogId(100),
+        );
+        assert_eq!(
+            advance_completed_counter(&ctx, &counters, "completed", 120).await?,
+            BookmarkUpdateLogId(120),
+        );
+
+        counters
+            .set_counter(&ctx, "completed", 130, Some(120))
+            .await?;
+        assert_eq!(
+            advance_completed_counter(&ctx, &counters, "completed", 110).await?,
+            BookmarkUpdateLogId(130),
+        );
+        assert_eq!(counters.get_counter(&ctx, "completed").await?, Some(130));
+
+        Ok(())
     }
 }
