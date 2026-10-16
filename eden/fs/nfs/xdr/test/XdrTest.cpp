@@ -37,28 +37,31 @@ TEST(XdrSerialize, integers) {
 }
 
 TEST(XdrDeserialize, lengthPrefixBeyondBuffer) {
-  auto buf = folly::IOBuf::copyBuffer(
-      std::string("\x00\x10\x00\x00", 4) + std::string(8, 'x'));
-  {
-    folly::io::Cursor cursor(buf.get());
-    EXPECT_THROW_RE(
-        XdrTrait<std::vector<uint8_t>>::deserialize(cursor),
-        std::out_of_range,
-        "underflow");
-  }
-  {
-    folly::io::Cursor cursor(buf.get());
-    EXPECT_THROW_RE(
-        XdrTrait<std::string>::deserialize(cursor),
-        std::out_of_range,
-        "underflow");
-  }
-  {
-    folly::io::Cursor cursor(buf.get());
-    EXPECT_THROW_RE(
-        XdrTrait<std::vector<uint32_t>>::deserialize(cursor),
-        std::out_of_range,
-        "underflow");
+  for (auto prefix :
+       {std::string("\x00\x10\x00\x00", 4),
+        std::string("\xff\xff\xff\xf0", 4)}) {
+    auto buf = folly::IOBuf::copyBuffer(prefix + std::string(8, 'x'));
+    {
+      folly::io::Cursor cursor(buf.get());
+      EXPECT_THROW_RE(
+          XdrTrait<std::vector<uint8_t>>::deserialize(cursor),
+          std::out_of_range,
+          "exceeds");
+    }
+    {
+      folly::io::Cursor cursor(buf.get());
+      EXPECT_THROW_RE(
+          XdrTrait<std::string>::deserialize(cursor),
+          std::out_of_range,
+          "exceeds");
+    }
+    {
+      folly::io::Cursor cursor(buf.get());
+      EXPECT_THROW_RE(
+          XdrTrait<std::vector<uint32_t>>::deserialize(cursor),
+          std::out_of_range,
+          "exceeds");
+    }
   }
 }
 

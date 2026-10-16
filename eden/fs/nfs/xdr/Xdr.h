@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <fmt/format.h>
 #include <folly/Preprocessor.h>
 #include <folly/io/Cursor.h>
 #include <optional>
+#include <stdexcept>
 #include <variant>
 
 // This PP stuff is mostly copy paste from FOLLY_PP_FOR_EACH, but works with
@@ -309,6 +311,33 @@ inline void skipPadding(folly::io::Cursor& cursor, size_t len) {
   cursor.skip(roundUp(len) - len);
 }
 
+/**
+ * Reject a length prefix that the bytes left in the cursor cannot satisfy,
+ * before any allocation is sized from it.
+ */
+inline void checkLength(const folly::io::Cursor& cursor, size_t len) {
+  auto remaining = cursor.totalLength();
+  if (len > remaining) {
+    throw std::out_of_range(
+        fmt::format(
+            "XDR length {} exceeds the {} remaining bytes", len, remaining));
+  }
+}
+
+/**
+ * Same as checkLength for a count of items that each take at least 4 bytes.
+ */
+inline void checkCount(const folly::io::Cursor& cursor, size_t count) {
+  auto remaining = cursor.totalLength() / sizeof(uint32_t);
+  if (count > remaining) {
+    throw std::out_of_range(
+        fmt::format(
+            "XDR count {} exceeds the {} items that could remain",
+            count,
+            remaining));
+  }
+}
+
 } // namespace detail
 
 /**
@@ -377,6 +406,7 @@ struct XdrTrait<std::vector<uint8_t>> {
 
   static std::vector<uint8_t> deserialize(folly::io::Cursor& cursor) {
     auto len = XdrTrait<uint32_t>::deserialize(cursor);
+    detail::checkLength(cursor, len);
     std::vector<uint8_t> ret(len);
     cursor.pull(ret.data(), len);
     detail::skipPadding(cursor, len);
@@ -432,6 +462,7 @@ struct XdrTrait<
 
   static std::vector<T> deserialize(folly::io::Cursor& cursor) {
     auto len = XdrTrait<uint32_t>::deserialize(cursor);
+    detail::checkCount(cursor, len);
     std::vector<T> ret;
     ret.reserve(len);
     for (size_t i = 0; i < len; i++) {
@@ -463,6 +494,7 @@ struct XdrTrait<std::string> {
 
   static std::string deserialize(folly::io::Cursor& cursor) {
     auto len = XdrTrait<uint32_t>::deserialize(cursor);
+    detail::checkLength(cursor, len);
     auto ret = cursor.readFixedString(len);
     detail::skipPadding(cursor, len);
     return ret;
