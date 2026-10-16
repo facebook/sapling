@@ -48,7 +48,7 @@ use crate::manifest_commit::build_manifest_commit;
 use crate::scribe::log_scribe_bookmark_update;
 
 /// A manifest commit prepared for one branch, ready for the caller's transaction.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PreparedManifestCommit {
     /// Live head at prepare time; the CAS baseline for the caller's `txn.update`.
     pub old_cs: ChangesetId,
