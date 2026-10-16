@@ -1045,3 +1045,29 @@ TEST(InodeMap, inodeLoadFailureLogsError) {
   EXPECT_EQ(strings.at("component"), "object_store");
   EXPECT_EQ(strings.at("error_type"), "inode_loading_failed");
 }
+
+TEST(InodeMap, loadingASecondNameForALoadedInodeFails) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/a.txt", "a\n");
+  TestMount testMount{builder};
+
+  auto dir = testMount.getTreeInode("dir");
+  auto a = testMount.getFileInode("dir/a.txt");
+
+  // The directory state an interrupted rename leaves on disk: a second entry
+  // carries a.txt's inode number.
+  dir->lockContentsWrite()->entries.emplace(
+      "b.txt"_pc, S_IFREG | 0644, a->getNodeId());
+
+  // FIXME: the lookup should fail with EIO instead of aborting the daemon.
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  EXPECT_DEATH(
+      dir->getOrLoadChild("b.txt"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms),
+      "already loaded as dir/a.txt");
+  EXPECT_EQ(
+      a->getNodeId(),
+      dir->getOrLoadChild("a.txt"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms)
+          ->getNodeId());
+}

@@ -670,6 +670,84 @@ TEST_F(OverlayWalDeferralTest, cleanWalDeferred) {
   EXPECT_TRUE(result.find("added"_pc) != result.end());
 }
 
+class OverlayWalReplayTest : public OverlayWalDeferralTest {};
+
+TEST_F(OverlayWalReplayTest, tornRenameKeepsOnlyTheDestinationName) {
+  auto rootIno = kRootNodeId;
+  auto fileIno = overlay_->allocateInodeNumber();
+  saveBaseDir(rootIno, fileIno);
+
+  // renameChild appends ADD(destination) before REMOVE(source); the daemon
+  // died between the two.
+  auto* catalog = overlay_->getRawInodeCatalog();
+  auto entry = makeWalEntry(S_IFREG | 0644, fileIno);
+  catalog->appendWalEntry(rootIno, WalOpType::ADD, "renamed"_pc, &entry);
+
+  auto result = overlay_->loadOverlayDir(rootIno);
+  EXPECT_TRUE(result.find("renamed"_pc) != result.end());
+  // FIXME: the source name should be gone; replay keeps both names.
+  EXPECT_TRUE(result.find("existing"_pc) != result.end());
+}
+
+TEST_F(OverlayWalReplayTest, theLaterAddWinsWhenTwoNamesShareAnInode) {
+  auto rootIno = kRootNodeId;
+  saveBaseDir(rootIno, overlay_->allocateInodeNumber());
+
+  // A file written under a temporary name and renamed over its final name,
+  // with the REMOVE of the temporary name lost. The final name sorts first,
+  // so only the record order says which name is current.
+  auto fileIno = overlay_->allocateInodeNumber();
+  auto* catalog = overlay_->getRawInodeCatalog();
+  auto entry = makeWalEntry(S_IFREG | 0644, fileIno);
+  catalog->appendWalEntry(rootIno, WalOpType::ADD, "tmp.final"_pc, &entry);
+  catalog->appendWalEntry(rootIno, WalOpType::ADD, "final"_pc, &entry);
+
+  auto result = overlay_->loadOverlayDir(rootIno);
+  EXPECT_TRUE(result.find("final"_pc) != result.end());
+  // FIXME: the temporary name should be gone; replay keeps both names.
+  EXPECT_TRUE(result.find("tmp.final"_pc) != result.end());
+  EXPECT_TRUE(result.find("existing"_pc) != result.end());
+}
+
+TEST_F(OverlayWalReplayTest, renameCompactsOnlyAfterBothWalAppends) {
+  // Every compaction roll hits.
+  OverlayTestHelper::setWalCompactionRng(*overlay_, [] { return 0u; });
+  auto srcIno = overlay_->allocateInodeNumber();
+  auto dstIno = overlay_->allocateInodeNumber();
+  auto fileIno = overlay_->allocateInodeNumber();
+  DirContents srcBefore(kPathMapDefaultCaseSensitive);
+  srcBefore.emplace("tmp"_pc, S_IFREG | 0644, fileIno);
+  overlay_->saveOverlayDir(srcIno, srcBefore);
+  overlay_->saveOverlayDir(dstIno, DirContents(kPathMapDefaultCaseSensitive));
+
+  // The source REMOVE cannot be appended: a directory sits where the source
+  // WAL file would be created. On disk this is a daemon that died between the
+  // rename's two appends.
+  auto srcWalPath = canonicalPath(testDir_.path().string()) +
+      RelativePathPiece{FsFileContentStore::getWalPath(srcIno)};
+  ASSERT_TRUE(boost::filesystem::create_directory(srcWalPath.c_str()));
+
+  DirContents srcAfter(kPathMapDefaultCaseSensitive);
+  DirContents dstAfter(kPathMapDefaultCaseSensitive);
+  dstAfter.emplace("final"_pc, S_IFREG | 0644, fileIno);
+  EXPECT_THROW(
+      overlay_->renameChild(
+          srcIno, dstIno, "tmp"_pc, "final"_pc, srcAfter, dstAfter),
+      std::system_error);
+
+  // FIXME: the destination ADD should still be in the destination WAL, which
+  // is what tells fsck that `final` is the newer of the two names. The
+  // destination was compacted right after its append, so its base record
+  // holds `final` and nothing on disk says which name came last.
+  auto* catalog = overlay_->getRawInodeCatalog();
+  EXPECT_FALSE(catalog->hasWal(dstIno));
+  auto dst = overlay_->loadOverlayDir(dstIno);
+  EXPECT_TRUE(dst.find("final"_pc) != dst.end());
+  boost::filesystem::remove(srcWalPath.c_str());
+  auto src = overlay_->loadOverlayDir(srcIno);
+  EXPECT_TRUE(src.find("tmp"_pc) != src.end());
+}
+
 TEST(OverlayFilePathTest, getFilePath) {
   InodePath path;
 

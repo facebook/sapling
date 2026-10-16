@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
@@ -32,6 +33,7 @@ using folly::StringPiece;
 using std::make_shared;
 using std::string;
 using ::testing::Contains;
+using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::UnorderedElementsAre;
 
@@ -987,6 +989,71 @@ TEST_P(FsckTest, testHardLink) {
           fmt::format(
               "found hard linked inode {}:\n- src/foo/also_z.txt\n- src/foo/x/y/z.txt",
               layout.src_foo_x_y_zTxt.number())));
+
+  // FIXME: nothing says which link is newer, so the repair should keep
+  // src/foo/also_z.txt, the first path in sorted order, and remove the other
+  // link. Today the error is unfixable.
+  auto [result, fsckLog] = performRepair(checker, 1, 0);
+  EXPECT_THAT(fsckLog, HasSubstr("unable to repair error 1"));
+  auto foo =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo.number());
+  ASSERT_TRUE(foo.has_value());
+  EXPECT_EQ(1u, foo->entries()->count("also_z.txt"));
+  auto y =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo_x_y.number());
+  ASSERT_TRUE(y.has_value());
+  EXPECT_EQ(1u, y->entries()->count("z.txt"));
+  EXPECT_TRUE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
+}
+
+TEST_P(FsckTest, hardLinkRepairKeepsTheTrackedName) {
+  auto testOverlay = make_shared<TestOverlay>(overlayType());
+  auto root = testOverlay->init();
+  SimpleOverlayLayout layout(root);
+  // A rename of z.txt.tmp over z.txt whose directory write never completed:
+  // both names carry z.txt's inode number.
+  layout.src_foo_x_y.linkFile(
+      layout.src_foo_x_y_zTxt.number(), "z.txt.tmp", std::nullopt, 0644);
+  layout.src_foo_x_y.save();
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, RelativePathPiece path) {
+    if (path.view() == "src/foo/x/y/z.txt") {
+      return ImmediateFuture<InodeCatalog::LookupCallbackValue>{
+          InodeCatalog::LookupCallbackValue{
+              TreeEntry{makeTestId("a"), TreeEntryType::REGULAR_FILE}}};
+    }
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("not in source control"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+  checker.scanForErrors();
+  // FIXME: the second line should name z.txt.tmp; the message repeats the
+  // first name it finds for each parent entry.
+  EXPECT_THAT(
+      errorMessages(checker),
+      ElementsAre(
+          fmt::format(
+              "found hard linked inode {}:\n- src/foo/x/y/z.txt\n- src/foo/x/y/z.txt",
+              layout.src_foo_x_y_zTxt.number())));
+
+  // FIXME: the repair should keep z.txt, the name source control knows, and
+  // remove z.txt.tmp. Today the error is unfixable.
+  auto [result, fsckLog] = performRepair(checker, 1, 0);
+  EXPECT_THAT(fsckLog, HasSubstr("unable to repair error 1"));
+  auto y =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo_x_y.number());
+  ASSERT_TRUE(y.has_value());
+  EXPECT_EQ(1u, y->entries()->count("z.txt"));
+  EXPECT_EQ(1u, y->entries()->count("z.txt.tmp"));
+  EXPECT_TRUE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
@@ -1312,4 +1379,80 @@ TEST(FsckWalTest, caseInsensitiveCollapsedAddRekeysBaseEntry) {
   ASSERT_EQ(1u, reload->entries()->count("FOO"));
   EXPECT_EQ(walChildIno.get(), *reload->entries()->at("FOO").inodeNumber());
   testOverlay->inodeCatalog()->close(std::nullopt);
+}
+
+TEST(FsckWalTest, tornSameDirectoryRenameKeepsOnlyTheDestination) {
+  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  auto file = root.create("old.txt", "contents\n");
+  root.save();
+  testOverlay->closeCleanly();
+
+  auto nextInode =
+      testOverlay->inodeCatalog()->initOverlay(/*createIfNonExisting=*/false);
+  ASSERT_TRUE(nextInode.has_value());
+  // renameChild appends ADD(new) before REMOVE(old); only the ADD reached the
+  // disk.
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = file.number().get();
+  testOverlay->fcs().appendWalEntry(
+      kRootNodeId, WalOpType::ADD, PathComponentPiece{"new.txt"}, &entry);
+
+  runFsckRepair(*testOverlay, nextInode);
+
+  EXPECT_FALSE(testOverlay->fcs().hasWal(kRootNodeId));
+  auto reload = testOverlay->inodeCatalog()->loadOverlayDir(kRootNodeId);
+  ASSERT_TRUE(reload.has_value());
+  EXPECT_EQ(1u, reload->entries()->count("new.txt"));
+  // FIXME: old.txt should be gone; the merge keeps both names.
+  EXPECT_EQ(1u, reload->entries()->count("old.txt"));
+  testOverlay->inodeCatalog()->close(std::nullopt);
+}
+
+TEST(FsckWalTest, hardLinkRepairKeepsTheLinkTheWalAdded) {
+  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto root = testOverlay->init();
+  SimpleOverlayLayout layout(root);
+  testOverlay->closeCleanly();
+
+  auto nextInode =
+      testOverlay->inodeCatalog()->initOverlay(/*createIfNonExisting=*/false);
+  ASSERT_TRUE(nextInode.has_value());
+  // A move of src/foo/x/y/z.txt to src/foo/moved_z.txt: the destination's ADD
+  // reached its WAL, the source directory's REMOVE did not.
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = layout.src_foo_x_y_zTxt.number().get();
+  testOverlay->fcs().appendWalEntry(
+      layout.src_foo.number(),
+      WalOpType::ADD,
+      PathComponentPiece{"moved_z.txt"},
+      &entry);
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      nextInode,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+  // FIXME: the repair should keep src/foo/moved_z.txt, the link the WAL
+  // added, and remove src/foo/x/y/z.txt. Today the error is unfixable.
+  auto [result, fsckLog] = performRepair(checker, 1, 0);
+  EXPECT_THAT(fsckLog, HasSubstr("unable to repair error 1"));
+  auto foo =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo.number());
+  ASSERT_TRUE(foo.has_value());
+  EXPECT_EQ(1u, foo->entries()->count("moved_z.txt"));
+  auto y =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src_foo_x_y.number());
+  ASSERT_TRUE(y.has_value());
+  EXPECT_EQ(1u, y->entries()->count("z.txt"));
+  EXPECT_TRUE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
