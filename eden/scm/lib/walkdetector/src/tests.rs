@@ -636,7 +636,7 @@ fn test_touched() {
         MockClock::advance(Duration::from_secs(1));
 
         assert!(detector.file_read(p("dir1/c"), 0));
-        assert!(detector.dir_read(p("dir2/c"), 0, 0, 0));
+        assert!(detector.dir_read(p("dir2/c"), 0));
     }
 
     detector.file_loaded(p("something/else"), 0);
@@ -673,7 +673,7 @@ fn test_counters() {
     detector.dir_loaded(p("dir1/dir1_1"), 0, 0, 0);
     detector.dir_loaded(p("dir1/dir1_2"), 0, 0, 0);
     detector.dir_loaded(p("dir1/dir1_2"), 0, 0, 0);
-    detector.dir_read(p("dir1/dir1_2"), 0, 0, 0);
+    detector.dir_read(p("dir1/dir1_2"), 0);
     assert_eq!(
         get_counters(p("dir1"), WalkType::Directory),
         (0, 0, 0, 3, 1)
@@ -871,7 +871,7 @@ fn test_important_metadata() {
     detector.set_walk_ratio(0.1);
 
     detector.dir_loaded(p("big_remote"), 1000, 1000, 0);
-    detector.dir_read(p("big_cached"), 1000, 1000, 0);
+    detector.dir_metadata(p("big_cached"), 1000, 1000);
 
     // Trigger a GC.
     MockClock::advance(Duration::from_mins(1));
@@ -1069,6 +1069,27 @@ fn test_breadth_credit() {
     insert_walk(&detector, p("big/d2/x/q"), WalkType::Directory, 0);
     insert_walk(&detector, p("big/d2/y/q"), WalkType::Directory, 0);
     assert!(detector.dir_walks().contains(&(p("big/d2"), 2)));
+}
+
+#[test]
+fn test_fast_paths() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    // Nothing covers these yet, so the fast paths decline and the slow paths detect the walk.
+    assert!(!detector.file_loaded_fast(p("dir/a"), 0));
+    assert!(!detector.dir_loaded_fast(p("dir/sub1"), 5, 5, 0));
+    detector.file_loaded(p("dir/a"), 0);
+    detector.file_loaded(p("dir/b"), 0);
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+
+    // Inside the walk the fast paths account the access and the walk's counters advance.
+    assert!(detector.file_loaded_fast(p("dir/c"), 0));
+    assert!(detector.dir_loaded_fast(p("dir/sub2"), 5, 5, 0));
+    // A directory size worth remembering still needs the slow path.
+    assert!(!detector.dir_loaded_fast(p("dir/sub3"), 1, 0, 0));
+    let (_, reads) = detector.files_preloaded(p("dir"), 0);
+    assert_eq!(reads, 3);
 }
 
 #[test]

@@ -117,9 +117,63 @@ struct Inner {
     reload_interval: Duration,
 
     prefetch_send: flume::Sender<()>,
+    walk_event_send: crossfire::MTx<crossfire::mpsc::Array<WalkEvent>>,
     walk_mode: WalkMode,
     restricted_tree_mode: RestrictedTreeMode,
     walk_detector: walkdetector::Detector,
+}
+
+/// A remote read that no active walk covered, reported to the walk detector off the filesystem
+/// thread because creating or extending walks takes the detector's write lock.
+enum WalkEvent {
+    FileLoaded(RepoPathBuf, u32),
+    DirLoaded(RepoPathBuf, usize, usize, u32),
+    DirMetadata(RepoPathBuf, usize, usize),
+}
+
+/// Bound on queued walk events. Walk detection is best effort, so events beyond it are dropped
+/// rather than letting a flood of remote reads grow memory.
+const WALK_EVENT_QUEUE_LIMIT: usize = 16_384;
+
+/// Spawn the thread that feeds queued walk events to the detector and kicks prefetching when a
+/// walk changes. It exits once every sender is dropped.
+fn spawn_walk_event_worker(
+    detector: walkdetector::Detector,
+    prefetch_send: flume::Sender<()>,
+) -> crossfire::MTx<crossfire::mpsc::Array<WalkEvent>> {
+    let (send, recv) = crossfire::mpsc::bounded_blocking(WALK_EVENT_QUEUE_LIMIT);
+    let spawned = std::thread::Builder::new()
+        .name("walkdet-events".to_owned())
+        .spawn(move || {
+            while let Ok(event) = recv.recv() {
+                handle_walk_event(&detector, &prefetch_send, event);
+            }
+        });
+    if let Err(err) = spawned {
+        tracing::warn!(?err, "failed to spawn walk event worker thread");
+    }
+    send
+}
+
+/// Feed one walk event to the detector and kick prefetching if a walk changed.
+fn handle_walk_event(
+    detector: &walkdetector::Detector,
+    prefetch_send: &flume::Sender<()>,
+    event: WalkEvent,
+) {
+    let walk_changed = match event {
+        WalkEvent::FileLoaded(path, pid) => detector.file_loaded(&path, pid),
+        WalkEvent::DirLoaded(path, num_files, num_dirs, pid) => {
+            detector.dir_loaded(&path, num_files, num_dirs, pid)
+        }
+        WalkEvent::DirMetadata(path, num_files, num_dirs) => {
+            detector.dir_metadata(&path, num_files, num_dirs);
+            false
+        }
+    };
+    if walk_changed {
+        let _ = prefetch_send.try_send(());
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -401,6 +455,12 @@ impl BackingStore {
             flume::bounded(0).0
         };
 
+        let walk_event_send = if walk_mode == WalkMode::Off {
+            crossfire::mpsc::bounded_blocking(1).0
+        } else {
+            spawn_walk_event_worker(walk_detector.clone(), prefetch_send.clone())
+        };
+
         Ok(Inner {
             treestore,
             filestore,
@@ -419,6 +479,7 @@ impl BackingStore {
                 .get_opt("backingstore", "reload-interval-secs")?
                 .unwrap_or(Duration::from_mins(5)),
             prefetch_send,
+            walk_event_send,
             walk_mode,
             restricted_tree_mode,
             walk_detector,
@@ -590,17 +651,11 @@ impl BackingStore {
             return;
         }
 
-        let walk_changed = if local {
+        if local {
             inner.walk_detector.file_read(path, pid);
-            false
-        } else {
-            inner.walk_detector.file_loaded(path, pid)
-        };
-        if !walk_changed {
-            return;
+        } else if !inner.walk_detector.file_loaded_fast(path, pid) {
+            inner.send_walk_event(WalkEvent::FileLoaded(path.to_owned(), pid));
         }
-
-        inner.notify_prefetch();
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -618,19 +673,25 @@ impl BackingStore {
             return;
         }
 
-        let walk_changed = if local {
-            inner.walk_detector.dir_read(path, num_files, num_dirs, pid);
-            false
-        } else {
-            inner
+        if local {
+            inner.walk_detector.dir_read(path, pid);
+            if inner
                 .walk_detector
-                .dir_loaded(path, num_files, num_dirs, pid)
-        };
-        if !walk_changed {
-            return;
+                .is_dir_metadata_important(num_files, num_dirs)
+            {
+                inner.send_walk_event(WalkEvent::DirMetadata(path.to_owned(), num_files, num_dirs));
+            }
+        } else if !inner
+            .walk_detector
+            .dir_loaded_fast(path, num_files, num_dirs, pid)
+        {
+            inner.send_walk_event(WalkEvent::DirLoaded(
+                path.to_owned(),
+                num_files,
+                num_dirs,
+                pid,
+            ));
         }
-
-        inner.notify_prefetch();
     }
 
     pub fn set_parent_hint(&self, parent_id: &str) {
@@ -837,9 +898,28 @@ impl Inner {
             reload_interval: self.reload_interval,
 
             prefetch_send: self.prefetch_send.clone(),
+            walk_event_send: self.walk_event_send.clone(),
             walk_mode: self.walk_mode,
             restricted_tree_mode: self.restricted_tree_mode,
             walk_detector: self.walk_detector.clone(),
+        }
+    }
+
+    fn send_walk_event(&self, event: WalkEvent) {
+        match self.walk_event_send.try_send(event) {
+            Ok(()) => {}
+            Err(crossfire::TrySendError::Full(_)) => {
+                tracing::trace!("walk event queue full; dropping event");
+            }
+            Err(crossfire::TrySendError::Disconnected(event)) => {
+                // The worker thread never started or has exited. Keep detecting walks on this
+                // thread rather than stopping silently.
+                static WARNED: AtomicBool = AtomicBool::new(false);
+                if !WARNED.swap(true, Ordering::Relaxed) {
+                    tracing::warn!("walk event worker is gone; handling walk events inline");
+                }
+                handle_walk_event(&self.walk_detector, &self.prefetch_send, event);
+            }
         }
     }
 
@@ -1212,6 +1292,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::fmt;
     use std::path::Path;
+    use std::time::Duration;
 
     use edenapi::types::SaplingRemoteApiServerError;
     use edenapi::types::SaplingRemoteApiServerErrorKind;
@@ -1440,5 +1521,35 @@ mod tests {
             source.downcast_ref::<TestNetworkError>().is_some(),
             "non-PermissionDenied source should remain visible: {source:?}"
         );
+    }
+
+    #[test]
+    fn test_walk_event_worker_detects_and_kicks() -> Result<()> {
+        let mut detector = walkdetector::Detector::new();
+        detector.set_walk_threshold(2);
+        let (prefetch_send, prefetch_recv) = flume::bounded(1);
+        let send = spawn_walk_event_worker(detector.clone(), prefetch_send);
+
+        for name in ["dir/a", "dir/b"] {
+            send.send(WalkEvent::FileLoaded(
+                RepoPathBuf::from_string(name.to_string())?,
+                0,
+            ))?;
+        }
+        send.send(WalkEvent::DirLoaded(
+            RepoPathBuf::from_string("dir/sub".to_string())?,
+            0,
+            0,
+            0,
+        ))?;
+
+        // The second file load forms the walk, which kicks prefetching.
+        prefetch_recv.recv_timeout(Duration::from_secs(10))?;
+        assert_eq!(
+            detector.file_walks(),
+            vec![(RepoPathBuf::from_string("dir".to_string())?, 0)]
+        );
+
+        Ok(())
     }
 }

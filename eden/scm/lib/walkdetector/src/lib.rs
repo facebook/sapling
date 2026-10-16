@@ -397,6 +397,9 @@ impl Detector {
 
     /// Run GC if needed, then persist any metadata collected by GC after dropping the write lock.
     fn maybe_gc(&self) -> bool {
+        if !self.inner.read().needs_gc(&self.config) {
+            return false;
+        }
         let mut inner = self.inner.write();
         let (walk_changed, important_metadata) =
             match inner.maybe_gc(&self.config, self.persistence_path.is_some()) {
@@ -505,6 +508,14 @@ impl Detector {
         walk_changed
     }
 
+    /// Account a "heavy" or remote file read of `path` to the walk already covering it, if any,
+    /// taking only the read lock. Returns whether a walk covered it. Otherwise the caller should
+    /// report the read with `file_loaded`, which may create or extend walks under the write lock.
+    pub fn file_loaded_fast(&self, path: impl AsRef<RepoPath>, pid: u32) -> bool {
+        self.mark_read(path.as_ref(), WalkType::File, true, pid)
+            .is_some()
+    }
+
     /// Observe a "soft" or cached file (content) access of `path`.
     /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
     /// Returns whether path was covered by an active walk.
@@ -606,35 +617,53 @@ impl Detector {
         walk_changed
     }
 
-    /// Observe a "soft" or cached directory access of `path`. This will not be tracked as a new
-    /// walk, but will reset TTL of an existing walk. `num_files` and `num_dirs` report the number
-    /// of file and directory children of `path`, respectively. Pass zero if you don't know. Returns
-    /// whether path was covered by an active walk.
-    pub fn dir_read(
+    /// Account a "heavy" or remote directory load of `path` to the walk already covering it, if
+    /// any, taking only the read lock. Returns whether a walk covered it. Directory sizes worth
+    /// remembering are left to `dir_loaded`, which records them under the write lock.
+    pub fn dir_loaded_fast(
         &self,
         path: impl AsRef<RepoPath>,
         num_files: usize,
         num_dirs: usize,
         pid: u32,
     ) -> bool {
-        let path = path.as_ref();
-        tracing::trace!(%path, num_files, num_dirs, "dir_read");
-
-        // Remember interesting directory metadata, even though directory is being loaded from cache.
-        // It could still be involved in ongoing or future walk activity that involves remote fetches.
-        if important_metadata(
+        !interesting_metadata(
             self.config.walk_threshold,
             self.config.walk_ratio,
             Some(num_files),
             Some(num_dirs),
-        ) {
-            self.inner
-                .write()
-                .set_metadata(&self.config, path, num_files, num_dirs);
-        }
+        ) && self
+            .mark_read(path.as_ref(), WalkType::Directory, true, pid)
+            .is_some()
+    }
 
+    /// Observe a "soft" or cached directory access of `path`. This will not be tracked as a new
+    /// walk, but will reset TTL of an existing walk. Returns whether path was covered by an
+    /// active walk. Takes only the read lock; see `dir_metadata` for remembering its size.
+    pub fn dir_read(&self, path: impl AsRef<RepoPath>, pid: u32) -> bool {
+        let path = path.as_ref();
+        tracing::trace!(%path, "dir_read");
         self.mark_read(path, WalkType::Directory, false, pid)
             .is_some()
+    }
+
+    /// Whether a directory with `num_files` files and `num_dirs` directories is large enough that
+    /// its size should be remembered with `dir_metadata` even when it was read from cache: it could
+    /// still be involved in ongoing or future walk activity that involves remote fetches.
+    pub fn is_dir_metadata_important(&self, num_files: usize, num_dirs: usize) -> bool {
+        important_metadata(
+            self.config.walk_threshold,
+            self.config.walk_ratio,
+            Some(num_files),
+            Some(num_dirs),
+        )
+    }
+
+    /// Remember the size of directory `path`. Takes the write lock.
+    pub fn dir_metadata(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) {
+        self.inner
+            .write()
+            .set_metadata(&self.config, path.as_ref(), num_files, num_dirs);
     }
 
     /// Record that `preload_count` files were prefetched for the walk rooted at `walk_root`.
@@ -649,7 +678,7 @@ impl Detector {
         let walk_root = walk_root.as_ref();
         tracing::trace!(%walk_root, preload_count, "files_preloaded");
 
-        let inner = self.inner.read();
+        let inner = self.inner.read_recursive();
 
         if let Some(node) = inner.node.get_node(walk_root) {
             if let Some(walk) = node.get_walk_for_type(WalkType::File) {
@@ -678,7 +707,9 @@ impl Detector {
     ) -> Option<&'a RepoPath> {
         let dir = path.parent()?;
 
-        let inner = self.inner.read();
+        // Readers must not queue behind a waiting writer: this runs on filesystem threads for
+        // every read, while walk bookkeeping on the write lock is best effort.
+        let inner = self.inner.read_recursive();
 
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
