@@ -79,6 +79,10 @@ define_stats! {
     // builds it on its first request. Counted at most once per build attempt,
     // so a repo that never builds adds one per failed-build retry window.
     lazy_repo_build_failed: timeseries(Sum, Count),
+    // Successful repo builds, aggregated over repos so idle repos add no series:
+    // on first request via ConfigDefinedRepoLoader, and at assignment via add_repo.
+    lazy_repo_build_duration_ms: histogram(250, 0, 120_000, Average, Count; P 50; P 90; P 99),
+    add_repo_build_duration_ms: histogram(250, 0, 120_000, Average, Count; P 50; P 90; P 99),
     // A tier member a request asked for after startup, built on that request
     // (see `get_or_load_repo`), or that failed to load for it.
     repo_loaded_on_demand: timeseries(Rate, Sum),
@@ -183,6 +187,7 @@ where
                 .build(repo_name.clone(), repo_config, common_config)
                 .await
                 .inspect_err(|_| STATS::lazy_repo_build_failed.add_value(1))?;
+            STATS::lazy_repo_build_duration_ms.add_value(start.elapsed().as_millis() as i64);
             info!(
                 "Built repo on first request: {} in {:?}",
                 repo_name,
@@ -327,11 +332,13 @@ impl<Repo> MononokeReposManager<Repo> {
             .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
         let repo_id = repo_config.repoid.id();
         let common_config = self.configs.repo_configs().common.clone();
+        let start = Instant::now();
         let repo = self
             .repo_factory
             .build(repo_name.to_string(), repo_config, common_config)
             .await
             .inspect_err(|_| STATS::add_repo_failed.add_value(1))?;
+        STATS::add_repo_build_duration_ms.add_value(start.elapsed().as_millis() as i64);
         self.repos.add(repo_name, repo_id, repo);
         self.repos
             .get_by_name(repo_name)
