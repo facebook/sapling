@@ -1405,8 +1405,7 @@ TEST(FsckWalTest, tornSameDirectoryRenameKeepsOnlyTheDestination) {
   auto reload = testOverlay->inodeCatalog()->loadOverlayDir(kRootNodeId);
   ASSERT_TRUE(reload.has_value());
   EXPECT_EQ(1u, reload->entries()->count("new.txt"));
-  // FIXME: old.txt should be gone; the merge keeps both names.
-  EXPECT_EQ(1u, reload->entries()->count("old.txt"));
+  EXPECT_EQ(0u, reload->entries()->count("old.txt"));
   testOverlay->inodeCatalog()->close(std::nullopt);
 }
 

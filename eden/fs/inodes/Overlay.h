@@ -478,17 +478,34 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * path also runs synchronously under the contents lock, so the worst
    * case matches pre-WAL behavior.
    *
-   * Caller must hold the parent TreeInode's contents lock.
+   * Caller must hold the parent TreeInode's contents lock. Returns whether
+   * the directory was compacted.
    */
-  void maybeCompactWal(
+  bool maybeCompactWal(
       InodeNumber parent,
       const DirContents& content,
       uint64_t walFileSizeBytes);
 
   /**
-   * Append a WAL entry and immediately roll for inline compaction. This
-   * is the single entry point used by every WAL-using fast path in
-   * Overlay (`addChild`, `removeChild`, `renameChild`, `materializeChild`).
+   * Append a WAL entry and return the WAL file's size afterwards. An entry
+   * that does not fit the WAL format is persisted by rewriting the base
+   * record instead, which retires the WAL; nothing is returned then.
+   *
+   * Callers must hold the parent TreeInode's contents lock so that
+   * `content` is consistent with the WAL file on disk.
+   */
+  std::optional<uint64_t> appendWalEntryOrRewrite(
+      InodeNumber parent,
+      WalOpType op,
+      PathComponentPiece childName,
+      const overlay::OverlayEntry* entry,
+      const DirContents& content);
+
+  /**
+   * Append a WAL entry and immediately roll for inline compaction. Every
+   * WAL-using fast path in Overlay (`addChild`, `removeChild`,
+   * `renameChild`, `materializeChild`) goes through this, except that a
+   * rename across directories appends to both before rolling for either.
    * Bundling the two steps in one call ensures the compaction trigger
    * cannot be forgotten when a new WAL op is added later — a missed
    * `maybeCompactWal` would let the WAL grow unbounded for that op.

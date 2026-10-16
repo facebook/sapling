@@ -579,6 +579,47 @@ TEST_P(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenRemove) {
   EXPECT_EQ(WalOpType::REMOVE, delta.at("x").type);
 }
 
+TEST_P(
+    FsInodeCatalogWalTest,
+    loadWalDelta_laterAddOfTheSameInodeRemovesTheEarlierName) {
+  // A file created under a temporary name and renamed over its final name,
+  // with the rename's REMOVE not written yet.
+  const InodeNumber parent{340};
+  auto entry = makeEntry(0100644, 7);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"tmp"}, &entry);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"final"}, &entry);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(2u, delta.size());
+  EXPECT_EQ(WalOpType::REMOVE, delta.at("tmp").type);
+  EXPECT_EQ(WalOpType::ADD, delta.at("final").type);
+  EXPECT_EQ(7, *delta.at("final").entry.inodeNumber());
+}
+
+TEST_P(
+    FsInodeCatalogWalTest,
+    loadWalDelta_aNameReusedForAnotherInodeKeepsItsLaterAdd) {
+  const InodeNumber parent{341};
+  auto first = makeEntry(0100644, 7);
+  auto second = makeEntry(0100644, 8);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"a"}, &first);
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"a"}, &second);
+  // Inode 7 moves to b; a keeps inode 8.
+  store_->appendWalEntry(
+      parent, WalOpType::ADD, PathComponentPiece{"b"}, &first);
+
+  auto delta = store_->loadWalDelta(parent).delta;
+  ASSERT_EQ(2u, delta.size());
+  EXPECT_EQ(WalOpType::ADD, delta.at("a").type);
+  EXPECT_EQ(8, *delta.at("a").entry.inodeNumber());
+  EXPECT_EQ(WalOpType::ADD, delta.at("b").type);
+  EXPECT_EQ(7, *delta.at("b").entry.inodeNumber());
+}
+
 TEST_P(FsInodeCatalogWalTest, loadWalDelta_collapsesAddThenMaterialize) {
   const InodeNumber parent{302};
   auto entry = makeEntryWithHash(0100644, 1, std::string(20, '\xab'));

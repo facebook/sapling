@@ -25,6 +25,7 @@
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/Varint.h>
+#include <folly/container/F14Map.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/ToAscii.h>
@@ -1292,6 +1293,21 @@ LoadWalResult FsFileContentStore::loadWalDelta(
     }
     delta.emplace(std::move(walName), std::move(walDelta));
   };
+  // The name each inode was last ADDed under. An ADD of an inode that an
+  // earlier ADD placed under another name is the destination of a rename, so
+  // the earlier name becomes a REMOVE, which is the record the daemon writes
+  // right after that ADD.
+  folly::F14FastMap<int64_t, std::string> lastAddedAs;
+  auto forgetAdd = [&](const std::string& name) {
+    auto it = delta.find(name);
+    if (it == delta.end() || it->second.type != WalOpType::ADD) {
+      return;
+    }
+    auto known = lastAddedAs.find(*it->second.entry.inodeNumber());
+    if (known != lastAddedAs.end() && known->second == it->first) {
+      lastAddedAs.erase(known);
+    }
+  };
 
   auto walPath = getWalPath(parent);
   // Mirror loadRawOverlayDir: open once, ENOENT means no WAL, anything
@@ -1450,6 +1466,15 @@ LoadWalResult FsFileContentStore::loadWalDelta(
             overlayEntry.aclRootState() = static_cast<int32_t>(aclRootState);
           }
 
+          forgetAdd(name);
+          if (auto stale = lastAddedAs.find(inodeNum); stale !=
+                  lastAddedAs.end() &&
+              !isPathPieceEqual(PathComponentPiece{stale->second},
+                                PathComponentPiece{name},
+                                caseSensitive)) {
+            assignDelta(stale->second, WalDelta{WalOpType::REMOVE, {}});
+          }
+          lastAddedAs[inodeNum] = name;
           assignDelta(
               std::move(name),
               WalDelta{WalOpType::ADD, std::move(overlayEntry)});
@@ -1461,6 +1486,7 @@ LoadWalResult FsFileContentStore::loadWalDelta(
             valid = false;
             break;
           }
+          forgetAdd(name);
           assignDelta(std::move(name), WalDelta{WalOpType::REMOVE, {}});
           break;
         }
@@ -1538,6 +1564,38 @@ LoadWalResult FsFileContentStore::replayWal(
           caseSensitive);
     });
   };
+  // An ADD for an inode that the base holds under another name is the
+  // destination of a rename whose REMOVE never reached the WAL; that name
+  // goes. loadWalDelta already reconciled the ADDs within the WAL.
+  folly::F14FastMap<int64_t, const std::string*> addedAs;
+  for (const auto& [name, op] : result.delta) {
+    if (op.type == WalOpType::ADD) {
+      addedAs[*op.entry.inodeNumber()] = &name;
+    }
+  }
+  if (!addedAs.empty()) {
+    std::vector<std::string> stale;
+    for (const auto& [name, entry] : entries) {
+      auto added = addedAs.find(*entry.inodeNumber());
+      if (added != addedAs.end() &&
+          !isPathPieceEqual(
+              PathComponentPiece{name},
+              PathComponentPiece{*added->second},
+              caseSensitive)) {
+        XLOGF(
+            WARN,
+            "Overlay dir {}: dropping entry '{}' for inode {}, which the WAL names again as '{}'",
+            parent,
+            name,
+            *entry.inodeNumber(),
+            *added->second);
+        stale.push_back(name);
+      }
+    }
+    for (const auto& name : stale) {
+      entries.erase(name);
+    }
+  }
   for (auto& [name, op] : result.delta) {
     switch (op.type) {
       case WalOpType::ADD: {

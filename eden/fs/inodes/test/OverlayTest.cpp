@@ -617,8 +617,11 @@ TEST_F(OverlayWalDeferralTest, logsInvalidWalEntryContext) {
 
   const auto parent = overlay_->allocateInodeNumber();
   const auto child = overlay_->allocateInodeNumber();
+  // A second ADD of `child` would turn this name into a REMOVE before
+  // validation sees it, so the bad-mode entry gets an inode of its own.
+  const auto badModeChild = overlay_->allocateInodeNumber();
   auto* catalog = overlay_->getRawInodeCatalog();
-  auto badMode = makeWalEntry(-1, child);
+  auto badMode = makeWalEntry(-1, badModeChild);
   catalog->appendWalEntry(parent, WalOpType::ADD, "bad-mode"_pc, &badMode);
   auto self = makeWalEntry(S_IFREG | 0644, parent);
   catalog->appendWalEntry(parent, WalOpType::ADD, "self"_pc, &self);
@@ -634,7 +637,7 @@ TEST_F(OverlayWalDeferralTest, logsInvalidWalEntryContext) {
       {fmt::format(
            "overlay WAL ADD entry: parent inode {}, name hex \"6261642d6d6f6465\", inode {}",
            parent,
-           child),
+           badModeChild),
        fmt::format(
            "self-referencing inode in overlay WAL ADD (parent inode {}, name hex \"73656c66\", inode {})",
            parent,
@@ -685,8 +688,7 @@ TEST_F(OverlayWalReplayTest, tornRenameKeepsOnlyTheDestinationName) {
 
   auto result = overlay_->loadOverlayDir(rootIno);
   EXPECT_TRUE(result.find("renamed"_pc) != result.end());
-  // FIXME: the source name should be gone; replay keeps both names.
-  EXPECT_TRUE(result.find("existing"_pc) != result.end());
+  EXPECT_TRUE(result.find("existing"_pc) == result.end());
 }
 
 TEST_F(OverlayWalReplayTest, theLaterAddWinsWhenTwoNamesShareAnInode) {
@@ -704,8 +706,7 @@ TEST_F(OverlayWalReplayTest, theLaterAddWinsWhenTwoNamesShareAnInode) {
 
   auto result = overlay_->loadOverlayDir(rootIno);
   EXPECT_TRUE(result.find("final"_pc) != result.end());
-  // FIXME: the temporary name should be gone; replay keeps both names.
-  EXPECT_TRUE(result.find("tmp.final"_pc) != result.end());
+  EXPECT_TRUE(result.find("tmp.final"_pc) == result.end());
   EXPECT_TRUE(result.find("existing"_pc) != result.end());
 }
 
@@ -735,12 +736,10 @@ TEST_F(OverlayWalReplayTest, renameCompactsOnlyAfterBothWalAppends) {
           srcIno, dstIno, "tmp"_pc, "final"_pc, srcAfter, dstAfter),
       std::system_error);
 
-  // FIXME: the destination ADD should still be in the destination WAL, which
-  // is what tells fsck that `final` is the newer of the two names. The
-  // destination was compacted right after its append, so its base record
-  // holds `final` and nothing on disk says which name came last.
+  // The destination ADD is still in the destination WAL, which is what tells
+  // fsck that `final` is the newer of the two names.
   auto* catalog = overlay_->getRawInodeCatalog();
-  EXPECT_FALSE(catalog->hasWal(dstIno));
+  EXPECT_TRUE(catalog->hasWal(dstIno));
   auto dst = overlay_->loadOverlayDir(dstIno);
   EXPECT_TRUE(dst.find("final"_pc) != dst.end());
   boost::filesystem::remove(srcWalPath.c_str());
@@ -3385,7 +3384,7 @@ TEST(WalRenameTest, missingDestinationGuardCanBeDisabledAfterReload) {
   }
 }
 
-TEST(WalRenameTest, destinationCompactionWriteFailurePreservesSource) {
+TEST(WalRenameTest, destinationCompactionWriteFailureKeepsTheRename) {
   folly::test::TemporaryDirectory tmp("eden_wal_rename_compaction_failure");
   const auto dir = canonicalPath(tmp.path().string());
   auto bundle = makeWalLifecycleOverlay(dir);
@@ -3410,20 +3409,19 @@ TEST(WalRenameTest, destinationCompactionWriteFailurePreservesSource) {
       bundle.overlay->renameChild(
           src, dst, "source"_pc, "target"_pc, srcContent, dstContent),
       std::system_error);
+  // Both appends are on disk by the time the compaction fails, so the WAL
+  // files hold the whole rename and nothing in the caller's directories is
+  // out of step with them.
   EXPECT_TRUE(bundle.store->hasWal(dst));
-  EXPECT_FALSE(bundle.store->hasWal(src));
+  EXPECT_TRUE(bundle.store->hasWal(src));
   bundle.overlay->close();
   ASSERT_TRUE(boost::filesystem::remove(blocker));
 
   auto reopened = makeWalLifecycleOverlay(dir);
   const auto loadedSrc = reopened.overlay->loadOverlayDir(src);
   const auto loadedDst = reopened.overlay->loadOverlayDir(dst);
-  ASSERT_EQ(1u, loadedSrc.size());
+  EXPECT_TRUE(loadedSrc.empty());
   ASSERT_EQ(1u, loadedDst.size());
-  const auto source = loadedSrc.find("source"_pc);
-  ASSERT_NE(loadedSrc.end(), source);
-  EXPECT_EQ(child, source->second.getInodeNumber());
-  EXPECT_EQ(id, source->second.getObjectId());
   const auto target = loadedDst.find("target"_pc);
   ASSERT_NE(loadedDst.end(), target);
   EXPECT_EQ(child, target->second.getInodeNumber());

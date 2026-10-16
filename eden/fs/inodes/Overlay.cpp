@@ -25,6 +25,7 @@
 #include <folly/Range.h>
 #include <folly/ScopeGuard.h>
 #include <folly/String.h>
+#include <folly/container/F14Map.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
@@ -981,39 +982,85 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
       shouldRewriteOverlay = true;
     }
 
+    // Only the Overlay knows which inode numbers exist and which mode bits a
+    // DirEntry can hold. An ADD that fails those checks is dropped from the
+    // delta here, before anything else looks at it.
+    for (auto it = delta.begin(); it != delta.end();) {
+      const auto& name = it->first;
+      const auto& walDelta = it->second;
+      if (walDelta.type != WalOpType::ADD) {
+        ++it;
+        continue;
+      }
+      try {
+        validateOverlayEntry(
+            inodeNumber, name, walDelta.entry, "overlay WAL ADD");
+        if (*walDelta.entry.inodeNumber() == 0) {
+          throw OverlayDataCorruption{fmt::format(
+              "zero inode number in overlay WAL ADD (parent inode {}, name hex \"{}\", inode {})",
+              inodeNumber,
+              folly::hexlify(name),
+              *walDelta.entry.inodeNumber())};
+        }
+        if (static_cast<uint64_t>(*walDelta.entry.inodeNumber()) ==
+            inodeNumber.get()) {
+          throw OverlayDataCorruption{fmt::format(
+              "self-referencing inode in overlay WAL ADD (parent inode {}, name hex \"{}\", inode {})",
+              inodeNumber,
+              folly::hexlify(name),
+              *walDelta.entry.inodeNumber())};
+        }
+        ++it;
+      } catch (const OverlayDataCorruption& ex) {
+        XLOGF(
+            ERR,
+            "Dropping WAL entry {} from overlay dir {}: {}",
+            name,
+            inodeNumber,
+            ex.what());
+        ++walResult.parseErrors;
+        --walResult.rawEntriesParsed;
+        it = delta.erase(it);
+      }
+    }
+
+    // An ADD for an inode that the base holds under another name is the
+    // destination of a rename whose REMOVE never reached the WAL; that name
+    // goes. loadWalDelta already reconciled the ADDs within the WAL.
+    folly::F14FastMap<InodeNumber, std::string_view> addedAs;
+    for (const auto& [name, walDelta] : delta) {
+      if (walDelta.type == WalOpType::ADD) {
+        addedAs[InodeNumber::fromThrift(*walDelta.entry.inodeNumber())] = name;
+      }
+    }
+    if (!addedAs.empty()) {
+      std::vector<PathComponent> stale;
+      for (const auto& [name, entry] : merged) {
+        auto added = addedAs.find(entry.getInodeNumber());
+        if (added != addedAs.end() &&
+            !isPathPieceEqual(
+                name.piece(),
+                PathComponentPiece{added->second},
+                caseSensitive_)) {
+          XLOGF(
+              WARN,
+              "Overlay dir {}: dropping entry '{}' for inode {}, which the WAL names again as '{}'",
+              inodeNumber,
+              name.view(),
+              entry.getInodeNumber(),
+              added->second);
+          stale.push_back(name);
+        }
+      }
+      for (const auto& name : stale) {
+        merged.erase(name.piece());
+      }
+    }
+
     for (auto& [name, walDelta] : delta) {
       try {
         switch (walDelta.type) {
           case WalOpType::ADD: {
-            try {
-              validateOverlayEntry(
-                  inodeNumber, name, walDelta.entry, "overlay WAL ADD");
-              if (*walDelta.entry.inodeNumber() == 0) {
-                throw OverlayDataCorruption{fmt::format(
-                    "zero inode number in overlay WAL ADD (parent inode {}, name hex \"{}\", inode {})",
-                    inodeNumber,
-                    folly::hexlify(name),
-                    *walDelta.entry.inodeNumber())};
-              }
-              if (static_cast<uint64_t>(*walDelta.entry.inodeNumber()) ==
-                  inodeNumber.get()) {
-                throw OverlayDataCorruption{fmt::format(
-                    "self-referencing inode in overlay WAL ADD (parent inode {}, name hex \"{}\", inode {})",
-                    inodeNumber,
-                    folly::hexlify(name),
-                    *walDelta.entry.inodeNumber())};
-              }
-            } catch (const OverlayDataCorruption& ex) {
-              XLOGF(
-                  ERR,
-                  "Dropping WAL entry {} from overlay dir {}: {}",
-                  name,
-                  inodeNumber,
-                  ex.what());
-              ++walResult.parseErrors;
-              --walResult.rawEntriesParsed;
-              break;
-            }
             auto mode = static_cast<mode_t>(*walDelta.entry.mode());
             auto ino = InodeNumber::fromThrift(*walDelta.entry.inodeNumber());
             const auto aclRootState =
@@ -1244,12 +1291,12 @@ void Overlay::mergeWalIntoOverlayDir(
   }
 }
 
-void Overlay::maybeCompactWal(
+bool Overlay::maybeCompactWal(
     InodeNumber parent,
     const DirContents& content,
     uint64_t walFileSizeBytes) {
   if (!canHaveWalFiles()) {
-    return;
+    return false;
   }
   // Hard cap first: the on-disk WAL byte size is the source of truth.
   bool atCap = walFileSizeBytes >= walCompactionByteCap_;
@@ -1264,7 +1311,7 @@ void Overlay::maybeCompactWal(
         : walCompactionMultiplier_ *
             std::max(content.size(), static_cast<size_t>(10));
     if (walCompactionRng_() % threshold != 0) {
-      return;
+      return false;
     }
   }
   stats_->increment(&OverlayStats::walCompaction);
@@ -1281,18 +1328,20 @@ void Overlay::maybeCompactWal(
   DurationScope<EdenStats> compactScope{
       stats_, &OverlayStats::walCompactionInline};
   saveOverlayDir(parent, content, /*isMaterialized=*/true);
+  return true;
 }
 
-void Overlay::appendWalEntryAndCompact(
+std::optional<uint64_t> Overlay::appendWalEntryOrRewrite(
     InodeNumber parent,
     WalOpType op,
     PathComponentPiece childName,
     const overlay::OverlayEntry* entry,
     const DirContents& content) {
-  uint64_t walFileSizeBytes = 0;
   try {
-    walFileSizeBytes =
+    auto walFileSizeBytes =
         inodeCatalog_->appendWalEntry(parent, op, childName, entry);
+    stats_->increment(&OverlayStats::walAppend);
+    return walFileSizeBytes;
   } catch (const WalEntryTooLargeError& ex) {
     // `content` already includes this mutation, so a full rewrite persists
     // it and retires the incompatible WAL; the next append starts a fresh
@@ -1301,10 +1350,20 @@ void Overlay::appendWalEntryAndCompact(
     DurationScope<EdenStats> compactScope{
         stats_, &OverlayStats::walCompactionInline};
     saveOverlayDir(parent, content, /*isMaterialized=*/true);
-    return;
+    return std::nullopt;
   }
-  stats_->increment(&OverlayStats::walAppend);
-  maybeCompactWal(parent, content, walFileSizeBytes);
+}
+
+void Overlay::appendWalEntryAndCompact(
+    InodeNumber parent,
+    WalOpType op,
+    PathComponentPiece childName,
+    const overlay::OverlayEntry* entry,
+    const DirContents& content) {
+  if (auto walFileSizeBytes =
+          appendWalEntryOrRewrite(parent, op, childName, entry, content)) {
+    maybeCompactWal(parent, content, *walFileSizeBytes);
+  }
 }
 
 void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
@@ -2132,29 +2191,31 @@ void Overlay::renameChild(
               dst, WalOpType::ADD, dstName, &entry, dstContent);
         } else {
           // Order matters: write ADD-to-dst first so a crash between the
-          // two appends leaves the entry visible from both `src` and `dst`
-          // rather than dropping it entirely. The user observes the rename
-          // as incomplete (the source still exists alongside the destination)
-          // and can `rm` the unwanted copy to converge the state. The opposite
-          // ordering would risk losing the entry permanently. No fsck pass is
-          // required to recover.
+          // two appends keeps the entry reachable rather than dropping it.
+          // Replay then drops the source name when it sees the destination
+          // ADD for the same inode in the same directory, and fsck repairs
+          // the cross-directory case, where the two names sit in different
+          // WAL files, by keeping the name a WAL added. The opposite
+          // ordering would risk losing the entry permanently.
           //
-          // Both appends bump the per-parent compaction counter, so on a
-          // same-dir rename (src == dst) the counter ticks twice — matching
-          // the two on-disk WAL entries. Without this the counter under-reports
-          // by 50% on same-dir renames and the WAL grows to ~2x the intended
-          // threshold before compaction fires. If compaction fires after the
-          // first append, the second append targets the freshly-rewritten base
-          // file with `srcName` already absent (because srcContent reflects the
-          // post-rename state); replayWal tolerates REMOVE on a missing name.
-          appendWalEntryAndCompact(
+          // Neither directory is compacted until both entries are on disk.
+          // Compacting the destination in between would fold the new name
+          // into its base record while the source WAL still holds the old
+          // one, and fsck would keep the old name after a crash there.
+          //
+          // Both appends roll for compaction, so on a same-dir rename
+          // (src == dst) the roll happens twice, matching the two on-disk
+          // WAL entries; one roll per rename would let the WAL grow to ~2x
+          // the intended threshold. One compaction covers both appends.
+          auto dstWalFileSizeBytes = appendWalEntryOrRewrite(
               dst, WalOpType::ADD, dstName, &entry, dstContent);
-          appendWalEntryAndCompact(
-              src,
-              WalOpType::REMOVE,
-              srcName,
-              /*entry=*/nullptr,
-              srcContent);
+          auto srcWalFileSizeBytes = appendWalEntryOrRewrite(
+              src, WalOpType::REMOVE, srcName, /*entry=*/nullptr, srcContent);
+          const bool compacted = dstWalFileSizeBytes.has_value() &&
+              maybeCompactWal(dst, dstContent, *dstWalFileSizeBytes);
+          if (srcWalFileSizeBytes.has_value() && !(src == dst && compacted)) {
+            maybeCompactWal(src, srcContent, *srcWalFileSizeBytes);
+          }
         }
       }
     } else {
