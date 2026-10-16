@@ -158,7 +158,14 @@ impl RepoShardedProcess for ScsServerProcess {
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
-            self.repos_mgr.add_repo(repo_name).await.with_context(|| {
+            let added = if lazy_repo_build_enabled() {
+                self.repos_mgr
+                    .add_repo_for_service(repo_name, Some(ShardedService::SourceControlService))
+                    .await
+            } else {
+                self.repos_mgr.add_repo(repo_name).await.map(|_| ())
+            };
+            added.with_context(|| {
                 format!("Failure in setting up repo {repo_name} in SCS service")
             })?;
             info!("Completed repo {} setup in SCS service", repo_name);
@@ -170,6 +177,11 @@ impl RepoShardedProcess for ScsServerProcess {
             repos_mgr: self.repos_mgr.clone(),
         }))
     }
+}
+
+/// Whether `setup` may register a repo unbuilt, for its first request to build.
+fn lazy_repo_build_enabled() -> bool {
+    justknobs::eval("scm/mononoke:enable_scs_lazy_repo_build", None, None)
 }
 
 /// Struct representing the execution of the source control service for a

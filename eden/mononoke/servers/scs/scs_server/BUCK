@@ -39,6 +39,7 @@ rust_binary(
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
         "//eden/mononoke/common/facebook/sql_storage:sql_storage",
         "//eden/mononoke/common/memory:memory",
+        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/features/async_requests:async_requests_client",
         "//eden/mononoke/megarepo_api:megarepo_api",
