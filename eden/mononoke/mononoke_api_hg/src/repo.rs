@@ -553,15 +553,16 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ) {
         let uploaded = results.iter().filter_map(|result| result.as_ref().ok());
         let repo_name = self.repo().repo_identity().name();
-        // Mapping only stands in for derivation, so it cannot bring augmented
-        // manifests to a repo that has them off.
+        // Mapping cannot bring augmented manifests to a repo that has them off.
         let map_roots = justknobs::eval(
             MAP_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST,
             None,
             Some(repo_name),
         ) && self
-            .repo_ctx()
-            .derive_hg_augmented_manifest_at_creation_enabled();
+            .repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(RootHgAugmentedManifestId::VARIANT);
         // Bubbles are skipped: nothing is derived there.
         let check_roots = (map_roots
             || justknobs::eval(

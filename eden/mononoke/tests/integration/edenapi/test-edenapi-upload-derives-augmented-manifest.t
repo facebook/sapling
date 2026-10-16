@@ -550,8 +550,8 @@ tree, uploaded with mapping off.
   $ cmp acl_11 acl_12 && echo same
   same
 
-Scenario 10 -- changeset-upload derivation OFF, mapping ON. Mapping only stands
-in for derivation, so nothing is mapped or derived; the check still counts.
+Scenario 10 -- changeset-upload derivation OFF, mapping ON. The commit is still
+mapped to the root tree upload stored, and nothing is derived.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": false, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": true}}
   > EOF
@@ -574,10 +574,10 @@ in for derivation, so nothing is mapped or derived; the check still counts.
   $ wait_for_upload "$BEFORE"
   $ derivations_since "$BEFORE"
   $ root_checks_since "$BEFORE"
-  UploadedRootAugmentedStored: 1
+  UploadedRootAugmentedMapped: 1
   $ CS_OFF=$(sl log -r . -T '{node}')
   $ cd $TESTTMP
   $ mononoke_admin derived-data -R repo exists -T acl_manifests -i "$CS_OFF"
-  Not Derived: * (glob)
+  Derived: * (glob)
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_OFF"
-  Not Derived: * (glob)
+  Derived: * (glob)
