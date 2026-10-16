@@ -895,6 +895,16 @@ fn bypass_config_with_group() -> HookConfig {
     }
 }
 
+/// A group-gated bypass with no marker: membership alone bypasses the hook.
+fn implicit_bypass_config_with_group() -> HookConfig {
+    HookConfig {
+        bypass: Some(
+            HookBypass::new_implicit().with_permission_group(Some("test_bypass_group".to_string())),
+        ),
+        ..Default::default()
+    }
+}
+
 fn pushvar_bypass_config_with_group() -> HookConfig {
     HookConfig {
         bypass: Some(
@@ -1343,6 +1353,51 @@ async fn test_human_in_bypass_group_still_bypasses(fb: FacebookInit) {
     .run(fb)
     .await;
     assert_bypassed(&res);
+}
+
+// =========================================================================
+// Implicit group bypass
+//
+// With `bypass_implicit_for_group`, membership in the permission group is the
+// whole authorization: no marker in the commit message or pushvars is needed.
+// =========================================================================
+
+/// A member pushing a changeset with no bypass marker is bypassed.
+#[mononoke::fbinit_test]
+async fn test_implicit_bypass_member_without_marker(fb: FacebookInit) {
+    let res = BypassScenario {
+        bypass_config: implicit_bypass_config_with_group(),
+        checker: Some(AlwaysMember::new().into()),
+        changeset: default_changeset(),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_bypassed(&res);
+}
+
+/// A non-member pushing without a marker: the hook runs, and the rejection says
+/// the group is what they lack.
+#[mononoke::fbinit_test]
+async fn test_implicit_bypass_non_member_gets_group_note(fb: FacebookInit) {
+    let res = BypassScenario {
+        bypass_config: implicit_bypass_config_with_group(),
+        checker: Some(NeverMember::new().into()),
+        changeset: default_changeset(),
+        ..Default::default()
+    }
+    .run(fb)
+    .await;
+    assert_hook_rejected(&res);
+    let info = res[0]
+        .get_execution()
+        .rejection_info()
+        .expect("hook rejected");
+    assert!(
+        info.long_description.contains("not a member of group"),
+        "expected the not-a-member note, got {:?}",
+        info.long_description,
+    );
 }
 
 // =========================================================================

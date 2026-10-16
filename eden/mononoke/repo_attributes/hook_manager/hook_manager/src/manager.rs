@@ -300,10 +300,7 @@ impl HookManager {
 
         // Cheap synchronous trigger check first: no trigger => no ACL call.
         let bypass = hook.get_config().bypass.as_ref();
-        let triggered = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
-            .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)))
-            .is_some();
-        if !triggered {
+        if bypass_trigger_reason(bypass, maybe_pushvars, cs_msg).is_none() {
             return Ok(BypassDecision::NoBypass);
         }
 
@@ -396,10 +393,7 @@ impl HookManager {
     ) -> Result<BypassAuthorizationResult> {
         let bypass = hook.get_config().bypass.as_ref();
 
-        let bypass_reason = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
-            .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)));
-
-        let bypass_reason = match bypass_reason {
+        let bypass_reason = match bypass_trigger_reason(bypass, maybe_pushvars, cs_msg) {
             Some(reason) => reason,
             None => return Ok(BypassAuthorizationResult::NoBypass),
         };
@@ -1041,6 +1035,31 @@ fn unconditional_bypass_reason(
     let bypass = hook.get_config().bypass.as_ref();
     get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
         .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)))
+}
+
+/// Why a group-gated bypass is being attempted: the pushvar, the commit-message
+/// marker, or -- for a hook with `bypass_implicit_for_group` -- membership alone.
+/// `None` means the hook runs normally.
+fn bypass_trigger_reason(
+    bypass: Option<&HookBypass>,
+    maybe_pushvars: Option<&HashMap<String, Bytes>>,
+    cs_msg: Option<&str>,
+) -> Option<String> {
+    if let Some(reason) = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars) {
+        return Some(reason);
+    }
+    if let Some(reason) = cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)) {
+        return Some(reason);
+    }
+    if let Some(b) = bypass
+        && b.implicit_for_group()
+    {
+        return Some(format!(
+            "implicit: member of {}",
+            b.permission_group().unwrap_or("unknown"),
+        ));
+    }
+    None
 }
 
 fn get_bypassed_by_pushvar_reason(
