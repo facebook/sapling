@@ -76,6 +76,10 @@ impl Default for Config {
     }
 }
 
+/// How often the manager checks whether a paused prefetch can resume. Kicks only arrive when
+/// walks change, and a walker catching up changes nothing the detector reports.
+const RESUME_CHECK_INTERVAL: Duration = Duration::from_millis(100);
+
 /// Directory walks at most this deep are prefetched together, this many per thread, since each
 /// one is small.
 const SHALLOW_DIR_DEPTH: usize = 2;
@@ -187,9 +191,8 @@ impl ActiveWalks {
 /// Prefetches in flight and the walks already handled.
 #[derive(Default)]
 struct Prefetches {
-    /// File prefetches per walk root, by depth. A walk that deepens gets another prefetch for the
-    /// new depth range below the existing ones.
-    files: HashMap<RepoPathBuf, Vec<(usize, PrefetchHandle)>>,
+    /// One file prefetch per walk root, with the depth it covers. A deeper walk replaces it.
+    files: HashMap<RepoPathBuf, (usize, PrefetchHandle)>,
     /// Directory prefetches per walk root, by depth. Prefetches at different depths overlap.
     dirs: HashMap<RepoPathBuf, Vec<(usize, PrefetchHandle)>>,
     /// Batches of shallow directory walks. A batch cannot be canceled for one walk, so these are
@@ -201,46 +204,45 @@ struct Prefetches {
 }
 
 impl Prefetches {
-    /// Logical prefetches in flight, which `max_concurrent_prefetches` bounds. The prefetches of
-    /// one root at several depths count once.
+    /// Logical prefetches in flight, which `max_concurrent_prefetches` bounds. A paused file
+    /// prefetch has no thread and holds no slot.
     fn active(&self) -> usize {
-        self.files.len() + self.dirs.len() + self.dir_batches.len()
+        self.files
+            .values()
+            .filter(|(_, handle)| !handle.is_paused())
+            .count()
+            + self.dirs.len()
+            + self.dir_batches.len()
+    }
+
+    fn any_paused(&self) -> bool {
+        self.files.values().any(|(_, handle)| handle.is_paused())
     }
 
     /// Forget prefetches that finished and cancel those whose walk ended, so a walk that comes
-    /// back is prefetched again rather than assumed handled. A root with a paused prefetch drops
-    /// all of its prefetches and their walks are no longer handled, so the manager starts them
-    /// again once the walker has caught up.
+    /// back is prefetched again rather than assumed handled.
     fn reconcile(&mut self, walks: &ActiveWalks) {
         self.handled_files
             .retain(|(root, depth)| walks.files.get(root) == Some(depth));
         self.handled_dirs
             .retain(|(root, depth)| walks.dirs.get(root) == Some(depth));
-        reconcile_root_prefetches(&mut self.files, &walks.files, &mut self.handled_files);
-        reconcile_root_prefetches(&mut self.dirs, &walks.dirs, &mut self.handled_dirs);
+        self.files.retain(|root, (_, handle)| {
+            if !walks.files.contains_key(root) {
+                tracing::debug!(%root, "canceling file prefetch with no corresponding walk");
+                return false;
+            }
+            !handle.is_done()
+        });
+        self.dirs.retain(|root, handles| {
+            if !walks.dirs.contains_key(root) {
+                tracing::debug!(%root, "canceling dir prefetch with no corresponding walk");
+                return false;
+            }
+            handles.retain(|(_, handle)| !handle.is_done());
+            !handles.is_empty()
+        });
         self.dir_batches.retain(|handle| !handle.is_done());
     }
-}
-
-fn reconcile_root_prefetches(
-    prefetches: &mut HashMap<RepoPathBuf, Vec<(usize, PrefetchHandle)>>,
-    walks: &HashMap<RepoPathBuf, usize>,
-    handled: &mut HashSet<(RepoPathBuf, usize)>,
-) {
-    prefetches.retain(|root, handles| {
-        if !walks.contains_key(root) {
-            tracing::debug!(%root, "canceling prefetch with no corresponding walk");
-            return false;
-        }
-        if handles.iter().any(|(_, handle)| handle.is_paused()) {
-            for (depth, _) in handles.iter() {
-                handled.remove(&(root.clone(), *depth));
-            }
-            return false;
-        }
-        handles.retain(|(_, handle)| !handle.is_done());
-        !handles.is_empty()
-    });
 }
 
 impl Manager {
@@ -249,7 +251,12 @@ impl Manager {
     /// accesses.
     fn run(mut self, kicks: flume::Receiver<()>) {
         loop {
-            match kicks.recv_timeout(Duration::from_secs(1)) {
+            let wait = if self.prefetches.any_paused() {
+                RESUME_CHECK_INTERVAL
+            } else {
+                Duration::from_secs(1)
+            };
+            match kicks.recv_timeout(wait) {
                 Ok(()) | Err(flume::RecvTimeoutError::Timeout) => {}
                 Err(flume::RecvTimeoutError::Disconnected) => return,
             }
@@ -367,7 +374,7 @@ impl Manager {
                 tracing::debug!(%root, depth, "not kicking off dir walk - prefetches full");
                 continue;
             }
-            if should_pause_prefetch(&self.detector, &self.config, &root) {
+            if should_pause_prefetch(&self.detector, &self.config, &root, false) {
                 tracing::debug!(%root, depth, "not kicking off dir walk - prefetching paused");
                 continue;
             }
@@ -388,6 +395,13 @@ impl Manager {
         self.start_dir_batch(&manifest, shallow, &mut slots);
 
         for (root, depth) in walks.files {
+            if let Some((prefetched, handle)) = self.prefetches.files.get(&root)
+                && handle.is_paused()
+                && *prefetched >= depth
+            {
+                self.resume(&manifest, root, &mut slots);
+                continue;
+            }
             if self
                 .prefetches
                 .handled_files
@@ -395,30 +409,41 @@ impl Manager {
             {
                 continue;
             }
-            // A root already being prefetched at a shallower depth keeps that prefetch, and the
-            // new one starts below it so the two do not overlap.
-            let depth_offset = self
-                .prefetches
-                .files
-                .get(&root)
-                .and_then(|handles| handles.last())
-                .and_then(|(prefetched, _)| (*prefetched < depth).then_some(prefetched + 1));
-            if let Some(depth_offset) = depth_offset {
-                tracing::debug!(%root, depth, depth_offset, "starting walk with depth offset due to existing walk");
+            // A running prefetch that already covers the reported depth is left alone; the walk
+            // may have been replaced by a shallower one.
+            if let Some((prefetched, _)) = self.prefetches.files.get(&root)
+                && *prefetched >= depth
+            {
+                self.prefetches.handled_files.insert((root, depth));
+                continue;
+            }
+            // A file prefetch is a single depth-first enumeration: separate per-depth prefetches
+            // would share the root's pacing budget, with the shallow one spending it far ahead of
+            // the walker while the deep ones starve. A deeper walk replaces the prefetch from the
+            // top, since the deeper files under directories already passed are wanted too; the
+            // new one passes already-fetched directories quickly from local trees.
+            if let Some((prefetched, handle)) = self.prefetches.files.get(&root)
+                && *prefetched < depth
+            {
+                tracing::debug!(%root, depth, "replacing shallower prefetch");
+                if !handle.is_paused() {
+                    slots += 1;
+                }
+                self.prefetches.files.remove(&root);
             }
             let is_new = !self.prefetches.files.contains_key(&root);
             if is_new && slots == 0 {
                 tracing::debug!(%root, depth, "not kicking off file walk - prefetches full");
                 continue;
             }
-            if should_pause_prefetch(&self.detector, &self.config, &root) {
+            if should_pause_prefetch(&self.detector, &self.config, &root, false) {
                 tracing::debug!(%root, depth, "not kicking off file walk - prefetching paused");
                 continue;
             }
             let work = PrefetchWork::Files {
                 root: root.clone(),
                 depth,
-                depth_offset,
+                start_after: None,
             };
             let Some(handle) = self.spawn(&manifest, work) else {
                 tracing::debug!(%root, depth, "not kicking off file walk - manifest walks full");
@@ -426,13 +451,34 @@ impl Manager {
             };
             tracing::debug!(%root, depth, "kicking off file prefetch");
             self.prefetches.handled_files.insert((root.clone(), depth));
-            let handles = self.prefetches.files.entry(root).or_default();
-            handles.push((depth, handle));
-            handles.sort_by_key(|(depth, _)| *depth);
+            self.prefetches.files.insert(root, (depth, handle));
             if is_new {
                 slots -= 1;
             }
         }
+    }
+
+    /// Start a paused prefetch again, after the last file it fetched, once the walker has caught
+    /// up enough and a slot is free.
+    fn resume(&mut self, manifest: &TreeManifest, root: RepoPathBuf, slots: &mut usize) {
+        let Some((depth, handle)) = self.prefetches.files.get(&root) else {
+            return;
+        };
+        let (depth, start_after) = (*depth, handle.resume_after());
+        if *slots == 0 || should_pause_prefetch(&self.detector, &self.config, &root, true) {
+            return;
+        }
+        let work = PrefetchWork::Files {
+            root: root.clone(),
+            depth,
+            start_after,
+        };
+        let Some(handle) = self.spawn(manifest, work) else {
+            return;
+        };
+        tracing::debug!(%root, depth, "resuming prefetch");
+        self.prefetches.files.insert(root, (depth, handle));
+        *slots -= 1;
     }
 
     fn start_dir_batch(
@@ -482,12 +528,12 @@ impl Manager {
 }
 
 enum PrefetchWork {
-    /// Files under `root` down to `depth`, paced against the walker's progress, starting at
-    /// `depth_offset` when a prefetch of the same root already covers the levels above it.
+    /// Files under `root` down to `depth`, in the walker's order, paced against its progress,
+    /// starting after `start_after` when resuming.
     Files {
         root: RepoPathBuf,
         depth: usize,
-        depth_offset: Option<usize>,
+        start_after: Option<RepoPathBuf>,
     },
     /// The trees under each `(root, depth)`.
     Dirs(Vec<(RepoPathBuf, usize)>),
@@ -549,9 +595,7 @@ impl PrefetchJob {
                 // depth=N, we need to pretend we are fetching files at depth=N+1.
                 let matchers = walks
                     .into_iter()
-                    .map(|(root, depth)| {
-                        Arc::new(WalkMatcher::new(root, depth + 1, None)) as DynMatcher
-                    })
+                    .map(|(root, depth)| Arc::new(WalkMatcher::new(root, depth + 1)) as DynMatcher)
                     .collect();
                 let matcher = with_sparse(UnionMatcher::new_or_single(matchers), sparse_matcher);
                 prefetch_dirs(&manifest, matcher, &handle, &log);
@@ -560,15 +604,15 @@ impl PrefetchJob {
             PrefetchWork::Files {
                 root,
                 depth,
-                depth_offset,
+                start_after,
             } => {
                 let _span = tracing::debug_span!("file prefetch", %root, depth).entered();
                 let log = WalkLog::new(depth, || format!("root={root} depth={depth}"));
                 let matcher = with_sparse(
-                    Arc::new(WalkMatcher::new(root.clone(), depth, depth_offset)) as DynMatcher,
+                    Arc::new(WalkMatcher::new(root.clone(), depth)) as DynMatcher,
                     sparse_matcher,
                 );
-                let files = manifest.files(matcher);
+                let files = manifest.files_dfs(matcher, start_after.as_deref());
                 FilePrefetch {
                     config,
                     root,
@@ -578,6 +622,8 @@ impl PrefetchJob {
                     fetches: FileFetchQueue::new(file_store, limits.file_fetches),
                     manifest_walk_permit: Some(permit),
                     batch: Vec::new(),
+                    batch_end: None,
+                    last_fetched: None,
                     file_count: 0,
                     start: Instant::now(),
                 }
@@ -614,9 +660,10 @@ fn prefetch_dirs(
     log.finished("prefetch complete", start, 0);
 }
 
-/// A file-content prefetch: files are enumerated, fetched in batches, and paced against the
-/// walker's progress. When the walker falls too far behind, the prefetch marks its handle paused
-/// and stops; the manager starts a new one from the beginning once the walker has caught up.
+/// A file-content prefetch: files are enumerated in the walker's order, fetched in batches, and
+/// paced against the walker's progress. When the walker falls too far behind, the prefetch
+/// records the last file it fetched in its handle and stops; the manager starts it again from
+/// there once the walker has caught up.
 struct FilePrefetch {
     config: Config,
     root: RepoPathBuf,
@@ -627,22 +674,29 @@ struct FilePrefetch {
     /// Released before waiting for the last fetches so an idle prefetch does not keep another
     /// from walking.
     manifest_walk_permit: Option<ConcurrencyPermit>,
-    /// Keys carry no path, to keep a batch small.
+    /// Keys carry no path, to keep a batch small; the path of the batch's last file is kept
+    /// separately as the point to resume from.
     batch: Vec<Key>,
+    batch_end: Option<RepoPathBuf>,
+    last_fetched: Option<RepoPathBuf>,
     file_count: usize,
     start: Instant,
 }
 
 impl FilePrefetch {
     fn run(mut self, files: impl Iterator<Item = anyhow::Result<manifest::File>>) {
+        // Enumerate file content depth-first in sorted order so the prefetch lead stays in the
+        // walker's path; a breadth-first enumeration would fetch every shallow file under the
+        // root before any deep one. The iterator fetches trees in batches ahead of its position.
         for file in files {
             if !self.handle.is_in_progress() {
-                return self.stopped();
+                return self.finished("prefetch canceled");
             }
             match file {
                 Ok(file) => {
                     self.batch
                         .push(Key::new(RepoPathBuf::new(), file.meta.hgid));
+                    self.batch_end = Some(file.path);
                     if self.batch.len() >= self.config.file_batch_size && !self.fetch_batch() {
                         return self.stopped();
                     }
@@ -657,22 +711,27 @@ impl FilePrefetch {
         // Wait for the remaining fetches to finish.
         while self.handle.is_in_progress() && self.consume_one() {}
         if !self.handle.is_in_progress() {
-            return self.stopped();
+            return self.finished("prefetch canceled");
         }
         self.finished("prefetch complete");
     }
 
-    /// Fetch the batched files. Returns false when the prefetch should stop, paused or canceled.
+    /// Fetch the batched files, unless the walker is too far behind, in which case the prefetch
+    /// pauses. Returns false when the prefetch should stop, paused or canceled.
     fn fetch_batch(&mut self) -> bool {
         if self.batch.is_empty() {
             return true;
         }
         let _span = tracing::debug_span!("prefetching file content", batch_size = self.batch.len())
             .entered();
+        if should_pause_prefetch(&self.detector, &self.config, &self.root, false) {
+            self.pause();
+            return false;
+        }
         let Some(permit) = self.acquire_slot() else {
             return false;
         };
-        // Consuming a fetch can take a while; the prefetch may have stopped meanwhile.
+        // Consuming a fetch can take a while; the prefetch may have been canceled meanwhile.
         if !self.handle.is_in_progress() {
             return false;
         }
@@ -681,15 +740,26 @@ impl FilePrefetch {
         // asynchronously when you fetch more than 1_000 keys. If that assumption changes, we
         // will need to change what we do here.
         let batch = mem::take(&mut self.batch);
+        let batch_end = self.batch_end.take();
         self.file_count += batch.len();
-        if let Err(err) = self.fetches.start(permit, batch, self.config.skip_lfs) {
-            tracing::error!(?err, "error prefetching file content");
+        match self.fetches.start(permit, batch, self.config.skip_lfs) {
+            Ok(()) => self.last_fetched = batch_end,
+            Err(err) => tracing::error!(?err, "error prefetching file content"),
         }
         true
     }
 
-    /// A fetch slot, consuming this prefetch's own finished fetches first. None if the prefetch
-    /// stopped.
+    /// Stop here and let the manager start again after the last fetched file once the walker has
+    /// caught up. The files batched but not fetched are enumerated again then. Outstanding
+    /// fetches are drained first so their files are accounted to the walk.
+    fn pause(&mut self) {
+        self.log.event("pausing prefetch");
+        self.manifest_walk_permit.take();
+        while self.consume_one() {}
+        self.handle.pause(self.last_fetched.take());
+    }
+
+    /// A fetch slot, consuming this prefetch's own finished fetches first. None if canceled.
     fn acquire_slot(&mut self) -> Option<ConcurrencyPermit> {
         loop {
             if !self.handle.is_in_progress() {
@@ -704,18 +774,14 @@ impl FilePrefetch {
         }
     }
 
-    /// Wait for the oldest fetch to finish and account it to the walk, pausing the prefetch if the
-    /// walker has fallen too far behind. False if none was pending.
+    /// Wait for the oldest fetch to finish and account it to the walk, so pacing knows how far
+    /// ahead the prefetch is. False if none was pending.
     fn consume_one(&mut self) -> bool {
         let Some(fctx) = self.fetches.consume_one() else {
             return false;
         };
         self.detector
             .files_preloaded(&self.root, fctx.remote_fetch_count());
-        if should_pause_prefetch(&self.detector, &self.config, &self.root) {
-            self.log.event("pausing prefetch");
-            self.handle.pause();
-        }
         true
     }
 
@@ -790,11 +856,13 @@ fn prefetch(
 
 /// Whether prefetching for `walk_root` should pause, given how much has been prefetched and how
 /// much of it the walker has read. Files are not necessarily read in the order they are
-/// prefetched, so a sizeable lag is allowed before pausing.
+/// prefetched, so a sizeable lag is allowed before pausing; a paused prefetch resumes only once
+/// the lag is down to half that, so it does not stop and start on every batch.
 fn should_pause_prefetch(
     detector: &walkdetector::Detector,
     config: &Config,
     walk_root: &RepoPath,
+    resuming: bool,
 ) -> bool {
     let (prefetch_count, read_count) = detector.files_preloaded(walk_root, 0);
     tracing::debug!(%walk_root, prefetch_count, read_count, "should_pause_prefetch");
@@ -809,7 +877,12 @@ fn should_pause_prefetch(
         return false;
     }
 
-    prefetch_count.saturating_sub(read_count) > config.max_initial_lag
+    let max_lag = if resuming {
+        config.max_initial_lag / 2
+    } else {
+        config.max_initial_lag
+    };
+    prefetch_count.saturating_sub(read_count) > max_lag
 }
 
 #[derive(Clone)]
@@ -940,16 +1013,10 @@ struct WalkMatcher {
 }
 
 impl WalkMatcher {
-    fn new(dir: RepoPathBuf, walk_depth: usize, depth_offset: Option<usize>) -> Self {
+    fn new(dir: RepoPathBuf, walk_depth: usize) -> Self {
         let start_depth = dir.depth();
         Self {
-            depth_matcher: DepthMatcher::new(
-                // If we have a starting depth offset, increase the matcher's min_depth. This is so we
-                // skip prefetching work that is already being handled by another active prefetch for
-                // the same root at a shallow depth.
-                Some(start_depth + depth_offset.unwrap_or_default()),
-                Some(start_depth + walk_depth),
-            ),
+            depth_matcher: DepthMatcher::new(Some(start_depth), Some(start_depth + walk_depth)),
             dir,
         }
     }
@@ -979,6 +1046,8 @@ struct PrefetchState {
     status: AtomicU8,
     cancellation_send: flume::Sender<()>,
     cancellation_recv: flume::Receiver<()>,
+    /// Where a paused prefetch left off: the last file it fetched, or None if it fetched nothing.
+    resume_after: parking_lot::Mutex<Option<RepoPathBuf>>,
 }
 
 #[derive(Clone, Debug)]
@@ -994,6 +1063,7 @@ impl Default for PrefetchHandle {
                 status: AtomicU8::new(Self::IN_PROGRESS),
                 cancellation_send,
                 cancellation_recv,
+                resume_after: Default::default(),
             }),
         }
     }
@@ -1004,23 +1074,15 @@ impl PrefetchHandle {
     const DONE: u8 = 1;
     const PAUSED: u8 = 2;
 
+    /// End a running prefetch. The thread's own copy of the handle drops when it returns, so a
+    /// prefetch that paused stays paused and one that finished is marked done.
     pub(crate) fn cancel(&self) {
-        self.transition_to(Self::DONE);
-    }
-
-    pub(crate) fn pause(&self) {
-        self.transition_to(Self::PAUSED);
-    }
-
-    /// Stop a running prefetch. Only the first transition takes effect, so a prefetch that paused
-    /// stays paused when its handles are dropped.
-    fn transition_to(&self, new_status: u8) {
         if self
             .state
             .status
             .compare_exchange(
                 Self::IN_PROGRESS,
-                new_status,
+                Self::DONE,
                 Ordering::AcqRel,
                 Ordering::Relaxed,
             )
@@ -1033,6 +1095,17 @@ impl PrefetchHandle {
         }
     }
 
+    /// Mark the prefetch paused after `resume_after`, unless it was canceled meanwhile.
+    fn pause(&self, resume_after: Option<RepoPathBuf>) {
+        *self.state.resume_after.lock() = resume_after;
+        let _ = self.state.status.compare_exchange(
+            Self::IN_PROGRESS,
+            Self::PAUSED,
+            Ordering::AcqRel,
+            Ordering::Relaxed,
+        );
+    }
+
     fn cancellation_receiver(&self) -> &flume::Receiver<()> {
         &self.state.cancellation_recv
     }
@@ -1041,12 +1114,17 @@ impl PrefetchHandle {
         self.state.status.load(Ordering::Acquire) == Self::DONE
     }
 
+    pub(crate) fn is_in_progress(&self) -> bool {
+        self.state.status.load(Ordering::Acquire) == Self::IN_PROGRESS
+    }
+
     pub(crate) fn is_paused(&self) -> bool {
         self.state.status.load(Ordering::Acquire) == Self::PAUSED
     }
 
-    pub(crate) fn is_in_progress(&self) -> bool {
-        self.state.status.load(Ordering::Acquire) == Self::IN_PROGRESS
+    /// The last file a paused prefetch fetched, to resume after.
+    pub(crate) fn resume_after(&self) -> Option<RepoPathBuf> {
+        self.state.resume_after.lock().clone()
     }
 }
 
@@ -1058,6 +1136,7 @@ impl Drop for PrefetchHandle {
 
 #[cfg(test)]
 mod test {
+    use std::sync::atomic::AtomicBool;
     use std::time::Duration;
 
     use anyhow::anyhow;
@@ -1130,7 +1209,7 @@ mod test {
             PrefetchWork::Files {
                 root: exclude_dir.clone(),
                 depth: 0,
-                depth_offset: None,
+                start_after: None,
             },
             Some(sparse_matcher.clone()),
         );
@@ -1155,7 +1234,7 @@ mod test {
             PrefetchWork::Files {
                 root: "dir".to_string().try_into()?,
                 depth: 0,
-                depth_offset: None,
+                start_after: None,
             },
             Some(sparse_matcher.clone()),
         );
@@ -1180,7 +1259,7 @@ mod test {
             PrefetchWork::Files {
                 root: exclude_dir,
                 depth: 0,
-                depth_offset: None,
+                start_after: None,
             },
             None,
         );
@@ -1199,7 +1278,7 @@ mod test {
             ]
         );
 
-        // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
+        // Prefetch for "dir/" at depth=1 (i.e. "dir/*" and "dir/*/*").
         let handle = prefetch(
             Config::default(),
             mf.clone(),
@@ -1208,7 +1287,7 @@ mod test {
             PrefetchWork::Files {
                 root: "dir".to_string().try_into()?,
                 depth: 1,
-                depth_offset: Some(1),
+                start_after: None,
             },
             None,
         );
@@ -1218,13 +1297,15 @@ mod test {
             std::thread::sleep(Duration::from_millis(1));
         }
 
-        // We only additionally fetched "dir/dir2/bar" (i.e. did not redundantly fetch "dir/foo").
+        // Depth-first in name order: "dir/dir2/bar", then "dir/foo" (already local) is requested
+        // again.
         assert_eq!(
             store.fetches().into_iter().flatten().collect::<Vec<_>>(),
             vec![
                 Key::new(RepoPathBuf::new(), foo_hgid),
                 Key::new(RepoPathBuf::new(), exclude_hgid),
                 Key::new(RepoPathBuf::new(), bar_hgid),
+                Key::new(RepoPathBuf::new(), foo_hgid),
             ]
         );
 
@@ -1239,7 +1320,7 @@ mod test {
             PrefetchWork::Files {
                 root: RepoPathBuf::new(),
                 depth: 2,
-                depth_offset: None,
+                start_after: None,
             },
             None,
         );
@@ -1746,24 +1827,11 @@ mod test {
         let handle = PrefetchHandle::default();
         assert!(handle.is_in_progress());
         assert!(!handle.is_done());
-        assert!(!handle.is_paused());
 
+        // Dropping any clone cancels the prefetch.
         drop(handle.clone());
         assert!(handle.is_done());
         assert!(!handle.is_in_progress());
-        assert!(!handle.is_paused());
-
-        // Has no effect.
-        handle.pause();
-        assert!(handle.is_done());
-        assert!(!handle.is_in_progress());
-        assert!(!handle.is_paused());
-
-        let handle = PrefetchHandle::default();
-        handle.pause();
-        assert!(!handle.is_done());
-        assert!(!handle.is_in_progress());
-        assert!(handle.is_paused());
     }
 
     #[test]
@@ -1790,7 +1858,7 @@ mod test {
         assert_eq!(prefetches.active(), 2);
         prefetches
             .files
-            .insert(RepoPathBuf::new(), vec![(1, PrefetchHandle::default())]);
+            .insert(RepoPathBuf::new(), (1, PrefetchHandle::default()));
         assert_eq!(prefetches.active(), 3);
     }
 
@@ -1857,7 +1925,7 @@ mod test {
             PrefetchWork::Files {
                 root: "".to_string().try_into()?,
                 depth: 0,
-                depth_offset: None,
+                start_after: None,
             },
             None,
         );
@@ -1869,6 +1937,205 @@ mod test {
         let contexts = file_store.fetch_contexts();
         assert_eq!(contexts.len(), 1);
         assert!(contexts[0].skip_lfs());
+
+        Ok(())
+    }
+
+    /// A file store whose fetches block until released, so a prefetch can be caught in progress.
+    #[derive(Clone)]
+    struct GatedFileStore {
+        inner: Arc<TestStore>,
+        released: Arc<AtomicBool>,
+    }
+
+    impl KeyStore for GatedFileStore {
+        fn get_content_iter(
+            &self,
+            fctx: FetchContext,
+            keys: Vec<Key>,
+        ) -> anyhow::Result<storemodel::ContentFetchItems> {
+            // Record the fetch first so the test can see it while it is held.
+            let items = self.inner.get_content_iter(fctx, keys)?;
+            while !self.released.load(Ordering::Acquire) {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            Ok(items)
+        }
+
+        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+            self.inner.get_local_content(path, hgid)
+        }
+
+        fn insert_data(
+            &self,
+            opts: storemodel::InsertOpts,
+            path: &RepoPath,
+            data: Blob,
+        ) -> anyhow::Result<HgId> {
+            self.inner.insert_data(opts, path, data)
+        }
+
+        fn format(&self) -> SerializationFormat {
+            self.inner.format()
+        }
+
+        fn clone_key_store(&self) -> Box<dyn KeyStore> {
+            Box::new(self.clone())
+        }
+    }
+
+    impl FileStore for GatedFileStore {
+        fn clone_file_store(&self) -> Box<dyn FileStore + 'static> {
+            Box::new(self.clone())
+        }
+    }
+
+    #[test]
+    fn test_deeper_walk_replaces_prefetch() -> anyhow::Result<()> {
+        let tree_store = Arc::new(TestStore::new());
+        let inner = Arc::new(TestStore::new());
+        let released = Arc::new(AtomicBool::new(false));
+        let file_store = Arc::new(GatedFileStore {
+            inner: inner.clone(),
+            released: released.clone(),
+        });
+        let mut mf = TreeManifest::ephemeral(tree_store.clone());
+        for path in ["r/a", "r/b", "r/d1/x", "r/d1/y", "r/d2/x", "r/d2/y"] {
+            let repo_path: RepoPathBuf = path.to_string().try_into()?;
+            let hgid = inner.insert_data(Default::default(), &repo_path, path.as_bytes().into())?;
+            mf.insert(repo_path, FileMetadata::new(hgid, types::FileType::Regular))?;
+        }
+        let root_hgid = mf.persist(&[])?;
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let commit_id = HgId::random(&mut rng);
+        let tree_resolver = TestTreeResolver::new(tree_store, [(commit_id, root_hgid)]);
+
+        let mut detector = walkdetector::Detector::new();
+        detector.set_walk_threshold(2);
+        let kick_manager = prefetch_manager(
+            Config::default(),
+            Arc::new(tree_resolver),
+            file_store,
+            Arc::new(RwLock::new(Some(commit_id.to_hex()))),
+            detector.clone(),
+            "".into(),
+            make_test_sparse_matcher,
+        );
+        let wait_for_fetches = |count: usize| {
+            for _ in 0..2000 {
+                if inner.fetches().len() >= count {
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            panic!("timed out waiting for {count} fetches");
+        };
+
+        detector.file_loaded(RepoPath::from_static_str("r/a"), 0);
+        detector.file_loaded(RepoPath::from_static_str("r/b"), 0);
+        kick_manager.send(())?;
+        wait_for_fetches(1);
+
+        detector.file_loaded(RepoPath::from_static_str("r/d1/x"), 0);
+        detector.file_loaded(RepoPath::from_static_str("r/d1/y"), 0);
+        detector.file_loaded(RepoPath::from_static_str("r/d2/x"), 0);
+        detector.file_loaded(RepoPath::from_static_str("r/d2/y"), 0);
+        assert_eq!(
+            detector.file_walks(),
+            vec![("r".to_string().try_into()?, 1)]
+        );
+        kick_manager.send(())?;
+        wait_for_fetches(2);
+        released.store(true, Ordering::Release);
+
+        // The deeper walk restarts a single enumeration from the root, so the depth-0 files are
+        // requested again (served locally) along with the depth-1 files.
+        let keys = inner.fetches().swap_remove(1);
+        assert_eq!(keys.len(), 6, "{keys:?}");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pause_records_resume_point() -> anyhow::Result<()> {
+        let store = Arc::new(TestStore::new());
+        let file_store = store.clone() as Arc<dyn FileStore>;
+        let mut mf = TreeManifest::ephemeral(store.clone());
+        let dir: RepoPathBuf = "dir".to_string().try_into()?;
+        let mut paths = Vec::new();
+        let mut hgids = Vec::new();
+        for i in 0..6 {
+            let path: RepoPathBuf = format!("dir/f{i}").try_into()?;
+            let hgid = file_store.insert_data(
+                Default::default(),
+                &path,
+                format!("content {i}").into_bytes().into(),
+            )?;
+            mf.insert(
+                path.clone(),
+                FileMetadata::new(hgid, types::FileType::Regular),
+            )?;
+            paths.push(path);
+            hgids.push(hgid);
+        }
+
+        let mut detector = walkdetector::Detector::new();
+        detector.set_walk_threshold(2);
+        detector.file_loaded(RepoPath::from_str("dir/f0")?, 0);
+        detector.file_loaded(RepoPath::from_str("dir/f1")?, 0);
+        // Five files already preloaded against two reads: the lead exceeds max_initial_lag and
+        // the read ratio is below min_ratio, so the prefetch pauses before its first batch.
+        detector.files_preloaded(&dir, 5);
+        let config = Config {
+            max_initial_lag: 2,
+            min_ratio: 0.5,
+            ..Default::default()
+        };
+
+        let handle = prefetch(
+            config,
+            mf.clone(),
+            file_store.clone(),
+            detector.clone(),
+            PrefetchWork::Files {
+                root: dir.clone(),
+                depth: 0,
+                start_after: None,
+            },
+            None,
+        );
+        while handle.is_in_progress() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        // It stopped without fetching, and has no resume point since it fetched nothing.
+        assert!(handle.is_paused());
+        assert!(!handle.is_done());
+        assert_eq!(handle.resume_after(), None);
+        assert!(store.fetches().is_empty());
+
+        // Resuming after a file fetches only the files after it.
+        let handle = prefetch(
+            Config::default(),
+            mf,
+            file_store,
+            walkdetector::Detector::new(),
+            PrefetchWork::Files {
+                root: dir,
+                depth: 0,
+                start_after: Some(paths[2].clone()),
+            },
+            None,
+        );
+        while !handle.is_done() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        let fetched: Vec<HgId> = store
+            .fetches()
+            .into_iter()
+            .flatten()
+            .map(|key| key.hgid)
+            .collect();
+        assert_eq!(fetched, hgids[3..]);
 
         Ok(())
     }
@@ -1887,33 +2154,57 @@ mod test {
 
         let walk_root: RepoPathBuf = "root".to_string().try_into()?;
 
-        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+        assert!(!should_pause_prefetch(
+            &detector, &config, &walk_root, false
+        ));
 
         detector.file_loaded(RepoPath::from_str("root/a")?, 0);
         detector.file_loaded(RepoPath::from_str("root/b")?, 0);
         detector.file_read(RepoPath::from_str("root/c")?, 0);
 
-        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+        assert!(!should_pause_prefetch(
+            &detector, &config, &walk_root, false
+        ));
 
         detector.files_preloaded(&walk_root, 15);
 
         // Still not paused - lag is below 20.
-        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+        assert!(!should_pause_prefetch(
+            &detector, &config, &walk_root, false
+        ));
 
         // Now we are paused
         detector.files_preloaded(&walk_root, 20);
-        assert!(should_pause_prefetch(&detector, &config, &walk_root));
+        assert!(should_pause_prefetch(&detector, &config, &walk_root, false));
 
         for i in 0..100 {
             detector.file_read(RepoPath::from_str(&format!("root/{i})"))?, 0);
         }
         detector.files_preloaded(&walk_root, 500);
         // Ratio is ~100/500 - above min_ratio of 0.1.
-        assert!(!should_pause_prefetch(&detector, &config, &walk_root));
+        assert!(!should_pause_prefetch(
+            &detector, &config, &walk_root, false
+        ));
 
         // Now we are below the min ratio.
         detector.files_preloaded(&walk_root, 700);
-        assert!(should_pause_prefetch(&detector, &config, &walk_root));
+        assert!(should_pause_prefetch(&detector, &config, &walk_root, false));
+
+        // Resuming needs the lag down to half the allowance: 19 files ahead of 2 reads does not
+        // pause a running prefetch with an allowance of 20, but keeps a paused one paused.
+        let mut detector = walkdetector::Detector::new();
+        detector.set_walk_threshold(2);
+        detector.file_loaded(RepoPath::from_str("dir/f1")?, 0);
+        detector.file_loaded(RepoPath::from_str("dir/f2")?, 0);
+        let root = RepoPath::from_str("dir")?;
+        let config = Config {
+            min_ratio: 0.1,
+            max_initial_lag: 20,
+            ..Default::default()
+        };
+        detector.files_preloaded(root, 21);
+        assert!(!should_pause_prefetch(&detector, &config, root, false));
+        assert!(should_pause_prefetch(&detector, &config, root, true));
 
         Ok(())
     }
@@ -1931,15 +2222,15 @@ mod test {
         detector.file_loaded(RepoPath::from_str("root/a")?, 0);
         detector.file_loaded(RepoPath::from_str("root/b")?, 0);
         detector.files_preloaded(root, 100);
-        assert!(should_pause_prefetch(&detector, &config, root));
+        assert!(should_pause_prefetch(&detector, &config, root, false));
 
         for i in 0..49 {
             detector.file_loaded(RepoPath::from_str(&format!("root/{i}"))?, 0);
         }
-        assert!(!should_pause_prefetch(&detector, &config, root));
+        assert!(!should_pause_prefetch(&detector, &config, root, false));
 
         detector.files_preloaded(root, 100);
-        assert!(should_pause_prefetch(&detector, &config, root));
+        assert!(should_pause_prefetch(&detector, &config, root, false));
         Ok(())
     }
 }
