@@ -259,6 +259,10 @@ impl GitServerContext {
             Ok(result) => result,
             Err(Some(repo_mgr)) => {
                 // Repo exists in config but not loaded
+                // DO NOT BUILD ON THIS. It is a request-time rescue for eager
+                // repos that miss, with no single-flight: ten concurrent first
+                // requests build the repo ten times. Lazy repos are built through
+                // `RepoSlot` by `MononokeRepos::get` above. Do not extend it.
                 // Check if dynamic repo loading is enabled via JustKnobs
                 let dynamic_loading_enabled =
                     justknobs::eval("scm/mononoke:git_server_dynamic_repo_loading", None, None);
