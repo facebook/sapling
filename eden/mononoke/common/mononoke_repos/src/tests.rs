@@ -12,6 +12,8 @@ use std::sync::atomic::Ordering;
 
 use futures::FutureExt;
 use mononoke_macros::mononoke;
+use tokio::sync::Notify;
+use tokio::task::JoinHandle;
 
 use super::*;
 
@@ -207,4 +209,95 @@ async fn test_an_unbuilt_repo_is_built_on_first_request() {
         1,
         "a repo that is already built must not be built again"
     );
+}
+
+/// Loads `42`, but not until the test releases it, so a build can be held in
+/// flight while the repo is dropped underneath it.
+#[derive(Default)]
+struct Gate {
+    calls: AtomicUsize,
+    started: Notify,
+    release: Notify,
+}
+
+struct GatedLoader(Arc<Gate>);
+
+impl RepoLoader<i32> for GatedLoader {
+    fn load(&self, _repo_name: String) -> BoxFuture<'static, Result<i32>> {
+        let gate = Arc::clone(&self.0);
+        async move {
+            gate.calls.fetch_add(1, Ordering::SeqCst);
+            gate.started.notify_one();
+            gate.release.notified().await;
+            Ok(42)
+        }
+        .boxed()
+    }
+}
+
+/// Assigns `foo` and starts its first request, returning once the build is
+/// in flight.
+async fn start_build(
+    gate: &Arc<Gate>,
+) -> (
+    Arc<MononokeRepos<i32>>,
+    JoinHandle<Result<Option<Arc<i32>>>>,
+) {
+    let repos = Arc::new(MononokeRepos::new_lazy(Arc::new(GatedLoader(Arc::clone(
+        gate,
+    )))));
+    repos.add_placeholder("foo", 1);
+    let request = {
+        let repos = Arc::clone(&repos);
+        mononoke::spawn_task(async move { repos.get("foo").await })
+    };
+    gate.started.notified().await;
+    (repos, request)
+}
+
+#[mononoke::test]
+async fn test_a_shard_dropped_mid_build_is_not_resurrected() {
+    let gate = Arc::new(Gate::default());
+    let (repos, request) = start_build(&gate).await;
+
+    // `on_drop_shard` while the build is in flight.
+    repos.remove("foo");
+    gate.release.notify_one();
+
+    // The request that started the build is still answered with it.
+    assert_eq!(request.await.unwrap().unwrap().as_deref(), Some(&42));
+
+    assert!(repos.get_by_name("foo").is_none(), "dropped repo came back");
+    assert!(repos.get_by_id(1).is_none());
+    assert_eq!(repos.iter_names().count(), 0);
+    assert_eq!(repos.iter_ids().count(), 0);
+    assert_eq!(repos.iter_loaded_names().count(), 0);
+    assert!(repos.get("foo").await.unwrap().is_none());
+    assert_eq!(
+        gate.calls.load(Ordering::SeqCst),
+        1,
+        "a request after the drop must not build the dropped repo"
+    );
+}
+
+#[mononoke::test]
+async fn test_a_shard_reassigned_mid_build_gets_a_fresh_build() {
+    let gate = Arc::new(Gate::default());
+    let (repos, request) = start_build(&gate).await;
+
+    // Dropped and reassigned while the first build is in flight.
+    repos.remove("foo");
+    repos.add_placeholder("foo", 1);
+    gate.release.notify_one();
+    assert_eq!(request.await.unwrap().unwrap().as_deref(), Some(&42));
+
+    // The old build landed in the detached slot, not in the new assignment.
+    assert!(repos.get_by_name("foo").is_none());
+    assert_eq!(repos.iter_loaded_names().count(), 0);
+    assert_eq!(repos.iter_names().collect::<Vec<_>>(), vec!["foo"]);
+
+    // The duplicate build `claim_build` documents, and no more than that.
+    gate.release.notify_one();
+    assert_eq!(repos.get("foo").await.unwrap().as_deref(), Some(&42));
+    assert_eq!(gate.calls.load(Ordering::SeqCst), 2);
 }
