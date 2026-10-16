@@ -93,6 +93,10 @@ define_stats! {
     reconcile_tick_duration_ms: timeseries(Average, Sum, Count),
     tier_names_len: timeseries(Average),
     tier_names_manifest_len: timeseries(Average),
+    // Per-task gauges, sampled on each reconcile tick: repos assigned to this
+    // task (built or not) and those of them that are built.
+    repos_assigned: timeseries(Average),
+    repos_built: timeseries(Average),
 }
 
 /// A manager of a MononokeRepos collection.
@@ -908,6 +912,8 @@ where
                 }
                 STATS::reconcile_tick_duration_ms
                     .add_value(start.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+                STATS::repos_assigned.add_value(driver.repos.iter_names().count() as i64);
+                STATS::repos_built.add_value(driver.repos.iter_loaded_names().count() as i64);
             }
         },
         trigger,
