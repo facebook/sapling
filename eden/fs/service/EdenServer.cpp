@@ -3231,14 +3231,12 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   // server object destruction. This specifically matters in the takeover
   // shutdown code path.
   server_->setStopWorkersOnStopListening(false);
-  server_->leakOutstandingRequestsWhenServerStops(
-      edenConfig->thriftLeakOutstandingRequestsWhenServerStops.getValue());
 
-  // S532385: The above leakOutstandingRequestsWhenServerStops config has
-  // memory safety issues. We'd like to remove it, but removing it leads to a
-  // new class of bugs where outstanding requests do not complete and the
-  // server crashes as a result. This config attempts to mitigate that by
-  // allowing more time for each request to complete on shutdown.
+  // The server joins its in-flight requests when it stops. Returning from
+  // serve() while they still run, which Thrift's
+  // leakOutstandingRequestsWhenServerStops() permits, lets them reach the
+  // server and the mounts after shutdown has torn them down (S532385). A
+  // request that outlives this wait aborts the daemon instead.
   server_->setWorkersJoinTimeout(
       std::chrono::duration_cast<std::chrono::seconds>(
           edenConfig->thriftWorkersJoinTimeout.getValue()));

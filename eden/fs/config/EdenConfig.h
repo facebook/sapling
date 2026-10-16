@@ -659,15 +659,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Whether the Thrift server should be configured to leak outstanding requests
-   * when the server is stopped during shutdown/restart.
-   */
-  ConfigSetting<bool> thriftLeakOutstandingRequestsWhenServerStops{
-      "thrift:leak-outstanding-requests-when-server-stops",
-      false,
-      this};
-
-  /**
    * Enable use of MiniTracer to collect checkout timing info.
    */
   ConfigSetting<bool> thriftCheckoutTimeTracing{
@@ -675,12 +666,8 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
   /**
-   * Configures the amount of time workers should spend completing outstanding
-   * requests during Thrift server shutdown. If the timeout is reached, the
-   * server exits immediately (i.e. crashes).
-   *
-   * Must be used with thriftLeakOutstandingRequestsWhenServerStops to have any
-   * effect.
+   * How long the Thrift server waits for in-flight requests to finish when it
+   * stops. A request that outlives the wait makes the daemon abort.
    */
   ConfigSetting<std::chrono::nanoseconds> thriftWorkersJoinTimeout{
       "thrift:workers-join-timeout",

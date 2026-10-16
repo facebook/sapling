@@ -14,6 +14,8 @@ namespace facebook::eden {
 TEST(DeadConfigKeysTest, matchesExactSectionAndKey) {
   EXPECT_TRUE(isDeadConfigKey("experimental", "prefetch-optimizations-v2"));
   EXPECT_TRUE(isDeadConfigKey("coroutines", "enable-phase1"));
+  EXPECT_TRUE(
+      isDeadConfigKey("thrift", "leak-outstanding-requests-when-server-stops"));
 }
 
 TEST(DeadConfigKeysTest, doesNotMatchPartialOrShiftedKeys) {
