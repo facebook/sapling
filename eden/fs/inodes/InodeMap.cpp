@@ -21,10 +21,12 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/EdenErrorInfo.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -1353,7 +1355,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
 }
 
 bool InodeMap::startLoadingChildIfNotLoading(
-    const TreeInode* parent,
+    TreeInode* parent,
     PathComponentPiece name,
     InodeNumber childInode,
     mode_t mode,
@@ -1362,6 +1364,14 @@ bool InodeMap::startLoadingChildIfNotLoading(
   std::optional<InodeTraceEvent> startLoadEvent;
   {
     auto data = data_.wlock();
+    if (auto loaded = data->loadedInodes_.find(childInode);
+        loaded != data->loadedInodes_.end()) {
+      auto loadedAs = loaded->second->getLogPath();
+      data.unlock();
+      failLoadOfDuplicateEntry(
+          parent, name, childInode, loadedAs, std::move(promise));
+      return false;
+    }
     UnloadedInode* unloadedData{nullptr};
     auto iter = data->unloadedInodes_.find(childInode);
     if (iter == data->unloadedInodes_.end()) {
@@ -1397,6 +1407,30 @@ bool InodeMap::startLoadingChildIfNotLoading(
   // to start the load operation.  Otherwise someone else (whoever added the
   // first promise) has already started loading the inode.
   return isFirstPromise;
+}
+
+void InodeMap::failLoadOfDuplicateEntry(
+    TreeInode* parent,
+    PathComponentPiece name,
+    InodeNumber childInode,
+    const std::string& loadedAs,
+    folly::Promise<InodePtr> promise) {
+  auto message = fmt::format(
+      "inode {} is already loaded as {}; refusing to load it again as {}/{}",
+      childInode,
+      loadedAs,
+      parent->getLogPath(),
+      name.view());
+  auto outcome = mount_->getServerState()->getErrorLogger().log(
+      EdenErrorInfo::overlay(message, childInode.getRawValue())
+          .withMountPoint(mount_->getPath().asString())
+          .withErrorType("duplicate_inode_entry"));
+  if (outcome != ErrorLogOutcome::RateLimited) {
+    XLOGF(ERR, "{}", message);
+  }
+  stats_->increment(&InodeMapStats::lookupInodeError);
+  promise.setException(InodeError(
+      EIO, TreeInodePtr::newPtrFromExisting(parent), name, std::move(message)));
 }
 
 void InodeMap::inodeCreated(const InodePtr& inode) {

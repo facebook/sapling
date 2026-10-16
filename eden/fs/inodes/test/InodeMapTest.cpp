@@ -1059,12 +1059,10 @@ TEST(InodeMap, loadingASecondNameForALoadedInodeFails) {
   dir->lockContentsWrite()->entries.emplace(
       "b.txt"_pc, S_IFREG | 0644, a->getNodeId());
 
-  // FIXME: the lookup should fail with EIO instead of aborting the daemon.
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  EXPECT_DEATH(
+  EXPECT_THROW_ERRNO(
       dir->getOrLoadChild("b.txt"_pc, ObjectFetchContext::getNullContext())
           .get(0ms),
-      "already loaded as dir/a.txt");
+      EIO);
   EXPECT_EQ(
       a->getNodeId(),
       dir->getOrLoadChild("a.txt"_pc, ObjectFetchContext::getNullContext())

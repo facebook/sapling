@@ -371,6 +371,12 @@ class InodeMap {
    * publishes an event to tracebus marking the start of the inode load and
    * attaches an initial promise to the inode to resolve when the load ends.
    *
+   * An inode number that is already loaded under another directory entry is
+   * not loaded a second time: the promise fails with EIO and the function
+   * returns false. Two entries share a number only when the overlay is
+   * damaged, for example by a rename that was interrupted after its first
+   * write.
+   *
    * If startLoadingChildIfNotLoading() returns true, the TreeInode will then
    * continue loading the child inode.  It must then call inodeLoadComplete() or
    * inodeLoadFailed() when it finishes loading the inode.
@@ -386,13 +392,26 @@ class InodeMap {
    *   The InodeMap is responsible for fulfilling this promise.
    *
    * @return Returns true if the TreeInode should continue loading this child
-   *   inode, or false if this child was already being loaded.
+   *   inode, or false if this child was already being loaded or its number is
+   *   loaded under another entry.
    */
   bool startLoadingChildIfNotLoading(
-      const TreeInode* parent,
+      TreeInode* parent,
       PathComponentPiece name,
       InodeNumber childInode,
       mode_t mode,
+      folly::Promise<InodePtr> promise);
+
+  /**
+   * Fail a load that startLoadingChildIfNotLoading() refused because the inode
+   * number is already loaded under another directory entry, and report the
+   * two paths.
+   */
+  void failLoadOfDuplicateEntry(
+      TreeInode* parent,
+      PathComponentPiece name,
+      InodeNumber childInode,
+      const std::string& loadedAs,
       folly::Promise<InodePtr> promise);
 
   /**
