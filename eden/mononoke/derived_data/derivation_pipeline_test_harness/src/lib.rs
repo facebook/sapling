@@ -239,16 +239,10 @@ async fn verify_pipeline_matches_canonical_impl<F: PipelineTestFixture + Send>(
         pipeline_boundary,
     );
     with_just_knobs_async(
-        JustKnobsInMemory::new(HashMap::from([
-            (
-                "scm/mononoke:enable_subtree_changes".to_string(),
-                KnobVal::Bool(true),
-            ),
-            (
-                "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
-                KnobVal::Bool(true),
-            ),
-        ])),
+        JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:enable_subtree_changes".to_string(),
+            KnobVal::Bool(true),
+        )])),
         run.boxed(),
     )
     .await?;
@@ -321,10 +315,6 @@ async fn verify_pipeline_first_then_canonical_with_repo<F: PipelineTestFixture +
         JustKnobsInMemory::new(HashMap::from([
             (
                 "scm/mononoke:enable_subtree_changes".to_string(),
-                KnobVal::Bool(true),
-            ),
-            (
-                "scm/mononoke:enable_manifest_altering_subtree_changes".to_string(),
                 KnobVal::Bool(true),
             ),
             (
