@@ -38,8 +38,11 @@ export function AICodeReviewUpsell({
     Internal.featureFlags?.AIFirstPassCodeReview,
   );
 
-  const allReviewOptions: Array<{label: string; id: string; featureFlag?: string}> =
-    Internal.aiCodeReview?.reviewOptions ?? [];
+  const allReviewOptions: Array<{
+    label: string;
+    id: string;
+    featureFlag?: string;
+  }> = Internal.aiCodeReview?.reviewOptions ?? [];
   const flagResults = allReviewOptions.map(opt =>
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useFeatureFlagSync(

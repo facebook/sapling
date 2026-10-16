@@ -180,7 +180,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
   const methods = (
     <>
       {fillCommitMessageMethods
-        // Only show Devmate option if allowlisted in GK
+        // Only show Agent option if allowlisted in GK
         .filter(method => method.key !== 'devmate' || showDevmate)
         .map(method => (
           <Tooltip

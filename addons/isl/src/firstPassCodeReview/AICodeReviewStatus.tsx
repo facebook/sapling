@@ -65,7 +65,7 @@ export function AICodeReviewStatus(): JSX.Element | null {
       title={
         <div className="comment-collapsible-title">
           <b>
-            <T>Devmate Code Review</T>
+            <T>Agent Code Review</T>
           </b>
           <div className="comment-collapsible-title-status">
             {status === 'success' &&
@@ -84,7 +84,7 @@ export function AICodeReviewStatus(): JSX.Element | null {
       }>
       <div className="comment-content-container">
         {status === 'running' && (
-          <div className="comment-loading">Devmate is reviewing your code...</div>
+          <div className="comment-loading">Agent is reviewing your code...</div>
         )}
         {status === 'success' &&
           (commentCount > 0 ? (
@@ -113,7 +113,7 @@ export function AICodeReviewStatus(): JSX.Element | null {
             </div>
           ) : (
             <div>
-              <T>Everything looks good! Devmate didn't find any issues.</T>
+              <T>Everything looks good! Agent didn't find any issues.</T>
             </div>
           ))}
         {status === 'error' && <ErrorNotice title="Failed to load comments" error={error} />}
