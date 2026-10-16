@@ -7,9 +7,30 @@
 
 #include "eden/fs/inodes/InodeError.h"
 
+#include <cerrno>
+
+#include "eden/fs/telemetry/ThrowTraceCapture.h"
+
 #include "eden/fs/inodes/TreeInode.h"
 
 namespace facebook::eden {
+
+namespace {
+/**
+ * Errors the filesystem raises in normal operation, such as a lookup of a
+ * name that does not exist, throw on the request path. Their throw-site
+ * trace is never reported and is the most expensive part of the throw.
+ */
+bool isExpectedInodeError(const void* exception) {
+  const auto errnum = static_cast<const InodeError*>(exception)->code().value();
+  return errnum == ENOENT || errnum == EEXIST || errnum == ENOTEMPTY;
+}
+
+const bool kThrowTracesSkipped = [] {
+  skipThrowTraceFor(typeid(InodeError), isExpectedInodeError);
+  return true;
+}();
+} // namespace
 
 InodeError::InodeError(int errnum, TreeInodePtr inode, PathComponentPiece child)
     : PathErrorBase(errnum),

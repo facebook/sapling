@@ -42,6 +42,34 @@ TEST(ThrowTraceCaptureTest, CapturesThrowSiteStackTrace) {
   }
 }
 
+namespace {
+struct ExpectedError : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+} // namespace
+
+TEST(ThrowTraceCaptureTest, SkipsRegisteredExpectedTypes) {
+  skipThrowTraceFor(typeid(ExpectedError), [](const void*) { return true; });
+  try {
+    outerThrowingFunc();
+  } catch (const std::exception&) {
+    // An earlier trace must not survive an expected throw.
+  }
+  try {
+    throw ExpectedError("expected");
+  } catch (const ExpectedError&) {
+#ifndef _WIN32
+    // The Windows hook sees no exception type, so nothing is skipped there.
+    EXPECT_FALSE(getThrowSiteStackTrace().has_value());
+#endif
+  }
+  try {
+    outerThrowingFunc();
+  } catch (const std::exception&) {
+    EXPECT_TRUE(getThrowSiteStackTrace().has_value());
+  }
+}
+
 TEST(ThrowTraceCaptureTest, ReturnsNulloptOutsideCatchBlock) {
   auto trace = getThrowSiteStackTrace();
   EXPECT_FALSE(trace.has_value());

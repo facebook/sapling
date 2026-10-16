@@ -176,6 +176,7 @@ cpp_library(
     deps = [
         "//eden/fs/rust/backtrace_ffi:backtrace-ffi",
         "//eden/fs/rust/backtrace_ffi:backtrace-ffi@header",
+        "//folly/logging:logging",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:macos": [

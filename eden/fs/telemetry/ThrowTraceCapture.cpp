@@ -7,7 +7,11 @@
 
 #include "eden/fs/telemetry/ThrowTraceCapture.h"
 
+#include <atomic>
 #include <cstdlib>
+#include <mutex>
+
+#include <folly/logging/xlog.h>
 
 #ifdef __APPLE__
 #include "folly/debugging/exception_tracer/ExceptionTracerLib.h"
@@ -19,11 +23,71 @@
 #include "eden/fs/rust/backtrace_ffi/src/lib.rs.h"
 
 namespace {
-void onThrow() {
+struct SkippedType {
+  const std::type_info* type{nullptr};
+  bool (*isExpected)(const void*){nullptr};
+};
+
+// Registered during startup, read on every throw; small enough to scan.
+// Slots are written under the mutex and published through the count, so
+// the throw path reads them without a lock.
+constexpr size_t kMaxSkippedTypes = 4;
+struct SkipRegistry {
+  SkippedType types[kMaxSkippedTypes];
+  std::atomic<size_t> count{0};
+  std::mutex registerMutex;
+};
+
+SkipRegistry& skipRegistry() {
+  static SkipRegistry registry;
+  return registry;
+}
+
+bool isExpectedThrow(const void* exception, const std::type_info* type) {
+  if (!exception || !type) {
+    return false;
+  }
+  auto& registry = skipRegistry();
+  size_t n = registry.count.load(std::memory_order_acquire);
+  for (size_t i = 0; i < n; ++i) {
+    if (*registry.types[i].type == *type) {
+      return registry.types[i].isExpected(exception);
+    }
+  }
+  return false;
+}
+
+void onThrow(const void* exception, const std::type_info* type) {
+  if (isExpectedThrow(exception, type)) {
+    // Leave no trace behind: a later error must not report this throw's
+    // predecessor as its own throw site.
+    facebook::eden::clear_captured_trace();
+    return;
+  }
   constexpr size_t kMaxStackDepth = 64;
   facebook::eden::capture_backtrace(kMaxStackDepth);
 }
 } // namespace
+
+namespace facebook::eden {
+void skipThrowTraceFor(
+    const std::type_info& type,
+    bool (*isExpected)(const void* exception)) {
+  auto& registry = skipRegistry();
+  std::lock_guard<std::mutex> guard{registry.registerMutex};
+  size_t n = registry.count.load(std::memory_order_relaxed);
+  if (n >= kMaxSkippedTypes) {
+    XLOGF(
+        DFATAL,
+        "cannot skip throw traces for {}: all {} registry slots are in use",
+        type.name(),
+        kMaxSkippedTypes);
+    return;
+  }
+  registry.types[n] = SkippedType{&type, isExpected};
+  registry.count.store(n + 1, std::memory_order_release);
+}
+} // namespace facebook::eden
 
 #if defined(__linux__)
 // Linux throw hook using the GNU linker's --wrap mechanism.
@@ -44,7 +108,7 @@ __attribute__((__noreturn__)) void __wrap___cxa_throw(
     void* thrownException,
     void* type,
     void (*destructor)(void*)) {
-  onThrow();
+  onThrow(thrownException, static_cast<const std::type_info*>(type));
   __real___cxa_throw(thrownException, type, destructor);
   __builtin_unreachable();
 }
@@ -53,8 +117,11 @@ __attribute__((__noreturn__)) void __wrap___cxa_throw(
 #elif defined(__APPLE__)
 // macOS: Register with folly's exception tracer callback system
 
-static void throwCallback(void*, std::type_info*, void (**)(void*)) noexcept {
-  onThrow();
+static void throwCallback(
+    void* thrownException,
+    std::type_info* type,
+    void (**)(void*)) noexcept {
+  onThrow(thrownException, type);
 }
 
 static struct RegisterThrowCallback {
@@ -71,7 +138,7 @@ constexpr DWORD kCppExceptionCode = 0xE06D7363;
 LONG WINAPI cppExceptionHandler(PEXCEPTION_POINTERS info) {
   if (info && info->ExceptionRecord &&
       info->ExceptionRecord->ExceptionCode == kCppExceptionCode) {
-    onThrow();
+    onThrow(nullptr, nullptr);
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }

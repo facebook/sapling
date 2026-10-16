@@ -10,7 +10,19 @@
 #include <optional>
 #include <string>
 
+#include <typeinfo>
+
 namespace facebook::eden {
+
+/**
+ * Do not capture a throw-site trace for exceptions of exactly `type` when
+ * `isExpected` returns true for the thrown object. Expected errors such as a
+ * negative lookup throw on request paths, and the capture is the largest
+ * cost of such a throw. Call during startup; at most four types.
+ */
+void skipThrowTraceFor(
+    const std::type_info& type,
+    bool (*isExpected)(const void* exception));
 
 /**
  * Returns the throw-site stack trace for the current exception.
