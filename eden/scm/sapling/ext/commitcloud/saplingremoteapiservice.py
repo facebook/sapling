@@ -149,7 +149,20 @@ class SaplingRemoteAPIService(baseservice.BaseService):
                 "clientinfo": clientinfo,
             }
         )
-        newversion = self._getversionfromdata(response)
+        data = self._getdatafromresponse(response) if "data" in response else response
+        newversion = data["version"]
+
+        # The server replies without references when it applies the update.
+        # An update that is not based on the latest version is not applied:
+        # the reply then carries the latest references, which the client must
+        # merge before trying again.
+        if data.get("heads") is not None:
+            self.ui.debug(
+                "'update_references' rejected update, current version %d is old, "
+                "client needs to sync to version %d first\n" % (version, newversion),
+                component="commitcloud",
+            )
+            return False, self._makereferences(self._castreferences(data))
 
         self.ui.debug(
             "'update_references' accepted update, old version is %d, new version is %d\n"
