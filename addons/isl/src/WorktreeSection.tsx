@@ -160,6 +160,7 @@ function WorktreeRowWithHover({
   dismiss: () => unknown;
 }) {
   const appInfo = useAtomValue(applicationinfo);
+  const canRename = canMutate && wt.role !== 'main';
   return (
     <div
       key={wt.path}
@@ -168,11 +169,10 @@ function WorktreeRowWithHover({
       <code className={css.worktreePath} title={wt.path}>
         {hasLabel ? wt.label : wtBasename}
       </code>
-      {isCurrent ? (
-        <Badge className={css.activeBadge}>Active</Badge>
-      ) : (
+      {isCurrent && <Badge className={css.activeBadge}>Active</Badge>}
+      {(!isCurrent || canRename) && (
         <div className={css.worktreeActions}>
-          {canMutate && (
+          {canRename && (
             <Tooltip title={t('Rename this worktree')}>
               <Button
                 icon
@@ -202,53 +202,57 @@ function WorktreeRowWithHover({
               </Button>
             </Tooltip>
           )}
-          <Tooltip title={t('Switch to this worktree')}>
-            <Button
-              icon
-              data-testid="worktree-switch-button"
-              onClick={async () => {
-                dismiss();
-                if (platform.platformName !== 'vscode') {
-                  changeCwd(wt.path);
-                  return;
-                }
-                const isBasecamp = appInfo?.isBasecamp === true;
-                const newWindowLabel = isBasecamp ? t('Open in New Tile') : t('Open in New Window');
-                const choice = await showModal({
-                  type: 'confirm',
-                  title: <T>Switch Worktree</T>,
-                  icon: 'worktree',
-                  message: (
-                    <Column alignStart style={{gap: 'var(--pad)'}}>
-                      <Row>
-                        <T replace={{$path: <code>{wtBasename}</code>}}>
-                          Switch to worktree $path?
-                        </T>
-                      </Row>
-                      {!isBasecamp && (
+          {!isCurrent && (
+            <Tooltip title={t('Switch to this worktree')}>
+              <Button
+                icon
+                data-testid="worktree-switch-button"
+                onClick={async () => {
+                  dismiss();
+                  if (platform.platformName !== 'vscode') {
+                    changeCwd(wt.path);
+                    return;
+                  }
+                  const isBasecamp = appInfo?.isBasecamp === true;
+                  const newWindowLabel = isBasecamp
+                    ? t('Open in New Tile')
+                    : t('Open in New Window');
+                  const choice = await showModal({
+                    type: 'confirm',
+                    title: <T>Switch Worktree</T>,
+                    icon: 'worktree',
+                    message: (
+                      <Column alignStart style={{gap: 'var(--pad)'}}>
                         <Row>
-                          <Subtle>
-                            <T>Opening in current window will reload the editor.</T>
-                          </Subtle>
+                          <T replace={{$path: <code>{wtBasename}</code>}}>
+                            Switch to worktree $path?
+                          </T>
                         </Row>
-                      )}
-                    </Column>
-                  ),
-                  buttons: isBasecamp
-                    ? [{label: newWindowLabel, primary: true}]
-                    : [
-                        {label: t('Open in Current Window')},
-                        {label: newWindowLabel, primary: true},
-                      ],
-                });
-                if (choice != null) {
-                  openWorktreeInWindow(wt.path, choice.label === newWindowLabel);
-                }
-              }}>
-              <Icon icon="arrow-swap" />
-            </Button>
-          </Tooltip>
-          {!canMutate ? null : wt.role === 'main' ? (
+                        {!isBasecamp && (
+                          <Row>
+                            <Subtle>
+                              <T>Opening in current window will reload the editor.</T>
+                            </Subtle>
+                          </Row>
+                        )}
+                      </Column>
+                    ),
+                    buttons: isBasecamp
+                      ? [{label: newWindowLabel, primary: true}]
+                      : [
+                          {label: t('Open in Current Window')},
+                          {label: newWindowLabel, primary: true},
+                        ],
+                  });
+                  if (choice != null) {
+                    openWorktreeInWindow(wt.path, choice.label === newWindowLabel);
+                  }
+                }}>
+                <Icon icon="arrow-swap" />
+              </Button>
+            </Tooltip>
+          )}
+          {!canMutate || isCurrent ? null : wt.role === 'main' ? (
             <Tooltip title={t('The main worktree cannot be removed')}>
               <Button icon disabled data-testid="worktree-remove-button">
                 <Icon icon="trash" />

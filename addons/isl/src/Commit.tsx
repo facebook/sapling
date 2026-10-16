@@ -843,7 +843,7 @@ function CommitLabel({children}: {children?: ReactNode}) {
 
 /**
  * A label naming a sibling worktree currently checked out (`.`) at this commit,
- * followed by buttons to open, rename, and (for linked worktrees) remove it.
+ * followed by buttons to open and (for linked worktrees) rename and remove it.
  * Rename and remove are only shown where the server reports worktree mutations are supported.
  */
 export function CheckedOutElsewhereBadge({wt}: {wt: WorktreeEntry}) {
@@ -919,6 +919,9 @@ function OpenWorktreeButton({wt, name}: {wt: WorktreeEntry; name: string}) {
 
 function RenameWorktreeButton({wt, name}: {wt: WorktreeEntry; name: string}) {
   const runOperation = useRunOperation();
+  if (wt.role === 'main') {
+    return null;
+  }
   const title = t('Rename worktree $name', {replace: {$name: name}});
   return (
     <Tooltip title={title} delayMs={250}>

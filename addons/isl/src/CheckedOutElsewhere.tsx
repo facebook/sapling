@@ -112,6 +112,15 @@ export const isCheckedOutElsewhere = atomFamilyWeak((hash: Hash) =>
   atom(get => get(otherWorktreeCheckoutsByHash).get(hash)),
 );
 
+export const currentWorktree = atom(get => {
+  const enabled = get(enabledWorktreeInfo);
+  if (enabled == null) {
+    return undefined;
+  }
+  const {info, worktreeInfo} = enabled;
+  return worktreeInfo.worktrees.find(wt => pathsAreIdentical(wt.path, info.repoRoot));
+});
+
 /**
  * This repo's own worktree name (label, or basename of its path), but only when
  * this checkout *is* a linked worktree (not the main one) -- `undefined` for a
@@ -121,12 +130,7 @@ export const currentWorktreeName = atom(get => {
   if (!get(showWorktreeLabels)) {
     return undefined;
   }
-  const enabled = get(enabledWorktreeInfo);
-  if (enabled == null) {
-    return undefined;
-  }
-  const {info, worktreeInfo} = enabled;
-  const mine = worktreeInfo.worktrees.find(wt => pathsAreIdentical(wt.path, info.repoRoot));
+  const mine = get(currentWorktree);
   if (mine == null || mine.role !== 'linked') {
     return undefined;
   }
