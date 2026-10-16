@@ -434,6 +434,12 @@ class EdenServer : private TakeoverHandler {
   bool checkForPreviousHeartbeat(bool takeover);
 #endif
 
+  /**
+   * Log the Thrift requests that are still running once the Thrift server
+   * has given up waiting for them at stop.
+   */
+  void reportThriftStopTimeout();
+
   const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
   }

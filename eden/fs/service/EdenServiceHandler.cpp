@@ -6119,11 +6119,20 @@ void EdenServiceHandler::debugOutstandingThriftRequests(
     std::vector<ThriftRequestMetadata>& outstandingRequests) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
-  const auto requestsLockedPtr = outstandingThriftRequests_.rlock();
-  for (const auto& item : *requestsLockedPtr) {
-    outstandingRequests.emplace_back(
-        populateThriftRequestMetadata(item.second));
+  for (const auto& request : getOutstandingThriftRequests()) {
+    outstandingRequests.emplace_back(populateThriftRequestMetadata(request));
   }
+}
+
+std::vector<ThriftRequestTraceEvent>
+EdenServiceHandler::getOutstandingThriftRequests() const {
+  std::vector<ThriftRequestTraceEvent> requests;
+  const auto requestsLockedPtr = outstandingThriftRequests_.rlock();
+  requests.reserve(requestsLockedPtr->size());
+  for (const auto& item : *requestsLockedPtr) {
+    requests.push_back(item.second);
+  }
+  return requests;
 }
 
 void EdenServiceHandler::debugOutstandingHgEvents(

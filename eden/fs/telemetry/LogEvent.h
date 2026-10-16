@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/telemetry/DynamicEvent.h"
@@ -261,6 +262,24 @@ struct DaemonStop : public EdenFSEvent {
 
   const char* getType() const override {
     return "daemon_stop";
+  }
+};
+
+struct ThriftStopTimeout : public EdenFSEvent {
+  std::string requests;
+  double oldest_request_age_s = 0.0;
+
+  ThriftStopTimeout(std::string requests, double oldest_request_age_s)
+      : requests(std::move(requests)),
+        oldest_request_age_s(oldest_request_age_s) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("reason", requests);
+    event.addDouble("duration", oldest_request_age_s);
+  }
+
+  const char* getType() const override {
+    return "thrift_stop_timeout";
   }
 };
 
