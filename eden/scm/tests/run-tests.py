@@ -7,8 +7,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-# pyre-unsafe
-
 # Modifying this script is tricky because it has many modes:
 #   - serial vs parallel (default) (-jN, N > 1)
 #   - no coverage (default) vs coverage (-c, -C, -s)
@@ -3155,6 +3153,7 @@ class TextTestRunner(unittest.TextTestRunner):
             )
             # pyrefly: ignore [missing-attribute]
             result.testsSkipped = skipped + ignored
+            result.testsPassed = len(result.successes)
             if failed:
                 self.stream.writeln(
                     "python hash seed: %s" % os.environ["PYTHONHASHSEED"]
@@ -3342,6 +3341,7 @@ class TextTestRunner(unittest.TextTestRunner):
 class TestpilotTestResult:
     def __init__(self, testpilotjson):
         self.testsSkipped = 0
+        self.testsPassed = 0
         self.errors = 0
         self.failures = []
 
@@ -3349,7 +3349,9 @@ class TestpilotTestResult:
             for line in fp:
                 result = json.loads(line)
                 summary = result["summary"]
-                if summary != "passed":
+                if summary == "passed":
+                    self.testsPassed += 1
+                else:
                     if summary == "OMITTED" or summary == "skipped":
                         self.testsSkipped += 1
                     else:
@@ -3866,8 +3868,9 @@ class TestRunner:
                     self._usecorrecthg()
 
                     result = runner.run(suite)
-                    if tests and result.testsSkipped == len(tests):
-                        allskipped = True
+                    allskipped = result.testsSkipped > 0 and not (
+                        result.testsPassed or result.failures or result.errors
+                    )
                     if tests and result.errors:
                         errored = True
 
@@ -3894,7 +3897,9 @@ class TestRunner:
         if failed:
             return 1
         elif allskipped:
-            return 0
+            # Preserve skips for unittestify without changing the default CLI
+            # exit status for an all-skipped run.
+            return Test.SKIPPED_STATUS if os.environ.get("HGTEST_REPORT_SKIPS") else 0
         elif errored:
             return 2
 
