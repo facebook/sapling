@@ -54,6 +54,7 @@
 #endif
 
 DECLARE_bool(takeover);
+DECLARE_bool(forceTakeover);
 
 namespace cpptoml {
 class table;
@@ -270,8 +271,25 @@ class EdenServer : private TakeoverHandler {
    * mounts.
    *
    * Returns a Future that will return a map of (mount path -> FUSE fd)
+   *
+   * A takeover that is not forced gives the Thrift requests in flight
+   * core:takeover-request-grace to finish and is refused, with an error, if
+   * they do not; the Thrift server could not stop until they finished. One
+   * that asks to proceed only if idle is also refused while an operation
+   * noted by noteActivity() ran within core:takeover-recent-activity-window.
+   * A forced takeover cancels every Thrift request instead. All of them end
+   * the open trace streams.
    */
-  folly::Future<TakeoverData> startTakeoverShutdown() override;
+  folly::Future<TakeoverData> startTakeoverShutdown(bool force, bool onlyIfIdle)
+      override;
+
+  /**
+   * Record that EdenFS served a Thrift request that marks it as in use: a
+   * checkout, a reset of the parent commits, a mount or an unmount. Mounts
+   * made at startup or during a takeover do not count. See
+   * startTakeoverShutdown().
+   */
+  void noteActivity(std::string_view what);
 
   /**
    * Mount and return an EdenMount.
@@ -439,6 +457,19 @@ class EdenServer : private TakeoverHandler {
    * has given up waiting for them at stop.
    */
   void reportThriftStopTimeout();
+
+  /**
+   * The part of startTakeoverShutdown() that commits to the restart, once an
+   * unforced takeover has waited for the requests in flight.
+   */
+  folly::Future<TakeoverData> startTakeoverShutdownNow(bool force);
+
+  /**
+   * Wait up to core:takeover-request-grace for the Thrift requests in flight
+   * to finish. Throws, after logging the requests, if some have not finished
+   * by then or if any has already been running for longer than that.
+   */
+  folly::coro::Task<void> co_waitForInFlightRequests();
 
   const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
@@ -861,6 +892,19 @@ class EdenServer : private TakeoverHandler {
         folly::Future<std::optional<TakeoverData>>::makeEmpty();
   };
   folly::Synchronized<RunStateData> runningState_;
+
+  // Unforced takeovers waiting for the Thrift requests in flight. Only
+  // touched on the main event base thread: by startTakeoverShutdown(), by
+  // the wait's continuation, and by performCleanup(), which ends the waits
+  // still pending before anything is torn down.
+  size_t pendingTakeoverWaits_ = 0;
+  folly::CancellationSource takeoverWaitCancellation_;
+
+  struct RecentActivity {
+    std::string what;
+    std::chrono::steady_clock::time_point when;
+  };
+  folly::Synchronized<std::optional<RecentActivity>> recentActivity_;
 
   /**
    * Move the server into RunState::SHUTTING_DOWN and disarm the privhelper's

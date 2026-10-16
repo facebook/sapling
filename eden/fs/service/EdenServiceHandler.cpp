@@ -895,7 +895,9 @@ EdenServiceHandler::EdenServiceHandler(
       });
 }
 
-EdenServiceHandler::~EdenServiceHandler() = default;
+EdenServiceHandler::~EdenServiceHandler() {
+  disarmDelayedCancellation();
+}
 
 std::shared_ptr<folly::Executor> EdenServiceHandler::getTraceStreamExecutor() {
   return server_->getServerState()->getThreadPool();
@@ -940,6 +942,7 @@ EdenServiceHandler::getProcessor() {
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
     std::unique_ptr<MountArgument> argument) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, (*argument->mountPoint()));
+  server_->noteActivity("mount");
   return wrapImmediateFuture(
              std::move(helper),
              makeImmediateFutureWith([&] {
@@ -971,6 +974,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmount(
     std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
+  server_->noteActivity("unmount");
   return wrapImmediateFuture(
              std::move(helper),
              makeImmediateFutureWith([&]() mutable {
@@ -991,6 +995,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmountV2(
     std::unique_ptr<UnmountArgument> unmountArg) {
   auto helper =
       INSTRUMENT_THRIFT_CALL(INFO, *unmountArg->mountId()->mountPoint());
+  server_->noteActivity("unmount");
   return wrapImmediateFuture(
              std::move(helper),
              makeImmediateFutureWith([&]() mutable {
@@ -1051,6 +1056,10 @@ EdenServiceHandler::semifuture_checkOutRevision(
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode,
     std::unique_ptr<CheckOutRevisionParams> params) {
+  // Noted when the checkout starts and again when it ends, so that a
+  // graceful restart asked to wait for an idle daemon stays away from it.
+  server_->noteActivity("checkOutRevision");
+  auto noteEnd = [this] { server_->noteActivity("checkOutRevision"); };
   auto config = server_->getServerState()->getEdenConfig();
   bool useCoroutines = config->enableCoroutines.getValue() &&
       config->enableCoroutinesPhase7.getValue();
@@ -1074,10 +1083,15 @@ EdenServiceHandler::semifuture_checkOutRevision(
                std::move(hash),
                checkoutMode,
                std::move(params))
-        .semi();
+        .semi()
+        .deferEnsure(noteEnd);
   }
   return semifuture_checkOutRevisionImpl(
-      std::move(mountPoint), std::move(hash), checkoutMode, std::move(params));
+             std::move(mountPoint),
+             std::move(hash),
+             checkoutMode,
+             std::move(params))
+      .deferEnsure(noteEnd);
 }
 
 folly::coro::now_task<std::unique_ptr<std::vector<CheckoutConflict>>>
@@ -1187,6 +1201,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents,
     std::unique_ptr<ResetParentCommitsParams> params) {
+  server_->noteActivity("resetParentCommits");
   auto rootIdOptions = params->rootIdOptions().ensure();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
@@ -7501,9 +7516,11 @@ EdenServiceHandler::getRequestsRunningLongerThan(
       if (!cancellationInfo.stream && !cancellationInfo.background &&
           age >= minAge) {
         requests.push_back(
-            {std::string{cancellationInfo.endpoint},
+            {requestId,
+             std::string{cancellationInfo.endpoint},
              cancellationInfo.clientPid,
-             age});
+             age,
+             cancellationInfo.isCancelable()});
       }
     }
   }
@@ -7531,6 +7548,49 @@ EdenServiceHandler::getCancellationToken(uint64_t requestId) {
     return it->second.cancellationSource->getToken();
   }
   return std::nullopt;
+}
+
+void EdenServiceHandler::cancelActiveRequestsAfter(
+    std::chrono::nanoseconds delay,
+    std::string reason) {
+  auto pending = delayedCancellation_.wlock();
+  if (pending->timer) {
+    pending->timer->cancel();
+  }
+  const auto generation = ++pending->generation;
+  // Runs on the timekeeper thread; cancelling the requests only takes the
+  // cancellation store lock and runs their cancellation callbacks. It holds
+  // the delayed cancellation lock meanwhile, so once a disarm has returned no
+  // cancellation from this timer can still be running.
+  pending->timer =
+      folly::futures::sleep(
+          std::chrono::duration_cast<folly::HighResDuration>(delay))
+          .toUnsafeFuture()
+          .thenTry(
+              [weak = weak_from_this(), generation, reason = std::move(reason)](
+                  folly::Try<folly::Unit>&& slept) {
+                if (!slept.hasValue()) {
+                  return;
+                }
+                auto self = weak.lock();
+                if (!self) {
+                  return;
+                }
+                auto pending = self->delayedCancellation_.wlock();
+                if (pending->generation != generation) {
+                  return;
+                }
+                self->cancelAllActiveRequests(reason);
+              });
+}
+
+void EdenServiceHandler::disarmDelayedCancellation() {
+  auto pending = delayedCancellation_.wlock();
+  ++pending->generation;
+  if (pending->timer) {
+    pending->timer->cancel();
+    pending->timer.reset();
+  }
 }
 
 void EdenServiceHandler::cancelAllActiveRequests(std::string_view reason) {

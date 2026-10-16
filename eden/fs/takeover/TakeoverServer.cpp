@@ -278,7 +278,8 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
             (currentState.protocolCapabilities &
              TakeoverCapabilities::CHUNKED_MESSAGE);
 
-        return takeoverHandler_->startTakeoverShutdown();
+        return takeoverHandler_->startTakeoverShutdown(
+            query.force().value_or(false), query.onlyIfIdle().value_or(false));
       })
       .via(eventBase_)
       .thenTry([this](folly::Try<TakeoverData>&& data) {

@@ -35,8 +35,15 @@ class TakeoverHandler {
    * This should return a Future that will produce the TakeoverData to send to
    * the remote edenfs process once this edenfs process is ready to transfer
    * its mounts.
+   *
+   * A takeover that is not forced may be refused, with an error, while this
+   * process is busy, and one that asks to proceed only if idle also while
+   * this process was in use recently. A forced takeover cancels the work in
+   * progress instead.
    */
-  virtual folly::Future<TakeoverData> startTakeoverShutdown() = 0;
+  virtual folly::Future<TakeoverData> startTakeoverShutdown(
+      bool force,
+      bool onlyIfIdle) = 0;
 
   virtual void closeStorage() = 0;
 };

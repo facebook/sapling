@@ -12,6 +12,7 @@
 #include <folly/Executor.h>
 #include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
+#include <folly/futures/Future.h>
 #include <atomic>
 #include <optional>
 #include "eden/common/os/ProcessId.h"
@@ -692,9 +693,11 @@ class EdenServiceHandler
   void closeTraceStreams();
 
   struct LongRunningRequest {
+    uint64_t requestId;
     std::string method;
     OptionalProcessId clientPid;
     std::chrono::steady_clock::duration age;
+    bool cancelable;
   };
 
   /**
@@ -718,6 +721,23 @@ class EdenServiceHandler
    * @param reason Description of why cancellation was requested (for logging)
    */
   void cancelAllActiveRequests(std::string_view reason);
+
+  /**
+   * Cancel every request that is still active once the delay has passed,
+   * unless disarmDelayedCancellation() has run by then. The timer does not
+   * depend on the main event base, which is blocked while the Thrift server
+   * waits for its requests to finish. Arming again replaces a pending timer.
+   */
+  void cancelActiveRequestsAfter(
+      std::chrono::nanoseconds delay,
+      std::string reason);
+
+  /**
+   * Cancel the timer armed by cancelActiveRequestsAfter(), if it has not
+   * fired. A daemon that resumes serving after a failed takeover must not
+   * have its new requests cancelled by the timer the takeover armed.
+   */
+  void disarmDelayedCancellation();
 
   void beginStreamJournalChangedShutdown();
 
@@ -787,6 +807,14 @@ class EdenServiceHandler
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;
+
+  // The timer armed by cancelActiveRequestsAfter(). The generation tells a
+  // timer that fires while it is being disarmed that it has nothing to do.
+  struct DelayedCancellation {
+    uint64_t generation = 0;
+    std::optional<folly::Future<folly::Unit>> timer;
+  };
+  folly::Synchronized<DelayedCancellation> delayedCancellation_;
 
   folly::Synchronized<std::unordered_map<uint64_t, RequestCancellationInfo>>
       requestCancellationStore_;

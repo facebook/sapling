@@ -48,14 +48,27 @@ class TestHandler : public TakeoverHandler {
  public:
   explicit TestHandler(TakeoverData&& data) : data_{std::move(data)} {}
 
-  Future<TakeoverData> startTakeoverShutdown() override {
+  Future<TakeoverData> startTakeoverShutdown(bool force, bool onlyIfIdle)
+      override {
+    force_ = force;
+    onlyIfIdle_ = onlyIfIdle;
     return makeFuture(std::move(data_));
   }
 
   void closeStorage() override {}
 
+  bool wasForced() const {
+    return force_;
+  }
+
+  bool wasOnlyIfIdle() const {
+    return onlyIfIdle_;
+  }
+
  private:
   TakeoverData data_;
+  bool force_ = false;
+  bool onlyIfIdle_ = false;
 };
 
 /**
@@ -63,7 +76,9 @@ class TestHandler : public TakeoverHandler {
  */
 class ErrorHandler : public TakeoverHandler {
  public:
-  Future<TakeoverData> startTakeoverShutdown() override {
+  Future<TakeoverData> startTakeoverShutdown(
+      bool /*force*/,
+      bool /*onlyIfIdle*/) override {
     return makeFuture<TakeoverData>(
         std::logic_error("purposely failing for testing"));
   }
@@ -80,7 +95,9 @@ Future<TakeoverData> takeoverViaEventBase(
     const std::set<int32_t>& supportedVersions,
     const uint64_t supportedCapabilities,
     bool shouldThrowDuringTakeover = false,
-    bool shouldPing = true) {
+    bool shouldPing = true,
+    bool force = false,
+    bool onlyIfIdle = false) {
   Promise<TakeoverData> promise;
   auto future = promise.getFuture();
   std::thread thread([path = AbsolutePath{socketPath},
@@ -88,11 +105,15 @@ Future<TakeoverData> takeoverViaEventBase(
                       supportedCapabilities = supportedCapabilities,
                       shouldThrowDuringTakeover = shouldThrowDuringTakeover,
                       shouldPing = shouldPing,
+                      force = force,
+                      onlyIfIdle = onlyIfIdle,
                       promise = std::move(promise)]() mutable {
     promise.setWith([&] {
       return takeoverMounts(
           path,
           /*takeoverReceiveTimeout*/ std::chrono::seconds(150),
+          force,
+          onlyIfIdle,
           shouldThrowDuringTakeover,
           shouldPing,
           supportedVersions,
@@ -144,7 +165,9 @@ folly::Try<TakeoverData> runTakeover(
     const std::set<int32_t>& serverSupportedVersions =
         kSupportedTakeoverVersions,
     const uint64_t clientSupportedCapabilities = kSupportedCapabilities,
-    const uint64_t serverSupportedCapabilities = kSupportedCapabilities) {
+    const uint64_t serverSupportedCapabilities = kSupportedCapabilities,
+    bool force = false,
+    bool onlyIfIdle = false) {
   // Ignore SIGPIPE so that sendmsg() will fail with an error code instead
   // of terminating the program if the remote side has closed the connection.
   signal(SIGPIPE, SIG_IGN);
@@ -166,7 +189,11 @@ folly::Try<TakeoverData> runTakeover(
                     &evb,
                     socketPath,
                     clientSupportedVersions,
-                    clientSupportedCapabilities)
+                    clientSupportedCapabilities,
+                    /*shouldThrowDuringTakeover=*/false,
+                    /*shouldPing=*/true,
+                    force,
+                    onlyIfIdle)
                     .ensure([&] { evb.terminateLoopSoon(); });
   loopWithTimeout(&evb);
   if (!future.isReady()) {
@@ -526,6 +553,60 @@ TEST(Takeover, noMounts) {
 
   // Make sure the received mount information is empty
   EXPECT_EQ(0, clientData.mountPoints.size());
+  EXPECT_FALSE(handler.wasForced());
+}
+
+TEST(Takeover, forcedTakeoverReachesHandler) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
+
+  TakeoverData serverData;
+  serverData.lockFile =
+      folly::File{(tmpDirPath + "lock"_pc).view(), O_RDWR | O_CREAT};
+  serverData.thriftSocket =
+      folly::File{(tmpDirPath + "thrift"_pc).view(), O_RDWR | O_CREAT};
+  serverData.mountdServerSocket =
+      folly::File{(tmpDirPath + "mountd"_pc).view(), O_RDWR | O_CREAT};
+
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      kSupportedTakeoverVersions,
+      kSupportedTakeoverVersions,
+      kSupportedCapabilities,
+      kSupportedCapabilities,
+      /*force=*/true);
+  EXPECT_TRUE(result.hasValue());
+  EXPECT_TRUE(handler.wasForced());
+  EXPECT_FALSE(handler.wasOnlyIfIdle());
+}
+
+TEST(Takeover, onlyIfIdleReachesHandler) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
+
+  TakeoverData serverData;
+  serverData.lockFile =
+      folly::File{(tmpDirPath + "lock"_pc).view(), O_RDWR | O_CREAT};
+  serverData.thriftSocket =
+      folly::File{(tmpDirPath + "thrift"_pc).view(), O_RDWR | O_CREAT};
+  serverData.mountdServerSocket =
+      folly::File{(tmpDirPath + "mountd"_pc).view(), O_RDWR | O_CREAT};
+
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      kSupportedTakeoverVersions,
+      kSupportedTakeoverVersions,
+      kSupportedCapabilities,
+      kSupportedCapabilities,
+      /*force=*/false,
+      /*onlyIfIdle=*/true);
+  EXPECT_TRUE(result.hasValue());
+  EXPECT_FALSE(handler.wasForced());
+  EXPECT_TRUE(handler.wasOnlyIfIdle());
 }
 
 TEST(Takeover, manyMounts) {

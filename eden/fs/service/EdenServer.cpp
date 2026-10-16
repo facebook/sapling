@@ -22,6 +22,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 #include "eden/fs/service/HeartbeatManager.h"
@@ -50,7 +51,9 @@
 #endif
 #include <folly/chrono/Conv.h>
 #include <folly/coro/Invoke.h>
+#include <folly/coro/Sleep.h>
 #include <folly/coro/Task.h>
+#include <folly/coro/WithCancellation.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
@@ -165,6 +168,16 @@ DEFINE_bool(
     false,
     "If another edenfs process is already running, "
     "attempt to gracefully takeover its mount points.");
+DEFINE_bool(
+    forceTakeover,
+    false,
+    "With --takeover, make the running edenfs cancel the Thrift requests it "
+    "is serving instead of refusing the takeover while it is busy.");
+DEFINE_bool(
+    takeoverOnlyIfIdle,
+    false,
+    "With --takeover, let the running edenfs refuse the takeover while it has "
+    "served a checkout or a mount recently, as well as while it is busy.");
 DEFINE_bool(
     enable_fault_injection,
     false,
@@ -1647,6 +1660,7 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
 #endif // !_WIN32
 
 ImmediateFuture<Unit> EdenServer::recover(TakeoverData&& data) {
+  handler_->disarmDelayedCancellation();
   return recoverImpl(std::move(data))
       .ensure(
           // Mark the server state as RUNNING once we finish setting up the
@@ -1822,6 +1836,31 @@ bool shouldThrowDuringTakeover(const EdenConfig& config) {
   return config.clientThrowsDuringTakeover.getValue();
 }
 
+std::string describeLongRunningRequests(
+    const std::vector<EdenServiceHandler::LongRunningRequest>& requests,
+    ProcessInfoCache& processInfoCache) {
+  std::string description;
+  for (const auto& request : requests) {
+    if (!description.empty()) {
+      description += ", ";
+    }
+    std::string client = "an unknown client";
+    if (request.clientPid) {
+      auto pid = request.clientPid.value().get();
+      auto name = processInfoCache.getProcessName(pid);
+      client = name ? fmt::format("pid {} ({})", pid, *name)
+                    : fmt::format("pid {}", pid);
+    }
+    description += fmt::format(
+        "{} from {} running for {}{}",
+        request.method,
+        client,
+        durationToString(request.age),
+        request.cancelable ? "" : " (cannot be cancelled)");
+  }
+  return description;
+}
+
 std::chrono::seconds getTakeoverTimeoutSeconds(const EdenConfig& config) {
   return std::chrono::duration_cast<std::chrono::seconds>(
       config.takeoverReceiveTimeout.getValue());
@@ -1912,6 +1951,8 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
       takeoverData = takeoverMounts(
           takeoverPath,
           getTakeoverTimeoutSeconds(*edenConfig),
+          FLAGS_forceTakeover,
+          FLAGS_takeoverOnlyIfIdle,
           shouldThrowDuringTakeover(*edenConfig));
     } catch (...) {
       auto ew = folly::exception_wrapper{std::current_exception()};
@@ -2194,6 +2235,19 @@ void EdenServer::closeStorage() {
 
 bool EdenServer::performCleanup() {
   bool takeover = false;
+
+  // Unforced takeovers may still be waiting for Thrift requests to finish.
+  // Each wait holds this server and the main event base, so end them before
+  // anything is torn down: cancellation wakes each one, and its continuation
+  // runs on the main event base. The timer that cancels requests once the
+  // grace period expires has nothing left to do either, since the Thrift
+  // server has joined its requests by now.
+  takeoverWaitCancellation_.requestCancellation();
+  while (pendingTakeoverWaits_ != 0) {
+    mainEventBase_->loopOnce();
+  }
+  takeoverWaitCancellation_ = folly::CancellationSource{};
+  handler_->disarmDelayedCancellation();
 
   folly::stop_watch<> shutdown;
   bool shutdownSuccess = true;
@@ -3291,7 +3345,163 @@ void EdenServer::stop() {
   server_->stop();
 }
 
-folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
+namespace {
+// `eden restart` tells a refused takeover from a failed one by these words,
+// which reach it through the new daemon's startup log. The CLI's
+// _TAKEOVER_REFUSED_MARKER matches them.
+constexpr std::string_view kTakeoverRefusedPhrase =
+    "refused the graceful restart";
+} // namespace
+
+void EdenServer::noteActivity(std::string_view what) {
+  recentActivity_.wlock()->emplace(
+      RecentActivity{std::string{what}, std::chrono::steady_clock::now()});
+}
+
+folly::Future<TakeoverData> EdenServer::startTakeoverShutdown(
+    bool force,
+    bool onlyIfIdle) {
+#ifndef _WIN32
+  {
+    auto state = runningState_.rlock();
+    if (state->state != RunState::RUNNING) {
+      serverState_->getStats()->increment(&TakeoverStats::sendFailure);
+      return makeFuture<TakeoverData>(std::runtime_error(
+          folly::to<string>(
+              "can only perform graceful restart when running normally; "
+              "current state is ",
+              enumValue(state->state))));
+    }
+  }
+  auto config = serverState_->getEdenConfig();
+  if (force || !config->takeoverWaitsForRequests.getValue()) {
+    return startTakeoverShutdownNow(force);
+  }
+  if (onlyIfIdle) {
+    const auto window = config->takeoverRecentActivityWindow.getValue();
+    const auto activity = *recentActivity_.rlock();
+    const auto age = activity
+        ? std::chrono::steady_clock::now() - activity->when
+        : std::chrono::steady_clock::duration::max();
+    if (age < window) {
+      auto description =
+          fmt::format("{} ran {} ago", activity->what, durationToString(age));
+      XLOGF(
+          WARN,
+          "Refusing the graceful restart, EdenFS was in use recently: {}",
+          description);
+      serverState_->getStats()->increment(&TakeoverStats::sendFailure);
+      edenFsEventsLogger_->logEvent(
+          TakeoverRefused{
+              description, std::chrono::duration<double>{age}.count()});
+      return makeFuture<TakeoverData>(std::runtime_error(
+          fmt::format(
+              "EdenFS was in use recently and {}: {}. Retry later, or force "
+              "the restart.",
+              kTakeoverRefusedPhrase,
+              description)));
+    }
+  }
+  // Nothing changes while the requests in flight get their chance to finish;
+  // the main event base keeps serving in the meantime.
+  ++pendingTakeoverWaits_;
+  folly::SemiFuture<folly::Unit> waited;
+  try {
+    waited = folly::coro::co_withExecutor(
+                 getMainEventBase(),
+                 folly::coro::co_withCancellation(
+                     takeoverWaitCancellation_.getToken(),
+                     co_waitForInFlightRequests()))
+                 .start();
+  } catch (...) {
+    --pendingTakeoverWaits_;
+    throw;
+  }
+  return std::move(waited)
+      .via(getMainEventBase())
+      .thenTry([this](folly::Try<folly::Unit>&& waited) {
+        --pendingTakeoverWaits_;
+        if (waited.hasException<folly::OperationCancelled>()) {
+          throw std::runtime_error(
+              "EdenFS stopped while the graceful restart was waiting for "
+              "Thrift requests to finish");
+        }
+        waited.throwUnlessValue();
+        return startTakeoverShutdownNow(/*force=*/false);
+      });
+#else
+  NOT_IMPLEMENTED();
+#endif
+}
+
+folly::coro::Task<void> EdenServer::co_waitForInFlightRequests() {
+  const auto grace =
+      serverState_->getEdenConfig()->takeoverRequestGrace.getValue();
+  auto refuse =
+      [this](
+          const std::vector<EdenServiceHandler::LongRunningRequest>& requests,
+          std::string_view why) {
+        auto description = describeLongRunningRequests(
+            requests, *serverState_->getProcessInfoCache());
+        XLOGF(WARN, "Refusing the graceful restart, {}: {}", why, description);
+        serverState_->getStats()->increment(&TakeoverStats::sendFailure);
+        // getRequestsRunningLongerThan() lists the oldest request first.
+        edenFsEventsLogger_->logEvent(
+            TakeoverRefused{
+                description,
+                std::chrono::duration<double>{requests.front().age}.count()});
+        throw std::runtime_error(
+            fmt::format(
+                "EdenFS is busy and {}: {}. Retry later, or force the restart "
+                "to cancel the requests that support cancellation.",
+                kTakeoverRefusedPhrase,
+                description));
+      };
+
+  // A request that has already outlived the grace period is not worth
+  // waiting for.
+  auto outlived = handler_->getRequestsRunningLongerThan(grace);
+  if (!outlived.empty()) {
+    refuse(outlived, "requests have outlived the grace period");
+  }
+  auto inFlight =
+      handler_->getRequestsRunningLongerThan(std::chrono::nanoseconds{0});
+  // Lets a test change the requests in flight once they have been looked at.
+  co_await serverState_->getFaultInjector().co_checkAsync(
+      "takeover", "wait_for_requests");
+  if (!inFlight.empty()) {
+    XLOGF(
+        INFO,
+        "Graceful restart: giving {} Thrift requests up to {} to finish",
+        inFlight.size(),
+        durationToString(grace));
+    const auto deadline = std::chrono::steady_clock::now() + grace;
+    const auto interval = std::min(
+        std::chrono::duration_cast<folly::HighResDuration>(grace),
+        folly::HighResDuration{std::chrono::seconds{1}});
+    // The daemon keeps serving while it waits, so every poll looks at all the
+    // requests in flight: a checkout that started during the wait must not be
+    // cut off by the restart either. The deadline bounds the wait all the
+    // same.
+    do {
+      // Lets a test change the requests in flight between two polls.
+      co_await serverState_->getFaultInjector().co_checkAsync(
+          "takeover_wait", "poll");
+      co_await folly::coro::sleep(interval);
+      inFlight =
+          handler_->getRequestsRunningLongerThan(std::chrono::nanoseconds{0});
+      if (!inFlight.empty() && std::chrono::steady_clock::now() >= deadline) {
+        refuse(inFlight, "requests did not finish within the grace period");
+      }
+    } while (!inFlight.empty());
+  }
+  // Lets a test start a request once the wait is over, before the Thrift
+  // server stops.
+  co_await serverState_->getFaultInjector().co_checkAsync(
+      "takeover", "after_wait");
+}
+
+folly::Future<TakeoverData> EdenServer::startTakeoverShutdownNow(bool force) {
 #ifndef _WIN32
   // Track how long the takeover send takes and whether it succeeds.
   folly::stop_watch<std::chrono::microseconds> takeoverSendWatch;
@@ -3371,7 +3581,25 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
       .checkAsync("takeover", "server_shutdown")
       .semi()
       .via(getMainEventBase())
-      .thenValue([this](auto&&) {
+      .thenValue([this, force](auto&&) {
+        // The Thrift server cannot stop while a request or a stream keeps a
+        // connection busy. A forced takeover cancels everything. An unforced
+        // one has waited for the requests that were in flight, so it only
+        // ends the trace streams, which stay open until their client leaves,
+        // and arms a cancellation for the requests that arrived during the
+        // wait: one of those may be long too, and left alone it would hold
+        // the Thrift stop to its deadline, which ends the process.
+        if (force) {
+          handler_->cancelAllActiveRequests("forced graceful restart");
+        } else {
+          handler_->closeTraceStreams();
+          auto config = serverState_->getEdenConfig();
+          if (config->takeoverWaitsForRequests.getValue()) {
+            handler_->cancelActiveRequestsAfter(
+                config->takeoverRequestGrace.getValue(),
+                "graceful restart: the request grace period expired");
+          }
+        }
         shutdownSubscribers();
 
         // Stop the thrift server. In the future, we'd like to

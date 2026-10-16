@@ -27,6 +27,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/ScopeGuard.h>
 #include <folly/io/IOBufQueue.h>
+#include <folly/test/TestUtils.h>
 #include <gflags/gflags.h>
 #include <gtest/gtest.h>
 
@@ -99,13 +100,20 @@ class ScopedServerThread {
 
 std::future<TakeoverData> takeoverViaThread(
     AbsolutePathPiece socketPath,
-    bool shouldThrowDuringTakeover) {
+    bool shouldThrowDuringTakeover,
+    bool force = false,
+    bool onlyIfIdle = false) {
   return std::async(
       std::launch::async,
-      [path = AbsolutePath{socketPath}, shouldThrowDuringTakeover] {
+      [path = AbsolutePath{socketPath},
+       shouldThrowDuringTakeover,
+       force,
+       onlyIfIdle] {
         return takeoverMounts(
             path,
             /*takeoverReceiveTimeout=*/std::chrono::seconds{150},
+            force,
+            onlyIfIdle,
             shouldThrowDuringTakeover);
       });
 }
@@ -438,6 +446,314 @@ TEST_F(EdenServerTest, TakeoverSendFailureRecoveryReinitializesMountd) {
     uint8_t reply[256];
     EXPECT_GT(read(mountdFd, reply, sizeof(reply)), 0);
   }
+}
+
+TEST(EdenServerTakeoverTest, RefusedWhileALongRequestRunsUnlessForced) {
+  GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+      "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+  TestServer::Options options;
+  // No grace: any request in flight has already outlived it.
+  options.takeoverRequestGrace = std::chrono::seconds{0};
+  TestServer testServer{options};
+  auto& server = testServer.getServer();
+  auto handler = server.getHandler();
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
+
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
+
+  // Simulate a Thrift request that has been running for a while.
+  folly::CancellationSource source;
+  auto token = source.getToken();
+  handler->insertCancellationSource(
+      /*requestId=*/4242, std::move(source), "globFiles");
+
+  {
+    auto clientFuture = takeoverViaThread(
+        socketPath, /*shouldThrowDuringTakeover=*/false, /*force=*/false);
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return clientFuture.wait_for(0ms) == std::future_status::ready;
+    }));
+    EXPECT_THROW_RE(
+        (void)clientFuture.get(), std::runtime_error, "refused.*globFiles");
+    EXPECT_FALSE(token.isCancellationRequested());
+    EXPECT_EQ(server.getStatus(), EdenServer::RunState::RUNNING);
+  }
+
+  {
+    auto clientFuture = takeoverViaThread(
+        socketPath, /*shouldThrowDuringTakeover=*/false, /*force=*/true);
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return clientFuture.wait_for(0ms) == std::future_status::ready;
+    }));
+    EXPECT_NO_THROW((void)clientFuture.get());
+    EXPECT_TRUE(token.isCancellationRequested());
+  }
+
+  ASSERT_TRUE(serverThread.waitForExit(5s));
+  serverThread.join();
+  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+  EXPECT_TRUE(server.performCleanup());
+}
+
+TEST(EdenServerTakeoverTest, RefusedAfterRecentActivityOnlyWhenAsked) {
+  GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+      "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+  TestServer::Options options;
+  options.takeoverRecentActivityWindow = std::chrono::minutes{10};
+  TestServer testServer{options};
+  auto& server = testServer.getServer();
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
+
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
+
+  // A checkout just ran; nothing is in flight.
+  server.noteActivity("checkOutRevision");
+
+  {
+    // A restart that asks for an idle daemon, as the restarter does, is
+    // refused and names the operation.
+    auto clientFuture = takeoverViaThread(
+        socketPath,
+        /*shouldThrowDuringTakeover=*/false,
+        /*force=*/false,
+        /*onlyIfIdle=*/true);
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return clientFuture.wait_for(0ms) == std::future_status::ready;
+    }));
+    EXPECT_THROW_RE(
+        (void)clientFuture.get(),
+        std::runtime_error,
+        "in use recently.*checkOutRevision");
+    EXPECT_EQ(server.getStatus(), EdenServer::RunState::RUNNING);
+  }
+
+  {
+    // A plain graceful restart, as a person runs it, only cares about the
+    // requests in flight and proceeds.
+    auto clientFuture = takeoverViaThread(
+        socketPath, /*shouldThrowDuringTakeover=*/false, /*force=*/false);
+    ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return clientFuture.wait_for(0ms) == std::future_status::ready;
+    }));
+    EXPECT_NO_THROW((void)clientFuture.get());
+  }
+
+  ASSERT_TRUE(serverThread.waitForExit(5s));
+  serverThread.join();
+  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+  EXPECT_TRUE(server.performCleanup());
+}
+
+namespace {
+
+// Starts a takeover with one request in flight, and once the takeover has
+// looked at the requests in flight, finishes that request and starts another
+// one, which counts as arriving during the grace period. With `laterFinishes`
+// the later request finishes once the takeover has polled again; otherwise it
+// keeps running.
+struct TakeoverWithALaterRequest {
+  TakeoverWithALaterRequest(TestServer& testServer, bool laterFinishes)
+      : server{testServer.getServer()},
+        handler{server.getHandler()},
+        socketPath{EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath()},
+        serverThread{server} {
+    EXPECT_TRUE(driveMainEventBaseUntil(server, [&] {
+      return server.getStatus() == EdenServer::RunState::RUNNING;
+    }));
+    handler->insertCancellationSource(
+        /*requestId=*/1, std::move(earlier), "getScmStatusV2");
+
+    auto& faultInjector = server.getServerState()->getFaultInjector();
+    faultInjector.injectBlock("takeover", "wait_for_requests");
+    if (laterFinishes) {
+      faultInjector.injectBlock("takeover_wait", "poll");
+    }
+    blockedWaiter = std::thread([this, &faultInjector, laterFinishes] {
+      takeoverBlocked = faultInjector.waitUntilBlocked("takeover", 5s);
+      handler->insertCancellationSource(
+          /*requestId=*/2, std::move(later), "globFiles");
+      handler->removeCancellationSource(/*requestId=*/1);
+      faultInjector.unblock("takeover", "wait_for_requests");
+      if (laterFinishes) {
+        // The takeover is about to poll again with the later request in
+        // flight; let it finish first.
+        pollBlocked = faultInjector.waitUntilBlocked("takeover_wait", 5s);
+        handler->removeCancellationSource(/*requestId=*/2);
+        faultInjector.unblock("takeover_wait", "poll");
+      }
+    });
+    clientFuture = takeoverViaThread(
+        socketPath, /*shouldThrowDuringTakeover=*/false, /*force=*/false);
+    EXPECT_TRUE(driveMainEventBaseUntil(
+        server,
+        [&] { return clientFuture.wait_for(0ms) == std::future_status::ready; },
+        10s));
+    blockedWaiter.join();
+    EXPECT_TRUE(takeoverBlocked);
+  }
+
+  EdenServer& server;
+  std::shared_ptr<EdenServiceHandler> handler;
+  AbsolutePath socketPath;
+  ScopedServerThread serverThread;
+  folly::CancellationSource earlier;
+  folly::CancellationToken earlierToken{earlier.getToken()};
+  folly::CancellationSource later;
+  folly::CancellationToken laterToken{later.getToken()};
+  std::thread blockedWaiter;
+  bool takeoverBlocked{false};
+  bool pollBlocked{false};
+  std::future<TakeoverData> clientFuture;
+};
+
+} // namespace
+
+TEST(EdenServerTakeoverTest, WaitsForRequestsThatArriveDuringTheGrace) {
+  GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+      "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+  TestServer::Options options;
+  options.takeoverRequestGrace = std::chrono::seconds{3};
+  TestServer testServer{options};
+  TakeoverWithALaterRequest takeover{testServer, /*laterFinishes=*/true};
+
+  // The later request finished on its own, so the takeover went ahead and
+  // cancelled nothing.
+  EXPECT_TRUE(takeover.pollBlocked);
+  EXPECT_NO_THROW((void)takeover.clientFuture.get());
+  EXPECT_FALSE(takeover.earlierToken.isCancellationRequested());
+  EXPECT_FALSE(takeover.laterToken.isCancellationRequested());
+
+  ASSERT_TRUE(takeover.serverThread.waitForExit(5s));
+  takeover.serverThread.join();
+  ASSERT_NO_THROW(takeover.serverThread.throwIfServeFailed());
+  EXPECT_TRUE(takeover.server.performCleanup());
+}
+
+TEST(
+    EdenServerTakeoverTest,
+    RefusedWhenARequestArrivingDuringTheGraceOutlivesIt) {
+  GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+      "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+  TestServer::Options options;
+  options.takeoverRequestGrace = std::chrono::seconds{1};
+  TestServer testServer{options};
+  TakeoverWithALaterRequest takeover{testServer, /*laterFinishes=*/false};
+
+  EXPECT_THROW_RE(
+      (void)takeover.clientFuture.get(),
+      std::runtime_error,
+      "refused.*globFiles");
+  EXPECT_FALSE(takeover.laterToken.isCancellationRequested());
+  EXPECT_EQ(takeover.server.getStatus(), EdenServer::RunState::RUNNING);
+
+  // A forced takeover cancels the request and ends the server.
+  auto forced = takeoverViaThread(
+      takeover.socketPath,
+      /*shouldThrowDuringTakeover=*/false,
+      /*force=*/true);
+  ASSERT_TRUE(driveMainEventBaseUntil(takeover.server, [&] {
+    return forced.wait_for(0ms) == std::future_status::ready;
+  }));
+  EXPECT_NO_THROW((void)forced.get());
+  EXPECT_TRUE(takeover.laterToken.isCancellationRequested());
+
+  ASSERT_TRUE(takeover.serverThread.waitForExit(5s));
+  takeover.serverThread.join();
+  ASSERT_NO_THROW(takeover.serverThread.throwIfServeFailed());
+  EXPECT_TRUE(takeover.server.performCleanup());
+}
+
+TEST(EdenServerTakeoverTest, CancelsRequestsThatArriveAfterTheGrace) {
+  GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+      "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+  TestServer::Options options;
+  options.takeoverRequestGrace = std::chrono::seconds{1};
+  TestServer testServer{options};
+  auto& server = testServer.getServer();
+  auto handler = server.getHandler();
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
+
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
+
+  // Nothing is in flight, so the takeover does not wait. Pause it once the
+  // wait is over and start a request in that window.
+  auto& faultInjector = server.getServerState()->getFaultInjector();
+  faultInjector.injectBlock("takeover", "after_wait");
+  folly::CancellationSource late;
+  auto lateToken = late.getToken();
+  bool takeoverBlocked = false;
+  std::thread blockedWaiter([&] {
+    takeoverBlocked = faultInjector.waitUntilBlocked("takeover", 5s);
+    handler->insertCancellationSource(
+        /*requestId=*/3, std::move(late), "globFiles");
+    faultInjector.unblock("takeover", "after_wait");
+  });
+
+  auto clientFuture = takeoverViaThread(
+      socketPath, /*shouldThrowDuringTakeover=*/false, /*force=*/false);
+  ASSERT_TRUE(driveMainEventBaseUntil(
+      server,
+      [&] { return clientFuture.wait_for(0ms) == std::future_status::ready; },
+      10s));
+  blockedWaiter.join();
+  EXPECT_TRUE(takeoverBlocked);
+  EXPECT_NO_THROW((void)clientFuture.get());
+
+  // Once the Thrift server has stopped and the grace period has passed again,
+  // the request is cancelled rather than left to hold the stop to its
+  // deadline.
+  ASSERT_TRUE(driveMainEventBaseUntil(
+      server, [&] { return lateToken.isCancellationRequested(); }, 10s));
+
+  ASSERT_TRUE(serverThread.waitForExit(5s));
+  serverThread.join();
+  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+  EXPECT_TRUE(server.performCleanup());
+}
+
+TEST(EdenServerTakeoverTest, DoesNotWaitWhenTheGracePeriodIsOff) {
+  GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+      "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+  TestServer::Options options;
+  options.takeoverRequestGrace = std::chrono::seconds{0};
+  options.takeoverWaitsForRequests = false;
+  TestServer testServer{options};
+  auto& server = testServer.getServer();
+  auto handler = server.getHandler();
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getTakeoverSocketPath();
+
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
+
+  folly::CancellationSource source;
+  auto token = source.getToken();
+  handler->insertCancellationSource(
+      /*requestId=*/4242, std::move(source), "globFiles");
+
+  // With the kill switch off the takeover neither refuses nor cancels.
+  auto clientFuture = takeoverViaThread(
+      socketPath, /*shouldThrowDuringTakeover=*/false, /*force=*/false);
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return clientFuture.wait_for(0ms) == std::future_status::ready;
+  }));
+  EXPECT_NO_THROW((void)clientFuture.get());
+  EXPECT_FALSE(token.isCancellationRequested());
+
+  ASSERT_TRUE(serverThread.waitForExit(5s));
+  serverThread.join();
+  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+  EXPECT_TRUE(server.performCleanup());
 }
 
 TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {

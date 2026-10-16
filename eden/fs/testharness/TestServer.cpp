@@ -92,6 +92,18 @@ unique_ptr<EdenServer> TestServer::createServer(
   config->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
   config->enableNfsServer.setValue(
       options.enableNfsServer, ConfigSourceType::CommandLine);
+  if (options.takeoverRequestGrace) {
+    config->takeoverRequestGrace.setValue(
+        *options.takeoverRequestGrace, ConfigSourceType::CommandLine);
+  }
+  if (options.takeoverWaitsForRequests) {
+    config->takeoverWaitsForRequests.setValue(
+        *options.takeoverWaitsForRequests, ConfigSourceType::CommandLine);
+  }
+  if (options.takeoverRecentActivityWindow) {
+    config->takeoverRecentActivityWindow.setValue(
+        *options.takeoverRecentActivityWindow, ConfigSourceType::CommandLine);
+  }
   // Unit tests must never reach production Scuba, whatever the build mode.
   config->enableScribeLogging.setValue(false, ConfigSourceType::CommandLine);
 #ifdef _WIN32

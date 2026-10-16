@@ -460,6 +460,8 @@ cpp_library(
         "//folly/coro:collect",
         "//folly/coro:current_executor",
         "//folly/coro:invoke",
+        "//folly/coro:sleep",
+        "//folly/coro:with_cancellation",
         "//folly/executors:cpu_thread_pool_executor",
         "//folly/executors/thread_factory:named_thread_factory",
         "//folly/io/async:async_signal_handler",

@@ -11,6 +11,8 @@
 
 #include <folly/futures/Future.h>
 #include <folly/testing/TestUtil.h>
+#include <chrono>
+#include <optional>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
@@ -28,6 +30,12 @@ class TestServer {
  public:
   struct Options {
     bool enableNfsServer{false};
+    // Override core:takeover-request-grace,
+    // experimental:takeover-waits-for-requests and
+    // core:takeover-recent-activity-window when set.
+    std::optional<std::chrono::nanoseconds> takeoverRequestGrace;
+    std::optional<bool> takeoverWaitsForRequests;
+    std::optional<std::chrono::nanoseconds> takeoverRecentActivityWindow;
   };
 
   TestServer();

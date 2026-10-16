@@ -232,6 +232,7 @@ cpp_unittest(
         "//folly:exception_wrapper",
         "//folly:scope_guard",
         "//folly/io:iobuf",
+        "//folly/test:test_utils",
     ],
     external_deps = [
         "gflags",

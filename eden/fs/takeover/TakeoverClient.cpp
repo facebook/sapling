@@ -56,6 +56,8 @@ folly::Future<UnixSocket::Message> receiveTakeoverDataMessage(
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
     const std::chrono::seconds& takeoverReceiveTimeout,
+    bool force,
+    bool onlyIfIdle,
     bool shouldThrowDuringTakeover,
     bool shouldPing,
     const std::set<int32_t>& supportedVersions,
@@ -67,18 +69,27 @@ TakeoverData takeoverMounts(
   auto connectTimeout = std::chrono::seconds(1);
   FutureUnixSocket socket;
   socket.connect(&evb, socketPath.view(), connectTimeout)
-      .thenValue(
-          [&socket, supportedVersions, supportedTakeoverCapabilities](auto&&) {
-            // Send our protocol version so that the server knows
-            // whether we're capable of handshaking successfully
+      .thenValue([&socket,
+                  force,
+                  onlyIfIdle,
+                  supportedVersions,
+                  supportedTakeoverCapabilities](auto&&) {
+        // Send our protocol version so that the server knows
+        // whether we're capable of handshaking successfully
 
-            TakeoverVersionQuery query;
-            query.versions() = supportedVersions;
-            query.capabilities() = supportedTakeoverCapabilities;
+        TakeoverVersionQuery query;
+        query.versions() = supportedVersions;
+        query.capabilities() = supportedTakeoverCapabilities;
+        if (force) {
+          query.force() = true;
+        }
+        if (onlyIfIdle) {
+          query.onlyIfIdle() = true;
+        }
 
-            return socket.send(
-                CompactSerializer::serialize<folly::IOBufQueue>(query).move());
-          })
+        return socket.send(
+            CompactSerializer::serialize<folly::IOBufQueue>(query).move());
+      })
       .thenValue([&socket, &takeoverReceiveTimeout](auto&&) {
         // Wait for a response. this will either be a "ready" ping or the
         // takeover data depending on the server protocol

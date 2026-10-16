@@ -65,6 +65,8 @@ int main(int argc, char* argv[]) {
     data = facebook::eden::takeoverMounts(
         takeoverSocketPath,
         takeoverReceiveTimeout,
+        /*force=*/false,
+        /*onlyIfIdle=*/false,
         FLAGS_shouldThrowDuringTakeover,
         FLAGS_shouldPing);
   } else {
@@ -72,6 +74,8 @@ int main(int argc, char* argv[]) {
     data = facebook::eden::takeoverMounts(
         takeoverSocketPath,
         takeoverReceiveTimeout,
+        /*force=*/false,
+        /*onlyIfIdle=*/false,
         FLAGS_shouldThrowDuringTakeover,
         FLAGS_shouldPing,
         takeoverVersion);

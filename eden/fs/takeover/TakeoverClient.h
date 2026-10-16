@@ -25,6 +25,12 @@ folly::Future<UnixSocket::Message> receiveTakeoverDataMessage(
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
     const std::chrono::seconds& takeoverReceiveTimeout,
+    // Ask the server to cancel the Thrift requests it is serving instead of
+    // refusing the takeover while one of them has run for long.
+    bool force,
+    // Let the server refuse the takeover while it has served a checkout or a
+    // mount recently, as well as while it is busy.
+    bool onlyIfIdle,
     // the following parameters are present for testing purposes and should not
     // normally be used in the production build.
     bool shouldThrowDuringTakeover = false,

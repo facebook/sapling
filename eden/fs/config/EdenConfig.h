@@ -274,6 +274,47 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * How long a graceful restart that is not forced lets the Thrift requests
+   * in flight finish. It waits up to this long for the requests that were
+   * running when it was asked and refuses if they have not finished; a
+   * request that has already been running longer than this is refused
+   * without waiting. Once the Thrift server has stopped, whatever is still
+   * running after this long again is cancelled, so that no request can hold
+   * the stop to its deadline.
+   */
+  ConfigSetting<std::chrono::nanoseconds> takeoverRequestGrace{
+      "core:takeover-request-grace",
+      std::chrono::seconds(30),
+      this};
+
+  /**
+   * Whether a graceful restart that is not forced waits for the Thrift
+   * requests in flight, see core:takeover-request-grace. When off, it stops
+   * the Thrift server at once and leaves the requests to the stop deadline,
+   * as EdenFS did before the grace period existed, and it does not refuse
+   * for recent activity either. The open trace streams are ended either way,
+   * since a stream holds its connection until its client leaves.
+   */
+  ConfigSetting<bool> takeoverWaitsForRequests{
+      "experimental:takeover-waits-for-requests",
+      true,
+      this};
+
+  /**
+   * How long after a checkout, a reset of the parent commits, a mount or an
+   * unmount EdenFS counts as in use. A graceful restart that asks to proceed
+   * only if EdenFS is idle, as the hourly restarter does, is refused while
+   * one of those ran within this window: a checkout is several Thrift calls
+   * in a row, and a takeover between two of them lands in the middle of it.
+   * `eden restart --graceful` run by hand does not ask, so it is only held
+   * back by the requests in flight.
+   */
+  ConfigSetting<std::chrono::nanoseconds> takeoverRecentActivityWindow{
+      "core:takeover-recent-activity-window",
+      std::chrono::minutes(10),
+      this};
+
+  /**
    * If EdenFS should auto migrate non inmemory inode catalogs to inmemory on
    * Windows.
    */

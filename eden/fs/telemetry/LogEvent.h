@@ -283,6 +283,28 @@ struct ThriftStopTimeout : public EdenFSEvent {
   }
 };
 
+/**
+ * A graceful restart was refused because Thrift requests were still running
+ * after core:takeover-request-grace. `requests` names them.
+ */
+struct TakeoverRefused : public EdenFSEvent {
+  std::string requests;
+  double oldest_request_age_s = 0.0;
+
+  TakeoverRefused(std::string requests, double oldest_request_age_s)
+      : requests(std::move(requests)),
+        oldest_request_age_s(oldest_request_age_s) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("reason", requests);
+    event.addDouble("duration", oldest_request_age_s);
+  }
+
+  const char* getType() const override {
+    return "takeover_refused";
+  }
+};
+
 struct PrivhelperShutdown : public EdenFSEvent {
   int64_t exit_code = 0;
   int64_t exit_signal = 0;
