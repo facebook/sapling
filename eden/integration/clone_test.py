@@ -4,8 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
-
 import json
 import os
 import re
@@ -479,7 +477,8 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase):
         )
 
         stop_cmd = base_args + ["stop"]
-        self.exit_stack.callback(subprocess.call, stop_cmd)
+        # Stop before TemporaryDirectoryMixin removes the daemon's state directory.
+        self.addCleanup(subprocess.check_call, stop_cmd, env=env)
 
         # Pass through any output from the clone command
         sys.stdout.write(proc.stdout)
