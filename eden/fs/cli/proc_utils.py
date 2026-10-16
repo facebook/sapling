@@ -20,7 +20,10 @@ import typing
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple
 
+from eden.fs.config.eden_config.thrift_types import ConfigReloadBehavior
+from eden.fs.service.eden.thrift_types import GetConfigParams
 from eden.thrift.client import create_thrift_client
+from fb303_core.thrift_types import fb303_status
 
 
 log: logging.Logger = logging.getLogger("eden.fs.cli.proc_utils")
@@ -51,6 +54,46 @@ class EdenFSProcess(NamedTuple):
     # of EdenFS will detect this and exit if their lock file is deleted, but older
     # versions of EdenFS would continue to run in this state.
     holding_lock: Optional[bool] = None
+
+    def is_healthy(self) -> Optional[bool]:
+        """Whether this daemon reports itself alive over Thrift. False when it
+        answers with another status or as another process, None when it does
+        not answer in time. A daemon that is starting or stopping cannot hand
+        over its mounts in a graceful restart.
+        """
+        try:
+            with create_thrift_client(
+                eden_dir=str(self.eden_dir), timeout=3.0
+            ) as client:
+                info = client.getDaemonInfo()
+        except Exception as ex:
+            log.warning(
+                f"EdenFS process {self.pid} did not answer a health check: {ex}"
+            )
+            return None
+        return info.status == fb303_status.ALIVE and info.pid == self.pid
+
+    def takeover_waits_for_requests(self) -> Optional[bool]:
+        """Whether this daemon refuses a graceful restart while Thrift requests
+        are in flight, as its own configuration says. None when the daemon
+        cannot say: it predates the setting or did not answer.
+        """
+        try:
+            with create_thrift_client(
+                eden_dir=str(self.eden_dir), timeout=3.0
+            ) as client:
+                config = client.getConfig(
+                    GetConfigParams(reload=ConfigReloadBehavior.NoReload)
+                )
+        except Exception as ex:
+            log.warning(
+                f"Failed to query the config of EdenFS process {self.pid}: {ex}"
+            )
+            return None
+        value = config.values.get("experimental:takeover-waits-for-requests")
+        if value is None:
+            return None
+        return value.parsedValue == "true"
 
     def is_edenfs_idle(self) -> bool:
         # Get the counters about number of thrift calls

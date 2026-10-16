@@ -225,7 +225,10 @@ python_library(
         "proc_utils_win.py",
     ],
     deps = [
+        "//eden/fs/config:config_thrift-python-types",
         "//eden/fs/py/eden/thrift:client",
+        "//eden/fs/service:thrift-python-types",
+        "//fb303/thrift:fb303_core-python-types",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
