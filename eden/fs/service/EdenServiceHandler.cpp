@@ -4510,14 +4510,19 @@ EdenServiceHandler::semifuture_setPathObjectId(
   std::vector<SetPathObjectIdObjectAndPath> objects;
   std::vector<std::string> object_strings;
   auto objectSize =
-      params->objects().is_set() ? params->objects()->size() + 1 : 1;
+      apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
+          params->objects())
+      ? params->objects()->size() + 1
+      : 1;
   objects.reserve(objectSize);
   object_strings.reserve(objectSize);
 
   // TODO deprecate non-batch fields once all clients moves to the batch
   // fields. Rust clients might set to default and is_set() would return false
   // negative
-  if (params->objectId().is_set() && !params->objectId()->empty()) {
+  if (apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
+          params->objectId()) &&
+      !params->objectId()->empty()) {
     SetPathObjectIdObjectAndPath objectAndPath;
     objectAndPath.path = RelativePath{*params->path()};
     objectAndPath.id =

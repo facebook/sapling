@@ -225,7 +225,8 @@ class OverlayChecker::RepairState {
       if (parentDirOpt.has_value()) {
         auto parentDir = parentDirOpt.value();
         auto entries = parentDir.entries();
-        if (entries.is_set()) {
+        if (apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
+                entries)) {
           // TODO: this copy can be avoided if we have overlay.thrift specify a
           // map with heterogeneous lookup for entries.
           auto result = entries->find(childName.asString());

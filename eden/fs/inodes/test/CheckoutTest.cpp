@@ -1805,7 +1805,9 @@ TEST_P(CheckoutTest, testSetPathObjectIdConflict) {
   testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
-  ASSERT_TRUE(result.result.conflicts().has_value());
+  ASSERT_TRUE(
+      apache::thrift::is_non_optional_field_set_manually_or_by_serializer(
+          result.result.conflicts()));
   EXPECT_EQ(1, result.result.conflicts()->size());
   EXPECT_THAT(
       std::move(result).result.conflicts().value(),
