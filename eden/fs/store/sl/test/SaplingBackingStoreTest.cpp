@@ -905,8 +905,12 @@ TEST_F(
   EXPECT_EQ(
       "Request forcibly dropped",
       completionError(std::move(treeFuture), kTestTimeout));
-  EXPECT_EQ("never completed", completionError(std::move(treeAuxFuture), 1s));
-  EXPECT_EQ("never completed", completionError(std::move(blobAuxFuture), 1s));
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(treeAuxFuture), kTestTimeout));
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(blobAuxFuture), kTestTimeout));
 }
 
 TEST_F(
@@ -942,12 +946,14 @@ TEST_F(
       queuedBackingStore->getTreeAuxDataEnqueue(treeAuxOid, context);
   EXPECT_EQ(1, queuedBackingStore->dropAllPendingRequestsFromQueue());
   EXPECT_EQ(
-      "never completed", completionError(std::move(firstTreeAuxFuture), 1s));
+      "Request forcibly dropped",
+      completionError(std::move(firstTreeAuxFuture), kTestTimeout));
   auto secondTreeAuxFuture =
       queuedBackingStore->getTreeAuxDataEnqueue(treeAuxOid, context);
-  EXPECT_EQ(0, queuedBackingStore->dropAllPendingRequestsFromQueue());
+  EXPECT_EQ(1, queuedBackingStore->dropAllPendingRequestsFromQueue());
   EXPECT_EQ(
-      "never completed", completionError(std::move(secondTreeAuxFuture), 1s));
+      "Request forcibly dropped",
+      completionError(std::move(secondTreeAuxFuture), kTestTimeout));
 }
 
 } // namespace facebook::eden

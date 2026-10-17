@@ -2468,17 +2468,9 @@ void SaplingBackingStore::periodicManagementTask() {
 }
 
 namespace {
-void dropBlobImportRequest(std::shared_ptr<SaplingImportRequest>& request) {
-  auto* promise = request->getPromise<BlobPtr>();
-  if (promise != nullptr) {
-    if (!promise->isFulfilled()) {
-      promise->setException(std::runtime_error("Request forcibly dropped"));
-    }
-  }
-}
-
-void dropTreeImportRequest(std::shared_ptr<SaplingImportRequest>& request) {
-  auto* promise = request->getPromise<TreePtr>();
+template <typename ResponseType>
+void dropImportRequest(std::shared_ptr<SaplingImportRequest>& request) {
+  auto* promise = request->getPromise<ResponseType>();
   if (promise != nullptr) {
     if (!promise->isFulfilled()) {
       promise->setException(std::runtime_error("Request forcibly dropped"));
@@ -2492,10 +2484,16 @@ int64_t SaplingBackingStore::dropAllPendingRequestsFromQueue() {
   for (auto& request : requestVec) {
     if (request->isType<SaplingImportRequest::BlobImport>()) {
       XLOG(DBG7, "Dropping blob request");
-      dropBlobImportRequest(request);
+      dropImportRequest<BlobPtr>(request);
     } else if (request->isType<SaplingImportRequest::TreeImport>()) {
       XLOG(DBG7, "Dropping tree request");
-      dropTreeImportRequest(request);
+      dropImportRequest<TreePtr>(request);
+    } else if (request->isType<SaplingImportRequest::BlobAuxImport>()) {
+      XLOG(DBG7, "Dropping blob aux data request");
+      dropImportRequest<BlobAuxDataPtr>(request);
+    } else if (request->isType<SaplingImportRequest::TreeAuxImport>()) {
+      XLOG(DBG7, "Dropping tree aux data request");
+      dropImportRequest<TreeAuxDataPtr>(request);
     }
   }
   return requestVec.size();
