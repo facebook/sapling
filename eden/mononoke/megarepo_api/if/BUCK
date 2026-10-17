@@ -5,9 +5,6 @@ oncall("scm_server_treehugger")
 
 thrift_library(
     name = "megarepo_configs",
-    java_versions = [
-        "21",
-    ],
     languages = [
         "hs2",
         "rust",
