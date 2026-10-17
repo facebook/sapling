@@ -155,19 +155,17 @@ class DirstateTruncatedReadTest(unittest.TestCase):
         return tuples_dict
 
     def test_file_cut_before_checksum(self) -> None:
-        tuples_dict = self.read(self.RAW_DIRSTATE[: -self.CHECKSUM_SECTION_LENGTH])
-        self.assertEqual(2, len(tuples_dict))
+        with self.assertRaises(eden.dirstate.DirstateParseException):
+            self.read(self.RAW_DIRSTATE[: -self.CHECKSUM_SECTION_LENGTH])
 
     def test_file_cut_after_first_record(self) -> None:
-        tuples_dict = self.read(
-            self.RAW_DIRSTATE[: self.HEADER_LENGTH + self.FIRST_RECORD_LENGTH]
-        )
-        self.assertEqual(
-            {"fbcode/eden/py/test/dirstate_test.py": ("a", 0, -1)}, tuples_dict
-        )
+        with self.assertRaises(eden.dirstate.DirstateParseException):
+            self.read(
+                self.RAW_DIRSTATE[: self.HEADER_LENGTH + self.FIRST_RECORD_LENGTH]
+            )
 
     def test_path_with_invalid_utf8(self) -> None:
         corrupted = bytearray(self.RAW_DIRSTATE)
         corrupted[self.HEADER_LENGTH + 1 + 6 + 2] = 0xFF
-        with self.assertRaises(UnicodeDecodeError):
+        with self.assertRaises(eden.dirstate.DirstateParseException):
             self.read(bytes(corrupted))

@@ -138,8 +138,9 @@ def read(
     while True:
         header = hashing_read(1)
         if not header:
-            # We have reached the end of the file.
-            break
+            raise DirstateParseException(
+                "Reached EOF before the checksum in {}.\n".format(filename)
+            )
         elif header == b"\x01":
             scalars = hashing_read(6)
             if len(scalars) != 6:
@@ -220,7 +221,12 @@ def _read_path(reader: "Callable[[int], bytes]", filename: str) -> str:
             return path
         else:
             # Python 3
-            return str(path, "utf8")
+            try:
+                return str(path, "utf8")
+            except UnicodeDecodeError as ex:
+                raise DirstateParseException(
+                    "Path is not valid UTF-8 in {}: {}\n".format(filename, ex)
+                ) from ex
     else:
         raise DirstateParseException(
             "Reached EOF while reading path in {}.\n".format(filename)
