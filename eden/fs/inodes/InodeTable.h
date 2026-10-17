@@ -350,6 +350,7 @@ class InodeTable {
 
   struct State {
     State(MappedDiskVector<Entry>&& mdv) : storage{std::move(mdv)} {
+      size_t kept = 0;
       for (size_t i = 0; i < storage.size(); ++i) {
         auto entry = storage.get(i);
         if (entry.inode.empty()) {
@@ -357,17 +358,25 @@ class InodeTable {
           // zeroes. Don't pretend this entry is valid.
           continue;
         }
-        auto ret = indices.insert({entry.inode, i});
+        auto ret = indices.insert({entry.inode, kept});
         if (!ret.second) {
           XLOG_FIRST_N(
               WARNING,
               100,
               fmt::format(
-                  "Duplicate records for the same inode: indices {} and {}",
+                  "Duplicate records for the same inode: kept at compacted "
+                  "index {}, duplicate at original storage index {}",
                   indices[entry.inode],
                   i));
           continue;
         }
+        if (kept != i) {
+          storage.set(kept, entry);
+        }
+        ++kept;
+      }
+      while (storage.size() > kept) {
+        storage.pop_back();
       }
     }
 

@@ -294,14 +294,14 @@ TEST_F(InodeTableTest, freeInodesFromAfterCrashInFreeInode) {
   writeTableLeftByCrashInFreeInode(tablePath);
   auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
   EXPECT_EQ(1, inodeTable->freeInodesFrom(2_ino));
-  EXPECT_TRUE(inodeTable->getOptional(3_ino).has_value());
+  EXPECT_FALSE(inodeTable->getOptional(3_ino).has_value());
 }
 
 TEST_F(InodeTableTest, freeInodeAfterCrashInFreeInode) {
   writeTableLeftByCrashInFreeInode(tablePath);
   auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
   inodeTable->freeInode(3_ino);
-  EXPECT_TRUE(inodeTable->getOptional(3_ino).has_value());
+  EXPECT_FALSE(inodeTable->getOptional(3_ino).has_value());
 }
 
 TEST_F(InodeTableTest, freeInodeOfAnotherRecordAfterCrashInFreeInode) {
@@ -309,7 +309,7 @@ TEST_F(InodeTableTest, freeInodeOfAnotherRecordAfterCrashInFreeInode) {
   auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
   inodeTable->set(3_ino, 9);
   inodeTable->freeInode(1_ino);
-  EXPECT_EQ(7, inodeTable->getOrThrow(3_ino));
+  EXPECT_EQ(9, inodeTable->getOrThrow(3_ino));
 }
 
 #endif // !_WIN32
