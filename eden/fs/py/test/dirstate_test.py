@@ -8,6 +8,7 @@
 
 import io
 import unittest
+from typing import Dict, Tuple
 
 import eden.dirstate
 
@@ -131,3 +132,42 @@ class DirstateWriteTest(unittest.TestCase):
         with io.BytesIO() as dirstate_file:
             eden.dirstate.write(dirstate_file, parents, tuples_dict, copymap)
             self.assertEqual(dirstate_file.getvalue(), expected_raw_dirstate)
+
+
+class DirstateTruncatedReadTest(unittest.TestCase):
+    RAW_DIRSTATE = (
+        b"P\x03\xc2x?z\xf1\xec\xc9\x99+\xc0\xdb\xb6n[}\x92nr\x00\x00\x00"
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        b"\x00\x00\x00\x00\x01\x01a\x00\x00\x00\x00\xff\x00$fbcode/eden/"
+        b"py/test/dirstate_test.py\x01a\x00\x00\x00\x00\xff\x00\x1bfbcode/"
+        b"eden/py/test/TARGETS\xffh\x0f,\x18\xaa\xbb\x0b\x02x\\.\xf6\x19S"
+        b"\xe8\xc2#\x8b\xde\xd4\xa6s\xcf\xa1\xb9\xaekJ\x85HCW"
+    )
+    HEADER_LENGTH = 44
+    FIRST_RECORD_LENGTH = 1 + 6 + 2 + len(b"fbcode/eden/py/test/dirstate_test.py")
+    CHECKSUM_SECTION_LENGTH = 1 + 32
+
+    def read(self, data: bytes) -> Dict[str, Tuple[str, int, int]]:
+        with io.BytesIO(data) as dirstate_file:
+            _parents, tuples_dict, _copymap = eden.dirstate.read(
+                dirstate_file, "raw_dirstate"
+            )
+        return tuples_dict
+
+    def test_file_cut_before_checksum(self) -> None:
+        tuples_dict = self.read(self.RAW_DIRSTATE[: -self.CHECKSUM_SECTION_LENGTH])
+        self.assertEqual(2, len(tuples_dict))
+
+    def test_file_cut_after_first_record(self) -> None:
+        tuples_dict = self.read(
+            self.RAW_DIRSTATE[: self.HEADER_LENGTH + self.FIRST_RECORD_LENGTH]
+        )
+        self.assertEqual(
+            {"fbcode/eden/py/test/dirstate_test.py": ("a", 0, -1)}, tuples_dict
+        )
+
+    def test_path_with_invalid_utf8(self) -> None:
+        corrupted = bytearray(self.RAW_DIRSTATE)
+        corrupted[self.HEADER_LENGTH + 1 + 6 + 2] = 0xFF
+        with self.assertRaises(UnicodeDecodeError):
+            self.read(bytes(corrupted))
