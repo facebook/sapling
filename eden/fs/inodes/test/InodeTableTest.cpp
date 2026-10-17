@@ -276,4 +276,40 @@ TEST_F(InodeTableTest, freeInodeHandlesUnavailableBackingPage) {
       "");
 }
 #endif // defined(__linux__) && defined(MADV_POPULATE_WRITE)
+
+namespace {
+void writeTableLeftByCrashInFreeInode(const std::string& tablePath) {
+  {
+    auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+    inodeTable->set(1_ino, 0);
+    inodeTable->set(2_ino, 0);
+    inodeTable->set(3_ino, 7);
+  }
+  auto storage = MappedDiskVector<InodeTable<Int>::Entry>::open(tablePath);
+  storage.set(1, storage.get(2));
+}
+} // namespace
+
+TEST_F(InodeTableTest, freeInodesFromAfterCrashInFreeInode) {
+  writeTableLeftByCrashInFreeInode(tablePath);
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+  EXPECT_EQ(1, inodeTable->freeInodesFrom(2_ino));
+  EXPECT_TRUE(inodeTable->getOptional(3_ino).has_value());
+}
+
+TEST_F(InodeTableTest, freeInodeAfterCrashInFreeInode) {
+  writeTableLeftByCrashInFreeInode(tablePath);
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+  inodeTable->freeInode(3_ino);
+  EXPECT_TRUE(inodeTable->getOptional(3_ino).has_value());
+}
+
+TEST_F(InodeTableTest, freeInodeOfAnotherRecordAfterCrashInFreeInode) {
+  writeTableLeftByCrashInFreeInode(tablePath);
+  auto inodeTable = InodeTable<Int>::open(tablePath, makeRefPtr<EdenStats>());
+  inodeTable->set(3_ino, 9);
+  inodeTable->freeInode(1_ino);
+  EXPECT_EQ(7, inodeTable->getOrThrow(3_ino));
+}
+
 #endif // !_WIN32
