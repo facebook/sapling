@@ -359,6 +359,12 @@ class SaplingBackingStore final
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
+      dropAllPendingRequestsWithAuxRequestsQueued);
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
+      dropAllPendingRequestsThenRefetchAuxData);
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
       sameRequestsDifferentFetchCause);
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,

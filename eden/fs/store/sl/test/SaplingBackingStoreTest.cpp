@@ -231,6 +231,17 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           &faultInjector);
 };
 
+template <typename Future, typename Duration>
+std::string completionError(Future&& future, Duration timeout) {
+  try {
+    (void)std::forward<Future>(future).get(timeout);
+    return "completed with a value";
+  } catch (const folly::FutureTimeout&) {
+    return "never completed";
+  } catch (const std::exception& ex) {
+    return ex.what();
+  }
+}
 } // namespace
 
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getTree) {
@@ -848,6 +859,95 @@ TEST_F(SaplingBackingStoreErrorLoggingTest, manifestResolutionFailureIsLogged) {
   const auto& strings = xplatLogger.events()[0].event.getStringMap();
   EXPECT_EQ(strings.at("component"), "backing_store");
   EXPECT_EQ(strings.at("error_type"), "manifest_resolution_failure");
+}
+
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    dropAllPendingRequestsWithAuxRequestsQueued) {
+  queuedBackingStore->queue_.stop();
+  for (auto& thread : queuedBackingStore->threads_) {
+    thread.join();
+  }
+  queuedBackingStore->threads_.clear();
+  auto context = ObjectFetchContext::getNullContext();
+  SlOid blobOid{
+      Hash20{folly::StringPiece{"1111111111111111111111111111111111111111"}},
+      RelativePathPiece{"lean/check/blobOid"}};
+  SlOid treeOid{
+      Hash20{folly::StringPiece{"2222222222222222222222222222222222222222"}},
+      RelativePathPiece{"lean/check/treeOid"}};
+  SlOid blobAuxOid{
+      Hash20{folly::StringPiece{"3333333333333333333333333333333333333333"}},
+      RelativePathPiece{"lean/check/blobAuxOid"}};
+  SlOid treeAuxOid{
+      Hash20{folly::StringPiece{"4444444444444444444444444444444444444444"}},
+      RelativePathPiece{"lean/check/treeAuxOid"}};
+
+  auto blobFuture = queuedBackingStore->getBlobEnqueue(
+      blobOid, context, SaplingImportRequest::FetchType::Fetch);
+  auto blobDuplicateFuture = queuedBackingStore->getBlobEnqueue(
+      blobOid, context, SaplingImportRequest::FetchType::Fetch);
+  auto treeFuture = queuedBackingStore->queue_.enqueueTree(
+      SaplingImportRequest::makeTreeImportRequest(treeOid, context));
+  auto treeAuxFuture =
+      queuedBackingStore->getTreeAuxDataEnqueue(treeAuxOid, context);
+  auto blobAuxFuture = queuedBackingStore->queue_.enqueueBlobAux(
+      SaplingImportRequest::makeBlobAuxImportRequest(blobAuxOid, context));
+
+  EXPECT_EQ(4, queuedBackingStore->dropAllPendingRequestsFromQueue());
+
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(blobFuture), kTestTimeout));
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(blobDuplicateFuture), kTestTimeout));
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(treeFuture), kTestTimeout));
+  EXPECT_EQ("never completed", completionError(std::move(treeAuxFuture), 1s));
+  EXPECT_EQ("never completed", completionError(std::move(blobAuxFuture), 1s));
+}
+
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    dropAllPendingRequestsThenRefetchAuxData) {
+  queuedBackingStore->queue_.stop();
+  for (auto& thread : queuedBackingStore->threads_) {
+    thread.join();
+  }
+  queuedBackingStore->threads_.clear();
+  auto context = ObjectFetchContext::getNullContext();
+  SlOid blobOid{
+      Hash20{folly::StringPiece{"5555555555555555555555555555555555555555"}},
+      RelativePathPiece{"lean/check/blobOid"}};
+  SlOid treeAuxOid{
+      Hash20{folly::StringPiece{"6666666666666666666666666666666666666666"}},
+      RelativePathPiece{"lean/check/treeAuxOid"}};
+
+  auto firstBlobFuture = queuedBackingStore->getBlobEnqueue(
+      blobOid, context, SaplingImportRequest::FetchType::Fetch);
+  EXPECT_EQ(1, queuedBackingStore->dropAllPendingRequestsFromQueue());
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(firstBlobFuture), kTestTimeout));
+  auto secondBlobFuture = queuedBackingStore->getBlobEnqueue(
+      blobOid, context, SaplingImportRequest::FetchType::Fetch);
+  EXPECT_EQ(1, queuedBackingStore->dropAllPendingRequestsFromQueue());
+  EXPECT_EQ(
+      "Request forcibly dropped",
+      completionError(std::move(secondBlobFuture), kTestTimeout));
+
+  auto firstTreeAuxFuture =
+      queuedBackingStore->getTreeAuxDataEnqueue(treeAuxOid, context);
+  EXPECT_EQ(1, queuedBackingStore->dropAllPendingRequestsFromQueue());
+  EXPECT_EQ(
+      "never completed", completionError(std::move(firstTreeAuxFuture), 1s));
+  auto secondTreeAuxFuture =
+      queuedBackingStore->getTreeAuxDataEnqueue(treeAuxOid, context);
+  EXPECT_EQ(0, queuedBackingStore->dropAllPendingRequestsFromQueue());
+  EXPECT_EQ(
+      "never completed", completionError(std::move(secondTreeAuxFuture), 1s));
 }
 
 } // namespace facebook::eden
