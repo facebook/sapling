@@ -160,6 +160,24 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_classify_path_symlink_to_regular_file() {
+        let temp_dir = prepare_directory();
+        let target = temp_dir.path().join("target.txt");
+        fs::write(&target, "anything").unwrap();
+        let link = temp_dir.path().join("link-to-target");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        let (p, t) = classify_path(link.to_str().unwrap()).await.unwrap();
+        assert!(matches!(t, PathType::RegularFile));
+        assert_eq!(p, target.canonicalize().unwrap());
+
+        fs::remove_file(&p).unwrap();
+        assert!(!target.exists());
+        assert!(link.symlink_metadata().is_ok());
+    }
+
     #[tokio::test]
     async fn test_classify_nonexistent_path() {
         let tmp_dir = prepare_directory();
