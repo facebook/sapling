@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -34,7 +35,10 @@ pub async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
         Ok(canonicalized_path) => {
             let path = canonicalized_path.as_path();
             if path.is_file() {
-                return Ok((canonicalized_path, PathType::RegularFile));
+                return Ok((
+                    path_to_remove_for_file(&path_buf, canonicalized_path)?,
+                    PathType::RegularFile,
+                ));
             }
 
             if !path.is_dir() {
@@ -60,6 +64,20 @@ pub async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
             Ok((canonicalized_path, path_type))
         }
     }
+}
+
+fn path_to_remove_for_file(given_path: &Path, canonicalized_path: PathBuf) -> Result<PathBuf> {
+    if !given_path.symlink_metadata()?.file_type().is_symlink() {
+        return Ok(canonicalized_path);
+    }
+    let link_name = given_path
+        .file_name()
+        .ok_or_else(|| anyhow!("{} has no file name", given_path.display()))?;
+    let link_parent = match given_path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    Ok(link_parent.canonicalize()?.join(link_name))
 }
 
 pub async fn clean_up(context: &RemoveContext) -> Result<()> {
@@ -171,11 +189,18 @@ mod tests {
 
         let (p, t) = classify_path(link.to_str().unwrap()).await.unwrap();
         assert!(matches!(t, PathType::RegularFile));
-        assert_eq!(p, target.canonicalize().unwrap());
+        assert_eq!(
+            p,
+            temp_dir
+                .path()
+                .canonicalize()
+                .unwrap()
+                .join("link-to-target")
+        );
 
         fs::remove_file(&p).unwrap();
-        assert!(!target.exists());
-        assert!(link.symlink_metadata().is_ok());
+        assert!(target.exists());
+        assert!(link.symlink_metadata().is_err());
     }
 
     #[tokio::test]
