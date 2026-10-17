@@ -12,6 +12,8 @@ use std::process::Command;
 use anyhow::Result;
 #[cfg(target_os = "linux")]
 use anyhow::anyhow;
+#[cfg(target_os = "linux")]
+use edenfs_utils::trace_env;
 
 #[cfg(target_os = "linux")]
 use crate::instance::EdenFsInstance;
@@ -27,6 +29,7 @@ const EDENFS_UNIT_NAME_TEMPLATE: &str = "edenfs@{escaped_state_dir}.service";
 pub fn get_systemd_unit(instance: &EdenFsInstance) -> Result<String> {
     let config_dir = instance.get_config_dir().to_string_lossy();
     let output = Command::new("systemd-escape")
+        .envs(trace_env("systemd-escape"))
         .arg("--path")
         .arg(config_dir.as_ref())
         .output()

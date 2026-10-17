@@ -114,6 +114,7 @@ class ForegroundColor(Enum):
     RESET = "\033[0m"
 
 
+from eden.fs.cli import agent_tracing
 from eden.fs.cli.version import VersionInfo
 
 try:
@@ -3735,7 +3736,7 @@ def _main() -> int:
         if args.debug:
             raise
 
-        os._exit(130)
+        agent_tracing.exit_interrupted()
         # Pyre doesn't understand that os._exit is noreturn.
         return 130
 
@@ -3744,6 +3745,7 @@ def zipapp_main() -> None:
     """zipapp_main() is used when running edenfsctl as a Python 3 zipapp executable.
     The zipapp module expects the main function to call sys.exit() on its own if it
     wants to exit with a non-zero status."""
+    agent_tracing.trace()
     retcode = main()
     sys.exit(retcode)
 

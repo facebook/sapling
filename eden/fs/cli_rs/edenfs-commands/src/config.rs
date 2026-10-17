@@ -18,6 +18,7 @@ use clap::Parser;
 use edenfs_client::config::ConfigSourceType;
 #[cfg(windows)]
 use edenfs_utils::find_python;
+use edenfs_utils::trace_env;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
@@ -129,6 +130,7 @@ fn edenfs_config_manager_command(telemetry_disabled: bool) -> Command {
     #[cfg(not(target_os = "windows"))]
     let cmd = {
         let mut cmd = Command::new("sudo");
+        cmd.envs(trace_env("sudo"));
         if telemetry_disabled {
             // A command-line assignment survives sudo's environment filtering.
             cmd.arg("EDENFS_NO_TELEMETRY=1");
@@ -140,6 +142,7 @@ fn edenfs_config_manager_command(telemetry_disabled: bool) -> Command {
     #[cfg(target_os = "windows")]
     let cmd = {
         let mut cmd = Command::new(r"C:\Windows\py.exe");
+        cmd.envs(trace_env("edenfs_config_manager"));
         cmd.arg(r"c:\tools\eden\libexec\edenfs_config_manager.par");
         if telemetry_disabled {
             cmd.env("EDENFS_NO_TELEMETRY", "1");

@@ -13,13 +13,16 @@ clap = { version = "4.6.2", features = ["derive", "env", "string", "unicode", "w
 edenfs-commands = { version = "0.1.0", path = "../edenfs-commands" }
 fail = { version = "0.5.1", features = ["failpoints"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
 sapling-testutil = { version = "0.1.0", path = "../../../scm/lib/util/testutil" }
 tempfile = "3.27.0"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
-[target.'cfg(target_os = "linux")'.dependencies]
-sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
+[dev-dependencies]
+base64 = { version = "0.23.1", features = ["alloc"] }
+edenfs-core = { version = "0.1.0", path = "../edenfs-core" }
+fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }

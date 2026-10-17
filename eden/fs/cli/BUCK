@@ -82,11 +82,18 @@ python_binary(
 )
 
 python_library(
+    name = "agent_tracing",
+    srcs = ["agent_tracing.py"],
+    deps = ["//artillery/artillery2/api/cpp/cli_lite/python:art_cli_lite"],
+)
+
+python_library(
     name = "main_lib",
     srcs = [
         "main.py",
     ],
     deps = [
+        ":agent_tracing",
         ":constants",
         ":error_report",
         ":lib",

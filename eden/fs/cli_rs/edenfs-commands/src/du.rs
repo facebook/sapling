@@ -43,6 +43,7 @@ use edenfs_utils::get_buck_command;
 use edenfs_utils::get_env_with_buck_version;
 use edenfs_utils::get_environment_suitable_for_subprocess;
 use edenfs_utils::path_from_bytes;
+use edenfs_utils::trace_env;
 use serde::Serialize;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
@@ -372,6 +373,7 @@ fn get_hg_cache_path() -> Result<PathBuf> {
         .stderr(SubprocessRedirection::Pipe)
         .env_clear()
         .env_extend(&get_environment_suitable_for_subprocess())
+        .env_extend(&trace_env("hg"))
         .capture()?;
 
     if output.success() {
@@ -583,6 +585,7 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
                 .cwd(basename)
                 .env_clear()
                 .env_extend(&get_env_with_buck_version(basename)?)
+                .env_extend(&trace_env("buck"))
                 .capture()
                 .with_context(|| format!("Failed to run buck {}", get_buck_command()))?;
 
@@ -616,6 +619,7 @@ fn get_purgeable_size() -> Result<u64> {
     let args = &[PURGEABLE_DATA_UTIL, "-G", home_dir];
 
     let output = Command::new("sudo")
+        .envs(trace_env("sudo"))
         .args(args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::piped())
@@ -664,6 +668,7 @@ fn clear_purgeable_space(purgeable_space: String) -> Result<()> {
     ];
 
     let output = Command::new("sudo")
+        .envs(trace_env("sudo"))
         .args(args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::piped())
@@ -948,6 +953,7 @@ impl crate::Subcommand for DiskUsageCmd {
                         "Cleaning shared space used by the storage engine...".blue()
                     );
                     let output = Exec::cmd("eden")
+                        .env_extend(&trace_env("eden"))
                         .arg("gc")
                         .stdout(SubprocessRedirection::Pipe)
                         .stderr(SubprocessRedirection::Pipe)

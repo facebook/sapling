@@ -1,10 +1,26 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 oncall("scm_client_infra")
 
 rust_binary(
     name = "edenfsctl",
     srcs = glob(["src/**/*.rs"]),
+    labels = ci.labels(
+        ci.linux(),
+        ci.linux(ci.aarch64()),
+        ci.mac(ci.aarch64()),
+        ci.windows(),
+    ),
+    test_deps = [
+        "fbsource//third-party/rust:base64",
+        "//configerator/structs/contextprop/if:baggage-rust",
+        "//contextprop/if:context_prop_thrift_structs-rust",
+        "//eden/fs/cli_rs/edenfs-core:edenfs-core",
+        "//thrift/lib/rust:fbthrift",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
@@ -12,17 +28,41 @@ rust_binary(
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
+        "//artillery/artillery2/api/cpp/cli_lite/rust:art_cli_lite_rs",
+        "//artillery/artillery2/api/cpp/cli_lite/rust:art_cli_lite_rs_thrift",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/fs/cli_rs/edenfs-commands:edenfs-commands",
         "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
+        "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/util/testutil:testutil",
     ] + select({
         "DEFAULT": [],
-        "ovr_config//os:linux": [
-            "//eden/scm/lib/http-client:http-client",
-        ],
         "ovr_config//os:windows": [
             "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
         ],
     }),
+)
+
+python_unittest(
+    name = "test_tracing",
+    srcs = ["tests/test_tracing.py"],
+    env = {"EDENFSCTL": "$(location :edenfsctl)"},
+    labels = ci.labels(
+        ci.linux(),
+        ci.linux(ci.aarch64()),
+        ci.mac(ci.aarch64()),
+        ci.windows(),
+    ),
+    network_access = select({
+        "DEFAULT": network_access_utils.NETWORK_ACCESS_ALL,
+        "ovr_config//os:linux": network_access_utils.NETWORK_ACCESS_NONE,
+        "ovr_config//os:macos": network_access_utils.NETWORK_ACCESS_LOOPBACK,
+        "ovr_config//os:windows": network_access_utils.NETWORK_ACCESS_STRICT,
+    }),
+    deps = [
+        "//artillery/thrift:artillery_trace_model-python-types",
+        "//configerator/structs/contextprop/if:baggage-python-types",
+        "//contextprop/if:context_prop_thrift_structs-python-types",
+        "//thrift/lib/python:types",
+    ],
 )

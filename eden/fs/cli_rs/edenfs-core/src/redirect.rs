@@ -43,6 +43,7 @@ use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
+use edenfs_utils::trace_env;
 use hg_util::no_follow::NoFollowRoot;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
@@ -653,6 +654,7 @@ impl Redirection {
         // Keep this command eligible for std's posix_spawn path: pre_exec
         // callbacks would run daemon at-fork handlers before the shell exec.
         let mut child = Command::new("/bin/sh")
+            .envs(trace_env("mkscratch"))
             .arg("-c")
             .arg(MKSCRATCH_WRAPPER)
             .arg("--")
@@ -696,7 +698,10 @@ impl Redirection {
     }
 
     fn run_mkscratch(mkscratch: &Path, args: &[&OsStr]) -> Result<MkscratchOutput> {
-        let output = Command::new(mkscratch).args(args).output();
+        let output = Command::new(mkscratch)
+            .envs(trace_env("mkscratch"))
+            .args(args)
+            .output();
         match output {
             Ok(output) => Ok(MkscratchOutput {
                 status: MkscratchExitStatus::Exited(output.status),
@@ -899,6 +904,7 @@ impl Redirection {
             .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
         let args = &["mount", &mount_path.to_string_lossy()];
         let output = Command::new(APFS_HELPER)
+            .envs(trace_env("apfs_helper"))
             .args(args)
             .output()
             .from_err()
@@ -967,6 +973,7 @@ impl Redirection {
                 &image_file_name,
             ];
             let create_output = Command::new("hdiutil")
+                .envs(trace_env("hdiutil"))
                 .args(args)
                 .output()
                 .from_err()
@@ -1005,6 +1012,7 @@ impl Redirection {
                 .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
         }
         let attach_output = Command::new("hdiutil")
+            .envs(trace_env("hdiutil"))
             .args(args)
             .output()
             .from_err()
@@ -1123,6 +1131,7 @@ impl Redirection {
         // by unmounting unrelated apfs volumes in the past. See S325232.
         let args = &["unmount", "force", &mount_path.to_string_lossy()];
         let output = Command::new("diskutil")
+            .envs(trace_env("diskutil"))
             .args(args)
             .output()
             .from_err()

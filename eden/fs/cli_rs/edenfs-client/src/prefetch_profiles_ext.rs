@@ -21,6 +21,7 @@ use edenfs_core::checkout::PrefetchProfilesResult;
 use edenfs_core::checkout::find_checkout;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
+use edenfs_utils::trace_env;
 use thrift_types::edenfs::PrefetchParams;
 
 use crate::client::Client;
@@ -87,6 +88,7 @@ impl CheckoutPrefetchExt for EdenFsCheckout {
             }
 
             let output = Command::new("arc")
+                .envs(trace_env("arc"))
                 .arg("stable")
                 .arg("best")
                 .arg("--verbose")
@@ -107,6 +109,7 @@ impl CheckoutPrefetchExt for EdenFsCheckout {
             let bookmark = bookmark.trim();
 
             let output = Command::new("hg")
+                .envs(trace_env("hg"))
                 .arg("log")
                 .arg("-r")
                 .arg(bookmark)

@@ -11,7 +11,9 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 use std::process;
+use std::process::Command;
 
+use edenfs_utils::trace_env;
 use regex::Regex;
 use sysinfo::Pid;
 use sysinfo::System;
@@ -87,10 +89,19 @@ fn parse_handler_output(output: &str) -> Result<Vec<FileHandleEntry>, HandleErro
     Ok(ret)
 }
 
+pub fn handle_command(mount: &Path) -> Command {
+    let mut command = Command::new("handle.exe");
+    command.envs(trace_env("handle.exe")).args([
+        "/accepteula",
+        "-nobanner",
+        mount.to_str().unwrap(),
+    ]);
+    command
+}
+
 #[allow(dead_code)]
 pub fn find_resource_locks(mount: &Path) -> Result<Vec<FileHandleEntry>, HandleError> {
-    let output = std::process::Command::new("handle.exe")
-        .args(["/accepteula", "-nobanner", mount.to_str().unwrap()])
+    let output = handle_command(mount)
         .output()
         .expect("failed to execute handle.exe");
     let output = String::from_utf8(output.stdout).expect("Failed to decode handle.exe output");

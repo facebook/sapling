@@ -23,6 +23,7 @@ rust_library(
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:sysinfo",
         "fbsource//third-party/rust:tracing",
+        "//artillery/artillery2/api/cpp/cli_lite/rust:art_cli_lite_rs",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
     ] + select({
         "DEFAULT": [],

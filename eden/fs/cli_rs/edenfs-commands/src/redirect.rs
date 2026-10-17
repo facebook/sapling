@@ -39,6 +39,8 @@ use edenfs_client::redirect::get_effective_redirs_for_mount;
 use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::utils::expand_path_or_cwd;
 use edenfs_client::utils::remove_trailing_slash;
+#[cfg(target_os = "macos")]
+use edenfs_utils::trace_env;
 use hg_util::path::expand_path;
 use tabular::Table;
 use tabular::row;
@@ -531,6 +533,7 @@ impl RedirectCmd {
             .collect::<Vec<_>>();
         args.extend(mounts.keys().map(|m| m.as_os_str()));
         let output = Command::new(APFS_HELPER)
+            .envs(trace_env("apfs_helper"))
             .args(&args)
             .output()
             .with_context(|| {
@@ -581,6 +584,7 @@ impl RedirectCmd {
             if let Some(vol_str) = vol.as_str() {
                 let args = &["delete-volume", vol_str];
                 let output = Command::new(APFS_HELPER)
+                    .envs(trace_env("apfs_helper"))
                     .args(args)
                     .output()
                     .with_context(|| {

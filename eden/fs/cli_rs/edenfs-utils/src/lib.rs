@@ -28,6 +28,14 @@ pub mod varint;
 #[cfg(windows)]
 pub mod winargv;
 
+#[cfg(fbcode_build)]
+pub use art_cli_lite_rs::outgoing_env as trace_env;
+
+#[cfg(not(fbcode_build))]
+pub fn trace_env(_command: &str) -> Vec<(String, String)> {
+    Vec::new()
+}
+
 /// Converts bytes to a PathBuf.
 ///
 /// This function attempts to convert a byte slice to a PathBuf by interpreting the bytes
@@ -139,6 +147,7 @@ pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)
     } else {
         // On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
         let mut version_cmd = Command::new(get_buck_command());
+        version_cmd.envs(trace_env("buck"));
         version_cmd.arg("--version-fast");
         let canonical_path = path.canonicalize().from_err()?;
         #[cfg(windows)]
@@ -197,6 +206,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
 
 pub fn is_buckd_running_for_repo(path: &Path) -> bool {
     let mut status_cmd = Command::new(get_buck_command());
+    status_cmd.envs(trace_env("buck"));
     status_cmd.arg("status");
     let canonical_path = path.canonicalize().unwrap_or_default();
     #[cfg(windows)]
@@ -224,6 +234,7 @@ pub fn run_buck_command(buck_command: &mut Command, path: &Path) -> Result<Outpu
     let buck_envs = get_env_with_buck_version(path)?;
     buck_command
         .envs(buck_envs)
+        .envs(trace_env("buck"))
         .current_dir(path)
         .output()
         .from_err()

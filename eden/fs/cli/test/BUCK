@@ -1,4 +1,7 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 oncall("scm_client_infra")
 
@@ -40,5 +43,79 @@ python_unittest(
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/cli:mp",
+    ],
+)
+
+python_binary(
+    name = "interrupt_probe",
+    srcs = ["tracing/interrupt_probe.py"],
+    main_function = "eden.fs.cli.test.tracing.interrupt_probe.main",
+    deps = [
+        "//artillery/art_cli_lite:art_cli_lite_py",
+        "//eden/fs/cli:main_lib",
+    ],
+)
+
+python_unittest(
+    name = "interrupt_exit_test",
+    srcs = ["tracing/interrupt_exit_test.py"],
+    env = {"INTERRUPT_PROBE": "$(location :interrupt_probe)"},
+    labels = ci.labels(
+        ci.linux(),
+        ci.linux(ci.aarch64()),
+        ci.mac(ci.aarch64()),
+        ci.windows(),
+    ),
+    network_access = select({
+        "DEFAULT": network_access_utils.NETWORK_ACCESS_ALL,
+        "ovr_config//os:linux": network_access_utils.NETWORK_ACCESS_NONE,
+        "ovr_config//os:macos": network_access_utils.NETWORK_ACCESS_LOOPBACK,
+        "ovr_config//os:windows": network_access_utils.NETWORK_ACCESS_STRICT,
+    }),
+)
+
+python_unittest(
+    name = "agent_tracing_test",
+    srcs = ["tracing/agent_tracing_test.py"],
+    labels = ci.labels(
+        ci.linux(),
+        ci.linux(ci.aarch64()),
+        ci.mac(ci.aarch64()),
+        ci.windows(),
+    ),
+    network_access = select({
+        "DEFAULT": network_access_utils.NETWORK_ACCESS_ALL,
+        "ovr_config//os:linux": network_access_utils.NETWORK_ACCESS_NONE,
+        "ovr_config//os:macos": network_access_utils.NETWORK_ACCESS_LOOPBACK,
+        "ovr_config//os:windows": network_access_utils.NETWORK_ACCESS_STRICT,
+    }),
+    deps = ["//eden/fs/cli:agent_tracing"],
+)
+
+python_unittest(
+    name = "tracing_test",
+    srcs = ["tracing/tracing_test.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = {"EDENFSCTL_PY": "$(location //eden/fs/cli:edenfsctl)"},
+    labels = ci.labels(
+        ci.linux(),
+        ci.linux(ci.aarch64()),
+        ci.mac(ci.aarch64()),
+    ),
+    network_access = select({
+        "DEFAULT": network_access_utils.NETWORK_ACCESS_ALL,
+        "ovr_config//os:linux": network_access_utils.NETWORK_ACCESS_ALL,
+        "ovr_config//os:macos": network_access_utils.NETWORK_ACCESS_LOOPBACK,
+    }),
+    deps = [
+        "//artillery/art_cli_lite:art_cli_lite_py",
+        "//artillery/artillery2/api/cpp/cli_lite/python:art_cli_lite",
+        "//configerator/structs/contextprop/if:baggage-python-types",
+        "//contextprop/if:context_prop_thrift_structs-python-types",
+        "//eden/fs/cli:main_lib",
+        "//thrift/lib/python:types",
     ],
 )

@@ -19,6 +19,8 @@ use edenfs_client::daemon_info::DaemonHealthy;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::types::DaemonInfo;
 use edenfs_client::types::Fb303Status;
+#[cfg(target_os = "linux")]
+use edenfs_utils::trace_env;
 use futures::stream::StreamExt;
 use tokio::time;
 use tracing::Level;
@@ -188,6 +190,7 @@ fn print_systemd_status_full(instance: &EdenFsInstance) {
     };
 
     let mut command = Command::new("systemctl");
+    command.envs(trace_env("systemctl"));
     command.args(["--user", "status", "--no-pager", &unit]);
 
     // Point `systemctl --user` at the current user's D-Bus session bus rather

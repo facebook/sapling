@@ -29,6 +29,8 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 pub(crate) use comparison::load_result;
+#[cfg(target_os = "linux")]
+use edenfs_utils::trace_env;
 use hdrhistogram::Histogram;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -1161,6 +1163,7 @@ fn drop_kernel_caches_on_linux(mode: KernelCacheDropMode) -> Result<()> {
     }
 
     let mut child = Command::new("sudo")
+        .envs(trace_env("sudo"))
         .args(["-n", "tee", DROP_CACHES])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
