@@ -175,6 +175,26 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "heartbeat_manager_test",
+    srcs = ["HeartbeatManagerTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes/test:overlay_test_util",
+        "//eden/fs/service:server",
+        "//folly:conv",
+        "//folly:file_util",
+        "//folly/executors:manual_executor",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_unittest(
     name = "eden_state_dir_test",
     srcs = ["EdenStateDirTest.cpp"],
     network_access = network_access_utils.none(),
