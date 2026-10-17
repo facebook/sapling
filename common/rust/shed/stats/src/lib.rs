@@ -123,11 +123,73 @@ pub fn create_singleton_counter(name: String) -> BoxSingletonCounter {
     #[cfg(any(not(fbcode_build), stats_backend = "noop"))]
     {
         let _ = name;
-        Box::new(crate::noop_stats::Noop)
+        #[cfg(stats_backend = "noop")]
+        {
+            BoxSingletonCounter::new(Box::new(crate::noop_stats::Noop))
+        }
+        #[cfg(not(stats_backend = "noop"))]
+        {
+            Box::new(crate::noop_stats::Noop)
+        }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, stats_backend = "noop"))]
+mod glue_counter_tests {
+    use stats_traits::stat_types::CounterStatic;
+
+    use crate::define_stats;
+    use crate::define_stats_struct;
+
+    define_stats! {
+        prefix = "stats_glue_tests";
+        singleton: singleton_counter(),
+        counter: counter(),
+        histogram: quantile_stat(Sum; P 50;),
+        dynamic: dynamic_singleton_counter("dynamic.{}", (key: String)),
+    }
+
+    define_stats_struct! {
+        GlueStats("stats_glue_struct.{}", key: String),
+        singleton: singleton_counter(),
+        counter: counter(),
+        histogram: quantile_stat(Sum; P 50;),
+    }
+
+    #[test]
+    fn singleton_macros_accept_compatibility_arguments() {
+        STATS::counter.increment_value(1);
+        STATS::histogram.add_value(7);
+        STATS::singleton.set_value((), 40);
+        STATS::singleton.increment_value(String::from("compatibility"), 2);
+        assert_eq!(STATS::singleton.get_value(()), None);
+
+        let stats = GlueStats::new(String::from("key"));
+        stats.counter.increment_value(1);
+        stats.histogram.add_value(7);
+        stats.singleton.set_value(String::from("compatibility"), 40);
+        stats.singleton.increment_value((), 2);
+        assert_eq!(
+            stats.singleton.get_value(String::from("compatibility")),
+            None
+        );
+    }
+
+    #[test]
+    fn dynamic_macro_accepts_non_copy_arguments() {
+        use stats_traits::dynamic_stat_types::DynamicSingletonCounter;
+
+        STATS::dynamic.set_value(String::from("compatibility"), 40, (String::from("cat"),));
+        STATS::dynamic.increment_value((), 2, (String::from("cat"),));
+        assert_eq!(
+            STATS::dynamic.get_value(String::from("compatibility"), (String::from("cat"),)),
+            None
+        );
+        assert_eq!(STATS::dynamic.get_value((), (String::from("dog"),)), None);
+    }
+}
+
+#[cfg(all(test, not(stats_backend = "noop")))]
 mod tests {
     use std::sync::Mutex;
 

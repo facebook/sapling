@@ -18,3 +18,6 @@ path = "lib.rs"
 auto_impl = "1.4.0"
 dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
 fbinit = { version = "0.2.0", path = "../../fbinit" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(stats_backend, values("noop"))']}

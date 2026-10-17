@@ -9,9 +9,56 @@
  */
 
 use auto_impl::auto_impl;
+#[cfg(not(stats_backend = "noop"))]
 use fbinit::FacebookInit;
 
+#[cfg(not(stats_backend = "noop"))]
 pub type BoxSingletonCounter = Box<dyn SingletonCounter + Send + Sync>;
+
+/// A boxed counter for backends that do not require native initialization.
+#[cfg(stats_backend = "noop")]
+pub struct BoxSingletonCounter {
+    inner: Box<dyn SingletonCounter<()> + Send + Sync>,
+}
+
+#[cfg(stats_backend = "noop")]
+impl BoxSingletonCounter {
+    /// Wrap a counter that does not require native initialization.
+    pub fn new(inner: Box<dyn SingletonCounter<()> + Send + Sync>) -> Self {
+        Self { inner }
+    }
+
+    /// Set the value, ignoring the compatibility initialization argument.
+    pub fn set_value<Init>(&self, _init: Init, value: i64) {
+        self.inner.set_value((), value);
+    }
+
+    /// Increment the value, ignoring the compatibility initialization argument.
+    pub fn increment_value<Init>(&self, _init: Init, value: i64) {
+        self.inner.increment_value((), value);
+    }
+
+    /// Get the value, ignoring the compatibility initialization argument.
+    pub fn get_value<Init>(&self, _init: Init) -> Option<i64> {
+        self.inner.get_value(())
+    }
+}
+
+#[cfg(stats_backend = "noop")]
+impl<Init> SingletonCounter<Init> for BoxSingletonCounter {
+    fn set_value(&self, init: Init, value: i64) {
+        BoxSingletonCounter::set_value(self, init, value);
+    }
+
+    fn increment_value(&self, init: Init, value: i64) {
+        BoxSingletonCounter::increment_value(self, init, value);
+    }
+
+    fn get_value(&self, init: Init) -> Option<i64> {
+        BoxSingletonCounter::get_value(self, init)
+    }
+}
+
 pub type BoxCounter = Box<dyn Counter + Send + Sync>;
 pub type BoxTimeseries = Box<dyn Timeseries + Send + Sync>;
 pub type BoxHistogram = Box<dyn Histogram + Send + Sync>;
@@ -19,19 +66,28 @@ pub type BoxLocalCounter = Box<dyn Counter>;
 pub type BoxLocalTimeseries = Box<dyn Timeseries>;
 pub type BoxLocalHistogram = Box<dyn Histogram>;
 
-/// SingletonCounter is a non-aggregated, global counter. Use this if you don't want any aggregation,
-/// and just want to expose a value through stats.
-#[auto_impl(Box)]
-pub trait SingletonCounter<Init = FacebookInit> {
-    /// Sets the value of the counter
-    fn set_value(&self, init: Init, value: i64);
+macro_rules! define_singleton_counter {
+    ($default:ty) => {
+        /// SingletonCounter is a non-aggregated, global counter. Use this if you don't want any aggregation,
+        /// and just want to expose a value through stats.
+        #[auto_impl(Box)]
+        pub trait SingletonCounter<Init = $default> {
+            /// Sets the value of the counter
+            fn set_value(&self, init: Init, value: i64);
 
-    /// Increment the value of the counter
-    fn increment_value(&self, init: Init, value: i64);
+            /// Increment the value of the counter
+            fn increment_value(&self, init: Init, value: i64);
 
-    /// Gets the current value of the counter
-    fn get_value(&self, init: Init) -> Option<i64>;
+            /// Gets the current value of the counter
+            fn get_value(&self, init: Init) -> Option<i64>;
+        }
+    };
 }
+
+#[cfg(not(stats_backend = "noop"))]
+define_singleton_counter!(FacebookInit);
+#[cfg(stats_backend = "noop")]
+define_singleton_counter!(());
 
 /// Counter is the simplest type of aggregated stat, it behaves as a single number that can be
 /// incremented.
@@ -189,5 +245,37 @@ mod test {
             SingletonCounter::get_value(&counter, String::from("get")),
             Some(42)
         );
+    }
+
+    #[cfg(stats_backend = "noop")]
+    #[test]
+    fn boxed_glue_counter_forwards_to_inner() {
+        use std::sync::atomic::AtomicI64;
+        use std::sync::atomic::Ordering;
+
+        struct UnitCounter(AtomicI64);
+
+        impl SingletonCounter<()> for UnitCounter {
+            fn set_value(&self, (): (), value: i64) {
+                self.0.store(value, Ordering::Relaxed);
+            }
+
+            fn increment_value(&self, (): (), value: i64) {
+                self.0.fetch_add(value, Ordering::Relaxed);
+            }
+
+            fn get_value(&self, (): ()) -> Option<i64> {
+                Some(self.0.load(Ordering::Relaxed))
+            }
+        }
+
+        let counter = BoxSingletonCounter::new(Box::new(UnitCounter(AtomicI64::new(0))));
+        counter.set_value(String::from("set"), 40);
+        counter.increment_value((), 2);
+        assert_eq!(counter.get_value(String::from("get")), Some(42));
+
+        let dynamic: &dyn SingletonCounter<String> = &counter;
+        dynamic.increment_value(String::from("increment"), 3);
+        assert_eq!(dynamic.get_value(String::from("get")), Some(45));
     }
 }

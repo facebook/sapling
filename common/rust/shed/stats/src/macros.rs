@@ -49,6 +49,7 @@ pub mod common_macro_prelude {
 /// Examples:
 /// ```standalone_crate
 /// use stats::prelude::*;
+/// # #[cfg(not(stats_backend = "noop"))]
 /// use fbinit::FacebookInit;
 ///
 /// define_stats! {
@@ -78,10 +79,21 @@ pub mod common_macro_prelude {
 ///     pub use self::STATS::*;
 /// }
 ///
+/// # #[cfg(not(stats_backend = "noop"))]
 /// # #[allow(clippy::needless_doctest_main)]
 /// #[fbinit::main]
 /// fn main(fb: FacebookInit) {
 ///     STATS::manual_c.set_value(fb, 1);
+///     add_aggregated_stats();
+/// }
+///
+/// # #[cfg(stats_backend = "noop")]
+/// # fn main() {
+/// #     STATS::manual_c.set_value((), 1);
+/// #     add_aggregated_stats();
+/// # }
+///
+/// fn add_aggregated_stats() {
 ///     STATS::test_c.increment_value(1);
 ///     STATS::test_c2.increment_value(100);
 ///     STATS::test_t.add_value(1);

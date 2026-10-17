@@ -10,6 +10,7 @@
 
 use std::time::Duration;
 
+#[cfg(not(stats_backend = "noop"))]
 use fbinit::FacebookInit;
 use stats_traits::stat_types::BoxHistogram;
 use stats_traits::stat_types::BoxLocalCounter;
@@ -86,10 +87,20 @@ impl Histogram for Noop {
     fn add_repeated_value(&self, _value: i64, _nsamples: u32) {}
 }
 
+#[cfg(not(stats_backend = "noop"))]
 impl SingletonCounter for Noop {
     fn set_value(&self, _fb: FacebookInit, _value: i64) {}
     fn increment_value(&self, _fb: FacebookInit, _value: i64) {}
     fn get_value(&self, _fb: FacebookInit) -> Option<i64> {
+        None
+    }
+}
+
+#[cfg(stats_backend = "noop")]
+impl SingletonCounter<()> for Noop {
+    fn set_value(&self, (): (), _value: i64) {}
+    fn increment_value(&self, (): (), _value: i64) {}
+    fn get_value(&self, (): ()) -> Option<i64> {
         None
     }
 }

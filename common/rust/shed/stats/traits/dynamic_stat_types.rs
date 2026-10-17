@@ -20,6 +20,7 @@ use std::thread::LocalKey;
 
 use dashmap::DashMap;
 use dashmap::mapref::entry::Entry as DashEntry;
+#[cfg(not(stats_backend = "noop"))]
 use fbinit::FacebookInit;
 
 use crate::stat_types::BoxHistogram;
@@ -195,18 +196,27 @@ impl<T> DynamicHistogram<'static, T> for LocalKey<DynamicStat<T, BoxLocalHistogr
     }
 }
 
-/// Similar to the SingletonCounter trait, but accepts the args parameter for accessing dynamic
-/// counters created at runtime.
-pub trait DynamicSingletonCounter<'a, T, Init = FacebookInit> {
-    /// Dynamic version of `SingletonCounter::set_value`
-    fn set_value(&'a self, init: Init, value: i64, args: T);
+macro_rules! define_dynamic_singleton_counter {
+    ($default:ty) => {
+        /// Similar to the SingletonCounter trait, but accepts the args parameter for accessing dynamic
+        /// counters created at runtime.
+        pub trait DynamicSingletonCounter<'a, T, Init = $default> {
+            /// Dynamic version of `SingletonCounter::set_value`
+            fn set_value(&'a self, init: Init, value: i64, args: T);
 
-    /// Dynamic version of `SingletonCounter::get_value`
-    fn get_value(&'a self, init: Init, args: T) -> Option<i64>;
+            /// Dynamic version of `SingletonCounter::get_value`
+            fn get_value(&'a self, init: Init, args: T) -> Option<i64>;
 
-    /// Dynamic version of `SingletonCounter::increment_value`
-    fn increment_value(&'a self, init: Init, value: i64, args: T);
+            /// Dynamic version of `SingletonCounter::increment_value`
+            fn increment_value(&'a self, init: Init, value: i64, args: T);
+        }
+    };
 }
+
+#[cfg(not(stats_backend = "noop"))]
+define_dynamic_singleton_counter!(FacebookInit);
+#[cfg(stats_backend = "noop")]
+define_dynamic_singleton_counter!(());
 
 impl<'a, T, Init> DynamicSingletonCounter<'a, T, Init> for DynamicStat<T, BoxSingletonCounter>
 where
