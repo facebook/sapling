@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/testing/TestUtil.h>
@@ -30,10 +29,9 @@ TEST(HeartbeatManagerTest, emptyHeartbeatFileLeftByAnInterruptedWrite) {
       stateDir, makeTestEdenFsEventsLogger());
   folly::ManualExecutor executor;
 
-  EXPECT_THROW(
-      manager->checkForPreviousHeartbeat(false, std::nullopt, false, &executor),
-      folly::ConversionError);
+  EXPECT_TRUE(manager->checkForPreviousHeartbeat(
+      false, std::nullopt, false, &executor));
   executor.drain();
 
-  EXPECT_TRUE(std::filesystem::exists(leftover.string()));
+  EXPECT_FALSE(std::filesystem::exists(leftover.string()));
 }

@@ -153,8 +153,16 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
         uint8_t daemon_exit_signal = 0;
         if (folly::readFile(
                 entry.path().string().c_str(), latestDaemonHeartbeatStr)) {
-          // Convert latestDaemonHeartbeatStr to uint64_t
-          latestDaemonHeartbeat = folly::to<uint64_t>(latestDaemonHeartbeatStr);
+          if (auto parsedHeartbeat =
+                  folly::tryTo<uint64_t>(latestDaemonHeartbeatStr)) {
+            latestDaemonHeartbeat = parsedHeartbeat.value();
+          } else {
+            XLOGF(
+                WARN,
+                "Heartbeat file {} holds no timestamp: '{}'",
+                entry.path().string(),
+                latestDaemonHeartbeatStr);
+          }
         }
         // read the exit signal from daemon_exit_signal file if it
         // exists

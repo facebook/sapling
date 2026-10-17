@@ -187,7 +187,6 @@ cpp_unittest(
         "//eden/common/utils:path",
         "//eden/fs/inodes/test:overlay_test_util",
         "//eden/fs/service:server",
-        "//folly:conv",
         "//folly:file_util",
         "//folly/executors:manual_executor",
         "//folly/testing:test_util",
