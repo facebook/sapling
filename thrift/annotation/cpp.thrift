@@ -267,6 +267,22 @@ struct FieldInterceptor {
 struct UseOpEncode {}
 
 /**
+ * Enables compilation of C++ support for decoding RPC messages stored in
+ * apache::thrift::IOBufChain:
+ * - Requests sent by clients and received by servers.
+ * - Responses sent by servers and received by clients, for RPCs that return
+ *   one response.
+ *
+ * Applies to services defined in this IDL file.
+ *
+ * This annotation only compiles in support. Runtime use requires configuring
+ * the receiving Rocket connection to use the "iobuf_chain" frame parser.
+ * IOBufChain decoding currently supports only the Binary protocol.
+ */
+@scope.Program
+struct EnableIOBufChainSupport {}
+
+/**
  * Enum in C++ by default uses signed 32 bit integer. There is no need to specify
  * underlying type for signed 32 bit integer.
  * 64-bit is not supported to avoid truncation since enums are sent as 32-bit integers over the wire.
