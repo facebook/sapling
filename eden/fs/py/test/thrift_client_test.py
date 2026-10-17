@@ -39,7 +39,7 @@ class CreateThriftClientTest(unittest.TestCase):
 
     def test_transport_error_raised_inside_the_body(self) -> None:
         with patch.object(thrift_client, "get_sync_client", connected_client):
-            with self.assertRaises(thrift_client.EdenNotRunningError):
+            with self.assertRaises(TransportError):
                 with thrift_client.create_thrift_client(socket_path="/tmp/eden.sock"):
                     raise TransportError(
                         TransportErrorType.TIMED_OUT, "request timed out", 0, 0

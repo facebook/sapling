@@ -6,7 +6,7 @@
 # pyre-strict
 
 import os
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from typing import Generator, Optional
 
 from eden.fs.service.eden.thrift_clients import EdenService
@@ -74,17 +74,20 @@ def create_thrift_client(
         else:
             raise TypeError("one of eden_dir or socket_path is required")
 
-    try:
-        with get_sync_client(
-            EdenService,
-            path=socket_path,
-            timeout=socket_init_timeout,
-            channel_timeout=timeout,
-            client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
-        ) as client:
-            yield client
-    except TransportError as e:
-        raise EdenNotRunningError(socket_path, e) from e
+    with ExitStack() as stack:
+        try:
+            client = stack.enter_context(
+                get_sync_client(
+                    EdenService,
+                    path=socket_path,
+                    timeout=socket_init_timeout,
+                    channel_timeout=timeout,
+                    client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
+                )
+            )
+        except TransportError as e:
+            raise EdenNotRunningError(socket_path, e) from e
+        yield client
 
 
 def create_async_thrift_client(
