@@ -9,5 +9,7 @@ python_unittest(
     network_access = network_access_utils.none(),
     deps = [
         "//eden/fs/py/eden:dirstate",
+        "//eden/fs/py/eden/thrift:client",
+        "//thrift/lib/python:types",
     ],
 )
