@@ -17,8 +17,8 @@ cpp_library(
         ],
     }),
     exported_deps = [
+        "fbsource//xplat/folly/container:f14_hash",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",
-        "//folly/container:f14_hash",
     ],
 )

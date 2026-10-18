@@ -6,7 +6,7 @@ cpp_benchmark(
     name = "language",
     srcs = glob(["*.cpp"]),
     deps = [
+        "fbsource//xplat/folly:try",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:try",
     ],
 )

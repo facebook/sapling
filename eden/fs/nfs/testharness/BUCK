@@ -9,8 +9,8 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/io:iobuf",
         "//eden/fs/nfs/xdr:xdr",
-        "//folly/io:iobuf",
     ],
 )
 
@@ -19,10 +19,10 @@ cpp_library(
     srcs = ["NfsRequestUtils.cpp"],
     headers = ["NfsRequestUtils.h"],
     exported_deps = [
+        "fbsource//xplat/folly:utility",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/lang:bits",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly:utility",
-        "//folly/io:iobuf",
-        "//folly/lang:bits",
     ],
 )

@@ -12,6 +12,11 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/testing:test_util",
         ":fake_backing_store_and_tree_builder",
         ":fake_fuse",
         ":fake_inode_access_logger",
@@ -34,13 +39,11 @@ cpp_library(
         "//eden/fs/telemetry:scribe_logger",
         "//eden/fs/telemetry:stats",
         "//eden/fs/utils:eden_error",
-        "//folly:exception",
-        "//folly:file_util",
-        "//folly/io:iobuf",
-        "//folly/logging:logging",
-        "//folly/testing:test_util",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:portability",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/executors:manual_executor",
         ":fake_clock",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:path",
@@ -49,9 +52,6 @@ cpp_library(
         "//eden/fs/inodes:inodes",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
-        "//folly:portability",
-        "//folly:range",
-        "//folly/executors:manual_executor",
     ],
     external_deps = [
         "gflags",
@@ -66,11 +66,11 @@ cpp_library(
         "//eden/fs/model:model",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/concurrency:unbounded_queue",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
         "//eden/fs/service:thrift-cpp2-types",
-        "//folly:range",
-        "//folly/concurrency:unbounded_queue",
     ],
 )
 
@@ -79,11 +79,11 @@ cpp_library(
     srcs = ["TestConfigSource.cpp"],
     headers = ["TestConfigSource.h"],
     deps = [
-        "//folly:map_util",
+        "fbsource//xplat/folly:map_util",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
         "//eden/fs/config:config",
-        "//folly:synchronized",
     ],
 )
 
@@ -91,8 +91,8 @@ cpp_library(
     name = "fake_clock",
     headers = ["FakeClock.h"],
     exported_deps = [
+        "fbsource//xplat/folly/chrono:conv",
         "//eden/fs/utils:clock",
-        "//folly/chrono:conv",
     ],
 )
 
@@ -102,10 +102,10 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/io:iobuf",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
-        "//folly:range",
-        "//folly/io:iobuf",
     ],
 )
 
@@ -114,16 +114,16 @@ cpp_library(
     srcs = ["FakeFuse.cpp"],
     headers = ["FakeFuse.h"],
     deps = [
-        "//folly:exception",
-        "//folly:file_util",
-        "//folly/chrono:conv",
-        "//folly/logging:logging",
-        "//folly/portability:sockets",
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly/chrono:conv",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:sockets",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:range",
         "//eden/fs/utils:fs_channel_types",
-        "//folly:file",
-        "//folly:range",
     ],
 )
 
@@ -132,15 +132,15 @@ cpp_library(
     srcs = ["TestDispatcher.cpp"],
     headers = ["TestDispatcher.h"],
     deps = [
-        "//folly:conv",
-        "//folly/logging:logging",
+        "fbsource//xplat/folly:conv",
+        "fbsource//xplat/folly/logging:logging",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly/futures:core",
         "//eden/common/utils:path",
         "//eden/fs/fuse:fuse",
         "//eden/fs/store:store",
-        "//folly:synchronized",
-        "//folly/futures:core",
     ],
 )
 
@@ -149,14 +149,14 @@ cpp_library(
     srcs = ["FakePrivHelper.cpp"],
     headers = ["FakePrivHelper.h"],
     deps = [
+        "fbsource//xplat/folly:file",
         ":fake_fuse",
         "//eden/fs/utils:eden_error",
-        "//folly:file",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/futures:core",
         "//eden/common/utils:path",
         "//eden/fs/privhelper:interface",
-        "//folly/futures:core",
     ],
 )
 
@@ -188,28 +188,28 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:map_util",
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/ssl:openssl_hash",
         ":test_util",
         "//eden/common/utils:enum",
         "//eden/common/utils:fault_injector",
         "//eden/fs/inodes:inodes",
-        "//folly:map_util",
-        "//folly/futures:core",
-        "//folly/logging:logging",
-        "//folly/ssl:openssl_hash",
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest_prod_headers",
+        "fbsource//xplat/folly:exception_wrapper",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/container:f14_hash",
+        "fbsource//xplat/folly/coro:task",
+        "fbsource//xplat/folly/coro/safe:now_task",
         ":stored_object",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:context",
-        "//folly:exception_wrapper",
-        "//folly:range",
-        "//folly/container:f14_hash",
-        "//folly/coro:task",
-        "//folly/coro/safe:now_task",
     ],
 )
 
@@ -218,15 +218,15 @@ cpp_library(
     srcs = ["FakeObjectStore.cpp"],
     headers = ["FakeObjectStore.h"],
     deps = [
+        "fbsource//xplat/folly:map_util",
+        "fbsource//xplat/folly/futures:core",
         "//eden/common/utils:immediate_future",
-        "//folly:map_util",
-        "//folly/futures:core",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/coro/safe:now_task",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//eden/fs/store:store",
-        "//folly/coro/safe:now_task",
     ],
 )
 
@@ -234,8 +234,8 @@ cpp_library(
     name = "fake_filter",
     headers = ["FakeFilter.h"],
     exported_deps = [
+        "fbsource//xplat/folly/coro/safe:now_task",
         "//eden/fs/store/filter:filters",
-        "//folly/coro/safe:now_task",
     ],
 )
 
@@ -250,16 +250,16 @@ cpp_library(
         "HgRepo.h",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly:portability",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:unistd",
+        "fbsource//xplat/folly/portability:windows",
         "//eden/common/utils:file_utils",
-        "//folly:exception",
-        "//folly:file",
-        "//folly:file_util",
-        "//folly:portability",
-        "//folly:range",
-        "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:unistd",
-        "//folly/portability:windows",
     ],
     exported_deps = [
         "//eden/common/utils:path",
@@ -276,6 +276,7 @@ cpp_library(
     srcs = ["TestServer.cpp"],
     headers = ["TestServer.h"],
     deps = [
+        "fbsource//xplat/folly/io/async:async_base",
         ":fake_privhelper",
         "//eden/common/telemetry:log_info",
         "//eden/common/testharness:temp_file",
@@ -286,13 +287,12 @@ cpp_library(
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/telemetry:activity_recorder",
         "//eden/fs/telemetry:scribe_logger",
-        "//folly/io/async:async_base",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/testing:test_util",
         "//eden/common/utils:path",
         "//eden/fs/service:startup_status_subscriber",
-        "//folly/futures:core",
-        "//folly/testing:test_util",
     ],
     external_deps = [
         "gflags",

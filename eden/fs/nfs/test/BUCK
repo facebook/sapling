@@ -10,6 +10,9 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/executors:manual_executor",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
@@ -30,8 +33,5 @@ cpp_unittest(
         "//eden/fs/utils:process_access_log",
         "//fb303:service_data",
         "//fb303:thread_cached_service_data",
-        "//folly/executors:manual_executor",
-        "//folly/io:iobuf",
-        "//folly/logging:logging",
     ],
 )

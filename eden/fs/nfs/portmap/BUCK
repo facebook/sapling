@@ -8,15 +8,15 @@ cpp_library(
     srcs = ["PortmapClient.cpp"],
     headers = ["PortmapClient.h"],
     deps = [
-        "//folly:exception",
-        "//folly:network_address",
-        "//folly:string",
-        "//folly/logging:logging",
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:network_address",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/logging:logging",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/net:network_socket",
         ":rpcbindrpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly/net:network_socket",
     ],
 )
 
@@ -25,13 +25,13 @@ cpp_library(
     srcs = ["Rpcbindd.cpp"],
     headers = ["Rpcbindd.h"],
     deps = [
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly:utility",
+        "fbsource//xplat/folly/logging:logging",
         ":rpcbindrpc",
         "//eden/common/utils:immediate_future",
         "//eden/fs/nfs:mountd_rpc",
         "//eden/fs/nfs/rpc:server",
-        "//folly:synchronized",
-        "//folly:utility",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         "//eden/common/utils:path",
@@ -57,10 +57,10 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly:network_address",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/logging:init",
+        "fbsource//xplat/folly/logging:logging",
         ":portmap",
-        "//folly:network_address",
-        "//folly/init:init",
-        "//folly/logging:init",
-        "//folly/logging:logging",
     ],
 )

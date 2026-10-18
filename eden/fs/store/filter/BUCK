@@ -7,12 +7,12 @@ cpp_library(
     srcs = ["FilteredObjectId.cpp"],
     headers = ["FilteredObjectId.h"],
     deps = [
+        "fbsource//xplat/folly:conv",
+        "fbsource//xplat/folly:varint",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:enum",
         "//eden/common/utils:throw",
         "//eden/fs/store:backing_store_interface",
-        "//folly:conv",
-        "//folly:varint",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         "//eden/common/utils:path",
@@ -26,10 +26,10 @@ cpp_library(
         "Filter.h",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/coro/safe:now_task",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
-        "//folly:range",
-        "//folly/coro/safe:now_task",
     ],
 )
 
@@ -41,13 +41,13 @@ cpp_library(
         "//eden/common/utils:immediate_future",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/coro/safe:now_task",
         ":filters",
         "//eden/common/utils:case_sensitivity",
         "//eden/fs/utils:eden_error",
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi",  # @manual
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",  # @manual
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi@header",  # @manual
-        "//folly/coro/safe:now_task",
     ],
 )
 
@@ -62,9 +62,9 @@ cpp_library(
         "ovr_config//os:windows": ["fbsource//third-party/rust:cxx"],
     })
     + [
+        "fbsource//xplat/folly/futures:core",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
-        "//folly/futures:core",
     ]
     + select({
         "DEFAULT": [],
@@ -72,12 +72,12 @@ cpp_library(
     }),
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
+        "fbsource//xplat/folly/container:f14_hash",
+        "fbsource//xplat/folly/coro/safe:now_task",
+        "fbsource//xplat/folly/logging:logging",
         ":filters",
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi",  # @manual
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",
         "//eden/scm/lib/edenfs_ffi:edenfs_ffi@header",  # @manual
-        "//folly/container:f14_hash",
-        "//folly/coro/safe:now_task",
-        "//folly/logging:logging",
     ],
 )

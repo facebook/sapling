@@ -37,12 +37,12 @@ cpp_library(
     srcs = ["Notifier.cpp"],
     headers = ["Notifier.h"],
     deps = [
+        "fbsource//xplat/folly/futures:core",
         "//eden/common/utils:system_error",
-        "//folly/futures:core",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
         "//eden/fs/config:config",
-        "//folly:synchronized",
     ],
 )
 
@@ -64,6 +64,8 @@ cpp_library(
     }),
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/portability:windows",
         ":constants",
         "//eden/common/utils:process",
         "//eden/common/utils:stringconv",
@@ -71,8 +73,6 @@ cpp_library(
         "//eden/fs/config:config",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
-        "//folly/futures:core",
-        "//folly/portability:windows",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:windows": [
@@ -81,9 +81,9 @@ cpp_library(
         ],
     }),
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
         ":notifier",
         "//eden/common/utils:utils",
-        "//folly:synchronized",
     ],
 )
 
@@ -92,10 +92,10 @@ cpp_library(
     srcs = ["CommandNotifier.cpp"],
     headers = ["CommandNotifier.h"],
     deps = [
+        "fbsource//xplat/folly/futures:core",
         "//eden/common/utils:process",
         "//eden/common/utils:system_error",
         "//eden/fs/config:config",
-        "//folly/futures:core",
     ],
     exported_deps = [
         ":notifier",

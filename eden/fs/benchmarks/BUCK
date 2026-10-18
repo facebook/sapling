@@ -8,9 +8,9 @@ cpp_library(
     name = "bench_utils",
     headers = ["bench_utils.h"],
     exported_deps = [
+        "fbsource//xplat/folly/io/async:async_socket",
         "//eden/common/utils:path",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:async_socket",
         "//thrift/lib/cpp2/async:header_client_channel",
     ],
 )
@@ -40,12 +40,12 @@ cpp_binary(
     name = "random_writes",
     srcs = ["random_writes.cpp"],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:exception",
-        "//folly:file",
-        "//folly:file_util",
-        "//folly:string",
-        "//folly/logging:logging",
     ],
     external_deps = [
         "gflags",
@@ -60,9 +60,9 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:exception",
-        "//folly:file",
     ],
     external_deps = [
         "gflags",
@@ -76,9 +76,9 @@ cpp_binary(
         "ovr_config//os:linux",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:exception",
     ],
     external_deps = [
         "gflags",
@@ -94,15 +94,15 @@ cpp_binary(
     ],
     deps = [
         "fbsource//third-party/benchmark:benchmark",
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly/container:array",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/io/async:async_socket",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/synchronization/test:barrier",
         "//eden/common/utils:utils",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly:file",
-        "//folly/container:array",
-        "//folly/init:init",
-        "//folly/io/async:async_socket",
-        "//folly/logging:logging",
-        "//folly/synchronization/test:barrier",
         "//thrift/lib/cpp2/async:header_client_channel",
     ],
     external_deps = [
@@ -118,9 +118,9 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:exception",
-        "//folly:file",
     ],
     external_deps = [
         "gflags",
@@ -135,12 +135,12 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:likely",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/portability:unistd",
+        "fbsource//xplat/folly/synchronization/test:barrier",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:exception",
-        "//folly:likely",
-        "//folly/init:init",
-        "//folly/portability:unistd",
-        "//folly/synchronization/test:barrier",
     ],
     external_deps = [
         "gflags",
@@ -151,11 +151,11 @@ cpp_binary(
     name = "glob",
     srcs = ["glob.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
         "//watchman/cppclient:cppclient",
     ],
 )
@@ -164,11 +164,11 @@ cpp_binary(
     name = "prefetch",
     srcs = ["prefetch.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -176,11 +176,11 @@ cpp_binary(
     name = "get_blake3",
     srcs = ["get_blake3.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -188,11 +188,11 @@ cpp_binary(
     name = "get_sha1",
     srcs = ["get_sha1.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -200,11 +200,11 @@ cpp_binary(
     name = "get_entry_information",
     srcs = ["get_entry_information.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -212,11 +212,11 @@ cpp_binary(
     name = "get_file_information",
     srcs = ["get_file_information.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -224,11 +224,11 @@ cpp_binary(
     name = "get_attributes_from_files_v2",
     srcs = ["get_attributes_from_files_v2.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -236,13 +236,13 @@ cpp_binary(
     name = "get_digest_hash",
     srcs = ["get_digest_hash.cpp"],
     deps = [
+        "fbsource//xplat/folly:exception_string",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly:exception_string",
-        "//folly/init:init",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -250,13 +250,13 @@ cpp_binary(
     name = "get_blob",
     srcs = ["get_blob.cpp"],
     deps = [
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils:process",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
         "//eden/fs/service:thrift_get_object_impl",
-        "//folly/io/async:event_base_thread",
     ],
 )
 
@@ -264,13 +264,13 @@ cpp_binary(
     name = "get_file_content",
     srcs = ["get_file_content.cpp"],
     deps = [
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/io/async:event_base_thread",
+        "fbsource//xplat/folly/synchronization:call_once",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/futures:core",
-        "//folly/io/async:event_base_thread",
-        "//folly/synchronization:call_once",
     ],
 )
 
@@ -283,10 +283,10 @@ cpp_binary(
     ],
     deps = [
         "fbsource//third-party/boost:boost_uuid",
+        "fbsource//xplat/folly/io/async:event_base_thread",
         "//eden/common/utils:path",
         "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/service:thrift-cpp2-services",
-        "//folly/io/async:event_base_thread",
         "//thrift/lib/cpp2/async:header_client_channel",
     ],
     external_deps = [
@@ -299,8 +299,8 @@ cpp_binary(
     srcs = ["formatting.cpp"],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:string",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:string",
     ],
 )
 

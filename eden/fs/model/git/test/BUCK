@@ -10,11 +10,11 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/io:iobuf",
         "//eden/fs/model:model",
         "//eden/fs/model:testutil",
         "//eden/fs/model/git:git",
         "//eden/fs/model/git:gitignore",
-        "//folly:string",
-        "//folly/io:iobuf",
     ],
 )

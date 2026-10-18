@@ -7,9 +7,10 @@ cpp_library(
     srcs = ["SaplingImportRequest.cpp"],
     headers = ["SaplingImportRequest.h"],
     deps = [
-        "//folly:try",
+        "fbsource//xplat/folly:try",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/futures:core",
         ":sapling_object_id",
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:bug",
@@ -17,7 +18,6 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//eden/fs/store:context",
-        "//folly/futures:core",
     ],
 )
 
@@ -26,18 +26,18 @@ cpp_library(
     srcs = ["SaplingImportRequestQueue.cpp"],
     headers = ["SaplingImportRequestQueue.h"],
     deps = [
+        "fbsource//xplat/folly:map_util",
         "//eden/common/utils:immediate_future",
-        "//folly:map_util",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly:try",
+        "fbsource//xplat/folly/container:f14_hash",
+        "fbsource//xplat/folly/coro:task",
+        "fbsource//xplat/folly/coro/safe:now_task",
         ":sapling_import_request",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
-        "//folly:synchronized",
-        "//folly:try",
-        "//folly/container:f14_hash",
-        "//folly/coro:task",
-        "//folly/coro/safe:now_task",
     ],
 )
 
@@ -48,6 +48,15 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/re2:re2",
+        "fbsource//xplat/folly:executor",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/coro:collect",
+        "fbsource//xplat/folly/executors:cpu_thread_pool_executor",
+        "fbsource//xplat/folly/executors/task_queue:unbounded_blocking_queue",
+        "fbsource//xplat/folly/executors/thread_factory:init_thread_factory",
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/system:thread_name",
         ":sapling_import_request",
         ":sapling_object_id",
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
@@ -67,20 +76,18 @@ cpp_library(
         "//eden/fs/telemetry:stats",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:static_assert",
-        "//folly:executor",
-        "//folly:string",
-        "//folly/coro:collect",
-        "//folly/executors:cpu_thread_pool_executor",
-        "//folly/executors/task_queue:unbounded_blocking_queue",
-        "//folly/executors/thread_factory:init_thread_factory",
-        "//folly/futures:core",
-        "//folly/logging:logging",
-        "//folly/system:thread_name",
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/googletest:gtest_headers",
         "fbsource//third-party/googletest:gtest_prod_headers",
+        "fbsource//xplat/folly:exception_wrapper",
+        "fbsource//xplat/folly:expected",
+        "fbsource//xplat/folly:function",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly/coro:task",
+        "fbsource//xplat/folly/coro/safe:now_task",
         ":sapling_backing_store_options",
         ":sapling_import_request_queue",
         "//eden/common/telemetry:telemetry",
@@ -95,13 +102,6 @@ cpp_library(
         "//eden/scm/lib/backingstore:backingstore",  # @manual
         "//eden/scm/lib/backingstore:backingstore@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore",
-        "//folly:exception_wrapper",
-        "//folly:expected",
-        "//folly:function",
-        "//folly:range",
-        "//folly:synchronized",
-        "//folly/coro:task",
-        "//folly/coro/safe:now_task",
         "//monitoring/obc:obc_lib",
     ],
     external_deps = [
@@ -120,8 +120,8 @@ cpp_library(
     headers = ["SaplingObjectId.h"],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:throw",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",

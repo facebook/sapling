@@ -23,8 +23,8 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/futures:core",
         "//eden/fs/telemetry:task_trace",
-        "//folly/futures:core",
     ],
 )
 
@@ -47,11 +47,11 @@ cpp_benchmark(
         "ActivityBufferBenchmark.cpp",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:stop_watch",
+        "fbsource//xplat/folly/init:init",
         "//eden/common/utils:process",
-        "//folly:exception",
-        "//folly:file",
-        "//folly:stop_watch",
-        "//folly/init:init",
     ],
     external_deps = [
         "gflags",
@@ -69,6 +69,8 @@ cpp_benchmark(
     ),
     deps = [
         "fbsource//third-party/benchmark:benchmark",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/json:dynamic",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/common/utils:ref_ptr",
@@ -77,8 +79,6 @@ cpp_benchmark(
         "//eden/fs/telemetry/facebook:XplatTransforms",
         "//eden/fs/telemetry/facebook:eden_telemetry_identity",
         "//eden/fs/telemetry/facebook:xplat_logger",
-        "//folly/init:init",
-        "//folly/json:dynamic",
         "//scribe/api/producer/structured:compact_message",
     ],
 )
@@ -94,6 +94,8 @@ cpp_benchmark(
     ],
     deps = [
         "fbsource//third-party/benchmark:benchmark",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/json:dynamic",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/common/utils:ref_ptr",
@@ -104,8 +106,6 @@ cpp_benchmark(
         "//eden/fs/telemetry/facebook:eden_telemetry_identity",
         "//eden/fs/telemetry/facebook:xplat_logger",
         "//eden/fs/telemetry/facebook/if:edenfs_file_access_entry-cpp2-types",
-        "//folly/init:init",
-        "//folly/json:dynamic",
         "//scribe/api/producer/structured:compact_message",
     ],
 )
@@ -119,8 +119,8 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:c_portability",
         "//eden/fs/telemetry:throw_trace_capture",
-        "//folly:c_portability",
     ],
 )
 
@@ -160,6 +160,7 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:c_portability",
         "//eden/common/telemetry:log_info",
         "//eden/fs/config:config",
         "//eden/fs/telemetry:error_info",
@@ -169,7 +170,6 @@ cpp_unittest(
         "//eden/fs/telemetry:xplat_keys",
         "//eden/fs/telemetry/test:capturing_xplat_logger",
         "//fb303:service_data",
-        "//folly:c_portability",
     ],
 )
 
@@ -183,10 +183,10 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/json:dynamic",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/fs/telemetry:structured_logger",
-        "//folly/json:dynamic",
     ],
 )
 

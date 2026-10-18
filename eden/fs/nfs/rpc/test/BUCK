@@ -10,13 +10,13 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/executors:manual_executor",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/testing:test_util",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/nfs/testharness:xdr_test_utils",
         "//eden/fs/utils:request_permit_vendor",
-        "//folly/executors:manual_executor",
-        "//folly/io:iobuf",
-        "//folly/testing:test_util",
     ],
 )

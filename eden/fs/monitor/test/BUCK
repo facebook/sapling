@@ -14,10 +14,10 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/testharness:temp_file",
         "//eden/fs/monitor:edenfs_monitor_lib",
         "//eden/fs/testharness:fake_clock",
-        "//folly:range",
-        "//folly/logging:logging",
     ],
 )

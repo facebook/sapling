@@ -12,14 +12,14 @@ cpp_library(
     srcs = ["LinuxMemoryPriority.cpp"],
     headers = ["LinuxMemoryPriority.h"],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/common/utils:throw",
         "//eden/fs/privhelper:rollback",
-        "//folly:exception",
-        "//folly:file",
-        "//folly:file_util",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         ":memory_priority",
@@ -34,8 +34,8 @@ cpp_library(
         "private_headers/kern_memorystatus.h",
     ],
     deps = [
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:throw",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         ":memory_priority",
@@ -47,17 +47,17 @@ cpp_library(
     srcs = ["ProcessPriority.cpp"],
     headers = ["ProcessPriority.h"],
     deps = [
+        "fbsource//xplat/folly/logging:logging",
         ":darwin_memory_priority",
         ":linux_memory_priority",
-        "//folly/logging:logging",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [":linux_memory_priority"],
         "ovr_config//os:macos": [":darwin_memory_priority"],
     }),
     exported_deps = [
+        "fbsource//xplat/folly:portability",
+        "fbsource//xplat/folly/portability:sys_types",
         ":memory_priority",
-        "//folly:portability",
-        "//folly/portability:sys_types",
     ],
 )

@@ -6,9 +6,9 @@ cpp_benchmark(
     name = "os",
     srcs = glob(["*.cpp"]),
     deps = [
+        "fbsource//xplat/folly:try",
+        "fbsource//xplat/folly/system:pid",
         "//eden/common/os:os",
         "//eden/common/utils/benchharness:benchharness",
-        "//folly:try",
-        "//folly/system:pid",
     ],
 )

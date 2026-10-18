@@ -7,17 +7,17 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:match",
-        "//folly/logging:logging",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:function",
+        "fbsource//xplat/folly:shared_mutex",
+        "fbsource//xplat/folly:synchronized",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift-streaming-cpp2-types",
         "//eden/fs/telemetry:stats",
-        "//folly:function",
-        "//folly:shared_mutex",
-        "//folly:synchronized",
     ],
 )

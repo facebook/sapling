@@ -10,10 +10,10 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/container:array",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/test:test_utils",
         "//eden/fs/nfs/testharness:xdr_test_utils",
         "//eden/fs/nfs/xdr:xdr",
-        "//folly/container:array",
-        "//folly/io:iobuf",
-        "//folly/test:test_utils",
     ],
 )

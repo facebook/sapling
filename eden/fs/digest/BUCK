@@ -12,6 +12,6 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/blake3:blake3",
-        "//folly:range",
+        "fbsource//xplat/folly:range",
     ],
 )

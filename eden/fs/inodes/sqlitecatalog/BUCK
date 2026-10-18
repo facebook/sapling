@@ -8,15 +8,15 @@ cpp_library(
     srcs = ["SqliteTreeStore.cpp"],
     headers = ["SqliteTreeStore.h"],
     deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly:stop_watch",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
-        "//folly:range",
-        "//folly:stop_watch",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
@@ -35,11 +35,11 @@ cpp_library(
         "SqliteInodeCatalog.h",
     ],
     deps = [
+        "fbsource//xplat/folly:file",
         "//eden/common/utils:bug",
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:file",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:windows": [
@@ -47,11 +47,11 @@ cpp_library(
         ],
     }),
     exported_deps = [
+        "fbsource//xplat/folly:range",
         ":sqlitetreestore",
         "//eden/common/utils:path",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/overlay:overlay_checker",
-        "//folly:range",
     ],
 )
 
@@ -64,20 +64,20 @@ cpp_library(
         "BufferedSqliteInodeCatalog.h",
     ],
     deps = [
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/system:thread_name",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
-        "//folly/futures:core",
-        "//folly/logging:logging",
-        "//folly/system:thread_name",
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest_prod_headers",
+        "fbsource//xplat/folly:function",
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly/synchronization:lifo_sem",
         ":sqliteinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:function",
-        "//folly:synchronized",
-        "//folly/synchronization:lifo_sem",
     ],
 )
 
@@ -85,15 +85,15 @@ cpp_binary(
     name = "windows_overlay_scanner",
     srcs = ["WindowsOverlayScanner.cpp"],
     deps = [
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/logging:init",
+        "fbsource//xplat/folly/logging:logging",
         ":sqliteinodecatalog",
         "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:win_stacktrace",
-        "//folly/init:init",
-        "//folly/logging:init",
-        "//folly/logging:logging",
     ],
     external_deps = [
         "gflags",

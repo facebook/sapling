@@ -10,14 +10,14 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/executors:manual_executor",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/test:test_utils",
+        "fbsource//xplat/folly/testing:test_util",
         "//eden/common/utils:path",
         "//eden/fs/model:testutil",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_util",
-        "//folly/executors:manual_executor",
-        "//folly/io:iobuf",
-        "//folly/test:test_utils",
-        "//folly/testing:test_util",
     ],
 )
 
@@ -28,12 +28,12 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/io:iobuf",
         "//eden/common/utils:immediate_future",
         "//eden/fs/model:model",
         "//eden/fs/model:testutil",
         "//eden/fs/testharness:fake_object_store",
-        "//folly/futures:core",
-        "//folly/io:iobuf",
     ],
 )
 
@@ -44,11 +44,11 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:range",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:testutil",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_mount",
-        "//folly:range",
     ],
 )
 
@@ -59,9 +59,9 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/io/async:async_base",
         "//eden/fs/service:server",
         "//eden/fs/testharness:test_server",
-        "//folly/io/async:async_base",
         "//thrift/lib/cpp2:server",
     ],
 )
@@ -73,9 +73,9 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/test:test_utils",
         "//eden/fs/model:model",
         "//eden/fs/model:testutil",
         "//eden/fs/testharness:test_util",
-        "//folly/test:test_utils",
     ],
 )

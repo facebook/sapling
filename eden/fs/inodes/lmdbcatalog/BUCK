@@ -16,6 +16,10 @@ cpp_library(
         "ovr_config//os:macos",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/io:iobuf",
         ":lmdbstoreif",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:immediate_future",
@@ -25,10 +29,6 @@ cpp_library(
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/model:model",
-        "//folly:file",
-        "//folly:file_util",
-        "//folly:range",
-        "//folly/io:iobuf",
     ],
 )
 
@@ -45,20 +45,20 @@ cpp_library(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly/io:iobuf",
         ":lmdb_file_content_store",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/utils:eden_error",
-        "//folly/io:iobuf",
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:range",
         ":lmdbstoreif",
         "//eden/common/utils:path",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/overlay:overlay_checker",
-        "//folly:file",
-        "//folly:range",
     ],
 )
 
@@ -71,21 +71,21 @@ cpp_library(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/system:thread_name",
         ":lmdb_file_content_store",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
-        "//folly/futures:core",
-        "//folly/logging:logging",
-        "//folly/system:thread_name",
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:function",
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly/synchronization:lifo_sem",
         ":lmdb_inode_catalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:function",
-        "//folly:synchronized",
-        "//folly/synchronization:lifo_sem",
     ],
 )
 
@@ -94,18 +94,18 @@ cpp_library(
     srcs = ["LMDBStoreInterface.cpp"],
     headers = ["LMDBStoreInterface.h"],
     deps = [
+        "fbsource//xplat/folly:range",
         "//eden/common/utils:utils",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:range",
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/portability:sys_uio",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/fs/lmdb:lmdb",
-        "//folly/portability:sys_uio",
     ],
 )

@@ -32,6 +32,12 @@ cpp_binary(
     name = "fake_edenfs",
     srcs = ["fake_edenfs.cpp"],
     deps = [
+        "fbsource//xplat/folly:scope_guard",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/io/async:async_signal_handler",
+        "fbsource//xplat/folly/logging:init",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:gflags",
         "//eden/common/utils:path",
         "//eden/common/utils:user_info",
         "//eden/fs/inodes:inodes",
@@ -39,12 +45,6 @@ cpp_binary(
         "//eden/fs/service:startup_logger",
         "//eden/fs/service:startup_status_subscriber",
         "//eden/fs/service:thrift-streaming-cpp2-services",
-        "//folly:scope_guard",
-        "//folly/init:init",
-        "//folly/io/async:async_signal_handler",
-        "//folly/logging:init",
-        "//folly/logging:logging",
-        "//folly/portability:gflags",
         "//thrift/lib/cpp2:server",
     ],
 )
@@ -57,10 +57,10 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/json:dynamic",
+        "fbsource//xplat/folly/portability:gflags",
         "//eden/common/utils:utils",
-        "//folly/init:init",
-        "//folly/json:dynamic",
-        "//folly/portability:gflags",
     ],
 )
 
@@ -72,12 +72,12 @@ cpp_binary(
         "ovr_config//os:macos",
     ],
     deps = [
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/logging:init",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:gflags",
         "//eden/fs/takeover:takeover",
         "//eden/fs/utils:fs_channel_types",
-        "//folly/init:init",
-        "//folly/logging:init",
-        "//folly/logging:logging",
-        "//folly/portability:gflags",
     ],
 )
 
@@ -89,13 +89,13 @@ cpp_binary(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:try",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/portability:gflags",
+        "fbsource//xplat/folly/portability:windows",
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
         "//eden/fs/utils:projfs_util",
-        "//folly:try",
-        "//folly/init:init",
-        "//folly/portability:gflags",
-        "//folly/portability:windows",
     ],
 )
 
@@ -107,14 +107,14 @@ cpp_binary(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/portability:gflags",
+        "fbsource//xplat/folly/portability:windows",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
         "//eden/common/utils/windows:win_error",
-        "//folly:string",
-        "//folly/init:init",
-        "//folly/portability:gflags",
-        "//folly/portability:windows",
     ],
 )
 
@@ -122,11 +122,11 @@ cpp_binary(
     name = "blake3_sum",
     srcs = ["Blake3Sum.cpp"],
     deps = [
+        "fbsource//xplat/folly:file",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/init:init",
+        "fbsource//xplat/folly/portability:gflags",
+        "fbsource//xplat/folly/system:memory_mapping",
         "//eden/fs/digest:blake3_hash",
-        "//folly:file",
-        "//folly:string",
-        "//folly/init:init",
-        "//folly/portability:gflags",
-        "//folly/system:memory_mapping",
     ],
 )

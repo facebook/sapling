@@ -6,7 +6,7 @@ cpp_library(
     name = "event_base_state",
     headers = ["EventBaseState.h"],
     exported_deps = [
-        "//folly/io/async:async_base",
+        "fbsource//xplat/folly/io/async:async_base",
     ],
 )
 
@@ -19,8 +19,8 @@ cpp_library(
         "EdenTaskQueue.h",
     ],
     exported_deps = [
-        "//folly/concurrency:dynamic_bounded_queue",
-        "//folly/executors:cpu_thread_pool_executor",
+        "fbsource//xplat/folly/concurrency:dynamic_bounded_queue",
+        "fbsource//xplat/folly/executors:cpu_thread_pool_executor",
     ],
 )
 
@@ -33,11 +33,11 @@ cpp_library(
         "WinStackTrace.h",
     ],
     deps = [
+        "fbsource//xplat/folly:c_portability",
+        "fbsource//xplat/folly/portability:windows",
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
         "//eden/common/utils/windows:win_error",
-        "//folly:c_portability",
-        "//folly/portability:windows",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:windows": ["fbsource//third-party/toolchains/win:dbghelp.lib"],
@@ -50,7 +50,7 @@ cpp_library(
         "BufVec.h",
     ],
     exported_deps = [
-        "//folly/io:iobuf",
+        "fbsource//xplat/folly/io:iobuf",
     ],
 )
 
@@ -64,12 +64,12 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "//folly/container:f14_hash",
-        "//folly/logging:logging",
+        "fbsource//xplat/folly/container:f14_hash",
+        "fbsource//xplat/folly/logging:logging",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:expected",
         "//eden/common/utils:case_sensitivity",
-        "//folly:expected",
     ],
 )
 
@@ -79,9 +79,9 @@ cpp_library(
         "GlobPath.h",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/io:iobuf",
         "//eden/common/utils:path",
-        "//folly:range",
-        "//folly/io:iobuf",
     ],
 )
 
@@ -100,6 +100,11 @@ cpp_library(
         "//eden/fs/config:config",
     ],
     exported_deps = [
+        "fbsource//xplat/folly/coro:collect",
+        "fbsource//xplat/folly/coro:invoke",
+        "fbsource//xplat/folly/coro:task",
+        "fbsource//xplat/folly/coro/safe:now_task",
+        "fbsource//xplat/folly/futures:core",
         ":glob_path",
         ":matcher",
         "//eden/common/utils:case_sensitivity",
@@ -109,11 +114,6 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/store:store",
         "//eden/fs/telemetry:task_trace",
-        "//folly/coro:collect",
-        "//folly/coro:invoke",
-        "//folly/coro:task",
-        "//folly/coro/safe:now_task",
-        "//folly/futures:core",
     ],
 )
 
@@ -133,10 +133,10 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:exception_wrapper",
         "//eden/common/utils:utf8",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/scm/lib/backingstore:sapling_backingstore_error",
-        "//folly:exception_wrapper",
     ],
 )
 
@@ -149,9 +149,9 @@ cpp_library(
         "FileHash.h",
     ],
     deps = [
+        "fbsource//xplat/folly/portability:openssl",
         "//eden/common/utils/windows:win_error",
         "//eden/fs/digest:blake3_hash",
-        "//folly/portability:openssl",
     ],
     exported_deps = [
         "//eden/common/utils:path",
@@ -168,13 +168,13 @@ cpp_library(
         "FilterUtils.h",
     ],
     deps = [
+        "fbsource//xplat/folly:varint",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:throw",
-        "//folly:varint",
-        "//folly/logging:logging",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
         "//eden/fs/model:model",
-        "//folly:range",
     ],
 )
 
@@ -183,17 +183,17 @@ cpp_library(
     srcs = ["ProcUtil.cpp"],
     headers = ["ProcUtil.h"],
     deps = [
+        "fbsource//xplat/folly:conv",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:unistd",
         "//eden/common/utils:file_utils",
-        "//folly:conv",
-        "//folly:file_util",
-        "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:unistd",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
-        "//folly:range",
     ],
 )
 
@@ -206,16 +206,16 @@ cpp_library(
         "ProcessAccessLog.h",
     ],
     deps = [
+        "fbsource//xplat/folly:exception",
+        "fbsource//xplat/folly:micro_lock",
+        "fbsource//xplat/folly:thread_local",
         "//eden/common/utils:process_info_cache",
-        "//folly:exception",
-        "//folly:micro_lock",
-        "//folly:thread_local",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
         "//eden/common/utils:enum",
         "//eden/common/utils:utils",
         "//eden/fs/service:thrift-cpp2-types",
-        "//folly:synchronized",
     ],
 )
 
@@ -240,15 +240,15 @@ cpp_library(
         "ChronoUnit.h",
     ],
     deps = [
-        "//folly:conv",
-        "//folly:string",
-        "//folly/logging:logging",
+        "fbsource//xplat/folly:conv",
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/logging:logging",
     ],
     exported_deps = [
-        "//folly:cpp_attributes",
-        "//folly:expected",
-        "//folly:portability",
-        "//folly:range",
+        "fbsource//xplat/folly:cpp_attributes",
+        "fbsource//xplat/folly:expected",
+        "fbsource//xplat/folly:portability",
+        "fbsource//xplat/folly:range",
     ],
 )
 
@@ -256,15 +256,15 @@ cpp_library(
     name = "invalidation_queue",
     headers = ["InvalidationQueue.h"],
     exported_deps = [
+        "fbsource//xplat/folly:cancellation_token",
+        "fbsource//xplat/folly:function",
+        "fbsource//xplat/folly:scope_guard",
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/synchronization:call_once",
+        "fbsource//xplat/folly/system:thread_name",
         "//eden/common/utils:immediate_future",
-        "//folly:cancellation_token",
-        "//folly:function",
-        "//folly:scope_guard",
-        "//folly:synchronized",
-        "//folly/futures:core",
-        "//folly/logging:logging",
-        "//folly/synchronization:call_once",
-        "//folly/system:thread_name",
     ],
 )
 
@@ -284,7 +284,7 @@ cpp_library(
     srcs = ["Clock.cpp"],
     headers = ["Clock.h"],
     deps = [
-        "//folly/portability:time",
+        "fbsource//xplat/folly/portability:time",
     ],
 )
 
@@ -293,7 +293,7 @@ cpp_library(
     srcs = ["LinuxKernelVersion.cpp"],
     headers = ["LinuxKernelVersion.h"],
     exported_deps = [
-        "//folly:range",
+        "fbsource//xplat/folly:range",
     ],
 )
 
@@ -303,12 +303,12 @@ cpp_library(
     headers = ["NfsSocket.h"],
     deps = [
         "fbsource//third-party/fmt:fmt",
-        "//folly:exception",
+        "fbsource//xplat/folly:exception",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:network_address",
+        "fbsource//xplat/folly:portability",
         "//eden/common/utils:path",
-        "//folly:network_address",
-        "//folly:portability",
     ],
 )
 
@@ -316,7 +316,7 @@ cpp_library(
     name = "fs_channel_types",
     headers = ["FsChannelTypes.h"],
     exported_deps = [
-        "//folly:file",
+        "fbsource//xplat/folly:file",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": ["//eden/fs/third-party:fuse_kernel"],
@@ -335,9 +335,9 @@ cpp_library(
     headers = ["ProjfsUtil.h"],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:try",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:stringconv",
-        "//folly:try",
     ],
 )
 
@@ -345,7 +345,7 @@ cpp_library(
     name = "request_permit_vendor",
     headers = ["RequestPermitVendor.h"],
     exported_deps = [
-        "//folly/fibers:semaphore",
+        "fbsource//xplat/folly/fibers:semaphore",
     ],
 )
 
@@ -353,9 +353,9 @@ cpp_library(
     name = "sharded_lru_cache",
     headers = ["ShardedLruCache.h"],
     exported_deps = [
+        "fbsource//xplat/folly:synchronized",
+        "fbsource//xplat/folly/container:evicting_cache_map",
         "//eden/fs/model:model",
-        "//folly:synchronized",
-        "//folly/container:evicting_cache_map",
     ],
 )
 
@@ -378,8 +378,8 @@ cpp_library(
     srcs = ["MountInfoTable.cpp"],
     headers = ["MountInfoTable.h"],
     deps = [
+        "fbsource//xplat/folly:file_util",
         ":statmount",
-        "//folly:file_util",
     ],
     exported_deps = ["//eden/common/utils:proc_mount_info"],
 )
@@ -389,11 +389,11 @@ cpp_library(
     srcs = ["MountHealthCheck.cpp"],
     headers = ["MountHealthCheck.h"],
     deps = [
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:sys_stat",
+        "fbsource//xplat/folly/portability:unistd",
         ":mount_info_table",
         "//eden/common/utils:fsdetect",
-        "//folly:string",
-        "//folly/logging:logging",
-        "//folly/portability:sys_stat",
-        "//folly/portability:unistd",
     ],
 )

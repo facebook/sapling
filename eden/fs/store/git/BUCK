@@ -11,20 +11,20 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/rust:libgit2-sys-libgit2-linux",  # @manual
+        "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly/coro:task",
+        "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/utils:enum",
         "//eden/common/utils:throw",
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
-        "//folly:string",
-        "//folly/coro:task",
-        "//folly/futures:core",
-        "//folly/logging:logging",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/coro/safe:now_task",
         "//eden/common/utils:path",
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:context",
-        "//folly:range",
-        "//folly/coro/safe:now_task",
     ],
 )
