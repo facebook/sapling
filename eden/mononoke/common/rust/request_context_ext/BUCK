@@ -6,9 +6,9 @@ rust_library(
     name = "request_context_ext",
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
-        "request_context": "//folly/rust/request_context:request_context",
-        "request_context_future": "//folly/rust/request_context:request_context_future",
-        "request_context_tokio": "//folly/rust/request_context:request_context_tokio",
+        "request_context": "fbsource//xplat/folly/rust/request_context:request_context",
+        "request_context_future": "fbsource//xplat/folly/rust/request_context:request_context_future",
+        "request_context_tokio": "fbsource//xplat/folly/rust/request_context:request_context_tokio",
     },
     deps = [
         "fbsource//third-party/rust:tokio",
