@@ -9,10 +9,11 @@ oncall("scm_client_infra")
 
 artifacts = get_integration_test_env_and_deps()
 
-python_integration_test(
+python_unittest(
     name = "testcase",
     srcs = ["testcase_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/pypi/parameterized:parameterized",
@@ -117,10 +118,11 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "wal",
     srcs = ["wal_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -647,10 +649,11 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "start",
     srcs = ["start_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/pypi/psutil:psutil",
@@ -660,30 +663,33 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "stats",
     srcs = ["stats_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "telemetry",
     srcs = ["telemetry_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "stop",
     srcs = ["stop_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -694,10 +700,11 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "takeover",
     srcs = ["takeover_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/pypi/pexpect:pexpect",
@@ -707,10 +714,11 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "thrift",
     srcs = ["thrift_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -719,37 +727,40 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "unicode",
     srcs = ["unicode_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "unixsocket",
     srcs = ["unixsocket_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "unlink",
     srcs = ["unlink_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "userinfo",
     srcs = ["userinfo_test.py"],
     env = artifacts["env"],
@@ -759,7 +770,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "windows_fsck",
     srcs = ["windows_fsck_test.py"],
     compatible_with = [
@@ -767,19 +778,21 @@ python_integration_test(
         "ovr_config//os:windows",
     ],
     env = artifacts["env"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "xattr",
     srcs = ["xattr_test.py"],
     compatible_with = [
         "ovr_config//os:linux",
     ],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
@@ -839,10 +852,11 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "use_case",
     srcs = ["use_case_test.py"],
     env = full_artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
