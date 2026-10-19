@@ -1,0 +1,38 @@
+Fuzz targets for the indexedlog on-disk format.
+
+Each target builds one valid structure once per process, then per iteration
+writes a fuzzer-corrupted copy of it into a temporary directory and re-opens
+it. The input is a sequence of 8-byte patch records applied to the seed files;
+see eden/scm/lib/fuzzutil/src/corrupt.rs for the encoding.
+
+  log_open_lookup     Log::open, Log::lookup, Log::lookup_prefix, Log::iter
+  rotate_log_lookup   rotate::OpenOptions::open and RotateLogLookupIter, which
+                      opens the older rotated logs lazily
+
+Panics, aborts and sanitizer reports are findings. Errors returned for corrupt
+data are the expected behavior and are ignored by the harnesses.
+
+Run with buck2. `@fbcode//mode/opt-asan` is what produces sancov
+instrumentation; `-c rust.fuzzing=true` on its own builds a blind binary.
+Every length and offset in the format is a VLQ, so pass the shared boundary
+dictionary:
+
+    buck2 run @fbcode//mode/opt-asan -c rust.fuzzing=true \
+        fbcode//eden/scm/lib/indexedlog/fuzz:log_open_lookup -- \
+        -dict=fbcode/eden/scm/lib/fuzzutil/vlq.dict -runs=100000 /path/to/corpus
+
+The harnesses call `fuzzutil::configure_indexedlog_for_fuzzing` before
+writing the seed, which makes indexedlog use a fixed epoch and skip the
+index-lag timestamp, so the snapshot is byte-identical across processes;
+without that, offset-based patches into `meta` replayed only by chance.
+
+Steps to run the fuzz tests with the OSS toolchain:
+
+1. Install rustup.
+2. `rustup install nightly` to install the nightly toolchain.
+3. From `eden/scm`, run `rustup override set nightly && make local` to use the
+   nightly toolchain.
+4. From `indexedlog` (parent directory of `fuzz`), run
+   `cargo fuzz run $TEST_NAME`.
+
+See also https://rust-fuzz.github.io/book/cargo-fuzz.html.

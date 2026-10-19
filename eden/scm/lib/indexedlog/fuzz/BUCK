@@ -1,0 +1,97 @@
+load(
+    "@fbsource//xplat/security/lionhead:defs.bzl",
+    "EXTERNAL_USERS",
+    "Metadata",
+    "Severity",
+    "lh",
+)
+load(
+    "@fbsource//xplat/security/lionhead/build_defs:harness_rust.bzl",
+    "rust_lionhead_harness",
+)
+
+oncall("sapling")
+
+INDEXEDLOG_PATH_GLOBS = ["**/eden/scm/lib/indexedlog/src/**"]
+
+# Lionhead matches each target_symbols entry as a regex against the function's
+# raw DWARF linkage name and demangles only C++ (`_Z`) names, so Rust names
+# reach it v0-mangled (T291781185). Each function gets two entries, the
+# demangled path and the v0 tokens, with `.?` standing in for the `>` of the
+# `<Type>::method` form. The manifest genrule passes these on a command line
+# that cmd.exe splits on unquoted `|` and `>`, so neither may appear.
+# Non-generic functions are anchored with `$`; a generic instantiation appends
+# its type arguments after the name, so those entries are left unanchored.
+
+# Smoke test these with: buck2 test :log_open_lookup-smoke-test
+rust_lionhead_harness(
+    name = "log_open_lookup",
+    srcs = [
+        "fuzz_targets/corrupt.rs",
+        "fuzz_targets/log_open_lookup.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = INDEXEDLOG_PATH_GLOBS,
+            target_symbols = [
+                "indexedlog::log::open_options::OpenOptions.?::open",
+                "3log12open_options.*11OpenOptions4open",
+                "indexedlog::log::Log.?::lookup",
+                "3log.*3Log6lookup",
+                "indexedlog::index::MemChecksum.?::read_from",
+                "5index.*11MemChecksum9read_from",
+                "indexedlog::index::MemChecksum.?::check_range$",
+                "5index.*11MemChecksum11check_range$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/log_open_lookup.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/fuzzutil:fuzzutil",
+        "//eden/scm/lib/indexedlog:indexedlog",
+    ],
+)
+
+rust_lionhead_harness(
+    name = "rotate_log_lookup",
+    srcs = [
+        "fuzz_targets/corrupt.rs",
+        "fuzz_targets/rotate_log_lookup.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = INDEXEDLOG_PATH_GLOBS,
+            target_symbols = [
+                "indexedlog::rotate::OpenOptions.?::open",
+                "6rotate.*11OpenOptions4open",
+                "indexedlog::rotate::RotateLogLookupIter.?::load_next_log$",
+                "6rotate.*19RotateLogLookupIter13load_next_log$",
+                "indexedlog::log::Log.?::lookup",
+                "3log.*3Log6lookup",
+                "indexedlog::index::MemChecksum.?::read_from",
+                "5index.*11MemChecksum9read_from",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/rotate_log_lookup.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/fuzzutil:fuzzutil",
+        "//eden/scm/lib/indexedlog:indexedlog",
+    ],
+)
