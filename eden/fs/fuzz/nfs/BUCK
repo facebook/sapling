@@ -1,0 +1,160 @@
+load("@fbcode//security/lionhead/harnesses:defs.bzl", "cpp_lionhead_harness")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+load("@fbsource//xplat/security/lionhead:defs.bzl", "Metadata", "SUBSET_OF_EMPLOYEES", "Severity", "lh")
+
+oncall("scm_client_infra")
+
+edenfs_metadata = Metadata(
+    exposure = SUBSET_OF_EMPLOYEES,
+    project = "edenfs",
+    severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+    severity_service_takeover = Severity.FILE_SECURITY_TASK,
+)
+
+xdr_decode_path_globs = [
+    "fbcode/eden/fs/nfs/xdr/**/*",
+    "fbcode/eden/fs/nfs/rpc/Rpc.*",
+    "fbcode/eden/fs/nfs/NfsdRpc.*",
+]
+
+xdr_decode_annotations = [
+    # The regression guard. Line coverage rather than symbols, because every
+    # XdrTrait<T>::deserialize is a header template with no stable symbol of
+    # its own to require.
+    lh.PathAnnotation(
+        alert = True,
+        include_path_globs = xdr_decode_path_globs,
+        line_coverage_goal_percentage = 0.3,
+    ),
+    # Metrics only, hence alert = False. Lionhead demangles the DWARF linkage
+    # name (C++ `_Z` names only), then strips template arguments, return type
+    # and parameters before an unanchored regex search, so every
+    # XdrTrait<T>::deserialize reads as facebook::eden::XdrTrait::deserialize
+    # and no pattern can single out one struct's decoder. ERR_LH_027 fires
+    # when any matched function is uncovered, and no one harness reaches every
+    # specialization, so alerting would fail permanently. It earns its place
+    # because the symbol-coverage pass is what makes the health check report
+    # num_covered_functions at all.
+    lh.PathAnnotation(
+        alert = False,
+        include_path_globs = xdr_decode_path_globs,
+        target_symbols = ["deserialize"],
+    ),
+]
+
+export_file(
+    name = "nfs_xdr.dict",
+    src = "nfs_xdr.dict",
+)
+
+cpp_library(
+    name = "nfs_xdr_decode",
+    headers = ["NfsXdrDecode.h"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    exported_deps = [
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/xdr:xdr",
+        "//folly:range",
+        "//folly:utility",
+        "//folly/io:iobuf",
+        "//folly/lang:hint",
+    ],
+)
+
+cpp_lionhead_harness(
+    name = "NfsXdrRpcCallFuzz",
+    srcs = ["NfsXdrFuzz.cpp"],
+    annotations = xdr_decode_annotations,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    dictionary = ":nfs_xdr.dict",
+    ftest_name = ("NfsXdr", "rpc_call_message"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":nfs_xdr_decode",
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly:range",
+    ],
+)
+
+cpp_lionhead_harness(
+    name = "NfsXdrLookupArgsFuzz",
+    srcs = ["NfsXdrFuzz.cpp"],
+    annotations = xdr_decode_annotations,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    dictionary = ":nfs_xdr.dict",
+    ftest_name = ("NfsXdr", "lookup_args"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":nfs_xdr_decode",
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly:range",
+    ],
+)
+
+cpp_lionhead_harness(
+    name = "NfsXdrCreateArgsFuzz",
+    srcs = ["NfsXdrFuzz.cpp"],
+    annotations = xdr_decode_annotations,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    dictionary = ":nfs_xdr.dict",
+    ftest_name = ("NfsXdr", "create_args"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":nfs_xdr_decode",
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly:range",
+    ],
+)
+
+cpp_lionhead_harness(
+    name = "NfsXdrNfs3ArgsFuzz",
+    srcs = ["NfsXdrFuzz.cpp"],
+    annotations = xdr_decode_annotations,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    dictionary = ":nfs_xdr.dict",
+    ftest_name = ("NfsXdr", "nfs3_args"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":nfs_xdr_decode",
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly:range",
+    ],
+)
+
+cpp_unittest(
+    name = "nfs_xdr_seed_test",
+    srcs = ["NfsXdrSeedTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        ":nfs_xdr_decode",
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly:range",
+        "//folly/io:iobuf",
+    ],
+)

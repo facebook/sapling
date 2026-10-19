@@ -1,0 +1,32 @@
+# AFL dictionary for the NFS XDR decode harnesses.
+#
+# XDR is all big-endian 4-byte fields, so every entry is 4 bytes and aligned to
+# a field boundary. The small integers below are deliberately listed once each
+# even though they mean different things at different offsets: 0x00000003 is
+# both the NFS version and the LOOKUP procedure number, 0x00000008 is both the
+# nfs_fh3 handle size and the CREATE procedure number, and so on.
+
+# Small integers. These cover the auth_flavor, msg_type, createmode3,
+# stable_how, ftype3, and time_how discriminants, the boolean tags driving the
+# optional variants in sattr3, and short length prefixes.
+u32_0="\x00\x00\x00\x00"
+u32_1="\x00\x00\x00\x01"
+u32_2="\x00\x00\x00\x02"
+u32_3="\x00\x00\x00\x03"
+u32_4="\x00\x00\x00\x04"
+u32_6="\x00\x00\x00\x06"
+u32_7="\x00\x00\x00\x07"
+
+# sizeof(nfs_fh3). The decoder throws unless the declared handle size matches
+# exactly, so this is the gate every argument struct sits behind.
+fh3_handle_size="\x00\x00\x00\x08"
+
+# RPC program numbers: nfsd (100003) and mountd (100005).
+prog_nfsd="\x00\x01\x86\xa3"
+prog_mountd="\x00\x01\x86\xa5"
+
+# Length prefixes that no payload can back.
+len_255="\x00\x00\x00\xff"
+len_64k="\x00\x01\x00\x00"
+len_int_max="\x7f\xff\xff\xff"
+len_uint_max="\xff\xff\xff\xff"
