@@ -332,10 +332,11 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "list",
     srcs = ["list_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/pypi/parameterized:parameterized",
@@ -343,7 +344,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "lock",
     srcs = ["lock_test.py"],
     compatible_with = [
@@ -371,20 +372,22 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "long_path",
     srcs = ["long_path_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "materialized_query",
     srcs = ["materialized_query_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -393,17 +396,18 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "mmap_test",
     srcs = ["mmap_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "mount",
     srcs = ["mount_test.py"],
     env = selects.apply(
@@ -413,6 +417,7 @@ python_integration_test(
             EDEN_TEST_TSAN = "1" if sanitizer and "thread" in sanitizer else "0",
         ),
     ),
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -423,40 +428,44 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "notify",
     srcs = ["notify_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "oexcl",
     srcs = ["oexcl_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "patch",
     srcs = ["patch_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "persistence",
     srcs = ["persistence_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
