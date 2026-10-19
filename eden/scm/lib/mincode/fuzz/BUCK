@@ -1,0 +1,91 @@
+load(
+    "@fbsource//xplat/security/lionhead:defs.bzl",
+    "EXTERNAL_USERS",
+    "Metadata",
+    "Severity",
+    "lh",
+)
+load(
+    "@fbsource//xplat/security/lionhead/build_defs:harness_rust.bzl",
+    "rust_lionhead_harness",
+)
+
+oncall("sapling")
+
+MINCODE_PATH_GLOBS = ["**/eden/scm/lib/mincode/src/**"]
+
+# Lionhead matches each target_symbols entry as a regex against the function's
+# raw DWARF linkage name and demangles only C++ (`_Z`) names, so Rust names
+# reach it v0-mangled (T291781185). Each function gets two entries, the
+# demangled path and the v0 tokens, with `.?` standing in for the `>` of the
+# `<Type>::method` form. The manifest genrule passes these on a command line
+# that cmd.exe splits on unquoted `|` and `>`, so neither may appear.
+# Non-generic functions are anchored with `$`; a generic instantiation appends
+# its type arguments after the name, so those entries are left unanchored.
+
+# Smoke test these with: buck2 test :decode-smoke-test
+rust_lionhead_harness(
+    name = "decode",
+    srcs = [
+        "fuzz_targets/decode.rs",
+        "fuzz_targets/shapes.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = MINCODE_PATH_GLOBS,
+            target_symbols = [
+                "mincode::deserialize",
+                "7mincode11deserialize",
+                "mincode::de::Deserializer.?::read_slice$",
+                "2de.*12Deserializer10read_slice$",
+                "mincode::de::Deserializer.?::read_str$",
+                "2de.*12Deserializer8read_str$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/decode.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = [
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/mincode:mincode",
+    ],
+)
+
+rust_lionhead_harness(
+    name = "roundtrip",
+    srcs = [
+        "fuzz_targets/roundtrip.rs",
+        "fuzz_targets/shapes.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = MINCODE_PATH_GLOBS,
+            target_symbols = [
+                "mincode::serialize",
+                "7mincode9serialize",
+                "mincode::deserialize",
+                "7mincode11deserialize",
+                "mincode::de::Deserializer.?::read_slice$",
+                "2de.*12Deserializer10read_slice$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/roundtrip.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = [
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/mincode:mincode",
+    ],
+)

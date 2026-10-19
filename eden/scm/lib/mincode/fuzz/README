@@ -1,0 +1,40 @@
+Fuzz targets for the mincode serde format.
+
+mincode has no magic, no header and no checksum, so unlike the indexedlog
+targets these do not corrupt a valid structure: fuzzer bytes go straight into
+the deserializer. The first read for every target type is a VLQ length at
+offset 0 and any byte below 0x80 is a complete VLQ, so a random string is
+already a plausible encoding and coverage feedback grows valid prefixes on its
+own.
+
+What gets decoded is decided entirely by the target type. `fuzz_targets/
+shapes.rs` mirrors the two shapes read off disk today - metalog's `Root` and
+revisionstore's LFS pointer entry, both `pub(crate)` in their own crates - with
+the same field order and the same serde calls, so the same encoding.
+
+  decode      mincode::deserialize over raw bytes. The first input byte picks
+              between the two on-disk shapes and a synthetic one covering the
+              Deserializer methods they do not reach.
+  roundtrip   Serialize a value derived from the input, decode it again and
+              compare, then re-encode and compare bytes. Catches asymmetry
+              between ser.rs and de.rs, not just crashes.
+
+Panics, aborts and sanitizer reports are findings. In `decode`, an error
+returned for input that is not a valid encoding is the expected behavior and is
+ignored. In `roundtrip` the bytes were produced by mincode itself, so an error
+there is a finding.
+
+Run with buck2:
+
+    buck2 run -c rust.fuzzing=true fbcode//eden/scm/lib/mincode/fuzz:decode -- \
+        -runs=100000 /path/to/corpus
+
+Steps to run the fuzz tests with the OSS toolchain:
+
+1. Install rustup.
+2. `rustup install nightly` to install the nightly toolchain.
+3. From `eden/scm`, run `rustup override set nightly && make local` to use the
+   nightly toolchain.
+4. From `mincode` (parent directory of `fuzz`), run `cargo fuzz run $TEST_NAME`.
+
+See also https://rust-fuzz.github.io/book/cargo-fuzz.html.
