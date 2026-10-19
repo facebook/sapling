@@ -132,3 +132,28 @@ rust_lionhead_harness(
     ),
     deps = CORRUPT_FUZZ_DEPS,
 )
+
+rust_lionhead_harness(
+    name = "lfs_blob_decode",
+    srcs = ["fuzz_targets/lfs_blob_decode.rs"],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = REVISIONSTORE_PATH_GLOBS,
+            target_symbols = [
+                "revisionstore::lfs::LfsIndexedLogBlobsStore.?::get$",
+                "3lfs.*23LfsIndexedLogBlobsStore3get$",
+                "revisionstore::lfs::LfsStore.?::get_blob$",
+                "3lfs.*8LfsStore8get_blob$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/lfs_blob_decode.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = REVISIONSTORE_FUZZ_DEPS,
+)
