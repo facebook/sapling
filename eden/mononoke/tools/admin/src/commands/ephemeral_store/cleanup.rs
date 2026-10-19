@@ -138,22 +138,27 @@ pub async fn clean_bubbles(
         let _thread_states_report = report_periodically(THREAD_STATES_REPORT_INTERVAL, || {
             mononoke::spawn_blocking(log_thread_states);
         });
-        stream::iter(expired_bubbles)
-            .map(Ok)
-            .map_ok(|id| {
-                cloned!(ctx, repo, finished);
-                async move {
-                    let count = repo.repo_ephemeral_store.delete_bubble(&ctx, id).await?;
-                    finished.fetch_add(1, Ordering::Relaxed);
-                    println!(
-                        "Cleaned up bubble {id} and deleted {count} blob keys contained in it"
-                    );
-                    anyhow::Ok(())
-                }
-            })
-            .try_buffer_unordered(args.concurrency)
-            .try_collect::<Vec<_>>()
-            .await?;
+        let ctx = ctx.clone();
+        let store = repo.repo_ephemeral_store.clone();
+        mononoke::spawn_task(async move {
+            stream::iter(expired_bubbles)
+                .map(Ok)
+                .map_ok(|id| {
+                    cloned!(ctx, store, finished);
+                    async move {
+                        let count = store.delete_bubble(&ctx, id).await?;
+                        finished.fetch_add(1, Ordering::Relaxed);
+                        println!(
+                            "Cleaned up bubble {id} and deleted {count} blob keys contained in it"
+                        );
+                        anyhow::Ok(())
+                    }
+                })
+                .try_buffer_unordered(args.concurrency)
+                .try_collect::<Vec<_>>()
+                .await
+        })
+        .await??;
     } else {
         println!(
             "Executing cleanup in dry-run mode. The following bubbles were fetched for deletion:"
