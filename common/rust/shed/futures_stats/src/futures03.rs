@@ -452,136 +452,160 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn test_timed_future() {
-        let ten_millis = Duration::from_millis(10);
-        let twenty_millis = Duration::from_millis(20);
-        let (stats, result) = async {
-            thread::sleep(ten_millis);
-            tokio::task::yield_now().await;
-            thread::sleep(ten_millis);
-            tokio::task::yield_now().await;
-            123u32
-        }
-        .timed()
-        .await;
-        assert_eq!(result, 123u32);
-        assert!(stats.poll_count > 0);
-        assert!(stats.poll_time > twenty_millis);
-        assert!(stats.max_poll_time > ten_millis);
+    // #[tokio::test] calls enable_all(), starting an I/O reactor whose
+    // kqueue/IOCP syscalls Miri cannot execute. These tests need only timers.
+    fn run_test(future: impl Future<Output = ()>) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(future);
     }
 
-    #[tokio::test]
-    async fn test_cancel_timed_future() {
-        let stats = Mutex::new(None);
-        let fut = async {}
+    #[test]
+    fn test_timed_future() {
+        run_test(async {
+            let ten_millis = Duration::from_millis(10);
+            let twenty_millis = Duration::from_millis(20);
+            let (stats, result) = async {
+                thread::sleep(ten_millis);
+                tokio::task::yield_now().await;
+                thread::sleep(ten_millis);
+                tokio::task::yield_now().await;
+                123u32
+            }
             .timed()
-            .on_cancel_with_data(|data| *stats.lock().unwrap() = Some(data));
-        drop(fut);
-        let stats = stats.lock().unwrap();
-        assert_eq!(stats.as_ref().unwrap().poll_count, 0)
+            .await;
+            assert_eq!(result, 123u32);
+            assert!(stats.poll_count > 0);
+            assert!(stats.poll_time > twenty_millis);
+            assert!(stats.max_poll_time > ten_millis);
+        });
     }
 
-    #[tokio::test]
-    async fn test_timed_try_future() {
-        let (stats, result) = async { Result::<_, ()>::Ok(123u32) }
-            .try_timed()
-            .await
-            .unwrap();
-        assert_eq!(result, 123u32);
-        assert!(stats.poll_count > 0);
+    #[test]
+    fn test_cancel_timed_future() {
+        run_test(async {
+            let stats = Mutex::new(None);
+            let fut = async {}
+                .timed()
+                .on_cancel_with_data(|data| *stats.lock().unwrap() = Some(data));
+            drop(fut);
+            let stats = stats.lock().unwrap();
+            assert_eq!(stats.as_ref().unwrap().poll_count, 0)
+        });
     }
 
-    #[tokio::test]
-    async fn test_timed_stream() {
-        let callback_called = Arc::new(AtomicBool::new(false));
-        const TEST_COUNT: usize = 3;
-        let out: Vec<_> = stream::iter([0u32; TEST_COUNT].iter())
-            .timed({
+    #[test]
+    fn test_timed_try_future() {
+        run_test(async {
+            let (stats, result) = async { Result::<_, ()>::Ok(123u32) }
+                .try_timed()
+                .await
+                .unwrap();
+            assert_eq!(result, 123u32);
+            assert!(stats.poll_count > 0);
+        });
+    }
+
+    #[test]
+    fn test_timed_stream() {
+        run_test(async {
+            let callback_called = Arc::new(AtomicBool::new(false));
+            const TEST_COUNT: usize = 3;
+            let out: Vec<_> = stream::iter([0u32; TEST_COUNT].iter())
+                .timed({
+                    let callback_called = callback_called.clone();
+                    move |stats| {
+                        assert_eq!(stats.count, TEST_COUNT);
+                        assert!(stats.completed);
+                        callback_called.store(true, Ordering::SeqCst);
+                    }
+                })
+                .collect::<Vec<u32>>()
+                .await;
+            assert_eq!(out, vec![0; TEST_COUNT]);
+            assert!(callback_called.load(Ordering::SeqCst));
+        });
+    }
+
+    #[test]
+    fn test_cancel_timed_stream() {
+        run_test(async {
+            let callback_called = Arc::new(AtomicBool::new(false));
+            const TEST_COUNT: usize = 3;
+            let mut s = stream::iter([0u32; TEST_COUNT].iter()).timed({
                 let callback_called = callback_called.clone();
                 move |stats| {
-                    assert_eq!(stats.count, TEST_COUNT);
-                    assert!(stats.completed);
+                    assert_eq!(stats.count, 1);
+                    assert!(!stats.completed);
+                    callback_called.store(true, Ordering::SeqCst);
+                }
+            });
+            let first = s.next().await;
+            assert_eq!(first, Some(&0));
+            assert!(!callback_called.load(Ordering::SeqCst));
+            drop(s);
+            assert!(callback_called.load(Ordering::SeqCst));
+        });
+    }
+
+    #[test]
+    fn test_try_timed_stream() {
+        run_test(async {
+            let callback_called = Arc::new(AtomicBool::new(false));
+            let out = stream::iter([
+                Ok(0),
+                Err("Integer overflow".to_owned()),
+                Ok(1),
+                Ok(2),
+                Err("Rounding error".to_owned()),
+                Err("Unit conversion error".to_owned()),
+            ])
+            .try_timed({
+                let callback_called = callback_called.clone();
+                move |stats: TryStreamStats| {
+                    assert_eq!(stats.stream_stats.count, 6);
+                    assert_eq!(stats.error_count, 3);
+                    assert_eq!(stats.first_error_position, Some(1));
+                    assert!(stats.stream_stats.completed);
                     callback_called.store(true, Ordering::SeqCst);
                 }
             })
-            .collect::<Vec<u32>>()
+            .collect::<Vec<Result<u32, _>>>()
             .await;
-        assert_eq!(out, vec![0; TEST_COUNT]);
-        assert!(callback_called.load(Ordering::SeqCst));
-    }
-
-    #[tokio::test]
-    async fn test_cancel_timed_stream() {
-        let callback_called = Arc::new(AtomicBool::new(false));
-        const TEST_COUNT: usize = 3;
-        let mut s = stream::iter([0u32; TEST_COUNT].iter()).timed({
-            let callback_called = callback_called.clone();
-            move |stats| {
-                assert_eq!(stats.count, 1);
-                assert!(!stats.completed);
-                callback_called.store(true, Ordering::SeqCst);
-            }
+            assert_eq!(out[2], Ok(1));
+            assert!(callback_called.load(Ordering::SeqCst));
         });
-        let first = s.next().await;
-        assert_eq!(first, Some(&0));
-        assert!(!callback_called.load(Ordering::SeqCst));
-        drop(s);
-        assert!(callback_called.load(Ordering::SeqCst));
     }
 
-    #[tokio::test]
-    async fn test_try_timed_stream() {
-        let callback_called = Arc::new(AtomicBool::new(false));
-        let out = stream::iter([
-            Ok(0),
-            Err("Integer overflow".to_owned()),
-            Ok(1),
-            Ok(2),
-            Err("Rounding error".to_owned()),
-            Err("Unit conversion error".to_owned()),
-        ])
-        .try_timed({
-            let callback_called = callback_called.clone();
-            move |stats: TryStreamStats| {
-                assert_eq!(stats.stream_stats.count, 6);
-                assert_eq!(stats.error_count, 3);
-                assert_eq!(stats.first_error_position, Some(1));
-                assert!(stats.stream_stats.completed);
-                callback_called.store(true, Ordering::SeqCst);
-            }
-        })
-        .collect::<Vec<Result<u32, _>>>()
-        .await;
-        assert_eq!(out[2], Ok(1));
-        assert!(callback_called.load(Ordering::SeqCst));
-    }
-
-    #[tokio::test]
-    async fn test_cancel_try_timed_stream() {
-        let callback_called = Arc::new(AtomicBool::new(false));
-        let out = stream::iter([
-            Ok(0),
-            Err("Integer overflow".to_owned()),
-            Ok(1),
-            Ok(2),
-            Err("Rounding error".to_owned()),
-            Err("Unit conversion error".to_owned()),
-        ])
-        .try_timed({
-            let callback_called = callback_called.clone();
-            move |stats: TryStreamStats| {
-                assert_eq!(stats.stream_stats.count, 2);
-                assert_eq!(stats.error_count, 1);
-                assert_eq!(stats.first_error_position, Some(1));
-                assert!(!stats.stream_stats.completed);
-                callback_called.store(true, Ordering::SeqCst);
-            }
-        })
-        // Try collect will drop the stream after first failure
-        .try_collect::<Vec<u32>>()
-        .await;
-        assert!(out.is_err());
-        assert!(callback_called.load(Ordering::SeqCst));
+    #[test]
+    fn test_cancel_try_timed_stream() {
+        run_test(async {
+            let callback_called = Arc::new(AtomicBool::new(false));
+            let out = stream::iter([
+                Ok(0),
+                Err("Integer overflow".to_owned()),
+                Ok(1),
+                Ok(2),
+                Err("Rounding error".to_owned()),
+                Err("Unit conversion error".to_owned()),
+            ])
+            .try_timed({
+                let callback_called = callback_called.clone();
+                move |stats: TryStreamStats| {
+                    assert_eq!(stats.stream_stats.count, 2);
+                    assert_eq!(stats.error_count, 1);
+                    assert_eq!(stats.first_error_position, Some(1));
+                    assert!(!stats.stream_stats.completed);
+                    callback_called.store(true, Ordering::SeqCst);
+                }
+            })
+            // Try collect will drop the stream after first failure
+            .try_collect::<Vec<u32>>()
+            .await;
+            assert!(out.is_err());
+            assert!(callback_called.load(Ordering::SeqCst));
+        });
     }
 }

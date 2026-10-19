@@ -16,6 +16,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:tokio",
     ],
+    unittests_miri = True,
     deps = [
         "fbsource//third-party/rust:futures",
         "//common/rust/shed/futures_ext:futures_ext",
