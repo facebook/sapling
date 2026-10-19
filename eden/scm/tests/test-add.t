@@ -178,6 +178,36 @@ Forgotten file can be added back (as either clean or modified)
   $ sl up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+A filesystem error for one explicit path should not prevent other files from
+being added, but the command still fails because the explicit path was rejected:
+
+  $ cat > failadd.py <<'EOF'
+  > import errno
+  > from unittest import mock
+  > from sapling import context, extensions
+  > def wrapadd(orig, ctx, files, *args, **kwargs):
+  >     reallstat = ctx._repo.wvfs.lstat
+  >     def lstat(path):
+  >         if path == "denied":
+  >             raise PermissionError(errno.EACCES, "Permission denied", path)
+  >         if path == "message-only":
+  >             raise OSError("filesystem unavailable")
+  >         return reallstat(path)
+  >     with mock.patch.object(ctx._repo.wvfs, "lstat", side_effect=lstat):
+  >         return orig(ctx, files, *args, **kwargs)
+  > def extsetup(ui):
+  >     extensions.wrapfunction(context.workingctx, "add", wrapadd)
+  > EOF
+  $ touch denied good message-only
+  $ sl --config extensions.failadd=failadd.py add denied good message-only
+  denied: [Errno 13] Permission denied: 'denied'
+  message-only: filesystem unavailable
+  [1]
+  $ sl st denied good message-only
+  A good
+  ? denied
+  ? message-only
+
 forget and get should have the right order: added but missing dir should be
 forgotten before file with same name is added
 

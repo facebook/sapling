@@ -1938,9 +1938,12 @@ class workingctx(committablectx):
                 scmutil.checkportable(ui, os.path.join(prefix, f))
                 try:
                     st = lstat(f)
-                except OSError:
+                except OSError as err:
                     if not quiet:
-                        ui.warn(_("%s does not exist!\n") % uipath(f))
+                        if isinstance(err, FileNotFoundError):
+                            ui.warn(_("%s does not exist!\n") % uipath(f))
+                        else:
+                            ui.warn(_("%s: %s\n") % (uipath(f), err))
                     rejected.append(f)
                     continue
                 if not (
