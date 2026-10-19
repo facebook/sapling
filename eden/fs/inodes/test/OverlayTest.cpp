@@ -11,8 +11,6 @@
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <fmt/format.h>
 #include <folly/Exception.h>
 #include <folly/Expected.h>
@@ -20,6 +18,7 @@
 #include <folly/Range.h>
 #include <folly/ScopeGuard.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/io/FsUtil.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/logging/test/TestLogHandler.h>
 #include <folly/synchronization/Baton.h>
@@ -1010,7 +1009,7 @@ TEST_P(RawOverlayTest, cannot_create_overlay_file_in_corrupt_overlay) {
 
   // Remove the overlay directory in order to make file creation fail.
   auto path = testDir_.path();
-  boost::filesystem::remove_all(path);
+  folly::fs::remove_all(path);
 
   EXPECT_THROW(
       overlay->createOverlayFile(ino2, folly::ByteRange{"contents"_sp}),
@@ -1018,7 +1017,7 @@ TEST_P(RawOverlayTest, cannot_create_overlay_file_in_corrupt_overlay) {
 
   // Restore the overlay directory and make sure we can create an overlay file
   // and close the overlay.
-  boost::filesystem::create_directory(path);
+  folly::fs::create_directory(path);
   loadOverlay();
 
   ino2 = overlay->allocateInodeNumber();
@@ -1056,7 +1055,7 @@ TEST(OverlayErrorLoggingTest, createOverlayFileLogsErrorOnFailure) {
   auto ino = overlay->allocateInodeNumber();
 
   // Remove the overlay directory to force createOverlayFile to fail
-  boost::filesystem::remove_all(testDir.path());
+  folly::fs::remove_all(testDir.path());
 
   EXPECT_THROW(
       overlay->createOverlayFile(ino, folly::ByteRange{"contents"_sp}),
@@ -1170,27 +1169,23 @@ TEST_P(RawOverlayTest, persistsInodeReservation) {
       (getLocalDir() + "inode-reservation"_pc).asString();
   const auto initialReservation = std::to_string(2 + reservationSize);
   const auto secondReservation = std::to_string(2 + 2 * reservationSize);
-  EXPECT_TRUE(boost::filesystem::is_symlink(reservationPath));
+  EXPECT_TRUE(folly::fs::is_symlink(reservationPath));
   EXPECT_EQ(
-      initialReservation,
-      boost::filesystem::read_symlink(reservationPath).string());
+      initialReservation, folly::fs::read_symlink(reservationPath).string());
 
   EXPECT_EQ(2_ino, overlay->allocateInodeNumbers(reservationSize));
   EXPECT_EQ(
-      initialReservation,
-      boost::filesystem::read_symlink(reservationPath).string());
+      initialReservation, folly::fs::read_symlink(reservationPath).string());
 
   EXPECT_EQ(InodeNumber{2 + reservationSize}, overlay->allocateInodeNumber());
   EXPECT_EQ(
-      secondReservation,
-      boost::filesystem::read_symlink(reservationPath).string());
+      secondReservation, folly::fs::read_symlink(reservationPath).string());
 
   overlay->close();
   ASSERT_EQ(0, unlink((getLocalDir() + "next-inode-number"_pc).c_str()));
-  EXPECT_TRUE(boost::filesystem::is_symlink(reservationPath));
+  EXPECT_TRUE(folly::fs::is_symlink(reservationPath));
   EXPECT_EQ(
-      secondReservation,
-      boost::filesystem::read_symlink(reservationPath).string());
+      secondReservation, folly::fs::read_symlink(reservationPath).string());
 }
 
 TEST_P(RawOverlayTest, replacesInvalidInodeReservation) {
@@ -1205,7 +1200,7 @@ TEST_P(RawOverlayTest, replacesInvalidInodeReservation) {
   EXPECT_NO_THROW(loadOverlay());
   EXPECT_EQ(
       std::to_string(2 + reservationSize),
-      boost::filesystem::read_symlink(reservationPath).string());
+      folly::fs::read_symlink(reservationPath).string());
 }
 
 TEST_P(RawOverlayTest, replacesOverflowingInodeReservation) {
@@ -1223,7 +1218,7 @@ TEST_P(RawOverlayTest, replacesOverflowingInodeReservation) {
   EXPECT_NO_THROW(loadOverlay());
   EXPECT_EQ(
       std::to_string(2 + reservationSize),
-      boost::filesystem::read_symlink(reservationPath).string());
+      folly::fs::read_symlink(reservationPath).string());
 }
 
 TEST_P(RawOverlayTest, inodeReservationWriteFailureFailsInitialization) {
@@ -1233,7 +1228,7 @@ TEST_P(RawOverlayTest, inodeReservationWriteFailureFailsInitialization) {
   overlay->close();
   overlay = nullptr;
   ASSERT_EQ(0, unlink(reservationPath.c_str()));
-  ASSERT_TRUE(boost::filesystem::create_directory(tempPath));
+  ASSERT_TRUE(folly::fs::create_directory(tempPath));
 
   EXPECT_THROW(loadOverlay(), std::system_error);
 }
@@ -1416,13 +1411,13 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
 
 TEST_P(RawOverlayTest, close_overlay_after_removing_overlay_dir) {
   auto path = testDir_.path();
-  boost::filesystem::remove_all(path);
+  folly::fs::remove_all(path);
 
   // Should not crash.
   overlay->close();
   overlay = nullptr;
 
-  boost::filesystem::create_directory(path);
+  folly::fs::create_directory(path);
 }
 
 TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
@@ -1886,8 +1881,8 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
 }
 
 /// Return the temporary base-file path used when saving an overlay directory.
-boost::filesystem::path overlayDirTempFilePath(
-    const boost::filesystem::path& root,
+folly::fs::path overlayDirTempFilePath(
+    const folly::fs::path& root,
     InodeNumber inode) {
   return root / "sharded_tmp" / fmt::format("{:02x}", inode.get() % 256) /
       std::to_string(inode.get());
@@ -1900,7 +1895,7 @@ TEST(OverlayWalLifecycleTest, writeFailureKeepsErrorLoggerAlive) {
   auto bundle = makeWalLifecycleOverlay(canonicalPath(tmp.path().string()));
   const auto parent = bundle.overlay->allocateInodeNumber();
   const auto blocker = overlayDirTempFilePath(tmp.path(), parent);
-  ASSERT_TRUE(boost::filesystem::create_directory(blocker));
+  ASSERT_TRUE(folly::fs::create_directory(blocker));
   DirContents content(kPathMapDefaultCaseSensitive);
   EXPECT_THROW(
       bundle.overlay->saveOverlayDir(parent, content), std::system_error);
@@ -3402,7 +3397,7 @@ TEST(WalRenameTest, destinationCompactionWriteFailureKeepsTheRename) {
   // A directory at the temporary file path makes only the destination's
   // compaction write fail, even when the test runs with elevated privileges.
   const auto blocker = overlayDirTempFilePath(tmp.path(), dst);
-  ASSERT_TRUE(boost::filesystem::create_directory(blocker));
+  ASSERT_TRUE(folly::fs::create_directory(blocker));
   OverlayTestHelper::setWalCompactionRng(*bundle.overlay, [] { return 0u; });
   srcContent.erase("source"_pc);
   EXPECT_THROW(
@@ -3415,7 +3410,7 @@ TEST(WalRenameTest, destinationCompactionWriteFailureKeepsTheRename) {
   EXPECT_TRUE(bundle.store->hasWal(dst));
   EXPECT_TRUE(bundle.store->hasWal(src));
   bundle.overlay->close();
-  ASSERT_TRUE(boost::filesystem::remove(blocker));
+  ASSERT_TRUE(folly::fs::remove(blocker));
 
   auto reopened = makeWalLifecycleOverlay(dir);
   const auto loadedSrc = reopened.overlay->loadOverlayDir(src);

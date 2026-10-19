@@ -8,6 +8,7 @@
 #include <chrono>
 
 #include <folly/Range.h>
+#include <folly/io/FsUtil.h>
 #include <folly/logging/xlog.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -17,7 +18,7 @@
 #include "eden/fs/monitor/LogRotation.h"
 #include "eden/fs/testharness/FakeClock.h"
 
-namespace fs = boost::filesystem;
+namespace fs = folly::fs;
 using namespace std::chrono_literals;
 using folly::StringPiece;
 using std::make_shared;

@@ -29,6 +29,7 @@ cpp_unittest(
         "fbsource//xplat/folly:scope_guard",
         "fbsource//xplat/folly:synchronized",
         "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/io:fs_util",
         "fbsource//xplat/folly/io:iobuf",
         "fbsource//xplat/folly/io/async:async_base",
         "fbsource//xplat/folly/io/async:event_base_thread",

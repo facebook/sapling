@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -16,6 +15,7 @@
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
+#include <folly/io/FsUtil.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
@@ -126,7 +126,7 @@ void runInMountNamespace(
 }
 void installPrivHelperRollbackMarker() {
   checkUnixError(mount("tmpfs", "/etc", "tmpfs", 0, "size=1m"));
-  boost::filesystem::create_directory("/etc/eden");
+  folly::fs::create_directory("/etc/eden");
   File marker(
       kDisablePrivHelperHardeningPath,
       O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
@@ -1241,8 +1241,8 @@ TEST(PrivHelperSanityTest, readAheadRollbackBypassesRegistration) {
 TEST(PrivHelperSanityTest, userPathResolutionFollowsOrdinarySymlinks) {
   TemporaryDirectory dir;
   const auto real = dir.path() / "real";
-  boost::filesystem::create_directory(real);
-  boost::filesystem::create_directory(real / "leaf");
+  folly::fs::create_directory(real);
+  folly::fs::create_directory(real / "leaf");
   checkUnixError(symlink("real", (dir.path() / "link").c_str()));
   PrivHelperSanityTestServer server(getuid());
   auto fd = server.openPathAsUser(
@@ -1262,8 +1262,8 @@ TEST(PrivHelperSanityTest, userPathResolutionRejectsAnInaccessibleAncestor) {
   }
   TemporaryDirectory dir;
   const auto blocked = dir.path() / "blocked";
-  boost::filesystem::create_directory(blocked);
-  boost::filesystem::create_directory(blocked / "leaf");
+  folly::fs::create_directory(blocked);
+  folly::fs::create_directory(blocked / "leaf");
   checkUnixError(chmod(blocked.c_str(), 0000));
   SCOPE_EXIT {
     checkUnixError(chmod(blocked.c_str(), 0700));
@@ -1282,8 +1282,8 @@ TEST(PrivHelperSanityTest, bindMountClonesAnOPathSourceDescriptor) {
     const auto source = dir.path() / "source";
     const auto root = dir.path() / "checkout";
     const auto target = root / "redirect";
-    boost::filesystem::create_directory(source);
-    boost::filesystem::create_directories(target);
+    folly::fs::create_directory(source);
+    folly::fs::create_directories(target);
     ASSERT_TRUE(
         folly::writeFile(StringPiece{"content"}, (source / "file").c_str()));
 
@@ -1312,7 +1312,7 @@ TEST(PrivHelperSanityTest, userPathResolutionDisablesDacOverrides) {
         checkUnixError(prctl(PR_SET_SECUREBITS, SECBIT_NO_SETUID_FIXUP));
         const auto blocked = dir.path() / "blocked";
         const auto leaf = blocked / "leaf";
-        boost::filesystem::create_directories(leaf);
+        folly::fs::create_directories(leaf);
         checkUnixError(chmod(blocked.c_str(), 0000));
         EXPECT_NO_THROW(File(leaf.c_str(), O_PATH | O_DIRECTORY));
 
@@ -1394,8 +1394,8 @@ TEST(PrivHelperStaleMountTest, ancestorReplacementCannotRedirectUnmount) {
     const auto original = dir.path() / "original";
     const auto moved = dir.path() / "moved";
     const auto victim = dir.path() / "victim";
-    boost::filesystem::create_directories(original / "mount");
-    boost::filesystem::create_directories(victim / "mount");
+    folly::fs::create_directories(original / "mount");
+    folly::fs::create_directories(victim / "mount");
     checkUnixError(
         mount("edenfs:", (original / "mount").c_str(), "tmpfs", 0, "size=1m"));
     checkUnixError(
@@ -1409,14 +1409,14 @@ TEST(PrivHelperStaleMountTest, ancestorReplacementCannotRedirectUnmount) {
 
     PrivHelperStaleMountTestServer server;
     server.beforeChildProbe = [&] {
-      boost::filesystem::rename(original, moved);
-      boost::filesystem::create_directory_symlink(victim, original);
+      folly::fs::rename(original, moved);
+      folly::fs::create_directory_symlink(victim, original);
     };
     EXPECT_TRUE(server.detectAndUnmountStaleMount(
         (original / "mount").string(), false, false));
     EXPECT_FALSE(server.unmounted);
-    EXPECT_FALSE(boost::filesystem::exists(moved / "mount" / "marker"));
-    EXPECT_TRUE(boost::filesystem::exists(victim / "mount" / "marker"));
+    EXPECT_FALSE(folly::fs::exists(moved / "mount" / "marker"));
+    EXPECT_TRUE(folly::fs::exists(victim / "mount" / "marker"));
   });
 }
 
@@ -1688,13 +1688,11 @@ TEST_F(PrivHelperTest, bindMounts) {
   auto abcPath = abcMountPoint.path().string();
   TemporaryFile tempFile;
 
-  boost::filesystem::create_directory(abcMountPoint.path() / "foo");
-  boost::filesystem::create_directory(abcMountPoint.path() / "bar");
-  boost::filesystem::create_directory(abcMountPoint.path() / "buck-out");
-  boost::filesystem::create_directory(
-      abcMountPoint.path() / "foo" / "buck-out");
-  boost::filesystem::create_directory(
-      abcMountPoint.path() / "bar" / "buck-out");
+  folly::fs::create_directory(abcMountPoint.path() / "foo");
+  folly::fs::create_directory(abcMountPoint.path() / "bar");
+  folly::fs::create_directory(abcMountPoint.path() / "buck-out");
+  folly::fs::create_directory(abcMountPoint.path() / "foo" / "buck-out");
+  folly::fs::create_directory(abcMountPoint.path() / "bar" / "buck-out");
 
   // Prepare promises for the mount calls
   server_.setFuseMountResult(abcPath).setValue(File(tempFile.fd(), false));
@@ -1705,15 +1703,14 @@ TEST_F(PrivHelperTest, bindMounts) {
   auto userMountPoint = makeTempDir("user");
   auto userPath = userMountPoint.path().string();
 
-  boost::filesystem::create_directory(userMountPoint.path() / "somerepo");
-  boost::filesystem::create_directory(
-      userMountPoint.path() / "somerepo" / "buck-out");
+  folly::fs::create_directory(userMountPoint.path() / "somerepo");
+  folly::fs::create_directory(userMountPoint.path() / "somerepo" / "buck-out");
 
   server_.setFuseMountResult(userPath + "/somerepo")
       .setValue(File(tempFile.fd(), false));
   server_.setBindMountResult(userPath + "/somerepo/buck-out").setValue();
 
-  boost::filesystem::create_directory(userMountPoint.path() / "somerepo2");
+  folly::fs::create_directory(userMountPoint.path() / "somerepo2");
   server_.setFuseMountResult(userPath + "/somerepo2")
       .setValue(File(tempFile.fd(), false));
 
@@ -1774,8 +1771,8 @@ TEST_F(PrivHelperTest, bindMountRejectsEscapedMountPath) {
 #else
   auto mountRoot = makeTempDir("mount-root");
   auto source = makeTempDir("source");
-  boost::filesystem::create_directory(mountRoot.path() / "registered");
-  boost::filesystem::create_directory(mountRoot.path() / "target");
+  folly::fs::create_directory(mountRoot.path() / "registered");
+  folly::fs::create_directory(mountRoot.path() / "target");
 
   const auto registeredPath = (mountRoot.path() / "registered").string();
   const auto escapedPath = registeredPath + "/../target";
@@ -1836,9 +1833,9 @@ TEST_F(PrivHelperTest, bindMountRejectsSymlinkComponent) {
   auto mountRoot = makeTempDir("mount-root");
   auto source = makeTempDir("source");
   auto outside = makeTempDir("outside");
-  boost::filesystem::create_directory(mountRoot.path() / "registered");
-  boost::filesystem::create_directories(outside.path() / "target");
-  boost::filesystem::create_directory_symlink(
+  folly::fs::create_directory(mountRoot.path() / "registered");
+  folly::fs::create_directories(outside.path() / "target");
+  folly::fs::create_directory_symlink(
       outside.path(), mountRoot.path() / "registered" / "link");
 
   const auto registeredPath = (mountRoot.path() / "registered").string();
@@ -1869,12 +1866,11 @@ TEST_F(PrivHelperTest, bindMountRejectsSymlinkHiddenByDotDot) {
   auto mountRoot = makeTempDir("mount-root");
   auto source = makeTempDir("source");
   auto outside = makeTempDir("outside");
-  boost::filesystem::create_directory(mountRoot.path() / "registered");
-  boost::filesystem::create_directory(
-      mountRoot.path() / "registered" / "target");
-  boost::filesystem::create_directories(outside.path() / "child");
-  boost::filesystem::create_directory(outside.path() / "target");
-  boost::filesystem::create_directory_symlink(
+  folly::fs::create_directory(mountRoot.path() / "registered");
+  folly::fs::create_directory(mountRoot.path() / "registered" / "target");
+  folly::fs::create_directories(outside.path() / "child");
+  folly::fs::create_directory(outside.path() / "target");
+  folly::fs::create_directory_symlink(
       outside.path() / "child", mountRoot.path() / "registered" / "link");
 
   const auto registeredPath = (mountRoot.path() / "registered").string();
@@ -1905,10 +1901,9 @@ TEST_F(PrivHelperTest, bindMountAllowsSymlinkAncestorOfRegisteredMount) {
   auto realRoot = makeTempDir("real-root");
   auto linkRoot = makeTempDir("link-root");
   auto source = makeTempDir("source");
-  boost::filesystem::create_directories(realRoot.path() / "registered");
-  boost::filesystem::create_directories(
-      realRoot.path() / "registered" / "redirected");
-  boost::filesystem::create_directory_symlink(
+  folly::fs::create_directories(realRoot.path() / "registered");
+  folly::fs::create_directories(realRoot.path() / "registered" / "redirected");
+  folly::fs::create_directory_symlink(
       realRoot.path(), linkRoot.path() / "link");
 
   const auto registeredPath =
@@ -1933,10 +1928,10 @@ TEST_F(
   auto alternateRoot = makeTempDir("alternate-root");
   auto linkRoot = makeTempDir("link-root");
   auto source = makeTempDir("source");
-  boost::filesystem::create_directories(realRoot.path() / "registered");
-  boost::filesystem::create_directories(
+  folly::fs::create_directories(realRoot.path() / "registered");
+  folly::fs::create_directories(
       alternateRoot.path() / "registered" / "redirected");
-  boost::filesystem::create_directory_symlink(
+  folly::fs::create_directory_symlink(
       realRoot.path(), linkRoot.path() / "link");
 
   const auto registeredPath =
@@ -1946,8 +1941,8 @@ TEST_F(
   client_->takeoverStartup(registeredPath, {}).get(1s);
   server_.setFuseUnmountResult(registeredPath).setValue();
 
-  boost::filesystem::remove(linkRoot.path() / "link");
-  boost::filesystem::create_directory_symlink(
+  folly::fs::remove(linkRoot.path() / "link");
+  folly::fs::create_directory_symlink(
       alternateRoot.path(), linkRoot.path() / "link");
 
   server_.setBindMountResult(bindPath).setValue();
@@ -1970,15 +1965,14 @@ TEST_F(PrivHelperTest, takeoverKeepsValidatedRootWhenAncestorIsReplaced) {
   const auto ancestor = root.path() / "ancestor";
   const auto moved = root.path() / "moved";
   const auto replacement = root.path() / "replacement";
-  boost::filesystem::create_directories(
-      ancestor / "registered" / "original-only");
-  boost::filesystem::create_directories(
+  folly::fs::create_directories(ancestor / "registered" / "original-only");
+  folly::fs::create_directories(
       replacement / "registered" / "replacement-only");
 
   const auto registeredPath = (ancestor / "registered").string();
   server_.setAfterSanityCheck([ancestor, moved, replacement] {
-    boost::filesystem::rename(ancestor, moved);
-    boost::filesystem::create_directory_symlink(replacement, ancestor);
+    folly::fs::rename(ancestor, moved);
+    folly::fs::create_directory_symlink(replacement, ancestor);
   });
   client_->takeoverStartup(registeredPath, {}).get(1s);
   server_.setFuseUnmountResult(registeredPath).setValue();
@@ -2002,9 +1996,8 @@ TEST_F(PrivHelperFdUnmountTest, bindUnmountAllowsAlreadyUnmountedTarget) {
   GTEST_SKIP() << "Linux-specific procfd bind unmount validation";
 #else
   auto mountRoot = makeTempDir("mount-root");
-  boost::filesystem::create_directory(mountRoot.path() / "registered");
-  boost::filesystem::create_directory(
-      mountRoot.path() / "registered" / "not-mounted");
+  folly::fs::create_directory(mountRoot.path() / "registered");
+  folly::fs::create_directory(mountRoot.path() / "registered" / "not-mounted");
 
   const auto registeredPath = (mountRoot.path() / "registered").string();
   const auto notMountedPath = registeredPath + "/not-mounted";
@@ -2021,13 +2014,11 @@ TEST_F(PrivHelperTest, takeoverShutdown) {
   auto abcPath = abcMountPoint.path().string();
   TemporaryFile tempFile;
 
-  boost::filesystem::create_directory(abcMountPoint.path() / "foo");
-  boost::filesystem::create_directory(abcMountPoint.path() / "bar");
-  boost::filesystem::create_directory(abcMountPoint.path() / "buck-out");
-  boost::filesystem::create_directory(
-      abcMountPoint.path() / "foo" / "buck-out");
-  boost::filesystem::create_directory(
-      abcMountPoint.path() / "bar" / "buck-out");
+  folly::fs::create_directory(abcMountPoint.path() / "foo");
+  folly::fs::create_directory(abcMountPoint.path() / "bar");
+  folly::fs::create_directory(abcMountPoint.path() / "buck-out");
+  folly::fs::create_directory(abcMountPoint.path() / "foo" / "buck-out");
+  folly::fs::create_directory(abcMountPoint.path() / "bar" / "buck-out");
 
   // Prepare promises for the mount calls
   server_.setFuseMountResult(abcPath).setValue(File(tempFile.fd(), false));
@@ -2038,14 +2029,13 @@ TEST_F(PrivHelperTest, takeoverShutdown) {
   auto userMountPoint = makeTempDir("user");
   auto userPath = userMountPoint.path().string();
 
-  boost::filesystem::create_directory(userMountPoint.path() / "somerepo");
+  folly::fs::create_directory(userMountPoint.path() / "somerepo");
 
   server_.setFuseMountResult(userPath + "/somerepo")
       .setValue(File(tempFile.fd(), false));
 
-  boost::filesystem::create_directory(userMountPoint.path() / "somerepo2");
-  boost::filesystem::create_directory(
-      userMountPoint.path() / "somerepo2" / "buck-out");
+  folly::fs::create_directory(userMountPoint.path() / "somerepo2");
+  folly::fs::create_directory(userMountPoint.path() / "somerepo2" / "buck-out");
   server_.setFuseMountResult(userPath + "/somerepo2")
       .setValue(File(tempFile.fd(), false));
   server_.setBindMountResult(userPath + "/somerepo2/buck-out").setValue();
@@ -2094,9 +2084,8 @@ TEST_F(PrivHelperTest, takeoverStartup) {
   auto abcPath = abcMountPoint.path().string();
   TemporaryFile tempFile;
 
-  boost::filesystem::create_directories(
-      abcMountPoint.path() / "foo" / "buck-out");
-  boost::filesystem::create_directories(
+  folly::fs::create_directories(abcMountPoint.path() / "foo" / "buck-out");
+  folly::fs::create_directories(
       abcMountPoint.path() / "xyz" / "test" / "buck-out");
 
   // Indicate that we are taking over some mount points.
@@ -2116,7 +2105,7 @@ TEST_F(PrivHelperTest, takeoverStartup) {
   // Manually mount one other mount point.
   auto xyzMountPoint = makeTempDir("xyz");
   auto xyzPath = xyzMountPoint.path().string();
-  boost::filesystem::create_directory(xyzMountPoint.path() / "buck-out");
+  folly::fs::create_directory(xyzMountPoint.path() / "buck-out");
   server_.setFuseMountResult(xyzPath).setValue(File(tempFile.fd(), false));
   server_.setBindMountResult(xyzPath + "/buck-out").setValue();
   client_->fuseMount(xyzPath, false, "fuse").get(1s);

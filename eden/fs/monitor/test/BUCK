@@ -15,6 +15,7 @@ cpp_unittest(
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
         "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/io:fs_util",
         "fbsource//xplat/folly/logging:logging",
         "//eden/common/testharness:temp_file",
         "//eden/fs/monitor:edenfs_monitor_lib",

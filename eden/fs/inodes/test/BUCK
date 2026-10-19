@@ -456,7 +456,6 @@ cpp_unittest(
     network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
-        "fbsource//third-party/boost:boost_filesystem",
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/googletest:gtest",
         "fbsource//xplat/folly:exception",
@@ -465,6 +464,7 @@ cpp_unittest(
         "fbsource//xplat/folly:range",
         "fbsource//xplat/folly:scope_guard",
         "fbsource//xplat/folly/executors:cpu_thread_pool_executor",
+        "fbsource//xplat/folly/io:fs_util",
         "fbsource//xplat/folly/io:iobuf",
         "fbsource//xplat/folly/logging/test:test_handler",
         "fbsource//xplat/folly/synchronization:baton",
