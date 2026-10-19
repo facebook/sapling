@@ -46,6 +46,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ptr::NonNull;
+use std::sync::Arc;
 use std::sync::Mutex;
 
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
@@ -97,14 +98,13 @@ impl<T> ThreadMap<T> {
         // to a different thread themselves later. But that operation requires
         // PerThread<T>: Send which requires T: Send.
 
-        let mut storage = Box::new(StableStorage {
+        let mut locked = self.inner.lock().expect("poisoned lock");
+        let storage = Arc::new(StableStorage {
             val,
-            handle: Handle(0), // replaced below after locking map
+            handle: Handle(locked.idx),
             map: NonNull::from(self),
         });
 
-        let mut locked = self.inner.lock().expect("poisoned lock");
-        storage.handle = Handle(locked.idx);
         locked
             .map
             .insert(storage.handle, NonNull::from(&storage.val));
@@ -155,11 +155,12 @@ impl<T> ThreadMap<T> {
 /// drop it the corresponding entry is removed from the map.
 ///
 /// The map data structure holds a pointer `NonNull<T>` to the content of the
-/// storage box. We must not expose an API through which the owner of a
+/// storage allocation. We must not expose an API through which the owner of a
 /// `PerThread<T>` could invalidate that pointer, for example by moving the content
 /// or dropping the content outside of PerThread's Drop impl.
 pub struct PerThread<T> {
-    storage: Box<StableStorage<T>>,
+    // Moving the owner must preserve shared access through ThreadMap's pointers.
+    storage: Arc<StableStorage<T>>,
 }
 
 struct StableStorage<T> {
@@ -233,6 +234,7 @@ mod tests {
     use std::collections::HashSet;
     use std::hash::Hash;
     use std::sync::LazyLock;
+    use std::thread;
 
     use super::*;
 
@@ -261,6 +263,21 @@ mod tests {
         assert_eq!(**TEST_VAL2, 431);
         expected_values.insert(**TEST_VAL2);
         assert_map_content(&*TEST_MAP, &expected_values);
+    }
+
+    #[test]
+    fn test_move_between_threads() {
+        static TEST_MAP: LazyLock<ThreadMap<i64>> = LazyLock::new(ThreadMap::default);
+        let value = TEST_MAP.register(42);
+
+        thread::spawn(move || {
+            assert_eq!(*value, 42);
+            assert_map_content(&*TEST_MAP, &HashSet::from([42]));
+            drop(value);
+            assert_map_content(&*TEST_MAP, &HashSet::new());
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]
