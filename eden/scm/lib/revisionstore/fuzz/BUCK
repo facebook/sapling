@@ -1,0 +1,102 @@
+load(
+    "@fbsource//xplat/security/lionhead:defs.bzl",
+    "EXTERNAL_USERS",
+    "Metadata",
+    "Severity",
+    "lh",
+)
+load(
+    "@fbsource//xplat/security/lionhead/build_defs:harness_rust.bzl",
+    "rust_lionhead_harness",
+)
+
+oncall("sapling")
+
+REVISIONSTORE_PATH_GLOBS = [
+    "**/eden/scm/lib/revisionstore/src/**",
+    "**/eden/scm/lib/revisionstore/types/**",
+]
+
+# Lionhead matches each target_symbols entry as a regex against the function's
+# raw DWARF linkage name and demangles only C++ (`_Z`) names, so Rust names
+# reach it v0-mangled (T291781185). Each function gets two entries, the
+# demangled path and the v0 tokens, with `.?` standing in for the `>` of the
+# `<Type>::method` form. The manifest genrule passes these on a command line
+# that cmd.exe splits on unquoted `|` and `>`, so neither may appear.
+# Non-generic functions are anchored with `$`; a generic instantiation appends
+# its type arguments after the name, so those entries are left unanchored.
+
+REVISIONSTORE_FUZZ_DEPS = [
+    "fbsource//third-party/rust:tempfile",
+    "//eden/scm/lib/fuzzutil:fuzzutil",
+    "//eden/scm/lib/indexedlog:indexedlog",
+    "//eden/scm/lib/minibytes:minibytes",
+    "//eden/scm/lib/revisionstore:revisionstore",
+    "//eden/scm/lib/storemodel:storemodel",
+    "//eden/scm/lib/types:types",
+]
+
+# Smoke test these with: buck2 test :entry_decode-smoke-test
+rust_lionhead_harness(
+    name = "entry_decode",
+    srcs = [
+        "fuzz_targets/corrupt.rs",
+        "fuzz_targets/entry_decode.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = REVISIONSTORE_PATH_GLOBS,
+            target_symbols = [
+                "revisionstore::indexedlogdatastore::Entry.?::from_bytes$",
+                "19indexedlogdatastore.*5Entry10from_bytes$",
+                "revisionstore::indexedlogdatastore::Entry.?::from_log$",
+                "19indexedlogdatastore.*5Entry8from_log$",
+                "revisionstore::indexedlogdatastore::Entry.?::calculate_content$",
+                "19indexedlogdatastore.*5Entry17calculate_content$",
+                "revisionstore_types::datastore::InternalMetadata.?::read$",
+                "9datastore.*16InternalMetadata4read$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/entry_decode.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = REVISIONSTORE_FUZZ_DEPS,
+)
+
+rust_lionhead_harness(
+    name = "store_open_get",
+    srcs = [
+        "fuzz_targets/corrupt.rs",
+        "fuzz_targets/store_open_get.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = REVISIONSTORE_PATH_GLOBS,
+            target_symbols = [
+                "revisionstore::indexedlogdatastore::IndexedLogHgIdDataStore.?::get_raw_entry$",
+                "19indexedlogdatastore.*23IndexedLogHgIdDataStore13get_raw_entry$",
+                "revisionstore::indexedlogdatastore::Entry.?::from_log$",
+                "19indexedlogdatastore.*5Entry8from_log$",
+                "revisionstore::indexedlogdatastore::Entry.?::from_bytes$",
+                "19indexedlogdatastore.*5Entry10from_bytes$",
+                "revisionstore::indexedlogutil::Store.?::read$",
+                "14indexedlogutil.*5Store4read$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/store_open_get.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = REVISIONSTORE_FUZZ_DEPS,
+)

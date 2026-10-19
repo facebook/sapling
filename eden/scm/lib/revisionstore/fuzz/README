@@ -1,0 +1,51 @@
+Fuzz targets for the IndexedLogHgIdDataStore read path.
+
+The stores under eden/scm/lib/indexedlog/fuzz cover the container format. These
+cover the revisionstore layer above it: the entry decoder, the metadata-list
+walk and lz4 decompression, reached through the store wrapper.
+
+  entry_decode      Entry::from_bytes, InternalMetadata::read and
+                    Entry::calculate_content, reached via get_raw_entry and
+                    to_keys
+  store_open_get    IndexedLogHgIdDataStore::new on a corrupted rotated store,
+                    then get/get_missing/to_keys - the Log::lookup frame the
+                    EdenFS crash reports name
+
+indexedlog checksums every entry it stores, so an entry patched on disk is
+rejected below revisionstore and the decoder never runs. entry_decode therefore
+patches a valid serialized entry and appends it through the store's write path,
+which recomputes the checksum over the patched bytes. store_open_get patches
+the container files instead. Both encode the input as a sequence of 8-byte
+patch records; see eden/scm/lib/fuzzutil/src/corrupt.rs.
+
+Panics, aborts and sanitizer reports are findings. Errors returned for corrupt
+data are the expected behavior and are ignored by the harnesses.
+
+Run with buck2. Every length and offset these decoders read is a VLQ, so pass
+the shared boundary dictionary:
+
+    buck2 run @fbcode//mode/opt-asan -c rust.fuzzing=true \
+        fbcode//eden/scm/lib/revisionstore/fuzz:entry_decode -- \
+        -dict=fbcode/eden/scm/lib/fuzzutil/vlq.dict -runs=100000 /path/to/corpus
+
+store_open_get calls `fuzzutil::configure_indexedlog_for_fuzzing` before
+writing its seed, which makes indexedlog use a fixed epoch and skip the
+index-lag timestamp, so the snapshot is byte-identical across processes and
+offset-based patches replay deterministically.
+
+mode/opt-asan matters: tools/build_defs/lib/rust/rust_common.bzl gives DEFAULT
+and asan-ubsan-dev builds an empty sancov flag list, so those binaries build and
+run but collect no coverage. Confirm instrumentation before trusting a run:
+
+    readelf -S <binary> | grep -E "__sancov_cntrs|__sancov_pcs"
+
+Steps to run the fuzz tests with the OSS toolchain:
+
+1. Install rustup.
+2. `rustup install nightly` to install the nightly toolchain.
+3. From `eden/scm`, run `rustup override set nightly && make local` to use the
+   nightly toolchain.
+4. From `revisionstore` (parent directory of `fuzz`), run
+   `cargo fuzz run $TEST_NAME`.
+
+See also https://rust-fuzz.github.io/book/cargo-fuzz.html.
