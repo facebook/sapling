@@ -43,6 +43,8 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_p4_mapping::BonsaiP4Mapping;
+use bonsai_p4_mapping::BonsaiP4MappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bonsai_tag_mapping::BonsaiTagMapping;
@@ -123,6 +125,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::ContentId;
 use mononoke_types::ContentManifestId;
+use mononoke_types::P4ChangelistId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
@@ -249,6 +252,9 @@ pub struct Repo {
 
     #[facet]
     pub bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    pub bonsai_p4_mapping: dyn BonsaiP4Mapping,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,
@@ -1249,6 +1255,24 @@ impl<R: BonsaiSvnrevMappingRef> RepoContext<R> {
     }
 }
 
+impl<R: BonsaiP4MappingRef> RepoContext<R> {
+    /// Similar to many_changeset_hg_ids, but returning Perforce changelist ids.
+    pub async fn many_changeset_p4_changelist_ids(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, P4ChangelistId)>, MononokeError> {
+        let mapping = self
+            .repo()
+            .bonsai_p4_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.p4_changelist_id))
+            .collect();
+        Ok(mapping)
+    }
+}
+
 impl<R: RepoConfigRef> RepoContext<R> {
     /// Start a write to the repo.
     pub fn start_write(&self) -> Result<(), MononokeError> {
@@ -1381,6 +1405,7 @@ where
         + BonsaiGitMappingRef
         + BonsaiGlobalrevMappingRef
         + BonsaiSvnrevMappingRef
+        + BonsaiP4MappingRef
         + Clone
         + Send
         + Sync
@@ -1463,6 +1488,12 @@ where
                 self.repo()
                     .bonsai_svnrev_mapping()
                     .get_bonsai_from_svnrev(&self.ctx, rev)
+                    .await?
+            }
+            ChangesetSpecifier::P4Changelist(cl) => {
+                self.repo()
+                    .bonsai_p4_mapping()
+                    .get_bonsai_from_p4_changelist_id(&self.ctx, cl)
                     .await?
             }
             ChangesetSpecifier::GitSha1(git_sha1) => {

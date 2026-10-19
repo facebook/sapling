@@ -29,6 +29,7 @@ pub type GitSha1 = mononoke_types::hash::GitSha1;
 
 /// A SVN revision number.
 pub type Svnrev = mononoke_types::Svnrev;
+pub type P4ChangelistId = mononoke_types::P4ChangelistId;
 
 /// A changeset specifier.  This is anything that may be used to specify a
 /// unique changeset, such as its bonsai changeset ID, a changeset hash in an
@@ -42,6 +43,7 @@ pub enum ChangesetSpecifier {
     Globalrev(Globalrev),
     GitSha1(GitSha1),
     Svnrev(Svnrev),
+    P4Changelist(P4ChangelistId),
 }
 
 impl From<ChangesetId> for ChangesetSpecifier {
@@ -74,6 +76,12 @@ impl From<Svnrev> for ChangesetSpecifier {
     }
 }
 
+impl From<P4ChangelistId> for ChangesetSpecifier {
+    fn from(id: P4ChangelistId) -> Self {
+        Self::P4Changelist(id)
+    }
+}
+
 impl From<GitSha1> for ChangesetSpecifier {
     fn from(id: GitSha1) -> Self {
         Self::GitSha1(id)
@@ -96,7 +104,7 @@ impl ChangesetSpecifier {
         use ChangesetSpecifier::*;
         match self {
             EphemeralBonsai(_, _) => true,
-            Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) => false,
+            Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) | P4Changelist(_) => false,
         }
     }
 
@@ -114,7 +122,7 @@ impl ChangesetSpecifier {
                     .await?
                     .with_context(|| format!("changeset {cs_id} does not belong to bubble"))?,
             }),
-            Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) => None,
+            Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) | P4Changelist(_) => None,
         })
     }
 }
@@ -247,6 +255,7 @@ impl fmt::Display for ChangesetSpecifier {
             ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),
             ChangesetSpecifier::GitSha1(git_sha1) => write!(f, "git sha1 {git_sha1}"),
             ChangesetSpecifier::Svnrev(rev) => write!(f, "svn rev {}", rev.id()),
+            ChangesetSpecifier::P4Changelist(cl) => write!(f, "p4 changelist {}", cl.id()),
         }
     }
 }

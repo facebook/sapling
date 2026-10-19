@@ -34,6 +34,7 @@ pub(crate) enum Scheme {
     Git,
     Globalrev,
     Svnrev,
+    P4Changelist,
 }
 
 impl Scheme {
@@ -44,6 +45,7 @@ impl Scheme {
             Self::Git => thrift::CommitIdentityScheme::GIT,
             Self::Globalrev => thrift::CommitIdentityScheme::GLOBALREV,
             Self::Svnrev => thrift::CommitIdentityScheme::SVNREV,
+            Self::P4Changelist => thrift::CommitIdentityScheme::P4_CHANGELIST,
         }
     }
 }
@@ -262,6 +264,37 @@ async fn try_resolve_svnrev(
     }
 }
 
+/// Try to resolve a Perforce changelist number to a commit ID.
+async fn try_resolve_p4_changelist(
+    conn: &ScsClient,
+    repo: &thrift::RepoSpecifier,
+    changelist: impl AsRef<str>,
+) -> Result<Option<thrift::CommitId>, Error> {
+    match changelist.as_ref().parse::<i64>() {
+        Ok(changelist) => {
+            let params = thrift::CommitLookupParams {
+                identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
+                    .into_iter()
+                    .collect(),
+                ..Default::default()
+            };
+            let commit = thrift::CommitSpecifier {
+                repo: repo.clone(),
+                id: thrift::CommitId::p4_changelist(changelist),
+                ..Default::default()
+            };
+            let response = conn
+                .commit_lookup(&commit, &params)
+                .await
+                .map_err(|e| e.handle_selection_error(repo))?;
+            Ok(response
+                .ids
+                .and_then(|ids| ids.get(&thrift::CommitIdentityScheme::BONSAI).cloned()))
+        }
+        Err(_) => Ok(None),
+    }
+}
+
 /// Resolve commit IDs into a thrift commit identifier.
 ///
 /// Simple commit ID types (hashes of a known type) are converted to the right
@@ -301,6 +334,7 @@ pub(crate) async fn resolve_commit_ids(
                             try_resolve_git_sha1(conn, repo, commit_id).boxed(),
                             try_resolve_globalrev(conn, repo, commit_id).boxed(),
                             try_resolve_svnrev(conn, repo, commit_id).boxed(),
+                            try_resolve_p4_changelist(conn, repo, commit_id).boxed(),
                         ];
                         let candidates: Vec<_> = try_join_all(resolvers)
                             .await?
@@ -372,6 +406,9 @@ pub(crate) fn map_commit_id(id: &thrift::CommitId) -> Option<(String, String)> {
         thrift::CommitId::git(hash) => Some((String::from("git"), hex_string(hash))),
         thrift::CommitId::globalrev(rev) => Some((String::from("globalrev"), rev.to_string())),
         thrift::CommitId::svnrev(rev) => Some((String::from("svnrev"), rev.to_string())),
+        thrift::CommitId::p4_changelist(cl) => {
+            Some((String::from("p4_changelist"), cl.to_string()))
+        }
         _ => None,
     }
 }

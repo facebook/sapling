@@ -499,12 +499,16 @@ fn names_of(entries: &[(&str, CommitIdentityScheme)]) -> HashMap<String, CommitI
         .collect()
 }
 
-// The layout convention is the only source of the scheme: git/ and hg/ trees
-// map to their schemes, anything else is UNKNOWN rather than a guess.
+// The layout convention is the only source of the scheme: git/, hg/ and p4/
+// trees map to their schemes, anything else is UNKNOWN rather than a guess.
 #[mononoke::test]
 fn test_scheme_from_config_path_follows_the_tree_layout() {
     assert_eq!(scheme_from_config_path(&git_path("org/repo")), GIT);
     assert_eq!(scheme_from_config_path(&hg_path("fbsource")), HG);
+    assert_eq!(
+        scheme_from_config_path("scm/mononoke/repos/p4/d7/test_p4-repo"),
+        CommitIdentityScheme::P4
+    );
     assert_eq!(
         scheme_from_config_path("scm/mononoke/repos/common/x"),
         UNKNOWN

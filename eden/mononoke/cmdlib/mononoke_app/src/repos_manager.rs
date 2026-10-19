@@ -998,17 +998,21 @@ const TIER_NAMES_FROM_MANIFEST_KNOB: &str = "scm/mononoke:tier_repo_names_from_m
 
 const GIT_SPEC_PATH_SEGMENT: &str = "/repos/git/";
 const HG_SPEC_PATH_SEGMENT: &str = "/repos/hg/";
+const P4_SPEC_PATH_SEGMENT: &str = "/repos/p4/";
 
 /// The identity scheme of a manifest entry, from where its spec lives.
-/// Configerator keeps Git repo specs under `repos/git/` and Mercurial repo
-/// specs under `repos/hg/`, with no exceptions in the tree (10,051 and 52
-/// entries in the SCS manifest on 2026-10-05). Anything else is `UNKNOWN`: it
-/// is still listed, but never matches a scheme filter.
+/// Configerator keeps Git repo specs under `repos/git/`, Mercurial repo
+/// specs under `repos/hg/` and Perforce mirror specs under `repos/p4/`, with
+/// no exceptions in the tree (10,051 and 52 entries in the SCS manifest on
+/// 2026-10-05). Anything else is `UNKNOWN`: it is still listed, but never
+/// matches a scheme filter.
 fn scheme_from_config_path(config_path: &str) -> CommitIdentityScheme {
     if config_path.contains(GIT_SPEC_PATH_SEGMENT) {
         CommitIdentityScheme::GIT
     } else if config_path.contains(HG_SPEC_PATH_SEGMENT) {
         CommitIdentityScheme::HG
+    } else if config_path.contains(P4_SPEC_PATH_SEGMENT) {
+        CommitIdentityScheme::P4
     } else {
         CommitIdentityScheme::UNKNOWN
     }

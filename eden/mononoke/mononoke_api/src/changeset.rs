@@ -22,6 +22,7 @@ use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_p4_mapping::BonsaiP4MappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
@@ -75,6 +76,7 @@ use mononoke_types::ContentManifestId;
 use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
 use mononoke_types::NonRootMPath;
+use mononoke_types::P4ChangelistId;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::SubtreeChange;
 use mononoke_types::Svnrev;
@@ -471,6 +473,19 @@ impl<R: BonsaiSvnrevMappingRef> ChangesetContext<R> {
             .repo()
             .bonsai_svnrev_mapping()
             .get_svnrev_from_bonsai(self.ctx(), self.id)
+            .await?;
+        Ok(mapping)
+    }
+}
+
+impl<R: BonsaiP4MappingRef> ChangesetContext<R> {
+    /// The Perforce changelist this changeset was imported from, for mirror repos.
+    pub async fn p4_changelist_id(&self) -> Result<Option<P4ChangelistId>, MononokeError> {
+        let mapping = self
+            .repo_ctx()
+            .repo()
+            .bonsai_p4_mapping()
+            .get_p4_changelist_id_from_bonsai(self.ctx(), self.id)
             .await?;
         Ok(mapping)
     }
@@ -1377,6 +1392,7 @@ where
         + BonsaiGitMappingRef
         + BonsaiGlobalrevMappingRef
         + BonsaiSvnrevMappingRef
+        + BonsaiP4MappingRef
         + MutableRenamesArc
         + Clone
         + Send

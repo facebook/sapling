@@ -40,6 +40,7 @@ use mononoke_api::HgChangesetIdPrefix;
 use mononoke_api::specifiers::GitSha1;
 use mononoke_api::specifiers::GitSha1Prefix;
 use mononoke_api::specifiers::Globalrev;
+use mononoke_api::specifiers::P4ChangelistId;
 use mononoke_api::specifiers::Svnrev;
 use mononoke_types::ContentManifestId;
 use mononoke_types::hash::Sha1;
@@ -160,6 +161,12 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     scs_errors::invalid_request(format!("cannot parse svn revision {rev} to u64"))
                 })?);
                 Ok(ChangesetSpecifier::Svnrev(rev))
+            }
+            thrift::CommitId::p4_changelist(cl) => {
+                let cl = P4ChangelistId::new((*cl).try_into().map_err(|_| {
+                    scs_errors::invalid_request(format!("cannot parse p4 changelist {cl} to u64"))
+                })?);
+                Ok(ChangesetSpecifier::P4Changelist(cl))
             }
             thrift::CommitId::ephemeral_bonsai(ephemeral) => {
                 let cs_id = ChangesetId::from_bytes(&ephemeral.bonsai_id).map_err(|e| {

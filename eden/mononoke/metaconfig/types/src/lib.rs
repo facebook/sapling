@@ -384,6 +384,9 @@ pub enum CommitIdentityScheme {
     GIT,
     /// Hashes are Bonsai hashes.
     BONSAI,
+    /// Commits are identified by the Perforce changelist they were imported
+    /// from (Perforce mirror repos).
+    P4,
     /// Hashes are of unknown scheme.
     UNKNOWN,
 }

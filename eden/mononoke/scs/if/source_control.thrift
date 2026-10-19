@@ -67,6 +67,10 @@ enum CommitIdentityScheme {
 
   /// 32-byte hash of Mononoke's bonsai changeset, plus a 64-bit bubble
   EPHEMERAL_BONSAI = 6,
+
+  /// Commits identified by the Perforce changelist number they were imported
+  /// from (Perforce mirror repos only).
+  P4_CHANGELIST = 7,
 }
 
 /// A commit stored in an ephemeral bubble
@@ -106,6 +110,9 @@ union CommitId {
 
   /// Bonsai commit stored in an ephemeral bubble
   6: EphemeralBonsai ephemeral_bonsai;
+
+  /// Commit identified by the Perforce changelist number it was imported from.
+  7: i64 p4_changelist;
 }
 
 /// Specified a commit within a repo.

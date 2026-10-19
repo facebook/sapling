@@ -20,6 +20,7 @@ impl fmt::Display for CommitId {
             CommitId::git(git) => write!(f, "{}", hex_string(git)),
             CommitId::globalrev(rev) => write!(f, "{}", rev),
             CommitId::svnrev(rev) => write!(f, "{}", rev),
+            CommitId::p4_changelist(cl) => write!(f, "{}", cl),
             CommitId::ephemeral_bonsai(ephemeral) => {
                 write!(
                     f,

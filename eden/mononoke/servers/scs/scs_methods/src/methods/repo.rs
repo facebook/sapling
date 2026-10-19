@@ -80,6 +80,7 @@ impl SourceControlServiceImpl {
             CommitIdentityScheme::HG => thrift::CommitIdentityScheme::HG,
             CommitIdentityScheme::GIT => thrift::CommitIdentityScheme::GIT,
             CommitIdentityScheme::BONSAI => thrift::CommitIdentityScheme::BONSAI,
+            CommitIdentityScheme::P4 => thrift::CommitIdentityScheme::P4_CHANGELIST,
             CommitIdentityScheme::UNKNOWN => thrift::CommitIdentityScheme::UNKNOWN,
         };
         // Repo might not be found due to deep sharding. However all push_redirected repos are shallow sharded, so this should be safe because

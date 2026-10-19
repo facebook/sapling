@@ -101,6 +101,20 @@ pub async fn map_commit_identity<R: crate::Repo>(
         };
         scheme_identities.push(identity.boxed());
     }
+    if schemes.contains(&source_control_thrift::CommitIdentityScheme::P4_CHANGELIST) {
+        let identity = async {
+            if let Some(cl) = changeset_ctx.p4_changelist_id().await? {
+                let result: Result<Option<_>, MononokeError> = Ok(Some((
+                    source_control_thrift::CommitIdentityScheme::P4_CHANGELIST,
+                    source_control_thrift::CommitId::p4_changelist(cl.id() as i64),
+                )));
+                result
+            } else {
+                Ok(None)
+            }
+        };
+        scheme_identities.push(identity.boxed());
+    }
     if schemes.contains(&source_control_thrift::CommitIdentityScheme::GIT) {
         let identity = async {
             if let Some(git_sha1) = changeset_ctx.git_sha1().await? {

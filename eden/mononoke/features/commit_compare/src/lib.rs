@@ -16,6 +16,7 @@ use acl_regions::AclRegionsRef;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_p4_mapping::BonsaiP4MappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
@@ -53,6 +54,7 @@ pub trait Repo = RepoPermissionCheckerRef
     + BonsaiGitMappingRef
     + BonsaiGlobalrevMappingRef
     + BonsaiSvnrevMappingRef
+    + BonsaiP4MappingRef
     + MutableRenamesArc
     + Clone
     + Send

@@ -34,7 +34,7 @@ const P4_CHANGELIST_EXTRA: &str = "convert_revision";
 ///
 /// Numbering starts at 1; there is no changelist 0. The sequence is sparse:
 /// abandoned pending changelists and obliterated changelists both leave holes.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(mysql::OptTryFromRowField)]
 #[derive(bincode::Encode, bincode::Decode)]
 pub struct P4ChangelistId(u64);
