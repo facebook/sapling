@@ -277,6 +277,30 @@ mod tests {
     const SECOND_COMMIT_ID: &str = "999988887777666655554444333322221100000";
 
     #[tokio::test]
+    pub async fn test_get_status_when_sl_exits_non_zero() -> Result<()> {
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            None,
+            Some((255, Some(Vec::new()))),
+        );
+        let params = GetStatusParams {
+            first: "aaaa111122223333444455556666777788889999".to_string(),
+            second: Some("aaaa999988887777666655554444333322221111".to_string()),
+            limit_results: 1000,
+            case_insensitive_suffix_compares: false,
+            repository_root: None,
+            root: None,
+            included_roots: None,
+            included_suffixes: None,
+            excluded_roots: None,
+            excluded_suffixes: None,
+        };
+        let result = get_status_impl(&spawner, params).await?;
+        assert_eq!(result, SaplingGetStatusResult::Normal(vec![]));
+        Ok(())
+    }
+
+    #[tokio::test]
     pub async fn test_get_status_basic() -> Result<()> {
         let output = r"M fbcode/buck2/app/buck2_audit/src/lib.rs
 M fbcode/buck2/app/buck2_audit_server/src/lib.rs

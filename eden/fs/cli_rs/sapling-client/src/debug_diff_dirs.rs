@@ -194,6 +194,26 @@ mod tests {
     const SECOND_COMMIT_ID: &str = "999988887777666655554444333322221100000";
 
     #[tokio::test]
+    pub async fn test_get_diff_dirs_when_sl_exits_non_zero() -> Result<()> {
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            None,
+            Some((255, Some(Vec::new()))),
+        );
+        let params = GetDiffDirsParams {
+            first: "bbbb111122223333444455556666777788889999".to_string(),
+            second: Some("bbbb999988887777666655554444333322221111".to_string()),
+            limit_results: 1000,
+            root: None,
+            included_roots: None,
+            excluded_roots: None,
+        };
+        let result = get_diff_dirs_impl(&spawner, params).await?;
+        assert_eq!(result, SaplingGetDiffDirsResult::Normal(vec![]));
+        Ok(())
+    }
+
+    #[tokio::test]
     pub async fn test_get_diff_dirs_basic() -> Result<()> {
         let output = r"M fbcode/buck2/app/buck2_audit/src
 M fbcode/buck2/app/buck2_audit_server/src
