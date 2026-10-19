@@ -2490,8 +2490,10 @@ pub enum MetadataCacheUpdateMode {
 /// Configuration for Mononoke metadata cache
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct MetadataCacheConfig {
-    /// Mode for updating the warm bookmark metadata cache
+    /// Mode for updating the warm bookmark metadata cache from legacy notifications
     pub wbc_update_mode: Option<MetadataCacheUpdateMode>,
+    /// Mode for updating the warm bookmark metadata cache from EventRouter notifications
+    pub wbc_event_router_update_mode: Option<MetadataCacheUpdateMode>,
     /// Mode for updating the tags metadata cache
     pub tags_update_mode: Option<MetadataCacheUpdateMode>,
     /// Mode for updating the content refs metadata cache
@@ -2502,6 +2504,14 @@ impl MetadataCacheConfig {
     /// Returns the scribe category to tail for warm bookmark cache updates if it exists
     pub fn wbc_scribe_category(&self) -> Option<String> {
         match &self.wbc_update_mode {
+            Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
+            _ => None,
+        }
+    }
+
+    /// Returns the EventRouter scribe category to tail for warm bookmark cache updates
+    pub fn wbc_event_router_scribe_category(&self) -> Option<String> {
+        match &self.wbc_event_router_update_mode {
             Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
             _ => None,
         }

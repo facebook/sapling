@@ -1351,6 +1351,10 @@ impl Convert for RawMetadataCacheConfig {
                 .wbc_update_mode
                 .map(|mode| mode.convert())
                 .transpose()?,
+            wbc_event_router_update_mode: self
+                .wbc_event_router_update_mode
+                .map(|mode| mode.convert())
+                .transpose()?,
             tags_update_mode: self
                 .tags_update_mode
                 .map(|mode| mode.convert())

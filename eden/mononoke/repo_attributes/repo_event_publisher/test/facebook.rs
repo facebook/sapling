@@ -8,10 +8,14 @@ use fbinit::FacebookInit;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::CommonConfig;
+use metaconfig_types::MetadataCacheConfig;
+use metaconfig_types::MetadataCacheUpdateMode;
 use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
 use repo_event_publisher::AllBookmarksFilter;
+use repo_event_publisher::RepoEventPublisher;
 use repo_event_publisher::ScribeListener;
+use repo_event_publisher::ScribeRepoEventPublisher;
 use repo_update_logger::PlainBookmarkInfo;
 use scribe_api::ReadFlavor;
 use scribe_api::consumer::ScribeConsumerOptions;
@@ -27,6 +31,30 @@ fn mononoke_configs() -> Arc<MononokeConfigs> {
             storage: HashMap::new(),
         },
     ))
+}
+
+#[mononoke::fbinit_test]
+async fn subscribes_to_eventrouter_bookmark_notifications(fb: FacebookInit) -> anyhow::Result<()> {
+    unsafe {
+        std::env::set_var("MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY", "log");
+    }
+    let metadata_cache_config = MetadataCacheConfig {
+        wbc_event_router_update_mode: Some(MetadataCacheUpdateMode::Tailing {
+            category: "event_router_bookmark_events".to_owned(),
+        }),
+        ..Default::default()
+    };
+    let publisher =
+        ScribeRepoEventPublisher::new(fb, mononoke_configs(), Some(&metadata_cache_config))?;
+
+    publisher.subscribe_for_bookmark_event_notifications(&"test_repo".to_owned())?;
+    assert!(
+        publisher
+            .subscribe_for_bookmark_updates(&"test_repo".to_owned())
+            .is_err(),
+        "EventRouter configuration should not enable legacy bookmark notifications"
+    );
+    Ok(())
 }
 
 #[mononoke::fbinit_test]
