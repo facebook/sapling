@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/servers/slapi/.*\.rs$'
-apply_to_content: 'API_METHOD|SaplingRemoteApiMethod'
+name: copy-paste-api-method
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/servers/slapi/.*\.rs$'
+  apply_to_content: 'API_METHOD|SaplingRemoteApiMethod'
 ---
 
 # Copy-Pasted API_METHOD in New Handlers
