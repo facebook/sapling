@@ -106,15 +106,35 @@ impl Drop for StreamEncoder {
     }
 }
 
+// Upper bound on how many bytes one compressed byte can expand to. An LZ4
+// sequence costs at least 3 bytes (token + offset) plus k match-length
+// extension bytes and produces at most 19 + 255 * k bytes, so the ratio
+// stays below 255 (liblz4 doc/lz4_Block_format.md: "maximum achievable
+// compression ratio of about ~250").
+const MAX_COMPRESSION_RATIO: usize = 255;
+
 /// Read decompressed size from a u32 header.
+///
+/// Returns an error if the header declares more bytes than the compressed
+/// payload could possibly expand to, so callers can allocate the returned
+/// size without a corrupt header driving a multi-gigabyte allocation.
 pub fn decompress_size(data: &[u8]) -> Result<usize> {
     if data.is_empty() {
-        Ok(0)
-    } else {
-        let mut cur = Cursor::new(data);
-        let max_decompressed_size = cur.read_u32::<LittleEndian>()? as usize;
-        Ok(max_decompressed_size)
+        return Ok(0);
     }
+    let mut cur = Cursor::new(data);
+    let max_decompressed_size = cur.read_u32::<LittleEndian>()? as usize;
+    let compressed_len = data.len() - HEADER_LEN;
+    let max_plausible = compressed_len.saturating_mul(MAX_COMPRESSION_RATIO);
+    if max_decompressed_size > max_plausible {
+        return Err(LZ4Error::Generic {
+            message: format!(
+                "lz4 header declares {max_decompressed_size} decompressed bytes but \
+                 {compressed_len} compressed bytes can expand to at most {max_plausible}"
+            ),
+        });
+    }
+    Ok(max_decompressed_size)
 }
 
 struct StreamEncoderHC(pub *mut LZ4_streamHC_t);
@@ -299,6 +319,49 @@ mod tests {
         // But decompress to their original form.
         let decompressed = decompress(&compressed).unwrap();
         assert_eq!(data, &*decompressed);
+    }
+
+    // Minimized input from fuzzing (T289915770, P2519339485): the header
+    // declares 0x98989808 bytes but only 4 compressed bytes follow.
+    #[test]
+    fn test_implausible_header_size_rejected() {
+        let data = [0x08, 0x98, 0x98, 0x98, 0x98, 0x98, 0xff, 0x98];
+        assert!(matches!(
+            decompress_size(&data),
+            Err(LZ4Error::Generic { .. })
+        ));
+        assert!(matches!(decompress(&data), Err(LZ4Error::Generic { .. })));
+    }
+
+    #[test]
+    fn test_header_size_at_bound_reaches_decoder() {
+        // 4 payload bytes may declare up to 4 * 255 bytes.
+        let mut data = (4 * 255u32).to_le_bytes().to_vec();
+        data.extend_from_slice(&[0xff; 4]);
+        assert_eq!(decompress_size(&data).unwrap(), 4 * 255);
+        // The payload is garbage, so the decoder itself rejects it.
+        let err = decompress(&data).unwrap_err().to_string();
+        assert!(err.contains("lz4 failed with error"), "{err}");
+
+        data[..4].copy_from_slice(&(4 * 255u32 + 1).to_le_bytes());
+        let err = decompress_size(&data).unwrap_err().to_string();
+        assert!(err.contains("can expand to at most 1020"), "{err}");
+    }
+
+    #[test]
+    fn test_roundtrip_highly_compressible() {
+        // A long run of one byte is the worst case for the ratio limit in
+        // `decompress_size`, so this is where a too-tight limit would show up.
+        let data = vec![0u8; 1 << 20];
+        let (compressed, roundtrips) = check_roundtrip(&data);
+        assert!(roundtrips);
+
+        let compressed_len = compressed.len() - HEADER_LEN;
+        assert!(
+            data.len() <= compressed_len * MAX_COMPRESSION_RATIO,
+            "{} bytes compressed to {compressed_len}, a ratio the limit would reject",
+            data.len()
+        );
     }
 
     quickcheck! {
