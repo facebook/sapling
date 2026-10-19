@@ -124,6 +124,14 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
         // Windows also needs room for argument home space and larger
         // unoptimized stack frames.
         const STACK_SIZE_THRESHOLD: usize = if cfg!(windows) { 128 } else { 64 };
+        // On Windows x64 the 32 bytes above the wrapper's SP are the home space
+        // of the function it calls. `_PyEval_EvalFrameDefault` can spill the
+        // code object there, so a match in that range is not a wrapper slot.
+        const STACK_SCAN_START: usize = if cfg!(all(windows, target_arch = "x86_64")) {
+            32
+        } else {
+            0
+        };
 
         // On macOS, backtrace may resolve names either from DWARF frames (often
         // "Sapling_PyEvalFrame") or from Mach-O symtab fallback (raw nlist name
@@ -134,7 +142,9 @@ fn examine_backtrace(_py: Python) -> PyResult<Option<bool>> {
             let last_frame = evalframe_sys::get_last_frame();
             let start = evalframe_sys::sapling_py_eval_frame_addr();
 
-            for sp_offset in (0..=STACK_SIZE_THRESHOLD).step_by(std::mem::size_of::<usize>()) {
+            for sp_offset in
+                (STACK_SCAN_START..=STACK_SIZE_THRESHOLD).step_by(std::mem::size_of::<usize>())
+            {
                 let stack_ptr = (sp + sp_offset) as *const libc::c_void;
                 // SAFETY: `sp` comes from the unwound Sapling_PyEvalFrame frame,
                 // so it is readable and aligned to at least `align_of::<usize>()`
