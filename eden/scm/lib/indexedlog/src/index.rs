@@ -1529,6 +1529,7 @@ impl MemChecksum {
         let _entered = span.enter();
         let mut result = Self::default();
         let mut size: usize = 0;
+        let buf_len = index.buf().len();
 
         let mut offset = start_offset as usize;
         while offset > 0 {
@@ -1543,6 +1544,16 @@ impl MemChecksum {
                 .context(index.path(), "cannot read previous_checksum_offset")
                 .corruption()?;
             cur += vlq_len;
+
+            // Entries are append-only, so a Checksum entry always refers to an
+            // entry written before it. Without this check a self- or
+            // forward-referencing offset turns the chain into an endless loop.
+            if previous_offset >= offset as u64 {
+                return Err(crate::Error::corruption(
+                    index.path(),
+                    format!("invalid previous_checksum_offset {previous_offset} at {offset}"),
+                ));
+            }
 
             let (chunk_size_logarithm, vlq_len): (u32, _) = index
                 .buf()
@@ -1559,7 +1570,21 @@ impl MemChecksum {
             cur += vlq_len;
 
             let chunk_size = 1usize << chunk_size_logarithm;
-            let chunk_needed = (offset + chunk_size - 1) >> chunk_size_logarithm;
+            let chunk_needed = offset.div_ceil(chunk_size);
+
+            // Chunk hashes take 8 bytes each and the whole chain covering
+            // `chunk_needed` chunks is stored inside `buf`, so `chunk_needed`
+            // cannot exceed `buf_len / 8`. Without this check a small
+            // `chunk_size_logarithm` (0 means one hash per byte) makes the
+            // `resize` below request memory proportional to the index size.
+            if chunk_needed > buf_len / 8 {
+                return Err(crate::Error::corruption(
+                    index.path(),
+                    format!(
+                        "checksum at {offset} needs {chunk_needed} chunks, too many for index length {buf_len}"
+                    ),
+                ));
+            }
 
             let is_initial_checksum = start_offset == offset as u64;
 
@@ -1573,6 +1598,17 @@ impl MemChecksum {
 
                 let checked_needed = result.xxhash_list.len().div_ceil(64);
                 result.checked.resize_with(checked_needed, Default::default);
+            } else if chunk_needed > result.xxhash_list.len() {
+                // Entries in a chain share `chunk_size_logarithm` and have
+                // decreasing offsets, so a later entry cannot cover more chunks
+                // than the initial one, which sized `xxhash_list`.
+                return Err(crate::Error::corruption(
+                    index.path(),
+                    format!(
+                        "checksum at {offset} covers {chunk_needed} chunks, more than {} of the initial checksum",
+                        result.xxhash_list.len()
+                    ),
+                ));
             }
             result.chain_len = result.chain_len.saturating_add(1);
 
@@ -1586,6 +1622,16 @@ impl MemChecksum {
 
             // Read the new checksums.
             let start_chunk_index = (previous_offset >> chunk_size_logarithm) as usize;
+
+            // The hashes and the trailing xx32 belong to this entry, so they
+            // are inside `buf`. This has to be checked upfront: the xx32 check
+            // below only runs once everything has been read.
+            let hash_count = chunk_needed.saturating_sub(start_chunk_index);
+            let entry_end = cur + hash_count * 8 + size_of::<u32>();
+            if entry_end > buf_len {
+                return Err(index.range_error(cur, entry_end - cur));
+            }
+
             for i in start_chunk_index..chunk_needed {
                 let incomplete_chunk = !offset.is_multiple_of(chunk_size) && i == chunk_needed - 1;
 
@@ -3877,6 +3923,9 @@ mod tests {
     use std::collections::BTreeSet;
     use std::collections::HashMap;
     use std::fs::File;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
 
     use quickcheck::quickcheck;
     use tempfile::tempdir;
@@ -4927,6 +4976,104 @@ Disk[410]: Root { radix: Disk[402] }
                 Disk[1296]: Checksum { start: 0, end: 1296, chunk_size_logarithm: 7, checksums.len(): 11 }
                 Disk[1455]: Checksum { start: 0, end: 1455, chunk_size_logarithm: 7, checksums.len(): 12 }
                 Disk[1725]: Checksum { start: 0, end: 1725, chunk_size_logarithm: 7, checksums.len(): 14 }"#
+        );
+    }
+
+    /// Serialize a Checksum entry the way `MemChecksum::write_to` does, with
+    /// `hash_count` zeroed chunk hashes and a matching xx32.
+    fn checksum_entry(
+        previous_offset: u64,
+        chunk_size_logarithm: u32,
+        hash_count: usize,
+    ) -> Vec<u8> {
+        let mut buf = vec![TYPE_CHECKSUM];
+        buf.write_vlq(previous_offset).unwrap();
+        buf.write_vlq(chunk_size_logarithm).unwrap();
+        for _ in 0..hash_count {
+            buf.write_u64::<LittleEndian>(0).unwrap();
+        }
+        let xx32 = xxhash32(&buf);
+        buf.write_u32::<LittleEndian>(xx32).unwrap();
+        buf
+    }
+
+    /// A `len`-byte index buffer with the given entries placed at the given
+    /// offsets. Everything else is zeroed.
+    fn index_buf(len: usize, entries: &[(usize, Vec<u8>)]) -> Vec<u8> {
+        let mut buf = vec![0u8; len];
+        for (offset, entry) in entries {
+            buf[*offset..*offset + entry.len()].copy_from_slice(entry);
+        }
+        buf
+    }
+
+    fn read_checksum(buf: &[u8], offset: u64) -> crate::Result<MemChecksum> {
+        let index = SimpleIndexBuf(buf, Path::new("<test>"));
+        MemChecksum::read_from(&index, offset).map(|(checksum, _size)| checksum)
+    }
+
+    #[test]
+    fn test_checksum_read_rejects_oversized_chunk_count() {
+        // chunk_size_logarithm 0 means one 8-byte hash per byte of index, so
+        // the chunk count cannot be backed by a buffer this small.
+        let buf = index_buf(4096, &[(4000, checksum_entry(0, 0, 0))]);
+        let err = read_checksum(&buf, 4000).unwrap_err();
+        assert!(
+            err.to_string().contains("needs 4000 chunks"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn test_checksum_read_rejects_entry_past_end() {
+        // The entry at 63542 claims 249 chunks whose hashes run past the end of
+        // the index. Its last chunk is incomplete, so the read is skipped while
+        // the read position still advances beyond the buffer.
+        let buf = index_buf(
+            65536,
+            &[
+                (65000, checksum_entry(63542, 8, 6)),
+                (63542, checksum_entry(0, 8, 0)),
+            ],
+        );
+        let err = read_checksum(&buf, 65000).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("byte range 63545..65541 is unavailable"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn test_checksum_read_rejects_self_referential_chain() {
+        // An entry pointing at itself makes the chain endless. Read in a thread
+        // so this fails instead of hanging if the chain is not rejected.
+        let buf = index_buf(4096, &[(4000, checksum_entry(4000, 20, 1))]);
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let _ = tx.send(read_checksum(&buf, 4000).is_err());
+        });
+        match rx.recv_timeout(Duration::from_secs(60)) {
+            Ok(rejected) => assert!(rejected, "self-referential checksum chain was accepted"),
+            Err(_) => panic!("MemChecksum::read_from did not terminate"),
+        }
+    }
+
+    #[test]
+    fn test_checksum_read_rejects_chunk_count_above_initial() {
+        // The second entry of the chain declares a smaller chunk size, so it
+        // covers more chunks than the initial entry sized `xxhash_list` for.
+        let buf = index_buf(
+            4096,
+            &[
+                (4000, checksum_entry(3900, 12, 1)),
+                (3900, checksum_entry(0, 4, 0)),
+            ],
+        );
+        let err = read_checksum(&buf, 4000).unwrap_err();
+        assert!(
+            err.to_string().contains("covers 244 chunks"),
+            "unexpected error: {err}"
         );
     }
 
