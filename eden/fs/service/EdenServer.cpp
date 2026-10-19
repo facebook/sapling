@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <map>
 
 #include <sys/stat.h>
 #include <fstream>
@@ -738,11 +737,6 @@ static constexpr folly::StringPiece kMemoryFootprintBytes{
     "memory_footprint_bytes"};
 #endif
 
-namespace {
-// The server whose Thrift requests dumpSnapshotOnLongShutdown() reports.
-std::atomic<EdenServer*> gServerForStopReport{nullptr};
-} // namespace
-
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
@@ -1017,10 +1011,6 @@ void EdenServer::registerXplatTransforms() {
 #endif
 
 EdenServer::~EdenServer() {
-  // Tests create several servers in one process; only the one that
-  // registered itself unregisters.
-  EdenServer* self = this;
-  gServerForStopReport.compare_exchange_strong(self, nullptr);
 #ifdef __linux__
   cgroupFileCacheReclaimState_->enabled.store(false, std::memory_order_release);
 #endif
@@ -1752,64 +1742,6 @@ bool EdenServer::checkForPreviousHeartbeat(bool takeover) {
 }
 
 #endif
-
-void EdenServer::reportThriftStopTimeout() {
-  auto handler = handler_;
-  if (!handler) {
-    return;
-  }
-  // Background work holds no connection, so it cannot be what the stop waits
-  // on.
-  auto requests =
-      handler->getOutstandingThriftRequests(/*includeBackground=*/false);
-  if (requests.empty()) {
-    // The stop can also wait on a connection that is busy for a reason the
-    // handler does not track, such as a request that finished between the
-    // deadline and this snapshot.
-    XLOG(ERR, "No tracked Thrift request outlived the stop deadline");
-    edenFsEventsLogger_->logEvent(ThriftStopTimeout{"no tracked requests", 0});
-    return;
-  }
-  auto processInfoCache = serverState_->getProcessInfoCache();
-  const auto now = std::chrono::steady_clock::now();
-  // The method names are string literals, so no copies are needed.
-  std::map<std::string_view, size_t> counts;
-  double oldestAgeSeconds = 0;
-  for (const auto& request : requests) {
-    auto age =
-        std::chrono::duration<double>{now - request.monotonicTime}.count();
-    oldestAgeSeconds = std::max(oldestAgeSeconds, age);
-    counts[std::string_view{request.method.data(), request.method.size()}]++;
-    std::string client = "an unknown client";
-    if (request.clientPid) {
-      auto pid = request.clientPid.value().get();
-      auto name = processInfoCache->getProcessName(pid);
-      client = name ? fmt::format("pid {} ({})", pid, *name)
-                    : fmt::format("pid {}", pid);
-    }
-    XLOGF(
-        ERR,
-        "Thrift request {} ({}) from {} is still running {:.0f}s after it started",
-        request.method,
-        request.requestId,
-        client,
-        age);
-  }
-  std::string summary;
-  for (const auto& [method, count] : counts) {
-    if (!summary.empty()) {
-      summary += ", ";
-    }
-    summary += fmt::format("{} x{}", method, count);
-  }
-  XLOGF(
-      ERR,
-      "{} Thrift requests outlived the stop deadline: {}",
-      requests.size(),
-      summary);
-  edenFsEventsLogger_->logEvent(
-      ThriftStopTimeout{std::move(summary), oldestAgeSeconds});
-}
 
 Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
   return prepareImpl(std::move(logger))
@@ -3243,7 +3175,6 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
-  gServerForStopReport.store(this);
 
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
@@ -4930,33 +4861,3 @@ void EdenServer::clearStartupStatusPublishers() {
 }
 
 } // namespace facebook::eden
-
-namespace apache::thrift::detail {
-THRIFT_PLUGGABLE_FUNC_SET(
-    apache::thrift::ThriftServer::DumpSnapshotOnLongShutdownResult,
-    dumpSnapshotOnLongShutdown) {
-  // Thrift calls this once per IO worker that missed the deadline; one report
-  // is enough.
-  static std::atomic<bool> reported{false};
-  if (reported.exchange(true)) {
-    return {folly::makeSemiFuture(), std::chrono::milliseconds{0}};
-  }
-  if (auto* server = facebook::eden::gServerForStopReport.load()) {
-    // The report is diagnostics for a process that is about to die; an
-    // exception from it must not replace the stop path's own exit.
-    try {
-      server->reportThriftStopTimeout();
-    } catch (const std::exception& ex) {
-      XLOGF(
-          ERR,
-          "could not report the outstanding Thrift requests: {}",
-          ex.what());
-    }
-  }
-  // Leave the event logger time to hand the sample off before the process
-  // exits.
-  return {
-      folly::futures::sleep(std::chrono::seconds{2}),
-      std::chrono::milliseconds{3000}};
-}
-} // namespace apache::thrift::detail

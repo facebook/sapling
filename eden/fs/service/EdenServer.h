@@ -453,12 +453,6 @@ class EdenServer : private TakeoverHandler {
 #endif
 
   /**
-   * Log the Thrift requests that are still running once the Thrift server
-   * has given up waiting for them at stop.
-   */
-  void reportThriftStopTimeout();
-
-  /**
    * The part of startTakeoverShutdown() that commits to the restart, once an
    * unforced takeover has waited for the requests in flight.
    */

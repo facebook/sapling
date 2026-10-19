@@ -464,12 +464,6 @@ class EdenServiceHandler
   void debugOutstandingThriftRequests(
       std::vector<ThriftRequestMetadata>& outstandingCalls) override;
 
-  /**
-   * Snapshot of the Thrift requests that have started and not yet finished.
-   */
-  std::vector<ThriftRequestTraceEvent> getOutstandingThriftRequests(
-      bool includeBackground = true) const;
-
   bool debugLogError() override;
 
   void debugOutstandingHgEvents(
