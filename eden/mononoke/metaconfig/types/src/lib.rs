@@ -372,6 +372,8 @@ pub enum ShardedService {
     DerivationPipelineTailer,
     /// Derivation Pipeline Worker
     DerivationPipelineWorker,
+    /// Perforce mirror tailer (p4import)
+    P4Sync,
 }
 
 /// Indicates types of commit hashes used in a repo context.
