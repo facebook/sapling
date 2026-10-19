@@ -10,11 +10,11 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io;
-use std::io::Read;
 use std::mem;
 use std::ops;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -33,6 +33,7 @@ use crate::repair::OpenOptionsRepair;
 use crate::repair::RepairMessage;
 use crate::utils;
 use crate::utils::rand_u64;
+use crate::utils::read_exact_slice;
 
 /// Options used to configure how a [`MultiLog`] is opened.
 #[derive(Clone, Default)]
@@ -526,16 +527,18 @@ impl MultiMeta {
                 "MultiMeta format {format_version} is unsupported"
             )));
         }
+        // `count` needs no bound of its own: every iteration consumes at least
+        // one byte of `reader`, so a corrupt count runs out of input rather than
+        // spinning.
         let count: usize = reader.read_vlq()?;
         for _ in 0..count {
             let name_len = reader.read_vlq()?;
-            let mut name_buf = vec![0; name_len];
-            reader.read_exact(&mut name_buf)?;
-            let name = String::from_utf8(name_buf)
-                .map_err(|_| io::Error::other("Log name is not utf-8"))?;
+            let name = read_exact_slice(&mut reader, name_len)?;
+            let name =
+                str::from_utf8(name).map_err(|_| io::Error::other("Log name is not utf-8"))?;
             let meta = LogMetadata::read(&mut reader)?;
             self.metas
-                .entry(name.to_string())
+                .entry(name.to_owned())
                 .and_modify(|e| {
                     let mut e = e.lock().unwrap();
                     let truncated = e.primary_len > meta.primary_len && e.epoch == meta.epoch;
@@ -1018,6 +1021,41 @@ Write valid MultiMeta"#
         assert_eq!(
             mlog.logs[0].iter().map(|e| e.unwrap()).collect::<Vec<_>>(),
             [[0, 0], [0, 1], [1, 0], [1, 1]],
+        );
+    }
+
+    /// A length prefix that a corrupt or partially written "multimeta" can
+    /// plausibly name: past the end of the data, and past what any allocator
+    /// will serve.
+    const CORRUPT_LEN: usize = 1 << 48;
+
+    #[test]
+    fn test_read_rejects_oversized_log_name_length() {
+        let mut data = Vec::new();
+        data.write_vlq(0usize).unwrap(); // format version
+        data.write_vlq(1usize).unwrap(); // entry count
+        data.write_vlq(CORRUPT_LEN).unwrap(); // name length
+        data.extend_from_slice(b"short");
+
+        let err = MultiMeta::default().read(&data[..]).unwrap_err();
+        assert_eq!(
+            err.kind(),
+            io::ErrorKind::UnexpectedEof,
+            "a name length past the end of the data should read as truncation"
+        );
+    }
+
+    #[test]
+    fn test_read_rejects_oversized_entry_count() {
+        let mut data = Vec::new();
+        data.write_vlq(0usize).unwrap(); // format version
+        data.write_vlq(CORRUPT_LEN).unwrap(); // entry count
+
+        let err = MultiMeta::default().read(&data[..]).unwrap_err();
+        assert_eq!(
+            err.kind(),
+            io::ErrorKind::UnexpectedEof,
+            "an entry count past the end of the data should read as truncation"
         );
     }
 
