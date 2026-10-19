@@ -1,0 +1,19 @@
+# Tokens for the EdenFS Legacy overlay on-disk file format.
+# See FsFileContentStore::createHeader / validateHeader in
+# eden/fs/inodes/fscatalog/FsInodeCatalog.cpp.
+
+# Header identifiers: directory listing and file content.
+"OVDR"
+"OVFL"
+
+# kHeaderVersion == 1, written big-endian.
+"\x00\x00\x00\x01"
+
+# A complete valid directory header prefix: identifier + version.
+"OVDR\x00\x00\x00\x01"
+
+# Thrift compact protocol: struct-stop byte, i.e. a valid empty OverlayDir.
+"\x00"
+
+# Compact protocol field header for OverlayDir.entries (field 1, T_MAP).
+"\x1b"

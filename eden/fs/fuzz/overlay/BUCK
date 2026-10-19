@@ -1,0 +1,182 @@
+load("@fbcode//security/lionhead/harnesses:defs.bzl", "cpp_lionhead_harness")
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+load("@fbsource//xplat/security/lionhead:defs.bzl", "Metadata", "SUBSET_OF_EMPLOYEES", "Severity", "lh")
+
+oncall("scm_client_infra")
+
+edenfs_metadata = Metadata(
+    exposure = SUBSET_OF_EMPLOYEES,
+    project = "edenfs",
+    severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+    severity_service_takeover = Severity.FILE_SECURITY_TASK,
+)
+
+overlay_read_path_annotations = [
+    lh.PathAnnotation(
+        alert = True,
+        include_path_globs = [
+            "fbcode/eden/fs/inodes/fscatalog/**/*",
+        ],
+        # loadRawOverlayDir is deliberately absent: it demangles as
+        # loadRawOverlayDir[abi:cxx11] and never matches, and it sits between
+        # the two symbols below on the same call path anyway.
+        target_symbols = [
+            "facebook::eden::FsFileContentStore::deserializeOverlayDir$",
+            "facebook::eden::FsFileContentStore::validateHeader$",
+        ],
+    ),
+]
+
+export_file(
+    name = "overlay_file.dict",
+    src = "overlay_file.dict",
+)
+
+cpp_library(
+    name = "overlay_file_fuzz_fixture",
+    srcs = ["OverlayFileFuzzFixture.cpp"],
+    headers = ["OverlayFileFuzzFixture.h"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/common/testharness:temp_file",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//folly:file_util",
+        "//folly:scope_guard",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes:inode_number",
+        "//folly:range",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_lionhead_harness(
+    name = "OverlayFsCatalogFileFuzz",
+    srcs = ["OverlayFsCatalogFuzz.cpp"],
+    annotations = overlay_read_path_annotations,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    context_task = "T139646881",
+    dictionary = ":overlay_file.dict",
+    ftest_name = ("OverlayFsCatalog", "load_overlay_dir_file"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":overlay_file_fuzz_fixture",
+        "//folly:range",
+    ],
+)
+
+cpp_lionhead_harness(
+    name = "OverlayFsCatalogDirPayloadFuzz",
+    srcs = ["OverlayFsCatalogFuzz.cpp"],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = [
+                "fbcode/eden/fs/inodes/fscatalog/**/*",
+            ],
+            target_symbols = [
+                "facebook::eden::FsFileContentStore::deserializeOverlayDir$",
+                "facebook::eden::FsFileContentStore::validateHeader$",
+                "facebook::eden::FsInodeCatalog::loadOverlayEntries$",
+            ],
+        ),
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    context_task = "T139646881",
+    dictionary = ":overlay_file.dict",
+    ftest_name = ("OverlayFsCatalog", "load_overlay_dir_payload"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":overlay_file_fuzz_fixture",
+        "//folly:range",
+    ],
+)
+
+# The LMDB content store that Overlay pairs with the InMemory and LMDB inode
+# catalogs. Not a parser: createOverlayFile hands the input to
+# LMDBStoreInterface::saveBlob as one iovec, and an empty input is the
+# null-base, zero-length iovec of T289739917.
+cpp_lionhead_harness(
+    name = "OverlayLmdbFileContentStoreFuzz",
+    srcs = ["OverlayLmdbFuzz.cpp"],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = [
+                "fbcode/eden/fs/inodes/lmdbcatalog/**/*",
+            ],
+            target_symbols = [
+                "facebook::eden::LMDBFileContentStore::createOverlayFile$",
+                "facebook::eden::LMDBStoreInterface::saveBlob$",
+            ],
+        ),
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    context_task = "T139646881",
+    ftest_name = ("OverlayLmdb", "create_overlay_file"),
+    metadata = edenfs_metadata,
+    deps = [
+        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
+        ":overlay_file_fuzz_fixture",
+        "//eden/common/testharness:temp_file",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+        "//eden/fs/telemetry:structured_logger",
+        "//folly:range",
+        "//folly/testing:test_util",
+    ],
+)
+
+cpp_binary(
+    name = "overlay_fuzz_seed_corpus",
+    srcs = ["OverlayFuzzSeedCorpus.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":overlay_file_fuzz_fixture",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/init:init",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)
+
+cpp_unittest(
+    name = "overlay_fuzz_seed_test",
+    srcs = ["OverlayFuzzSeedTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        ":overlay_file_fuzz_fixture",
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//folly:range",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)
