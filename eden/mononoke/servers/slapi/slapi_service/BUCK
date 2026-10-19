@@ -12,14 +12,15 @@ rust_library(
         else {
             "MononokeSaplingApiRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeSaplingApiRequest_ods3-rust",
             "backend_if": "//configerator/structs/rim/if:backend_if-rust",
-            "rim_ligen": "//rim_dev/ligen:rim_ligen-rs_bindings",
+            "rim_ligen": "//rim/ligen:rim_ligen-rs_bindings",
         }
     ),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
-    ],
+    ]
+    + ([] if rust_oss.is_oss_build() else ["//thrift/lib/rust:fbthrift"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-compression",
@@ -99,6 +100,8 @@ rust_library(
         if rust_oss.is_oss_build()
         else [
             "//common/rust/fbwhoami:fbwhoami",
+            "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
+            "//eden/mononoke/common/metadata:metadata",
             "//eden/mononoke/facebook/ods3_schemas:MononokeSaplingApiRequest_ods3-rs_bindings",
         ]
     ),

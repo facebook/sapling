@@ -110,6 +110,12 @@ pub fn build<R: Send + Sync + Clone + 'static>(
         })
         .transpose()?;
 
+    #[cfg(fbcode_build)]
+    let rim_workload_config = rim_workload_tenancy
+        .then(|| crate::utils::rim_rate_limiter::workload_config(config_store))
+        .transpose()
+        .context("Loading RIM workload config")?;
+
     #[cfg(not(fbcode_build))]
     let _ = (rim_backend, rim_regional_backend, rim_workload_tenancy);
 
@@ -174,7 +180,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
             #[cfg(fbcode_build)]
             rim_regional_backend,
             #[cfg(fbcode_build)]
-            rim_workload_tenancy,
+            rim_workload_config,
         ))
         .add(LoadMiddleware::new())
         .add(log_middleware)

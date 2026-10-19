@@ -14,15 +14,44 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use anyhow::Result;
 use backend_if::RimBackend;
+use cached_config::ConfigHandle;
+use cached_config::ConfigStore;
 use context::CoreContext;
+use metadata::RimTenancyPath;
 use permission_checker::TenantInfo;
+use rate_limiting_config::RimWorkloadConfig;
 use rim_ligen::RimThinClient;
 use tokio::time::timeout;
 use tracing::debug;
 use tracing::warn;
 
 const RIM_ACQUIRE_TIMEOUT: Duration = Duration::from_millis(500);
+const WORKLOAD_CONFIG_PATH: &str = "scm/mononoke/ratelimiting/rim_workloads";
+
+pub(crate) type WorkloadConfig = ConfigHandle<RimWorkloadConfig>;
+
+pub(crate) fn workload_config(store: &ConfigStore) -> Result<WorkloadConfig> {
+    store.get_config_handle(WORKLOAD_CONFIG_PATH.to_owned())
+}
+
+pub(crate) fn workload_tenancy_path(
+    path: RimTenancyPath,
+    config: &RimWorkloadConfig,
+    backend: RimBackend,
+) -> Vec<String> {
+    if !config.allocation_backends.contains(&backend.0) {
+        return path.into_vec();
+    }
+    path.with_workload_allocation(|category, workload| {
+        config
+            .named_workloads
+            .get(category)
+            .is_some_and(|workloads| workloads.contains(workload))
+    })
+    .into_vec()
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum RimDecision {
@@ -148,10 +177,112 @@ pub(crate) async fn report_load(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use backend_if::RimBackend;
+    use cached_config::ConfigStore;
+    use cached_config::ModificationTime;
+    use cached_config::TestSource;
+    use metadata::Metadata;
     use mononoke_macros::mononoke;
     use permission_checker::TenantInfo;
+    use rate_limiting_config::RimWorkloadConfig;
 
+    use super::WORKLOAD_CONFIG_PATH;
     use super::legacy_tenancy_path;
+    use super::workload_config;
+    use super::workload_tenancy_path;
+
+    #[mononoke::test]
+    fn allocation_follows_live_catalog() {
+        let source = Arc::new(TestSource::new());
+        let store = ConfigStore::new(source.clone(), None::<Duration>, None);
+        let mut handle = None;
+        for (version, grouped, named) in [
+            (1, false, false),
+            (2, true, false),
+            (3, true, true),
+            (4, true, false),
+            (5, false, false),
+        ] {
+            let config = RimWorkloadConfig {
+                allocation_backends: if grouped {
+                    [RimBackend::RIM_USE_CASE_52.0, RimBackend::RIM_USE_CASE_79.0].into()
+                } else {
+                    Default::default()
+                },
+                named_workloads: if named {
+                    [("unknown".to_owned(), ["unknown".to_owned()].into())].into()
+                } else {
+                    Default::default()
+                },
+            };
+            source.insert_config(
+                WORKLOAD_CONFIG_PATH,
+                core::str::from_utf8(&fbthrift::simplejson_protocol::serialize(&config)).unwrap(),
+                ModificationTime::UnixTimestamp(version),
+            );
+            source.insert_to_refresh(WORKLOAD_CONFIG_PATH.to_owned());
+            let handle = handle.get_or_insert_with(|| workload_config(&store).unwrap());
+            store.force_update_configs();
+            for (backend, region) in [
+                (RimBackend::RIM_USE_CASE_52, None),
+                (RimBackend::RIM_USE_CASE_79, Some("atn")),
+                (RimBackend::RIM_USE_CASE_79, Some("ldc")),
+                (RimBackend::MONONOKE_SERVER, None),
+            ] {
+                let path = Metadata::default().rim_tenancy_path(region);
+                let expected: Vec<_> = std::iter::once("root")
+                    .chain(region)
+                    .chain(["unknown"])
+                    .chain(
+                        (grouped && backend != RimBackend::MONONOKE_SERVER).then_some(if named {
+                            "unknown"
+                        } else {
+                            "__mononoke_remaining__"
+                        }),
+                    )
+                    .chain(["unknown", "default"])
+                    .collect();
+                assert_eq!(
+                    workload_tenancy_path(path, &handle.get(), backend),
+                    expected
+                );
+            }
+            source.insert_config(
+                WORKLOAD_CONFIG_PATH,
+                "invalid",
+                ModificationTime::UnixTimestamp(100 + version),
+            );
+            source.insert_to_refresh(WORKLOAD_CONFIG_PATH.to_owned());
+            store.force_update_configs();
+            assert_eq!(*handle.get(), config);
+        }
+    }
+
+    #[mononoke::test]
+    fn workload_catalog_is_required_at_startup() {
+        let source = Arc::new(TestSource::new());
+        let store = ConfigStore::new(source.clone(), None::<Duration>, None);
+        assert!(workload_config(&store).is_err());
+
+        source.insert_config(
+            WORKLOAD_CONFIG_PATH,
+            "invalid",
+            ModificationTime::UnixTimestamp(1),
+        );
+        assert!(workload_config(&store).is_err());
+
+        let config = RimWorkloadConfig::default();
+        source.insert_config(
+            WORKLOAD_CONFIG_PATH,
+            core::str::from_utf8(&fbthrift::simplejson_protocol::serialize(&config)).unwrap(),
+            ModificationTime::UnixTimestamp(2),
+        );
+        let handle = workload_config(&store).unwrap();
+        assert_eq!(*handle.get(), config);
+    }
 
     #[mononoke::test]
     fn global_and_regional_paths_preserve_category_and_client() {

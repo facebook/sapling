@@ -49,20 +49,28 @@ impl ClientPathAclCompatibility {
 pub struct RimTenancyPath {
     region: Option<String>,
     category: ClientCategory,
+    allocation: Option<String>,
     workload: String,
     instance: String,
 }
 
 impl RimTenancyPath {
+    pub fn with_workload_allocation(mut self, is_named: impl FnOnce(&str, &str) -> bool) -> Self {
+        self.allocation = Some(if is_named(self.category.as_str(), &self.workload) {
+            self.workload.clone()
+        } else {
+            "__mononoke_remaining__".to_owned()
+        });
+        self
+    }
+
     /// Convert to the ordered components expected by the RIM client.
     pub fn into_vec(self) -> Vec<String> {
         once("root".to_owned())
             .chain(self.region)
-            .chain([
-                self.category.as_str().to_owned(),
-                self.workload,
-                self.instance,
-            ])
+            .chain(once(self.category.as_str().to_owned()))
+            .chain(self.allocation)
+            .chain([self.workload, self.instance])
             .collect()
     }
 }
@@ -448,6 +456,7 @@ impl Metadata {
         RimTenancyPath {
             region: region.map(str::to_owned),
             category,
+            allocation: None,
             workload,
             instance: instance.to_owned(),
         }
@@ -579,6 +588,7 @@ mod tests {
         let expected = RimTenancyPath {
             region: None,
             category: ClientCategory::DevEnv,
+            allocation: None,
             workload: "www_fbsource_configerator".to_owned(),
             instance: "od1.ldc.facebook.com".to_owned(),
         };
@@ -687,6 +697,58 @@ mod tests {
                 "www_fbsource_configerator",
                 "od1.prn.facebook.com",
             ]
+        );
+    }
+
+    #[mononoke::test]
+    fn rim_remaining_preserves_workloads_and_instances() {
+        for workload in ["registered", "new/a", "new/b"] {
+            for machine in ["od1", "od2"] {
+                let metadata = metadata(&[
+                    ("SERVICE_IDENTITY", &format!("ondemand_{workload}")),
+                    ("MACHINE", machine),
+                ]);
+                for region in [None, Some("ldc")] {
+                    let allocation = if workload == "registered" {
+                        workload
+                    } else {
+                        "__mononoke_remaining__"
+                    };
+                    let expected: Vec<_> = once("root")
+                        .chain(region)
+                        .chain(["dev_env", allocation, workload, machine])
+                        .collect();
+                    assert_eq!(
+                        metadata
+                            .rim_tenancy_path(region)
+                            .with_workload_allocation(|category, workload| {
+                                category == "dev_env" && workload == "registered"
+                            })
+                            .into_vec(),
+                        expected,
+                    );
+                }
+            }
+        }
+    }
+
+    #[mononoke::test]
+    fn rim_workload_registration_is_scoped_to_category() {
+        let metadata = metadata(&[("SERVICE_IDENTITY", "ondemand_registered")]);
+        assert_eq!(
+            metadata
+                .rim_tenancy_path(None)
+                .with_workload_allocation(|category, workload| {
+                    category == "automation" && workload == "registered"
+                })
+                .into_vec(),
+            [
+                "root",
+                "dev_env",
+                "__mononoke_remaining__",
+                "registered",
+                "unknown"
+            ],
         );
     }
 }

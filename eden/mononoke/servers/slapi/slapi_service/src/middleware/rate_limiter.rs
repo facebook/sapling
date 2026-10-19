@@ -38,11 +38,15 @@ use crate::handlers::JsonErrorFormatter;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::WorkloadConfig;
+#[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::check_rate_limit;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::legacy_tenancy_path;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::report_load;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::workload_tenancy_path;
 
 #[cfg(fbcode_build)]
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
@@ -120,13 +124,13 @@ pub struct ThrottleMiddleware {
     #[cfg(fbcode_build)]
     rim_regional_backend: Option<(RimBackend, String)>,
     #[cfg(fbcode_build)]
-    rim_workload_tenancy: bool,
+    rim_workload_config: Option<WorkloadConfig>,
 }
 impl ThrottleMiddleware {
     pub fn new(
         #[cfg(fbcode_build)] rim_backend: Option<RimBackend>,
         #[cfg(fbcode_build)] rim_regional_backend: Option<(RimBackend, String)>,
-        #[cfg(fbcode_build)] rim_workload_tenancy: bool,
+        #[cfg(fbcode_build)] rim_workload_config: Option<WorkloadConfig>,
     ) -> Self {
         Self {
             #[cfg(fbcode_build)]
@@ -134,7 +138,7 @@ impl ThrottleMiddleware {
             #[cfg(fbcode_build)]
             rim_regional_backend,
             #[cfg(fbcode_build)]
-            rim_workload_tenancy,
+            rim_workload_config,
         }
     }
 }
@@ -166,8 +170,9 @@ impl Middleware for ThrottleMiddleware {
             let paths = state.try_borrow::<MetadataState>().map(|metadata| {
                 scopes.map(|scope| {
                     let (backend, region) = scope?;
-                    let path = if self.rim_workload_tenancy {
-                        metadata.metadata().rim_tenancy_path(region).into_vec()
+                    let path = if let Some(config) = &self.rim_workload_config {
+                        let path = metadata.metadata().rim_tenancy_path(region);
+                        workload_tenancy_path(path, &config.get(), backend)
                     } else {
                         legacy_tenancy_path(&metadata.metadata().tenant_info(), region)?
                     };
