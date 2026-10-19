@@ -889,17 +889,10 @@ pub async fn compute_hg_node_id(
     calculate_hg_node_id_stream(lines, parents).await
 }
 
-/// A reusable parent envelope for a merged directory.
-#[derive(Debug, PartialEq, Eq)]
-pub struct ReusableParentEnvelope {
-    pub id: HgAugmentedManifestId,
-    pub envelope: HgAugmentedManifestEnvelope,
-}
-
 /// Result of probing a merged directory for reusable parent envelopes.
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParentEnvelopeReuse {
-    pub reusable_parent: Option<ReusableParentEnvelope>,
+    pub reusable_parent: Option<HgAugmentedManifestId>,
     pub fresh_computed_node_id: HgNodeHash,
 }
 
@@ -938,12 +931,11 @@ fn select_hg_parents<T>(
 
 fn indexed_directory_hg_parents(
     parents: &[IndexedAugmentedDirectory],
-) -> (Option<HgAugmentedManifestId>, Option<HgAugmentedManifestId>) {
-    select_hg_parents(
-        parents
-            .iter()
-            .map(|parent| (parent.index, indexed_augmented_manifest_id(parent))),
-    )
+) -> (
+    Option<&IndexedAugmentedDirectory>,
+    Option<&IndexedAugmentedDirectory>,
+) {
+    select_hg_parents(parents.iter().map(|parent| (parent.index, parent)))
 }
 
 fn indexed_file_hg_parents(
@@ -1147,44 +1139,39 @@ async fn finalize_envelope(
     // `derive_manifest` deduplication. For octopus parent trees `(X, X, Y)`,
     // the deduped list can be `[p1:X, p3:Y]`; positional indexing would
     // incorrectly treat p3 as Mercurial p2.
-    let (p1, p2) = indexed_directory_hg_parents(parents);
+    let (p1_dir, p2_dir) = indexed_directory_hg_parents(parents);
+    let p1 = p1_dir.map(indexed_augmented_manifest_id);
+    let p2 = p2_dir.map(indexed_augmented_manifest_id);
     let p1_hash = p1.map(HgAugmentedManifestId::into_nodehash);
     let p2_hash = p2.map(HgAugmentedManifestId::into_nodehash);
 
     let hash_parents = HgParents::new(p1_hash, p2_hash);
 
     // Mirror `create_hg_manifest` parent reuse: if merged contents match an
-    // hg-relevant parent (and the parent's ACL pointer agrees), reuse that
-    // parent's envelope. A reused root keeps a client-supplied `hg_node_id`
-    // because Hg reuses that root id too.
+    // hg-relevant parent, reuse that parent's node. A reused root keeps a
+    // client-supplied `hg_node_id` because Hg reuses that root id too.
     let computed_node_id = if parents.len() > 1 {
         let ParentEnvelopeReuse {
             reusable_parent,
             fresh_computed_node_id: computed_node_id,
-        } = try_reuse_parent_envelope(
-            ctx,
-            blobstore,
-            subentries.clone(),
-            dir_acl_id,
-            p1,
-            p2,
-            hash_parents,
-        )
-        .await?;
+        } = try_reuse_parent_envelope(ctx, blobstore, subentries.clone(), p1, p2, hash_parents)
+            .await?;
 
-        if let Some(reused) = reusable_parent {
+        if let Some(reused_id) = reusable_parent {
+            // Keep the parent's entry for this directory, ACL pointer included,
+            // as `derive_from_hg_manifest_and_parents` copies it for a
+            // directory that Hg reuses. The parent's stored envelope can carry
+            // an older pointer than its entry. `finalize_augmented_manifest_root`
+            // stores a reused root with the commit's pointer.
+            let reused_dir = [p1_dir, p2_dir]
+                .into_iter()
+                .flatten()
+                .find(|dir| indexed_augmented_manifest_id(dir) == reused_id)
+                .context("reused directory should be p1 or p2")?;
             return Ok((
                 (),
                 IndexedAugmentedDirectory {
-                    node: HgAugmentedDirectoryNode {
-                        treenode: reused.id.into_nodehash(),
-                        augmented_manifest_id: reused.envelope.augmented_manifest_id,
-                        augmented_manifest_size: reused.envelope.augmented_manifest_size,
-                        acl_manifest_directory_id: reused
-                            .envelope
-                            .augmented_manifest
-                            .acl_manifest_directory_id,
-                    },
+                    node: reused_dir.node.clone(),
                     index: None,
                 },
             ));
@@ -1292,40 +1279,6 @@ async fn create_augmented_tree(
     .await
 }
 
-fn dedup_root_parents_for_reemit(
-    mut parents: Vec<IndexedAugmentedDirectory>,
-) -> Vec<IndexedAugmentedDirectory> {
-    // Match derive_manifest's parent deduplication: indexed equality ignores
-    // the parent index, while the retained value keeps the surviving index.
-    let mut seen = HashSet::new();
-    parents.retain(|p| seen.insert(p.clone()));
-    parents
-}
-
-async fn reemit_root_envelope(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn KeyedBlobstore>,
-    root_parents: Vec<IndexedAugmentedDirectory>,
-    envelope: HgAugmentedManifestEnvelope,
-    root_acl_id: Option<AclManifestId>,
-    restricted_paths: &ArcRestrictedPathsConfigBased,
-    restricted_paths_enabled: bool,
-) -> Result<IndexedAugmentedDirectory> {
-    let parents = dedup_root_parents_for_reemit(root_parents);
-    let (_, final_dir) = finalize_envelope(
-        ctx,
-        blobstore,
-        &MPath::ROOT,
-        &parents,
-        envelope.augmented_manifest.subentries,
-        root_acl_id,
-        restricted_paths,
-        restricted_paths_enabled,
-    )
-    .await?;
-    Ok(final_dir)
-}
-
 pub(crate) async fn finalize_augmented_manifest_root<Store>(
     ctx: &CoreContext,
     blobstore: &Store,
@@ -1359,31 +1312,24 @@ where
     let restricted_paths = Arc::clone(restricted_paths);
     match root {
         Some(HgAugmentedManifestEntry::DirectoryNode(root_dir)) => {
-            let candidate_root_id = HgAugmentedManifestId::new(root_dir.treenode);
-            let candidate_envelope = candidate_root_id.load(ctx, &blobstore).await?;
-            let root_acl_pointer_matches = candidate_envelope
-                .augmented_manifest
-                .acl_manifest_directory_id
-                == acl_root_overlay;
-            if root_acl_pointer_matches {
+            let root_id = HgAugmentedManifestId::new(root_dir.treenode);
+            let mut root_envelope = root_id.load(ctx, &blobstore).await?;
+            if root_envelope.augmented_manifest.acl_manifest_directory_id == acl_root_overlay {
                 Ok(root_dir)
             } else {
-                let restricted_paths_enabled = justknobs::eval(
-                    "scm/mononoke:enabled_restricted_paths_access_logging",
-                    None,
-                    Some("hg_augmented_manifest_write"),
-                );
-                Ok(reemit_root_envelope(
-                    ctx,
-                    &blobstore,
-                    root_parents,
-                    candidate_envelope,
-                    acl_root_overlay,
-                    &restricted_paths,
-                    restricted_paths_enabled,
-                )
-                .await?
-                .node)
+                // The reused root was stored with another ACL pointer, for
+                // example before ACL pointers existed. Keep its id, as Hg
+                // does, and make the write `derive_from_hg_manifest_and_parents`
+                // makes: the root under that id with the commit's pointer.
+                // Neither the key nor the digest covers the pointer, so with
+                // the default `IfAbsent` put behaviour the stored pointer stays.
+                assert_root_acl_pointer_invariant(&acl_root_overlay)?;
+                root_envelope.augmented_manifest.acl_manifest_directory_id = acl_root_overlay;
+                root_envelope.store(ctx, &blobstore).await?;
+                Ok(HgAugmentedDirectoryNode {
+                    acl_manifest_directory_id: acl_root_overlay,
+                    ..root_dir
+                })
             }
         }
         Some(HgAugmentedManifestEntry::FileNode(_)) => {
@@ -1691,7 +1637,10 @@ where
 /// content-equality test is done by streaming `merged_subentries` under the
 /// candidate parent's own `(p1, p2)`: if that hash equals the parent's stored
 /// `computed_node_id`, then the merged content serialises identically to the
-/// parent's content and we can reuse the parent's envelope wholesale.
+/// parent's content and the parent's node can be reused.
+///
+/// Like Hg, only content decides: the parent's stored ACL pointer is not
+/// compared.
 ///
 /// Computes the fresh-envelope node id in the same stream pass as the reuse
 /// checks, so callers do not need a second sharded-map traversal when reuse is
@@ -1700,7 +1649,6 @@ pub async fn try_reuse_parent_envelope(
     ctx: &CoreContext,
     blobstore: &impl KeyedBlobstore,
     merged_subentries: ShardedMapV2Node<HgAugmentedManifestEntry>,
-    dir_acl_id: Option<AclManifestId>,
     p1: Option<HgAugmentedManifestId>,
     p2: Option<HgAugmentedManifestId>,
     fresh_node_parents: HgParents,
@@ -1710,23 +1658,11 @@ pub async fn try_reuse_parent_envelope(
 
     for parent_id in [p1, p2].into_iter().flatten() {
         let parent_env = parent_id.load(ctx, blobstore).await?;
-        // The ACL pointer rides on the envelope but is part of neither the
-        // storage key (= `hg_node_id`) nor the content-addressed digest (see
-        // `ShardedHgAugmentedManifest::write_content_addressed_prefix`, which
-        // never serialises `acl_manifest_directory_id`). Content addressing
-        // therefore can't distinguish two envelopes that differ only in their
-        // ACL pointer, so we check it explicitly before reusing. In normal
-        // derivation content-match already implies ACL-match (ACL is a pure
-        // function of subtree content), so this is a safety net rather than a
-        // case seen in practice
-        if parent_env.augmented_manifest.acl_manifest_directory_id != dir_acl_id {
-            continue;
-        }
         hash_parent_sets.push(HgParents::new(
             parent_env.augmented_manifest.p1,
             parent_env.augmented_manifest.p2,
         ));
-        reuse_candidates.push((parent_id, parent_env));
+        reuse_candidates.push((parent_id, parent_env.augmented_manifest.computed_node_id));
     }
     hash_parent_sets.push(fresh_node_parents);
 
@@ -1745,16 +1681,11 @@ pub async fn try_reuse_parent_envelope(
     let reusable_parent = reuse_candidates
         .into_iter()
         .zip(node_ids_by_parent_set)
-        .find_map(|((parent_id, parent_env), candidate_node_id)| {
-            if candidate_node_id == parent_env.augmented_manifest.computed_node_id {
-                Some(ReusableParentEnvelope {
-                    id: parent_id,
-                    envelope: parent_env,
-                })
-            } else {
-                None
-            }
-        });
+        .find_map(
+            |((parent_id, parent_computed_node_id), candidate_node_id)| {
+                (candidate_node_id == parent_computed_node_id).then_some(parent_id)
+            },
+        );
 
     Ok(ParentEnvelopeReuse {
         reusable_parent,

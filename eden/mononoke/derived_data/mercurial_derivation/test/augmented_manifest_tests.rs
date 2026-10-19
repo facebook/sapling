@@ -1156,7 +1156,6 @@ async fn test_try_reuse_parent_envelope_reuses_matching_parent(fb: FacebookInit)
         &ctx,
         repo.repo_blobstore(),
         p1_env.augmented_manifest.subentries.clone(),
-        None,
         Some(p1_aug_id),
         None,
         p1_only_parents,
@@ -1173,10 +1172,7 @@ async fn test_try_reuse_parent_envelope_reuses_matching_parent(fb: FacebookInit)
     .await?;
     assert_eq!(
         reuse.reusable_parent,
-        Some(derive_hg_augmented_manifest::ReusableParentEnvelope {
-            id: p1_aug_id,
-            envelope: p1_env,
-        }),
+        Some(p1_aug_id),
         "should reuse the matching parent"
     );
     assert_eq!(reuse.fresh_computed_node_id, expected_fresh_node_id);
@@ -1214,7 +1210,6 @@ async fn test_try_reuse_parent_envelope_creates_fresh_for_different_content(
         &ctx,
         repo.repo_blobstore(),
         other_env.augmented_manifest.subentries.clone(),
-        None,
         Some(p1_aug_id),
         None,
         p1_only_parents,
@@ -1271,7 +1266,6 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
         &ctx,
         repo.repo_blobstore(),
         p2_env.augmented_manifest.subentries.clone(),
-        None,
         Some(p1_aug_id),
         Some(p2_aug_id),
         merge_parents,
@@ -1288,82 +1282,10 @@ async fn test_try_reuse_parent_envelope_reuses_second_parent_when_first_does_not
     .await?;
     assert_eq!(
         reuse.reusable_parent,
-        Some(derive_hg_augmented_manifest::ReusableParentEnvelope {
-            id: p2_aug_id,
-            envelope: p2_env,
-        }),
+        Some(p2_aug_id),
         "should reuse the second parent that matches"
     );
     assert_eq!(reuse.fresh_computed_node_id, expected_fresh_node_id);
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn test_try_reuse_parent_envelope_creates_fresh_when_acl_pointer_differs(
-    fb: FacebookInit,
-) -> Result<()> {
-    // Given: merged subentries match the parent content, but `dir_acl_id` differs
-    // from the parent's stored ACL pointer. This is a synthetic state — in real
-    // derivation content-match implies ACL-match — so we construct it explicitly
-    // to lock the `try_reuse_parent_envelope` ACL guard.
-    let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = test_repo_factory::build_empty(fb).await?;
-    let p1_cs = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file("alpha", "1")
-        .add_file("beta", "2")
-        .add_file("gamma", "3")
-        .commit()
-        .await?;
-    let mut manifests = derive_augmented_manifests(&ctx, &repo, vec![p1_cs]).await?;
-    let (p1_aug_id, p1_env) = manifests.pop().expect("derived one augmented manifest");
-    let p1_only_parents = HgParents::new(Some(p1_aug_id.into_nodehash()), None);
-
-    let acl_cs = CreateCommitContext::new_root(&ctx, &repo)
-        .add_file(
-            "dir/.slacl",
-            "repo_region_acl = \"REPO_REGION:repos/hg/fbsource/=project\"\n",
-        )
-        .commit()
-        .await?;
-    let manager = repo.repo_derived_data().manager();
-    manager
-        .derive_exactly_batch::<RootAclManifestId>(&ctx, vec![acl_cs], None)
-        .await?;
-    let some_acl_id: AclManifestId = *manager
-        .fetch_derived::<RootAclManifestId>(&ctx, acl_cs, None)
-        .await?
-        .expect("derived just above")
-        .inner_id();
-
-    // When: probing reuse with matching content but a different ACL pointer.
-    let no_reuse_acl_mismatch = derive_hg_augmented_manifest::try_reuse_parent_envelope(
-        &ctx,
-        repo.repo_blobstore(),
-        p1_env.augmented_manifest.subentries.clone(),
-        Some(some_acl_id),
-        Some(p1_aug_id),
-        None,
-        p1_only_parents,
-    )
-    .await?;
-
-    // Then: no parent is reused and the fresh-envelope hash is returned.
-    let expected_fresh_node_id = derive_hg_augmented_manifest::compute_hg_node_id(
-        p1_env.augmented_manifest.subentries.clone(),
-        &ctx,
-        repo.repo_blobstore(),
-        &p1_only_parents,
-    )
-    .await?;
-    assert_eq!(
-        no_reuse_acl_mismatch.reusable_parent, None,
-        "content matches but ACL pointer differs (Some vs parent's None); expected fresh envelope"
-    );
-    assert_eq!(
-        no_reuse_acl_mismatch.fresh_computed_node_id,
-        expected_fresh_node_id
-    );
 
     Ok(())
 }
@@ -3006,7 +2928,7 @@ async fn test_direct_derivation_none_keeps_supplied_short_circuit_root(
 }
 
 #[mononoke::fbinit_test]
-async fn test_direct_derivation_reemits_content_derived_short_circuit_root_when_root_acl_pointer_differs(
+async fn test_direct_derivation_keeps_content_derived_short_circuit_root_when_root_acl_pointer_differs(
     fb: FacebookInit,
 ) -> Result<()> {
     // Given: a no-op merge whose content-derived parent root is visible
@@ -3077,21 +2999,20 @@ async fn test_direct_derivation_reemits_content_derived_short_circuit_root_when_
     )
     .await?;
 
-    // Then: the local direct path re-emits the root with the current ACL
-    // overlay instead of accepting the stale content-derived envelope.
+    // Then: like Hg and V1, the merge keeps the parent root id and writes the
+    // root under it with the current merge root ACL pointer. The write is
+    // visible here only because `MemWritesKeyedBlobstore` overwrites; with the
+    // default `IfAbsent` put behaviour the backing store keeps the stale
+    // pointer, though caches above it may serve the written one.
     let env = aug_id.load(&ctx, &stale_blobstore).await?;
+    assert_eq!(
+        aug_id, stale_parent_root,
+        "should keep the content-derived parent root id",
+    );
     assert_eq!(
         env.augmented_manifest.acl_manifest_directory_id,
         Some(acl_root_overlay),
-        "direct Bonsai local derivation should preserve the current root ACL pointer",
-    );
-    assert_ne!(
-        aug_id, stale_parent_root,
-        "must not return the stale content-derived parent root verbatim",
-    );
-    assert_eq!(
-        env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-        "direct Bonsai derivation should still produce a content-derived root",
+        "the kept root should be stored with the merge root ACL pointer",
     );
 
     Ok(())
@@ -3726,12 +3647,11 @@ async fn test_v2_matches_v1_for_merge_equal_to_empty_supplied_root(fb: FacebookI
     Ok(())
 }
 
-/// Pins a known V1/V2 divergence: when a reusable root's stored ACL pointer
-/// disagrees with the commit's ACL root, V2 re-emits the root under a new id
-/// to carry the current pointer, while V1 keeps the Hg root id. Changing
-/// either side of this should be a deliberate decision.
+/// A reusable root whose stored ACL pointer disagrees with the commit's ACL
+/// root. V1 keeps the Hg root id and writes the root under it with the
+/// commit's pointer.
 #[mononoke::fbinit_test]
-async fn test_v2_reemits_supplied_root_with_stale_acl_pointer_unlike_v1(
+async fn test_v2_matches_v1_for_empty_commit_on_supplied_root_with_stale_acl_pointer(
     fb: FacebookInit,
 ) -> Result<()> {
     // Given: an empty commit on the supplied-root commit, whose stored root has
@@ -3764,22 +3684,98 @@ async fn test_v2_reemits_supplied_root_with_stale_acl_pointer_unlike_v1(
     // When: deriving the empty commit with V1 and V2.
     let roots = parity.derive(&ctx, &repo, empty).await?;
 
-    // Then: V1 keeps the supplied Hg root id, while V2 re-emits a
-    // content-derived root that carries the commit's ACL root.
+    // Then: V2 matches V1, and both keep the supplied root and write it with
+    // the commit's ACL root. The write is visible here only because the parity
+    // stores overwrite; with the default `IfAbsent` put behaviour the backing
+    // store keeps the stale pointer, though caches above it may serve the
+    // written one.
+    parity
+        .assert_v2_matches_v1(&ctx, &roots, "empty commit on a stale supplied root")
+        .await?;
     assert_eq!(
         roots.v1, history.supplied_root,
-        "V1 should keep the supplied root id"
+        "should keep the supplied root"
     );
-    assert_ne!(roots.v2, roots.v1, "V2 should re-emit the root");
     let v2_envelope = roots.v2.load(&ctx, &parity.v2_store).await?;
     assert_eq!(
         v2_envelope.augmented_manifest.acl_manifest_directory_id,
         Some(acl_root_overlay),
-        "V2's root should carry the commit's ACL root",
+        "the kept root should carry the commit's ACL root",
     );
+    Ok(())
+}
+
+/// A merged directory equal to p1's, whose stored envelope has no ACL pointer
+/// although p1's root records one for it. V1 copies p1's entry for the
+/// directory and does not rewrite the directory.
+#[mononoke::fbinit_test]
+async fn test_v2_matches_v1_for_merge_reusing_directory_with_stale_acl_pointer(
+    fb: FacebookInit,
+) -> Result<()> {
+    // Given: `p1` adds a file under the restriction root `restricted/`, `p2`
+    // adds one elsewhere, and their merge keeps p1's `restricted/`. That
+    // directory's envelope is stored without an ACL pointer, as before ACL
+    // pointers existed, while p1's root still records the pointer for it.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
+    let b = create_supplied_root_base(&ctx, &repo, true).await?;
+    let p1 = CreateCommitContext::new(&ctx, &repo, vec![b])
+        .add_file("restricted/extra", "extra")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new(&ctx, &repo, vec![b])
+        .add_file("other/c", "c")
+        .commit()
+        .await?;
+    let p1_root = derive_stored_root(&ctx, &repo, p1).await?;
+    let p1_restricted_entry = lookup_augmented_root_child(&ctx, &repo, p1_root, b"restricted")
+        .await?
+        .context("fixture: p1 should contain restricted/")?;
+    let HgAugmentedManifestEntry::DirectoryNode(p1_restricted) = &p1_restricted_entry else {
+        return Err(anyhow!("fixture: p1's restricted/ should be a directory"));
+    };
+    assert!(
+        p1_restricted.acl_manifest_directory_id.is_some(),
+        "fixture: p1's root should record an ACL pointer for restricted/",
+    );
+    let p1_restricted_id = HgAugmentedManifestId::new(p1_restricted.treenode);
+    let stale_base = MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone());
+    let mut stale_envelope = p1_restricted_id.load(&ctx, repo.repo_blobstore()).await?;
+    stale_envelope.augmented_manifest.acl_manifest_directory_id = None;
     assert_eq!(
-        v2_envelope.augmented_manifest.hg_node_id, v2_envelope.augmented_manifest.computed_node_id,
-        "V2's re-emitted root should be content-derived",
+        stale_envelope.store(&ctx, &stale_base).await?,
+        p1_restricted_id,
+        "fixture: the stale envelope should be stored under p1's restricted/ id",
+    );
+    let mut parity = V1V2Parity::new(stale_base);
+    parity.add_stored_root(p1, p1_root);
+    parity.add_stored_root(p2, derive_stored_root(&ctx, &repo, p2).await?);
+    let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+        .commit()
+        .await?;
+
+    // When: deriving the merge with V1 and V2.
+    let roots = parity.derive(&ctx, &repo, merge).await?;
+
+    // Then: V2 matches V1, and both keep p1's entry for restricted/.
+    parity
+        .assert_v2_matches_v1(&ctx, &roots, "merge reusing a stale restricted/")
+        .await?;
+    let merge_restricted_entry = roots
+        .v1
+        .load(&ctx, &parity.v1_store)
+        .await?
+        .augmented_manifest
+        .lookup(
+            &ctx,
+            &parity.v1_store,
+            &MPathElement::new_from_slice(b"restricted")?,
+        )
+        .await?;
+    assert_eq!(
+        merge_restricted_entry,
+        Some(p1_restricted_entry),
+        "the merge should keep p1's entry for restricted/",
     );
     Ok(())
 }
