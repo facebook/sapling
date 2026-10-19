@@ -82,10 +82,11 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "clone",
     srcs = ["clone_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -93,20 +94,22 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "config",
     srcs = ["config_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "corrupt_overlay",
     srcs = ["corrupt_overlay_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/service:thrift-python-types",
@@ -139,40 +142,44 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "debug_getpath",
     srcs = ["debug_getpath_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "debug_subscribe",
     srcs = ["debug_subscribe_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "debug",
     srcs = ["debug_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "doteden",
     srcs = ["doteden_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
@@ -253,10 +260,11 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "cli_smoke",
     srcs = ["eden_cli_smoke_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
@@ -364,7 +372,7 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "eden_lock",
     srcs = ["eden_lock_test.py"],
     compatible_with = [
@@ -841,10 +849,11 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "du",
     srcs = ["du_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
