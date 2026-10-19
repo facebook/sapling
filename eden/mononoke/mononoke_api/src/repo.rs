@@ -894,9 +894,9 @@ impl<R: RepoConfigRef> RepoContext<R> {
 }
 
 impl<R: RepoConfigRef + RepoIdentityRef> RepoContext<R> {
-    /// Reject commit-cloud writes on structurally-readonly repos.
-    /// Config flag only, not the dynamic repo lock: drafts must keep
-    /// syncing during a push freeze.
+    /// Reject commit-cloud writes on repos that accept no drafts at all.
+    /// `readonly` alone is not enough: the configerator family is readonly
+    /// yet takes drafts. `infinitepush.allow_writes` is the discriminator.
     pub fn ensure_commit_cloud_writable(&self) -> Result<(), MononokeError> {
         if !justknobs::eval(
             "scm/mononoke:reject_commit_cloud_writes_on_readonly_repos",
@@ -905,7 +905,7 @@ impl<R: RepoConfigRef + RepoIdentityRef> RepoContext<R> {
         ) {
             return Ok(());
         }
-        if self.config().readonly.is_read_only() {
+        if self.config().readonly.is_read_only() && !self.config().infinitepush.allow_writes {
             Err(MononokeError::InvalidRequest(format!(
                 "Commit-cloud writes are disabled on readonly repo {} (see scm/mononoke:reject_commit_cloud_writes_on_readonly_repos)",
                 self.config().repoid,
@@ -2430,6 +2430,7 @@ mod tests {
         let mut factory = test_repo_factory::TestRepoFactory::new(fb)?;
         factory.with_config_override(|config| {
             config.readonly = metaconfig_types::RepoReadOnly::ReadOnly("test".to_string());
+            config.infinitepush.allow_writes = false;
         });
         let repo: Repo = factory.build().await?;
         let repo_ctx = RepoContext::new_test(CoreContext::test_mock(fb), Arc::new(repo)).await?;
@@ -2443,6 +2444,19 @@ mod tests {
                 "knob_on={knob_on}: readonly repo must be rejected iff gate on, got: {other:?}"
             ),
         }
+
+        // Readonly but draft-accepting (the configerator shape): always allowed.
+        let mut factory = test_repo_factory::TestRepoFactory::new(fb)?;
+        factory.with_config_override(|config| {
+            config.readonly = metaconfig_types::RepoReadOnly::ReadOnly("test".to_string());
+            config.infinitepush.allow_writes = true;
+        });
+        let repo: Repo = factory.build().await?;
+        let repo_ctx = RepoContext::new_test(CoreContext::test_mock(fb), Arc::new(repo)).await?;
+        assert!(
+            repo_ctx.ensure_commit_cloud_writable().is_ok(),
+            "knob_on={knob_on}: readonly repo with infinitepush writes must allow commit-cloud writes"
+        );
 
         let repo: Repo = test_repo_factory::build_empty(fb).await?;
         let repo_ctx = RepoContext::new_test(CoreContext::test_mock(fb), Arc::new(repo)).await?;

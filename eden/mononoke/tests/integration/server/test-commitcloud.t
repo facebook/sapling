@@ -8,6 +8,7 @@
   $ setconfig ui.ignorerevnum=false
 
 setup configuration
+  $ export READ_ONLY_REPO=1
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   setup_common_config
   $ cd $TESTTMP
