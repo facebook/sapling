@@ -215,3 +215,112 @@ impl<T: Manifest> fmt::Display for MergeResult<T> {
         write!(f, "{}\n{}", self.actions, self.conflicts)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use manifest::FileMetadata;
+    use manifest_tree::testutil::TestStore;
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
+    use types::HgId;
+
+    use super::*;
+
+    // FIXME: Combining these changes must return a merge result, not panic.
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn test_merge_content_with_exec() {
+        check_content_and_exec(false).unwrap();
+    }
+
+    // FIXME: Combining these changes must return a merge result, not panic.
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn test_merge_exec_with_content() {
+        check_content_and_exec(true).unwrap();
+    }
+
+    fn check_content_and_exec(swap_sides: bool) -> Result<()> {
+        for base_type in [FileType::Regular, FileType::Executable] {
+            let exec_type = if base_type == FileType::Regular {
+                FileType::Executable
+            } else {
+                FileType::Regular
+            };
+            for content_type in [FileType::Regular, FileType::Executable] {
+                let store = Arc::new(TestStore::new());
+                let path = RepoPathBuf::from_string("file".to_owned())?;
+                let base_meta = FileMetadata::new(HgId::from_byte_array([1; 20]), base_type);
+                let content_meta = FileMetadata::new(HgId::from_byte_array([2; 20]), content_type);
+                let exec_meta = FileMetadata::new(base_meta.hgid, exec_type);
+                let base =
+                    make_tree_manifest_from_meta(store.clone(), vec![(path.clone(), base_meta)]);
+                let content =
+                    make_tree_manifest_from_meta(store.clone(), vec![(path.clone(), content_meta)]);
+                let exec = make_tree_manifest_from_meta(store, vec![(path.clone(), exec_meta)]);
+                let (src, dest) = if swap_sides {
+                    (&exec, &content)
+                } else {
+                    (&content, &exec)
+                };
+
+                let merged = Merge {}
+                    .merge(src, dest, &base)?
+                    .try_into_manifest()?
+                    .expect("content and executable changes should merge without conflict");
+                assert_eq!(
+                    merged.get_file(&path)?,
+                    Some(FileMetadata::new(content_meta.hgid, exec_type)),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    // FIXME: Combining these changes must return a merge result, not panic.
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn test_merge_symlink_with_exec() {
+        check_symlink_and_exec(false).unwrap();
+    }
+
+    // FIXME: Combining these changes must return a merge result, not panic.
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    fn test_merge_exec_with_symlink() {
+        check_symlink_and_exec(true).unwrap();
+    }
+
+    fn check_symlink_and_exec(swap_sides: bool) -> Result<()> {
+        let store = Arc::new(TestStore::new());
+        let path = RepoPathBuf::from_string("file".to_owned())?;
+        let base_meta = FileMetadata::regular(HgId::from_byte_array([1; 20]));
+        let link_meta = FileMetadata::new(HgId::from_byte_array([2; 20]), FileType::Symlink);
+        let exec_meta = FileMetadata::new(base_meta.hgid, FileType::Executable);
+        let base = make_tree_manifest_from_meta(store.clone(), vec![(path.clone(), base_meta)]);
+        let link = make_tree_manifest_from_meta(store.clone(), vec![(path.clone(), link_meta)]);
+        let exec = make_tree_manifest_from_meta(store, vec![(path.clone(), exec_meta)]);
+        let (src, dest, src_meta, dest_meta) = if swap_sides {
+            (&exec, &link, exec_meta, link_meta)
+        } else {
+            (&link, &exec, link_meta, exec_meta)
+        };
+
+        let merged = Merge {}.merge(src, dest, &base)?;
+        match &merged.conflicts()[&path] {
+            Conflict::BothChanged {
+                ancestor,
+                src,
+                dest,
+            } => {
+                assert_eq!(*ancestor, Some(base_meta));
+                assert_eq!(*src, src_meta);
+                assert_eq!(*dest, dest_meta);
+            }
+            _ => panic!("a symlink and executable change should remain a type conflict"),
+        }
+        assert!(merged.try_into_manifest()?.is_none());
+        Ok(())
+    }
+}

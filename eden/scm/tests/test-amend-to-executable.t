@@ -73,3 +73,66 @@ Replay additions, flag clears, and flag changes on existing files.
   target
   amended
 #endif
+
+Amend an executable-bit change across a descendant content change.
+FIXME: Native merge must combine the mode and content changes without panicking.
+  $ newclientrepo
+  $ setconfig diff.git=true
+  $ echo one > file
+  $ sl ci -Aqm A
+  $ echo two >> file
+  $ sl ci -m B
+  $ chmod +x file
+  $ sl amend --to 'desc(A)' > $TESTTMP/amend-error 2>&1
+  [1]
+  $ tail -1 $TESTTMP/amend-error
+  SystemError: Rust panic: not implemented
+  $ sl status
+  M file
+  $ sl manifest -v -r 'desc(A)'
+  644   file
+  $ sl manifest -v
+  644   file
+  $ sl cat -r . file
+  one
+  two
+
+Amend a content change across a descendant clearing the executable bit.
+FIXME: Native merge must combine the content and mode changes without panicking.
+  $ newclientrepo
+  $ setconfig diff.git=true
+  $ echo one > file
+  $ chmod +x file
+  $ sl ci -Aqm A
+  $ chmod -x file
+  $ sl ci -m B
+  $ echo two >> file
+  $ sl amend --to 'desc(A)' > $TESTTMP/amend-error 2>&1
+  [1]
+  $ tail -1 $TESTTMP/amend-error
+  SystemError: Rust panic: not implemented
+  $ sl status
+  M file
+  $ sl manifest -v -r 'desc(A)'
+  755 * file
+  $ sl manifest -v
+  644   file
+  $ sl cat -r . file
+  one
+
+Internal amend patches preserve permissions, paths, and whitespace despite diff
+preferences.
+FIXME: User diff settings must not silently discard mode and whitespace changes.
+  $ newclientrepo
+  $ setconfig diff.git=false diff.noprefix=true diff.ignorews=true
+  $ echo 'one two' > file
+  $ sl ci -Aqm A
+  $ chmod +x file
+  $ echo 'one  two' > file
+  $ sl amend --to .
+  $ sl status
+  M file
+  $ sl manifest -v
+  644   file
+  $ sl cat -r . file
+  one two

@@ -59,3 +59,33 @@ Test rebasing a single commit that changes flags:
   $ tellmeabout foo_newloc
   foo_newloc is an executable file with content:
   B
+
+Native rebase combines content and executable-bit changes from either side.
+It also preserves text merges, removals, and source copy metadata.
+
+  $ newclientrepo
+  $ setconfig nativecheckout.rebaseonenative=true
+  $ drawdag <<'EOS'
+  > B C
+  > |/
+  > A
+  >   # drawdag.defaultfiles=false
+  >   # A/src-set=base\n
+  >   # A/dest-clear=base\n (executable)
+  >   # A/merged=one\ntwo\nthree\n
+  >   # A/removed=removed\n
+  >   # B/src-set=source\n
+  >   # B/dest-clear=base\n
+  >   # B/merged=ONE\ntwo\nthree\n
+  >   # B/removed=(removed)
+  >   # B/copied=source\n (copied from src-set)
+  >   # C/src-set=base\n (executable)
+  >   # C/dest-clear=destination\n (executable)
+  >   # C/merged=one\ntwo\nTHREE\n
+  > EOS
+FIXME: Native merge must combine content and mode changes instead of panicking.
+
+  $ sl rebase -q -r $B -d $C > $TESTTMP/rebase-error 2>&1
+  [1]
+  $ tail -1 $TESTTMP/rebase-error
+  SystemError: Rust panic: not implemented
