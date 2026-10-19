@@ -32,8 +32,12 @@ REVISIONSTORE_FUZZ_DEPS = [
     "//eden/scm/lib/indexedlog:indexedlog",
     "//eden/scm/lib/minibytes:minibytes",
     "//eden/scm/lib/revisionstore:revisionstore",
-    "//eden/scm/lib/storemodel:storemodel",
     "//eden/scm/lib/types:types",
+]
+
+# For the targets that compile fuzz_targets/corrupt.rs.
+CORRUPT_FUZZ_DEPS = REVISIONSTORE_FUZZ_DEPS + [
+    "//eden/scm/lib/storemodel:storemodel",
 ]
 
 # Smoke test these with: buck2 test :entry_decode-smoke-test
@@ -66,7 +70,7 @@ rust_lionhead_harness(
         severity_denial_of_service = Severity.FILE_SECURITY_TASK,
         severity_service_takeover = Severity.FILE_SECURITY_TASK,
     ),
-    deps = REVISIONSTORE_FUZZ_DEPS,
+    deps = CORRUPT_FUZZ_DEPS,
 )
 
 rust_lionhead_harness(
@@ -98,5 +102,33 @@ rust_lionhead_harness(
         severity_denial_of_service = Severity.FILE_SECURITY_TASK,
         severity_service_takeover = Severity.FILE_SECURITY_TASK,
     ),
-    deps = REVISIONSTORE_FUZZ_DEPS,
+    deps = CORRUPT_FUZZ_DEPS,
+)
+
+rust_lionhead_harness(
+    name = "aux_entry_decode",
+    srcs = [
+        "fuzz_targets/aux_entry_decode.rs",
+        "fuzz_targets/corrupt.rs",
+    ],
+    annotations = [
+        lh.PathAnnotation(
+            alert = True,
+            include_path_globs = REVISIONSTORE_PATH_GLOBS,
+            target_symbols = [
+                "revisionstore::indexedlogauxstore::deserialize$",
+                "18indexedlogauxstore11deserialize$",
+                "revisionstore::indexedlogauxstore::AuxStore.?::get$",
+                "18indexedlogauxstore.*8AuxStore3get$",
+            ],
+        ),
+    ],
+    crate_root = "fuzz_targets/aux_entry_decode.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,
+    ),
+    deps = CORRUPT_FUZZ_DEPS,
 )

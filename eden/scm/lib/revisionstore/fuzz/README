@@ -1,22 +1,27 @@
-Fuzz targets for the IndexedLogHgIdDataStore read path.
+Fuzz targets for the revisionstore on-disk read paths.
 
 The stores under eden/scm/lib/indexedlog/fuzz cover the container format. These
-cover the revisionstore layer above it: the entry decoder, the metadata-list
-walk and lz4 decompression, reached through the store wrapper.
+cover the revisionstore layer above it: the entry decoders of
+indexedlogdatastore and indexedlogauxstore, reached through their store
+wrappers.
 
-  entry_decode      Entry::from_bytes, InternalMetadata::read and
-                    Entry::calculate_content, reached via get_raw_entry and
-                    to_keys
-  store_open_get    IndexedLogHgIdDataStore::new on a corrupted rotated store,
-                    then get/get_missing/to_keys - the Log::lookup frame the
-                    EdenFS crash reports name
+  entry_decode          indexedlogdatastore: Entry::from_bytes,
+                        InternalMetadata::read and Entry::calculate_content,
+                        reached via get_raw_entry and to_keys
+  store_open_get        IndexedLogHgIdDataStore::new on a corrupted rotated
+                        store, then get/get_missing/to_keys - the Log::lookup
+                        frame the EdenFS crash reports name
+  aux_entry_decode      indexedlogauxstore: deserialize, reached via
+                        AuxStore::get - the version byte, the VLQ total_size
+                        and the file header metadata size
 
 indexedlog checksums every entry it stores, so an entry patched on disk is
-rejected below revisionstore and the decoder never runs. entry_decode therefore
-patches a valid serialized entry and appends it through the store's write path,
-which recomputes the checksum over the patched bytes. store_open_get patches
-the container files instead. Both encode the input as a sequence of 8-byte
-patch records; see eden/scm/lib/fuzzutil/src/corrupt.rs.
+rejected below revisionstore and the decoder never runs. entry_decode and
+aux_entry_decode therefore patch a valid serialized entry and append it
+through the store's write path, which recomputes the checksum over the patched
+bytes. store_open_get patches the container files instead. All three encode
+the input as a sequence of 8-byte patch records; see
+eden/scm/lib/fuzzutil/src/corrupt.rs.
 
 Panics, aborts and sanitizer reports are findings. Errors returned for corrupt
 data are the expected behavior and are ignored by the harnesses.
