@@ -139,19 +139,22 @@ impl InternalMetadata {
 
             let value_len = cur.read_u16::<BigEndian>()? as usize;
             let value_start = cur.position() as usize;
+            let buf = cur.get_ref();
+            let value_end = value_start
+                .checked_add(value_len)
+                .filter(|&end| end <= buf.len())
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "metadata value length {value_len} exceeds buffer at offset {value_start}"
+                    )
+                })?;
             match key {
-                b'f' => {
-                    let buf = cur.get_ref();
-                    flags = Some(bin_to_u64(&buf[value_start..value_start + value_len]));
-                }
-                b's' => {
-                    let buf = cur.get_ref();
-                    size = Some(bin_to_u64(&buf[value_start..value_start + value_len]));
-                }
+                b'f' => flags = Some(bin_to_u64(&buf[value_start..value_end])),
+                b's' => size = Some(bin_to_u64(&buf[value_start..value_end])),
                 _ => anyhow::bail!("invalid metadata format '{key:?}'"),
             }
 
-            cur.set_position((value_start + value_len) as u64);
+            cur.set_position(value_end as u64);
         }
 
         Ok(Self {
@@ -223,6 +226,20 @@ mod tests {
             let read_meta = InternalMetadata::read(&mut Cursor::new(&buf)).expect("read");
 
             meta.api.size == read_meta.api.size && (meta.api.flags == read_meta.api.flags || (meta.api.flags == Some(0)))
+        }
+    }
+
+    #[test]
+    fn test_value_len_past_end_of_buffer() {
+        // Metadata list declaring a 0x1194 byte value in an 8 byte buffer.
+        for key in *b"fs" {
+            let buf = vec![0x00, 0x00, 0x00, 0x04, key, 0x11, 0x94, 0x00];
+            let err = InternalMetadata::read(&mut Cursor::new(buf.as_slice()))
+                .expect_err("a value length past the end of the buffer should be an error");
+            assert!(
+                err.to_string().contains("exceeds buffer"),
+                "expected a bounds error, got: {err}"
+            );
         }
     }
 
