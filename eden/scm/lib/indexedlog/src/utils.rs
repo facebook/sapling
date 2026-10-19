@@ -417,6 +417,20 @@ pub(crate) fn rand_u64() -> u64 {
     }
 }
 
+/// Consume exactly `len` bytes after checking the remaining input size.
+/// Length prefixes from disk must be checked before slicing or allocating.
+pub(crate) fn read_exact_slice<'a>(reader: &mut &'a [u8], len: usize) -> io::Result<&'a [u8]> {
+    if len > reader.len() {
+        // Matches the error `Read::read_exact` would have produced.
+        let msg = "failed to fill whole buffer";
+        return Err(io::Error::new(io::ErrorKind::UnexpectedEof, msg));
+    }
+
+    let (buf, remaining) = reader.split_at(len);
+    *reader = remaining;
+    Ok(buf)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

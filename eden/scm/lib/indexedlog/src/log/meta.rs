@@ -7,10 +7,10 @@
 
 use std::collections::BTreeMap;
 use std::io;
-use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
+use std::str;
 
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;
@@ -22,6 +22,7 @@ use crate::errors::IoResultExt;
 use crate::utils;
 use crate::utils::atomic_read;
 use crate::utils::atomic_write;
+use crate::utils::read_exact_slice;
 use crate::utils::xxhash;
 
 /// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
@@ -43,37 +44,35 @@ pub struct LogMetadata {
 }
 
 impl LogMetadata {
-    /// Read metadata from a reader.
-    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
-        let header = HeaderVersion::from_reader(&mut reader)?;
+    /// Read one metadata record, advancing the slice past the consumed bytes.
+    pub fn read(reader: &mut &[u8]) -> io::Result<Self> {
+        let header = HeaderVersion::from_reader(reader)?;
         let hash: u64 = match header {
             HeaderVersion::V0 => reader.read_vlq()?,
             HeaderVersion::V1 => reader.read_u64::<LittleEndian>()?,
         };
         let buf_len = reader.read_vlq()?;
 
-        let mut buf = vec![0; buf_len];
-        reader.read_exact(&mut buf)?;
+        let buf = read_exact_slice(reader, buf_len)?;
 
-        if xxhash(&buf) != hash {
+        if xxhash(buf) != hash {
             let msg = "metadata integrity check failed";
             return Err(io::Error::new(io::ErrorKind::InvalidData, msg));
         }
 
-        let mut reader = Cursor::new(buf);
+        let mut reader = buf;
         let primary_len = reader.read_vlq()?;
         let index_count: usize = reader.read_vlq()?;
         let mut indexes = BTreeMap::new();
         for _ in 0..index_count {
             let name_len = reader.read_vlq()?;
-            let mut name = vec![0; name_len];
-            reader.read_exact(&mut name)?;
-            let name = String::from_utf8(name).map_err(|_e| {
+            let name = read_exact_slice(&mut reader, name_len)?;
+            let name = str::from_utf8(name).map_err(|_e| {
                 let msg = "non-utf8 index name";
                 io::Error::new(io::ErrorKind::InvalidData, msg)
             })?;
             let len = reader.read_vlq()?;
-            indexes.insert(name, len);
+            indexes.insert(name.to_owned(), len);
         }
 
         // 'epoch' is optional - it does not exist in a previous serialization
@@ -131,7 +130,7 @@ impl LogMetadata {
     pub fn read_file<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
         let path = path.as_ref();
         let buf = atomic_read(path).context(path, "when reading LogMetadata")?;
-        Self::read(&buf[..]).context(path, || {
+        Self::read(&mut &buf[..]).context(path, || {
             format!("when parsing LogMetadata (content: {buf:?})")
         })
     }
@@ -229,7 +228,7 @@ mod tests {
                 index_lag_since_unix_secs: 0,
             };
             meta.write(&mut buf).expect("write");
-            let mut cur = Cursor::new(buf);
+            let mut cur = buf.as_slice();
             let meta_read = LogMetadata::read(&mut cur).expect("read");
             meta_read == meta
         }
@@ -243,7 +242,7 @@ mod tests {
                 index_lag_since_unix_secs: 0,
             };
             meta.write_using_header(&mut buf, HeaderVersion::V0).expect("write");
-            let mut cur = Cursor::new(buf);
+            let mut cur = buf.as_slice();
             let meta_read = LogMetadata::read(&mut cur).expect("read");
             meta_read == meta
         }
@@ -263,6 +262,10 @@ mod tests {
         }
     }
 
+    /// A length prefix that a corrupt or partially written `meta` can plausibly
+    /// name: past the end of the data, and past what any allocator will serve.
+    const CORRUPT_LEN: usize = 1 << 48;
+
     #[test]
     fn test_roundtrip_meta_with_index_lag_since() {
         let meta = LogMetadata {
@@ -273,7 +276,7 @@ mod tests {
         };
         let mut buf = Vec::new();
         meta.write(&mut buf).unwrap();
-        let meta_read = LogMetadata::read(&buf[..]).unwrap();
+        let meta_read = LogMetadata::read(&mut &buf[..]).unwrap();
         assert_eq!(meta_read, meta);
     }
 
@@ -291,6 +294,62 @@ mod tests {
 
         other.indexes.insert(String::from("b"), 5);
         assert!(!meta.has_same_log_state(&other));
+    }
+
+    #[test]
+    fn test_read_rejects_oversized_metadata_length() {
+        for len in [8, CORRUPT_LEN] {
+            let mut data = HeaderVersion::V1.to_bytes().to_vec();
+            data.write_u64::<LittleEndian>(0).unwrap();
+            data.write_vlq(len).unwrap();
+            data.extend_from_slice(b"short");
+
+            let err = LogMetadata::read(&mut &data[..]).unwrap_err();
+            assert_eq!(
+                err.kind(),
+                io::ErrorKind::UnexpectedEof,
+                "a length prefix past the remaining data should read as truncation"
+            );
+        }
+    }
+
+    #[test]
+    fn test_read_rejects_oversized_index_name_length() {
+        for len in [2, CORRUPT_LEN] {
+            // Hashed so the integrity check passes and the oversized length is reached.
+            let mut buf = Vec::new();
+            buf.write_vlq(0u64).unwrap();
+            buf.write_vlq(1usize).unwrap();
+            buf.write_vlq(len).unwrap();
+
+            let mut data = HeaderVersion::V1.to_bytes().to_vec();
+            data.write_u64::<LittleEndian>(xxhash(&buf)).unwrap();
+            data.write_vlq(buf.len()).unwrap();
+            data.extend_from_slice(&buf);
+            // Bytes outside the payload must not count toward the name length.
+            data.extend_from_slice(b"trailing data");
+
+            let err = LogMetadata::read(&mut &data[..]).unwrap_err();
+            assert_eq!(
+                err.kind(),
+                io::ErrorKind::UnexpectedEof,
+                "an index name length past the remaining payload should read as truncation"
+            );
+        }
+    }
+
+    #[test]
+    fn test_read_consumes_one_record() {
+        let meta = LogMetadata::new_with_primary_len(42);
+        let mut data = Vec::new();
+        meta.write(&mut data).unwrap();
+        meta.write(&mut data).unwrap();
+
+        let mut reader = data.as_slice();
+        assert_eq!(LogMetadata::read(&mut reader).unwrap(), meta);
+        assert_eq!(reader.len(), data.len() / 2);
+        assert_eq!(LogMetadata::read(&mut reader).unwrap(), meta);
+        assert!(reader.is_empty());
     }
 
     #[test]

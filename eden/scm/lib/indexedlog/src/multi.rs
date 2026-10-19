@@ -10,6 +10,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io;
+use std::io::Read;
 use std::mem;
 use std::ops;
 use std::path::Path;
@@ -516,9 +517,9 @@ impl Default for MultiMeta {
 }
 
 impl MultiMeta {
-    /// Update self with content from a reader.
+    /// Update self with content from a byte slice.
     /// Metadata with existing keys are mutated in-place.
-    fn read(&mut self, mut reader: impl io::Read) -> io::Result<()> {
+    fn read(&mut self, mut reader: &[u8]) -> io::Result<()> {
         let format_version: usize = reader.read_vlq()?;
         if format_version != 0 {
             return Err(io::Error::other(format!(
