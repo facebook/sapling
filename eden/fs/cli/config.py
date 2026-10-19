@@ -54,7 +54,11 @@ from eden.fs.service.eden.thrift_types import (
 from eden.thrift import client
 from eden.thrift.client import EdenNotRunningError
 from filelock import BaseFileLock, FileLock
-from thrift.python.exceptions import ApplicationError, ApplicationErrorType
+from thrift.python.exceptions import (
+    ApplicationError,
+    ApplicationErrorType,
+    TransportError,
+)
 
 from . import configinterpolator, configutil, telemetry, util, version
 
@@ -632,7 +636,7 @@ class EdenInstance(AbstractEdenInstance):
         try:
             with self.get_thrift_client() as client:
                 thrift_mounts: List[MountInfo] = list(client.listMounts())
-        except EdenNotRunningError:
+        except (EdenNotRunningError, TransportError):
             thrift_mounts = []
 
         config_mounts = self.get_checkouts()
