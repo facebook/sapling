@@ -174,3 +174,62 @@ impl Arbitrary for AsciiChar {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
+
+    use super::AsciiChar;
+    use super::AsciiString;
+    use super::gen_ascii_in_range;
+
+    fn assert_ascii(ch: ascii::AsciiChar) {
+        let byte = ch.as_byte();
+        assert!(byte < 128);
+        assert_eq!(ascii::AsciiChar::from_ascii(byte), Ok(ch));
+    }
+
+    #[test]
+    fn arbitrary_char_exercises_both_unchecked_branches() {
+        for (seed, mode) in [(7, 0), (39, 14), (42, 40), (22, 99)] {
+            let mut probe = Gen::from_size_and_seed(4, seed);
+            assert_eq!(u32::arbitrary(&mut probe) % 100, mode);
+
+            let mut generator = Gen::from_size_and_seed(4, seed);
+            let ch = AsciiChar::arbitrary(&mut generator);
+            assert_ascii(ch.0);
+            if mode <= 14 {
+                assert!(ch.as_byte() < 0x1F);
+            }
+        }
+    }
+
+    #[test]
+    fn helper_ranges_produce_checked_ascii() {
+        for (left, right) in [(0, 1), (30, 31), (127, 128), (0, 31), (0, 128), (32, 127)] {
+            for seed in 0..8 {
+                let mut generator = Gen::from_size_and_seed(4, seed);
+                let byte = gen_ascii_in_range(&mut generator, left, right);
+                assert!((left..right).contains(&byte));
+                let ch = ascii::AsciiChar::from_ascii(byte).unwrap();
+                assert_eq!(ch.as_byte(), byte);
+                assert_ascii(ch);
+            }
+        }
+    }
+
+    #[test]
+    fn arbitrary_strings_contain_checked_ascii() {
+        for size in [0, 1, 4] {
+            for seed in 0..4 {
+                let mut generator = Gen::from_size_and_seed(size, seed);
+                let string = AsciiString::arbitrary(&mut generator);
+                assert_eq!(string.len(), size);
+                for ch in string.chars() {
+                    assert_ascii(ch);
+                }
+            }
+        }
+    }
+}

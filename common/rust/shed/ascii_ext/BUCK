@@ -12,6 +12,7 @@ rust_library(
             },
         },
     },
+    unittests_miri = True,
     deps = [
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:quickcheck",
