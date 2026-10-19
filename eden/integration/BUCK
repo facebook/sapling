@@ -37,30 +37,33 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "cancellation",
     srcs = ["cancellation_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "casing",
     srcs = ["casing_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "changes",
     srcs = ["changes_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -68,10 +71,11 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "chown",
     srcs = ["chown_test.py"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
