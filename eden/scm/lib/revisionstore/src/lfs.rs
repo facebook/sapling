@@ -400,6 +400,13 @@ impl LfsIndexedLogBlobsStore {
                 continue;
             }
 
+            // `range` and `data` are independent on-disk fields. A chunk that doesn't carry
+            // exactly the data its range claims can't be stitched into the blob, so treat the
+            // blob as missing and let it be refetched.
+            if entry.range.len() != entry.data.len() {
+                return Ok(None);
+            }
+
             let mut range_in_data = Range {
                 start: 0,
                 end: entry.data.len(),
@@ -2441,6 +2448,39 @@ mod tests {
         };
 
         store.inner.append(serialize(&entry)?)?;
+        store.flush()?;
+
+        assert_eq!(store.get(&sha256, data.len() as u64)?, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_chunk_data_shorter_than_range() -> Result<()> {
+        let dir = TempDir::new()?;
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_chunk_data_shorter_than_range");
+
+        let store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
+
+        let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
+        let sha256 = ContentHash::sha256(&data).unwrap_sha256();
+
+        let first_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 0, end: 4 },
+            data: data.slice(0..4),
+        };
+        store.inner.append(serialize(&first_entry)?)?;
+
+        // This chunk overlaps the first one, but holds less data than its range claims.
+        let short_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 2, end: 7 },
+            data: data.slice(6..7),
+        };
+        store.inner.append(serialize(&short_entry)?)?;
+
         store.flush()?;
 
         assert_eq!(store.get(&sha256, data.len() as u64)?, None);
