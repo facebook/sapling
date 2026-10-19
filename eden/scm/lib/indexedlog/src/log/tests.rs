@@ -1063,6 +1063,34 @@ pub(crate) fn pwrite(path: &Path, offset: i64, data: &[u8]) {
 }
 
 #[test]
+fn test_read_entry_rejects_data_len_overflow() {
+    let dir = tempdir().unwrap();
+    let mut log = Log::open(dir.path(), Vec::new()).unwrap();
+    log.append(&[b'x'; 100]).unwrap();
+    let primary_len = log.sync().unwrap();
+    let entry_len = (primary_len - PRIMARY_START_OFFSET) as usize;
+
+    // Rewrite the entry in place with the same layout (entry_flags, data_len,
+    // xxhash64, data) and the same total length, but with a data_len that makes
+    // `data_offset + data_len` wrap around instead of merely exceeding the buffer.
+    let mut entry = Vec::new();
+    entry.write_vlq(ENTRY_FLAG_HAS_XXHASH64).unwrap();
+    entry.write_vlq(u64::MAX - 5).unwrap();
+    entry.write_u64::<LittleEndian>(0).unwrap();
+    assert!(entry.len() < entry_len);
+    entry.resize(entry_len, b'x');
+    pwrite(
+        &dir.path().join(PRIMARY_FILE),
+        PRIMARY_START_OFFSET as i64,
+        &entry,
+    );
+
+    let log = Log::open(dir.path(), Vec::new()).unwrap();
+    let err = log.iter().collect::<Result<Vec<_>, _>>().unwrap_err();
+    assert!(err.to_string().contains("incomplete entry data"), "{err}");
+}
+
+#[test]
 fn test_repair() {
     let dir = tempdir().unwrap();
     {

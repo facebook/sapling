@@ -1726,10 +1726,10 @@ impl Log {
         };
 
         // Read the actual payload
-        let end = offset + data_len;
-        if end > buf.len() as u64 {
-            return Err(data_error(format!("incomplete entry data at {offset}")));
-        }
+        let end = offset
+            .checked_add(data_len)
+            .filter(|end| *end <= buf.len() as u64)
+            .ok_or_else(|| data_error(format!("incomplete entry data at {offset}")))?;
         let data = &buf[offset as usize..end as usize];
 
         let verified = match checksum_flags {
