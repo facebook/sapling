@@ -248,7 +248,7 @@ def checkportisavailable(port):
         return True
     except socket.error as exc:
         # pyrefly: ignore [missing-attribute]
-        if os.name == "nt" and exc.errno == errno.WSAEACCES:
+        if os.name == "nt" and exc.winerror == errno.WSAEACCES:
             return False
         elif exc.errno in (
             errno.EADDRINUSE,
