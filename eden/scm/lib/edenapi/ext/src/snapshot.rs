@@ -27,6 +27,7 @@ use edenapi_types::BubbleStrategy;
 use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::ContentId;
+use edenapi_types::EphemeralExtendRequest;
 use edenapi_types::ExtendBubbleTtlOutcome;
 use edenapi_types::FileType;
 use edenapi_types::RepoPathBuf;
@@ -222,6 +223,7 @@ async fn prepare_ephemeral_bubble(
             BubbleStrategy::Reuse {
                 bubble_id: reuse_bubble_id,
                 keep_ttl,
+                snapshot_id,
             } => {
                 // When keep_ttl is true, skip TTL extension for performance
                 let expiration = if *keep_ttl {
@@ -237,7 +239,11 @@ async fn prepare_ephemeral_bubble(
                     // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
                     // Only bubbles without labels that have expired will cause the request to fail.
                     let extend_response = api
-                        .ephemeral_extend(*reuse_bubble_id, bubble_properties.lifetime_secs)
+                        .ephemeral_extend(EphemeralExtendRequest {
+                            bubble_id: snapshot_id.is_none().then_some(*reuse_bubble_id),
+                            custom_duration_secs: bubble_properties.lifetime_secs,
+                            snapshot_id: *snapshot_id,
+                        })
                         .await
                         .context("Failed to extend ephemeral bubble lifetime")?;
                     match extend_response.result {

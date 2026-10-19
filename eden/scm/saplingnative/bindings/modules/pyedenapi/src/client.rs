@@ -34,6 +34,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
+use edenapi_types::BonsaiChangesetId;
 use edenapi_types::BookmarkKind;
 use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
@@ -53,6 +54,7 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitTranslateIdResponse;
+use edenapi_types::EphemeralExtendRequest;
 use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
@@ -543,15 +545,35 @@ py_class!(pub class client |py| {
             .map(Serde)
     }
 
-    def ephemeralextend(&self, bubble_id: u64, custom_duration_secs: Option<u64>)
-        -> PyResult<Serde<EphemeralExtendResponse>>
+    def ephemeralextend(
+        &self,
+        bubble_id: Option<u64>,
+        custom_duration_secs: Option<u64>,
+        snapshot_id: Option<Serde<BonsaiChangesetId>> = None
+    ) -> PyResult<Serde<EphemeralExtendResponse>>
     {
         let api = self.inner(py).as_ref();
-        let bubble_id = NonZeroU64::new(bubble_id).ok_or_else(|| {
-            PyErr::new::<cpython::exc::ValueError, _>(py, "bubble_id must be non-zero")
-        })?;
+        let bubble_id = bubble_id
+            .map(|id| {
+                NonZeroU64::new(id).ok_or_else(|| {
+                    PyErr::new::<cpython::exc::ValueError, _>(py, "bubble_id must be non-zero")
+                })
+            })
+            .transpose()?;
+        let snapshot_id = snapshot_id.map(|id| id.0);
+        if bubble_id.is_none() && snapshot_id.is_none() {
+            return Err(PyErr::new::<cpython::exc::ValueError, _>(
+                py,
+                "either bubble_id or snapshot_id must be provided",
+            ));
+        }
+        let request = EphemeralExtendRequest {
+            bubble_id,
+            custom_duration_secs,
+            snapshot_id,
+        };
         py
-            .allow_threads(|| block_on(api.ephemeral_extend(bubble_id, custom_duration_secs)))
+            .allow_threads(|| block_on(api.ephemeral_extend(request)))
             .map_pyerr(py)
             .map(Serde)
     }

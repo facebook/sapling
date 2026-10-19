@@ -427,9 +427,10 @@ def createremote(ui, repo, *pats, **opts) -> None:
             #   2. Subsequent snapshots: Use --continuation-of <id> --keep-ttl for fast creation
             #      in quick succession without unnecessary TTL extension overhead
 
-            bubble_strategy = {
-                "reuse": {"bubble_id": previousbubble, "keep_ttl": keepttl}
-            }
+            reuse = {"bubble_id": previousbubble, "keep_ttl": keepttl}
+            if ui.configbool("snapshot", "extend-by-snapshot-id", True):
+                reuse["snapshot_id"] = continuationof
+            bubble_strategy = {"reuse": reuse}
             ui.status(
                 _("continuing from snapshot {} using bubble {}\n").format(
                     continuationof, previousbubble

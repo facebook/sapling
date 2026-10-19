@@ -36,6 +36,7 @@ use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitMutationsResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitTranslateIdResponse;
+use edenapi_types::EphemeralExtendRequest;
 use edenapi_types::EphemeralExtendResponse;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
@@ -397,10 +398,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
 
     async fn ephemeral_extend(
         &self,
-        bubble_id: NonZeroU64,
-        custom_duration_secs: Option<u64>,
+        request: EphemeralExtendRequest,
     ) -> Result<EphemeralExtendResponse, SaplingRemoteApiError> {
-        let _ = (bubble_id, custom_duration_secs);
+        let _ = request;
         Err(SaplingRemoteApiError::NotSupported)
     }
 

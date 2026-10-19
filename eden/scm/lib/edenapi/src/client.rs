@@ -869,25 +869,23 @@ impl Client {
 
     async fn ephemeral_extend_attempt(
         &self,
-        bubble_id: NonZeroU64,
-        custom_duration_secs: Option<u64>,
+        request: EphemeralExtendRequest,
     ) -> Result<EphemeralExtendResponse, SaplingRemoteApiError> {
-        if let Some(duration) = custom_duration_secs {
+        if let Some(duration) = request.custom_duration_secs {
             tracing::info!(
-                "Extending ephemeral bubble {} ttl to {} seconds",
-                bubble_id,
-                duration
+                "Extending ephemeral bubble ttl to {duration} seconds; bubble_id={:?}, snapshot_id={:?}",
+                request.bubble_id,
+                request.snapshot_id
             );
         } else {
-            tracing::info!("Extending ephemeral bubble {} ttl", bubble_id);
+            tracing::info!(
+                "Extending ephemeral bubble ttl; bubble_id={:?}, snapshot_id={:?}",
+                request.bubble_id,
+                request.snapshot_id
+            );
         }
         let url = self.build_url(paths::EPHEMERAL_EXTEND)?;
-        let req = EphemeralExtendRequest {
-            bubble_id: Some(bubble_id),
-            custom_duration_secs,
-            snapshot_id: None,
-        }
-        .to_wire();
+        let req = request.to_wire();
         let request = self
             .configure_request(paths::EPHEMERAL_EXTEND, self.inner.client.post(url))?
             .cbor(&req)
@@ -2131,14 +2129,10 @@ impl SaplingRemoteApi for Client {
     /// If no duration is provided, the lifetime resets to the greater of the default lifetime or the remaining lifetime.
     async fn ephemeral_extend(
         &self,
-        bubble_id: NonZeroU64,
-        custom_duration_secs: Option<u64>,
+        request: EphemeralExtendRequest,
     ) -> Result<EphemeralExtendResponse, SaplingRemoteApiError> {
-        self.with_retry(|this| {
-            this.ephemeral_extend_attempt(bubble_id, custom_duration_secs)
-                .boxed()
-        })
-        .await
+        self.with_retry(|this| this.ephemeral_extend_attempt(request.clone()).boxed())
+            .await
     }
 
     async fn fetch_snapshot(

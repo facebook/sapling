@@ -395,6 +395,8 @@ pub enum BubbleStrategy {
         bubble_id: NonZeroU64,
         #[serde(default)]
         keep_ttl: bool,
+        #[serde(default)]
+        snapshot_id: Option<BonsaiChangesetId>,
     },
 }
 
