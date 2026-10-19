@@ -128,12 +128,16 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
             // read size
             let size: u64 = cur.read_vlq()?;
             // read file header metadata blob
-            if cur.position() + size <= bytes.len() as u64 {
-                let pos = cur.position() as usize;
-                file_header_metadata = Some(bytes.slice(pos..pos + size as usize));
-            } else {
+            let pos = cur.position();
+            // `pos + size` must not wrap: a corrupted `size` would otherwise satisfy the
+            // bounds check below and slice out of bounds.
+            let Some(end) = pos
+                .checked_add(size)
+                .filter(|end| *end <= bytes.len() as u64)
+            else {
                 bail!("auxstore entry is truncated/corrupted");
             };
+            file_header_metadata = Some(bytes.slice(pos as usize..end as usize));
         }
         Ok(Some((
             hgid,
@@ -585,6 +589,35 @@ mod tests {
                 .expect("Failed to deserialize entry")
                 .is_some(),
         );
+        Ok(())
+    }
+
+    #[test]
+    /// Test that a file header metadata size which overflows when added to the cursor
+    /// position is rejected rather than slicing out of bounds.
+    fn test_deserialize_file_header_metadata_size_overflow() -> Result<()> {
+        let mut buf = Vec::new();
+        buf.write_all(
+            key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")
+                .hgid
+                .as_ref(),
+        )?;
+        buf.write_u8(2)?; // write version
+        buf.write_vlq(4)?;
+        buf.write_all(Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?.as_ref())?;
+        buf.write_all(
+            Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?
+                .as_ref(),
+        )?;
+        buf.write_u8(1)?; // a value of 1 indicates the file header metadata is present
+        buf.write_vlq(u64::MAX)?; // size that wraps when added to the cursor position
+
+        let err = deserialize(buf.into()).expect_err("oversized size should be rejected");
+        assert!(
+            err.to_string().contains("truncated/corrupted"),
+            "unexpected error: {err}"
+        );
+
         Ok(())
     }
 
