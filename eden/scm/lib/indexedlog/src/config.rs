@@ -65,6 +65,9 @@ pub static WEAK_BUFFER_GC_THRESHOLD: atomic::AtomicUsize = atomic::AtomicUsize::
 /// A value of 0 disables the timeout-based correction.
 static INDEX_LAG_FLUSH_TIMEOUT_SECS: AtomicU64 = AtomicU64::new(60);
 
+/// Whether metadata written for newly-created logs is deterministic.
+static DETERMINISTIC_METADATA: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
 /// Set whether to fsync globally. fsync will be performed if either the local
 /// or global fsync flag is set.
 pub fn set_global_fsync(flag: bool) {
@@ -110,6 +113,24 @@ pub fn set_index_lag_flush_timeout_secs(timeout_secs: u64) {
 /// Get how long index lag may persist on disk before `Log::open` forces a flush.
 pub fn get_index_lag_flush_timeout_secs() -> u64 {
     INDEX_LAG_FLUSH_TIMEOUT_SECS.load(atomic::Ordering::Acquire)
+}
+
+/// Make metadata for newly-created logs deterministic.
+///
+/// This is intended for fuzzers and tests that need byte-identical on-disk
+/// seeds across processes. When enabled, new logs use a fixed epoch and do not
+/// record wall-clock index-lag timestamps. Set it before opening any logs and
+/// do not change it while logs are in use.
+///
+/// Not for production: a log deleted and recreated in place gets the same
+/// epoch, so readers cannot reliably detect that non-append-only change, and the
+/// index-lag flush timeout never fires.
+pub fn set_deterministic_metadata(flag: bool) {
+    DETERMINISTIC_METADATA.store(flag, atomic::Ordering::Release);
+}
+
+pub(crate) fn get_deterministic_metadata() -> bool {
+    DETERMINISTIC_METADATA.load(atomic::Ordering::Acquire)
 }
 
 /// Configure various settings based on a `Config`.

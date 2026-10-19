@@ -148,10 +148,15 @@ impl LogMetadata {
     /// The caller must make sure the primary log is consistent (exists,
     /// and covered the length).
     pub(crate) fn new_with_primary_len(len: u64) -> Self {
+        let epoch = if crate::config::get_deterministic_metadata() {
+            1 << 63
+        } else {
+            utils::rand_u64()
+        };
         Self {
             primary_len: len,
             indexes: BTreeMap::new(),
-            epoch: utils::rand_u64(),
+            epoch,
             index_lag_since_unix_secs: 0,
         }
     }

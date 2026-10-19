@@ -1,0 +1,30 @@
+# Boundary VLQ (little-endian base-128) encodings for the Sapling on-disk
+# format fuzz targets. indexedlog, revisionstore and metalog read lengths and
+# offsets as VLQs and add them to cursor positions; the overflows live at the
+# widest encodings, which a byte-flipping mutator does not reach on its own.
+# The aux store overflow needs a ten-byte VLQ within about 85 of u64::MAX at
+# an exact offset.
+#
+# Use with libFuzzer: <harness> -dict=<path to this file> <corpus>
+
+vlq_zero="\x00"
+vlq_7f="\x7f"
+vlq_80="\x80\x01"
+vlq_u8_max="\xff\x01"
+vlq_u16_max="\xff\xff\x03"
+vlq_u16_max_plus_1="\x80\x80\x04"
+vlq_u32_max_minus_1="\xfe\xff\xff\xff\x0f"
+vlq_u32_max="\xff\xff\xff\xff\x0f"
+vlq_u32_max_plus_1="\x80\x80\x80\x80\x10"
+vlq_i64_max="\xff\xff\xff\xff\xff\xff\xff\xff\x7f"
+vlq_2_63="\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01"
+vlq_u64_max_minus_0="\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_1="\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_2="\xfd\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_8="\xf7\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_16="\xef\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_32="\xdf\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_64="\xbf\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_85="\xaa\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_100="\x9b\xff\xff\xff\xff\xff\xff\xff\xff\x01"
+vlq_u64_max_minus_128="\xff\xfe\xff\xff\xff\xff\xff\xff\xff\x01"

@@ -877,7 +877,7 @@ impl Log {
     }
 
     fn update_index_lag_since_unix_secs(&mut self, stale_index_ids: &[usize]) {
-        if stale_index_ids.is_empty() {
+        if stale_index_ids.is_empty() || crate::config::get_deterministic_metadata() {
             self.meta.index_lag_since_unix_secs = 0;
         } else if self.meta.index_lag_since_unix_secs == 0
             && crate::config::get_index_lag_flush_timeout_secs() > 0

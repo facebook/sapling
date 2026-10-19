@@ -121,6 +121,7 @@ members = [
   "lib/formatter",
   "lib/fsinfo",
   "lib/fsyncglob",
+  "lib/fuzzutil",
   "lib/gitcompat",
   "lib/gitstore",
   "lib/grepocompat",
