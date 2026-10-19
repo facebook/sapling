@@ -881,8 +881,9 @@ impl SourceControlServiceImpl {
         params: thrift::CommitFingerprintParams,
     ) -> Result<thrift::CommitFingerprintResponse, scs_errors::ServiceError> {
         let version = match params.version {
-            thrift::CommitFingerprintVersion::V1 => FingerprintVersion::V1,
-            thrift::CommitFingerprintVersion::V2 => FingerprintVersion::V2,
+            thrift::CommitFingerprintVersion::V1 | thrift::CommitFingerprintVersion::V2 => {
+                FingerprintVersion::V2
+            }
             other => {
                 return Err(scs_errors::ServiceError::from(
                     MononokeError::InvalidRequest(format!(
@@ -895,7 +896,7 @@ impl SourceControlServiceImpl {
         let fingerprint = changeset.content_fingerprint(version).await?;
         Ok(thrift::CommitFingerprintResponse {
             fingerprint,
-            version: params.version,
+            version: thrift::CommitFingerprintVersion::V2,
             ..Default::default()
         })
     }

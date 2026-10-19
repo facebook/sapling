@@ -1419,9 +1419,8 @@ struct CommitGenerationParams {}
 
 enum CommitFingerprintVersion {
   UNKNOWN = 0,
-  /// V1: root FsnodeId blake2 hash. Universally available — every production
-  /// repo derives Fsnodes — but not the long-term recommendation. Prefer V2
-  /// where available.
+  /// Legacy request version. The server computes a V2 fingerprint and
+  /// reports V2 in the response.
   V1 = 1,
   /// V2: root ContentManifestId blake2 hash. Recommended long-term default.
   /// Requires ContentManifests derived data enabled for the repo;
