@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/(scs/if|megarepo_api/if|derived_data/if|blobstore/if)/.*\.thrift$'
-apply_to_content: 'struct |enum |service |optional|required|deprecated'
+name: scs-thrift-compat
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/(scs/if|megarepo_api/if|derived_data/if|blobstore/if)/.*\.thrift$'
+  apply_to_content: 'struct |enum |service |optional|required|deprecated'
 ---
 
 # SCS Thrift Backward Compatibility
