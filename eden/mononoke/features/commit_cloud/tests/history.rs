@@ -116,6 +116,39 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
 
+    // A workspace with fewer versions than it keeps loses nothing
+    txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
+    txn = Delete::<WorkspaceHistory>::delete(
+        &sql,
+        txn,
+        reponame.clone(),
+        workspace.clone(),
+        HistoryDeleteArgs {
+            latest_version: 2,
+            keep_version: 100,
+            delete_limit: 10,
+        },
+    )
+    .await?;
+    txn.commit().await?;
+
+    let res: Vec<GetOutput> = sql
+        .get(
+            &ctx,
+            reponame.clone(),
+            workspace.clone(),
+            GetType::GetHistoryDate {
+                timestamp,
+                limit: 10,
+            },
+        )
+        .await?;
+    assert_eq!(res.len(), 2, "both versions should survive");
+
     // Delete first history entry, validate only second entry is left
     txn = sql
         .connections
@@ -129,7 +162,6 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         workspace.clone(),
         HistoryDeleteArgs {
             latest_version: 1,
-            keep_days: 0,
             keep_version: 0,
             delete_limit: 1,
         },

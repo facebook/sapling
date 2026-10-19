@@ -136,7 +136,6 @@ pub enum Phase {
 }
 
 const HISTORY_KEEP_VERSIONS: u64 = 100;
-const HISTORY_KEEP_DAYS: u64 = 7;
 
 impl Display for Phase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -405,7 +404,6 @@ impl CommitCloud {
                 HistoryDeleteArgs {
                     latest_version,
                     keep_version: HISTORY_KEEP_VERSIONS,
-                    keep_days: HISTORY_KEEP_DAYS,
                     delete_limit,
                 },
             )

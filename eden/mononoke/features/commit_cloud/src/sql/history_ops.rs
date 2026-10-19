@@ -43,7 +43,6 @@ pub enum GetOutput {
 
 pub struct HistoryDeleteArgs {
     pub latest_version: u64,
-    pub keep_days: u64,
     pub keep_version: u64,
     pub delete_limit: u64,
 }
@@ -68,16 +67,16 @@ mononoke_queries! {
         WHERE reponame={reponame} AND workspace={workspace} AND version={version}")
     }
 
-    write DeleteHistory(reponame: String, workspace: String, keep_days: u64, keep_version: u64, delete_limit: u64) {
+    write DeleteHistory(reponame: String, workspace: String, keep_version: u64, delete_limit: u64) {
         none,
         mysql("DELETE FROM history WHERE reponame = {reponame} AND workspace = {workspace}
-        AND timestamp < date_sub(current_timestamp(), INTERVAL {keep_days} DAY) AND version <= {keep_version}
+        AND version <= {keep_version}
         ORDER BY version
         LIMIT {delete_limit}")
 
         sqlite("DELETE FROM history WHERE (`reponame`,`workspace`,`version`) IN
         (SELECT `reponame`,`workspace`,`version` FROM history
-          WHERE `reponame` = {reponame} AND `workspace` = {workspace} AND `timestamp` < datetime('now', '-'||{keep_days}||' day') AND `version` <= {keep_version}
+          WHERE `reponame` = {reponame} AND `workspace` = {workspace} AND `version` <= {keep_version}
           ORDER BY `version`
           LIMIT {delete_limit})")
     }
@@ -205,8 +204,7 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
             txn,
             &reponame,
             &workspace,
-            &args.keep_days,
-            &(args.latest_version - args.keep_version),
+            &args.latest_version.saturating_sub(args.keep_version),
             &args.delete_limit,
         )
         .await?;
