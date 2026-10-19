@@ -33,6 +33,7 @@ use crate::RateLimitReason;
 use crate::RateLimitResult;
 use crate::RateLimiter;
 use crate::Scope;
+use crate::log_would_have_rate_limited;
 
 pub static MAIN_IDS_THRESHOLDS: LazyLock<HashMap<&'static str, f64>> = LazyLock::new(|| {
     let mut main_id_to_threshold = HashMap::new();
@@ -65,12 +66,10 @@ pub fn log_or_enforce_status(
     match body.raw_config.status {
         RateLimitStatus::Disabled => RateLimitResult::Pass,
         RateLimitStatus::Tracked => {
-            scuba.log_with_msg(
-                "Would have rate limited",
-                format!(
-                    "{:?}",
-                    (RateLimitReason::RateLimitedMetric(metric.metric, metric.window, no_target))
-                ),
+            log_would_have_rate_limited(
+                scuba,
+                &metric.metric.to_string(),
+                &RateLimitReason::RateLimitedMetric(metric.metric, metric.window, no_target),
             );
             RateLimitResult::Pass
         }

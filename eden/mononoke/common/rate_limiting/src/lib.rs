@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
+use std::num::NonZeroU64;
 use std::string::ToString;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -90,6 +91,23 @@ pub trait RateLimiter {
 
 define_stats! {
     load_shed_counter: dynamic_singleton_counter("{}", (key: String)),
+    would_have_rate_limited: dynamic_timeseries("mononoke.rate_limiting.would_have_rate_limited.{}", (metric: String); Rate, Sum),
+}
+
+const WOULD_HAVE_RATE_LIMITED_SAMPLE_RATE: NonZeroU64 = NonZeroU64::new(1000).unwrap();
+
+/// Records a limit that would have fired but is not enforced: an exact count in
+/// ODS and a sampled Scuba row, so a fleet-wide limit cannot flood the request table.
+fn log_would_have_rate_limited(
+    scuba: &MononokeScubaSampleBuilder,
+    metric: &str,
+    reason: &RateLimitReason,
+) {
+    STATS::would_have_rate_limited.add_value(1, (metric.to_string(),));
+    scuba
+        .clone()
+        .sampled(WOULD_HAVE_RATE_LIMITED_SAMPLE_RATE)
+        .log_with_msg("Would have rate limited", format!("{reason:?}"));
 }
 
 #[derive(Clone)]
@@ -218,6 +236,7 @@ pub enum LoadShedResult {
 pub fn log_or_enforce_status(
     raw_config: rate_limiting_config::LoadShedLimit,
     metric: String,
+    counter_key: &str,
     value: i64,
     scuba: &mut MononokeScubaSampleBuilder,
     no_target: bool,
@@ -225,12 +244,10 @@ pub fn log_or_enforce_status(
     match raw_config.status {
         RateLimitStatus::Disabled => LoadShedResult::Pass,
         RateLimitStatus::Tracked => {
-            scuba.log_with_msg(
-                "Would have rate limited",
-                format!(
-                    "{:?}",
-                    (RateLimitReason::LoadShedMetric(metric, value, raw_config.limit, no_target))
-                ),
+            log_would_have_rate_limited(
+                scuba,
+                counter_key,
+                &RateLimitReason::LoadShedMetric(metric, value, raw_config.limit, no_target),
             );
             LoadShedResult::Pass
         }
@@ -267,7 +284,7 @@ impl LoadShedLimit {
         }
 
         // Fetch the counter
-        let (metric_string, value, force_targeted) = match self
+        let (metric_string, counter_key, value, force_targeted) = match self
             .raw_config
             .load_shedding_metric
             .clone()
@@ -275,6 +292,7 @@ impl LoadShedLimit {
             LoadSheddingMetric::local_fb303_counter(metric) => {
                 let metric = metric.to_string();
                 (
+                    metric.clone(),
                     metric.clone(),
                     STATS::load_shed_counter.get_value(fb, (metric,)),
                     false,
@@ -295,6 +313,7 @@ impl LoadShedLimit {
                     format!(
                         "Ods key:{key} entity:{entity} reduce:{reduce:?} transform:{transform:?}"
                     ),
+                    key,
                     value,
                     false,
                 )
@@ -317,11 +336,12 @@ impl LoadShedLimit {
                         client_bucket.name(),
                         top_client.metric
                     ),
+                    top_client.metric,
                     value,
                     true,
                 )
             }
-            _ => ("".to_string(), None, false),
+            _ => ("".to_string(), "".to_string(), None, false),
         };
 
         match value {
@@ -334,6 +354,7 @@ impl LoadShedLimit {
                 log_or_enforce_status(
                     self.raw_config.clone(),
                     metric_string,
+                    &counter_key,
                     value,
                     scuba,
                     no_target,
@@ -967,7 +988,8 @@ mod test {
         let mut scuba = MononokeScubaSampleBuilder::with_discard();
         let ods_counters = OdsCounterManager::new(fb);
 
-        // Tracked mode → logs but passes (shadow mode)
+        // Shadow mode passes; the sampled log goes to a clone, so the
+        // request's builder is untouched.
         let result = limit.should_load_shed(
             fb,
             None,
@@ -977,13 +999,7 @@ mod test {
             None,
         );
         assert!(matches!(result, LoadShedResult::Pass));
-
-        // Verify that "Would have rate limited" was logged
-        let sample = scuba.get_sample();
-        assert_eq!(
-            sample.get("log_tag").unwrap().to_string(),
-            "Would have rate limited"
-        );
+        assert!(scuba.get_sample().get("log_tag").is_none());
 
         registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
     }
