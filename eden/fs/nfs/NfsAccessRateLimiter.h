@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/TokenBucket.h>
+#include <limits>
 
 namespace facebook::eden {
 
@@ -48,7 +49,9 @@ class NfsAccessRateLimiter {
 
  private:
   // The bucket is internally atomic, so sharing it under a read lock is safe.
-  mutable folly::DynamicTokenBucket bucket_;
+  // A new bucket has its full burst allowance regardless of the clock's epoch.
+  mutable folly::DynamicTokenBucket bucket_{
+      -std::numeric_limits<double>::infinity()};
 };
 
 } // namespace facebook::eden

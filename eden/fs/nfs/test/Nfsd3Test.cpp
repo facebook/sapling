@@ -691,24 +691,22 @@ TEST_F(Nfsd3Test, set_can_include_read) {
 TEST(NfsAccessRateLimiterTest, budget_refills_over_time) {
   NfsAccessRateLimiter limiter;
 
-  // Burst capacity: `count` accesses pass at one instant, further ones are
-  // rejected. (The token bucket accrues from time zero, so start the
-  // synthetic clock late enough for a full initial budget.)
+  // Burst capacity is available even at the clock's epoch.
   EXPECT_TRUE(
-      limiter.allow(/*count=*/2, /*windowSeconds=*/60, /*nowSeconds=*/1000.0));
-  EXPECT_TRUE(limiter.allow(2, 60, 1000.0));
-  EXPECT_FALSE(limiter.allow(2, 60, 1000.0));
+      limiter.allow(/*count=*/2, /*windowSeconds=*/60, /*nowSeconds=*/0.0));
+  EXPECT_TRUE(limiter.allow(2, 60, 0.0));
+  EXPECT_FALSE(limiter.allow(2, 60, 0.0));
 
   // The budget refills continuously at count/window: one window later the
   // full burst is available again.
-  EXPECT_TRUE(limiter.allow(2, 60, 1060.0));
-  EXPECT_TRUE(limiter.allow(2, 60, 1060.0));
-  EXPECT_FALSE(limiter.allow(2, 60, 1060.0));
+  EXPECT_TRUE(limiter.allow(2, 60, 60.0));
+  EXPECT_TRUE(limiter.allow(2, 60, 60.0));
+  EXPECT_FALSE(limiter.allow(2, 60, 60.0));
 
   // Degenerate configs: zero count admits nothing, zero window admits
   // everything.
-  EXPECT_FALSE(limiter.allow(0, 60, 1120.0));
-  EXPECT_TRUE(limiter.allow(2, 0, 1120.0));
+  EXPECT_FALSE(limiter.allow(0, 60, 120.0));
+  EXPECT_TRUE(limiter.allow(2, 0, 120.0));
 }
 
 TEST(InvalidatingInodesTest, removingAnInvalidationReleasesItsForgetCallback) {
