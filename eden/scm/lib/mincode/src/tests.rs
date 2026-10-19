@@ -37,3 +37,26 @@ quickcheck! {
         foo == foo_deserialized
     }
 }
+
+#[test]
+fn test_truncated_slice() {
+    // Declares a 5 byte string, but only 2 bytes follow.
+    let bytes = [5u8, b'h', b'i'];
+    assert!(crate::deserialize::<String>(&bytes).is_err());
+    assert!(crate::deserialize::<&[u8]>(&bytes).is_err());
+}
+
+#[test]
+fn test_slice_length_overflow() {
+    // VLQ decoding saturates at u64::MAX, which is usize::MAX on 64-bit.
+    let mut bytes = crate::serialize(&u64::MAX).unwrap();
+    bytes.extend_from_slice(b"hi");
+    assert!(crate::deserialize::<String>(&bytes).is_err());
+}
+
+#[test]
+fn test_truncated_char() {
+    assert!(crate::deserialize::<char>(&[]).is_err());
+    // 0xf0 starts a 4 byte UTF-8 sequence, but only 2 bytes are present.
+    assert!(crate::deserialize::<char>(&[0xf0, 0x9f]).is_err());
+}
