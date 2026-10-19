@@ -352,7 +352,9 @@ class InterruptedEdenfsctlTest(unittest.TestCase):
         time.sleep(0.1)
         self.daemon.hang_up()
         for _ in range(interrupts - 1):
-            time.sleep(0.05)
+            self.assertTrue(
+                self.scribed.first.wait(5), "edenfsctl is shipping the block"
+            )
             os.killpg(child.pid, signal.SIGINT)
         stdout, stderr = child.communicate(timeout=30)
         self.assertEqual((stdout, stderr), (b"", b""), "Ctrl-C prints nothing")
