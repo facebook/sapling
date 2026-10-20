@@ -86,3 +86,17 @@ Conflicted case. Example is from a sparse related test.
   *.py
   *.txt
   >>>>>>> source: f4337c9b9462 - test: C
+
+Word merge combines differently formatted matching changes:
+
+  $ newrepo
+  $ drawdag <<'EOS'
+  > B C # C/A=f(g(x)\n)\n
+  > |/  # B/A=f(g(x))\n
+  > A   # A/A=f(x)\n
+  > EOS
+  $ sl rebase -r $C -d $B -q
+  $ sl cat -r tip A
+  f(g(x))
+  )
+
