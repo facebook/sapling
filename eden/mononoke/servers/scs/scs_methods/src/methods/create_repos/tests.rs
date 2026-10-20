@@ -424,6 +424,171 @@ fn test_validate_acl_request_shape() {
     assert!(format!("{no_maintainers:?}").contains("at least one maintainer"));
 }
 
+#[cfg(fbcode_build)]
+fn mirror_request(repo_name: &str, maintainer_oncall: Option<&str>) -> thrift::RepoCreationRequest {
+    thrift::RepoCreationRequest {
+        repo_name: repo_name.to_string(),
+        oncall_name: "scm_server_infra".to_string(),
+        size_bucket: RepoSizeBucket::SMALL,
+        github_mirror: Some(thrift::GithubMirrorParams {
+            maintainer_oncall: maintainer_oncall.map(str::to_string),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+#[cfg(fbcode_build)]
+fn grant_entries(grants: &[AclPermissionChange], action: &str) -> Vec<(String, String)> {
+    grants
+        .iter()
+        .find(|g| g.action == action)
+        .unwrap_or_else(|| panic!("grants must contain a {action} action"))
+        .entry_changes
+        .iter()
+        .map(|e| (e.entry.id_type.clone(), e.entry.id_data.clone()))
+        .collect()
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_github_mirror_acl_grants() {
+    let grants = github_mirror_acl_grants("luisa");
+    let sync = (
+        SANDCASTLE_TAG.to_string(),
+        GITHUB_MIRROR_SYNC_TAG.to_string(),
+    );
+    let group = (ONCALL_GROUP_TYPE.to_string(), "oncall_luisa".to_string());
+
+    for action in GITHUB_MIRROR_SYNC_ACTIONS {
+        assert!(
+            grant_entries(&grants, action).contains(&sync),
+            "the sync tag needs {action} to import into a read-only repo",
+        );
+    }
+    assert!(
+        grant_entries(&grants, "read").contains(&group),
+        "the oncall can read"
+    );
+    assert_eq!(
+        grant_entries(&grants, "maintainers"),
+        vec![group.clone(), (AUTH_SET.to_string(), "scm".to_string())],
+        "the oncall and Source Control maintain the ACL",
+    );
+    assert!(
+        grant_entries(&grants, "read")
+            .contains(&(AUTH_SET.to_string(), "coding_crewmates".to_string())),
+        "the standard read grants stay",
+    );
+    assert!(
+        !grant_entries(&grants, "write").contains(&group),
+        "the oncall cannot write to a mirror",
+    );
+    assert_eq!(
+        grants
+            .iter()
+            .filter(|g| g.action == "write_no_hooks")
+            .count(),
+        1,
+        "write_no_hooks is added once, not per entry",
+    );
+}
+
+#[cfg(fbcode_build)]
+fn acl_with(entries: &[(&str, Identity)]) -> ACL {
+    ACL {
+        permissions: GITHUB_MIRROR_SYNC_ACTIONS
+            .iter()
+            .chain(["maintainers"].iter())
+            .map(|action| infrasec_authorization::Permission {
+                action: action.to_string(),
+                entries: entries
+                    .iter()
+                    .filter(|(entry_action, _)| entry_action == action)
+                    .map(|(_, identity)| infrasec_authorization::ACLEntry {
+                        identity: identity.clone(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    }
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_missing_github_mirror_entries() {
+    let complete = required_github_mirror_entries("luisa");
+    assert!(
+        missing_github_mirror_entries(&acl_with(&complete), "luisa").is_empty(),
+        "an ACL holding every required entry is accepted",
+    );
+
+    let without_write_no_hooks: Vec<_> = complete
+        .iter()
+        .filter(|(action, _)| *action != "write_no_hooks")
+        .cloned()
+        .collect();
+    assert_eq!(
+        missing_github_mirror_entries(&acl_with(&without_write_no_hooks), "luisa"),
+        vec![format!(
+            "write_no_hooks:{SANDCASTLE_TAG}:{GITHUB_MIRROR_SYNC_TAG}"
+        )],
+        "write is not enough: gitimport bypasses hooks",
+    );
+
+    assert_eq!(
+        missing_github_mirror_entries(&acl_with(&complete), "other"),
+        vec![format!("read:{ONCALL_GROUP_TYPE}:oncall_other")],
+        "another oncall's read grant does not count",
+    );
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_validate_github_mirror_request_shape() {
+    let refusal = |request: &thrift::RepoCreationRequest, batch_size: usize| -> String {
+        format!(
+            "{:?}",
+            validate_github_mirror_request_shape(request, batch_size)
+                .expect_err("the request should be refused")
+        )
+    };
+
+    assert!(
+        validate_github_mirror_request_shape(&mirror_request("o/r", Some("luisa")), 1).is_ok(),
+        "a single repo may get its own ACL",
+    );
+    assert!(
+        validate_github_mirror_request_shape(&mirror_request("o/r", None), 2).is_ok(),
+        "a batch of mirrors inheriting the org ACL is accepted",
+    );
+    assert!(
+        validate_github_mirror_request_shape(&thrift::RepoCreationRequest::default(), 2).is_ok(),
+        "a request without github_mirror is not this check's business",
+    );
+
+    assert!(
+        refusal(&mirror_request("o/r", Some("luisa")), 2).contains("single-repo call"),
+        "a batch cannot create per-repo ACLs",
+    );
+    let writable = thrift::RepoCreationRequest {
+        readonly: Some(false),
+        ..mirror_request("o/r", None)
+    };
+    assert!(refusal(&writable, 1).contains("always read-only"));
+    let with_custom_acl = thrift::RepoCreationRequest {
+        custom_acl: Some(thrift::CustomAclParams {
+            hipster_group: "team".to_string(),
+            ..Default::default()
+        }),
+        ..mirror_request("o/r", None)
+    };
+    assert!(refusal(&with_custom_acl, 1).contains("cannot be combined"));
+}
+
 #[mononoke::test]
 fn test_to_repo_spec_tshirt_size_mapping() {
     assert_eq!(
@@ -700,4 +865,21 @@ fn test_make_repo_spec_uses_full_acl_when_custom_acl_set() {
         spec.hipster_acl, "repos/git/fairinternal/occhi",
         "Repos with custom_acl should use the full-path ACL"
     );
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_make_repo_spec_for_github_mirrors() {
+    let spec = |request| {
+        make_repo_spec(&(RepositoryId::new(55556), request), &template())
+            .expect("make_repo_spec should succeed")
+    };
+
+    let own_acl = spec(mirror_request("fairinternal/Occhi", Some("onevision")));
+    assert_eq!(own_acl.hipster_acl, "repos/git/fairinternal/occhi");
+    assert!(own_acl.readonly, "a mirror is read-only without asking");
+
+    let inherited = spec(mirror_request("fairinternal/Occhi", None));
+    assert_eq!(inherited.hipster_acl, "repos/git/fairinternal");
+    assert!(inherited.readonly, "a mirror is read-only without asking");
 }
