@@ -1225,6 +1225,43 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
         );
     }
 
+    #[test]
+    fn test_list_stale_volumes_includes_volumes_macos_mounted_under_volumes() {
+        // At boot macOS mounts every volume under /Volumes. ~/fbsource is still
+        // a checkout, but ~/test was removed before the reboot.
+        let mut apfs_util = fake_apfs_util(
+            &[
+                (
+                    "disk3s8",
+                    "edenfs:/Users/me/fbsource/fbcode/buck-out",
+                    "00000000-0000-0000-0000-000000000008",
+                ),
+                (
+                    "disk3s10",
+                    "edenfs:/Users/me/test/buck-out",
+                    "00000000-0000-0000-0000-000000000010",
+                ),
+            ],
+            [],
+        );
+        apfs_util.mount.set_stdout(
+            &[],
+            "/dev/disk3s8 on /Volumes/edenfs::Users:me:fbsource:fbcode:buck-out (apfs, local, journaled, protect)\n\
+             /dev/disk3s10 on /Volumes/edenfs::Users:me:test:buck-out (apfs, local, journaled, protect)\n",
+        );
+
+        let stale_volume_names = apfs_util
+            .list_stale_volumes_unsafe(&["/Users/me/fbsource".to_string()])
+            .expect("listing stale volumes should succeed")
+            .into_iter()
+            .map(|vol| vol.name.expect("EdenFS volumes should have names"))
+            .collect::<Vec<_>>();
+
+        // FIXME: This should be ["edenfs:/Users/me/test/buck-out"] once a volume
+        // mounted under /Volumes no longer counts as in use.
+        assert_eq!(stale_volume_names, Vec::<String>::new());
+    }
+
     fn volume_list_plist(volumes: &[(&str, &str, &str)]) -> String {
         let volumes = volumes
             .iter()
