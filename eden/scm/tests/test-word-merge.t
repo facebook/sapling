@@ -87,7 +87,7 @@ Conflicted case. Example is from a sparse related test.
   *.txt
   >>>>>>> source: f4337c9b9462 - test: C
 
-Word merge combines differently formatted matching changes:
+Reject differently formatted matching changes:
 
   $ newrepo
   $ drawdag <<'EOS'
@@ -96,7 +96,6 @@ Word merge combines differently formatted matching changes:
   > A   # A/A=f(x)\n
   > EOS
   $ sl rebase -r $C -d $B -q
-  $ sl cat -r tip A
-  f(g(x))
-  )
-
+  warning: 1 conflicts while merging A! (edit, then use 'sl resolve --mark')
+  unresolved conflicts (see sl resolve, then sl rebase --continue)
+  [1]

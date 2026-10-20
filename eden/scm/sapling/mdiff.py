@@ -35,7 +35,16 @@ patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
 
 wordsplitter: Pattern[bytes] = re.compile(
-    rb"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])"
+    rb"""
+    (
+        \t+                                  # A run of tabs.
+      | [ ]+                                 # A run of spaces.
+      | [a-zA-Z0-9_\x80-\xff]+               # A word component.
+      | [)\]}]+                              # A run of closing delimiters.
+      | [^ \ta-zA-Z0-9_\x80-\xff]            # Other punctuation or a newline.
+    )
+    """,
+    re.VERBOSE,
 )
 
 
