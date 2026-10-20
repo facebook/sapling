@@ -1,4 +1,9 @@
 #!/bin/bash
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Tests for monad-config-check's binary-selection logic: --local / env
 # overrides / version-matched default / warn+fallback. The wrapper is copied
 # next to a stub `monad-admin-resolve` so $SCRIPT_DIR resolution picks up the
@@ -25,7 +30,7 @@ new_sandbox() {
     root="$(mktemp -d)"
     bindir="$root/bin"; conf="$root/conf"
     mkdir -p "$bindir" "$conf/materialized_configs/scm/mononoke/repos/tiers"
-    echo '{}' > "$conf/materialized_configs/scm/mononoke/repos/tiers/scs.materialized_JSON"
+    echo '{}' > "$conf/materialized_configs/scm/mononoke/repos/tiers/scs_manifest.materialized_JSON"
     cp "$WRAPPER_SRC" "$bindir/monad-config-check"
     chmod +x "$bindir/monad-config-check"
     # PATH mononoke_admin stub: records identity + argv.
