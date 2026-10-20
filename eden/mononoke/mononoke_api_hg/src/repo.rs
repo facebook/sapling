@@ -413,6 +413,23 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         contents: Bytes,
         computed_node_id: Option<HgNodeHash>,
     ) -> Result<HgManifestEnvelope, MononokeError> {
+        let envelope = self
+            .verify_tree(upload_node_id, p1, p2, contents, computed_node_id)
+            .await?;
+        self.store_verified_tree(envelope.clone()).await?;
+        Ok(envelope)
+    }
+
+    /// Check an uploaded tree against its node id and return the envelope
+    /// `store_verified_tree` would store, writing nothing.
+    pub async fn verify_tree(
+        &self,
+        upload_node_id: HgNodeHash,
+        p1: Option<HgNodeHash>,
+        p2: Option<HgNodeHash>,
+        contents: Bytes,
+        computed_node_id: Option<HgNodeHash>,
+    ) -> Result<HgManifestEnvelope, MononokeError> {
         if computed_node_id.is_some() {
             self.repo_ctx
                 .authorization_context()
@@ -428,11 +445,28 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             computed_node_id,
         };
         let (envelope, _path) = entry.into_verified_envelope()?;
-        store_manifest_envelope(self.ctx(), self.repo().repo_blobstore(), envelope.clone())
+        Ok(envelope)
+    }
+
+    /// Store a tree envelope that `verify_tree` returned.
+    pub async fn store_verified_tree(
+        &self,
+        envelope: HgManifestEnvelope,
+    ) -> Result<(), MononokeError> {
+        store_manifest_envelope(self.ctx(), self.repo().repo_blobstore(), envelope)
             .await
             .map_err(MononokeError::from)?;
+        Ok(())
+    }
 
-        Ok(envelope)
+    /// Whether `build_and_store_augmented_manifests_for_uploaded_trees` writes
+    /// the envelopes it builds, rather than discarding them.
+    pub fn stores_augmented_manifests_at_tree_upload(&self) -> bool {
+        justknobs::eval(
+            STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD,
+            None,
+            Some(self.repo().repo_identity().name()),
+        )
     }
 
     /// Build the augmented manifest envelopes for a batch of already-stored
@@ -455,11 +489,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         &self,
         trees: Vec<HgManifestEnvelope>,
     ) -> Result<Vec<UploadTreeAugmented>, Error> {
-        let store = justknobs::eval(
-            STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD,
-            None,
-            Some(self.repo().repo_identity().name()),
-        );
+        let store = self.stores_augmented_manifests_at_tree_upload();
         let repo_blobstore = if store {
             self.repo().repo_blobstore().clone()
         } else {
