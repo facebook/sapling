@@ -263,12 +263,18 @@ impl<T: SystemCommand> ApfsUtil<T> {
         let mut stale_volumes = vec![];
         for container in containers {
             for vol in container.volumes {
+                // EdenFS mounts a volume at the path its name encodes. macOS mounts
+                // every volume at boot, putting the ones EdenFS hasn't mounted
+                // under /Volumes, so a volume mounted anywhere else isn't in use.
                 if !vol.is_edenfs_managed_volume()
                     || vol
                         .get_current_mount_point(&self.mount, Some(&mount_table))
-                        .is_some()
+                        .is_some_and(|mount_point| {
+                            vol.name.as_ref()
+                                == Some(&encode_mount_point_as_volume_name(&mount_point))
+                        })
                 {
-                    // ignore currently mounted or volumes not managed by EdenFS
+                    // ignore volumes EdenFS has mounted or doesn't manage
                     continue;
                 }
 
@@ -284,9 +290,9 @@ impl<T: SystemCommand> ApfsUtil<T> {
     // Returns stale eden APFS redirection volumes based on checkout names.
     //
     // Note that because this implementation only takes into account checkout
-    // names, it may incorrectly indicate that an unmounted redirection volume
-    // with a hashed name is "stale", even if it is currently configured for
-    // some checkout.
+    // names, it may incorrectly indicate that a redirection volume with a
+    // hashed name that EdenFS hasn't mounted is "stale", even if it is
+    // currently configured for some checkout.
     pub fn list_stale_volumes_unsafe(&self, all_checkouts: &[String]) -> Result<Vec<ApfsVolume>> {
         self.list_stale_volumes_impl(|vol| {
             all_checkouts
@@ -1257,9 +1263,7 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
             .map(|vol| vol.name.expect("EdenFS volumes should have names"))
             .collect::<Vec<_>>();
 
-        // FIXME: This should be ["edenfs:/Users/me/test/buck-out"] once a volume
-        // mounted under /Volumes no longer counts as in use.
-        assert_eq!(stale_volume_names, Vec::<String>::new());
+        assert_eq!(stale_volume_names, ["edenfs:/Users/me/test/buck-out"]);
     }
 
     fn volume_list_plist(volumes: &[(&str, &str, &str)]) -> String {

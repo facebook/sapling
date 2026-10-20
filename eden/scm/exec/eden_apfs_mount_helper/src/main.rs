@@ -49,7 +49,7 @@ enum Opt {
         all: bool,
     },
 
-    /// List APFS volumes that are not mounted and not used by any of the active checkouts.
+    /// List APFS volumes that EdenFS hasn't mounted and that aren't used by any of the active checkouts.
     /// The intent is that `all_checkouts` is produced by `edenfsctl list`.
     #[command(name = "list-stale-volumes")]
     ListStaleVolumes {
