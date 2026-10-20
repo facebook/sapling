@@ -19,6 +19,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_p4_mapping::BonsaiP4Mapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use clap::ArgGroup;
@@ -68,6 +69,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    bonsai_p4_mapping: dyn BonsaiP4Mapping,
 
     #[facet]
     repo_blobstore: RepoBlobstore,

@@ -11,6 +11,7 @@ use anyhow::anyhow;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_p4_mapping::BonsaiP4MappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
@@ -35,7 +36,8 @@ pub trait Repo = BookmarksRef
     + BonsaiHgMappingRef
     + BonsaiGitMappingRef
     + BonsaiGlobalrevMappingRef
-    + BonsaiSvnrevMappingRef;
+    + BonsaiSvnrevMappingRef
+    + BonsaiP4MappingRef;
 
 /// Command line arguments for specifying a changeset.
 #[derive(Args, Debug)]

@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_p4_mapping::BonsaiP4Mapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
@@ -141,6 +142,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    bonsai_p4_mapping: dyn BonsaiP4Mapping,
 
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,

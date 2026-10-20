@@ -12,6 +12,7 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_p4_mapping::BonsaiP4MappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
@@ -24,8 +25,11 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 
-pub trait Repo =
-    BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
+pub trait Repo = BonsaiHgMappingRef
+    + BonsaiGitMappingRef
+    + BonsaiGlobalrevMappingRef
+    + BonsaiSvnrevMappingRef
+    + BonsaiP4MappingRef;
 
 pub struct BookmarkLogEntry {
     timestamp: Timestamp,

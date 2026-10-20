@@ -28,6 +28,7 @@ pub(crate) const ARG_BONSAI_ID: &str = "bonsai-id";
 pub(crate) const ARG_GIT_SHA1: &str = "git-sha1";
 pub(crate) const ARG_GLOBALREV: &str = "globalrev";
 pub(crate) const ARG_SVNREV: &str = "svnrev";
+pub(crate) const ARG_P4_CHANGELIST: &str = "p4-changelist";
 pub(crate) const ARG_BUBBLE_ID: &str = "bubble-id";
 pub(crate) const ARG_SNAPSHOT_ID: &str = "snapshot-id";
 
@@ -235,6 +236,9 @@ pub enum CommitId {
     /// SVN revision.
     Svnrev(u64),
 
+    /// Perforce changelist number (Perforce mirror repos).
+    P4Changelist(u64),
+
     /// A bookmark name.
     Bookmark(String),
 }
@@ -263,6 +267,7 @@ impl fmt::Display for CommitId {
             CommitId::GitSha1(id) => write!(f, "git sha1 '{}'", hex_string(id)),
             CommitId::Globalrev(rev) => write!(f, "globalrev '{rev}'"),
             CommitId::Svnrev(rev) => write!(f, "svn revision '{rev}'"),
+            CommitId::P4Changelist(cl) => write!(f, "p4 changelist '{cl}'"),
             CommitId::Bookmark(bookmark) => write!(f, "bookmark '{bookmark}'"),
         }
     }
@@ -348,6 +353,14 @@ fn add_commit_id_args_impl(
                 .help("SVN revision to query"),
         )
         .arg(
+            Arg::new(ARG_P4_CHANGELIST)
+                .long("p4-changelist")
+                .num_args(num_args)
+                .action(ArgAction::Append)
+                .number_of_values(1)
+                .help("Perforce changelist number to query"),
+        )
+        .arg(
             Arg::new(ARG_BUBBLE_ID)
                 .long("bubble-id")
                 .num_args(1)
@@ -365,6 +378,7 @@ fn add_commit_id_args_impl(
                     ARG_GIT_SHA1,
                     ARG_GLOBALREV,
                     ARG_SVNREV,
+                    ARG_P4_CHANGELIST,
                 ])
                 .multiple(multiple)
                 .required(required),
@@ -522,6 +536,14 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<BTreeMap<usize, CommitId>
     ) {
         for (index, value) in indices.zip(values) {
             commit_ids.insert(index, CommitId::Svnrev(value.parse::<u64>()?));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_P4_CHANGELIST),
+        matches.get_many::<String>(ARG_P4_CHANGELIST),
+    ) {
+        for (index, value) in indices.zip(values) {
+            commit_ids.insert(index, CommitId::P4Changelist(value.parse::<u64>()?));
         }
     }
     if let (Some(indices), Some(values)) = (

@@ -324,6 +324,9 @@ pub(crate) async fn resolve_commit_ids(
                     CommitId::GitSha1(hash) => Ok(thrift::CommitId::git(hash.to_vec())),
                     CommitId::Globalrev(rev) => Ok(thrift::CommitId::globalrev((*rev).try_into()?)),
                     CommitId::Svnrev(rev) => Ok(thrift::CommitId::svnrev((*rev).try_into()?)),
+                    CommitId::P4Changelist(cl) => {
+                        Ok(thrift::CommitId::p4_changelist((*cl).try_into()?))
+                    }
                     CommitId::Bookmark(bookmark) => try_resolve_bookmark(conn, repo, bookmark)
                         .await?
                         .ok_or_else(|| format_err!("bookmark not found: {bookmark}")),
