@@ -14,12 +14,20 @@ use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use futures::StreamExt;
 use futures::stream::BoxStream;
+use thrift_streaming_clients::errors::StreamJournalChangedStreamError;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::methods::EdenThriftMethod;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
+
+fn translate_stream_journal_changed_error(error: StreamJournalChangedStreamError) -> EdenFsError {
+    match error {
+        StreamJournalChangedStreamError::ex(error) => EdenFsError::ThriftRequestError(error.into()),
+        e => EdenFsError::from(anyhow!(e)),
+    }
+}
 
 impl EdenFsClient {
     pub async fn get_journal_position(
@@ -55,7 +63,7 @@ impl EdenFsClient {
             .from_err()?
             .map(|item| match item {
                 Ok(item) => Ok(item.into()),
-                Err(e) => Err(EdenFsError::from(anyhow!(e))),
+                Err(e) => Err(translate_stream_journal_changed_error(e)),
             })
             .boxed())
     }
