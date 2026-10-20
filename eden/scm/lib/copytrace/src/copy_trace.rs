@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use dag::Vertex;
+use hg_metrics::increment_counter;
 use pathmatcher::Matcher;
 use serde::Serialize;
 use types::RepoPathBuf;
@@ -69,4 +70,34 @@ pub trait CopyTrace {
         dst: Vertex,
         matcher: Option<Arc<dyn Matcher + Send + Sync>>,
     ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>>;
+}
+
+/// Trace each path in `src_paths` from `src` to `dst`.
+///
+/// Returns a `{dst_path: src_path}` map of the paths with a `TraceResult::Renamed` result.
+/// If the trace of a path fails, this function logs the error, increments the
+/// `copytrace_trace_rename_error` counter, and skips the path.
+pub async fn trace_renames(
+    copy_trace: &(dyn CopyTrace + Send + Sync),
+    src: Vertex,
+    dst: Vertex,
+    src_paths: Vec<RepoPathBuf>,
+) -> HashMap<RepoPathBuf, RepoPathBuf> {
+    let mut renames = HashMap::new();
+    for src_path in src_paths {
+        match copy_trace
+            .trace_rename(src.clone(), dst.clone(), src_path.clone())
+            .await
+        {
+            Ok(TraceResult::Renamed(dst_path)) => {
+                renames.insert(dst_path, src_path);
+            }
+            Ok(_) => {}
+            Err(err) => {
+                tracing::warn!(?src, ?dst, ?src_path, ?err, "failed to trace rename");
+                increment_counter("copytrace_trace_rename_error", 1);
+            }
+        }
+    }
+    renames
 }

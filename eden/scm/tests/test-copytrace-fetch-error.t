@@ -41,12 +41,19 @@ The conflict hint also traces the rename. In tests, a trace error in the hint st
   $ setconfig copytrace.hint-with-commit=false
   $ FAILPOINTS=eagerepo::api::trees=return SL_LOG=copytrace=warn sl rebase -r $B -d $E --config devel.print-metrics=copytrace
   rebasing 98114c1b9d02 "B"
+   WARN copytrace::copy_trace: failed to trace rename src=98114c1b9d02bfb676c60a080316fdc825dfe4a9 dst=1ce439dbd9bd25ec9f47996327965e847e5ebc37 src_path=RepoPathBuf("x") err=* (glob)
+  
+  Caused by:
+      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
+      1: * (glob)
+      2: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {} (?)
   other [source] changed x which local [dest] is missing
   hint: if this is due to a renamed file, you can manually input the renamed path
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see sl resolve, then sl rebase --continue)
   copytrace_copies: 0
   copytrace_missingfiles: 1
+  copytrace_trace_rename_error: 1
   [1]
   $ sl rebase --abort
   rebase aborted

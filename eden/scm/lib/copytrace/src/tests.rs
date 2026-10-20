@@ -40,6 +40,7 @@ use crate::CopyTrace;
 use crate::DagCopyTrace;
 use crate::MetadataRenameFinder;
 use crate::TraceResult;
+use crate::trace_renames;
 
 #[derive(Clone)]
 struct CopyTraceTestCase {
@@ -640,4 +641,79 @@ async fn test_forward_copy_then_rename() {
     assert_trace_rename!(c B C, b -> c);
     // should not found, since `b` is not in src commit `A`
     assert_trace_rename!(c A C, b -> !);
+}
+
+/// Renames each path to `<path>.renamed`. The path `fail` returns an error.
+struct FailOnePathCopyTrace;
+
+#[async_trait]
+impl CopyTrace for FailOnePathCopyTrace {
+    async fn trace_rename(
+        &self,
+        _src: Vertex,
+        _dst: Vertex,
+        src_path: RepoPathBuf,
+    ) -> Result<TraceResult> {
+        if src_path.as_str() == "fail" {
+            anyhow::bail!("trace failed");
+        }
+        let dst_path = RepoPathBuf::from_string(format!("{src_path}.renamed"))?;
+        Ok(TraceResult::Renamed(dst_path))
+    }
+
+    async fn trace_rename_backward(
+        &self,
+        _src: Vertex,
+        _dst: Vertex,
+        _dst_path: RepoPathBuf,
+    ) -> Result<TraceResult> {
+        unimplemented!()
+    }
+
+    async fn trace_rename_forward(
+        &self,
+        _src: Vertex,
+        _dst: Vertex,
+        _src_path: RepoPathBuf,
+    ) -> Result<TraceResult> {
+        unimplemented!()
+    }
+
+    async fn path_copies(
+        &self,
+        _src: Vertex,
+        _dst: Vertex,
+        _matcher: Option<Arc<dyn pathmatcher::Matcher + Send + Sync>>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+        unimplemented!()
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_trace_renames_skips_and_counts_failed_paths() {
+    let counter = || {
+        hg_metrics::summarize()
+            .get("copytrace_trace_rename_error")
+            .copied()
+            .unwrap_or(0)
+    };
+    let path = |s: &str| RepoPath::from_str(s).unwrap().to_owned();
+    let before = counter();
+
+    let renames = trace_renames(
+        &FailOnePathCopyTrace,
+        vertex_from_str("A"),
+        vertex_from_str("B"),
+        vec![path("a"), path("fail"), path("b")],
+    )
+    .await;
+
+    assert_eq!(
+        renames,
+        HashMap::from([
+            (path("a.renamed"), path("a")),
+            (path("b.renamed"), path("b")),
+        ])
+    );
+    assert_eq!(counter() - before, 1);
 }
