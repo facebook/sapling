@@ -400,7 +400,7 @@ mod test {
 
         match StreamExt::into_future(s).await {
             (Some(Ok(())), s) => {
-                // Producting the very first value caused a buffer
+                // Producing the very first value caused a buffer
                 // to be filled with 2 futures
                 assert_eq!(counter.load(Ordering::SeqCst), 2);
                 let v = s.collect::<Vec<Result<_, _>>>().await;
@@ -452,7 +452,7 @@ mod test {
 
         match StreamExt::into_future(s).await {
             (Some(Ok(())), s) => {
-                // Producting the very first value caused a buffer
+                // Producing the very first value caused a buffer
                 // to be filled with 2 futures
                 assert_eq!(counter.load(Ordering::SeqCst), 2);
                 let v = s.collect::<Vec<Result<_, _>>>().await;
