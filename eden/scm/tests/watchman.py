@@ -68,6 +68,10 @@ class Watchman:
             "--foreground",
             "--log-level=2",  # debug logging for watchman
         ]
+        if os.name == "nt":
+            # Otherwise the daemon still unlinks and binds the default
+            # %LOCALAPPDATA%\watchman\sock, shared by every daemon on the host.
+            argv += ["--unix-listener-path", self._watchman_dir / "sock"]
 
         with open(clilogfile, "wb") as f:
             self._watchman_proc = subprocess.Popen(
@@ -109,7 +113,11 @@ class Watchman:
                 lastoutput = ex.output.decode(errors="replace")
         if not watchmanavailable:
             sys.stderr.write(f"watchman CLI output: {lastoutput}\n")
-            sys.stderr.write("watchman log:\n%s\n" % open(clilogfile, "r").read())
+            with open(clilogfile, "r", errors="replace") as f:
+                sys.stderr.write("watchman log:\n%s\n" % f.read())
+            if os.path.exists(logfile):
+                with open(logfile, "r", errors="replace") as f:
+                    sys.stderr.write("watchman daemon log:\n%s\n" % f.read())
             raise WatchmanTimeout()
 
     def stop(self) -> None:
