@@ -215,6 +215,12 @@ test worktree remove - group dissolved after all linked removed
   $ sl worktree list
   this worktree is not part of a group
 
+test worktree remove - names the target when this checkout has no linked worktrees
+
+  $ sl worktree remove $TESTTMP/linked1 -y
+  abort: cannot remove $TESTTMP/linked1: $TESTTMP/myrepo has no linked worktrees
+  [255]
+
 #if no-windows
 test worktree remove --all preserves partial progress after eden remove failure
 

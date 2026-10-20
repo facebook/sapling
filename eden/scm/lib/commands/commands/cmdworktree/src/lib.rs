@@ -92,15 +92,22 @@ pub(crate) fn reservation_ttl_seconds(repo: &Repo) -> Result<i64> {
     Ok(ttl.as_secs() as i64)
 }
 
-pub(crate) fn require_group(repo: &Repo) -> Result<CurrentGroup> {
+/// The worktree group the current checkout belongs to, if any.
+pub(crate) fn find_group(repo: &Repo) -> Result<Option<CurrentGroup>> {
     let shared_store_path = repo.store_path();
     let registry = worktree::load_registry(shared_store_path)?;
     let current = util::path::strip_unc_prefix(fs::canonicalize(repo.path())?);
-    match registry.find_group_for_path(&current) {
-        Some(group_id) => Ok(CurrentGroup {
+    Ok(registry
+        .find_group_for_path(&current)
+        .map(|group_id| CurrentGroup {
             shared_store_path: shared_store_path.to_path_buf(),
             group_id,
-        }),
+        }))
+}
+
+pub(crate) fn require_group(repo: &Repo) -> Result<CurrentGroup> {
+    match find_group(repo)? {
+        Some(group) => Ok(group),
         None => abort!("this worktree is not part of a group"),
     }
 }

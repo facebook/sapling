@@ -26,12 +26,12 @@ use worktree::with_worktree_path_op_lock;
 use crate::CurrentGroup;
 use crate::WorktreeOpts;
 use crate::checkout;
+use crate::find_group;
 use crate::require_group;
 
 pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) -> Result<u8> {
-    let current_group = require_group(repo)?;
-
     if ctx.opts.all {
+        let current_group = require_group(repo)?;
         return run_remove_all(ctx, repo, &current_group);
     }
 
@@ -49,6 +49,14 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, _wc: &WorkingCopy) ->
         })
         .collect::<Result<_>>()?;
     let target_refs: Vec<&Path> = targets.iter().map(|p| p.as_path()).collect();
+    let Some(current_group) = find_group(repo)? else {
+        let names: Vec<String> = targets.iter().map(|p| p.display().to_string()).collect();
+        abort!(
+            "cannot remove {}: {} has no linked worktrees",
+            names.join(", "),
+            repo.path().display()
+        );
+    };
     validate_targets(&current_group, &target_refs)?;
 
     remove_and_update_registry(ctx, repo, &current_group, &target_refs)?;
