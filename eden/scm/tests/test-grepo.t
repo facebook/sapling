@@ -461,6 +461,40 @@ subproject commit of `vendor/a/sub/c`.
   +Subproject commit C_LOCAL_REV
   $ reset_workspace
 
+`diff` tests: changes inside a project
+
+Each test starts clean at `$REV_AFTER_BUMP_C`. Sapling compares only the
+project `HEAD` with `static.xml` in the commit. It does not look at files
+inside a project or in `.repo/manifests`. So `sl diff` is empty, the same as
+`sl status`.
+
+Uncommitted file change in `frameworks/b`:
+
+  $ echo "uncommitted change" > frameworks/b/README
+  $ git -C frameworks/b status --porcelain
+   M README
+  $ sl status
+  $ sl diff
+  $ reset_workspace
+
+Untracked file in `frameworks/b`:
+
+  $ echo "untracked" > frameworks/b/untracked
+  $ git -C frameworks/b status --porcelain
+  ?? untracked
+  $ sl status
+  $ sl diff
+  $ rm frameworks/b/untracked
+
+Untracked file in the manifests repo:
+
+  $ echo "untracked" > .repo/manifests/untracked
+  $ git -C .repo/manifests status --porcelain
+  ?? untracked
+  $ sl status
+  $ sl diff
+  $ rm .repo/manifests/untracked
+
 `goto` tests: clean workspace
 
 Every test below starts clean at `$REV_AFTER_BUMP_C`:
