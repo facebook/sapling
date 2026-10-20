@@ -1,6 +1,8 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
 
 oncall("scm_client_infra")
 
@@ -14,11 +16,12 @@ python_library(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "chmod",
     srcs = ["chmod_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -26,11 +29,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "chown",
     srcs = ["chown_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -38,11 +42,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "truncate",
     srcs = ["truncate_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -50,11 +55,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "link",
     srcs = ["link_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -62,11 +68,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "mkdir",
     srcs = ["mkdir_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -74,11 +81,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "mkfifo",
     srcs = ["mkfifo_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -86,11 +94,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "mknod",
     srcs = ["mknod_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -98,11 +107,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "open",
     srcs = ["open_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -110,11 +120,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "rename",
     srcs = ["rename_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -122,11 +133,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "rmdir",
     srcs = ["rmdir_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -134,11 +146,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "symlink",
     srcs = ["symlink_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -146,11 +159,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "unlink",
     srcs = ["unlink_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -170,11 +184,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "io",
     srcs = ["io_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -182,11 +197,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "space",
     srcs = ["space_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -194,11 +210,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "dirfd",
     srcs = ["dirfd_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -206,11 +223,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "fd",
     srcs = ["fd_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -218,11 +236,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "lock",
     srcs = ["lock_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -230,11 +249,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "mmap",
     srcs = ["mmap_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -242,11 +262,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "scandir",
     srcs = ["scandir_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -254,11 +275,12 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "names",
     srcs = ["names_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
