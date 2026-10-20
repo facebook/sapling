@@ -581,3 +581,55 @@ mapped to the root tree upload stored, and nothing is derived.
   Derived: * (glob)
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_OFF"
   Derived: * (glob)
+
+Scenario 11 -- trees uploaded before storing was on, reused once mapping is on,
+with changeset-upload derivation still OFF from scenario 10. Lookup reports a
+tree as uploaded as soon as its hg manifest exists, so the client does not
+resend these trees, tree upload never stores their augmented manifests, and the
+commit that reuses them is left with none.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": false}}
+  > EOF
+  $ force_update_configerator
+
+  $ cd "$TESTTMP/client1"
+  $ sl goto -q master_bookmark
+  $ mkdir early
+  $ echo eleven > early/file
+  $ sl commit -qAm "commit uploaded before storing"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": true, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": true}}
+  > EOF
+  $ force_update_configerator
+
+FIXME: a twin commit with the same tree should resend both trees so tree upload
+stores their augmented manifests; instead lookup skips them and the commit is
+neither mapped nor derived.
+  $ sl goto -q master_bookmark
+  $ BEFORE=$(scuba_rows)
+  $ mkdir early
+  $ echo eleven > early/file
+  $ sl commit -qAm "the same tree, uploaded with mapping on"
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 0 trees for upload
+  edenapi: uploaded 1 changeset
+  $ wait_for_upload "$BEFORE"
+  $ derivations_since "$BEFORE"
+  $ root_checks_since "$BEFORE"
+  UploadedRootAugmentedMissing: 1
+  $ CS_EARLY=$(sl log -r . -T '{node}')
+  $ cd $TESTTMP
+  $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_EARLY"
+  Not Derived: * (glob)
