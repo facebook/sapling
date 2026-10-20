@@ -2500,6 +2500,19 @@ TEST_F(PrivHelperExitRaceTest, clientDestroyedDuringPrivhelperExit) {
   destroyClientDuringPrivhelperExit();
 }
 
+TEST_F(PrivHelperExitRaceTest, requestInFlightFailsWithTheExitError) {
+  // The request is larger than the socket buffer. The server does not read.
+  // Part of the request thus stays in the client's send queue.
+  auto pending =
+      client_->fuseUnmount(std::string(8 * 1024 * 1024, 'x'), UnmountOptions{});
+  ioThread_.getEventBase()->runInEventBaseThreadAndWait([] {});
+
+  destroyClientDuringPrivhelperExit();
+
+  EXPECT_THROW_RE(
+      std::move(pending).get(30s), std::runtime_error, "privhelper process");
+}
+
 /**
  * The sentinel is created by the daemon's unprivileged user and examined by a
  * root privhelper, so these cases are all about what a file planted at the name
