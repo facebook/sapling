@@ -28,7 +28,7 @@ rust_library(
             []
             if rust_oss.is_oss_build()
             else [
-                "//cas/client_lib/bindings/rust/embedded:cas_client",
+                "//cas/client_lib/rust/embedded:cas_client",  # @manual name:cas_client
                 "//common/rust/folly/logging:logging",
                 "//common/rust/shed/futures_ext:futures_ext",
                 "fbsource//third-party/rust:tracing",

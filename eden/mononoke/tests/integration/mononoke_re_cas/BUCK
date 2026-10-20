@@ -25,8 +25,8 @@ dott_test(
 # This adds some artificial direct dependecies to CI graph to make it look like deps are closer
 ci_hint(
     ci_deps = [
-        "fbcode//cas/client_lib/bindings/rust/embedded:cas_client",
-        "fbcode//cas/client_lib/bindings/rust/external:cas_client",
+        "fbcode//cas/client_lib/rust/embedded:cas_client",  # @manual name:cas_client
+        "fbcode//cas/client_lib/rust/external:cas_client",  # @manual name:cas_client
     ],
     reason = "Those tests should be triggered on RE diffs despite the longer CI distance",
     target = "mononoke_re_cas",
