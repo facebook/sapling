@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use edenapi_types::file::FILE_COUNT_HEADER;
+use edenapi_types::tree::TREE_COUNT_HEADER;
 use gotham::helpers::http::Body;
 use gotham::prelude::FromState;
 use gotham::state::State;
@@ -12,12 +14,14 @@ use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
 use gotham_ext::middleware::RequestLoad;
+use http::HeaderMap;
 use http::Response;
 use http::StatusCode;
 use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
 
 use crate::handlers::HandlerInfo;
+use crate::handlers::RequestBatchSize;
 use crate::handlers::SaplingRemoteApiMethod;
 #[cfg(fbcode_build)]
 use crate::middleware::facebook::log_ods3;
@@ -84,6 +88,19 @@ define_stats! {
     upload_trees_duration_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
 }
 
+fn batch_count_header(method: SaplingRemoteApiMethod) -> Option<&'static str> {
+    match method {
+        SaplingRemoteApiMethod::Files2 => Some(FILE_COUNT_HEADER),
+        SaplingRemoteApiMethod::Trees => Some(TREE_COUNT_HEADER),
+        _ => None,
+    }
+}
+
+pub(crate) fn batch_size_from_headers(headers: &HeaderMap, header: &str) -> Option<f64> {
+    let count: u32 = headers.get(header)?.to_str().ok()?.parse().ok()?;
+    (count > 0).then(|| f64::from(count))
+}
+
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     // Proxygen can be configured to periodically send a preconfigured set of
     // requests to check server health. These requests will look like ordinary
@@ -98,6 +115,18 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let handler_info = state.try_borrow::<HandlerInfo>()?;
     let method = handler_info.method?;
     let request_load = RequestLoad::try_borrow_from(state).map(|r| r.0 as f64);
+    // Prefer the count the handler recorded from the parsed request; fall
+    // back to the client's count header for requests that failed before
+    // the handler ran.
+    let batch_size = state
+        .try_borrow::<RequestBatchSize>()
+        .map(|b| b.0)
+        .or_else(|| {
+            batch_count_header(method).and_then(|header| {
+                let headers = HeaderMap::try_borrow_from(state)?;
+                batch_size_from_headers(headers, header)
+            })
+        });
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
@@ -191,7 +220,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         if let Some(response_bytes_sent) = info.meta.as_ref().map(|m| m.body().bytes_sent) {
             STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method.clone(),))
         }
-        log_ods3(info, &status, method, request_load);
+        log_ods3(info, &status, method, request_load, batch_size);
     });
 
     if let Some(request_load) = RequestLoad::try_borrow_from(state) {
@@ -212,5 +241,73 @@ impl OdsMiddleware {
 impl Middleware for OdsMiddleware {
     async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         log_stats(state, response.status());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn headers_with(header: &'static str, value: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(header, value.parse().unwrap());
+        headers
+    }
+
+    #[mononoke::test]
+    fn files2_maps_to_file_count_header() {
+        assert_eq!(
+            batch_count_header(SaplingRemoteApiMethod::Files2),
+            Some(FILE_COUNT_HEADER)
+        );
+    }
+
+    #[mononoke::test]
+    fn trees_maps_to_tree_count_header() {
+        assert_eq!(
+            batch_count_header(SaplingRemoteApiMethod::Trees),
+            Some(TREE_COUNT_HEADER)
+        );
+    }
+
+    #[mononoke::test]
+    fn other_methods_have_no_batch_header() {
+        assert_eq!(
+            batch_count_header(SaplingRemoteApiMethod::Capabilities),
+            None
+        );
+    }
+
+    #[mononoke::test]
+    fn parses_batch_size() {
+        let headers = headers_with(FILE_COUNT_HEADER, "32");
+        assert_eq!(
+            batch_size_from_headers(&headers, FILE_COUNT_HEADER),
+            Some(32.0)
+        );
+    }
+
+    #[mononoke::test]
+    fn batch_size_absent_without_header() {
+        let headers = HeaderMap::new();
+        assert_eq!(batch_size_from_headers(&headers, FILE_COUNT_HEADER), None);
+    }
+
+    #[mononoke::test]
+    fn batch_size_absent_for_bad_value() {
+        let headers = headers_with(FILE_COUNT_HEADER, "many");
+        assert_eq!(batch_size_from_headers(&headers, FILE_COUNT_HEADER), None);
+    }
+
+    #[mononoke::test]
+    fn batch_size_absent_for_zero() {
+        let headers = headers_with(FILE_COUNT_HEADER, "0");
+        assert_eq!(
+            batch_size_from_headers(&headers, FILE_COUNT_HEADER),
+            None,
+            "zero batch must not divide"
+        );
     }
 }

@@ -91,6 +91,7 @@ use types::RepoPathBuf;
 
 use super::HandlerInfo;
 use super::HandlerResult;
+use super::RequestBatchSize;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
@@ -157,6 +158,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse + use<>, Ht
     let repo: HgRepoContext<Repo> =
         get_repo(sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
+    state.put(RequestBatchSize(request.keys.len() as f64));
     if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
         rd.add_request(&request);
     };

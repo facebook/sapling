@@ -162,6 +162,12 @@ pub trait SaplingRemoteApiHandler: 'static {
         nonzero!(1u64)
     }
 
+    /// Number of items in this request's batch, for per-item latency
+    /// normalization. The wrapper records it in request `State` for logging.
+    fn batch_size(_request: &Self::Request) -> Option<usize> {
+        None
+    }
+
     /// Returns an in-band error if the response contains one. In-band errors are errors that
     /// are sent to the client as part of the response.
     fn extract_in_band_error(_response: &Self::Response) -> Option<anyhow::Error> {

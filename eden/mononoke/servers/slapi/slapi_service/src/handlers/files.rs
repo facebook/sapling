@@ -118,6 +118,10 @@ impl SaplingRemoteApiHandler for Files2Handler {
         nonzero_ext::nonzero!(1024u64)
     }
 
+    fn batch_size(request: &Self::Request) -> Option<usize> {
+        Some(request.reqs.len())
+    }
+
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
@@ -471,5 +475,38 @@ impl SaplingRemoteApiHandler for DownloadFileHandler {
             .await?
             .context("File not found")?;
         Ok(content.boxed())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+    use types::HgId;
+    use types::RepoPathBuf;
+
+    use super::*;
+
+    fn file_spec() -> FileSpec {
+        FileSpec {
+            key: Key::new(RepoPathBuf::new(), HgId::null_id().clone()),
+            attrs: FileAttributes {
+                content: true,
+                aux_data: false,
+            },
+        }
+    }
+
+    #[mononoke::test]
+    fn batch_size_counts_reqs() {
+        let request = FileRequest {
+            reqs: vec![file_spec(), file_spec(), file_spec()],
+        };
+        assert_eq!(Files2Handler::batch_size(&request), Some(3));
+    }
+
+    #[mononoke::test]
+    fn batch_size_empty_is_zero() {
+        let request = FileRequest { reqs: vec![] };
+        assert_eq!(Files2Handler::batch_size(&request), Some(0));
     }
 }

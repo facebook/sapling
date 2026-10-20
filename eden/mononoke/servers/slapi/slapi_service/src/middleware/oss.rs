@@ -13,5 +13,6 @@ pub fn log_ods3(
     _status: &StatusCode,
     _method: String,
     _request_load: Option<f64>,
+    _batch_size: Option<f64>,
 ) {
 }

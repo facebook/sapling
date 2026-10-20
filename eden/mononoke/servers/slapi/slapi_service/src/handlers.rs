@@ -219,6 +219,14 @@ impl HandlerInfo {
     }
 }
 
+/// Number of items in this request's batch (files2 `reqs`, trees `keys`).
+/// Recorded in request `State` by the handler layer (`handler_wrapper` via
+/// the `batch_size` hook, or directly for the legacy trees handler) for
+/// per-item latency logging. `OdsMiddleware` reads it; when absent it falls
+/// back to the client's count header.
+#[derive(Clone, Debug, StateData)]
+pub struct RequestBatchSize(pub f64);
+
 /// JSON representation of an error to send to the client.
 #[derive(Clone, Serialize, Debug, Deserialize)]
 struct JsonError {
@@ -374,6 +382,10 @@ where
         let sampling_rate = Handler::sampling_rate(&request);
         if sampling_rate.get() > 1 {
             ScubaMiddlewareState::try_set_sampling_rate(&mut state, sampling_rate);
+        }
+
+        if let Some(batch_size) = Handler::batch_size(&request) {
+            state.put(RequestBatchSize(batch_size as f64));
         }
 
         if let Some(rd) = RequestDumper::try_borrow_mut_from(&mut state) {
