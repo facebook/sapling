@@ -178,7 +178,7 @@ async fn check_request_item<R: MononokeRepo>(
             .await?
             .into(),
         AnyId::HgTreeId(id) => repo
-            .tree_exists(HgManifestId::new(HgNodeHash::from(id)))
+            .is_tree_uploaded(HgManifestId::new(HgNodeHash::from(id)))
             .await?
             .into(),
         AnyId::HgChangesetId(id) => repo

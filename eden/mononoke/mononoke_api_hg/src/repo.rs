@@ -104,6 +104,11 @@ const CHECK_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST: &str =
 const MAP_UPLOADED_ROOT_HG_AUGMENTED_MANIFEST: &str =
     "scm/mononoke:map_uploaded_root_hg_augmented_manifest";
 
+/// Makes tree lookup require the augmented manifest as well as the hg
+/// manifest.
+const REQUIRE_AUGMENTED_MANIFEST_FOR_TREE_LOOKUP: &str =
+    "scm/mononoke:require_augmented_manifest_for_tree_lookup";
+
 #[derive(Clone)]
 pub struct HgRepoContext<R> {
     repo_ctx: RepoContext<R>,
@@ -351,6 +356,44 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     pub async fn tree_exists(&self, manifest_id: HgManifestId) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&manifest_id.blobstore_key(), None)
             .await
+    }
+
+    /// Whether lookup should tell the client that a tree is already uploaded.
+    ///
+    /// Lookup normally trusts the hg manifest alone, so a tree whose augmented
+    /// manifest is missing is never resent and never gets one. With
+    /// `scm/mononoke:require_augmented_manifest_for_tree_lookup` on, the tree
+    /// counts only when both manifests are stored, so the client resends it
+    /// and tree upload stores the missing envelope.
+    pub async fn is_tree_uploaded(&self, manifest_id: HgManifestId) -> Result<bool, MononokeError> {
+        if !self.requires_augmented_manifest_for_tree_lookup() {
+            return self.tree_exists(manifest_id).await;
+        }
+        let augmented_key = HgAugmentedManifestId::new(manifest_id.into_nodehash()).blobstore_key();
+        let (augmented_exists, tree_exists) = try_join!(
+            self.is_key_present_in_blobstore(&augmented_key, None),
+            self.tree_exists(manifest_id),
+        )?;
+        // Only trees resent because of the augmented manifest, not new ones.
+        if tree_exists && !augmented_exists {
+            self.ctx()
+                .perf_counters()
+                .increment_counter(PerfCounterType::TreeLookupAugmentedMissing);
+        }
+        Ok(augmented_exists && tree_exists)
+    }
+
+    fn requires_augmented_manifest_for_tree_lookup(&self) -> bool {
+        // A repo without augmented manifests would never see a tree as uploaded.
+        justknobs::eval(
+            REQUIRE_AUGMENTED_MANIFEST_FOR_TREE_LOOKUP,
+            None,
+            Some(self.repo().repo_identity().name()),
+        ) && self
+            .repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(RootHgAugmentedManifestId::VARIANT)
     }
 
     /// Look up a file in the repo by `HgFileNodeId`.
@@ -1279,6 +1322,60 @@ mod tests {
                 !hg.tree_exists(HgManifestId::new(node_id)).await?,
                 "the hg manifest of {node_id} should not be stored yet"
             );
+        }
+        Ok(())
+    }
+
+    async fn assert_tree_uploaded(fb: FacebookInit, required: bool) -> anyhow::Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let hg = RepoContext::new_test(ctx, Arc::new(repo)).await?.hg();
+
+        // `leaf` gets both manifests, `middle` only its augmented manifest and
+        // `root` only its hg manifest.
+        let leaf = verify_directory(&hg, String::new()).await?;
+        let middle = verify_directory(&hg, format!("d\0{}t\n", leaf.node_id())).await?;
+        let root = verify_directory(&hg, format!("m\0{}t\n", middle.node_id())).await?;
+        hg.build_and_store_augmented_manifests_for_uploaded_trees(vec![
+            leaf.clone(),
+            middle.clone(),
+        ])
+        .await?;
+        hg.store_verified_tree(leaf.clone()).await?;
+        hg.store_verified_tree(root.clone()).await?;
+
+        let uploaded = |tree: &HgManifestEnvelope| {
+            let manifest_id = HgManifestId::new(tree.node_id());
+            let hg = hg.clone();
+            async move { hg.is_tree_uploaded(manifest_id).await }
+        };
+        assert!(
+            uploaded(&leaf).await?,
+            "a tree with both manifests is uploaded"
+        );
+        assert!(
+            !uploaded(&middle).await?,
+            "a tree without its hg manifest is never uploaded"
+        );
+        assert_eq!(
+            uploaded(&root).await?,
+            !required,
+            "a tree without its augmented manifest is uploaded only while lookup does not require it"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_tree_uploaded(fb: FacebookInit) -> anyhow::Result<()> {
+        for required in [true, false] {
+            with_just_knobs_async(
+                JustKnobsInMemory::new(hashmap! {
+                    STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD.to_string() => KnobVal::Bool(true),
+                    REQUIRE_AUGMENTED_MANIFEST_FOR_TREE_LOOKUP.to_string() => KnobVal::Bool(required),
+                }),
+                assert_tree_uploaded(fb, required).boxed(),
+            )
+            .await?;
         }
         Ok(())
     }

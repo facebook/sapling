@@ -582,11 +582,9 @@ mapped to the root tree upload stored, and nothing is derived.
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_OFF"
   Derived: * (glob)
 
-Scenario 11 -- trees uploaded before storing was on, reused once mapping is on,
-with changeset-upload derivation still OFF from scenario 10. Lookup reports a
-tree as uploaded as soon as its hg manifest exists, so the client does not
-resend these trees, tree upload never stores their augmented manifests, and the
-commit that reuses them is left with none.
+Scenario 11 -- trees uploaded before storing was on. Lookup must not report them
+as uploaded once mapping is on, or the commit that reuses them, with derivation
+off, would be left with no augmented manifest.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": false}}
   > EOF
@@ -611,9 +609,14 @@ commit that reuses them is left with none.
   > EOF
   $ force_update_configerator
 
-FIXME: a twin commit with the same tree should resend both trees so tree upload
-stores their augmented manifests; instead lookup skips them and the commit is
-neither mapped nor derived.
+With lookup requiring the augmented manifest, a twin commit with the same tree
+resends both trees, so tree upload stores their augmented manifests and the
+commit is mapped.
+  $ merge_just_knobs <<EOF
+  > {"bools": {"scm/mononoke:require_augmented_manifest_for_tree_lookup": true}}
+  > EOF
+  $ force_update_configerator
+
   $ sl goto -q master_bookmark
   $ BEFORE=$(scuba_rows)
   $ mkdir early
@@ -623,13 +626,19 @@ neither mapped nor derived.
   commitcloud: head '*' hasn't been uploaded yet (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
-  edenapi: queue 0 trees for upload
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
   $ wait_for_upload "$BEFORE"
   $ derivations_since "$BEFORE"
   $ root_checks_since "$BEFORE"
-  UploadedRootAugmentedMissing: 1
+  UploadedRootAugmentedMapped: 1
+  $ tail -n +$((BEFORE + 1)) "$SCUBA" \
+  >   | jq -r 'select(.normal.log_tag == "EdenAPI Request Processed"
+  >                   and .normal.edenapi_method == "lookup")
+  >            | .int.TreeLookupAugmentedMissing // empty'
+  2
   $ CS_EARLY=$(sl log -r . -T '{node}')
   $ cd $TESTTMP
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_EARLY"
-  Not Derived: * (glob)
+  Derived: * (glob)

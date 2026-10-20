@@ -99,6 +99,7 @@
     "scm/mononoke:store_augmented_manifests_at_tree_upload": false,
     "scm/mononoke:check_uploaded_root_hg_augmented_manifest": false,
     "scm/mononoke:map_uploaded_root_hg_augmented_manifest": false,
+    "scm/mononoke:require_augmented_manifest_for_tree_lookup": false,
     "scm/metagit:mononoke_git_lfs": false,
     "scm/mononoke:lfs_server_compression_sniff_enabled": false,
     "scm/mononoke:backsyncer_prefix_polling": false,

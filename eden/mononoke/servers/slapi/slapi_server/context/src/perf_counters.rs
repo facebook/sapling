@@ -89,6 +89,7 @@ define_perf_counters! {
         UploadedRootAugmentedUnmappable,
         UploadedRootAugmentedFailed,
         UploadedRootAugmentedMapped,
+        TreeLookupAugmentedMissing,
         GetbundleNumCommits,
         GetbundleNumDrafts,
         GetpackNumPossibleLFSFiles,
@@ -201,6 +202,7 @@ impl PerfCounterType {
             | UploadedRootAugmentedUnmappable
             | UploadedRootAugmentedFailed
             | UploadedRootAugmentedMapped
+            | TreeLookupAugmentedMissing
             | GetbundleNumCommits
             | GetbundleNumDrafts
             | GetpackNumPossibleLFSFiles
