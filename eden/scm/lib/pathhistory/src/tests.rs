@@ -230,22 +230,43 @@ impl TestHistory {
         }
     }
 
-    // Obtain a `PathHistory` for tracing existence.
-    pub async fn rename_tracer(&self, params: impl Into<BuildSetParam>, path: &str) -> PathHistory {
-        let set = self.build_set(params.into()).await;
+    /// Return one existence `PathHistory` for each tree source, with the name of the source.
+    pub async fn rename_tracers(
+        &self,
+        params: impl Into<BuildSetParam>,
+        path: &str,
+    ) -> Vec<(&'static str, PathHistory)> {
+        let params = params.into();
         let path = RepoPath::from_str(path).unwrap().to_owned();
-        PathHistory::new_existence_tracer(
-            set,
-            path,
-            Arc::new(self.clone()),
-            PathHistoryTreeSource::TreeManifest(Arc::new(self.clone())),
-        )
-        .await
-        .unwrap()
+        let tree_sources = [
+            (
+                "tree_manifest",
+                PathHistoryTreeSource::TreeManifest(Arc::new(self.clone())),
+            ),
+            (
+                "tree_store",
+                PathHistoryTreeSource::TreeStore(Arc::new(self.clone())),
+            ),
+        ];
+        let mut tracers = Vec::with_capacity(tree_sources.len());
+        for (name, tree_source) in tree_sources {
+            let set = self.build_set(params.clone()).await;
+            let tracer = PathHistory::new_existence_tracer(
+                set,
+                path.clone(),
+                Arc::new(self.clone()),
+                tree_source,
+            )
+            .await
+            .unwrap();
+            tracers.push((name, tracer));
+        }
+        tracers
     }
 }
 
 /// Used by `build_set`. Specifies the graph size and the subset passed to PathHistory.
+#[derive(Clone)]
 pub struct BuildSetParam(u64, Option<Vec<u64>>);
 
 impl From<u64> for BuildSetParam {
@@ -654,6 +675,16 @@ async fn test_log_with_mode_only_changes() {
 mod rename_tracer_tests {
     use super::*;
 
+    async fn assert_traced(t: &TestHistory, head: u64, path: &str, expected: &[u64]) {
+        for (tree_source, mut tracer) in t.rename_tracers(head, path).await {
+            assert_eq!(
+                tracer.next_n(10).await,
+                expected,
+                "tree source: {tree_source}"
+            );
+        }
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_trace_rename_files() {
         let t = TestHistory::from_history(&[
@@ -666,13 +697,11 @@ mod rename_tracer_tests {
             (250, "b", 5, E),
         ]);
 
-        let mut r = t.rename_tracer(250, "b").await;
-        assert_eq!(r.next_n(2).await, [150]);
+        assert_traced(&t, 250, "b", &[150]).await;
 
         // commit 150 did the rename (b -> a), so we search commit 149 (150-1)
         // with name "a"
-        let mut r = t.rename_tracer(149, "a").await;
-        assert_eq!(r.next_n(2).await, [0]);
+        assert_traced(&t, 149, "a", &[0]).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -687,13 +716,11 @@ mod rename_tracer_tests {
             (250, "a/2", 5, E),
         ]);
 
-        let mut r = t.rename_tracer(250, "a/2").await;
-        assert_eq!(r.next_n(2).await, [150]);
+        assert_traced(&t, 250, "a/2", &[150]).await;
 
         // commit 150 did the rename (b -> a), so we search commit 149 (150-1)
         // with name "a"
-        let mut r = t.rename_tracer(149, "a/b/1").await;
-        assert_eq!(r.next_n(2).await, [0]);
+        assert_traced(&t, 149, "a/b/1", &[0]).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -709,10 +736,21 @@ mod rename_tracer_tests {
             (250, "b", 7, E),
         ]);
 
-        let mut r = t.rename_tracer(250, "a").await;
-        assert_eq!(r.next_n(2).await, [0]);
+        assert_traced(&t, 250, "a", &[0]).await;
+        assert_traced(&t, 250, "b", &[150]).await;
+    }
 
-        let mut r = t.rename_tracer(250, "b").await;
-        assert_eq!(r.next_n(2).await, [150]);
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_trace_directory_ignores_content_changes() {
+        let t = TestHistory::from_history(&[
+            (0, "x", 1, R),
+            (100, "d/a", 1, R),
+            (150, "d/a", 2, R),
+            (200, "d/b", 3, R),
+            (250, "d/a", 0, R),
+            (300, "d/b", 0, R),
+        ]);
+
+        assert_traced(&t, 300, "d", &[300, 100]).await;
     }
 }
