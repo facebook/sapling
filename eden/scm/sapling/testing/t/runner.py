@@ -425,7 +425,7 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
             return True
         result = hasfeature(feature)
         if result and feature in hghave.exes:
-            exeneeded.add(feature)
+            exeneeded.add(hghave.exes[feature])
         return result
 
     testcases = []

@@ -28,18 +28,23 @@ checks = {
     "false": (lambda: False, "nail clipper"),
 }
 
-exes = set()
+# Maps a feature name to its executable. The test needs this executable on PATH.
+exes = {}
 
 
-def check(name, desc, exe: bool = False):
-    """Registers a check function for a feature."""
+def check(name, desc, exe: bool | str = False):
+    """Registers a check function for a feature.
+
+    Set exe to True if the feature name is the executable name.
+    Set exe to a string if the executable has a different name.
+    """
 
     def decorator(func):
         checks[name] = (func, desc)
         return func
 
     if exe:
-        exes.add(name)
+        exes[name] = name if exe is True else exe
 
     return decorator
 
@@ -70,7 +75,7 @@ def checkexe(name):
         f"/usr/bin/{name}"
     )
     checks[name] = (f, f"{name} executable")
-    exes.add(name)
+    exes[name] = name
 
 
 checkexe("cmp")
@@ -521,6 +526,20 @@ def has_dev_full():
 @check("fsmonitor", "running tests with fsmonitor")
 def has_fsmonitor():
     return "HGFSMONITOR_TESTS" in os.environ
+
+
+@check("grepo", "Google repo tool for Android-style workspaces", exe="repo")
+def has_grepo():
+    return matchoutput("repo --version 2>&1", rb"repo launcher version")
+
+
+# Read at import time. The test environment does not contain host variables.
+grepo_source_url = os.environ.get("HGTEST_GREPO_SOURCE_URL")
+
+
+@check("grepo-source", "local clone of the repo tool source")
+def has_grepo_source():
+    return bool(grepo_source_url)
 
 
 @check("eden", "Eden HG extension")
