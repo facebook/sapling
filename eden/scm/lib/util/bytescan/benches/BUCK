@@ -1,0 +1,15 @@
+load("//eden/scm:targets.bzl", "sl_rust_binary")
+
+oncall("sapling")
+
+sl_rust_binary(
+    name = "bytescan-benches",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    crate_root = "src/main.rs",
+    deps = [
+        "//eden/scm/lib/minibench:minibench",
+        "//eden/scm/lib/util/bytescan:bytescan",
+    ],
+)

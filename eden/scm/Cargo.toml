@@ -211,6 +211,7 @@ members = [
   "lib/util/atexit",
   "lib/util/btrfs",
   "lib/util/bytescan",
+  "lib/util/bytescan/benches",
   "lib/util/factory",
   "lib/util/format-util",
   "lib/util/hgplain",
