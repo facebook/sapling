@@ -600,10 +600,8 @@ fn initial_acl_grants(maintainers: &[Identity], writers: &[Identity]) -> Vec<Acl
 fn make_initial_acl_creation_request(
     acl_name: &str,
     oncall_name: &str,
-    maintainers: &[Identity],
-    writers: &[Identity],
+    grants: Vec<AclPermissionChange>,
 ) -> CommitChangeSpecificationRequest {
-    let grants = initial_acl_grants(maintainers, writers);
     let repo_group = hipster_identity(REPO, acl_name);
     let acl_change = AclChange {
         acl: repo_group,
@@ -633,10 +631,9 @@ async fn create_repo_acl(
     ctx: CoreContext,
     acl_name: &str,
     oncall_name: &str,
-    maintainers: &[Identity],
-    writers: &[Identity],
+    grants: Vec<AclPermissionChange>,
 ) -> Result<(), scs_errors::ServiceError> {
-    let request = make_initial_acl_creation_request(acl_name, oncall_name, maintainers, writers);
+    let request = make_initial_acl_creation_request(acl_name, oncall_name, grants);
     let thrift_client = make_AuthorizationService_srclient!(ctx.fb)
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     thrift_client
@@ -857,8 +854,10 @@ async fn validate_and_process_custom_acl(
             ctx,
             &acl_name,
             &repo_creation_request.oncall_name,
-            &[hipster_identity(AUTH_SET, &custom_acl.hipster_group)],
-            &[],
+            initial_acl_grants(
+                &[hipster_identity(AUTH_SET, &custom_acl.hipster_group)],
+                &[],
+            ),
         )
         .await?;
     }
@@ -950,8 +949,7 @@ async fn ensure_top_level_acl(
         ctx.clone(),
         &acl_name,
         &org_acl.oncall_name,
-        &maintainers,
-        &writers,
+        initial_acl_grants(&maintainers, &writers),
     )
     .await
         && try_fetching_repo_acl(ctx, &acl_name).await?.is_none()
