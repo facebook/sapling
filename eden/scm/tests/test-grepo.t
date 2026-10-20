@@ -137,8 +137,9 @@ Sapling recognizes .repo identity
   │
   ~
 
-clean status
+clean status and diff
   $ sl status
+  $ sl diff
 
   $ sl log -r . -T "desc:\n  {desc}\nfiles:\n{files % '  {file}\n'}"
   desc:
@@ -431,6 +432,34 @@ commit at `m/main`:
   @  bump vendor/a/sub/c
   │
   ~
+
+`diff` tests: dirty manifest
+
+The two tests below start clean at `$REV_AFTER_BUMP_C`. The first test edits
+the revision of `vendor/a/sub/c` in `static.xml` on disk to `C_LOCAL_REV`. It
+does not commit the edit. The second test keeps the edit and also checks out
+`vendor/a/sub/c` at `C_LOCAL_REV`.
+
+The project stays at `C2_REV`. Expected: `sl diff` is empty. Sapling compares
+each project with `static.xml` in the commit. It does not read `static.xml` on
+disk.
+
+  $ reset_workspace
+  $ sed -i "s/$C2_REV/$C_LOCAL_REV/" .repo/manifests/static/static.xml
+  $ sl diff
+
+The project is checked out at `C_LOCAL_REV`. Expected: `sl diff` shows the new
+subproject commit of `vendor/a/sub/c`.
+
+  $ git -C vendor/a/sub/c checkout -q --detach $C_LOCAL_REV
+  $ sl diff | map_rev_names
+  diff -r * vendor/a/sub/c (glob)
+  --- a/vendor/a/sub/c	* (glob)
+  +++ b/vendor/a/sub/c	* (glob)
+  @@ -1,1 +1,1 @@
+  -Subproject commit C2_REV
+  +Subproject commit C_LOCAL_REV
+  $ reset_workspace
 
 `goto` tests: clean workspace
 
