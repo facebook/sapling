@@ -89,6 +89,13 @@ grepo workspace is the .repo/manifests git history, so commits are made there:
   $ writemanifest $A2_REV $B2_REV $C2_REV 'bump vendor/a/sub/c'
   $ REV_AFTER_BUMP_C=$(cd .repo/manifests && git rev-parse HEAD)
 
+`repo sync` fetches the manifests repo into `refs/remotes/origin/main`. It also
+makes `refs/remotes/m/main` a symbolic ref to `origin/main`. Sapling makes the
+ancestors of `m/*` public:
+
+  $ git -C .repo/manifests update-ref refs/remotes/origin/main $REV_AFTER_BUMP_C
+  $ git -C .repo/manifests symbolic-ref refs/remotes/m/main refs/remotes/origin/main
+
 Set up projects with .git symlinks back to .repo/projects/:
 
   $ mkdir -p .repo/projects/vendor .repo/projects/frameworks
@@ -128,11 +135,7 @@ Sapling recognizes .repo identity
   $ sl smartlog -T '{desc}'
   @  bump vendor/a/sub/c
   │
-  o  bump frameworks/b
-  │
-  o  bump vendor/a
-  │
-  o  add manifest
+  ~
 
 clean status
   $ sl status
@@ -330,8 +333,7 @@ per project, all on one line.
 `reset_workspace [REV]` gives a clean checkout of manifest commit REV. REV
 defaults to `$REV_AFTER_BUMP_C`. It uses Git, not `sl goto`, so it works even
 after a `goto` that failed halfway. It:
-- points `refs/heads/default` back at REV. This brings back commits that an
-earlier `goto` orphaned.
+- points `refs/heads/default` back at REV.
 - attaches HEAD of the manifests repo to `default`.
 - resets the manifests index and files.
 - checks out each project at its revision in `static.xml` of REV.
@@ -405,14 +407,17 @@ with the file on disk.
   frameworks/b: B2_REV
   vendor/a/sub/c: C2_REV
 
-`reset_workspace` also undoes a `goto`. It moves `.` back. It also brings back
-the manifest commits that `goto` orphaned:
+`reset_workspace` also undoes a `goto`. It moves `.` and `default` back.
+Smartlog hides public commits without a name, so it shows only `.` and the
+commit at `m/main`:
 
   $ sl goto -q $REV_AFTER_BUMP_A
   $ sl smartlog -T '{desc}' --all
+  o  bump vendor/a/sub/c
+  ╷
   @  bump vendor/a
   │
-  o  add manifest
+  ~
   $ reset_workspace
   $ workspace_state
   sl_workingcopy_parent: bump vendor/a/sub/c
@@ -425,11 +430,7 @@ the manifest commits that `goto` orphaned:
   $ sl smartlog -T '{desc}' --all
   @  bump vendor/a/sub/c
   │
-  o  bump frameworks/b
-  │
-  o  bump vendor/a
-  │
-  o  add manifest
+  ~
 
 `goto` tests: clean workspace
 
@@ -457,7 +458,7 @@ Each test ends with the args that `sl goto` passes to `hg.updatetotally`:
 it works like `updatecheck="none"`.
 
 Default flags. Expected: the result above.
-(bad: `default` moved back. The `bump vendor/a/sub/c` commit is orphaned.)
+(bad: `default` moved back. A local commit on `default` would be orphaned.)
 (bad: it says "0 files updated", but it checked out a project.)
 clean=False, updatecheck="noconflict"
 
@@ -472,11 +473,11 @@ clean=False, updatecheck="noconflict"
   frameworks/b: B2_REV
   vendor/a/sub/c: C_REV
   $ sl smartlog -T '{desc}' --all
+  o  bump vendor/a/sub/c
+  │
   @  bump frameworks/b
   │
-  o  bump vendor/a
-  │
-  o  add manifest
+  ~
 
 `--check`. Expected: the result above.
 (bad: `default` moved back and "0 files updated", same as the default flags.)
@@ -546,8 +547,8 @@ clean=False, updatecheck="noconflict"
   frameworks/b: B_REV
   vendor/a/sub/c: C_REV
 
-Default flags, going forward to the commit that the last `goto` orphaned.
-`goto` still finds it by hash, and it ends in the right state.
+Default flags, going forward to `$REV_AFTER_BUMP_C` again. It ends in the right
+state.
 clean=False, updatecheck="noconflict"
 
   $ sl goto $REV_AFTER_BUMP_C
