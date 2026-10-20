@@ -1157,6 +1157,8 @@ mod tests {
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::with_just_knobs_async;
     use maplit::hashmap;
+    use mercurial_types::HgParents;
+    use mercurial_types::calculate_hg_node_id;
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
     use mononoke_macros::mononoke;
@@ -1240,5 +1242,57 @@ mod tests {
             .await?;
         }
         Ok(())
+    }
+
+    async fn verify_directory(
+        hg: &HgRepoContext<Repo>,
+        contents: String,
+    ) -> Result<HgManifestEnvelope, MononokeError> {
+        let contents = Bytes::from(contents);
+        let node_id = calculate_hg_node_id(&contents, &HgParents::new(None, None));
+        hg.verify_tree(node_id, None, None, contents, None).await
+    }
+
+    async fn assert_augmented_manifests_build_without_hg_manifests(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
+        let hg = RepoContext::new_test(ctx, Arc::new(repo)).await?.hg();
+
+        // Root first, so the build has to order the batch itself.
+        let leaf = verify_directory(&hg, String::new()).await?;
+        let middle = verify_directory(&hg, format!("d\0{}t\n", leaf.node_id())).await?;
+        let root = verify_directory(&hg, format!("m\0{}t\n", middle.node_id())).await?;
+        let trees = vec![root, middle, leaf];
+        hg.build_and_store_augmented_manifests_for_uploaded_trees(trees.clone())
+            .await?;
+
+        for tree in &trees {
+            let node_id = tree.node_id();
+            let augmented_key = HgAugmentedManifestId::new(node_id).blobstore_key();
+            assert!(
+                hg.is_key_present_in_blobstore(&augmented_key, None).await?,
+                "the augmented manifest of {node_id} should be stored"
+            );
+            assert!(
+                !hg.tree_exists(HgManifestId::new(node_id)).await?,
+                "the hg manifest of {node_id} should not be stored yet"
+            );
+        }
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_augmented_manifests_build_without_hg_manifests(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap! {
+                STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD.to_string() => KnobVal::Bool(true),
+            }),
+            assert_augmented_manifests_build_without_hg_manifests(fb).boxed(),
+        )
+        .await
     }
 }
