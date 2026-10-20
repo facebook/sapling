@@ -2434,6 +2434,73 @@ TEST(PrivHelperConnectionLossTest, cleanShutdownLogsNoEvent) {
 }
 
 /**
+ * An IXplatLogger that holds the caller in logEvent() until the test releases
+ * it. The client logs the privhelper exit after its status leaves RUNNING. The
+ * test can then act on the client at a known point in that window.
+ */
+class BlockingXplatLogger : public IXplatLogger {
+ public:
+  void logEvent(std::string_view /*category*/, const DynamicEvent& /*event*/)
+      override {
+    entered_.post();
+    released_.wait();
+  }
+
+  bool waitUntilEntered(std::chrono::milliseconds timeout) {
+    return entered_.try_wait_for(timeout);
+  }
+
+  void release() {
+    released_.post();
+  }
+
+ private:
+  folly::SaturatingSemaphore<true /* MayBlock */> entered_;
+  folly::SaturatingSemaphore<true /* MayBlock */> released_;
+};
+
+class PrivHelperExitRaceTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    File clientConn;
+    PrivHelperConn::createConnPair(clientConn, serverConn_);
+    client_ = createTestPrivHelper(std::move(clientConn));
+    client_->setEdenFsEventsLogger(
+        std::make_shared<EdenFsEventsLogger>(logger_));
+    ioThread_.getEventBase()->runInEventBaseThreadAndWait(
+        [&] { client_->attachEventBase(ioThread_.getEventBase()); });
+  }
+
+  /**
+   * Close the server end of the connection. Then destroy the client while its
+   * EventBase thread is in the privhelper-exit handling. The EventBase stays
+   * alive.
+   */
+  void destroyClientDuringPrivhelperExit() {
+    serverConn_.close();
+    ASSERT_TRUE(logger_->waitUntilEntered(30s))
+        << "the client did not start to handle the privhelper exit";
+    client_.reset();
+    logger_->release();
+
+    folly::Baton<> alive;
+    ioThread_.getEventBase()->runInEventBaseThread([&] { alive.post(); });
+    EXPECT_TRUE(alive.try_wait_for(30s));
+  }
+
+  // Declared before client_, so that the EventBase outlives the client.
+  EventBaseThread ioThread_;
+  File serverConn_;
+  std::shared_ptr<BlockingXplatLogger> logger_{
+      std::make_shared<BlockingXplatLogger>()};
+  std::unique_ptr<PrivHelper> client_;
+};
+
+TEST_F(PrivHelperExitRaceTest, clientDestroyedDuringPrivhelperExit) {
+  destroyClientDuringPrivhelperExit();
+}
+
+/**
  * The sentinel is created by the daemon's unprivileged user and examined by a
  * root privhelper, so these cases are all about what a file planted at the name
  * can make that examination conclude.

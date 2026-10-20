@@ -460,6 +460,16 @@ class PrivHelperClientSession
   void handleSocketError(
       folly::StringPiece reason,
       const folly::exception_wrapper& ew) {
+    // The owner can drop its last reference when the status leaves RUNNING.
+    // The socket keeps raw pointers to this session until its callbacks
+    // unwind. Keep the session alive until the current loop iteration ends.
+    auto self = weak_from_this().lock();
+    if (!self) {
+      // This is a guard. Only the session destructor can call this without a
+      // live reference. The session releases conn_ before its destructor runs.
+      return;
+    }
+    EventBase* eventBase{nullptr};
     // If we are RUNNING, move to the DISCONNECTED state and then close the
     // socket and fail all pending requests.
     //
@@ -476,6 +486,7 @@ class PrivHelperClientSession
       if (state->status != Status::RUNNING) {
         return;
       }
+      eventBase = state->eventBase;
       state->status = Status::DISCONNECTED;
       state->eventBase = nullptr;
     }
@@ -488,6 +499,7 @@ class PrivHelperClientSession
     // The EventBase is no longer in use; without this, destroying the
     // client later fails OnDestructionCallback's must-be-canceled check.
     cancel();
+    eventBase->runInLoop([self = std::move(self)] {});
   }
 
   /**
