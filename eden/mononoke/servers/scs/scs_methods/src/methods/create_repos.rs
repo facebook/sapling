@@ -596,6 +596,88 @@ fn initial_acl_grants(maintainers: &[Identity], writers: &[Identity]) -> Vec<Acl
     .collect()
 }
 
+/// The identity the GitHub mirror sync runs as.
+#[cfg(fbcode_build)]
+const GITHUB_MIRROR_SYNC_TAG: &str = "scm_github_mirror_sync";
+/// What the sync needs on its repo's ACL: gitimport pushes into a read-only
+/// repo with hooks bypassed.
+#[cfg(fbcode_build)]
+const GITHUB_MIRROR_SYNC_ACTIONS: [&str; 4] =
+    ["read", "write", "write_no_hooks", "bypass_readonly"];
+
+fn github_mirror_maintainer_oncall(request: &thrift::RepoCreationRequest) -> Option<&str> {
+    request.github_mirror.as_ref()?.maintainer_oncall.as_deref()
+}
+
+/// Hipster's group for an oncall rotation.
+#[cfg(fbcode_build)]
+fn oncall_group_identity(oncall: &str) -> Identity {
+    hipster_identity(ONCALL_GROUP_TYPE, &format!("oncall_{oncall}"))
+}
+
+/// Every (action, identity) a GitHub mirror's own ACL must hold.
+#[cfg(fbcode_build)]
+fn required_github_mirror_entries(oncall: &str) -> Vec<(&'static str, Identity)> {
+    GITHUB_MIRROR_SYNC_ACTIONS
+        .iter()
+        .map(|action| {
+            (
+                *action,
+                hipster_identity(SANDCASTLE_TAG, GITHUB_MIRROR_SYNC_TAG),
+            )
+        })
+        .chain([("read", oncall_group_identity(oncall))])
+        .collect()
+}
+
+/// Source Control maintains the ACL alongside the oncall, so a broken sync
+/// grant can be fixed without the oncall.
+#[cfg(fbcode_build)]
+fn github_mirror_acl_grants(oncall: &str) -> Vec<AclPermissionChange> {
+    let maintainers = [
+        oncall_group_identity(oncall),
+        hipster_identity(AUTH_SET, "scm"),
+    ];
+    required_github_mirror_entries(oncall).into_iter().fold(
+        initial_acl_grants(&maintainers, &[]),
+        |mut grants, (action, entry)| {
+            let entry = EntryChange {
+                entry,
+                operation: ChangeOperation::ADD,
+                ..Default::default()
+            };
+            match grants.iter_mut().find(|grant| grant.action == action) {
+                Some(grant) => grant.entry_changes.push(entry),
+                None => grants.push(AclPermissionChange {
+                    action: action.to_string(),
+                    operation: ChangeOperation::ADD,
+                    entry_changes: vec![entry],
+                    ..Default::default()
+                }),
+            }
+            grants
+        },
+    )
+}
+
+/// The required entries an existing ACL lacks, as `action:TYPE:data`.
+#[cfg(fbcode_build)]
+fn missing_github_mirror_entries(acl: &ACL, oncall: &str) -> Vec<String> {
+    required_github_mirror_entries(oncall)
+        .into_iter()
+        .filter(|(action, identity)| {
+            !acl.permissions.iter().any(|permission| {
+                permission.action == *action
+                    && permission.entries.iter().any(|entry| {
+                        entry.identity.id_type == identity.id_type
+                            && entry.identity.id_data == identity.id_data
+                    })
+            })
+        })
+        .map(|(action, identity)| format!("{action}:{}:{}", identity.id_type, identity.id_data))
+        .collect()
+}
+
 #[cfg(fbcode_build)]
 fn make_initial_acl_creation_request(
     acl_name: &str,
@@ -896,6 +978,57 @@ fn validate_acl_request_shape(
     Ok(())
 }
 
+/// A mirror's ACL is decided by `github_mirror` alone. Only a single-repo call
+/// may ask for a per-repo ACL: ACLs are created one by one before the repos,
+/// so a batch that fails partway would leave ACLs for repos that never exist.
+#[cfg(fbcode_build)]
+fn validate_github_mirror_request_shape(
+    request: &thrift::RepoCreationRequest,
+    batch_size: usize,
+) -> Result<(), scs_errors::ServiceError> {
+    let Some(github_mirror) = &request.github_mirror else {
+        return Ok(());
+    };
+    let refusal = if request.custom_acl.is_some() || request.org_acl.is_some() {
+        "github_mirror cannot be combined with custom_acl or org_acl"
+    } else if request.readonly == Some(false) {
+        "a GitHub mirror is always read-only; omit readonly"
+    } else if github_mirror.maintainer_oncall.is_some() && batch_size > 1 {
+        "github_mirror.maintainer_oncall needs a single-repo call; a batch inherits the org ACL"
+    } else {
+        return Ok(());
+    };
+    Err(scs_errors::invalid_request(format!("{}: {refusal}", request.repo_name)).into())
+}
+
+/// Create the mirror's own ACL, or accept an existing one only if it already
+/// lets the sync write and the oncall read: anything less would create a repo
+/// that never syncs.
+#[cfg(fbcode_build)]
+async fn ensure_github_mirror_acl(
+    ctx: CoreContext,
+    repo_creation_request: &thrift::RepoCreationRequest,
+    oncall: &str,
+    valid_oncall_names_cache: &mut HashSet<String>,
+) -> Result<(), scs_errors::ServiceError> {
+    if !is_valid_oncall_name(ctx.clone(), oncall, valid_oncall_names_cache).await? {
+        return Err(scs_errors::invalid_request(format!("Invalid oncall name: {oncall}")).into());
+    }
+    let acl_name = make_full_acl_name_from_repo_name(&repo_creation_request.repo_name);
+    let Some(acl) = try_fetching_repo_acl(ctx.clone(), &acl_name).await? else {
+        return create_repo_acl(ctx, &acl_name, oncall, github_mirror_acl_grants(oncall)).await;
+    };
+    let missing = missing_github_mirror_entries(&acl, oncall);
+    if missing.is_empty() {
+        return Ok(());
+    }
+    Err(scs_errors::invalid_request(format!(
+        "ACL {acl_name} already exists but lacks {}",
+        missing.join(", ")
+    ))
+    .into())
+}
+
 /// The repo inherits `repos/git/<org>`; create it from `org_acl` when it is
 /// missing, else refuse as before. A concurrent first repo in the same org
 /// can win the create; the ACL being there afterwards is what matters.
@@ -968,16 +1101,24 @@ async fn update_repos_acls(
     ctx: CoreContext,
     params: &thrift::CreateReposParams,
 ) -> Result<(), scs_errors::ServiceError> {
-    params
-        .repos
-        .iter()
-        .try_for_each(validate_acl_request_shape)?;
+    params.repos.iter().try_for_each(|request| {
+        validate_acl_request_shape(request)?;
+        validate_github_mirror_request_shape(request, params.repos.len())
+    })?;
 
     let mut valid_oncall_names_cache = HashSet::new();
     let mut valid_hipster_groups_cache = HashSet::new();
 
     for repo_creation_request in &params.repos {
-        if let Some(custom_acl) = &repo_creation_request.custom_acl {
+        if let Some(oncall) = github_mirror_maintainer_oncall(repo_creation_request) {
+            ensure_github_mirror_acl(
+                ctx.clone(),
+                repo_creation_request,
+                oncall,
+                &mut valid_oncall_names_cache,
+            )
+            .await?;
+        } else if let Some(custom_acl) = &repo_creation_request.custom_acl {
             validate_and_process_custom_acl(
                 ctx.clone(),
                 repo_creation_request,
@@ -1337,12 +1478,14 @@ fn make_repo_spec(
         // Request-owned: identity and size.
         repo_id: repo_id.id(),
         repo_name: request.repo_name.clone(),
-        hipster_acl: if request.custom_acl.is_some() {
+        hipster_acl: if request.custom_acl.is_some()
+            || github_mirror_maintainer_oncall(request).is_some()
+        {
             make_full_acl_name_from_repo_name(&request.repo_name)
         } else {
             make_top_level_acl_name_from_repo_name(&request.repo_name)
         },
-        readonly: request.readonly.unwrap_or(false),
+        readonly: request.readonly.unwrap_or(request.github_mirror.is_some()),
         t_shirt_size: to_repo_spec_tshirt_size(request.size_bucket)?,
         // The only rule left in Rust is the additive AOSP tier on top of the
         // template's list (see repo_spec_writer::tier_list_for_repo_spec).
