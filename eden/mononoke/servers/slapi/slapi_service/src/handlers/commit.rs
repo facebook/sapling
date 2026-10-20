@@ -112,6 +112,8 @@ use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
+use stats::define_stats;
+use stats::prelude::TimeseriesStatic;
 use tracing::debug;
 use types::HgId;
 use types::Parents;
@@ -143,6 +145,12 @@ const PHASES_CHECK_LIMIT: usize = 10;
 
 const COMMITS_PER_USER_RATE_LIMIT: &str = "commits_per_user";
 const LOCATION_TO_HASH_COUNT_RATE_LIMIT: &str = "location_to_hash_count";
+
+define_stats! {
+    prefix = "mononoke.commit";
+    ephemeral_extend_by_snapshot_id: timeseries(Rate, Sum),
+    ephemeral_extend_by_bubble_id: timeseries(Rate, Sum),
+}
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct RevlogDataParams {
@@ -947,6 +955,7 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
         let repo = ectx.repo();
         let bubble_id = match (request.snapshot_id, request.bubble_id) {
             (Some(snapshot_id), _) => {
+                STATS::ephemeral_extend_by_snapshot_id.add_value(1);
                 let cs_id = ChangesetId::from(snapshot_id);
                 repo.ephemeral_store()
                     .bubble_from_changeset(repo.ctx(), &cs_id)
@@ -958,7 +967,10 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
                         )))
                     })?
             }
-            (None, Some(bubble_id)) => BubbleId::new(bubble_id),
+            (None, Some(bubble_id)) => {
+                STATS::ephemeral_extend_by_bubble_id.add_value(1);
+                BubbleId::new(bubble_id)
+            }
             (None, None) => {
                 return Err(HttpError::e400(anyhow!(
                     "Either snapshot_id or bubble_id must be provided"
