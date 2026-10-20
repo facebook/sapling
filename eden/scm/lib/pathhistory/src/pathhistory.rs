@@ -48,6 +48,24 @@ impl PathHistoryTreeSource {
     }
 }
 
+/// What `PathHistory` compares between two commits.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum TracerKind {
+    /// Compare the existence, content and file type of the paths.
+    Content,
+    /// Compare only the existence of the paths.
+    Existence,
+}
+
+impl TracerKind {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Content => "content",
+            Self::Existence => "existence",
+        }
+    }
+}
+
 /// State for answering history questions about paths.
 pub struct PathHistory {
     // Input
@@ -57,6 +75,9 @@ pub struct PathHistory {
 
     /// Resolve and prefetch tree content in batch.
     tree_source: PathHistoryTreeSource,
+
+    /// What this `PathHistory` compares between commits.
+    tracer_kind: TracerKind,
 
     // Derived from input
     //
@@ -126,7 +147,14 @@ impl PathHistory {
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_source: PathHistoryTreeSource,
     ) -> Result<Self> {
-        Self::new_internal(set, paths, root_tree_reader, tree_source, false).await
+        Self::new_internal(
+            set,
+            paths,
+            root_tree_reader,
+            tree_source,
+            TracerKind::Content,
+        )
+        .await
     }
 
     /// Prepare context to search existence changes of `paths` in commit `set`.
@@ -139,20 +167,25 @@ impl PathHistory {
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_source: PathHistoryTreeSource,
     ) -> Result<Self> {
-        Self::new_internal(set, vec![path], root_tree_reader, tree_source, true).await
+        Self::new_internal(
+            set,
+            vec![path],
+            root_tree_reader,
+            tree_source,
+            TracerKind::Existence,
+        )
+        .await
     }
 
     /// Internal version of `PathHistory::new` method.
     ///
-    /// This creation method adds an additional `ignore_file_content` parameter.
-    /// When enabled, file content and file type (e.g. executable) will be ignored,
-    /// this is used for tracing renames.
+    /// `tracer_kind` sets what the history compares between commits.
     pub(crate) async fn new_internal(
         set: Set,
         paths: Vec<RepoPathBuf>,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_source: PathHistoryTreeSource,
-        ignore_file_content: bool,
+        tracer_kind: TracerKind,
     ) -> Result<Self> {
         tracing::debug!("PathHistory::new(set={:.12?}, paths={:?})", &set, &paths);
         let (id_set, id_map) = set_to_id_set_and_id_map(&set)?;
@@ -177,14 +210,15 @@ impl PathHistory {
         sampling::log_event!("pathhistory.roots", len = &roots.len());
 
         let queue = id_dag.id_set_to_id_segments(&id_set)?;
-        let compiled_paths =
-            CompiledPaths::compile(paths).with_ignore_file_content(ignore_file_content);
+        let compiled_paths = CompiledPaths::compile(paths)
+            .with_ignore_file_content(matches!(tracer_kind, TracerKind::Existence));
         let mut path_history = Self {
             id_dag,
             id_map,
             id_set,
             root_tree_reader,
             tree_source,
+            tracer_kind,
             roots,
             compiled_paths,
             queue,
@@ -544,6 +578,7 @@ impl PathHistory {
         sampling::log_event!(
             "pathhistory.resolve_trees",
             backend = backend,
+            tracer = self.tracer_kind.name(),
             root_count = root_count,
             duration_ms = start.elapsed().as_millis() as u64,
             success = result.is_ok()
