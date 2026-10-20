@@ -2092,6 +2092,16 @@ struct OrgAclParams {
   3: list<AclIdentity> writers;
 }
 
+/// How to create a GitHub mirror repo.
+struct GithubMirrorParams {
+  /// Give the repo its own ACL `repos/git/<org>/<repo>`, maintained and
+  /// readable by this oncall (short name) and with it as point of contact,
+  /// instead of inheriting `repos/git/<org>`. The ACL also gets the mirror
+  /// sync's grants. Only accepted when the call creates a single repo; a batch
+  /// inherits the org ACL.
+  1: optional string maintainer_oncall;
+}
+
 enum RepoSizeBucket {
   /// <100MB
   EXTRA_SMALL = 0,
@@ -2132,6 +2142,8 @@ struct RepoCreationRequest {
   /// Create the org ACL `repos/git/<org>` if it does not exist yet. Only
   /// meaningful without `custom_acl`.
   8: optional OrgAclParams org_acl;
+  /// The repo mirrors a GitHub repo. Implies `readonly`.
+  9: optional GithubMirrorParams github_mirror;
 }
 
 struct CreateReposParams {
