@@ -2168,3 +2168,77 @@ clean=True
   vendor/a: A2_REV
   frameworks/b: B2_REV
   vendor/a/sub/c: C_REV
+
+`commit` tests
+
+Every test starts clean at `$REV_AFTER_BUMP_C`. Expected:
+- If `sl status` is empty, `sl commit` does nothing.
+- Else `sl commit` writes the new revision of each modified project into
+`static.xml`. It makes a Git commit in the manifests repo. This Git commit is
+the new `.`. `default` moves to it.
+- After the commit, the manifests repo is clean. `sl status` is empty.
+
+Clean workspace. Expected: `sl commit` does nothing.
+
+  $ reset_workspace
+  $ sl commit -m 'commit clean workspace'
+  nothing changed
+  [1]
+
+Uncommitted file change in `frameworks/b`. `sl status` is empty. Expected:
+`sl commit` does nothing.
+
+  $ reset_workspace
+  $ echo "uncommitted change" > frameworks/b/README
+  $ sl status
+  $ sl commit -m 'commit uncommitted change in frameworks/b'
+  nothing changed
+  [1]
+
+Local commit in `vendor/a/sub/c`. `sl status` shows the project as modified.
+Expected: the result above. `static.xml` of `.` says
+`vendor/a/sub/c=C_LOCAL_REV`.
+(bad: the Git commit has the synthesized project tree, not the manifests tree.
+The tree has one gitlink for each project. Each path ends in `\177`. Sapling
+adds this suffix to project paths. `static/static.xml` is not in the tree.)
+(bad: `.` and `default` move to the new Git commit. But the manifests index and
+`static.xml` on disk do not match it.)
+(bad: after the commit, Sapling cannot read `.`. `sl status` and `sl log`
+abort, because `static/static.xml` is not in the tree.)
+
+  $ reset_workspace
+  $ git -C vendor/a/sub/c checkout -q --detach $C_LOCAL_REV
+  $ sl status
+  M vendor/a/sub/c
+  $ sl commit -m 'commit vendor/a/sub/c' > $TESTTMP/commit.out 2>&1
+  $ map_rev_names < $TESTTMP/commit.out
+  $ COMMIT_REV=$(sl log -r . -T '{node}')
+  $ workspace_state 2>&1 | sed "s/$COMMIT_REV/COMMIT_REV/g"
+  sl_workingcopy_parent: commit vendor/a/sub/c
+  manifests HEAD: refs/heads/default COMMIT_REV
+  fatal: path 'static/static.xml' exists on disk, but not in the index
+  static.xml index: 
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  manifests:  D "frameworks/b\177"
+  manifests:  D "vendor/a/sub/c\177"
+  manifests:  D "vendor/a\177"
+  manifests: ?? static/
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C_LOCAL_REV
+  abort: synthesizing tree for root *: repo manifest xml not found at static/static.xml in tree (glob)
+  $ sl log -r . -T "parent: {p1node}\nfiles: {files}\n" 2>&1 | map_rev_names
+  abort: synthesizing tree for root * (glob)
+  
+  Caused by:
+      repo manifest xml not found at static/static.xml in tree
+  $ git -C .repo/manifests log --format='%H %s' -2 | map_rev_names | sed "s/$COMMIT_REV/COMMIT_REV/g"
+  COMMIT_REV commit vendor/a/sub/c
+  REV_AFTER_BUMP_C bump vendor/a/sub/c
+  $ git -C .repo/manifests ls-tree -r HEAD | map_rev_names
+  160000 commit B2_REV	"frameworks/b\177"
+  160000 commit C_LOCAL_REV	"vendor/a/sub/c\177"
+  160000 commit A2_REV	"vendor/a\177"
+  $ git -C .repo/manifests show HEAD:static/static.xml
+  fatal: path 'static/static.xml' exists on disk, but not in 'HEAD'
+  [128]
