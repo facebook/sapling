@@ -20,11 +20,11 @@ required-features = ["for-tests"]
 [dependencies]
 anyhow = "1.0.104"
 blob = { version = "0.1.0", path = "../blob" }
-bytecount = "0.6.9"
 num_cpus = "1.16"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 quickcheck = { version = "1.1", optional = true }
 rand = { version = "0.10.3", optional = true }
+sapling-bytescan = { version = "0.1.0", path = "../util/bytescan" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }

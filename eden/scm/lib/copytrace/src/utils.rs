@@ -85,7 +85,7 @@ pub fn content_similarity(
     let config_max_edit_cost = config
         .get_opt::<u64>("copytrace", "max-edit-cost")?
         .unwrap_or(DEFAULT_MAX_EDIT_COST);
-    let mut lines = bytecount::count(a, b'\n');
+    let mut lines = bytescan::count_newlines(a);
     if lines == 0 {
         // avoid 'nan' when compute the similarity score
         lines += 1;

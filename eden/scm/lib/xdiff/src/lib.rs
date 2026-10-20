@@ -518,7 +518,7 @@ where
         &text[0..text.len() - 1]
     };
     let start = if text.is_empty() { 0 } else { 1 };
-    let count = text_to_split.split(|c| c == &b'\n').count();
+    let count = bytescan::count_newlines(text_to_split) + 1;
     state.emit(
         format!(
             "@@ -{},{} +{},{} @@\n",

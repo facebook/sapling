@@ -65,7 +65,6 @@ sl_rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:bytecount",
         "fbsource//third-party/rust:num_cpus",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:thiserror",
@@ -80,6 +79,7 @@ sl_rust_library(
         "//eden/scm/lib/slex:slex",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/bytescan:bytescan",
         "//eden/scm/lib/util/factory:factory",
         "//eden/scm/lib/util/format-util:format-util",
         "//eden/scm/lib/util/try-once-lock:try-once-lock",
