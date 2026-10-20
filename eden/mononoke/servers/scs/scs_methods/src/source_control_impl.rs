@@ -106,6 +106,7 @@ const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+const FORWARDED_CLIENT_ID_HEADER: &str = "scm_forwarded_client_id";
 // Header names are fixed by the upstream proxy that forwards its caller's CATs.
 const FORWARDED_UNVERIFIED_CATS_HEADER: &str = "raw_customer_cats";
 const FORWARDED_UNVERIFIED_CATS_VERIFIER_HEADER: &str = "customer_cats_verifier_service_identity";
@@ -396,7 +397,7 @@ impl SourceControlServiceImpl {
                 ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer)
             }),
         );
-        if let Some(client_id) = header("client_id")? {
+        if let Some(client_id) = header(FORWARDED_CLIENT_ID_HEADER)?.or(header("client_id")?) {
             metadata.add_upstream_client_id(client_id);
         }
 
