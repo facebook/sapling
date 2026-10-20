@@ -335,6 +335,7 @@ impl Convert for RawCommitIdentityScheme {
             RawCommitIdentityScheme::HG => CommitIdentityScheme::HG,
             RawCommitIdentityScheme::GIT => CommitIdentityScheme::GIT,
             RawCommitIdentityScheme::BONSAI => CommitIdentityScheme::BONSAI,
+            RawCommitIdentityScheme::P4 => CommitIdentityScheme::P4,
             RawCommitIdentityScheme::UNKNOWN => CommitIdentityScheme::UNKNOWN,
             v => return Err(anyhow!("Invalid value {v} for enum CommitIdentityScheme")),
         };
