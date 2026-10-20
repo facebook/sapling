@@ -2279,9 +2279,7 @@ def diff(ui, repo, *pats, **opts):
     to generate diffs in the git extended diff format. For more information,
     see :prog:`help diffs`.
 
-    ``--from-path`` and ``--to-path`` allow diffing between directories.
-    Files outside ``--from-path`` in the left side are ignored. See
-    :prog:`help directorybranching` for more information.
+    To compare directories, use :prog:`subtree diff`.
 
     .. note::
 

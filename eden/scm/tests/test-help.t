@@ -639,9 +639,7 @@ Test command without options
       generate diffs in the git extended diff format. For more information, see
       'sl help diffs'.
   
-      "--from-path" and "--to-path" allow diffing between directories. Files
-      outside "--from-path" in the left side are ignored. See 'sl help
-      directorybranching' for more information.
+      To compare directories, use 'sl subtree diff'.
   
       Note:
          'sl diff' might generate unexpected results during merges because it
