@@ -99,7 +99,10 @@ python_unittest(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
-    env = {"EDENFSCTL_PY": "$(location //eden/fs/cli:edenfsctl)"},
+    env = {
+        "EDENFSCTL_PY": "$(location //eden/fs/cli:edenfsctl)",
+        "INTERRUPT_PROBE": "$(location :interrupt_probe)",
+    },
     labels = ci.labels(
         ci.linux(),
         ci.linux(ci.aarch64()),

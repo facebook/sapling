@@ -14,6 +14,17 @@ import types
 from unittest.mock import patch
 
 
+def started() -> None:
+    with open(os.environ["INTERRUPT_PROBE_STARTED"], "w") as f:
+        f.write(repr(time.monotonic()))
+
+
+def park(*_: object) -> int:
+    started()
+    time.sleep(60)
+    return 0
+
+
 def main() -> None:
     if sys.platform == "win32":
         prjfs = types.ModuleType("eden.fs.cli.prjfs")
@@ -33,6 +44,7 @@ def main() -> None:
     native = importlib.import_module("artillery.art_cli_lite.art_cli_lite_py")
     faults = {
         "finish": contextlib.nullcontext(),
+        "ctrl_c": contextlib.nullcontext(),
         "start_failure": patch.object(
             threading.Thread, "start", side_effect=RuntimeError("no thread")
         ),
@@ -43,15 +55,21 @@ def main() -> None:
             native, "finish_process", side_effect=lambda: time.sleep(30)
         ),
     }
-    fault = faults[sys.argv[1]]
+    mode = sys.argv[1]
+    fault = faults[mode]
+    parks = mode == "ctrl_c"
     sys.argv = ["edenfsctl", "list"]
     try:
         with (
-            patch.object(edenfsctl, "asyncio_run", side_effect=KeyboardInterrupt),
+            patch.object(
+                edenfsctl,
+                "asyncio_run",
+                side_effect=park if parks else KeyboardInterrupt,
+            ),
             fault,
         ):
-            with open(os.environ["INTERRUPT_PROBE_STARTED"], "w") as f:
-                f.write(repr(time.monotonic()))
+            if not parks:
+                started()
             edenfsctl.zipapp_main()
     finally:
         os._exit(99)

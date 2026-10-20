@@ -120,6 +120,15 @@ def agent_ids(child: dict[str, str]) -> tuple[str | None, str | None]:
     return apc.agent_id, cp2.agent_id
 
 
+def wait_for(path: str, timeout: float = 60.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if os.path.exists(path):
+            return True
+        time.sleep(0.01)
+    return False
+
+
 def without_carriers(env: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in env.items() if k not in CARRIERS}
 
@@ -280,10 +289,6 @@ class _Listener:
             self.received += chunk
             self.first.set()
 
-    def hang_up(self) -> None:
-        for conn in self.held:
-            conn.shutdown(socket.SHUT_RDWR)
-
     def close(self) -> None:
         for conn in self.held:
             conn.close()
@@ -294,8 +299,6 @@ class _Listener:
 class InterruptedEdenfsctlTest(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = tempfile.mkdtemp(prefix="eden")
-        self.daemon = _Listener(socket.AF_UNIX, os.path.join(self.dir, "socket"))
-        self.addCleanup(self.daemon.close)
         self.scribed = _Listener(socket.AF_INET, ("127.0.0.1", 0))
         self.addCleanup(self.scribed.close)
 
@@ -338,19 +341,19 @@ class InterruptedEdenfsctlTest(unittest.TestCase):
         self, control: dict[str, object] | None, interrupts: int = 1
     ) -> tuple[int, float]:
         env = self.environment(control)
+        parked = os.path.join(self.dir, "parked")
+        env["INTERRUPT_PROBE_STARTED"] = parked
         child = subprocess.Popen(
-            [os.environ["EDENFSCTL_PY"], "--config-dir", self.dir, "list"],
+            [os.environ["INTERRUPT_PROBE"], "ctrl_c"],
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True,
         )
         self.addCleanup(child.kill)
-        self.assertTrue(self.daemon.first.wait(60), "edenfsctl reached the daemon")
+        self.assertTrue(wait_for(parked), "edenfsctl reached its command")
         interrupted = time.monotonic()
         os.killpg(child.pid, signal.SIGINT)
-        time.sleep(0.1)
-        self.daemon.hang_up()
         for _ in range(interrupts - 1):
             self.assertTrue(
                 self.scribed.first.wait(5), "edenfsctl is shipping the block"
@@ -371,7 +374,7 @@ class InterruptedEdenfsctlTest(unittest.TestCase):
         self.assertIn(b"artillery_trace_events", self.scribed.received)
         self.assertIn(b"cli.edenfsctl", self.scribed.received)
         self.assertIn(AGENT.encode(), self.scribed.received)
-        self.assertLess(elapsed, 0.1 + 1.0 + 0.5)
+        self.assertLess(elapsed, 1.0 + 0.5)
 
     def test_a_second_ctrl_c_while_finishing_still_exits_130(self) -> None:
         code, elapsed = self.interrupt(
@@ -379,7 +382,7 @@ class InterruptedEdenfsctlTest(unittest.TestCase):
             interrupts=2,
         )
         self.assertEqual(code, 130)
-        self.assertLess(elapsed, 0.1 + 1.0 + 0.5)
+        self.assertLess(elapsed, 1.0 + 0.5)
 
     def entrypoint(
         self, control: dict[str, object] | None
@@ -432,7 +435,7 @@ class InterruptedEdenfsctlTest(unittest.TestCase):
         code, elapsed = self.interrupt(control)
         self.assertEqual(code, 130)
         self.assertFalse(self.scribed.first.wait(1), "nothing reached scribed")
-        self.assertLess(elapsed, 0.1 + 0.5)
+        self.assertLess(elapsed, 0.5)
 
     def test_a_human_ctrl_c_ships_nothing(self) -> None:
         self.assert_nothing_shipped(None)
