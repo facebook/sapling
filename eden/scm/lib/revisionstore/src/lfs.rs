@@ -1231,7 +1231,7 @@ impl LfsPointersEntry {
         Ok(LfsPointersEntry {
             hgid,
             size: content.len().try_into()?,
-            is_binary: content.as_ref().contains(&b'\0'),
+            is_binary: bytescan::is_binary(content.as_ref()),
             copy_from: copied_from,
             content_hashes,
         })

@@ -430,7 +430,7 @@ fn filter_binary_file(
 fn blob_contains_nul(data: &Blob) -> std::io::Result<bool> {
     let mut contains_nul = false;
     let result = data.each_chunk(|chunk| {
-        if chunk.contains(&0) {
+        if bytescan::is_binary(chunk) {
             contains_nul = true;
             Err(std::io::Error::new(
                 std::io::ErrorKind::Interrupted,

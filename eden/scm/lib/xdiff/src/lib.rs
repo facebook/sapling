@@ -659,10 +659,7 @@ where
     C: AsRef<[u8]>,
 {
     match file {
-        Some(file) => file
-            .contents
-            .as_bytes()
-            .is_some_and(|bytes| bytes.contains(&0)),
+        Some(file) => file.contents.as_bytes().is_some_and(bytescan::is_binary),
         None => false,
     }
 }

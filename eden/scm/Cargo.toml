@@ -210,6 +210,7 @@ members = [
   "lib/util/ascii-tree",
   "lib/util/atexit",
   "lib/util/btrfs",
+  "lib/util/bytescan",
   "lib/util/factory",
   "lib/util/format-util",
   "lib/util/hgplain",

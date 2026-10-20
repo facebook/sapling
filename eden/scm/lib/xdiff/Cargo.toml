@@ -13,4 +13,5 @@ license = "MIT"
 name = "xdiff"
 
 [dependencies]
+sapling-bytescan = { version = "0.1.0", path = "../util/bytescan" }
 sapling-xdiff-sys = { version = "0.1.0", path = "../xdiff-sys" }
