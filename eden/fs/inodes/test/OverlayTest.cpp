@@ -725,7 +725,7 @@ TEST_F(OverlayWalReplayTest, renameCompactsOnlyAfterBothWalAppends) {
   // rename's two appends.
   auto srcWalPath = canonicalPath(testDir_.path().string()) +
       RelativePathPiece{FsFileContentStore::getWalPath(srcIno)};
-  ASSERT_TRUE(boost::filesystem::create_directory(srcWalPath.c_str()));
+  ASSERT_TRUE(folly::fs::create_directory(srcWalPath.c_str()));
 
   DirContents srcAfter(kPathMapDefaultCaseSensitive);
   DirContents dstAfter(kPathMapDefaultCaseSensitive);
@@ -741,7 +741,7 @@ TEST_F(OverlayWalReplayTest, renameCompactsOnlyAfterBothWalAppends) {
   EXPECT_TRUE(catalog->hasWal(dstIno));
   auto dst = overlay_->loadOverlayDir(dstIno);
   EXPECT_TRUE(dst.find("final"_pc) != dst.end());
-  boost::filesystem::remove(srcWalPath.c_str());
+  folly::fs::remove(srcWalPath.c_str());
   auto src = overlay_->loadOverlayDir(srcIno);
   EXPECT_TRUE(src.find("tmp"_pc) != src.end());
 }
