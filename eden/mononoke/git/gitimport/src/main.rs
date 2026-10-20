@@ -1021,20 +1021,36 @@ async fn run_import(
                     // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
                     continue;
                 }
-                if let Some(tag_id) = maybe_tag_id {
+                match maybe_tag_id {
                     // Keyed on the tag object, not the bookmark target: always run.
-                    process_tags(
-                        &ctx,
-                        &name,
-                        tag_id,
-                        &existing_tags,
-                        Some(*changeset),
-                        reupload,
-                        uploader.clone(),
-                        reader.clone(),
-                    )
-                    .await
-                    .session_context(args.persistent, SessionFailure::Publication)?;
+                    Some(tag_id) => {
+                        process_tags(
+                            &ctx,
+                            &name,
+                            tag_id,
+                            &existing_tags,
+                            Some(*changeset),
+                            reupload,
+                            uploader.clone(),
+                            reader.clone(),
+                        )
+                        .await
+                        .session_context(args.persistent, SessionFailure::Publication)?;
+                    }
+                    // A lightweight tag that replaced an annotated one. The git
+                    // server advertises the mapping's tag object over the
+                    // bookmark, so the stale row must go even when the bookmark
+                    // itself is already correct.
+                    None if existing_tags.contains_key(&name) => {
+                        repo.bonsai_tag_mapping()
+                            .delete_mappings_by_name(&ctx, vec![name.clone()])
+                            .await
+                            .with_context(|| {
+                                format!("failed to delete stale tag mapping for {name}")
+                            })
+                            .session_context(args.persistent, SessionFailure::Publication)?;
+                    }
+                    None => {}
                 }
                 let bookmark_key = BookmarkKey::new(&name)
                     .session_context(args.persistent, SessionFailure::Publication)?;

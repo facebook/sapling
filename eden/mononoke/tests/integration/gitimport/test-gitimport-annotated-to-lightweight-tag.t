@@ -29,15 +29,13 @@ Both annotated tags get a tag mapping row.
   tags/moved
 
 Both tags are replaced by lightweight tags: one on a new commit, one on the same
-commit, so its bookmark does not move. The bookmarks follow, but both stale rows
-survive, so the git server keeps advertising the old tag objects.
+commit, so its bookmark does not move. Both stale rows go, otherwise the git
+server keeps advertising the old tag objects.
 
   $ git -C "$GIT_REPO" tag -f moved "$B" > /dev/null
   $ git -C "$GIT_REPO" tag -f kept "$A" > /dev/null
   $ import
   $ tag_mappings
-  tags/kept
-  tags/moved
   $ bookmark_is tags/moved "$B"
   $ bookmark_is tags/kept "$A"
 
@@ -47,5 +45,4 @@ An annotated tag created again under the same name has a row.
   $ import
   $ tag_mappings
   tags/kept
-  tags/moved
   $ bookmark_is tags/kept "$B"
