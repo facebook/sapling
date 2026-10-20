@@ -90,6 +90,8 @@ impl FromScubaJson for BookmarkEventNotification {
                 .context("log_id is not valid")?,
             bookmark_name: get_normal(&json, "bookmark_name")?,
             bookmark_category,
+            from_changeset_id: maybe_get_binary(&json, "from_changeset_id")?,
+            to_changeset_id: maybe_get_binary(&json, "to_changeset_id")?,
             ..Default::default()
         })
     }
@@ -104,6 +106,13 @@ fn maybe_get_normal(val: &serde_json::Value, key: &str) -> Option<String> {
         .as_str()
         .map(|s| s.to_string())
         .or_else(|| val[key].as_str().map(|s| s.to_string()))
+}
+
+#[cfg(fbcode_build)]
+fn maybe_get_binary(val: &serde_json::Value, key: &str) -> anyhow::Result<Option<Vec<u8>>> {
+    maybe_get_normal(val, key)
+        .map(|value| hex::decode(value).with_context(|| format!("{key} is not valid hex")))
+        .transpose()
 }
 
 #[cfg(all(test, fbcode_build))]
@@ -122,6 +131,8 @@ mod tests {
                 "log_id": "456",
                 "bookmark_name": "main",
                 "bookmark_category": "BRANCH",
+                "from_changeset_id": "1111111111111111111111111111111111111111111111111111111111111111",
+                "to_changeset_id": "2222222222222222222222222222222222222222222222222222222222222222",
             },
         }))?;
 
@@ -129,6 +140,8 @@ mod tests {
         assert_eq!(deserialized.log_id, 456);
         assert_eq!(deserialized.bookmark_name, "main");
         assert_eq!(deserialized.bookmark_category, BookmarkCategory::BRANCH);
+        assert_eq!(deserialized.from_changeset_id, Some(vec![0x11; 32]),);
+        assert_eq!(deserialized.to_changeset_id, Some(vec![0x22; 32]),);
         Ok(())
     }
 }

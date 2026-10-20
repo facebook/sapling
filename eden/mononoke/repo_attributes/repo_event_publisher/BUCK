@@ -31,6 +31,7 @@ rust_library(
             "//thrift/lib/rust:fbthrift",
             "fbsource//third-party/rust:bytes",
             "fbsource//third-party/rust:dashmap",
+            "fbsource//third-party/rust:hex",
             "fbcode//dsi/logger/thrift_schemas/mononoke_git_content_ref:mononoke_git_content_ref_logger_schema-rust",
             "fbcode//dsi/logger/thrift_schemas/mononoke_bookmark:mononoke_bookmark_logger_schema-rust",
             "fbcode//dsi/logger/rust/deserializer:deserializer",
