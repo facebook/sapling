@@ -42,7 +42,7 @@ async fn basic_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     };
     let mut bytes = tag.loose_header().into_vec();
     tag.write_to(bytes.by_ref())?;
@@ -66,7 +66,7 @@ async fn invalid_bytes_upload_non_blob_git_object(fb: FacebookInit) -> Result<()
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     };
     let mut bytes = Vec::new();
     tag.write_to(bytes.by_ref())?;
@@ -93,7 +93,7 @@ async fn invalid_hash_upload_non_blob_git_object(fb: FacebookInit) -> Result<()>
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     };
     let mut bytes = tag.loose_header().into_vec();
     tag.write_to(bytes.by_ref())?;
@@ -119,7 +119,7 @@ async fn blobstore_check_upload_non_blob_git_object(fb: FacebookInit) -> Result<
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     };
     let mut bytes = tag.loose_header().into_vec();
     tag.write_to(bytes.by_ref())?;

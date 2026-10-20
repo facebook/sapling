@@ -65,7 +65,7 @@ async fn get_objects_stream(
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     }))?;
     let blob_object =
         object_content_from_owned_object(gix_object::Object::Blob(gix_object::Blob {
@@ -91,7 +91,7 @@ async fn get_objects_stream(
             name: "BlobTag".into(),
             tagger: None,
             message: "Tag pointing to a blob".into(),
-            pgp_signature: None,
+            signature: None,
         }))?;
         let another_tag_hash = BaseObject::new(another_tag_object.raw().clone())?
             .hash()
@@ -125,7 +125,7 @@ fn validate_packitem_creation() -> anyhow::Result<()> {
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     };
     // Convert it into a packfile item
     BaseObject::new(object_content_from_owned_object(tag.into())?.raw().clone())
@@ -142,7 +142,7 @@ fn validate_packfile_item_encoding() -> anyhow::Result<()> {
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     };
     // Convert it into a packfile item
     let item = BaseObject::new(object_content_from_owned_object(tag.into())?.raw().clone())
@@ -263,7 +263,7 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     }))?;
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
@@ -470,7 +470,7 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
         name: "TreeTag".into(),
         tagger: None,
         message: "Tag pointing to a tree".into(),
-        pgp_signature: None,
+        signature: None,
     }))?;
     // Validate we are able to write the object to the bundle without errors
     bundle_writer

@@ -125,6 +125,7 @@ fn into_data_entry(pack_entry: InputEntry) -> data::Entry {
         header: pack_entry.header,
         decompressed_size: pack_entry.decompressed_size,
         data_offset: pack_entry.pack_offset + pack_entry.header_size as u64,
+        encoded_header_size: pack_entry.header_size,
     }
 }
 
@@ -248,7 +249,7 @@ fn process_pack_entries(
             let outcome = pack_file.decode_entry(
                 into_data_entry(entry.clone()),
                 &mut output,
-                &mut gix_features::zlib::Inflate::default(),
+                &mut Default::default(),
                 &|oid, out| resolve_delta(oid, out, &prereq_objects),
                 &mut Never,
             );

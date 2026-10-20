@@ -37,7 +37,7 @@
           "mononoke <mononoke@mononoke> 946684800 +0000",
       ),
       message: "Tag\n",
-      pgp_signature: None,
+      signature: None,
   }
 
   $ mononoke_admin git-objects -R repo fetch --id $tag2_hash
@@ -51,5 +51,5 @@
           "mononoke <mononoke@mononoke> 946684800 +0000",
       ),
       message: "Another Tag\n",
-      pgp_signature: None,
+      signature: None,
   }

@@ -396,7 +396,7 @@ impl TagMetadata {
                     None => decode_message(tag.name, &None)?,
                 };
                 let pgp_signature = tag
-                    .pgp_signature
+                    .signature
                     .map(|signature| Bytes::from(signature.to_vec()));
                 let target_is_tag = tag.target_kind == gix_object::Kind::Tag;
                 Result::<_, Error>::Ok(TagMetadata {

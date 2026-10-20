@@ -30,9 +30,9 @@ fbthrift = { version = "0.0.1", git = "https://github.com/facebook/fbthrift.git"
 fn-error-context = "0.2"
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
-gix-date = "0.15.6"
-gix-hash = { version = "0.25.1", features = ["sha1"] }
-gix-object = "0.60.0"
+gix-date = "0.16.0"
+gix-hash = { version = "0.26.2", features = ["sha1"] }
+gix-object = "0.64.1"
 hex = { version = "0.4.3", features = ["alloc"] }
 itertools = "0.15.0"
 lfs_protocol = { version = "0.1.0", path = "../common/lfs_protocol" }

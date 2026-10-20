@@ -348,7 +348,7 @@ mod test {
             name: "TreeTag".into(),
             tagger: None,
             message: "Tag pointing to a tree".into(),
-            pgp_signature: None,
+            signature: None,
         }))?;
         let tag_bytes = object_content.raw();
         let base_object = BaseObject::new(tag_bytes.clone())?;
