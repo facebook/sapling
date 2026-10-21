@@ -6,7 +6,6 @@
  */
 
 #![feature(error_generic_member_access)]
-#![feature(string_from_utf8_lossy_owned)]
 
 pub mod mode;
 
