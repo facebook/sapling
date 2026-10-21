@@ -12,6 +12,7 @@ use anyhow::Context;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
+use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 #[cfg(test)]
@@ -57,6 +58,14 @@ struct TextFile {
 #[derive(Clone, Debug)]
 enum ParsedFileContent {
     Text(TextFile),
+    NonUtf8,
+    Binary,
+    LfsPointer,
+}
+
+enum LoadedFileContent {
+    Text(Bytes, ContentMetadataV2),
+    String(Bytes),
     NonUtf8,
     Binary,
     LfsPointer,
@@ -159,7 +168,7 @@ impl TextFile {
     }
 }
 
-impl ParsedFileContent {
+impl LoadedFileContent {
     async fn new(
         ctx: &CoreContext,
         repo: &impl Repo,
@@ -167,13 +176,13 @@ impl ParsedFileContent {
         is_lfs: bool,
     ) -> Result<Self, DiffError> {
         if is_lfs {
-            return Ok(ParsedFileContent::LfsPointer);
+            return Ok(Self::LfsPointer);
         }
         // Load content metadata from blobstore
         let metadata = crate::utils::content::get_content_metadata(ctx, repo, &content_id).await?;
 
-        let parsed_content = if metadata.is_binary {
-            ParsedFileContent::Binary
+        let content = if metadata.is_binary {
+            Self::Binary
         } else if metadata.is_utf8 {
             // Load the actual content
             let file_content = {
@@ -184,15 +193,70 @@ impl ParsedFileContent {
                     .map_err(DiffError::internal)?
                     .ok_or_else(|| DiffError::content_not_found(content_id))?
             };
-            ParsedFileContent::Text(TextFile::new(file_content, metadata)?)
+            Self::Text(file_content, metadata)
         } else {
-            ParsedFileContent::NonUtf8
+            Self::NonUtf8
         };
-        Ok(parsed_content)
+        Ok(content)
+    }
+
+    fn needs_cpu_work(&self) -> bool {
+        matches!(self, Self::Text(..) | Self::String(..))
+    }
+
+    fn parse(self) -> Result<ParsedFileContent, DiffError> {
+        match self {
+            Self::Text(content, metadata) => {
+                Ok(ParsedFileContent::Text(TextFile::new(content, metadata)?))
+            }
+            Self::String(content) => ParsedFileContent::from_string(content),
+            Self::Binary => Ok(ParsedFileContent::Binary),
+            Self::NonUtf8 => Ok(ParsedFileContent::NonUtf8),
+            Self::LfsPointer => Ok(ParsedFileContent::LfsPointer),
+        }
     }
 }
 
-async fn calculate_lines_count(
+impl ParsedFileContent {
+    fn from_string(file_content: Bytes) -> Result<Self, DiffError> {
+        let is_binary = file_content.contains(&0u8);
+        let is_utf8 = std::str::from_utf8(&file_content).is_ok();
+
+        // String inputs have no persisted content metadata.
+        let newline_count = file_content.iter().filter(|&&b| b == b'\n').count() as u64;
+        let ends_in_newline = file_content.last() == Some(&b'\n');
+        let metadata = ContentMetadataV2 {
+            content_id: ContentId::from_bytes([0; 32]).map_err(DiffError::internal)?,
+            total_size: file_content.len() as u64,
+            sha1: mononoke_types::hash::Sha1::from_byte_array([0; 20]),
+            sha256: mononoke_types::hash::Sha256::from_byte_array([0; 32]),
+            git_sha1: mononoke_types::hash::RichGitSha1::from_sha1(
+                mononoke_types::hash::GitSha1::from_byte_array([0; 20]),
+                "blob",
+                file_content.len() as u64,
+            ),
+            seeded_blake3: mononoke_types::hash::Blake3::from_byte_array([0; 32]),
+            is_binary,
+            is_utf8,
+            is_ascii: file_content.is_ascii(),
+            ends_in_newline,
+            newline_count,
+            first_line: None,
+            is_generated: false,
+            is_partially_generated: false,
+        };
+
+        if is_binary {
+            Ok(Self::Binary)
+        } else if is_utf8 {
+            Ok(Self::Text(TextFile::new(file_content, metadata)?))
+        } else {
+            Ok(Self::NonUtf8)
+        }
+    }
+}
+
+fn calculate_lines_count(
     old_parsed_file_content: Option<&ParsedFileContent>,
     new_parsed_file_content: Option<&ParsedFileContent>,
     old_file_type: Option<&DiffFileType>,
@@ -335,7 +399,7 @@ async fn get_file_details_from_input(
     ctx: &CoreContext,
     repo: &impl Repo,
     input: DiffSingleInput,
-) -> Result<(Option<DiffFileType>, Option<ParsedFileContent>), DiffError> {
+) -> Result<(Option<DiffFileType>, Option<LoadedFileContent>), DiffError> {
     match input {
         DiffSingleInput::ChangesetPath(changeset_input) => {
             let non_root_mpath = changeset_input.path.clone();
@@ -368,7 +432,7 @@ async fn get_file_details_from_input(
                     )
                     .await?
                     .is_some();
-                    Some(ParsedFileContent::new(ctx, repo, *content_id, is_lfs).await?)
+                    Some(LoadedFileContent::new(ctx, repo, *content_id, is_lfs).await?)
                 }
                 (None, _) => None,
             };
@@ -378,7 +442,7 @@ async fn get_file_details_from_input(
         DiffSingleInput::Content(content_input) => {
             // If an LFS pointer was provided with this content input, report as LfsPointer
             let parsed_file_content = Some(
-                ParsedFileContent::new(
+                LoadedFileContent::new(
                     ctx,
                     repo,
                     content_input.content_id,
@@ -390,53 +454,12 @@ async fn get_file_details_from_input(
             // For content-only inputs, we don't have file type information
             Ok((None, parsed_file_content))
         }
-        DiffSingleInput::String(string_input) => {
-            let file_content = Bytes::from(string_input.content.into_bytes());
-
-            let is_binary = file_content.contains(&0u8);
-            let is_utf8 = std::str::from_utf8(&file_content).is_ok();
-
-            // Create a lightweight metadata struct for string content analysis
-            // We can't create a full ContentMetadataV2 without a content_id
-            let newline_count = file_content.iter().filter(|&&b| b == b'\n').count() as u64;
-            let ends_in_newline = file_content.last() == Some(&b'\n');
-
-            // Build a minimal metadata for TextFile creation
-            let metadata = ContentMetadataV2 {
-                content_id: ContentId::from_bytes([0; 32]).unwrap(), // Placeholder - not used for string inputs
-                total_size: file_content.len() as u64,
-                sha1: mononoke_types::hash::Sha1::from_byte_array([0; 20]),
-                sha256: mononoke_types::hash::Sha256::from_byte_array([0; 32]),
-                git_sha1: mononoke_types::hash::RichGitSha1::from_sha1(
-                    mononoke_types::hash::GitSha1::from_byte_array([0; 20]),
-                    "blob",
-                    file_content.len() as u64,
-                ),
-                seeded_blake3: mononoke_types::hash::Blake3::from_byte_array([0; 32]),
-                is_binary,
-                is_utf8,
-                is_ascii: file_content.is_ascii(),
-                ends_in_newline,
-                newline_count,
-                first_line: None,
-                is_generated: false,
-                is_partially_generated: false,
-            };
-
-            let parsed_file_content = if is_binary {
-                Some(ParsedFileContent::Binary)
-            } else if is_utf8 {
-                Some(ParsedFileContent::Text(TextFile::new(
-                    file_content,
-                    metadata,
-                )?))
-            } else {
-                Some(ParsedFileContent::NonUtf8)
-            };
-
-            // String inputs would be a regular file by definition
-            Ok((Some(DiffFileType::Regular), parsed_file_content))
-        }
+        DiffSingleInput::String(string_input) => Ok((
+            Some(DiffFileType::Regular),
+            Some(LoadedFileContent::String(Bytes::from(
+                string_input.content.into_bytes(),
+            ))),
+        )),
     }
 }
 
@@ -450,6 +473,23 @@ pub async fn metadata(
     other_pair: Option<(DiffSingleInput, &impl Repo)>,
     ignore_whitespace: bool,
 ) -> Result<MetadataDiff, DiffError> {
+    metadata_with_guard(ctx, base_pair, other_pair, ignore_whitespace, ()).await
+}
+
+/// Compute a metadata diff while retaining a caller-owned resource reservation.
+///
+/// The guard stays with the blocking computation if the awaiting request is
+/// cancelled. Inputs and repo bindings have the same meaning as in [`metadata`].
+pub async fn metadata_with_guard(
+    ctx: &CoreContext,
+    base_pair: Option<(DiffSingleInput, &impl Repo)>,
+    other_pair: Option<(DiffSingleInput, &impl Repo)>,
+    ignore_whitespace: bool,
+    guard: impl Send + 'static,
+) -> Result<MetadataDiff, DiffError> {
+    #[cfg(test)]
+    let on_compute = executor_tests::take_on_compute();
+
     // Get file information directly from inputs
     let (base_file_details, other_file_details) = try_join!(
         async {
@@ -472,27 +512,62 @@ pub async fn metadata(
         }
     )?;
 
-    let (base_file_type, base_parsed_content) = base_file_details.unwrap_or((None, None));
-    let (other_file_type, other_parsed_content) = other_file_details.unwrap_or((None, None));
+    let (base_file_type, base_content) = base_file_details.unwrap_or((None, None));
+    let (other_file_type, other_content) = other_file_details.unwrap_or((None, None));
+    let needs_cpu_work = base_content
+        .iter()
+        .chain(other_content.iter())
+        .any(LoadedFileContent::needs_cpu_work);
 
-    let lines_count = calculate_lines_count(
-        base_parsed_content.as_ref(),
-        other_parsed_content.as_ref(),
-        base_file_type.as_ref(),
-        other_file_type.as_ref(),
-        ignore_whitespace,
-    )
-    .await;
+    let compute = move || {
+        #[cfg(test)]
+        if let Some(on_compute) = on_compute {
+            on_compute();
+        }
 
-    let base_file_info = create_file_info(base_file_type, base_parsed_content.as_ref());
-    let other_file_info = create_file_info(other_file_type, other_parsed_content.as_ref());
+        let base_parsed_content = base_content.map(LoadedFileContent::parse).transpose()?;
+        let other_parsed_content = other_content.map(LoadedFileContent::parse).transpose()?;
+        let lines_count = calculate_lines_count(
+            base_parsed_content.as_ref(),
+            other_parsed_content.as_ref(),
+            base_file_type.as_ref(),
+            other_file_type.as_ref(),
+            ignore_whitespace,
+        );
 
-    Ok(MetadataDiff {
-        base_file_info,
-        other_file_info,
-        lines_count,
-    })
+        let base_file_info = create_file_info(base_file_type, base_parsed_content.as_ref());
+        let other_file_info = create_file_info(other_file_type, other_parsed_content.as_ref());
+
+        Ok(MetadataDiff {
+            base_file_info,
+            other_file_info,
+            lines_count,
+        })
+    };
+
+    if needs_cpu_work {
+        run_metadata_computation(guard, compute).await?
+    } else {
+        compute()
+    }
 }
+
+async fn run_metadata_computation<T: Send + 'static>(
+    guard: impl Send + 'static,
+    compute: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, DiffError> {
+    mononoke::spawn_blocking(move || {
+        // A started blocking task outlives cancellation of its awaiting request.
+        let _guard = guard;
+        compute()
+    })
+    .await
+    .context("metadata diff blocking task failed")
+    .map_err(DiffError::internal)
+}
+
+#[cfg(test)]
+mod executor_tests;
 
 #[cfg(test)]
 mod tests {
