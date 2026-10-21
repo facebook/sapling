@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/(scm|fs)/.*\.(rs|py|sh)$'
-apply_to_content: 'merge.driver|hook|prefetch|sl diff|hg diff|sl cat|hg cat'
+name: unscoped-hook-fetch
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/(scm|fs)/.*\.(rs|py|sh)$'
+  apply_to_content: 'merge.driver|hook|prefetch|sl diff|hg diff|sl cat|hg cat'
 ---
 
 # Unscoped Hook and Merge Driver Fetch
