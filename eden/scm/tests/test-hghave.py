@@ -14,6 +14,7 @@ from unittest import mock
 
 import hghave
 import silenttestrunner
+from sapling.testing.t import hghave as modernhghave
 
 
 class TimeoutPopen(subprocess.Popen):
@@ -28,6 +29,8 @@ class TimeoutPopen(subprocess.Popen):
 
 @unittest.skipIf(os.name == "nt", "requires POSIX shell exec for child ownership")
 class MatchOutputTest(unittest.TestCase):
+    feature_probe = hghave
+
     def matchoutput(self, code, regexp=rb"marker$", ignorestatus=False):
         python = os.environ.get("PYTHON", sys.executable)
         command = "exec " + " ".join(shlex.quote(arg) for arg in [python, "-c", code])
@@ -38,9 +41,11 @@ class MatchOutputTest(unittest.TestCase):
             child = TimeoutPopen(*args, **kwargs)
             return child
 
-        with mock.patch.object(hghave.subprocess, "Popen", popen):
+        with mock.patch.object(self.feature_probe.subprocess, "Popen", popen):
             try:
-                return hghave.matchoutput(command, regexp, ignorestatus=ignorestatus)
+                return self.feature_probe.matchoutput(
+                    command, regexp, ignorestatus=ignorestatus
+                )
             except subprocess.TimeoutExpired:
                 self.fail(
                     "feature probe did not drain subprocess output before waiting"
@@ -59,6 +64,12 @@ class MatchOutputTest(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(match.group(), b"marker")
         self.assertEqual(match.start(), 1024 * 1024)
+
+
+class ModernMatchOutputTest(MatchOutputTest):
+    """Apply the same probe contract to the modern .t runner."""
+
+    feature_probe = modernhghave
 
 
 if __name__ == "__main__":
