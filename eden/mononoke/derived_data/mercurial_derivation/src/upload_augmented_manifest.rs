@@ -212,6 +212,15 @@ enum BuildNode {
     Tree(usize),
 }
 
+fn directory_node(envelope: &HgAugmentedManifestEnvelope) -> HgAugmentedDirectoryNode {
+    HgAugmentedDirectoryNode {
+        treenode: envelope.augmented_manifest.hg_node_id,
+        augmented_manifest_id: envelope.augmented_manifest_id,
+        augmented_manifest_size: envelope.augmented_manifest_size,
+        acl_manifest_directory_id: envelope.augmented_manifest.acl_manifest_directory_id,
+    }
+}
+
 /// Build an augmented manifest for every uploaded tree, children before
 /// parents, without storing any. A child neither in the batch nor already
 /// derived fails the whole batch.
@@ -252,7 +261,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                     .iter()
                     .map(|child| (child.directory.treenode, child.as_ref()))
                     .collect();
-                let (envelope, directory, acl) = build_uploaded_tree(
+                let (envelope, acl) = build_uploaded_tree(
                     ctx,
                     blobstore,
                     restricted_paths,
@@ -274,20 +283,21 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                     .map(|child| child.level + 1)
                     .max()
                     .unwrap_or(0);
+                let built_tree = BuiltTree {
+                    directory: directory_node(&envelope),
+                    acl: acl.clone(),
+                    level,
+                };
                 built_ref
                     .lock()
                     .expect("should not be poisoned, nothing panics while holding it")[index] =
                     Some(UploadTreeAugmented {
                         node_id: tree.node_id,
-                        acl: acl.clone(),
+                        acl,
                         level,
                         envelope,
                     });
-                anyhow::Ok(Some(Arc::new(BuiltTree {
-                    directory,
-                    acl,
-                    level,
-                })))
+                anyhow::Ok(Some(Arc::new(built_tree)))
             }
             .boxed()
         },
@@ -327,11 +337,7 @@ async fn build_uploaded_tree(
     restricted_paths: &RestrictedPathsConfigBased,
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
-) -> Result<(
-    HgAugmentedManifestEnvelope,
-    HgAugmentedDirectoryNode,
-    DirectoryAcl,
-)> {
+) -> Result<(HgAugmentedManifestEnvelope, DirectoryAcl)> {
     let parent = parent_entries(ctx, blobstore, manifest.p1()).await?;
     let (children, acl) =
         children_and_acl(ctx, blobstore, restricted_paths, manifest, sources, &parent).await?;
@@ -415,14 +421,8 @@ async fn build_uploaded_tree(
         augmented_manifest_size,
         augmented_manifest,
     };
-    let directory = HgAugmentedDirectoryNode {
-        treenode: envelope.augmented_manifest.hg_node_id,
-        augmented_manifest_id: envelope.augmented_manifest_id,
-        augmented_manifest_size: envelope.augmented_manifest_size,
-        acl_manifest_directory_id: acl_overlay,
-    };
 
-    Ok((envelope, directory, acl))
+    Ok((envelope, acl))
 }
 
 /// Clients upload content before the trees that list it, so missing metadata
@@ -695,19 +695,11 @@ async fn load_children(
                 name: name.clone(),
                 child: *node_id,
             })?;
-            let acl = envelope.augmented_manifest.acl_manifest_directory_id;
-            anyhow::Ok((
-                name.clone(),
-                ChildNode {
-                    directory: HgAugmentedDirectoryNode {
-                        treenode: envelope.augmented_manifest.hg_node_id,
-                        augmented_manifest_id: envelope.augmented_manifest_id,
-                        augmented_manifest_size: envelope.augmented_manifest_size,
-                        acl_manifest_directory_id: acl,
-                    },
-                    acl: acl.map(AclChildNode::IdOnly),
-                },
-            ))
+            let directory = directory_node(&envelope);
+            let acl = directory
+                .acl_manifest_directory_id
+                .map(AclChildNode::IdOnly);
+            anyhow::Ok((name.clone(), ChildNode { directory, acl }))
         })
         .collect();
 
