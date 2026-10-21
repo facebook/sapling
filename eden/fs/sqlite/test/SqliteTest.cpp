@@ -28,6 +28,12 @@ TEST_F(SqliteTest, transactionAfterANonStdException) {
   EXPECT_NO_THROW(db.transaction([](LockedSqliteConnection&) {}));
 }
 
+TEST_F(SqliteTest, checkpointAfterClose) {
+  db.close();
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  EXPECT_DEATH(db.checkpoint(), "");
+}
+
 TEST_F(SqliteTest, testStatement) {
   auto conn = db.lock();
   SqliteStatement stmt{conn, "SELECT 1"};
