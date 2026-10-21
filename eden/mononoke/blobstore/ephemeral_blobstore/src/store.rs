@@ -904,12 +904,21 @@ impl RepoEphemeralStore {
 
 #[cfg(test)]
 mod test {
+    use std::fmt;
+
     use anyhow::anyhow;
+    use async_trait::async_trait;
+    use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreEnumerableWithUnlink;
+    use blobstore::BlobstoreEnumerationData;
+    use blobstore::BlobstoreGetData;
     use blobstore::BlobstoreIsPresent;
     use blobstore::BlobstoreKeyParam;
+    use blobstore::BlobstoreKeySource;
     use blobstore::KeyedBlobstore;
+    use blobstore::OverwriteStatus;
+    use blobstore::PutBehaviour;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashset;
@@ -2248,6 +2257,172 @@ mod test {
             }
         }
 
+        Ok(())
+    }
+
+    #[derive(Debug)]
+    enum UnlinkFault {
+        KeyVanishesAfterListing,
+        UnlinkFails,
+    }
+
+    #[derive(Debug)]
+    struct FaultyBlobstore {
+        inner: Arc<dyn BlobstoreEnumerableWithUnlink>,
+        fault: UnlinkFault,
+    }
+
+    impl fmt::Display for FaultyBlobstore {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "FaultyBlobstore<{}>", self.inner)
+        }
+    }
+
+    #[async_trait]
+    impl Blobstore for FaultyBlobstore {
+        async fn get<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: &'a str,
+        ) -> Result<Option<BlobstoreGetData>> {
+            self.inner.get(ctx, key).await
+        }
+
+        async fn put_explicit<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+            put_behaviour: PutBehaviour,
+        ) -> Result<OverwriteStatus> {
+            self.inner
+                .put_explicit(ctx, key, value, put_behaviour)
+                .await
+        }
+
+        async fn put_with_status<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> Result<OverwriteStatus> {
+            self.inner.put_with_status(ctx, key, value).await
+        }
+
+        async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+            match self.fault {
+                UnlinkFault::KeyVanishesAfterListing => self.inner.unlink(ctx, key).await,
+                UnlinkFault::UnlinkFails => Err(anyhow!("Injected unlink failure for {key}")),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl BlobstoreKeySource for FaultyBlobstore {
+        async fn enumerate<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            range: &'a BlobstoreKeyParam,
+        ) -> Result<BlobstoreEnumerationData> {
+            let enumeration = self.inner.enumerate(ctx, range).await?;
+            if let UnlinkFault::KeyVanishesAfterListing = self.fault
+                && let Some(key) = enumeration.keys.iter().next()
+            {
+                self.inner.unlink(ctx, key).await?;
+            }
+            Ok(enumeration)
+        }
+    }
+
+    async fn bubble_with_keys_in_faulty_store(
+        fb: FacebookInit,
+        fault: UnlinkFault,
+    ) -> Result<(
+        CoreContext,
+        Arc<dyn BlobstoreEnumerableWithUnlink>,
+        RepoEphemeralStore,
+        BubbleId,
+    )> {
+        let initial = Duration::from_hours(30 * 24);
+        let grace = Duration::from_hours(6);
+        let (ctx, blobstore, repo_blobstore, _) =
+            bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let faulty = Arc::new(FaultyBlobstore {
+            inner: blobstore.clone(),
+            fault,
+        });
+        let eph = RepoEphemeralStoreBuilder::with_sqlite_in_memory()?.build(
+            REPO_ZERO,
+            faulty,
+            initial,
+            grace,
+            BubbleDeletionMode::MarkAndDelete,
+        );
+        let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let bubble_repo = bubble.wrap_repo_blobstore(repo_blobstore);
+        for i in 1..=3 {
+            bubble_repo
+                .put(
+                    &ctx,
+                    format!("test_key_{i}"),
+                    BlobstoreBytes::from_bytes(format!("test data {i}")),
+                )
+                .await?;
+        }
+        Ok((ctx, blobstore, eph, bubble.bubble_id()))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn delete_bubble_with_key_vanished_after_listing_test(fb: FacebookInit) -> Result<()> {
+        let (ctx, blobstore, eph, bubble_id) =
+            bubble_with_keys_in_faulty_store(fb, UnlinkFault::KeyVanishesAfterListing).await?;
+
+        let deleted = eph.delete_bubble(&ctx, bubble_id).await?;
+
+        assert_eq!(
+            deleted, 3,
+            "All three listed keys, including the one that vanished, should be counted as deleted"
+        );
+        let enumerated = blobstore
+            .enumerate(&ctx, &BlobstoreKeyParam::from(..))
+            .await?;
+        assert!(
+            enumerated.keys.is_empty(),
+            "No keys should remain after deleting the bubble"
+        );
+        let err = eph
+            .open_bubble(&ctx, bubble_id)
+            .await
+            .expect_err("Bubble should no longer exist after deletion");
+        assert!(
+            matches!(
+                err.downcast_ref::<EphemeralBlobstoreError>(),
+                Some(EphemeralBlobstoreError::NoSuchBubble(_))
+            ),
+            "Reopening a deleted bubble should fail with NoSuchBubble"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn delete_bubble_with_failing_unlink_test(fb: FacebookInit) -> Result<()> {
+        let (ctx, blobstore, eph, bubble_id) =
+            bubble_with_keys_in_faulty_store(fb, UnlinkFault::UnlinkFails).await?;
+
+        let result = eph.delete_bubble(&ctx, bubble_id).await;
+
+        assert!(
+            result.is_err(),
+            "Unlink failures for keys that are still present should fail the deletion"
+        );
+        let enumerated = blobstore
+            .enumerate(&ctx, &BlobstoreKeyParam::from(..))
+            .await?;
+        assert_eq!(
+            enumerated.keys.len(),
+            3,
+            "All keys should remain when unlinking them fails"
+        );
         Ok(())
     }
 }

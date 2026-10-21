@@ -55,6 +55,7 @@ use sql::sql_common::mysql::RowField;
 use sql::sql_common::mysql::ValueError;
 use sql::sql_common::mysql::opt_try_from_rowfield;
 use sql_ext::SqlConnections;
+use tracing::warn;
 
 use crate::commit_graph::EphemeralCommitGraphStorage;
 use crate::commit_graph::EphemeralOnlyChangesetStorage;
@@ -333,7 +334,7 @@ impl Bubble {
             let unlinked_keys = steps
                 .run_step(
                     &format!("unlink {} keys", keys.len()),
-                    try_join_all(keys.iter().map(|key| self.blobstore.unlink(ctx, key))),
+                    try_join_all(keys.iter().map(|key| self.ensure_unlinked(ctx, key))),
                 )
                 .await?;
             keys_deleted += unlinked_keys.len();
@@ -341,6 +342,20 @@ impl Bubble {
         // If the unlinking of all blobs within the bubble was successful, return the
         // number of blobs unlinked.
         Ok(keys_deleted)
+    }
+
+    async fn ensure_unlinked(&self, ctx: &CoreContext, key: &str) -> Result<()> {
+        let Err(err) = self.blobstore.unlink(ctx, key).await else {
+            return Ok(());
+        };
+        match self.blobstore.is_present(ctx, key).await {
+            Ok(BlobstoreIsPresent::Absent) => {
+                let bubble_id = self.bubble_id;
+                warn!(%bubble_id, key, "Key was already absent when unlinking it, treating it as deleted: {err:#}");
+                Ok(())
+            }
+            _ => Err(err),
+        }
     }
 
     pub(crate) async fn keys_in_bubble(
