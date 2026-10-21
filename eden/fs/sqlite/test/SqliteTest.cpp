@@ -23,6 +23,12 @@ class SqliteTest : public testing::Test {
   SqliteDatabase db{SqliteDatabase::inMemory};
 };
 
+TEST_F(SqliteTest, transactionAfterANonStdException) {
+  EXPECT_THROW(db.transaction([](LockedSqliteConnection&) { throw 42; }), int);
+  EXPECT_THROW(
+      db.transaction([](LockedSqliteConnection&) {}), std::runtime_error);
+}
+
 TEST_F(SqliteTest, testStatement) {
   auto conn = db.lock();
   SqliteStatement stmt{conn, "SELECT 1"};
