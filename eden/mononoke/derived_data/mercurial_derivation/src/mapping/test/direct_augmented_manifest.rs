@@ -6,7 +6,6 @@
  */
 
 use super::*;
-use crate::RootHgAugmentedManifestV2Id;
 
 async fn load_aug_envelope(
     ctx: &CoreContext,
@@ -18,21 +17,6 @@ async fn load_aug_envelope(
         .with_context(|| {
             format!(
                 "Failed to load augmented manifest envelope for {}",
-                aug.hg_augmented_manifest_id(),
-            )
-        })
-}
-
-async fn load_v2_aug_envelope(
-    ctx: &CoreContext,
-    repo: &TestRepo,
-    aug: &RootHgAugmentedManifestV2Id,
-) -> Result<HgAugmentedManifestEnvelope> {
-    Loadable::load(&aug.hg_augmented_manifest_id(), ctx, repo.repo_blobstore())
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to load v2 augmented manifest envelope for {}",
                 aug.hg_augmented_manifest_id(),
             )
         })
@@ -113,51 +97,7 @@ async fn derive_old_path_augmented_manifest_envelopes(
 }
 
 #[mononoke::fbinit_test]
-async fn test_augmented_manifest_v2_manager_derivation_does_not_require_hgchangesets(
-    fb: FacebookInit,
-) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
-
-    // Given: a linear history with only the v2 non-HgChangeset dependency prederived.
-    let (repo, root, child) = create_two_commit_repo(fb).await?;
-    let csids = vec![root, child];
-    let manager = repo.repo_derived_data().manager();
-    manager
-        .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
-        .await?;
-
-    // When: deriving v2 through the manager.
-    manager
-        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(&ctx, csids.clone(), None)
-        .await?;
-
-    // Then: v2 roots are stored and no HgChangeset mappings were created as a side effect.
-    let derived = manager
-        .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(&ctx, csids.clone(), None)
-        .await?;
-    for cs_id in csids {
-        let aug = derived
-            .get(&cs_id)
-            .with_context(|| format!("Missing RootHgAugmentedManifestV2Id for {cs_id}"))?;
-        let env = load_v2_aug_envelope(&ctx, &repo, aug).await?;
-        assert_eq!(
-            env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
-            "v2 should use a content-derived root when no canonical Hg mapping exists for {cs_id}",
-        );
-        assert!(
-            manager
-                .fetch_derived::<MappedHgChangesetId>(&ctx, cs_id, None)
-                .await?
-                .is_none(),
-            "v2 manager derivation must not create MappedHgChangesetId for {cs_id}",
-        );
-    }
-
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
-async fn test_augmented_manifest_v2_derive_single_without_hgchangeset_mapping_matches_old_path(
+async fn test_augmented_manifest_derive_single_without_hgchangeset_mapping_matches_old_path(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -188,17 +128,12 @@ async fn test_augmented_manifest_v2_derive_single_without_hgchangeset_mapping_ma
     let root_bonsai = Loadable::load(&root, &ctx, repo.repo_blobstore()).await?;
     let child_bonsai = Loadable::load(&child, &ctx, repo.repo_blobstore()).await?;
 
-    // When: deriving the root and child through the v2 single-derive path,
+    // When: deriving the root and child through the single-derive path,
     // without a mapped HgChangeset or persisted HgManifest.
-    let root_aug = RootHgAugmentedManifestV2Id::derive_single(
-        &ctx,
-        &derivation_ctx,
-        root_bonsai,
-        vec![],
-        None,
-    )
-    .await?;
-    let child_aug = RootHgAugmentedManifestV2Id::derive_single(
+    let root_aug =
+        RootHgAugmentedManifestId::derive_single(&ctx, &derivation_ctx, root_bonsai, vec![], None)
+            .await?;
+    let child_aug = RootHgAugmentedManifestId::derive_single(
         &ctx,
         &derivation_ctx,
         child_bonsai,
@@ -207,10 +142,10 @@ async fn test_augmented_manifest_v2_derive_single_without_hgchangeset_mapping_ma
     )
     .await?;
 
-    // Then: v2 single derivation matches the old path and does not create
+    // Then: single derivation matches the old path and does not create
     // HgChangeset mappings or raw HgManifest blobs.
     for (cs_id, aug) in [(root, root_aug), (child, child_aug)] {
-        let env = load_v2_aug_envelope(&ctx, &repo, &aug).await?;
+        let env = load_aug_envelope(&ctx, &repo, &aug).await?;
         let baseline = baseline_envs
             .get(&cs_id)
             .with_context(|| format!("Missing baseline envelope for {cs_id}"))?;
@@ -235,7 +170,7 @@ async fn test_augmented_manifest_v2_derive_single_without_hgchangeset_mapping_ma
 }
 
 #[mononoke::fbinit_test]
-async fn test_augmented_manifest_v2_derive_single_uses_mapped_hg_root_when_available(
+async fn test_augmented_manifest_derive_single_uses_mapped_hg_root_when_available(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -261,13 +196,12 @@ async fn test_augmented_manifest_v2_derive_single_uses_mapped_hg_root_when_avail
     let derivation_ctx = manager.derivation_context(None);
     let bonsai = Loadable::load(&root, &ctx, repo.repo_blobstore()).await?;
 
-    // When: deriving through the v2 single-derive path.
-    let aug =
-        RootHgAugmentedManifestV2Id::derive_single(&ctx, &derivation_ctx, bonsai, vec![], None)
-            .await?;
+    // When: deriving through the single-derive path.
+    let aug = RootHgAugmentedManifestId::derive_single(&ctx, &derivation_ctx, bonsai, vec![], None)
+        .await?;
 
-    // Then: the v2 path preserves the mapped canonical Hg root.
-    let env = load_v2_aug_envelope(&ctx, &repo, &aug).await?;
+    // Then: derivation preserves the mapped canonical Hg root.
+    let env = load_aug_envelope(&ctx, &repo, &aug).await?;
     assert_eq!(
         env.augmented_manifest.hg_node_id, expected_root,
         "direct derivation should use the mapped canonical Hg root",

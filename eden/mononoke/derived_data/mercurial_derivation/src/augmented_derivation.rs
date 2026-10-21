@@ -16,7 +16,6 @@ use anyhow::bail;
 use blobstore::StoreLoadable;
 use context::CoreContext;
 use derived_data::prefetch_content_metadata;
-use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -29,24 +28,7 @@ use mononoke_types::ChangesetId;
 
 use crate::mapping::RootHgAugmentedManifestId;
 
-/// The canonical and rollout augmented-manifest types run the same derivation
-/// and differ only in where they store and fetch roots.
-pub(crate) trait AugmentedManifestRoot: BonsaiDerivable {
-    fn from_root_id(root: HgAugmentedManifestId) -> Self;
-    fn root_id(&self) -> HgAugmentedManifestId;
-}
-
-impl AugmentedManifestRoot for RootHgAugmentedManifestId {
-    fn from_root_id(root: HgAugmentedManifestId) -> Self {
-        Self::new(root)
-    }
-
-    fn root_id(&self) -> HgAugmentedManifestId {
-        self.hg_augmented_manifest_id()
-    }
-}
-
-pub(crate) async fn fetch_augmented_roots_with_fallback<Root: AugmentedManifestRoot>(
+pub(crate) async fn fetch_augmented_roots_with_fallback(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     source_csids: Vec<ChangesetId>,
@@ -61,10 +43,10 @@ pub(crate) async fn fetch_augmented_roots_with_fallback<Root: AugmentedManifestR
     if !missing_sources.is_empty() {
         roots.extend(
             derivation_ctx
-                .fetch_derived_batch::<Root>(ctx, missing_sources)
+                .fetch_derived_batch::<RootHgAugmentedManifestId>(ctx, missing_sources)
                 .await?
                 .into_iter()
-                .map(|(csid, root)| (csid, root.root_id())),
+                .map(|(csid, root)| (csid, root.hg_augmented_manifest_id())),
         );
     }
     if let Some(csid) = source_csids.iter().find(|csid| !roots.contains_key(csid)) {
@@ -185,14 +167,17 @@ async fn derive_direct(
 /// A commit with a Bonsai-to-Hg mapping builds from its mapped Hg manifest,
 /// because an uploaded Hg changeset can differ from the one Mononoke would
 /// derive, and the augmented manifest must match the Hg tree clients have.
-pub(crate) async fn derive_single_root<Root: AugmentedManifestRoot>(
+pub(crate) async fn derive_single_root(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
-    parents: Vec<Root>,
-) -> Result<Root> {
+    parents: Vec<RootHgAugmentedManifestId>,
+) -> Result<RootHgAugmentedManifestId> {
     let csid = bonsai.get_changeset_id();
-    let aug_parents = parents.iter().map(Root::root_id).collect();
+    let aug_parents = parents
+        .iter()
+        .map(RootHgAugmentedManifestId::hg_augmented_manifest_id)
+        .collect();
     let root = if let Some(hg_manifest_id) =
         lookup_mapped_root_hg_manifest_id(ctx, derivation_ctx, csid).await?
     {
@@ -201,15 +186,15 @@ pub(crate) async fn derive_single_root<Root: AugmentedManifestRoot>(
     } else {
         derive_direct(ctx, derivation_ctx, &bonsai, aug_parents).await?
     };
-    Ok(Root::from_root_id(root))
+    Ok(RootHgAugmentedManifestId::new(root))
 }
 
-pub(crate) async fn derive_batch_roots<Root: AugmentedManifestRoot>(
+pub(crate) async fn derive_batch_roots(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsais: Vec<BonsaiChangeset>,
-) -> Result<HashMap<ChangesetId, Root>> {
-    let mut res: HashMap<ChangesetId, Root> = HashMap::new();
+) -> Result<HashMap<ChangesetId, RootHgAugmentedManifestId>> {
+    let mut res: HashMap<ChangesetId, RootHgAugmentedManifestId> = HashMap::new();
     let mapped_hg_manifest_ids = lookup_mapped_root_hg_manifest_ids(
         ctx,
         derivation_ctx,
@@ -222,10 +207,10 @@ pub(crate) async fn derive_batch_roots<Root: AugmentedManifestRoot>(
     for bonsai in &bonsais {
         let csid = bonsai.get_changeset_id();
         let aug_parents: Vec<_> = derivation_ctx
-            .fetch_unknown_parents::<Root>(ctx, Some(&res), bonsai)
+            .fetch_unknown_parents::<RootHgAugmentedManifestId>(ctx, Some(&res), bonsai)
             .await?
             .iter()
-            .map(Root::root_id)
+            .map(RootHgAugmentedManifestId::hg_augmented_manifest_id)
             .collect();
         let root = if let Some(hg_manifest_id) = mapped_hg_manifest_ids.get(&csid).copied() {
             derive_from_mapped_hg_manifest(ctx, derivation_ctx, bonsai, hg_manifest_id, aug_parents)
@@ -233,7 +218,7 @@ pub(crate) async fn derive_batch_roots<Root: AugmentedManifestRoot>(
         } else {
             derive_direct(ctx, derivation_ctx, bonsai, aug_parents).await?
         };
-        res.insert(csid, Root::from_root_id(root));
+        res.insert(csid, RootHgAugmentedManifestId::new(root));
     }
     Ok(res)
 }

@@ -1176,7 +1176,6 @@ mod tests {
             DerivableType::Ccsm,
             DerivableType::DirectoryBranchClusterManifest,
             DerivableType::HgAugmentedManifests,
-            DerivableType::HgAugmentedManifestsV2,
             DerivableType::SkeletonManifestsV2,
             DerivableType::ContentManifests,
             DerivableType::InferredCopyFrom,

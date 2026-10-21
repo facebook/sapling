@@ -3005,21 +3005,6 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn test_pipeline_config_accepts_hg_augmented_manifests_v2() {
-        // Given: an otherwise-valid pipeline config enabling augmented
-        // manifests v2.
-        let config = DerivationPipelineConfig {
-            types: BTreeSet::from([DerivableType::HgAugmentedManifestsV2]),
-            ..pipeline_config(vec![("", stage(vec![]))])
-        };
-
-        // When/Then: validation accepts the pipeline-derivable type.
-        config
-            .validate()
-            .expect("augmented manifests v2 should support derivation pipelines");
-    }
-
-    #[mononoke::test]
     fn test_pipeline_config_rejects_non_prefix_dep_path() {
         // `fbcode/foo` depends on `scripts/bar` — not a prefix.
         let config = pipeline_config(vec![

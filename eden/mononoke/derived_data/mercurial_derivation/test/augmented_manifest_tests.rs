@@ -40,7 +40,6 @@ use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
-use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::augmented_backfill;
 use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_derivation::upload_augmented_manifest::DirectoryAcl;
@@ -746,25 +745,28 @@ async fn load_augmented_directory_envelopes<B: KeyedBlobstore + Clone + 'static>
 #[mononoke::fbinit_test]
 async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit) -> Result<()> {
     // Given: the same history, with an ACL restriction root, a copy, a
-    // deletion and a merge, in two repos. In the first, V2 derived every
-    // augmented manifest from Bonsai alone. The second has none derived.
+    // deletion and a merge, in two repos. In the first, the manager derived
+    // every augmented manifest; while the canonical type depends on
+    // HgChangesets, that builds each one from its mapped Hg manifest and its
+    // parents. The second has none derived.
     let ctx = CoreContext::test_mock(fb);
     let v2_repo: Repo = test_repo_factory::build_empty(fb).await?;
     let v2_csids = create_backfill_parity_history(&ctx, &v2_repo).await?;
     let v2_manager = v2_repo.repo_derived_data().manager();
     v2_manager
-        .derive_heads::<RootHgAugmentedManifestV2Id>(ctx.clone(), vec![v2_csids[3]], None, None)
+        .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![v2_csids[3]], None, None)
         .await?;
-    assert!(
+    assert_eq!(
         v2_repo
             .bonsai_hg_mapping()
             .get(&ctx, v2_csids.to_vec().into())
             .await?
-            .is_empty(),
-        "V2 must derive from Bonsai, not from mapped Hg manifests",
+            .len(),
+        4,
+        "the manager derives HgChangesets before augmented manifests",
     );
     let v2_roots = v2_manager
-        .fetch_derived_batch::<RootHgAugmentedManifestV2Id>(&ctx, v2_csids.to_vec(), None)
+        .fetch_derived_batch::<RootHgAugmentedManifestId>(&ctx, v2_csids.to_vec(), None)
         .await?;
 
     let backfill_repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -792,7 +794,7 @@ async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit
     for (v2_csid, backfill_csid) in v2_csids.into_iter().zip(backfill_csids) {
         let v2_root = v2_roots
             .get(&v2_csid)
-            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestV2Id for {v2_csid}"))
+            .unwrap_or_else(|| panic!("Missing RootHgAugmentedManifestId for {v2_csid}"))
             .hg_augmented_manifest_id();
         let v2_envelopes =
             load_augmented_directory_envelopes(&ctx, v2_repo.repo_blobstore(), v2_root).await?;
@@ -4889,10 +4891,10 @@ async fn test_direct_derivation_octopus_copy_from_ignores_step_parent(
 }
 
 #[mononoke::fbinit_test]
-async fn test_augmented_manifest_v2_batch_handles_repeated_merge_acl_root(
+async fn test_augmented_manifest_batch_handles_repeated_merge_acl_root(
     fb: FacebookInit,
 ) -> Result<()> {
-    // Given: one v2 derivation batch with two merge commits that share the
+    // Given: one derivation batch with two merge commits that share the
     // same non-empty ACL overlay root.
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -4946,16 +4948,16 @@ async fn test_augmented_manifest_v2_batch_handles_repeated_merge_acl_root(
     assert!(merge1_acl.is_some(), "fixture must have an ACL overlay");
     assert_eq!(merge1_acl, merge2_acl, "fixture must share one ACL root");
 
-    // When: deriving the batch through the v2 manager path.
+    // When: deriving the batch through the manager.
     manager
-        .derive_exactly_batch::<RootHgAugmentedManifestV2Id>(&ctx, csids, None)
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids, None)
         .await?;
 
     // Then: both merge commits derived through the cached full-ACL-map path
     // still match the Hg manifests.
     for merge in [merge1, merge2] {
         let aug_id = manager
-            .fetch_derived::<RootHgAugmentedManifestV2Id>(&ctx, merge, None)
+            .fetch_derived::<RootHgAugmentedManifestId>(&ctx, merge, None)
             .await?
             .expect("derived above")
             .hg_augmented_manifest_id();

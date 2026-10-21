@@ -34,7 +34,6 @@ use futures::TryStreamExt;
 use futures::future;
 use futures::stream::BoxStream;
 use mercurial_derivation::RootHgAugmentedManifestId;
-use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mercurial_derivation::derive_hg_augmented_manifest::cached_acl_overlay_map;
 use mercurial_derivation::derive_hg_augmented_manifest::derive_augmented_manifest_from_bonsai_changeset;
 use mercurial_derivation::derive_hg_augmented_manifest::normalize_acl_root;
@@ -260,7 +259,7 @@ impl<'a> Verifier<'a> {
             .into_iter()
             .map(|p| p.hg_augmented_manifest_id())
             .collect();
-        RootHgAugmentedManifestV2Id::derive_from_mapped_hg_with_parents(
+        RootHgAugmentedManifestId::derive_from_mapped_hg_with_parents(
             self.ctx,
             derivation_ctx,
             bonsai,

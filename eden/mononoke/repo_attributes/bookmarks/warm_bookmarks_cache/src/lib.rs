@@ -86,7 +86,6 @@ use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
-use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
@@ -398,7 +397,6 @@ impl WarmBookmarksCacheBuilder {
                 MappedHgChangesetId::VARIANT,
                 FilenodesOnlyPublic::VARIANT,
                 RootHgAugmentedManifestId::VARIANT,
-                RootHgAugmentedManifestV2Id::VARIANT,
             ],
             repo_derived_data,
         )?;
@@ -484,13 +482,6 @@ impl WarmBookmarksCacheBuilder {
             )),
             DerivableType::HgAugmentedManifests => {
                 Some(create_derived_data_warmer::<RootHgAugmentedManifestId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                    vec![WarmerTag::Hg],
-                ))
-            }
-            DerivableType::HgAugmentedManifestsV2 => {
-                Some(create_derived_data_warmer::<RootHgAugmentedManifestV2Id>(
                     &self.ctx,
                     repo_derived_data.clone(),
                     vec![WarmerTag::Hg],

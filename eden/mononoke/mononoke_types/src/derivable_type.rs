@@ -52,7 +52,6 @@ pub enum DerivableType {
     Fsnodes,
     HgChangesets,
     HgAugmentedManifests,
-    HgAugmentedManifestsV2,
     GitCommits,
     GitDeltaManifestsV2,
     GitDeltaManifestsV3,
@@ -96,7 +95,6 @@ pub enum PipelineDerivableVariant {
     AclManifests,
     HgChangesets,
     HgAugmentedManifests,
-    HgAugmentedManifestsV2,
     ContentManifests,
     DeletedManifests,
 }
@@ -118,7 +116,6 @@ impl DerivableType {
             "fsnodes" => DerivableType::Fsnodes,
             "hgchangesets" => DerivableType::HgChangesets,
             "hg_augmented_manifests" => DerivableType::HgAugmentedManifests,
-            "hg_augmented_manifests_v2" => DerivableType::HgAugmentedManifestsV2,
             "git_commits" => DerivableType::GitCommits,
             "git_delta_manifests_v2" => DerivableType::GitDeltaManifestsV2,
             "git_delta_manifests_v3" => DerivableType::GitDeltaManifestsV3,
@@ -151,7 +148,6 @@ impl DerivableType {
             DerivableType::Fsnodes => "fsnodes",
             DerivableType::HgChangesets => "hgchangesets",
             DerivableType::HgAugmentedManifests => "hg_augmented_manifests",
-            DerivableType::HgAugmentedManifestsV2 => "hg_augmented_manifests_v2",
             DerivableType::GitCommits => "git_commits",
             DerivableType::GitDeltaManifestsV2 => "git_delta_manifests_v2",
             DerivableType::GitDeltaManifestsV3 => "git_delta_manifests_v3",
@@ -181,7 +177,6 @@ impl DerivableType {
             thrift::DerivedDataType::FSNODE => Self::Fsnodes,
             thrift::DerivedDataType::HG_CHANGESET => Self::HgChangesets,
             thrift::DerivedDataType::HG_AUGMENTED_MANIFEST => Self::HgAugmentedManifests,
-            thrift::DerivedDataType::HG_AUGMENTED_MANIFEST_V2 => Self::HgAugmentedManifestsV2,
             thrift::DerivedDataType::COMMIT_HANDLE => Self::GitCommits,
             thrift::DerivedDataType::GIT_DELTA_MANIFEST_V2 => Self::GitDeltaManifestsV2,
             thrift::DerivedDataType::GIT_DELTA_MANIFEST_V3 => Self::GitDeltaManifestsV3,
@@ -214,7 +209,6 @@ impl DerivableType {
             Self::Fsnodes => thrift::DerivedDataType::FSNODE,
             Self::HgChangesets => thrift::DerivedDataType::HG_CHANGESET,
             Self::HgAugmentedManifests => thrift::DerivedDataType::HG_AUGMENTED_MANIFEST,
-            Self::HgAugmentedManifestsV2 => thrift::DerivedDataType::HG_AUGMENTED_MANIFEST_V2,
             Self::GitCommits => thrift::DerivedDataType::COMMIT_HANDLE,
             Self::GitDeltaManifestsV2 => thrift::DerivedDataType::GIT_DELTA_MANIFEST_V2,
             Self::GitDeltaManifestsV3 => thrift::DerivedDataType::GIT_DELTA_MANIFEST_V3,
@@ -276,9 +270,6 @@ impl DerivableType {
             DerivableType::HgAugmentedManifests => {
                 Ok(PipelineDerivableVariant::HgAugmentedManifests)
             }
-            DerivableType::HgAugmentedManifestsV2 => {
-                Ok(PipelineDerivableVariant::HgAugmentedManifestsV2)
-            }
             DerivableType::ContentManifests => Ok(PipelineDerivableVariant::ContentManifests),
             DerivableType::DeletedManifests => Ok(PipelineDerivableVariant::DeletedManifests),
             _ => bail!("{} does not support derivation pipeline", self.name()),
@@ -298,9 +289,6 @@ impl PipelineDerivableVariant {
             PipelineDerivableVariant::AclManifests => DerivableType::AclManifests,
             PipelineDerivableVariant::HgChangesets => DerivableType::HgChangesets,
             PipelineDerivableVariant::HgAugmentedManifests => DerivableType::HgAugmentedManifests,
-            PipelineDerivableVariant::HgAugmentedManifestsV2 => {
-                DerivableType::HgAugmentedManifestsV2
-            }
             PipelineDerivableVariant::ContentManifests => DerivableType::ContentManifests,
             PipelineDerivableVariant::DeletedManifests => DerivableType::DeletedManifests,
         }

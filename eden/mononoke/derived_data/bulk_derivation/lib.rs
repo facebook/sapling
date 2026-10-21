@@ -51,7 +51,6 @@ use inferred_copy_from::RootInferredCopyFromId;
 use itertools::Itertools;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
-use mercurial_derivation::RootHgAugmentedManifestV2Id;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableUntopologicallyVariant;
@@ -437,9 +436,6 @@ fn manager_for_type(
         DerivableType::HgAugmentedManifests => {
             Arc::new(SingleTypeManager::<RootHgAugmentedManifestId>::new(manager))
         }
-        DerivableType::HgAugmentedManifestsV2 => Arc::new(SingleTypeManager::<
-            RootHgAugmentedManifestV2Id,
-        >::new(manager)),
         DerivableType::Fsnodes => Arc::new(SingleTypeManager::<RootFsnodeId>::new(manager)),
         DerivableType::Fastlog => Arc::new(SingleTypeManager::<RootFastlog>::new(manager)),
         DerivableType::FastlogV2 => Arc::new(SingleTypeManager::<RootFastlogV2>::new(manager)),
@@ -568,10 +564,6 @@ pub async fn derive_stage_batch(
             ddm.derive_stage_batch::<RootHgAugmentedManifestId>(ctx, csids, payload)
                 .await
         }
-        PipelineDerivableVariant::HgAugmentedManifestsV2 => {
-            ddm.derive_stage_batch::<RootHgAugmentedManifestV2Id>(ctx, csids, payload)
-                .await
-        }
         PipelineDerivableVariant::ContentManifests => {
             ddm.derive_stage_batch::<RootContentManifestId>(ctx, csids, payload)
                 .await
@@ -622,10 +614,6 @@ pub async fn is_stage_derived(
         }
         PipelineDerivableVariant::HgAugmentedManifests => {
             ddm.is_stage_derived::<RootHgAugmentedManifestId>(ctx, csid, stage)
-                .await
-        }
-        PipelineDerivableVariant::HgAugmentedManifestsV2 => {
-            ddm.is_stage_derived::<RootHgAugmentedManifestV2Id>(ctx, csid, stage)
                 .await
         }
         PipelineDerivableVariant::ContentManifests => {
@@ -683,10 +671,6 @@ pub async fn verify_stage_output(
             ddm.verify_stage_output::<RootHgAugmentedManifestId>(ctx, csid, stage)
                 .await
         }
-        PipelineDerivableVariant::HgAugmentedManifestsV2 => {
-            ddm.verify_stage_output::<RootHgAugmentedManifestV2Id>(ctx, csid, stage)
-                .await
-        }
         PipelineDerivableVariant::ContentManifests => {
             ddm.verify_stage_output::<RootContentManifestId>(ctx, csid, stage)
                 .await
@@ -711,9 +695,6 @@ pub fn pipeline_has_finalize(variant: PipelineDerivableVariant) -> bool {
         PipelineDerivableVariant::AclManifests => RootAclManifestId::HAS_FINALIZE,
         PipelineDerivableVariant::HgChangesets => MappedHgChangesetId::HAS_FINALIZE,
         PipelineDerivableVariant::HgAugmentedManifests => RootHgAugmentedManifestId::HAS_FINALIZE,
-        PipelineDerivableVariant::HgAugmentedManifestsV2 => {
-            RootHgAugmentedManifestV2Id::HAS_FINALIZE
-        }
         PipelineDerivableVariant::ContentManifests => RootContentManifestId::HAS_FINALIZE,
         PipelineDerivableVariant::DeletedManifests => RootDeletedManifestV2Id::HAS_FINALIZE,
     }
