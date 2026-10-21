@@ -62,6 +62,8 @@ Test rebasing a single commit that changes flags:
 
 Native rebase combines content and executable-bit changes from either side.
 It also preserves text merges, removals, and source copy metadata.
+FIXME: Replay must use the resolved executable flag for src-set and retain the
+destination contents when clearing dest-clear's executable bit.
 
   $ newclientrepo
   $ setconfig nativecheckout.rebaseonenative=true
@@ -83,9 +85,19 @@ It also preserves text merges, removals, and source copy metadata.
   >   # C/dest-clear=destination\n (executable)
   >   # C/merged=one\ntwo\nTHREE\n
   > EOS
-FIXME: Native merge must combine content and mode changes instead of panicking.
-
-  $ sl rebase -q -r $B -d $C > $TESTTMP/rebase-error 2>&1
-  [1]
-  $ tail -1 $TESTTMP/rebase-error
-  SystemError: Rust panic: not implemented
+  $ sl rebase -q -r $B -d $C
+  $ sl manifest -v -r tip
+  644   copied
+  644   dest-clear
+  644   merged
+  644   src-set
+  $ sl cat -r tip copied dest-clear merged src-set
+  source
+  base
+  ONE
+  two
+  THREE
+  source
+  $ sl status --change tip --copies copied
+  A copied
+    src-set

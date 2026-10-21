@@ -75,7 +75,7 @@ Replay additions, flag clears, and flag changes on existing files.
 #endif
 
 Amend an executable-bit change across a descendant content change.
-FIXME: Native merge must combine the mode and content changes without panicking.
+FIXME: Replay must preserve the amended executable bit in the descendant.
   $ newclientrepo
   $ setconfig diff.git=true
   $ echo one > file
@@ -83,14 +83,11 @@ FIXME: Native merge must combine the mode and content changes without panicking.
   $ echo two >> file
   $ sl ci -m B
   $ chmod +x file
-  $ sl amend --to 'desc(A)' > $TESTTMP/amend-error 2>&1
-  [1]
-  $ tail -1 $TESTTMP/amend-error
-  SystemError: Rust panic: not implemented
+  $ sl amend --to 'desc(A)'
   $ sl status
   M file
   $ sl manifest -v -r 'desc(A)'
-  644   file
+  755 * file
   $ sl manifest -v
   644   file
   $ sl cat -r . file
@@ -98,7 +95,7 @@ FIXME: Native merge must combine the mode and content changes without panicking.
   two
 
 Amend a content change across a descendant clearing the executable bit.
-FIXME: Native merge must combine the content and mode changes without panicking.
+FIXME: Mode-only replay must retain the destination's amended contents.
   $ newclientrepo
   $ setconfig diff.git=true
   $ echo one > file
@@ -107,10 +104,7 @@ FIXME: Native merge must combine the content and mode changes without panicking.
   $ chmod -x file
   $ sl ci -m B
   $ echo two >> file
-  $ sl amend --to 'desc(A)' > $TESTTMP/amend-error 2>&1
-  [1]
-  $ tail -1 $TESTTMP/amend-error
-  SystemError: Rust panic: not implemented
+  $ sl amend --to 'desc(A)'
   $ sl status
   M file
   $ sl manifest -v -r 'desc(A)'

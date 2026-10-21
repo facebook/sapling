@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
 use manifest::FileType;
@@ -66,7 +67,10 @@ impl Merge {
                 (None, Some(_a)) => continue, // Already in destination
                 (Some(a), None) => ActionOrConflict::Action(*a),
                 (Some(s), Some(d)) => {
-                    if let Some(ac) = self.resolve_conflict(*s, *d) {
+                    if let Some(ac) = self
+                        .resolve_conflict(*s, *d)
+                        .with_context(|| format!("Failed to merge {file}"))?
+                    {
                         ac
                     } else {
                         continue;
@@ -80,9 +84,9 @@ impl Merge {
         Ok(result)
     }
 
-    fn resolve_conflict(&self, src: Action, dest: Action) -> Option<ActionOrConflict> {
-        Some(match (src, dest) {
-            (Action::Remove, Action::Remove) => return None,
+    fn resolve_conflict(&self, src: Action, dest: Action) -> Result<Option<ActionOrConflict>> {
+        Ok(Some(match (src, dest) {
+            (Action::Remove, Action::Remove) => return Ok(None),
             (Action::Update(s), Action::Update(d)) => both_changed(s, d),
             (Action::UpdateExec(s), Action::UpdateExec(d)) => {
                 assert!(s == d); // Can not be otherwise
@@ -96,7 +100,7 @@ impl Merge {
 
             // mercurial handles this differently - it actually raise it as a conflict since file has "changed" and removed
             // but more logical is probably to just remove the file and ignore flag update on the other side
-            (Action::UpdateExec(_), Action::Remove) => return None,
+            (Action::UpdateExec(_), Action::Remove) => return Ok(None),
 
             // exists only in src / remote / m2
             (Action::Remove, Action::Update(up)) => {
@@ -105,11 +109,47 @@ impl Merge {
             // same as mirror case above, for mercurial this is a conflict
             (Action::Remove, Action::UpdateExec(_)) => ActionOrConflict::Action(Action::Remove),
 
-            // flag conflicts - todo - implement
-            (Action::Update(_), Action::UpdateExec(_)) => unimplemented!(),
-            (Action::UpdateExec(_), Action::Update(_)) => unimplemented!(),
-        })
+            (Action::Update(mut update), Action::UpdateExec(exec))
+            | (Action::UpdateExec(exec), Action::Update(mut update)) => {
+                let update_is_src = matches!(src, Action::Update(_));
+                match update.to.file_type {
+                    FileType::Regular | FileType::Executable => {
+                        if update_is_src {
+                            update.to.file_type = if exec {
+                                FileType::Executable
+                            } else {
+                                FileType::Regular
+                            };
+                            ActionOrConflict::Action(Action::Update(update))
+                        } else {
+                            ActionOrConflict::Action(Action::UpdateExec(exec))
+                        }
+                    }
+                    FileType::Symlink | FileType::GitSubmodule => {
+                        let exec = exec_update(update, exec)?;
+                        if update_is_src {
+                            both_changed(update, exec)
+                        } else {
+                            both_changed(exec, update)
+                        }
+                    }
+                }
+            }
+        }))
     }
+}
+
+fn exec_update(update: UpdateAction, exec: bool) -> Result<UpdateAction> {
+    let from = update
+        .from
+        .context("an executable-bit change requires a file in the common ancestor")?;
+    let mut to = from;
+    to.file_type = if exec {
+        FileType::Executable
+    } else {
+        FileType::Regular
+    };
+    Ok(UpdateAction::new(Some(from), to))
 }
 
 fn both_changed(src: UpdateAction, dest: UpdateAction) -> ActionOrConflict {
@@ -227,18 +267,14 @@ mod tests {
 
     use super::*;
 
-    // FIXME: Combining these changes must return a merge result, not panic.
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn test_merge_content_with_exec() {
-        check_content_and_exec(false).unwrap();
+    fn test_merge_content_with_exec() -> Result<()> {
+        check_content_and_exec(false)
     }
 
-    // FIXME: Combining these changes must return a merge result, not panic.
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn test_merge_exec_with_content() {
-        check_content_and_exec(true).unwrap();
+    fn test_merge_exec_with_content() -> Result<()> {
+        check_content_and_exec(true)
     }
 
     fn check_content_and_exec(swap_sides: bool) -> Result<()> {
@@ -278,18 +314,14 @@ mod tests {
         Ok(())
     }
 
-    // FIXME: Combining these changes must return a merge result, not panic.
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn test_merge_symlink_with_exec() {
-        check_symlink_and_exec(false).unwrap();
+    fn test_merge_symlink_with_exec() -> Result<()> {
+        check_symlink_and_exec(false)
     }
 
-    // FIXME: Combining these changes must return a merge result, not panic.
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn test_merge_exec_with_symlink() {
-        check_symlink_and_exec(true).unwrap();
+    fn test_merge_exec_with_symlink() -> Result<()> {
+        check_symlink_and_exec(true)
     }
 
     fn check_symlink_and_exec(swap_sides: bool) -> Result<()> {
