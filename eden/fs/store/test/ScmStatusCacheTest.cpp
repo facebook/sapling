@@ -170,8 +170,8 @@ TEST_F(ScmStatusCacheTest, drop_cached_promise) {
   auto future_1 = std::move(std::get<StatusResultFuture>(getResult_1));
   EXPECT_FALSE(future_1.isReady());
 
-  cache->dropPromise(key, 1);
   auto promise = std::get<StatusResultPromise>(getResult_0);
+  cache->dropPromise(key, promise);
   promise->setValue(status);
 
   // check promise is still valid after being dropped
@@ -181,8 +181,8 @@ TEST_F(ScmStatusCacheTest, drop_cached_promise) {
   auto getResult_2 = cache->get(key, 1);
   EXPECT_FALSE(std::holds_alternative<StatusResultFuture>(getResult_2));
 
-  // dropping a promise with sequence smaller should be noop
-  cache->dropPromise(key, 0);
+  // dropping a promise that is no longer the stored one should be noop
+  cache->dropPromise(key, promise);
   auto getResult_3 = cache->get(key, 1);
   EXPECT_TRUE(std::holds_alternative<StatusResultFuture>(getResult_3));
 }
@@ -204,13 +204,10 @@ TEST_F(ScmStatusCacheTest, drop_promise_after_joiner_at_later_sequence) {
 
   auto promise = std::get<StatusResultPromise>(ownerResult);
   promise->setException(std::runtime_error("diff failed"));
-  cache->dropPromise(key, ownerSeq);
+  cache->dropPromise(key, promise);
 
   auto laterResult = cache->get(key, joinerSeq);
-  ASSERT_TRUE(std::holds_alternative<StatusResultFuture>(laterResult));
-  auto future = std::move(std::get<StatusResultFuture>(laterResult));
-  ASSERT_NE(future.isReady(), detail::kImmediateFutureAlwaysDefer);
-  EXPECT_THROW(std::move(future).get(), std::runtime_error);
+  EXPECT_TRUE(std::holds_alternative<StatusResultPromise>(laterResult));
 }
 
 TEST_F(ScmStatusCacheTest, get_results_as_promise_or_future) {

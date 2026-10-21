@@ -2620,7 +2620,7 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
                   folly::exception_wrapper{std::current_exception()}});
           {
             auto lockedCachePtr = scmStatusCache_.wlock();
-            (*lockedCachePtr)->dropPromise(key, curSequenceID);
+            (*lockedCachePtr)->dropPromise(key, promise);
           }
           throw;
         }
@@ -2629,7 +2629,7 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
           promise->setException(folly::OperationCancelled{});
           {
             auto lockedCachePtr = scmStatusCache_.wlock();
-            (*lockedCachePtr)->dropPromise(key, curSequenceID);
+            (*lockedCachePtr)->dropPromise(key, promise);
           }
           co_return std::make_unique<ScmStatus>(callback->extractStatus());
         }
@@ -2667,7 +2667,7 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
           serverState_->getFaultInjector().check(
               "scmStatusCache", "blocking dropPromise");
 
-          (*lockedCachePtr)->dropPromise(key, curSequenceID);
+          (*lockedCachePtr)->dropPromise(key, promise);
         }
         co_return std::make_unique<ScmStatus>(callback->extractStatus());
       }

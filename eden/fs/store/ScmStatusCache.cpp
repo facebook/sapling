@@ -92,11 +92,10 @@ void ScmStatusCache::insert(
 
 void ScmStatusCache::dropPromise(
     const ObjectId& key,
-    JournalDelta::SequenceNumber curSeq) {
+    const StatusResultPromise& promise) {
   auto it = promiseMap_.find(key);
   // we don't want to accidentally drop promises owned by other requests
-  // which query with a larger sequence number
-  if (it != promiseMap_.end() && it->second.first == curSeq) {
+  if (it != promiseMap_.end() && it->second.second == promise) {
     promiseMap_.erase(key);
   }
 }

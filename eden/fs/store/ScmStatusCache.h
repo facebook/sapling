@@ -127,13 +127,15 @@ class ScmStatusCache : public ObjectCache<
   insert(ObjectId key, JournalDelta::SequenceNumber curSeq, ScmStatus status);
 
   /**
-   * Drop the promise for a given key and sequence number from the promise map.
+   * Drop the given promise for a key from the promise map, if it is still the
+   * stored one. Requests that join a pending computation may have replaced
+   * the stored sequence number, so the promise itself identifies the owner.
    *
    * Note: we use a dedicated method for this instead of dropping inside insert
    * because we want to ensure the promise is dropped even in the error cases to
    * avoid increasing the promise map to an unbounded size.
    */
-  void dropPromise(const ObjectId& key, JournalDelta::SequenceNumber seq);
+  void dropPromise(const ObjectId& key, const StatusResultPromise& promise);
 
   /**
    * Clear this cache so both promiseMap and the internal ObjectCache are empty.
