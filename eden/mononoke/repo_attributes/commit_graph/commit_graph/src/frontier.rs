@@ -19,6 +19,7 @@ use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use commit_graph_types::storage::p1_linear_prefetch_steps;
 use context::CoreContext;
+use context::PerfCounterType;
 use futures::Future;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -256,10 +257,14 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     frontier.range((Bound::Excluded(target_generation), Bound::Unbounded));
                 let count: usize = above_target.clone().map(|(_, cs_ids)| cs_ids.len()).sum();
                 if count > 1 && count > above_target_count {
+                    let mut scanned = 0;
                     let cs_ids: Vec<_> = above_target
                         .flat_map(|(_, cs_ids)| cs_ids.iter().copied())
+                        .inspect(|_| scanned += 1)
                         .filter(|cs_id| batched.insert(*cs_id))
                         .collect();
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::CommitGraphBatchPrefetchScanned, scanned);
                     if !cs_ids.is_empty() {
                         self.storage
                             .fetch_many_edges(ctx, &cs_ids, prefetch_from(generation))

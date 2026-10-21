@@ -74,6 +74,7 @@ define_perf_counters! {
         BytesSent,
         CachelibHits,
         CachelibMisses,
+        CommitGraphBatchPrefetchScanned,
         EdenapiFiles,
         EdenapiFilesAuxData,
         EdenapiTrees,
@@ -187,6 +188,7 @@ impl PerfCounterType {
             | BytesSent
             | CachelibHits
             | CachelibMisses
+            | CommitGraphBatchPrefetchScanned
             | EdenapiFiles
             | EdenapiFilesAuxData
             | EdenapiTrees

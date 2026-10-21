@@ -20,6 +20,7 @@ use commit_graph_types::edges::Parents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
+use context::PerfCounterType;
 use futures::FutureExt;
 use futures::stream::TryStreamExt;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
@@ -62,6 +63,7 @@ macro_rules! impl_commit_graph_tests {
             test_parents_and_subtree_sources_tree,
             test_ancestors_difference,
             test_ancestors_difference_many_stacks,
+            test_lower_frontier_batch_prefetch,
             test_ancestors_difference_segment_slices,
             test_find_by_prefix,
             test_add_recursive,
@@ -847,6 +849,58 @@ pub async fn test_ancestors_difference_many_stacks(
             "scm/mononoke:commit_graph_pull_optimizations".to_string() => KnobVal::Bool(false),
         }),
         assert_many_stacks(&graph, &ctx).boxed(),
+    )
+    .await
+}
+
+pub async fn test_lower_frontier_batch_prefetch(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    // Every commit on the main line merges in an unrelated two-commit
+    // branch, so lowering a frontier below each merge adds a changeset
+    // above the target.
+    let graph = from_dag(
+        &ctx,
+        r"
+                A-B-C-D-E-F
+                 / / / / /
+              L-G / / / /
+               M-H / / /
+                N-I / /
+                 O-J /
+                  P-K
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:commit_graph_pull_optimizations".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:commit_graph_prefetch_step_limit".to_string() => KnobVal::Int(4),
+        }),
+        async {
+            assert!(
+                graph
+                    .is_ancestor(&ctx, name_cs_id("A"), name_cs_id("F"))
+                    .await?
+            );
+            // Lowering F to A's generation batches E and K, then D and J,
+            // then C and I, then B and H, as each merge adds its branch to
+            // the frontier.
+            // FIXME: every time the frontier grows, all the changesets above
+            // the target are scanned again, so this is 2 + 3 + 4 + 5 rather
+            // than the 8 changesets batched.
+            assert_eq!(
+                ctx.perf_counters()
+                    .get_counter(PerfCounterType::CommitGraphBatchPrefetchScanned),
+                14
+            );
+            Ok(())
+        }
+        .boxed(),
     )
     .await
 }
