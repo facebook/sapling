@@ -11,11 +11,128 @@ import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
+from typing import Any
 from unittest import mock
 
 from eden.fs.service.eden.thrift_types import MountInfo, MountState
 
 from .lib import edenclient, testcase
+
+
+class RunCommandTest(unittest.TestCase):
+    def setUp(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.eden = edenclient.EdenFS(base_dir=pathlib.Path(directory.name))
+
+    def run_python(self, script: str, **kwargs: Any) -> str:
+        with mock.patch.object(
+            self.eden,
+            "get_edenfsctl_cmd_env",
+            return_value=([sys.executable, "-c", script], os.environ.copy()),
+        ):
+            return self.eden.run_cmd("test-command", **kwargs)
+
+    def test_output_preserves_encoding_newlines_and_large_results(self) -> None:
+        for timeout in (None, 10):
+            for capture_stderr in (False, True):
+                with self.subTest(timeout=timeout, capture_stderr=capture_stderr):
+                    output = self.run_python(
+                        "import os; "
+                        "os.write(1, b'caf\\xe9\\r\\n' + b'x' * 70000 + b'\\r'); "
+                        "os.write(2, b'error\\r\\n')",
+                        timeout=timeout,
+                        capture_stderr=capture_stderr,
+                        encoding="latin-1",
+                    )
+                    expected = "café\n" + "x" * 70000 + "\n"
+                    if capture_stderr:
+                        expected += "error\n"
+                    self.assertEqual(expected, output)
+
+    def test_nonzero_exit_preserves_diagnostics(self) -> None:
+        for timeout in (None, 10):
+            for capture_stderr in (False, True):
+                with self.subTest(timeout=timeout, capture_stderr=capture_stderr):
+                    with self.assertRaises(edenclient.EdenCommandError) as raised:
+                        self.run_python(
+                            "import os; os.write(1, b'output'); "
+                            "os.write(2, b'error'); raise SystemExit(7)",
+                            timeout=timeout,
+                            capture_stderr=capture_stderr,
+                        )
+                    self.assertEqual(7, raised.exception.returncode)
+                    self.assertEqual(
+                        "outputerror" if capture_stderr else "output",
+                        raised.exception.output,
+                    )
+                    self.assertEqual(
+                        None if capture_stderr else "error", raised.exception.stderr
+                    )
+
+    def test_timeout_retains_bounded_diagnostics(self) -> None:
+        with self.assertRaises(subprocess.TimeoutExpired) as raised:
+            self.run_python(
+                "import os, threading; "
+                "os.write(1, b'x' * 70000); os.write(2, b'error'); "
+                "threading.Event().wait(30)",
+                timeout=5,
+            )
+        self.assertEqual(b"x" * 65536, raised.exception.output)
+        self.assertEqual(b"error", raised.exception.stderr)
+
+
+class ShutdownTest(unittest.TestCase):
+    def test_blocked_stop_is_killed_and_reported(self) -> None:
+        processes: list[subprocess.Popen] = []
+        real_popen = subprocess.Popen
+
+        def start_process(*args: Any, **kwargs: Any) -> subprocess.Popen:
+            process = real_popen(*args, **kwargs)
+            processes.append(process)
+            self.addCleanup(process.wait, timeout=10)
+            self.addCleanup(process.kill)
+            return process
+
+        daemon = start_process(
+            [sys.executable, "-c", "import threading; threading.Event().wait()"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        # The stop helper eventually exits so a regression fails without
+        # hanging the test runner. A working shutdown must kill it first.
+        stop_command = [
+            sys.executable,
+            "-c",
+            "import threading; threading.Event().wait(30)",
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            eden = edenclient.EdenFS(base_dir=pathlib.Path(directory))
+            eden._process = daemon
+            with (
+                mock.patch.object(edenclient, "EDENFS_STOP_TIMEOUT", 1),
+                mock.patch.object(edenclient, "can_run_sudo", return_value=False),
+                mock.patch.object(
+                    edenclient.util,
+                    "check_health",
+                    return_value=SimpleNamespace(pid=daemon.pid),
+                ),
+                mock.patch.object(
+                    eden,
+                    "get_edenfsctl_cmd_env",
+                    return_value=(stop_command, os.environ.copy()),
+                ),
+                mock.patch.object(edenclient.subprocess, "Popen", start_process),
+            ):
+                with self.assertRaisesRegex(Exception, "had to send SIGKILL"):
+                    eden.shutdown()
+
+            self.assertIsNone(eden._process)
+        self.assertEqual(2, len(processes))
+        self.assertIsNotNone(daemon.poll())
+        self.assertIsNotNone(processes[1].poll())
+        self.assertNotEqual(0, processes[1].returncode)
 
 
 class DebuggerStartupTest(unittest.TestCase):

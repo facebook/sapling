@@ -19,11 +19,12 @@ import tempfile
 import threading
 import time
 import unittest
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from pathlib import Path
 from types import TracebackType
 from typing import (
     Any,
+    BinaryIO,
     cast,
     Dict,
     Generator,
@@ -309,6 +310,7 @@ class EdenFS:
         encoding: str = "utf-8",
         config_dir: bool = True,
         env: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = None,
     ) -> str:
         """
         Run the specified eden command.
@@ -316,6 +318,9 @@ class EdenFS:
         Args: The eden command name and any arguments to pass to it.
         Usage example: run_cmd('mount', 'my_eden_client')
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
+        With timeout, capture output in files so inherited pipes cannot prolong
+        cleanup. Failures retain at most 64 KiB per stream; timeouts raise
+        subprocess.TimeoutExpired with byte output, as subprocess.run does.
         """
         cmd, cmd_env = self.get_edenfsctl_cmd_env(command, *args, config_dir=config_dir)
 
@@ -327,26 +332,74 @@ class EdenFS:
         else:
             merged_env = cmd_env
 
-        try:
-            stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
-            # TODO(T37669726): Re-enable LSAN.
-            merged_env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
-            completed_process = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=stderr,
-                check=True,
-                cwd=cwd,
-                env=merged_env,
-                encoding=encoding,
+        def read_output(stream: BinaryIO, limit: Optional[int] = None) -> bytes:
+            # Snapshot the length: a descendant may still be writing.
+            size = os.fstat(stream.fileno()).st_size
+            stream.seek(0)
+            return stream.read(size if limit is None else min(size, limit))
+
+        def decode_output(data: bytes, errors: str = "strict") -> str:
+            # Match subprocess.run's universal-newline text capture.
+            return (
+                data.decode(encoding, errors=errors)
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
             )
-        except subprocess.CalledProcessError as ex:
-            # Re-raise our own exception type so we can include the error
-            # output.
-            raise EdenCommandError(ex) from None
+
+        # TODO(T37669726): Re-enable LSAN.
+        merged_env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
+        with ExitStack() as stack:
+            stdout_file = (
+                stack.enter_context(tempfile.TemporaryFile())
+                if timeout is not None
+                else None
+            )
+            stderr_file = (
+                stack.enter_context(tempfile.TemporaryFile())
+                if timeout is not None and not capture_stderr
+                else None
+            )
+            try:
+                completed_process = subprocess.run(
+                    cmd,
+                    stdout=stdout_file if stdout_file is not None else subprocess.PIPE,
+                    stderr=(
+                        subprocess.STDOUT
+                        if capture_stderr
+                        else stderr_file
+                        if stderr_file is not None
+                        else subprocess.PIPE
+                    ),
+                    check=True,
+                    cwd=cwd,
+                    env=merged_env,
+                    encoding=encoding,
+                    timeout=timeout,
+                )
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as ex:
+                if stdout_file is not None:
+                    captured_stdout = read_output(stdout_file, 64 * 1024)
+                    if isinstance(ex, subprocess.CalledProcessError):
+                        ex.output = decode_output(captured_stdout, errors="replace")
+                    else:
+                        ex.output = captured_stdout
+                if stderr_file is not None:
+                    errors = read_output(stderr_file, 64 * 1024)
+                    if isinstance(ex, subprocess.CalledProcessError):
+                        ex.stderr = decode_output(errors, errors="replace")
+                    else:
+                        ex.stderr = errors
+                if isinstance(ex, subprocess.CalledProcessError):
+                    raise EdenCommandError(ex) from None
+                raise
+            output = (
+                decode_output(read_output(stdout_file))
+                if stdout_file is not None
+                else completed_process.stdout
+            )
         if config_dir and command in ("clone", "mount", "restart"):
             self.assert_running_fuse_transports()
-        return completed_process.stdout
+        return output
 
     def run_unchecked(
         self, command: str, *args: str, **kwargs: Any
@@ -637,6 +690,8 @@ class EdenFS:
             # to prevent overall test timeouts.
             timeout = 10
 
+        deadline = time.monotonic() + timeout
+        stop_completed = False
         stale_wrapper = False
 
         # Run "edenfsctl stop" with a timeout of 0 to tell it not to wait for the EdenFS
@@ -652,14 +707,23 @@ class EdenFS:
                 self._process = None
                 return
 
-            self.run_cmd("stop", "-t", "0")
-            return_code = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
+            self.run_cmd(
+                "stop", "-t", "0", timeout=max(0.0, deadline - time.monotonic())
+            )
+            stop_completed = True
+            return_code = process.wait(timeout=max(0.0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired as ex:
+            if not stop_completed:
+                self.report_time(
+                    f"edenfsctl stop timed out; stdout: {ex.output!r}; stderr: {ex.stderr!r}"
+                )
             # EdenFS did not exit normally on its own.
             self.report_time("Eden stop timed out, killing process")
             return_code, stale_wrapper = self._kill_after_shutdown_timeout(
                 process, daemon_pid
             )
+            # An exited daemon does not make a stuck stop command successful.
+            stale_wrapper = stale_wrapper and stop_completed
             if not retry and not stale_wrapper:
                 raise Exception(
                     f"edenfs did not shutdown within {timeout} seconds; "
