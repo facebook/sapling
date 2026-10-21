@@ -356,6 +356,36 @@ TEST(Hash32, ensureStringConstructorRejectsArgumentBadCharacters) {
       std::invalid_argument);
 }
 
+#if defined(_GLIBCXX_ASSERTIONS) || defined(_GLIBCXX_DEBUG) || \
+    defined(__SANITIZE_ADDRESS__) ||                           \
+    (defined(_LIBCPP_DEBUG) && _LIBCPP_DEBUG != 0)
+#define EDEN_HASH_HIGH_BYTES_DIES 1
+#else
+#define EDEN_HASH_HIGH_BYTES_DIES 0
+#endif
+
+TEST(Hash20, stringConstructorWithHighBytes) {
+  std::string highBytes(40, '\x84');
+#if EDEN_HASH_HIGH_BYTES_DIES
+  EXPECT_DEATH(
+      Hash20(folly::StringPiece{highBytes}),
+      "AddressSanitizer|__n < this->size\\(\\)");
+#else
+  EXPECT_NO_THROW(Hash20(folly::StringPiece{highBytes}));
+#endif
+}
+
+TEST(Hash32, stringConstructorWithHighBytes) {
+  std::string highBytes(64, '\x84');
+#if EDEN_HASH_HIGH_BYTES_DIES
+  EXPECT_DEATH(
+      Hash32(folly::StringPiece{highBytes}),
+      "AddressSanitizer|__n < this->size\\(\\)");
+#else
+  EXPECT_NO_THROW(Hash32(folly::StringPiece{highBytes}));
+#endif
+}
+
 TEST(Hash20, sha1IOBuf) {
   // Test computing the SHA1 of data spread across an IOBuf chain
   auto buf1 = IOBuf::create(50);
