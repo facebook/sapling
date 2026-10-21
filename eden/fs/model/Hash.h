@@ -59,8 +59,8 @@ hexToBytesPtrSafe(const C* data, const size_t length, uint8_t* bytes) {
   }
 
   for (auto i = 0u, j = 0u; i < length; i += 2) {
-    const auto hi = KHexTable[data[i]];
-    const auto lo = KHexTable[data[i + 1]];
+    const auto hi = KHexTable[static_cast<uint8_t>(data[i])];
+    const auto lo = KHexTable[static_cast<uint8_t>(data[i + 1])];
     if ((hi | lo) & 0x10) {
       // One of the characters wasn't a hex digit
       return false;

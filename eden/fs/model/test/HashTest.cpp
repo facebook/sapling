@@ -356,34 +356,16 @@ TEST(Hash32, ensureStringConstructorRejectsArgumentBadCharacters) {
       std::invalid_argument);
 }
 
-#if defined(_GLIBCXX_ASSERTIONS) || defined(_GLIBCXX_DEBUG) || \
-    defined(__SANITIZE_ADDRESS__) ||                           \
-    (defined(_LIBCPP_DEBUG) && _LIBCPP_DEBUG != 0)
-#define EDEN_HASH_HIGH_BYTES_DIES 1
-#else
-#define EDEN_HASH_HIGH_BYTES_DIES 0
-#endif
-
 TEST(Hash20, stringConstructorWithHighBytes) {
   std::string highBytes(40, '\x84');
-#if EDEN_HASH_HIGH_BYTES_DIES
-  EXPECT_DEATH(
-      Hash20(folly::StringPiece{highBytes}),
-      "AddressSanitizer|__n < this->size\\(\\)");
-#else
-  EXPECT_NO_THROW(Hash20(folly::StringPiece{highBytes}));
-#endif
+  EXPECT_THROW(Hash20(folly::StringPiece{highBytes}), std::invalid_argument);
+  std::string oneHighByte = "0123456789abcdef0123456789abcdef0123456\xff";
+  EXPECT_THROW(Hash20(folly::StringPiece{oneHighByte}), std::invalid_argument);
 }
 
 TEST(Hash32, stringConstructorWithHighBytes) {
   std::string highBytes(64, '\x84');
-#if EDEN_HASH_HIGH_BYTES_DIES
-  EXPECT_DEATH(
-      Hash32(folly::StringPiece{highBytes}),
-      "AddressSanitizer|__n < this->size\\(\\)");
-#else
-  EXPECT_NO_THROW(Hash32(folly::StringPiece{highBytes}));
-#endif
+  EXPECT_THROW(Hash32(folly::StringPiece{highBytes}), std::invalid_argument);
 }
 
 TEST(Hash20, sha1IOBuf) {
