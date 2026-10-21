@@ -48,13 +48,18 @@ dirsync is off on the client, so the server has to mirror during pushrebase:
 
   $ sl push --to master 2>&1 | grep -E '^(searching for changes|AssertionError|mirrored|updating bookmark)'
   searching for changes
-  AssertionError
+  mirrored adding 'dir1/b' to 'dir2/b'
+  mirrored adding 'dir1/c' to 'dir2/c'
+  updating bookmark master
 
   $ cd $TESTTMP/server
   $ sl log -G -T '{desc} {files} {bookmarks}\n' -r 'all()'
-  @  s1 unrelated master
+  o  c2 dir1/c dir2/c master
+  │
+  o  c1 dir1/b dir2/b
+  │
+  @  s1 unrelated
   │
   o  base .hgdirsync dir1/a dir2/a
   $ sl cat -r master dir2/c
-  dir2/c: no such file in rev 7f5f99663f02
-  [1]
+  4

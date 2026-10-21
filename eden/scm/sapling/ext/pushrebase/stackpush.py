@@ -204,7 +204,10 @@ class pushrequest:
         repo = ctx.repo()
 
         def getfilectx(repo, memctx, path):
-            assert path in commit.filechanges
+            if path not in commit.filechanges:
+                # unchanged, inherited from the parent
+                pctx = memctx.p1()
+                return pctx[path] if path in pctx else None
             entry = commit.filechanges[path]
             if entry is None:
                 # deleted
