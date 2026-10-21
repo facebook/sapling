@@ -187,6 +187,32 @@ TEST_F(ScmStatusCacheTest, drop_cached_promise) {
   EXPECT_TRUE(std::holds_alternative<StatusResultFuture>(getResult_3));
 }
 
+TEST_F(ScmStatusCacheTest, drop_promise_after_joiner_at_later_sequence) {
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
+  auto key = ScmStatusCache::makeKey(id1, false);
+
+  journal->recordChanged("file.txt"_relpath, dtype_t::Regular);
+  auto ownerSeq = journal->peekLatest()->sequenceID;
+  auto ownerResult = cache->get(key, ownerSeq);
+  ASSERT_TRUE(std::holds_alternative<StatusResultPromise>(ownerResult));
+
+  journal->recordChanged(".hg/blackbox.log"_relpath, dtype_t::Regular);
+  auto joinerSeq = journal->peekLatest()->sequenceID;
+  auto joinerResult = cache->get(key, joinerSeq);
+  ASSERT_TRUE(std::holds_alternative<StatusResultFuture>(joinerResult));
+
+  auto promise = std::get<StatusResultPromise>(ownerResult);
+  promise->setException(std::runtime_error("diff failed"));
+  cache->dropPromise(key, ownerSeq);
+
+  auto laterResult = cache->get(key, joinerSeq);
+  ASSERT_TRUE(std::holds_alternative<StatusResultFuture>(laterResult));
+  auto future = std::move(std::get<StatusResultFuture>(laterResult));
+  ASSERT_NE(future.isReady(), detail::kImmediateFutureAlwaysDefer);
+  EXPECT_THROW(std::move(future).get(), std::runtime_error);
+}
+
 TEST_F(ScmStatusCacheTest, get_results_as_promise_or_future) {
   auto cache = ScmStatusCache::create(
       rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
