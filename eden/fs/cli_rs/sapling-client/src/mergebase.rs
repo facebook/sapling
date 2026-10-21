@@ -167,6 +167,9 @@ mod tests {
         "0000111122223333444455556666777788889999\n1234567890.012345\n";
     const COMMIT_ID: &str = "0000111122223333444455556666777788889999";
     const MERGEBASE_WITH: &str = "master";
+    const DETAILS_EAST_OF_UTC: &str =
+        "aaaa111122223333444455556666777788889999\n1738089317.0-3600\n9876543210";
+    const COMMIT_ID_EAST_OF_UTC: &str = "aaaa111122223333444455556666777788889999";
 
     #[tokio::test]
     #[allow(clippy::unnecessary_literal_unwrap)]
@@ -269,6 +272,23 @@ mod tests {
         assert_eq!(details.mergebase, COMMIT_ID);
         assert_eq!(details.timestamp, Some(1234567890));
         assert_eq!(details.global_rev, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_mergebase_details_east_of_utc() -> Result<()> {
+        let output = DETAILS_EAST_OF_UTC.to_owned();
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            Some(Path::new(".")),
+            Some((0, Some(output.as_bytes().to_vec()))),
+        );
+        let details =
+            get_mergebase_details_impl(&spawner, ".", COMMIT_ID_EAST_OF_UTC, MERGEBASE_WITH)
+                .await?
+                .unwrap();
+        assert_eq!(details.timestamp, None);
+        assert_eq!(details.global_rev, Some(9876543210));
         Ok(())
     }
 }

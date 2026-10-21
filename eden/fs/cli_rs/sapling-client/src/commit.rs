@@ -165,4 +165,21 @@ mod tests {
         assert_eq!(timestamp, 1738089317);
         Ok(())
     }
+
+    #[tokio::test]
+    pub async fn test_get_commit_timestamp_east_of_utc() -> Result<()> {
+        // `{date}` renders the date tuple as the unix time followed by the
+        // timezone offset in seconds west of UTC, so a commit made at UTC+1
+        // renders as "<unixtime>.0-3600".
+        let timestamp_str = "1738089317.0-3600".to_owned();
+        let repo_path = Path::new(CURRENT_DIR);
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            Some(repo_path),
+            Some((0, Some(timestamp_str.as_bytes().to_vec()))),
+        );
+        let result = get_commit_timestamp_impl(&spawner, COMMIT_ID, Some(repo_path)).await;
+        assert!(result.is_err());
+        Ok(())
+    }
 }
