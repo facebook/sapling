@@ -1141,6 +1141,18 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareRootsById) {
       ObjectComparison::Different);
 }
 
+TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdRenderedTree) {
+  auto foid =
+      FilteredObjectId{RelativePath{"a/b"}, "V1:foo", makeTestId("0000")};
+  auto rendered = filteredStore_->renderObjectId(ObjectId{foid.getValue()});
+  EXPECT_THROW(filteredStore_->parseObjectId(rendered), folly::ConversionError);
+}
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdMalformedTree) {
+  EXPECT_DEATH(filteredStore_->parseObjectId("17:abc"), "Check failed");
+  EXPECT_DEATH(filteredStore_->parseObjectId("17:"), "Check failed");
+}
+
 TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdRawHex) {
   // A raw 40-char hex string without a colon should be delegated to the
   // underlying backing store instead of throwing.
