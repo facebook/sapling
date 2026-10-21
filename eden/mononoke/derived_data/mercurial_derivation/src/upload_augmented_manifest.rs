@@ -89,10 +89,11 @@ impl DirectoryAcl {
     }
 }
 
-#[derive(Debug)]
-pub struct BuiltTree {
-    pub directory: HgAugmentedDirectoryNode,
-    pub acl: DirectoryAcl,
+/// What a built tree hands up to the batch trees that contain it.
+struct BuiltTree {
+    directory: HgAugmentedDirectoryNode,
+    acl: DirectoryAcl,
+    level: usize,
 }
 
 #[derive(Debug)]
@@ -211,13 +212,6 @@ enum BuildNode {
     Tree(usize),
 }
 
-/// What a built tree hands up to the trees that contain it.
-struct AugmentedTree {
-    node_id: HgNodeHash,
-    tree: BuiltTree,
-    level: usize,
-}
-
 /// Build an augmented manifest for every uploaded tree, children before
 /// parents, without storing any. A child neither in the batch nor already
 /// derived fails the whole batch.
@@ -247,8 +241,8 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
             };
             future::ok((node, children)).boxed()
         },
-        move |node, children: bounded_traversal::Iter<Option<Arc<AugmentedTree>>>| {
-            let children: Vec<Arc<AugmentedTree>> = children.flatten().collect();
+        move |node, children: bounded_traversal::Iter<Option<Arc<BuiltTree>>>| {
+            let children: Vec<Arc<BuiltTree>> = children.flatten().collect();
             async move {
                 let BuildNode::Tree(index) = node else {
                     return Ok(None);
@@ -256,9 +250,9 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                 let tree = &batch.trees[index];
                 let siblings = children
                     .iter()
-                    .map(|child| (child.node_id, &child.tree))
+                    .map(|child| (child.directory.treenode, child.as_ref()))
                     .collect();
-                let (result, envelope) = build_uploaded_tree(
+                let (envelope, directory, acl) = build_uploaded_tree(
                     ctx,
                     blobstore,
                     restricted_paths,
@@ -285,13 +279,13 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                     .expect("should not be poisoned, nothing panics while holding it")[index] =
                     Some(UploadTreeAugmented {
                         node_id: tree.node_id,
-                        acl: result.acl.clone(),
+                        acl: acl.clone(),
                         level,
                         envelope,
                     });
-                anyhow::Ok(Some(Arc::new(AugmentedTree {
-                    node_id: tree.node_id,
-                    tree: result,
+                anyhow::Ok(Some(Arc::new(BuiltTree {
+                    directory,
+                    acl,
                     level,
                 })))
             }
@@ -333,7 +327,11 @@ async fn build_uploaded_tree(
     restricted_paths: &RestrictedPathsConfigBased,
     manifest: &HgBlobManifest,
     sources: ChildSources<'_>,
-) -> Result<(BuiltTree, HgAugmentedManifestEnvelope)> {
+) -> Result<(
+    HgAugmentedManifestEnvelope,
+    HgAugmentedDirectoryNode,
+    DirectoryAcl,
+)> {
     let parent = parent_entries(ctx, blobstore, manifest.p1()).await?;
     let (children, acl) =
         children_and_acl(ctx, blobstore, restricted_paths, manifest, sources, &parent).await?;
@@ -424,7 +422,7 @@ async fn build_uploaded_tree(
         acl_manifest_directory_id: acl_overlay,
     };
 
-    Ok((BuiltTree { directory, acl }, envelope))
+    Ok((envelope, directory, acl))
 }
 
 /// Clients upload content before the trees that list it, so missing metadata
