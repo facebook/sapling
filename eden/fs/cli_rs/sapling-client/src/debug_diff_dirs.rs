@@ -14,6 +14,7 @@ use std::sync::Mutex;
 use async_process_traits::Child;
 use async_process_traits::Command;
 use async_process_traits::CommandSpawner;
+use async_process_traits::ExitStatus;
 use async_process_traits::TokioCommandSpawner;
 use lru_cache::LruCache;
 use tokio::io::AsyncBufReadExt;
@@ -150,6 +151,14 @@ where
             }
         }
 
+        let exit_status = child.wait().await?;
+        if !exit_status.success() {
+            return Err(SaplingError::Other(format!(
+                "'sl debugdiffdirs' exited with status {:?}",
+                exit_status.code()
+            )));
+        }
+
         SaplingGetDiffDirsResult::Normal(status)
     };
 
@@ -208,8 +217,8 @@ mod tests {
             included_roots: None,
             excluded_roots: None,
         };
-        let result = get_diff_dirs_impl(&spawner, params).await?;
-        assert_eq!(result, SaplingGetDiffDirsResult::Normal(vec![]));
+        let result = get_diff_dirs_impl(&spawner, params).await;
+        assert!(result.is_err());
         Ok(())
     }
 

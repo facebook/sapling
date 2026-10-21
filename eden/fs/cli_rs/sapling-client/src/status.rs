@@ -14,6 +14,7 @@ use std::sync::Mutex;
 use async_process_traits::Child;
 use async_process_traits::Command;
 use async_process_traits::CommandSpawner;
+use async_process_traits::ExitStatus;
 use async_process_traits::TokioCommandSpawner;
 use lru_cache::LruCache;
 use tokio::io::AsyncBufReadExt;
@@ -206,6 +207,14 @@ where
             }
         }
 
+        let exit_status = child.wait().await?;
+        if !exit_status.success() {
+            return Err(SaplingError::Other(format!(
+                "'sl status' exited with status {:?}",
+                exit_status.code()
+            )));
+        }
+
         SaplingGetStatusResult::Normal(status)
     };
 
@@ -295,8 +304,8 @@ mod tests {
             excluded_roots: None,
             excluded_suffixes: None,
         };
-        let result = get_status_impl(&spawner, params).await?;
-        assert_eq!(result, SaplingGetStatusResult::Normal(vec![]));
+        let result = get_status_impl(&spawner, params).await;
+        assert!(result.is_err());
         Ok(())
     }
 
