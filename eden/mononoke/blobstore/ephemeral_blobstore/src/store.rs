@@ -29,7 +29,6 @@ use sql_query_config::SqlQueryConfig;
 use crate::bubble::Bubble;
 use crate::bubble::BubbleId;
 use crate::bubble::ExpiryStatus;
-use crate::deletion_step_runner::DeletionStepRunner;
 use crate::error::EphemeralBlobstoreError;
 
 /// Outcome of extending a bubble's TTL
@@ -39,6 +38,12 @@ pub enum ExtendBubbleTtlOutcome {
     Extended(Timestamp),
     /// The bubble's TTL was not changed, current expiration timestamp
     NotChanged(Timestamp),
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DeleteBubbleOutcome {
+    pub keys_deleted: usize,
+    pub keys_already_deleted: usize,
 }
 
 /// Ephemeral Store.
@@ -470,92 +475,74 @@ impl RepoEphemeralStoreInner {
     }
 
     /// Method responsible for deleting the bubble and all the data contained within.
-    /// Returns the number of blobs deleted from the bubble.
-    async fn delete_bubble(&self, ctx: &CoreContext, bubble_id: BubbleId) -> Result<usize> {
+    /// Returns the number of blobs deleted from the bubble and the number of blobs
+    /// that were already deleted.
+    async fn delete_bubble(
+        &self,
+        ctx: &CoreContext,
+        bubble_id: BubbleId,
+    ) -> Result<DeleteBubbleOutcome> {
         // Step 0: Validate if bubble deletion is enabled.
         if let BubbleDeletionMode::Disabled = self.bubble_deletion_mode {
             return Err(EphemeralBlobstoreError::DeleteBubbleDisabled.into());
         }
-        let steps = DeletionStepRunner::new(bubble_id);
         // Step 1: Mark the bubble as expired in the backing SQL Store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        steps
-            .run_step(
-                "mark bubble as expired",
-                UpdateExpired::query(
-                    &self.connections.write_connection,
-                    ctx.sql_query_telemetry(),
-                    &ExpiryStatus::Expired,
-                    &bubble_id,
-                ),
-            )
-            .await?;
+        UpdateExpired::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &ExpiryStatus::Expired,
+            &bubble_id,
+        )
+        .await?;
         // If only marking is required, exit now.
         if let BubbleDeletionMode::MarkOnly = self.bubble_deletion_mode {
-            return Ok(0); // Since 0 blob items were unlinked/removed.
+            return Ok(DeleteBubbleOutcome::default()); // Since 0 blob items were unlinked/removed.
         }
         // Step 2: Delete the blob content within the expired bubble.
-        let bubble = steps
-            .run_step("open bubble", self.open_bubble_raw(ctx, bubble_id, false))
-            .await?;
-        let count = bubble.delete_blobs_in_bubble(ctx, &steps).await?;
+        let bubble = self.open_bubble_raw(ctx, bubble_id, false).await?;
+        let outcome = bubble.delete_blobs_in_bubble(ctx).await?;
 
         // Step 3: Delete the metadata associated with the bubble from
         // the backing SQL store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        steps
-            .run_step(
-                "delete changeset mapping",
-                DeleteBubbleChangesetMapping::query(
-                    &self.connections.write_connection,
-                    ctx.sql_query_telemetry(),
-                    &bubble_id,
-                ),
-            )
-            .await?;
+        DeleteBubbleChangesetMapping::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &bubble_id,
+        )
+        .await?;
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        steps
-            .run_step(
-                "delete changeset parents",
-                DeleteBubbleChangesetParents::query(
-                    &self.connections.write_connection,
-                    ctx.sql_query_telemetry(),
-                    &bubble_id,
-                ),
-            )
-            .await?;
+        DeleteBubbleChangesetParents::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &bubble_id,
+        )
+        .await?;
         // When invoked through processes, this will always be a no-op. This is useful for
         // manually deleting a bubble regardless of its expiry status.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        steps
-            .run_step(
-                "delete labels",
-                DeleteExpiredBubbleLabels::query(
-                    &self.connections.write_connection,
-                    ctx.sql_query_telemetry(),
-                    &bubble_id,
-                ),
-            )
-            .await?;
+        DeleteExpiredBubbleLabels::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &bubble_id,
+        )
+        .await?;
 
         // Step 4: Delete the bubble itself from the backing SQL store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        steps
-            .run_step(
-                "delete bubble",
-                DeleteBubble::query(
-                    &self.connections.write_connection,
-                    ctx.sql_query_telemetry(),
-                    &bubble_id,
-                ),
-            )
-            .await?;
-        Ok(count)
+        DeleteBubble::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &bubble_id,
+        )
+        .await?;
+        Ok(outcome)
     }
 
     async fn open_bubble_raw(
@@ -783,10 +770,15 @@ impl RepoEphemeralStore {
     }
 
     /// Method responsible for deleting the bubble and all the data contained within.
-    /// Returns the number of blobs deleted from the bubble.
+    /// Returns the number of blobs deleted from the bubble and the number of blobs
+    /// that were already deleted.
     /// NOTE: Deletes the bubble regardless of its expiry status. Make sure the bubble
     /// is suitable for deletion.
-    pub async fn delete_bubble(&self, ctx: &CoreContext, bubble_id: BubbleId) -> Result<usize> {
+    pub async fn delete_bubble(
+        &self,
+        ctx: &CoreContext,
+        bubble_id: BubbleId,
+    ) -> Result<DeleteBubbleOutcome> {
         self.inner()?.delete_bubble(ctx, bubble_id).await
     }
 
@@ -1478,7 +1470,7 @@ mod test {
         // Delete the bubble
         let deleted = eph.delete_bubble(&ctx, bubble1.bubble_id()).await?;
         // Should be 0 since deletion mode is MarkOnly
-        assert_eq!(deleted, 0);
+        assert_eq!(deleted.keys_deleted, 0);
         // Even though the bubble hasn't been deleted from the backing physical store
         // it should appear as deleted to the user and hence not be accessible.
         let res = eph.open_bubble(&ctx, bubble1.bubble_id()).await;
@@ -1505,7 +1497,7 @@ mod test {
         // Delete the bubble
         let deleted = eph.delete_bubble(&ctx, bubble1.bubble_id()).await?;
         // Should be 0 since the bubble was empty
-        assert_eq!(deleted, 0);
+        assert_eq!(deleted.keys_deleted, 0);
         Ok(())
     }
 
@@ -1520,7 +1512,7 @@ mod test {
         // Delete the bubble
         let deleted = eph.delete_bubble(&ctx, bubble1.bubble_id()).await?;
         // Should be 0 since the bubble was empty
-        assert_eq!(deleted, 0);
+        assert_eq!(deleted.keys_deleted, 0);
         Ok(())
     }
 
@@ -1572,7 +1564,7 @@ mod test {
         // Delete the bubble
         let deleted = eph.delete_bubble(&ctx, bubble1.bubble_id()).await?;
         // Should be 4 based on the input data added
-        assert_eq!(deleted, 4);
+        assert_eq!(deleted.keys_deleted, 4);
         Ok(())
     }
 
@@ -2380,8 +2372,12 @@ mod test {
         let deleted = eph.delete_bubble(&ctx, bubble_id).await?;
 
         assert_eq!(
-            deleted, 3,
-            "All three listed keys, including the one that vanished, should be counted as deleted"
+            deleted,
+            DeleteBubbleOutcome {
+                keys_deleted: 2,
+                keys_already_deleted: 1,
+            },
+            "The key that vanished after listing should be counted as already deleted"
         );
         let enumerated = blobstore
             .enumerate(&ctx, &BlobstoreKeyParam::from(..))

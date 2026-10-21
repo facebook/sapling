@@ -59,9 +59,9 @@ use tracing::warn;
 
 use crate::commit_graph::EphemeralCommitGraphStorage;
 use crate::commit_graph::EphemeralOnlyChangesetStorage;
-use crate::deletion_step_runner::DeletionStepRunner;
 use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
+use crate::store::DeleteBubbleOutcome;
 use crate::view::EphemeralRepoView;
 
 pub enum StorageLocation {
@@ -192,6 +192,11 @@ impl BubbleId {
 
 type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn BlobstoreEnumerableWithUnlink>>;
 
+enum UnlinkOutcome {
+    Unlinked,
+    AlreadyAbsent,
+}
+
 /// Enum representing the expiry status of a bubble in the backing store.
 #[derive(Copy, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[derive(bincode::Encode, bincode::Decode)]
@@ -319,40 +324,37 @@ impl Bubble {
     pub(crate) async fn delete_blobs_in_bubble(
         &self,
         ctx: &CoreContext,
-        steps: &DeletionStepRunner,
-    ) -> Result<usize> {
+    ) -> Result<DeleteBubbleOutcome> {
         let key_stream = self.get_keys_in_bubble(ctx, None).await;
-        let mut keys_deleted = 0;
+        let mut outcome = DeleteBubbleOutcome::default();
         pin_mut!(key_stream);
-        while let Some(keys) = steps
-            .run_step("enumerate keys", key_stream.try_next())
-            .await?
-        {
+        while let Some(keys) = key_stream.try_next().await? {
             // As long as the unlink operation on underlying blobstores is "truly" async
             // (i.e. they yield on cross service I/O), the below will execute the unlinking
             // concurrently and terminate early on the first error encountered.
-            let unlinked_keys = steps
-                .run_step(
-                    &format!("unlink {} keys", keys.len()),
-                    try_join_all(keys.iter().map(|key| self.ensure_unlinked(ctx, key))),
-                )
-                .await?;
-            keys_deleted += unlinked_keys.len();
+            let unlink_outcomes =
+                try_join_all(keys.iter().map(|key| self.ensure_unlinked(ctx, key))).await?;
+            for unlink_outcome in unlink_outcomes {
+                match unlink_outcome {
+                    UnlinkOutcome::Unlinked => outcome.keys_deleted += 1,
+                    UnlinkOutcome::AlreadyAbsent => outcome.keys_already_deleted += 1,
+                }
+            }
         }
         // If the unlinking of all blobs within the bubble was successful, return the
         // number of blobs unlinked.
-        Ok(keys_deleted)
+        Ok(outcome)
     }
 
-    async fn ensure_unlinked(&self, ctx: &CoreContext, key: &str) -> Result<()> {
+    async fn ensure_unlinked(&self, ctx: &CoreContext, key: &str) -> Result<UnlinkOutcome> {
         let Err(err) = self.blobstore.unlink(ctx, key).await else {
-            return Ok(());
+            return Ok(UnlinkOutcome::Unlinked);
         };
         match self.blobstore.is_present(ctx, key).await {
             Ok(BlobstoreIsPresent::Absent) => {
                 let bubble_id = self.bubble_id;
                 warn!(%bubble_id, key, "Key was already absent when unlinking it, treating it as deleted: {err:#}");
-                Ok(())
+                Ok(UnlinkOutcome::AlreadyAbsent)
             }
             _ => Err(err),
         }

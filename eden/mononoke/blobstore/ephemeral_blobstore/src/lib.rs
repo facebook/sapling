@@ -15,7 +15,6 @@
 mod bubble;
 mod builder;
 mod commit_graph;
-mod deletion_step_runner;
 mod error;
 mod file;
 mod handle;
@@ -30,6 +29,7 @@ pub use crate::commit_graph::EphemeralOnlyChangesetStorage;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::handle::EphemeralHandle;
 pub use crate::store::ArcRepoEphemeralStore;
+pub use crate::store::DeleteBubbleOutcome;
 pub use crate::store::ExtendBubbleTtlOutcome;
 pub use crate::store::RepoEphemeralStore;
 pub use crate::store::RepoEphemeralStoreArc;
