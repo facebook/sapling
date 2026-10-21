@@ -441,9 +441,9 @@ TEST_F(FuseChannelTest, unmountAfterTakeoverStop) {
   auto stopData = std::move(completeFuture).get(kTimeout);
   auto* fuseStopData = dynamic_cast<FuseChannel::StopData*>(stopData.get());
   ASSERT_NE(nullptr, fuseStopData);
-  EXPECT_EQ(FuseChannel::StopReason::TAKEOVER, fuseStopData->reason);
-  EXPECT_TRUE(fuseStopData->fuseDevice);
-  EXPECT_FALSE(fuseStopData->isUnmounted());
+  EXPECT_EQ(FuseChannel::StopReason::UNMOUNTED, fuseStopData->reason);
+  EXPECT_FALSE(fuseStopData->fuseDevice);
+  EXPECT_TRUE(fuseStopData->isUnmounted());
 }
 
 TEST_F(FuseChannelTest, testTakeoverBufferSizeFollowsNegotiatedMaxWrite) {

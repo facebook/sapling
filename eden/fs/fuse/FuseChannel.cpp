@@ -1695,8 +1695,7 @@ bool FuseChannel::requestSessionExitLocked(
   if (state->stopReason != StopReason::RUNNING) {
     // Update state->stopReason only if the old stop reason left the FUSE
     // device in a still usable state but the new reason does not.
-    if (isFuseDeviceValid(state->stopReason) &&
-        !isFuseDeviceValid(state->stopReason)) {
+    if (isFuseDeviceValid(state->stopReason) && !isFuseDeviceValid(reason)) {
       state->stopReason = reason;
     }
     return false;
