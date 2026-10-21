@@ -53,19 +53,14 @@ use thiserror::Error;
 
 use crate::derive_hg_augmented_manifest::validate_augmented_manifest_element;
 
+/// Per tree build, so it multiplies with `MAX_CONCURRENT_TREE_BUILDS`.
 const MAX_CONCURRENT_CHILD_LOOKUPS: usize = 100;
-/// Each tree build fans out its own child lookups, so this multiplies with
-/// `MAX_CONCURRENT_CHILD_LOOKUPS`.
 const MAX_CONCURRENT_TREE_BUILDS: usize = 10;
 const MAX_CONCURRENT_ENVELOPE_STORES: usize = 100;
 
-/// Why an uploaded batch could not be built.
 #[derive(Debug, Error)]
 pub enum UploadTreeBuildError {
-    /// The client's fault: a parent uploaded before a child it contains.
-    ///
-    /// Phrased for both callers: an out-of-batch child with no stored envelope,
-    /// and an in-batch child the ordering could not put first.
+    /// A tree was uploaded before a child it contains.
     #[error(
         "tree {tree} contains {name} ({child}), which is neither built in this batch nor already derived"
     )]
@@ -76,14 +71,11 @@ pub enum UploadTreeBuildError {
     },
 }
 
-/// What the ACL manifest pass made of one directory.
 #[derive(Debug, Clone)]
 pub enum DirectoryAcl {
-    /// No ACL file here and no child carrying a node, so there was provably
-    /// nothing to build. The sparse common case.
+    /// No ACL file and no child with an ACL node, so nothing was built.
     NotNeeded,
-    /// Built and came to nothing: an ACL file that does not parse leaves the
-    /// directory unrestricted, and an empty child node is not carried.
+    /// Built but came to nothing, e.g. an ACL file that does not parse.
     Empty,
     Node(AclManifestDirectoryEntry),
 }
@@ -100,20 +92,15 @@ impl DirectoryAcl {
 #[derive(Debug)]
 pub struct BuiltTree {
     pub directory: HgAugmentedDirectoryNode,
-    /// Carries the node's flags as well as its id, so the containing directory
-    /// can list this tree as a child without loading it back.
     pub acl: DirectoryAcl,
 }
 
-/// One tree of a batch, once built.
 #[derive(Debug)]
 pub struct UploadTreeAugmented {
     pub node_id: HgNodeHash,
     pub acl: DirectoryAcl,
-    /// Its height in the batch: 0 for a tree containing nothing else in the
-    /// batch, otherwise one above its highest child.
+    /// 0 for a tree containing no other batch tree, else one above its highest child.
     pub level: usize,
-    /// Written only by `store_uploaded_tree_envelopes`.
     pub envelope: HgAugmentedManifestEnvelope,
 }
 
@@ -140,30 +127,22 @@ fn child_directories(
         })
 }
 
-/// One tree's child directories, split by where each has to be resolved from.
 #[derive(Default)]
 pub struct TreeChildren {
-    /// Children that arrived in the same batch.
     pub in_batch: Vec<(MPathElement, HgNodeHash)>,
-    /// Children that did not, so they must already be derived.
+    /// Not in the batch, so they must already be derived.
     pub external: Vec<(MPathElement, HgNodeHash)>,
 }
 
-/// A batch of uploaded trees, parsed, with which tree contains which. Built from
-/// the uploaded bytes alone, so its shape is known before the blobstore is
-/// touched.
 pub struct UploadedTreeBatch {
     trees: Vec<ParsedTree>,
-    /// Per tree, the positions of the batch trees it directly contains. Names
-    /// are irrelevant to ordering, hence separate from `children`.
+    /// Per tree, the positions of the batch trees it contains.
     contains: Vec<Vec<usize>>,
-    /// Per tree, its children split by where they resolve from.
     children: Vec<TreeChildren>,
 }
 
 impl UploadedTreeBatch {
-    /// Edges are hg node ids, not paths: identical subtrees at different paths
-    /// are one node, and the same node can arrive twice in one batch.
+    /// Edges are node ids, not paths: identical subtrees are one node.
     pub fn parse(envelopes: Vec<HgManifestEnvelope>) -> Result<Self> {
         let trees = envelopes
             .into_iter()
@@ -208,8 +187,6 @@ impl UploadedTreeBatch {
         })
     }
 
-    /// The trees no other tree in the batch contains, so building down from
-    /// them reaches the whole batch unless it has a cycle.
     fn top_trees(&self) -> Vec<usize> {
         let mut contained = vec![false; self.trees.len()];
         for &child in self.contains.iter().flatten() {
@@ -221,18 +198,15 @@ impl UploadedTreeBatch {
     }
 }
 
-/// Where the children of the tree being built are resolved from.
 struct ChildSources<'a> {
     children: &'a TreeChildren,
-    /// Trees built earlier in the same batch. What the map adds over a
-    /// blobstore lookup is their ACL flags, which the envelope does not record.
+    /// Trees built earlier in the same batch.
     siblings: &'a HashMap<HgNodeHash, &'a BuiltTree>,
 }
 
-/// A node of the build traversal. The traversal starts from a single node, so
-/// `Root` stands above the batch's top trees.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum BuildNode {
+    /// Above the batch's top trees, since the traversal needs a single start.
     Root,
     Tree(usize),
 }
@@ -244,13 +218,9 @@ struct AugmentedTree {
     level: usize,
 }
 
-/// Build an augmented manifest for every uploaded tree, each as soon as the
-/// batch trees it contains are built. A child neither in the batch nor already
+/// Build an augmented manifest for every uploaded tree, children before
+/// parents, without storing any. A child neither in the batch nor already
 /// derived fails the whole batch.
-///
-/// No envelope is stored: a parent needs only its children's built nodes, so
-/// writing each envelope here would put a blobstore round trip on the path to
-/// every parent. `store_uploaded_tree_envelopes` writes them afterwards.
 pub async fn build_augmented_manifests_for_uploaded_trees(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -259,8 +229,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
 ) -> Result<Vec<UploadTreeAugmented>> {
     let batch = UploadedTreeBatch::parse(trees)?;
     let top_trees: Vec<BuildNode> = batch.top_trees().into_iter().map(BuildNode::Tree).collect();
-    // Indexed by batch position, so the output order does not depend on which
-    // build finishes first.
+    // By batch position, so the output order does not depend on build order.
     let built: Mutex<Vec<Option<UploadTreeAugmented>>> =
         Mutex::new(batch.trees.iter().map(|_| None).collect());
 
@@ -331,8 +300,6 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
     )
     .await?;
 
-    // Not reachable from content-addressed manifests. A cycle under a root
-    // stops the traversal, and one with no root above it is never visited.
     traversed.context("the uploaded batch contains a cycle")?;
     built
         .into_inner()
@@ -342,17 +309,14 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
         .context("the uploaded batch contains a cycle")
 }
 
-/// Store the envelopes `build_augmented_manifests_for_uploaded_trees` built,
-/// all at once and in no order, so a write that fails can leave a stored
-/// envelope whose batch child is not stored.
+/// Store the built envelopes, concurrently and in no order.
 pub async fn store_uploaded_tree_envelopes(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     built: &[UploadTreeAugmented],
 ) -> Result<()> {
-    // Materialised before the stream for the same reason as the leaf futures
-    // in `build_uploaded_tree`: inlined, the closure is not higher-ranked and
-    // callers cannot prove `Send`.
+    // Collected first: inlined into `stream::iter` the closure is not
+    // higher-ranked and callers cannot prove `Send`.
     let stores: Vec<_> = built
         .iter()
         .map(|tree| tree.envelope.clone().store(ctx, blobstore))
@@ -363,13 +327,6 @@ pub async fn store_uploaded_tree_envelopes(
         .await
 }
 
-/// Build the augmented manifest for one uploaded tree, without storing it.
-///
-/// Subentries are built from the uploaded manifest alone, so no `HgManifest`
-/// blob is read. The per-changeset derivation instead splices unchanged runs
-/// out of the parent's sharded map; that is a read optimisation, and it can
-/// serialise a large directory's map differently from the same entries built
-/// directly.
 async fn build_uploaded_tree(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -391,10 +348,8 @@ async fn build_uploaded_tree(
             continue;
         };
         validate_augmented_manifest_element(name.as_ref())?;
-        // Agreement with the uploaded bytes is what makes this safe, not trust
-        // in `p1`: a leaf is a pure function of its filenode and file type, so
-        // an entry matching both is the one this would have built. A wrong
-        // parent can only cost a miss.
+        // A leaf depends only on its filenode and file type, so a wrong p1
+        // can only cost a miss.
         match parent.leaves.get(name) {
             Some(leaf)
                 if leaf.filenode == filenode_id.into_nodehash() && leaf.file_type == *file_type =>
@@ -408,9 +363,6 @@ async fn build_uploaded_tree(
         }
     }
 
-    // The leaf futures are materialised before the stream: a closure that
-    // borrows `ctx` and `blobstore` inlined into `stream::iter` cannot be
-    // inferred as higher-ranked, and callers then fail to prove `Send`.
     let leaf_futures: Vec<_> = to_build
         .into_iter()
         .map(|(name, file_type, filenode_id)| async move {
@@ -445,9 +397,8 @@ async fn build_uploaded_tree(
         );
     }
 
-    // The header is the client's and must not be recomputed: a mirror upload
-    // supplies a `node_id` that is not the content hash, and that id is the key
-    // this envelope is stored under and the serve path looks it up by.
+    // The header is the client's: a mirror upload's `node_id` is not the
+    // content hash, and it is the key the envelope is stored and served under.
     let augmented_manifest = ShardedHgAugmentedManifest {
         hg_node_id: manifest.node_id(),
         p1: manifest.p1(),
@@ -476,10 +427,8 @@ async fn build_uploaded_tree(
     Ok((BuiltTree { directory, acl }, envelope))
 }
 
-/// The tree-upload twin of `build_augmented_file_leaf`. Clients upload content
-/// before the trees that list it, so its metadata already exists: a miss is an
-/// error rather than a reason to stream the whole file back and recompute the
-/// metadata inside the upload request.
+/// Clients upload content before the trees that list it, so missing metadata
+/// is an error rather than a reason to recompute it.
 async fn build_uploaded_file_leaf(
     ctx: &CoreContext,
     blobstore: &impl KeyedBlobstore,
@@ -511,8 +460,7 @@ async fn build_uploaded_file_leaf(
     })
 }
 
-/// What this directory held in the parent commit, to reuse for the entries
-/// that did not change.
+/// This directory's entries in p1, reused for those that did not change.
 #[derive(Default)]
 struct ParentEntries {
     leaves: HashMap<MPathElement, HgAugmentedFileLeafNode>,
@@ -520,13 +468,7 @@ struct ParentEntries {
     acl_manifest_directory_id: Option<AclManifestId>,
 }
 
-/// This directory's entries in the parent commit. An uploaded manifest lists
-/// every entry in the directory, not just the changed ones, so without this a
-/// one-file change to a wide directory pays two blob reads for each unchanged
-/// file and one envelope load for each unchanged child directory.
-///
-/// No parent, or a parent that was never derived, is not an error: every entry
-/// is then built or loaded from scratch, which is what this path did before.
+/// No p1, or a p1 never derived, builds every entry from scratch.
 async fn parent_entries(
     ctx: &CoreContext,
     blobstore: &(impl KeyedBlobstore + 'static),
@@ -541,9 +483,6 @@ async fn parent_entries(
         return Ok(ParentEntries::default());
     };
     let acl_manifest_directory_id = envelope.augmented_manifest.acl_manifest_directory_id;
-    // One pass over the parent's map, rather than a lookup per entry: the
-    // directory is being rebuilt precisely because most of it is unchanged, so
-    // nearly every entry is wanted.
     envelope
         .augmented_manifest
         .subentries
@@ -639,8 +578,8 @@ async fn children_and_acl(
     Ok((children, acl))
 }
 
-/// p1's ACL node, when nothing it is built from changed: the same own ACL file
-/// and the same child pointers. Canonical derivation never re-parses that file.
+/// p1's ACL node, when the own ACL file and the child pointers are unchanged.
+/// Canonical derivation never re-parses that file either.
 async fn reuse_parent_acl(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -690,9 +629,8 @@ async fn reuse_parent_acl(
     }
 }
 
-/// Resolve every child directory: from the batch when it arrived there, from
-/// the parent's entry when it is unchanged, and from its own stored augmented
-/// manifest otherwise.
+/// Each child comes from the batch, from p1 when its node id is unchanged, or
+/// from its stored augmented manifest.
 async fn load_children(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
@@ -705,8 +643,6 @@ async fn load_children(
         .in_batch
         .iter()
         .map(|(name, node_id)| {
-            // Only reachable if the batch is not a DAG, since levelling
-            // otherwise builds every in-batch child before its parent.
             let sibling = sources.siblings.get(node_id).ok_or_else(|| {
                 UploadTreeBuildError::MissingChild {
                     tree,
@@ -718,15 +654,12 @@ async fn load_children(
                 name.clone(),
                 ChildNode {
                     directory: sibling.directory.clone(),
-                    // Built moments ago, so its flags are known.
                     acl: sibling.acl.node().cloned().map(AclChildNode::Known),
                 },
             ))
         })
         .collect::<Result<Vec<_>>>()?;
 
-    // A child with the node id its parent entry records is the same subtree,
-    // so that entry is exactly what loading the child's envelope would give.
     let (unchanged, changed): (Vec<_>, Vec<_>) =
         sources
             .children
@@ -750,8 +683,6 @@ async fn load_children(
         ))
     });
 
-    // Materialised before the stream: a closure borrowing `ctx` inlined into
-    // `stream::iter` is not inferred higher-ranked, and `Send` then fails.
     let lookups: Vec<_> = changed
         .into_iter()
         .map(|(name, node_id)| async move {
@@ -776,8 +707,6 @@ async fn load_children(
                         augmented_manifest_size: envelope.augmented_manifest_size,
                         acl_manifest_directory_id: acl,
                     },
-                    // The envelope records the pointer but not the flags, so the
-                    // ACL builder recovers them from the child's rollup data.
                     acl: acl.map(AclChildNode::IdOnly),
                 },
             ))
