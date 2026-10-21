@@ -25,7 +25,7 @@ use types::RepoPathBuf;
 
 use crate::path::GrepoPathTranslator;
 
-const REPO_XML_PATH: &str = "static/static.xml";
+pub(crate) const REPO_XML_PATH: &str = "static/static.xml";
 
 /// Parse .repo manifest xml files and synthesizes repo projects as trees.
 /// TODO: linkfile and copyfile support

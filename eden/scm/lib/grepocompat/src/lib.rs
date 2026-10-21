@@ -10,6 +10,7 @@
 //! This crate provides capabilities to support the
 //! [repo tool](https://gerrit.googlesource.com/git-repo) with `.repo/` identity.
 
+pub mod commit;
 pub mod init;
 pub mod path;
 pub mod trees;

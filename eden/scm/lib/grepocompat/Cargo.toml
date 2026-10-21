@@ -14,6 +14,7 @@ name = "grepocompat"
 
 [dependencies]
 anyhow = "1.0.104"
+blob = { version = "0.1.0", path = "../blob" }
 fs-err = { version = "3.3.2", features = ["tokio"] }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
 sapling-grepomanifest = { version = "0.1.0", path = "../grepomanifest" }
@@ -22,6 +23,3 @@ sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
-
-[dev-dependencies]
-blob = { version = "0.1.0", path = "../blob" }
