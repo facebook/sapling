@@ -36,6 +36,8 @@ use http::Uri;
 
 use crate::handlers::JsonErrorFormatter;
 #[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::FetchResource;
+#[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::WorkloadConfig;
@@ -45,6 +47,8 @@ use crate::utils::rim_rate_limiter::check_rate_limit;
 use crate::utils::rim_rate_limiter::legacy_tenancy_path;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::report_load;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::request_requirements;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::workload_tenancy_path;
 
@@ -167,12 +171,13 @@ impl Middleware for ThrottleMiddleware {
                     .map(|(backend, region)| (*backend, Some(region.as_str()))),
                 self.rim_backend.map(|backend| (backend, None)),
             ];
+            let config = self.rim_workload_config.as_ref().map(|config| config.get());
             let paths = state.try_borrow::<MetadataState>().map(|metadata| {
                 scopes.map(|scope| {
                     let (backend, region) = scope?;
-                    let path = if let Some(config) = &self.rim_workload_config {
+                    let path = if let Some(config) = &config {
                         let path = metadata.metadata().rim_tenancy_path(region);
-                        workload_tenancy_path(path, &config.get(), backend)
+                        workload_tenancy_path(path, config, backend)
                     } else {
                         legacy_tenancy_path(&metadata.metadata().tenant_info(), region)?
                     };
@@ -180,7 +185,7 @@ impl Middleware for ThrottleMiddleware {
                 })
             });
             if let Some(paths) = paths {
-                // Older clients keep QPS-only accounting. Fetch counts are advisory.
+                // Missing fetch headers charge only the base request cost.
                 let fetches = (Method::borrow_from(state) == Method::POST)
                     .then(|| {
                         // The API prefix is stripped; the encoded repo is one path segment.
@@ -189,8 +194,8 @@ impl Middleware for ThrottleMiddleware {
                             .strip_prefix('/')?
                             .split_once('/')?;
                         let (header, resource) = match endpoint {
-                            "files2" => (FILE_COUNT_HEADER, "file_fetches"),
-                            "trees" => (TREE_COUNT_HEADER, "tree_fetches"),
+                            "files2" => (FILE_COUNT_HEADER, FetchResource::Files),
+                            "trees" => (TREE_COUNT_HEADER, FetchResource::Trees),
                             _ => return None,
                         };
                         let count = HeaderMap::borrow_from(state)
@@ -199,16 +204,12 @@ impl Middleware for ThrottleMiddleware {
                             .ok()?
                             .parse::<u32>()
                             .ok()?;
-                        Some((resource, f64::from(count)))
+                        Some((resource, count))
                     })
                     .flatten();
-                let requirements = [Some(("qps", 1.0)), fetches]
-                    .into_iter()
-                    .flatten()
-                    .map(|(resource, units)| (resource.to_owned(), units))
-                    .collect();
                 // Global accounting sees only traffic that proceeds past the regional stage.
                 for (backend, path) in paths.into_iter().flatten() {
+                    let requirements = request_requirements(config.as_deref(), backend, fetches);
                     if let Some(response) =
                         apply_rim_decision(state, &ctx, &path, backend, &requirements).await
                     {

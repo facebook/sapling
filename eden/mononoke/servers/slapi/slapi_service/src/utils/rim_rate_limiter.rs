@@ -53,6 +53,42 @@ pub(crate) fn workload_tenancy_path(
     .into_vec()
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum FetchResource {
+    Files,
+    Trees,
+}
+
+pub(crate) fn request_requirements(
+    config: Option<&RimWorkloadConfig>,
+    backend: RimBackend,
+    fetches: Option<(FetchResource, u32)>,
+) -> HashMap<String, f64> {
+    let cost = config
+        .filter(|config| config.allocation_backends.contains(&backend.0))
+        .and_then(|config| config.request_cost.as_ref());
+    if let Some(cost) = cost {
+        let fetch_cost = match fetches {
+            Some((FetchResource::Files, count)) => f64::from(cost.file) * f64::from(count),
+            Some((FetchResource::Trees, count)) => f64::from(cost.tree) * f64::from(count),
+            None => 0.0,
+        };
+        return [("cost".to_owned(), f64::from(cost.request) + fetch_cost)].into();
+    }
+    let fetches = fetches.map(|(resource, count)| {
+        let resource = match resource {
+            FetchResource::Files => "file_fetches",
+            FetchResource::Trees => "tree_fetches",
+        };
+        (resource, f64::from(count))
+    });
+    [Some(("qps", 1.0)), fetches]
+        .into_iter()
+        .flatten()
+        .map(|(resource, units)| (resource.to_owned(), units))
+        .collect()
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum RimDecision {
     Allow,
@@ -187,10 +223,13 @@ mod tests {
     use metadata::Metadata;
     use mononoke_macros::mononoke;
     use permission_checker::TenantInfo;
+    use rate_limiting_config::RimRequestCost;
     use rate_limiting_config::RimWorkloadConfig;
 
+    use super::FetchResource;
     use super::WORKLOAD_CONFIG_PATH;
     use super::legacy_tenancy_path;
+    use super::request_requirements;
     use super::workload_config;
     use super::workload_tenancy_path;
 
@@ -212,6 +251,11 @@ mod tests {
                 } else {
                     Default::default()
                 },
+                request_cost: Some(RimRequestCost {
+                    request: version as i32,
+                    file: 2,
+                    tree: 1,
+                }),
                 named_workloads: if named {
                     [("unknown".to_owned(), ["unknown".to_owned()].into())].into()
                 } else {
@@ -232,6 +276,13 @@ mod tests {
                 (RimBackend::RIM_USE_CASE_79, Some("ldc")),
                 (RimBackend::MONONOKE_SERVER, None),
             ] {
+                let requirements = request_requirements(Some(&handle.get()), backend, None);
+                let expected_requirements = if grouped && backend != RimBackend::MONONOKE_SERVER {
+                    [("cost".to_owned(), version as f64)].into()
+                } else {
+                    [("qps".to_owned(), 1.0)].into()
+                };
+                assert_eq!(requirements, expected_requirements);
                 let path = Metadata::default().rim_tenancy_path(region);
                 let expected: Vec<_> = std::iter::once("root")
                     .chain(region)
@@ -259,6 +310,49 @@ mod tests {
             store.force_update_configs();
             assert_eq!(*handle.get(), config);
         }
+    }
+
+    #[mononoke::test]
+    fn request_cost_accounts_for_batches_and_preserves_legacy_backends() {
+        let mut config = RimWorkloadConfig {
+            allocation_backends: [RimBackend::RIM_USE_CASE_52.0, RimBackend::RIM_USE_CASE_79.0]
+                .into(),
+            request_cost: Some(RimRequestCost {
+                request: 14,
+                file: 2,
+                tree: 1,
+            }),
+            ..Default::default()
+        };
+        for backend in [RimBackend::RIM_USE_CASE_52, RimBackend::RIM_USE_CASE_79] {
+            for (fetches, expected) in [
+                (None, 14.0),
+                (Some((FetchResource::Files, 0)), 14.0),
+                (Some((FetchResource::Files, 4000)), 8014.0),
+                (Some((FetchResource::Trees, 4000)), 4014.0),
+                (Some((FetchResource::Files, u32::MAX)), 8589934604.0),
+            ] {
+                assert_eq!(
+                    request_requirements(Some(&config), backend, fetches),
+                    [("cost".to_owned(), expected)].into(),
+                );
+            }
+        }
+        let fetches = Some((FetchResource::Files, 4000));
+        let legacy = [("qps".to_owned(), 1.0), ("file_fetches".to_owned(), 4000.0)].into();
+        assert_eq!(
+            request_requirements(None, RimBackend::RIM_USE_CASE_52, fetches),
+            legacy
+        );
+        assert_eq!(
+            request_requirements(Some(&config), RimBackend::MONONOKE_SERVER, fetches),
+            legacy
+        );
+        config.request_cost = None;
+        assert_eq!(
+            request_requirements(Some(&config), RimBackend::RIM_USE_CASE_52, fetches),
+            legacy
+        );
     }
 
     #[mononoke::test]
