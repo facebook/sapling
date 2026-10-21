@@ -3389,7 +3389,12 @@ ImmediateFuture<Unit> TreeInode::doRename(
 
   // If the source and destination refer to exactly the same file,
   // then just succeed immediately.  Nothing needs to be done in this case.
-  if (locks.destChildExists() && srcEntry.getInode() == locks.destChild()) {
+  // On a case-insensitive mount the destination lookup also finds the source
+  // entry when only the spelling differs; that rename still has to change the
+  // stored name.
+  const bool sameEntry =
+      locks.destChildExists() && srcEntry.getInode() == locks.destChild();
+  if (sameEntry && destName.view() == locks.destChildIter()->first.view()) {
     return folly::unit;
   }
 
@@ -3437,8 +3442,13 @@ ImmediateFuture<Unit> TreeInode::doRename(
   // The child is used after the contents locks are released below, when an
   // unload or FORGET could otherwise destroy it. Hold a reference until then.
   auto childInode = srcEntry.getInodePtr();
-  bool destChildExists = locks.destChildExists();
-  if (destChildExists) {
+  const bool replacesDestChild = locks.destChildExists() && !sameEntry;
+  if (sameEntry) {
+    auto entry = std::move(srcIter->second);
+    locks.destContents()->erase(srcIter);
+    auto ret = locks.destContents()->emplace(destName, std::move(entry));
+    XCHECK(ret.second);
+  } else if (replacesDestChild) {
     // The reference held by locks keeps the destination alive, so
     // markUnlinked() never hands ownership back here; locks.reset() below
     // destroys the inode once every lock is released.
@@ -3465,7 +3475,7 @@ ImmediateFuture<Unit> TreeInode::doRename(
   // If the source and destination directory are the same, then modifying the
   // destination entries may have invalidated our source entry iterator, so we
   // have to look it up again.
-  if (destParent.get() == this) {
+  if (!sameEntry && destParent.get() == this) {
     srcIter = locks.srcContents()->find(srcName);
   }
 
@@ -3473,7 +3483,9 @@ ImmediateFuture<Unit> TreeInode::doRename(
   childInode->updateLocation(destParent, destName, locks.renameLock());
 
   // Now remove the source information
-  locks.srcContents()->erase(srcIter);
+  if (!sameEntry) {
+    locks.srcContents()->erase(srcIter);
+  }
 
   auto now = getNow();
   updateMtimeAndCtimeLocked(*locks.srcContents(), now);
@@ -3499,7 +3511,7 @@ ImmediateFuture<Unit> TreeInode::doRename(
   auto srcPath = getPath();
   auto destPath = destParent->getPath();
   if (srcPath.has_value() && destPath.has_value()) {
-    if (destChildExists) {
+    if (replacesDestChild) {
       getMount()->getJournal().recordReplaced(
           srcPath.value() + srcName,
           destPath.value() + destName,
