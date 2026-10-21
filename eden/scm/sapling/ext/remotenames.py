@@ -388,6 +388,10 @@ def expaths(orig, ui, repo, *args, **opts):
     """
     delete = opts.pop("delete", None)
     add = opts.pop("add", None)
+    if repo is None:
+        if add or delete:
+            raise error.Abort(_("@prog@ paths --add/--delete requires a repository"))
+        return orig(ui, repo, *args, **opts)
     configrepofile = repo.localvfs.join(ui.identity.configrepofile())
     if delete:
         rcutil.editconfig(ui, configrepofile, "paths", delete, None)

@@ -10,34 +10,37 @@ dereferences `repo.localvfs` before looking at any option.
   (use 'cd' to go to a directory inside a repository and try again)
   [255]
 
-BUG: listing paths outside a repository crashes with an uncaught AttributeError
-instead of behaving like the core command (print nothing / "not found!"):
+Listing paths outside a repository should behave like the core command (no
+paths configured: print nothing, exit 0; a NAME that is not configured: "not
+found!", exit 1):
 
-  $ hg paths 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
-  $ hg paths default 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
+  $ hg paths
+  $ hg paths default
+  not found!
+  [1]
 
-BUG: paths from the user config are not listed outside a repository either:
+Paths from the user config are listed outside a repository:
 
   $ setconfig paths.foo=http://x
-  $ hg paths 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
-  $ hg paths foo 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
-  $ hg paths -q 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
+  $ hg paths
+  foo = http://x/
+  $ hg paths foo
+  http://x/
+  $ hg paths -q
+  foo
 
-BUG: --add / --delete crash too, instead of a clean abort:
+--add / --delete need a repository config file, so they abort cleanly:
 
-  $ hg paths --add bar http://y 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
-  $ hg paths --delete foo 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
-  $ hg paths 2>&1 | grep -E '^AttributeError'
-  AttributeError: 'NoneType' object has no attribute 'localvfs'
+  $ hg paths --add bar http://y
+  abort: hg paths --add/--delete requires a repository
+  [255]
+  $ hg paths --delete foo
+  abort: hg paths --add/--delete requires a repository
+  [255]
+  $ hg paths
+  foo = http://x/
 
-Inside a repository everything works:
+Inside a repository nothing changes:
 
   $ newclientrepo repo
   $ hg paths -a bar http://y
