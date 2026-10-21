@@ -58,6 +58,7 @@ from sapling import (
     extensions,
     hintutil,
     lock as lockmod,
+    mdiff,
     patch,
     registrar,
     rewriteutil,
@@ -516,9 +517,16 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
 
         store = patch.mempatchstore(mergedctx)
         backend = patch.mempatchbackend(ui, mergedctx, store)
+        diff = patch.diff(
+            repo,
+            wctx.p1(),
+            wctx,
+            match=matcher,
+            opts=mdiff.diffopts(git=True),
+        )
         ret = patch.applydiff(
             ui,
-            io.BytesIO(b"".join(list(wctx.diff(match=matcher, opts=opts)))),
+            io.BytesIO(b"".join(diff)),
             backend,
             store,
         )

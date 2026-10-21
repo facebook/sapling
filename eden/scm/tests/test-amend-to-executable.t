@@ -113,7 +113,6 @@ Amend a content change across a descendant clearing the executable bit.
 
 Internal amend patches preserve permissions, paths, and whitespace despite diff
 preferences.
-FIXME: User diff settings must not silently discard mode and whitespace changes.
   $ newclientrepo
   $ setconfig diff.git=false diff.noprefix=true diff.ignorews=true
   $ echo 'one two' > file
@@ -122,8 +121,7 @@ FIXME: User diff settings must not silently discard mode and whitespace changes.
   $ echo 'one  two' > file
   $ sl amend --to .
   $ sl status
-  M file
   $ sl manifest -v
-  644   file
+  755 * file
   $ sl cat -r . file
-  one two
+  one  two
