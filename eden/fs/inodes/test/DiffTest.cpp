@@ -29,6 +29,8 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 using std::string;
+using ::testing::HasSubstr;
+using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 
@@ -668,6 +670,42 @@ void testResetReplaceFileWithDir(bool loadInodes) {
 TEST_F(DiffTestParam, resetReplaceFileWithDir) {
   testResetReplaceFileWithDir(true);
   testResetReplaceFileWithDir(false);
+}
+
+void testResetReplaceFileWithDirUnderMaterializedParent(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
+
+  DiffTest t{};
+  t.getMount().overwriteFile("src/1.txt", "This is src/1.txt, modified.\n");
+  auto b2 = t.getBuilder().clone();
+  b2.removeFile("src/a/b/3.txt");
+  b2.removeFile("src/a/b/c/4.txt");
+  b2.setFile("src/a", "a is now a file");
+
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
+  if (loadInodes) {
+    EXPECT_THAT(*result.errors(), UnorderedElementsAre());
+    EXPECT_THAT(
+        *result.entries(),
+        UnorderedElementsAre(
+            std::make_pair("src/1.txt", ScmFileStatus::MODIFIED),
+            std::make_pair("src/a/b/3.txt", ScmFileStatus::ADDED),
+            std::make_pair("src/a/b/c/4.txt", ScmFileStatus::ADDED),
+            std::make_pair("src/a", ScmFileStatus::REMOVED)));
+  } else {
+    EXPECT_THAT(
+        *result.errors(),
+        UnorderedElementsAre(Pair("src/a", HasSubstr("not found"))));
+    EXPECT_THAT(
+        *result.entries(),
+        UnorderedElementsAre(
+            std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
+  }
+}
+
+TEST_F(DiffTestParam, resetReplaceFileWithDirUnderMaterializedParent) {
+  testResetReplaceFileWithDirUnderMaterializedParent(true);
+  testResetReplaceFileWithDirUnderMaterializedParent(false);
 }
 
 // Test with a .gitignore file in the top-level directory
