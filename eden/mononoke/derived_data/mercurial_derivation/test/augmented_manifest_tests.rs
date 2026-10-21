@@ -745,10 +745,8 @@ async fn load_augmented_directory_envelopes<B: KeyedBlobstore + Clone + 'static>
 #[mononoke::fbinit_test]
 async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit) -> Result<()> {
     // Given: the same history, with an ACL restriction root, a copy, a
-    // deletion and a merge, in two repos. In the first, the manager derived
-    // every augmented manifest; while the canonical type depends on
-    // HgChangesets, that builds each one from its mapped Hg manifest and its
-    // parents. The second has none derived.
+    // deletion and a merge, in two repos. In the first, V2 derived every
+    // augmented manifest from Bonsai alone. The second has none derived.
     let ctx = CoreContext::test_mock(fb);
     let v2_repo: Repo = test_repo_factory::build_empty(fb).await?;
     let v2_csids = create_backfill_parity_history(&ctx, &v2_repo).await?;
@@ -756,14 +754,13 @@ async fn test_augmented_manifest_backfill_matches_v2_derivation(fb: FacebookInit
     v2_manager
         .derive_heads::<RootHgAugmentedManifestId>(ctx.clone(), vec![v2_csids[3]], None, None)
         .await?;
-    assert_eq!(
+    assert!(
         v2_repo
             .bonsai_hg_mapping()
             .get(&ctx, v2_csids.to_vec().into())
             .await?
-            .len(),
-        4,
-        "the manager derives HgChangesets before augmented manifests",
+            .is_empty(),
+        "V2 must derive from Bonsai, not from mapped Hg manifests",
     );
     let v2_roots = v2_manager
         .fetch_derived_batch::<RootHgAugmentedManifestId>(&ctx, v2_csids.to_vec(), None)

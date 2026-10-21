@@ -614,11 +614,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// chokepoint. Gated by the per-repo creation-time JustKnob; concurrency is
     /// bounded because the batch is client-controlled (S493741).
     ///
-    /// MUST run only AFTER the bonsai<->hg mapping is committed: deriving
-    /// `RootHgAugmentedManifestId` pulls in `MappedHgChangesetId`, which with no
-    /// stored mapping re-derives and stores Mononoke's own hg id, clobbering a
-    /// caller-supplied divergent id (e.g. null/empty-tree mirror commits from
-    /// `UploadIdenticalChangesets`).
+    /// MUST run only AFTER the bonsai<->hg mapping is committed: with no stored
+    /// mapping, `RootHgAugmentedManifestId` derives from Bonsai and produces
+    /// Mononoke's own hg tree, not a caller-supplied divergent one (e.g.
+    /// null/empty-tree mirror commits from `UploadIdenticalChangesets`).
     pub async fn ensure_uploaded_augmented_manifests_derived(
         &self,
         results: &[Result<(HgBlobChangeset, BonsaiChangeset), MononokeError>],

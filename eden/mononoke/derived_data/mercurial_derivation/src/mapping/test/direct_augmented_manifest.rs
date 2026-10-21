@@ -97,6 +97,50 @@ async fn derive_old_path_augmented_manifest_envelopes(
 }
 
 #[mononoke::fbinit_test]
+async fn test_augmented_manifest_manager_derivation_does_not_require_hgchangesets(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    // Given: a linear history with only the non-HgChangeset dependency prederived.
+    let (repo, root, child) = create_two_commit_repo(fb).await?;
+    let csids = vec![root, child];
+    let manager = repo.repo_derived_data().manager();
+    manager
+        .derive_exactly_batch::<RootAclManifestId>(&ctx, csids.clone(), None)
+        .await?;
+
+    // When: deriving through the manager.
+    manager
+        .derive_exactly_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+        .await?;
+
+    // Then: roots are stored and no HgChangeset mappings were created as a side effect.
+    let derived = manager
+        .fetch_derived_batch::<RootHgAugmentedManifestId>(&ctx, csids.clone(), None)
+        .await?;
+    for cs_id in csids {
+        let aug = derived
+            .get(&cs_id)
+            .with_context(|| format!("Missing RootHgAugmentedManifestId for {cs_id}"))?;
+        let env = load_aug_envelope(&ctx, &repo, aug).await?;
+        assert_eq!(
+            env.augmented_manifest.hg_node_id, env.augmented_manifest.computed_node_id,
+            "derivation should use a content-derived root when no canonical Hg mapping exists for {cs_id}",
+        );
+        assert!(
+            manager
+                .fetch_derived::<MappedHgChangesetId>(&ctx, cs_id, None)
+                .await?
+                .is_none(),
+            "manager derivation must not create MappedHgChangesetId for {cs_id}",
+        );
+    }
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
 async fn test_augmented_manifest_derive_single_without_hgchangeset_mapping_matches_old_path(
     fb: FacebookInit,
 ) -> Result<()> {

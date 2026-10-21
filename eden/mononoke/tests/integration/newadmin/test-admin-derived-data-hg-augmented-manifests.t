@@ -29,11 +29,11 @@ Then every root is published
   Derived: * (glob)
   Derived: * (glob)
 
-Then HgChangesets were derived first, because augmented manifests still depend on them
+Then derivation did not derive HgChangesets as a side effect
   $ mononoke_admin derived-data -R repo exists -T hgchangesets -i $A -i $B -i $C
-  Derived: * (glob)
-  Derived: * (glob)
-  Derived: * (glob)
+  Not Derived: * (glob)
+  Not Derived: * (glob)
+  Not Derived: * (glob)
 
 Then the published roots validate against a direct recomputation
   $ mononoke_admin derived-data -R repo verify-aug-direct --bookmark master --last 3 --batch-size 2 --concurrency 1 && echo success || echo failure

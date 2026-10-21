@@ -524,6 +524,7 @@ async fn run_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
 
 #[cfg(test)]
 mod tests {
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use fixtures::AclNestedDirectories;
     use fixtures::AugmentedManifestSuppliedRoot;
     use fixtures::AugmentedManifestSuppliedRootAcl;
@@ -695,9 +696,23 @@ mod tests {
     >(
         fb: FacebookInit,
     ) -> Result<()> {
-        // The canonical type still depends on HgChangesets, so canonical
-        // derivation creates mappings and takes the mapped-Hg branch.
-        verify_pipeline_first_then_canonical::<F>(fb, &AUGMENTED_MANIFEST_TYPES).await
+        let ctx = &CoreContext::test_mock(fb);
+        let (repo, commits) = verify_pipeline_first_then_canonical_with_repo::<F>(
+            fb,
+            &AUGMENTED_MANIFEST_TYPES,
+            false,
+        )
+        .await?;
+
+        assert!(
+            repo.bonsai_hg_mapping()
+                .get(ctx, commits.into())
+                .await?
+                .is_empty(),
+            "pipeline and canonical augmented manifest derivation should not create Bonsai-Hg mappings for {}",
+            F::REPO_NAME,
+        );
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
@@ -745,16 +760,30 @@ mod tests {
         fb: FacebookInit,
     ) -> Result<()> {
         // Given: commit A and its ancestors are derived only canonically.
+        let ctx = &CoreContext::test_mock(fb);
+
         // When: the pipeline starts at A's children with exactly ACL and augmented manifests.
+        let (repo, commits) =
+            verify_pipeline_matches_canonical_with_canonical_ancestors_and_repo::<
+                AugmentedManifestV2NoHgMapping,
+            >(
+                fb,
+                "A",
+                &AUGMENTED_MANIFEST_TYPES,
+                &AUGMENTED_MANIFEST_TYPES,
+            )
+            .await?;
+
         // Then: the pipeline extracts A's stage entries and remains
-        // canonical-equivalent. The canonical type still depends on
-        // HgChangesets, so canonical derivation creates Bonsai-Hg mappings.
-        verify_pipeline_matches_canonical_with_canonical_ancestors::<AugmentedManifestV2NoHgMapping>(
-            fb,
-            "A",
-            &AUGMENTED_MANIFEST_TYPES,
-        )
-        .await
+        // canonical-equivalent without creating a Bonsai-Hg mapping.
+        assert!(
+            repo.bonsai_hg_mapping()
+                .get(ctx, commits.into())
+                .await?
+                .is_empty(),
+            "canonical and pipeline augmented manifests should not create Bonsai-Hg mappings",
+        );
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
