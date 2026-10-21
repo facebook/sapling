@@ -49,6 +49,8 @@ use bookmarks_cache::ScopedBookmarksCache;
 use bookmarks_cache::WarmerRequirement;
 use bookmarks_types::Bookmark;
 use bookmarks_types::BookmarkKind;
+#[cfg(fbcode_build)]
+use bookmarks_types::BookmarkName;
 use bookmarks_types::BookmarkPagination;
 use bookmarks_types::BookmarkPrefix;
 use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
@@ -92,6 +94,10 @@ use mononoke_types::Timestamp;
 use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_event_publisher::ArcRepoEventPublisher;
+#[cfg(fbcode_build)]
+use repo_event_publisher::BookmarkCategory as EventRouterBookmarkCategory;
+#[cfg(fbcode_build)]
+use repo_event_publisher::BookmarkEventNotification;
 use repo_event_publisher::RepoEventPublisher;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
@@ -111,6 +117,57 @@ pub use warmers::create_public_phase_warmer;
 #[cfg(fbcode_build)]
 static WBC_INSTRUMENT: LazyLock<Instrument_MononokeWarmBookmarkCacheStats> =
     LazyLock::new(Instrument_MononokeWarmBookmarkCacheStats::new);
+
+#[cfg(fbcode_build)]
+struct ParsedBookmarkEventNotification {
+    key: BookmarkKey,
+    log_id: BookmarkUpdateLogId,
+    from_changeset_id: Option<ChangesetId>,
+    to_changeset_id: Option<ChangesetId>,
+}
+
+#[cfg(fbcode_build)]
+impl TryFrom<BookmarkEventNotification> for ParsedBookmarkEventNotification {
+    type Error = Error;
+
+    fn try_from(notification: BookmarkEventNotification) -> Result<Self, Self::Error> {
+        let category = if notification.bookmark_category == EventRouterBookmarkCategory::BRANCH {
+            BookmarkCategory::Branch
+        } else if notification.bookmark_category == EventRouterBookmarkCategory::TAG {
+            BookmarkCategory::Tag
+        } else if notification.bookmark_category == EventRouterBookmarkCategory::NOTE {
+            BookmarkCategory::Note
+        } else {
+            return Err(anyhow!(
+                "unknown EventRouter bookmark category {:?}",
+                notification.bookmark_category,
+            ));
+        };
+        let bookmark_name = BookmarkName::new(notification.bookmark_name)?;
+        let key = BookmarkKey::with_name_and_category(bookmark_name, category);
+        let log_id = BookmarkUpdateLogId::try_from(notification.log_id)
+            .context("bookmark notification has invalid log ID")?;
+        let from_changeset_id = notification
+            .from_changeset_id
+            .as_deref()
+            .map(ChangesetId::from_bytes)
+            .transpose()
+            .context("bookmark notification has invalid from-changeset ID")?;
+        let to_changeset_id = notification
+            .to_changeset_id
+            .as_deref()
+            .map(ChangesetId::from_bytes)
+            .transpose()
+            .context("bookmark notification has invalid to-changeset ID")?;
+
+        Ok(Self {
+            key,
+            log_id,
+            from_changeset_id,
+            to_changeset_id,
+        })
+    }
+}
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
@@ -1525,6 +1582,83 @@ impl BookmarksCoordinator {
         Ok(())
     }
 
+    #[cfg(fbcode_build)]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "wired into the EventRouter coordinator by the child diff"
+        )
+    )]
+    async fn update_from_notification(
+        &mut self,
+        ctx: &CoreContext,
+        notification: BookmarkEventNotification,
+    ) -> Result<(), Error> {
+        if notification.repo_id != self.repo.repo_identity().id().id() {
+            return Err(anyhow!(
+                "bookmark notification for repository ID {} was routed to repository ID {:?}",
+                notification.repo_id,
+                self.repo.repo_identity().id(),
+            ));
+        }
+        let ParsedBookmarkEventNotification {
+            key,
+            log_id,
+            from_changeset_id: _from_changeset_id,
+            to_changeset_id: _to_changeset_id,
+        } = notification.try_into()?;
+
+        if let Some(handle) = self.updaters_handles.remove(&key) {
+            handle
+                .await
+                .with_context(|| format!("joining existing updater for {key}"))?;
+            self.live_updaters
+                .with_write(|live_updaters| live_updaters.remove(&key));
+        }
+
+        let cached_log_id = self
+            .bookmarks
+            .with_read(|bookmarks| bookmarks.get(&key).and_then(BookmarkState::log_id));
+        if cached_log_id.is_some_and(|cached_log_id| log_id <= cached_log_id) {
+            return Ok(());
+        }
+
+        let prefix = BookmarkPrefix::new(key.name().as_str())?;
+        let mut bookmarks = self.repo.bookmarks().list(
+            ctx.clone(),
+            Freshness::MostRecent,
+            &prefix,
+            &[*key.category()],
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            1,
+        );
+        let current_bookmark = bookmarks
+            .try_next()
+            .await
+            .with_context(|| format!("reading current bookmark {key}"))?
+            .filter(|(bookmark, _)| bookmark.key() == &key);
+
+        match current_bookmark {
+            Some((bookmark, changeset_id)) => {
+                warm_bookmark_from_notification(ctx, &key, changeset_id, log_id, &self.warmers)
+                    .await?;
+                let mut state = BookmarkState::from_warmers(*bookmark.kind(), &self.warmers);
+                state.set_all_tracked(changeset_id);
+                state.set_log_id(log_id);
+                self.bookmarks.with_write(|bookmarks| {
+                    bookmarks.insert(key, state);
+                });
+            }
+            None => {
+                self.bookmarks
+                    .with_write(|bookmarks| bookmarks.remove(&key));
+            }
+        }
+        Ok(())
+    }
+
     // Loop that finds bookmarks that were modified and spawns separate bookmark updaters for them
     pub fn spawn(
         mut self,
@@ -1736,6 +1870,30 @@ impl BookmarkUpdaterState {
     }
 }
 
+#[cfg(fbcode_build)]
+async fn warm_bookmark_from_notification(
+    ctx: &CoreContext,
+    key: &BookmarkKey,
+    changeset_id: ChangesetId,
+    log_id: BookmarkUpdateLogId,
+    warmers: &[Warmer],
+) -> Result<(), Error> {
+    let ctx = ctx.clone().with_mutated_scuba(|mut scuba| {
+        scuba.add("bookmark", key.to_string());
+        scuba.add("bookmark_log_id", u64::from(log_id));
+        scuba.add("top_changeset", changeset_id.to_hex().to_string());
+        scuba
+    });
+    let (stats, result) = warm_all(&ctx, changeset_id, warmers).timed().await;
+    ctx.scuba()
+        .clone()
+        .add_future_stats(&stats)
+        .log_with_msg("After warming bookmark from notification", None);
+    result.with_context(|| {
+        format!("deriving data for {changeset_id} while updating {key} from notification")
+    })
+}
+
 async fn single_bookmark_updater(
     ctx: &CoreContext,
     repo: &(impl BookmarksRef + BookmarkUpdateLogRef),
@@ -1912,6 +2070,159 @@ mod tests {
         dyn RepoEventPublisher,
         FilestoreConfig,
     );
+
+    async fn bookmark_log_id(
+        ctx: &CoreContext,
+        repo: &Repo,
+        bookmark_name: &str,
+    ) -> Result<BookmarkUpdateLogId, Error> {
+        let key = BookmarkKey::new(bookmark_name)?;
+        let (log_id, _, _, _) = repo
+            .bookmark_update_log()
+            .list_bookmark_log_entries(ctx.clone(), key, 1, None, Freshness::MostRecent)
+            .try_next()
+            .await?
+            .with_context(|| format!("bookmark log entry for {bookmark_name} was not found"))?;
+        Ok(BookmarkUpdateLogId(log_id))
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    async fn test_update_from_notification_handles_create_move_and_delete(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let repo: Repo = Linear::get_repo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let bookmarks = repo
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (
+                    book.into_key(),
+                    test_bookmark_state_all_warmers(kind, cs_id),
+                )
+            })
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+        let warmers = Arc::new(vec![create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
+        )]);
+        let mut coordinator = BookmarksCoordinator::new(
+            bookmarks.clone(),
+            repo.bookmarks()
+                .create_subscription(&ctx, Freshness::MostRecent)
+                .await?,
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
+            warmers,
+        );
+
+        let first = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("first-notification", "first")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "master").set_to(first).await?;
+
+        let latest = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("latest-notification", "latest")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "master").set_to(latest).await?;
+        let move_log_id = bookmark_log_id(&ctx, &repo, "master").await?;
+
+        let notification = BookmarkEventNotification {
+            repo_id: repo.repo_identity().id().id(),
+            bookmark_name: "master".to_owned(),
+            bookmark_category: EventRouterBookmarkCategory::BRANCH,
+            log_id: i64::try_from(move_log_id)?,
+            from_changeset_id: Some(first.as_ref().to_vec()),
+            to_changeset_id: Some(latest.as_ref().to_vec()),
+            ..Default::default()
+        };
+        coordinator
+            .update_from_notification(&ctx, notification)
+            .await?;
+
+        let master_key = BookmarkKey::new("master")?;
+        assert_eq!(
+            bookmarks.with_read(|bookmarks| bookmarks.get(&master_key).cloned()),
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "master",
+                    BookmarkKind::PullDefaultPublishing,
+                    latest,
+                )
+                .await?,
+            )
+        );
+
+        let created = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("created-notification", "created")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "created")
+            .create_publishing(created)
+            .await?;
+        let create_log_id = bookmark_log_id(&ctx, &repo, "created").await?;
+        coordinator
+            .update_from_notification(
+                &ctx,
+                BookmarkEventNotification {
+                    repo_id: repo.repo_identity().id().id(),
+                    bookmark_name: "created".to_owned(),
+                    bookmark_category: EventRouterBookmarkCategory::BRANCH,
+                    log_id: i64::try_from(create_log_id)?,
+                    from_changeset_id: None,
+                    to_changeset_id: Some(created.as_ref().to_vec()),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        let created_key = BookmarkKey::new("created")?;
+        assert_eq!(
+            bookmarks.with_read(|bookmarks| bookmarks.get(&created_key).cloned()),
+            Some(
+                test_bookmark_state_all_warmers_with_latest_log_id(
+                    &ctx,
+                    &repo,
+                    "created",
+                    BookmarkKind::Publishing,
+                    created,
+                )
+                .await?,
+            )
+        );
+
+        bookmark(&ctx, &repo, "master").delete().await?;
+        let delete_log_id = bookmark_log_id(&ctx, &repo, "master").await?;
+        coordinator
+            .update_from_notification(
+                &ctx,
+                BookmarkEventNotification {
+                    repo_id: repo.repo_identity().id().id(),
+                    bookmark_name: "master".to_owned(),
+                    bookmark_category: EventRouterBookmarkCategory::BRANCH,
+                    log_id: i64::try_from(delete_log_id)?,
+                    from_changeset_id: Some(latest.as_ref().to_vec()),
+                    to_changeset_id: None,
+                    ..Default::default()
+                },
+            )
+            .await?;
+        assert_eq!(
+            bookmarks.with_read(|bookmarks| bookmarks.get(&master_key).cloned()),
+            None,
+        );
+        Ok(())
+    }
 
     #[mononoke::fbinit_test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
