@@ -495,7 +495,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
             monotonic_property(node.cs_id)
         };
 
-        while let Some(ancestors_frontier_extension) = self
+        while let Some((ancestors_frontier_extension, _)) = self
             .lower_frontier_step(ctx, &mut frontier, &monotonic_property, Prefetch::None)
             .await?
         {

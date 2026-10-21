@@ -889,14 +889,12 @@ pub async fn test_lower_frontier_batch_prefetch(
             );
             // Lowering F to A's generation batches E and K, then D and J,
             // then C and I, then B and H, as each merge adds its branch to
-            // the frontier.
-            // FIXME: every time the frontier grows, all the changesets above
-            // the target are scanned again, so this is 2 + 3 + 4 + 5 rather
-            // than the 8 changesets batched.
+            // the frontier.  Each is batched once however many times the
+            // frontier grows afterwards.
             assert_eq!(
                 ctx.perf_counters()
                     .get_counter(PerfCounterType::CommitGraphBatchPrefetchScanned),
-                14
+                8
             );
             Ok(())
         }

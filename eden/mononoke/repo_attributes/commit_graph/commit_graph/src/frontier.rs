@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::ops::Bound;
 
 use anyhow::Result;
@@ -115,14 +114,15 @@ impl<E: EdgeType> CommitGraphOps<E> {
     /// Repeatedly calling this function and concatenating the output will result
     /// in the frontier of changesets satisfying the property.
     ///
-    /// Returns None if the frontier is empty.
+    /// Returns None if the frontier is empty, and otherwise the changesets that
+    /// satisfy the property along with the nodes newly added to the frontier.
     pub(crate) async fn lower_frontier_step<Property, Out>(
         &self,
         ctx: &CoreContext,
         frontier: &mut ChangesetFrontier,
         property: Property,
         prefetch: Prefetch,
-    ) -> Result<Option<Vec<ChangesetId>>>
+    ) -> Result<Option<(Vec<ChangesetId>, Vec<ChangesetNode>)>>
     where
         Property: Fn(&ChangesetNode) -> Out + Send + Sync,
         Out: Future<Output = Result<bool>>,
@@ -163,20 +163,24 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     .await?;
 
                 let mut property_frontier: Vec<_> = Default::default();
+                let mut added = Vec::new();
 
                 for (property_match, next_nodes) in decisions {
                     if let Some(cs_id) = property_match {
                         property_frontier.push(cs_id);
                     }
                     for node in next_nodes {
-                        frontier
+                        if frontier
                             .entry(node.generation::<E>())
                             .or_default()
-                            .insert(node.cs_id);
+                            .insert(node.cs_id)
+                        {
+                            added.push(node);
+                        }
                     }
                 }
 
-                Ok(Some(property_frontier))
+                Ok(Some((property_frontier, added)))
             }
         }
     }
@@ -232,18 +236,33 @@ impl<E: EdgeType> CommitGraphOps<E> {
             ctx.client_request_info().map(|c| c.correlator.as_str()),
             Some(self.storage.repo_name()),
         );
-        let mut above_target_count = 0;
-        let mut batched = HashSet::new();
+        // The number of changesets above the target, and the ones among them
+        // that haven't been batch prefetched, are kept up to date from what
+        // each step pops and adds.  Scanning the frontier for them instead
+        // would cost its size above the target on every step that grows it.
+        let mut above_target = 0;
+        let mut above_target_before = 0;
+        let mut unbatched: Vec<(ChangesetId, Generation)> = Vec::new();
+        if batch_prefetch {
+            unbatched.extend(
+                frontier
+                    .range((Bound::Excluded(target_generation), Bound::Unbounded))
+                    .flat_map(|(generation, cs_ids)| {
+                        cs_ids.iter().map(|cs_id| (*cs_id, *generation))
+                    }),
+            );
+            above_target = unbatched.len();
+        }
 
         loop {
             tokio::task::consume_budget().await;
 
-            let generation = match frontier.last_key_value() {
+            let (generation, popped) = match frontier.last_key_value() {
                 None => return Ok(()),
                 Some((generation, _)) if *generation <= target_generation => {
                     return Ok(());
                 }
-                Some((generation, _)) => *generation,
+                Some((generation, cs_ids)) => (*generation, cs_ids.len()),
             };
 
             // Whenever the frontier holds more changesets above the target
@@ -253,37 +272,53 @@ impl<E: EdgeType> CommitGraphOps<E> {
             // at different generations, and lowering them one generation at
             // a time would otherwise miss the cache once for each.
             if batch_prefetch {
-                let above_target =
-                    frontier.range((Bound::Excluded(target_generation), Bound::Unbounded));
-                let count: usize = above_target.clone().map(|(_, cs_ids)| cs_ids.len()).sum();
-                if count > 1 && count > above_target_count {
-                    let mut scanned = 0;
-                    let cs_ids: Vec<_> = above_target
-                        .flat_map(|(_, cs_ids)| cs_ids.iter().copied())
-                        .inspect(|_| scanned += 1)
-                        .filter(|cs_id| batched.insert(*cs_id))
+                if above_target > 1 && above_target > above_target_before {
+                    // Changesets popped since they were added have been
+                    // fetched by the step that popped them.
+                    let cs_ids: Vec<_> = unbatched
+                        .drain(..)
+                        .filter(|(cs_id, generation)| {
+                            frontier
+                                .get(generation)
+                                .is_some_and(|cs_ids| cs_ids.contains(cs_id))
+                        })
+                        .map(|(cs_id, _)| cs_id)
                         .collect();
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::CommitGraphBatchPrefetchScanned, scanned);
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::CommitGraphBatchPrefetchScanned,
+                        cs_ids.len() as i64,
+                    );
                     if !cs_ids.is_empty() {
                         self.storage
                             .fetch_many_edges(ctx, &cs_ids, prefetch_from(generation))
                             .await?;
                     }
                 }
-                above_target_count = count;
+                above_target_before = above_target;
             }
 
             let prefetch = prefetch_from(generation);
 
-            self.lower_frontier_step(
-                ctx,
-                frontier,
-                move |node| future::ready(Ok(node.generation::<E>() < target_generation)),
-                prefetch,
-            )
-            .watched()
-            .await?;
+            let step = self
+                .lower_frontier_step(
+                    ctx,
+                    frontier,
+                    move |node| future::ready(Ok(node.generation::<E>() < target_generation)),
+                    prefetch,
+                )
+                .watched()
+                .await?;
+
+            if batch_prefetch && let Some((_, added)) = step {
+                above_target -= popped;
+                for node in added {
+                    let generation = node.generation::<E>();
+                    if generation > target_generation {
+                        above_target += 1;
+                        unbatched.push((node.cs_id, generation));
+                    }
+                }
+            }
         }
     }
 
