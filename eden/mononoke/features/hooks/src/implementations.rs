@@ -18,6 +18,7 @@ pub(crate) mod block_invalid_symlinks;
 pub(crate) mod block_merge_commits;
 mod block_mixed_users_changes;
 pub(crate) mod block_new_bookmark_creations_by_name;
+mod block_noconflict_merge_commits;
 pub(crate) mod block_unannotated_tags;
 pub(crate) mod block_unclean_merge_commits;
 pub(crate) mod deny_files;
@@ -103,6 +104,9 @@ pub async fn make_changeset_hook(
         )?)),
         "block_unclean_merge_commits" => Some(b(
             block_unclean_merge_commits::BlockUncleanMergeCommitsHook::new(&params.config)?,
+        )),
+        "block_noconflict_merge_commits" => Some(b(
+            block_noconflict_merge_commits::BlockNoconflictMergeCommitsHook::new(),
         )),
         "limit_submodule_edits" => Some(b(limit_submodule_edits::LimitSubmoduleEditsHook::new(
             &params.config,
