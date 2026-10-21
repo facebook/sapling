@@ -23,7 +23,7 @@ such as #foo_reviewers) crashes "{reviewers}".
   > 
   > Reviewers: alice #foo_reviewers"
   $ hg log -r . -T '{reviewers}\n' 2>&1 | grep -E '^(TypeError|alice)'
-  TypeError: 'str' object is not callable
+  alice #foo_reviewers
   $ hg log -r . -T '{reviewers % "- {reviewer}\n"}' 2>&1 | grep -E '^(TypeError|- )'
   - alice
   - #foo_reviewers
