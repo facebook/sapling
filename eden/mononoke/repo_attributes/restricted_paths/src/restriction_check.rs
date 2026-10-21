@@ -783,7 +783,7 @@ async fn has_repo_region_acls_for_action(
 /// Check whether the caller is a member of the given group identity, if one is
 /// configured. Returns `false` when no group is set — an absent group never
 /// grants access.
-async fn is_in_optional_group(
+pub(crate) async fn is_in_optional_group(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     group: Option<&MononokeIdentity>,

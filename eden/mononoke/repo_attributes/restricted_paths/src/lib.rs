@@ -52,6 +52,7 @@ use crate::restriction_check::SharedFetchHandle;
 use crate::restriction_check::SourceRestrictionCheck;
 pub use crate::restriction_check::check_path_restriction_infos;
 pub use crate::restriction_check::has_maintainer_access_to_repo_region;
+use crate::restriction_check::is_in_optional_group;
 pub use crate::restriction_info::ManifestRestrictionInfo;
 pub use crate::restriction_info::PathRestrictionInfo;
 
@@ -440,7 +441,8 @@ impl RestrictedPaths {
     /// # COVERED
     /// - Explicit add / modify / delete of files whose basename equals
     ///   `acl_file_name` (typically `.slacl`).
-    /// - Stack-internal add-then-modify of the same `.slacl` path.
+    /// - Stack-internal add-then-modify of the same `.slacl` path, unless the
+    ///   caller is an admin bypass member.
     ///
     /// # NOT COVERED (deliberately, for performance)
     /// - **Implicit `.slacl` deletes** (e.g., a file added at `secret`
@@ -504,12 +506,21 @@ impl RestrictedPaths {
             .collect();
 
         // 4. Track dirs touched by earlier stack entries — block
-        //    add-then-modify of the same .slacl in a single stack.
+        //    add-then-modify of the same .slacl in a single stack. Admin
+        //    bypass members are exempt, so source control engineers are
+        //    never blocked (e.g. while fixing a SEV); maintainers are not.
         let mut dirs_touched_in_stack: BTreeSet<MPath> = BTreeSet::new();
 
         for touched_dirs in &acl_file_dirs_stack {
             for dir_path in touched_dirs {
-                if dirs_touched_in_stack.contains(dir_path) {
+                if dirs_touched_in_stack.contains(dir_path)
+                    && !is_in_optional_group(
+                        ctx,
+                        self.acl_provider(),
+                        self.config().admin_bypass_group.as_ref(),
+                    )
+                    .await?
+                {
                     return Err(AclFileChangeRejection::ModifiedEarlierInStack {
                         dir: dir_path.clone(),
                     }

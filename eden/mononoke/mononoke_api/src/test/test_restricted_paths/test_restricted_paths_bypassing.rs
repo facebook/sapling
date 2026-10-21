@@ -600,10 +600,41 @@ async fn test_admin_bypass_stack_add_then_modify_nested_slacl(fb: FacebookInit) 
             "stack C1: add nested .slacl (admin bypass)",
             "stack C2: modify nested .slacl (admin bypass)",
         ],
-        // FIXME(T255927050): admin bypass group members must be allowed through
-        // the stack rule too. It rejects C2 before C2's permission check runs,
-        // so it rejects even callers who pass that check (maintainers and
-        // bypass members); flip to `ExpectedOutcome::Allowed` once fixed.
+        ExpectedOutcome::Allowed,
+    )
+    .await
+}
+
+/// What it tests: a maintainer of the restricting ACL creates a stack that
+/// adds a nested `.slacl` under a restricted directory and modifies it again
+/// in the next changeset.
+/// Expected: blocked by the one-change-per-`.slacl`-per-stack rule — only
+/// admin bypass group members are exempt from it, not maintainers.
+#[mononoke::fbinit_test]
+async fn test_maintainer_stack_add_then_modify_nested_slacl_blocked(
+    fb: FacebookInit,
+) -> Result<()> {
+    let repo = build_restricted_dir_repo(fb).await?;
+
+    let c1_changes = BTreeMap::from([(
+        MPath::try_from("restricted/subdir/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT), None),
+    )]);
+    let c2_changes = BTreeMap::from([(
+        MPath::try_from("restricted/subdir/.slacl")?,
+        CreateChange::Tracked(CreateChangeFile::new_regular(SLACL_CONTENT_2), None),
+    )]);
+
+    run_stack_changeset_test(
+        fb,
+        "maintainer_user",
+        repo,
+        &[("restricted/.slacl", SLACL_CONTENT)],
+        vec![c1_changes, c2_changes],
+        vec![
+            "stack C1: add nested .slacl (maintainer)",
+            "stack C2: modify nested .slacl (maintainer)",
+        ],
         ExpectedOutcome::Blocked("already modified by an earlier changeset in this stack"),
     )
     .await
