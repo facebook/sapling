@@ -587,6 +587,66 @@ fn test_validate_github_mirror_request_shape() {
         ..mirror_request("o/r", None)
     };
     assert!(refusal(&with_custom_acl, 1).contains("cannot be combined"));
+
+    let org_acl = thrift::RepoCreationRequest {
+        org_acl: Some(thrift::OrgAclParams {
+            oncall_name: "team_a".to_string(),
+            maintainers: vec![acl_identity(AUTH_SET, "scm")],
+            writers: vec![],
+            ..Default::default()
+        }),
+        ..mirror_request("testorg/repo", None)
+    };
+    assert!(
+        validate_github_mirror_request_shape(&org_acl, 2).is_ok(),
+        "a batch of mirrors may ask for a missing org ACL to be created",
+    );
+    let own_acl_and_org_acl = thrift::RepoCreationRequest {
+        org_acl: org_acl.org_acl.clone(),
+        ..mirror_request("testorg/repo", Some("team_a"))
+    };
+    assert!(
+        refusal(&own_acl_and_org_acl, 1).contains("org_acl does not apply"),
+        "a repo with its own ACL does not inherit the org ACL",
+    );
+}
+
+#[cfg(fbcode_build)]
+#[mononoke::test]
+fn test_org_acl_grants_carry_the_sync_grants_only_for_mirrors() {
+    let maintainers = [hipster_identity(AUTH_SET, "scm")];
+    let sync = (
+        SANDCASTLE_TAG.to_string(),
+        GITHUB_MIRROR_SYNC_TAG.to_string(),
+    );
+
+    let mirror = org_acl_grants(&maintainers, &[], true);
+    for action in GITHUB_MIRROR_SYNC_ACTIONS {
+        assert!(
+            grant_entries(&mirror, action).contains(&sync),
+            "every mirror in the org inherits this ACL, so the sync needs {action} on it",
+        );
+    }
+    assert_eq!(
+        mirror.iter().filter(|g| g.action == "write").count(),
+        1,
+        "the sync's write lands on the standard write grant",
+    );
+    assert_eq!(
+        grant_entries(&mirror, "maintainers"),
+        vec![(AUTH_SET.to_string(), "scm".to_string())],
+        "the maintainers stay exactly the requested ones",
+    );
+
+    let plain = org_acl_grants(&maintainers, &[], false);
+    assert!(
+        plain.iter().all(|g| g.action != "write_no_hooks"
+            && !g
+                .entry_changes
+                .iter()
+                .any(|e| e.entry.id_data == GITHUB_MIRROR_SYNC_TAG)),
+        "an org ACL for ordinary repos gets no sync grants",
+    );
 }
 
 #[mononoke::test]

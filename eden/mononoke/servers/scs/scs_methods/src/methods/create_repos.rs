@@ -615,9 +615,9 @@ fn oncall_group_identity(oncall: &str) -> Identity {
     hipster_identity(ONCALL_GROUP_TYPE, &format!("oncall_{oncall}"))
 }
 
-/// Every (action, identity) a GitHub mirror's own ACL must hold.
+/// Every (action, identity) the sync needs on the ACL its repo uses.
 #[cfg(fbcode_build)]
-fn required_github_mirror_entries(oncall: &str) -> Vec<(&'static str, Identity)> {
+fn github_mirror_sync_entries() -> Vec<(&'static str, Identity)> {
     GITHUB_MIRROR_SYNC_ACTIONS
         .iter()
         .map(|action| {
@@ -626,6 +626,14 @@ fn required_github_mirror_entries(oncall: &str) -> Vec<(&'static str, Identity)>
                 hipster_identity(SANDCASTLE_TAG, GITHUB_MIRROR_SYNC_TAG),
             )
         })
+        .collect()
+}
+
+/// Every (action, identity) a GitHub mirror's own ACL must hold.
+#[cfg(fbcode_build)]
+fn required_github_mirror_entries(oncall: &str) -> Vec<(&'static str, Identity)> {
+    github_mirror_sync_entries()
+        .into_iter()
         .chain([("read", oncall_group_identity(oncall))])
         .collect()
 }
@@ -638,9 +646,22 @@ fn github_mirror_acl_grants(oncall: &str) -> Vec<AclPermissionChange> {
         oncall_group_identity(oncall),
         hipster_identity(AUTH_SET, "scm"),
     ];
-    required_github_mirror_entries(oncall).into_iter().fold(
+    with_entries(
         initial_acl_grants(&maintainers, &[]),
-        |mut grants, (action, entry)| {
+        required_github_mirror_entries(oncall),
+    )
+}
+
+/// `grants` plus each (action, identity), under the action's existing grant
+/// when there is one.
+#[cfg(fbcode_build)]
+fn with_entries(
+    grants: Vec<AclPermissionChange>,
+    entries: Vec<(&'static str, Identity)>,
+) -> Vec<AclPermissionChange> {
+    entries
+        .into_iter()
+        .fold(grants, |mut grants, (action, entry)| {
             let entry = EntryChange {
                 entry,
                 operation: ChangeOperation::ADD,
@@ -656,8 +677,7 @@ fn github_mirror_acl_grants(oncall: &str) -> Vec<AclPermissionChange> {
                 }),
             }
             grants
-        },
-    )
+        })
 }
 
 /// The required entries an existing ACL lacks, as `action:TYPE:data`.
@@ -989,8 +1009,10 @@ fn validate_github_mirror_request_shape(
     let Some(github_mirror) = &request.github_mirror else {
         return Ok(());
     };
-    let refusal = if request.custom_acl.is_some() || request.org_acl.is_some() {
-        "github_mirror cannot be combined with custom_acl or org_acl"
+    let refusal = if request.custom_acl.is_some() {
+        "github_mirror cannot be combined with custom_acl"
+    } else if request.org_acl.is_some() && github_mirror.maintainer_oncall.is_some() {
+        "github_mirror.maintainer_oncall gives the repo its own ACL, so org_acl does not apply"
     } else if request.readonly == Some(false) {
         "a GitHub mirror is always read-only; omit readonly"
     } else if github_mirror.maintainer_oncall.is_some() && batch_size > 1 {
@@ -1027,6 +1049,22 @@ async fn ensure_github_mirror_acl(
         missing.join(", ")
     ))
     .into())
+}
+
+/// The grants of a new org ACL. A mirror inherits it, so it also carries the
+/// sync's grants: without them the repos are created and never sync.
+#[cfg(fbcode_build)]
+fn org_acl_grants(
+    maintainers: &[Identity],
+    writers: &[Identity],
+    is_mirror: bool,
+) -> Vec<AclPermissionChange> {
+    let grants = initial_acl_grants(maintainers, writers);
+    if is_mirror {
+        with_entries(grants, github_mirror_sync_entries())
+    } else {
+        grants
+    }
 }
 
 /// The repo inherits `repos/git/<org>`; create it from `org_acl` when it is
@@ -1078,13 +1116,12 @@ async fn ensure_top_level_acl(
             .into());
         }
     }
-    if let Err(e) = create_repo_acl(
-        ctx.clone(),
-        &acl_name,
-        &org_acl.oncall_name,
-        initial_acl_grants(&maintainers, &writers),
-    )
-    .await
+    let grants = org_acl_grants(
+        &maintainers,
+        &writers,
+        repo_creation_request.github_mirror.is_some(),
+    );
+    if let Err(e) = create_repo_acl(ctx.clone(), &acl_name, &org_acl.oncall_name, grants).await
         && try_fetching_repo_acl(ctx, &acl_name).await?.is_none()
     {
         return Err(e);
