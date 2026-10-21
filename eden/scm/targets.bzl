@@ -28,6 +28,15 @@ def debugcas_enabled():
     """Whether `sl.debugcas` adds `debugcas`, which links the C++ CAS client."""
     return read_bool("sl", "debugcas", False) and not rust_oss.is_oss_build()
 
+def sl_cas_select(values):
+    """Values for internal Linux builds of Sapling, which link the native CASd client."""
+    if rust_oss.is_oss_build():
+        return []
+    return select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": values,
+    })
+
 def edenfs_cas_select(values):
     if rust_oss.is_oss_build():
         return []

@@ -116,6 +116,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     let scenario = failpoint::setup_fail_points();
     constructors::init();
+    #[cfg(all(feature = "cas", fbcode_build))]
+    casd_native_client::register();
 
     // This is intended to be "process start". Since run_command is very close
     // to process start, it should reflect the duration of the command
