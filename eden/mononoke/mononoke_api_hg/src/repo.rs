@@ -24,7 +24,7 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
-use cacheblob::MemWritesBlobstore;
+use cacheblob::MemWritesKeyedBlobstore;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -519,10 +519,11 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// A tree whose child is neither in the batch nor already derived is an
     /// error: the batch builds completely or not at all.
     ///
-    /// Until `scm/mononoke:store_augmented_manifests_at_tree_upload` is on for
-    /// the repo, no envelope is written, and the build's own writes (large
-    /// directory shards, ACL nodes) land in a `MemWritesBlobstore` overlay that
-    /// dies with this call.
+    /// Everything the build writes (large directory shards, ACL nodes) and the
+    /// envelopes themselves go to an in-memory overlay above the repo
+    /// blobstore. Until `scm/mononoke:store_augmented_manifests_at_tree_upload`
+    /// is on for the repo the overlay dies with this call; once it is on it is
+    /// written out in one concurrent pass.
     ///
     /// Once it is on the writes are permanent: the key is the hg manifest id
     /// alone and the put is if-absent, so a wrong envelope cannot be corrected
@@ -533,15 +534,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         trees: Vec<HgManifestEnvelope>,
     ) -> Result<Vec<UploadTreeAugmented>, Error> {
         let store = self.stores_augmented_manifests_at_tree_upload();
-        let repo_blobstore = if store {
-            self.repo().repo_blobstore().clone()
-        } else {
-            RepoBlobstore::new_with_wrapped_inner_blobstore(
-                self.repo().repo_blobstore().clone(),
-                |inner| Arc::new(MemWritesBlobstore::new(inner)),
-            )
-        };
-        let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(repo_blobstore);
+        // Above the repo blobstore, so a buffered write is a plain insert: the
+        // if-absent check happens once, in the real store, when it is persisted.
+        let overlay = Arc::new(MemWritesKeyedBlobstore::new(
+            self.repo().repo_blobstore().clone(),
+        ));
+        let blobstore: Arc<dyn KeyedBlobstore> = overlay.clone();
         let restricted_paths = self.repo().restricted_paths_arc();
         let built = build_augmented_manifests_for_uploaded_trees(
             self.ctx(),
@@ -552,6 +550,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         .await?;
         if store {
             store_uploaded_tree_envelopes(self.ctx(), &blobstore, &built).await?;
+            overlay.persist(self.ctx()).await?;
         }
         Ok(built)
     }
