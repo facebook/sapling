@@ -4323,7 +4323,7 @@ TreeInode::prepareDeferredDiffEntries(
         if (exactMatch) {
           // This file or directory is unchanged.  We can skip it.
           XLOGF(DBG9, "diff: unchanged unloaded file: {}", entryPath);
-        } else if (inodeEntry->isDirectory()) {
+        } else if (inodeEntry->isDirectory() && scmEntry.isTree()) {
           // This is a modified directory. Since it is not materialized we can
           // directly compare the source control objects.
 
@@ -4335,6 +4335,22 @@ TreeInode::prepareDeferredDiffEntries(
                   entryPath,
                   scmEntry.getObjectId(),
                   inodeEntry->getObjectId()));
+        } else if (inodeEntry->isDirectory()) {
+          if (entryIgnored) {
+            if (context->listIgnored) {
+              XLOGF(DBG6, "diff: file --> ignored directory: {}", entryPath);
+              context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
+            }
+          } else {
+            XLOGF(DBG6, "diff: file --> untracked directory: {}", entryPath);
+            context->callback->addedPath(entryPath, inodeEntry->getDtype());
+          }
+          context->callback->removedPath(entryPath, scmEntry.getDtype());
+          if (!entryIgnored || context->listIgnored) {
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createAddedScmEntry(
+                    context, entryPath, inodeEntry->getObjectId()));
+          }
         } else if (scmEntry.isTree()) {
           // This used to be a directory in the source control state,
           // but is now a file or symlink.  Report the new file, then add a
