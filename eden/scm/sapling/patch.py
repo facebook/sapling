@@ -1631,7 +1631,7 @@ class binhunk:
     def __init__(self, lr, fname):
         self.text = None
         self.delta = False
-        self.hunk = ["GIT binary patch\n"]
+        self.hunk = [b"GIT binary patch\n"]
         self._fname = fname
         self._read(lr)
 

@@ -1,9 +1,6 @@
 #require no-eden
 
-Rejecting a GIT binary hunk crashes `hg import` with a TypeError instead of
-writing the .rej file (binhunk's "GIT binary patch" header is a str; every
-other line in `lines` is bytes, and the .rej is opened as a binary file).
-Traceback line numbers vary, so only the stable lines are asserted.
+A rejected GIT binary hunk must be saved to the .rej file, like a text hunk.
 
   $ newclientrepo
   $ echo text > text
@@ -17,37 +14,51 @@ Traceback line numbers vary, so only the stable lines are asserted.
   Vc${O1F^n;aF;2?NODwA70stK11Udi!
 
 The patch creates "bin", but an untracked "bin" already exists: the binary
-hunk is rejected. The process crashes right after announcing the .rej, and
-the .rej is left behind empty.
+hunk is rejected and written to bin.rej.
 
   $ hg up -q 'desc(text)'
   $ printf 'other' > bin
-  $ hg import --no-commit $TESTTMP/bin.patch > $TESTTMP/out 2>&1
-  [1]
-  $ grep -E '^(applying|file bin|1 out of|\*\* Sapling|TypeError)' $TESTTMP/out
+  $ hg import --no-commit $TESTTMP/bin.patch
   applying $TESTTMP/bin.patch
   file bin already exists
   1 out of 1 hunks FAILED -- saving rejects to file bin.rej
-  ** Sapling SCM (version *) has crashed: (glob)
-  TypeError: a bytes-like object is required, not 'str'
-  $ wc -c < bin.rej
-  0
+  abort: patch failed to apply
+  [255]
+  $ cat bin.rej
+  --- bin
+  +++ bin
+  GIT binary patch
+  literal 14
+  Vc${O1F^n;aF;2?NODwA70stK11Udi!
   $ cat bin
   other (no-eol)
 
-Same with --partial.
+The .rej is a valid patch again: once the conflicting file is gone it applies.
 
-  $ rm bin.rej
-  $ hg import --partial $TESTTMP/bin.patch > $TESTTMP/out 2>&1
-  [1]
-  $ grep -E '^(applying|file bin|1 out of|\*\* Sapling|TypeError|patch applied)' $TESTTMP/out
+  $ rm bin bin.rej
+  $ hg import --no-commit $TESTTMP/bin.patch
+  applying $TESTTMP/bin.patch
+  $ hg st
+  A bin
+
+Same with --partial: exit 1, partial commit, bin.rej written.
+
+  $ hg revert -qa
+  $ rm bin
+  $ printf 'other' > bin
+  $ hg import --partial $TESTTMP/bin.patch
   applying $TESTTMP/bin.patch
   file bin already exists
   1 out of 1 hunks FAILED -- saving rejects to file bin.rej
-  ** Sapling SCM (version *) has crashed: (glob)
-  TypeError: a bytes-like object is required, not 'str'
-  $ wc -c < bin.rej
-  0
+  patch applied partially
+  (fix the .rej files and run `hg commit --amend`)
+  [1]
+  $ cat bin.rej
+  --- bin
+  +++ bin
+  GIT binary patch
+  literal 14
+  Vc${O1F^n;aF;2?NODwA70stK11Udi!
 
 The other reject path for a binary hunk: the target file is missing (-p 2
 strips the directory, so the patch names a file that does not exist).
@@ -60,13 +71,16 @@ strips the directory, so the patch names a file that does not exist).
   $ hg ci -qm change
   $ hg export --git -r . > $TESTTMP/change.patch
   $ hg up -q 'desc(bin)'
-  $ hg import --no-commit -p 2 $TESTTMP/change.patch > $TESTTMP/out 2>&1
-  [1]
-  $ grep -E "^(applying|unable to find|1 out of|\*\* Sapling|TypeError)" $TESTTMP/out
+  $ hg import --no-commit -p 2 $TESTTMP/change.patch
   applying $TESTTMP/change.patch
   unable to find 'bin' for patching
+  (use '--prefix' to apply patch relative to the current directory)
   1 out of 1 hunks FAILED -- saving rejects to file bin.rej
-  ** Sapling SCM (version *) has crashed: (glob)
-  TypeError: a bytes-like object is required, not 'str'
-  $ wc -c < bin.rej
-  0
+  abort: patch failed to apply
+  [255]
+  $ cat bin.rej
+  --- bin
+  +++ bin
+  GIT binary patch
+  literal 15
+  Wc${O1F^n;aF;31%%u7#A;Q|05W(0o#
