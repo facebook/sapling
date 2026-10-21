@@ -769,6 +769,7 @@ struct InodeMapStats : StatsGroup<InodeMapStats> {
   Counter lookupTreeInodeMiss{"inode_map.lookup_tree_inode_miss"};
   Counter lookupBlobInodeMiss{"inode_map.lookup_blob_inode_miss"};
   Counter lookupInodeError{"inode_map.lookup_inode_error"};
+  Counter forgetUnknownInode{"inode_map.forget_unknown_inode"};
 };
 
 struct InodeMetadataTableStats : StatsGroup<InodeMetadataTableStats> {

@@ -795,6 +795,17 @@ InodePtr InodeMap::decFsRefcountHelper(
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
     stats_->increment(&InodeMapStats::lookupInodeError);
+    if (mount_->throwEstaleIfInodeIsMissing()) {
+      // Userspace FS peers (NFS, FSKit) can send forgets that violate the
+      // reference contract in ways a kernel client cannot; a misbehaving
+      // peer must never be able to abort the daemon. There is no reply to
+      // a FORGET, so tolerating means ignoring it.
+      stats_->increment(&InodeMapStats::forgetUnknownInode);
+      XLOG_EVERY_MS(WARN, 60000) << fmt::format(
+          "ignoring FORGET for unknown inode {} from userspace FS peer",
+          number);
+      return nullptr;
+    }
     EDEN_BUG() << "InodeMap::decFsRefcount() called on unknown inode number "
                << number;
   }
