@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Set
 from unittest import mock
 
 from eden.fs.cli import mtab
+from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor import check_stale_mounts
 from eden.fs.cli.util import poll_until_async
 from eden.fs.service.eden.thrift_clients import EdenService
@@ -406,6 +407,57 @@ class MountTest(testcase.EdenRepoTest):
         self.assertEqual(
             {self.mount: "RUNNING", str(checkout_path): "NOT_RUNNING"},
             self.eden.list_cmd_simple(),
+        )
+
+    def _assert_start_reports_mount_failure(
+        self, failed_mount: Path, expected_error: str
+    ) -> None:
+        startup_log = Path(self.tmp_dir) / "startup.log"
+        self.eden.start(extra_args=["--startupLogPath", str(startup_log)])
+        output = startup_log.read_text()
+        print(output)
+
+        self.assertTrue(self.eden.is_healthy(), output)
+        self.assertEqual(
+            MountState.RUNNING, self.eden.get_mount_state(self.mount_path), output
+        )
+        self.assert_checkout_root_entries(self.expected_mount_entries)
+        self.assertEqual("hola\n", (self.mount_path / "hello").read_text())
+        self.assertIsNone(self.eden.get_mount_state(failed_mount), output)
+        with self.eden.get_thrift_client() as client:
+            self.assertEqual(1, client.getCounter("startup_mount_failures"), output)
+
+        self.assertEqual(1, output.count(f"Failed to remount {failed_mount}: "), output)
+        self.assertIn(expected_error, output)
+        self.assertIn(f"Successfully remounted {self.mount}", output)
+
+    def test_start_reports_backing_store_construction_failure(self) -> None:
+        failed_mount = Path(self.mounts_dir) / "missing_repo_checkout"
+        self.eden.clone(self.repo.path, str(failed_mount))
+        self.eden.shutdown()
+
+        instance = EdenInstance(
+            self.eden_dir, etc_eden_dir=self.etc_eden_dir, home_dir=self.home_dir
+        )
+        checkout = EdenCheckout(
+            instance, failed_mount, self.eden.client_dir_for_mount(failed_mount)
+        )
+        missing_repo = Path(self.repos_dir) / "missing_repo"
+        checkout.save_config(checkout.get_config()._replace(backing_repo=missing_repo))
+
+        self._assert_start_reports_mount_failure(
+            failed_mount, f"realpath({missing_repo.as_posix()}) failed"
+        )
+
+    def test_start_reports_checkout_config_failure(self) -> None:
+        failed_mount = Path(self.mounts_dir) / "missing_config_checkout"
+        self.eden.clone(self.repo.path, str(failed_mount))
+        self.eden.shutdown()
+        config_path = self.eden.client_dir_for_mount(failed_mount) / "config.toml"
+        config_path.unlink()
+
+        self._assert_start_reports_mount_failure(
+            failed_mount, f"{config_path} could not be opened for parsing"
         )
 
     async def test_start_with_mount_failures(self) -> None:

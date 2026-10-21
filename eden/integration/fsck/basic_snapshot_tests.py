@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from eden.fs.cli import cmd_util
+from eden.fs.service.eden.thrift_types import MountState
 from eden.integration.lib import edenclient, testcase
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot
@@ -335,6 +336,13 @@ class SnapshotTestBase(
         # pyrefly: ignore [bad-context-manager]
         with self.snapshot.edenfs(use_io_uring=self.use_io_uring()) as eden:
             eden.start()
+            mount_state = eden.get_mount_state(self.snapshot.checkout_path)
+            self.assertEqual(
+                MountState.RUNNING,
+                mount_state,
+                f"snapshot checkout {self.snapshot.checkout_path} is not RUNNING "
+                f"(state={mount_state!r})",
+            )
             verifier.verify_directory(
                 self.snapshot.checkout_path,
                 expected_files,
@@ -373,6 +381,12 @@ class Basic20251104Test(SnapshotTestBase):
 
     def get_fsck_log_dirs(self) -> List[Path]:
         return list((self._overlay_path().parent / "fsck").iterdir())
+
+    def test_verify_contents_requires_running_checkout(self) -> None:
+        (self._checkout_state_dir() / "config.toml").unlink()
+        message = f"snapshot checkout {self.snapshot.checkout_path} is not RUNNING"
+        with self.assertRaisesRegex(AssertionError, re.escape(message)):
+            self._verify_contents(self.snapshot.get_expected_files())
 
     def _verify_fsck(
         self,

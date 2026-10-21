@@ -1224,7 +1224,11 @@ void EdenServer::ProgressManager::printProgresses(
       break;
     }
   }
-  logger->logVerbose(prepare + content);
+  if (errorMessage.has_value()) {
+    logger->warn(prepare + content);
+  } else {
+    logger->logVerbose(prepare + content);
+  }
   totalLinesPrinted++;
 }
 
@@ -2143,45 +2147,49 @@ std::vector<ImmediateFuture<Unit>> EdenServer::prepareMounts(
   logger->log("Remounting ", dirs.size(), " mount points...");
 
   for (const auto& client : dirs.items()) {
+    const auto mountPath = client.first.asString();
+    std::optional<size_t> progressIndex;
     auto mountFuture = makeImmediateFutureWith([&] {
-      auto mountPath = canonicalPath(client.first.stringPiece());
       auto edenClientPath =
           edenDir_.getCheckoutStateDir(client.second.stringPiece());
-      auto initialConfig =
-          CheckoutConfig::loadFromClientDirectory(mountPath, edenClientPath);
-      auto progressIndex = progressManager_->wlock()->registerEntry(
+      auto initialConfig = CheckoutConfig::loadFromClientDirectory(
+          canonicalPath(mountPath), edenClientPath);
+      auto index = progressManager_->wlock()->registerEntry(
           client.first.asString(), initialConfig->getOverlayPath().c_str());
+      progressIndex = index;
 
       return mount(
-                 std::move(initialConfig),
-                 false,
-                 [this, logger, progressIndex](auto percent) {
-                   progressManager_->wlock()->manageProgress(
-                       logger, progressIndex, percent);
-                 })
-          .thenTry([this, logger, mountPath, progressIndex](
-                       folly::Try<std::shared_ptr<EdenMount>>&& result) {
-            if (result.hasValue()) {
-              auto wl = progressManager_->wlock();
-              wl->finishProgress(progressIndex);
-              wl->printProgresses(logger);
-              return ImmediateFuture<folly::Unit>{std::in_place};
-            } else {
-              incrementStartupMountFailures();
-              auto errorMessage = fmt::format(
-                  "Failed to remount {}: {}\n",
-                  mountPath.value(),
-                  result.exception().what());
-              XLOG(DBG7, errorMessage);
-              auto wl = progressManager_->wlock();
-              wl->markFailed(progressIndex);
-              wl->printProgresses(logger, errorMessage);
-              return makeImmediateFuture<Unit>(std::move(result).exception());
-            }
+          std::move(initialConfig), false, [this, logger, index](auto percent) {
+            progressManager_->wlock()->manageProgress(logger, index, percent);
           });
     });
 
-    mountFutures.push_back(std::move(mountFuture));
+    // The factory runs eagerly, so the optional index is ready to capture.
+    // Handle failures outside it to include config and mount construction
+    // errors.
+    mountFutures.push_back(
+        std::move(mountFuture)
+            .thenTry([this, logger, mountPath, progressIndex](
+                         folly::Try<std::shared_ptr<EdenMount>>&& result) {
+              if (result.hasValue()) {
+                auto wl = progressManager_->wlock();
+                wl->finishProgress(progressIndex.value());
+                wl->printProgresses(logger);
+                return ImmediateFuture<folly::Unit>{std::in_place};
+              } else {
+                incrementStartupMountFailures();
+                auto errorMessage = fmt::format(
+                    "Failed to remount {}: {}\n",
+                    mountPath,
+                    result.exception().what());
+                auto wl = progressManager_->wlock();
+                if (progressIndex.has_value()) {
+                  wl->markFailed(progressIndex.value());
+                }
+                wl->printProgresses(logger, errorMessage);
+                return makeImmediateFuture<Unit>(std::move(result).exception());
+              }
+            }));
   }
   return mountFutures;
 }
