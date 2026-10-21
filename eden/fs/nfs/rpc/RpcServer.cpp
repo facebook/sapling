@@ -136,6 +136,14 @@ RpcConnectionHandler::RpcConnectionHandler(
   proc_->clientConnected();
 }
 
+RpcConnectionHandler::~RpcConnectionHandler() {
+  // Destroying sock_ closes it, and closing a socket calls its read callback's
+  // readEOF(), which would run on this partly destroyed handler.
+  if (sock_) {
+    sock_->setReadCB(nullptr);
+  }
+}
+
 folly::SemiFuture<folly::Unit> RpcConnectionHandler::takeoverStop() {
   XLOG(DBG4, "Takeover requested: locking state to change the status");
   // note its essential that this runs inline with the pending requests

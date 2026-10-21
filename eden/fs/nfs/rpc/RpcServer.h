@@ -226,6 +226,11 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
   using UniquePtr = std::
       unique_ptr<RpcConnectionHandler, folly::DelayedDestruction::Destructor>;
 
+  RpcConnectionHandler(const RpcConnectionHandler&) = delete;
+  RpcConnectionHandler& operator=(const RpcConnectionHandler&) = delete;
+  RpcConnectionHandler(RpcConnectionHandler&&) = delete;
+  RpcConnectionHandler& operator=(RpcConnectionHandler&&) = delete;
+
   /**
    * Build a RpcConnectionHandler.
    *
@@ -264,6 +269,8 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
       std::weak_ptr<RpcServer> owningServer,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highNfsRequestsLogInterval);
+
+  ~RpcConnectionHandler() override;
 
   // AsyncReader::ReadCallback
 
