@@ -21,6 +21,7 @@
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
+#include <limits>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/FaultInjector.h"
@@ -1145,12 +1146,28 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdRenderedTree) {
   auto foid =
       FilteredObjectId{RelativePath{"a/b"}, "V1:foo", makeTestId("0000")};
   auto rendered = filteredStore_->renderObjectId(ObjectId{foid.getValue()});
-  EXPECT_THROW(filteredStore_->parseObjectId(rendered), folly::ConversionError);
+  EXPECT_EQ(ObjectId{foid.getValue()}, filteredStore_->parseObjectId(rendered));
 }
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdMalformedTree) {
-  EXPECT_DEATH(filteredStore_->parseObjectId("17:abc"), "Check failed");
-  EXPECT_DEATH(filteredStore_->parseObjectId("17:"), "Check failed");
+  EXPECT_THROW(filteredStore_->parseObjectId("17:abc"), std::invalid_argument);
+  EXPECT_THROW(filteredStore_->parseObjectId("17:"), std::invalid_argument);
+  EXPECT_THROW(filteredStore_->parseObjectId("17:3:ab"), std::invalid_argument);
+  EXPECT_THROW(
+      filteredStore_->parseObjectId("17:3:foo5:ab"), std::invalid_argument);
+}
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdLengthNearMax) {
+  // Adding a length this close to SIZE_MAX to an index wraps the end index
+  // back into the string, so an end-index bounds check alone accepts these.
+  auto huge = fmt::format("{}", std::numeric_limits<size_t>::max() - 2);
+  auto tail = std::string(13, 'p') + std::string(40, 'a');
+  EXPECT_THROW(
+      filteredStore_->parseObjectId(fmt::format("17:{}:{}", huge, tail)),
+      std::invalid_argument);
+  EXPECT_THROW(
+      filteredStore_->parseObjectId(fmt::format("17:3:foo{}:{}", huge, tail)),
+      std::invalid_argument);
 }
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdRawHex) {

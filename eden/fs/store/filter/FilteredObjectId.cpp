@@ -325,26 +325,42 @@ FilteredObjectId FilteredObjectId::parseFilteredObjectId(
   // extract the filter length from the string.
   auto filterLenStartIdx = foidTypeEndIdx + 1;
   auto filterLenEndIdx = object.find(':', filterLenStartIdx);
-  XCHECK_NE(filterLenEndIdx, string::npos);
-  auto filterLength =
-      folly::to<size_t>(object.substr(filterLenStartIdx, filterLenEndIdx));
+  if (filterLenEndIdx == string::npos) {
+    throwf<std::invalid_argument>(
+        "Cannot parse invalid FilteredObjectId: {}", object);
+  }
+  auto filterLength = folly::to<size_t>(
+      object.substr(filterLenStartIdx, filterLenEndIdx - filterLenStartIdx));
 
-  // We can then extract the filter itself using the filter length info
+  // We can then extract the filter itself using the filter length info. The
+  // length is compared with the remaining bytes before it is added to an
+  // index, so a length near SIZE_MAX cannot wrap the end index back into the
+  // string.
   auto filterStartIdx = filterLenEndIdx + 1;
-  auto filterEndIdx /* also pathLenStartIdx */ =
-      filterLenEndIdx + filterLength + 1;
-  auto filter = object.substr(filterStartIdx, filterEndIdx);
+  if (filterLength > object.size() - filterStartIdx) {
+    throwf<std::invalid_argument>(
+        "Cannot parse invalid FilteredObjectId: {}", object);
+  }
+  auto filter = object.substr(filterStartIdx, filterLength);
+  auto filterEndIdx /* also pathLenStartIdx */ = filterStartIdx + filterLength;
 
   // We now have enough info to determine the path length and extract it.
   auto pathLenEndIdx = object.find(':', filterEndIdx);
-  XCHECK_NE(pathLenEndIdx, string::npos);
-  auto pathLength =
-      folly::to<size_t>(object.substr(filterEndIdx, pathLenEndIdx));
+  if (pathLenEndIdx == string::npos) {
+    throwf<std::invalid_argument>(
+        "Cannot parse invalid FilteredObjectId: {}", object);
+  }
+  auto pathLength = folly::to<size_t>(
+      object.substr(filterEndIdx, pathLenEndIdx - filterEndIdx));
 
   // We now can extract the path itself
   auto pathStartIdx = pathLenEndIdx + 1;
-  auto pathEndIdx = pathLenEndIdx + pathLength + 1;
-  auto path = RelativePath{object.substr(pathStartIdx, pathEndIdx)};
+  if (pathLength > object.size() - pathStartIdx) {
+    throwf<std::invalid_argument>(
+        "Cannot parse invalid FilteredObjectId: {}", object);
+  }
+  auto path = RelativePath{object.substr(pathStartIdx, pathLength)};
+  auto pathEndIdx = pathStartIdx + pathLength;
 
   // Render the underlying object using the underlyingBackingStore
   auto underlyingObject =
