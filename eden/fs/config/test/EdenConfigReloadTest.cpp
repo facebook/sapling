@@ -57,5 +57,5 @@ TEST(EdenConfigReloadTest, systemConfigDirAfterReload) {
   auto reloaded = config->maybeReload();
   ASSERT_NE(nullptr, reloaded);
   EXPECT_EQ(64, reloaded->inMemoryTreeCacheMinimumItems.getValue());
-  EXPECT_EQ(AbsolutePath{}, reloaded->getSystemConfigDir());
+  EXPECT_EQ(etcEdenDir, reloaded->getSystemConfigDir());
 }

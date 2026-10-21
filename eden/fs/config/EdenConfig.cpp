@@ -155,7 +155,8 @@ EdenConfig::EdenConfig(
   reload();
 }
 
-EdenConfig::EdenConfig(const EdenConfig& source) {
+EdenConfig::EdenConfig(const EdenConfig& source)
+    : systemConfigDir_{source.systemConfigDir_} {
   substitutions_ = source.substitutions_;
   configSources_ = source.configSources_;
 
