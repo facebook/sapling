@@ -171,19 +171,6 @@ impl TryFrom<BookmarkEventNotification> for ParsedBookmarkEventNotification {
 }
 
 #[cfg(fbcode_build)]
-const WBC_PROCESS_BOOKMARK_NOTIFICATIONS_JUST_KNOB: &str =
-    "scm/mononoke:wbc_process_bookmark_notifications";
-
-#[cfg(fbcode_build)]
-fn event_router_coordinator_enabled(repo_name: &str) -> bool {
-    justknobs::eval(
-        WBC_PROCESS_BOOKMARK_NOTIFICATIONS_JUST_KNOB,
-        None,
-        Some(repo_name),
-    )
-}
-
-#[cfg(fbcode_build)]
 enum EventRouterCoordinatorUpdate {
     FullRefresh(&'static str),
     Notification(BookmarkEventNotification),
@@ -393,6 +380,7 @@ pub struct WarmBookmarksCacheBuilder {
     bookmark_update_log: ArcBookmarkUpdateLog,
     repo_identity: ArcRepoIdentity,
     repo_event_publisher: ArcRepoEventPublisher,
+    event_router_coordinator_enabled: bool,
     warmers: Vec<Warmer>,
     init_mode: InitMode,
     default_warmer_requirement: WarmerRequirement,
@@ -421,10 +409,17 @@ impl WarmBookmarksCacheBuilder {
             bookmark_update_log,
             repo_identity,
             repo_event_publisher,
+            event_router_coordinator_enabled: false,
             warmers: vec![],
             init_mode: InitMode::Rewind,
             default_warmer_requirement: warmer_requirement,
         }
+    }
+
+    /// Selects EventRouter notifications as the WBC coordinator input.
+    pub fn with_event_router_coordinator_enabled(mut self, enabled: bool) -> Self {
+        self.event_router_coordinator_enabled = enabled;
+        self
     }
 
     pub fn add_all_warmers(
@@ -657,6 +652,7 @@ impl WarmBookmarksCacheBuilder {
             &self.bookmark_update_log,
             &self.repo_identity,
             &self.repo_event_publisher,
+            self.event_router_coordinator_enabled,
             self.warmers,
             self.init_mode,
             self.default_warmer_requirement,
@@ -763,6 +759,7 @@ impl WarmBookmarksCache {
         bookmark_update_log: &ArcBookmarkUpdateLog,
         repo_identity: &ArcRepoIdentity,
         repo_event_publisher: &ArcRepoEventPublisher,
+        event_router_coordinator_enabled: bool,
         warmers: Vec<Warmer>,
         init_mode: InitMode,
         default_warmer_requirement: WarmerRequirement,
@@ -818,8 +815,10 @@ impl WarmBookmarksCache {
             repo_event_publisher.clone(),
             warmers.clone(),
         );
+        #[cfg(not(fbcode_build))]
+        let _ = event_router_coordinator_enabled;
         #[cfg(fbcode_build)]
-        if event_router_coordinator_enabled(repo_identity.name()) {
+        if event_router_coordinator_enabled {
             coordinator.spawn_event_router(
                 ctx.clone(),
                 receiver,

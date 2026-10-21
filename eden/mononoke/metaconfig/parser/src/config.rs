@@ -1340,6 +1340,7 @@ mod test {
             [metadata_cache_config]
             wbc_update_mode = { tailing = { category = "scribe_category" } }
             wbc_event_router_update_mode = { tailing = { category = "event_router_scribe_category" } }
+            wbc_process_bookmark_notifications = true
             tags_update_mode = { polling = {} }
 
             [x_repo_sync_source_mapping.mapping.aros]
@@ -1828,6 +1829,7 @@ mod test {
                     wbc_event_router_update_mode: Some(MetadataCacheUpdateMode::Tailing {
                         category: "event_router_scribe_category".to_string(),
                     }),
+                    wbc_process_bookmark_notifications: true,
                     tags_update_mode: Some(MetadataCacheUpdateMode::Polling),
                     content_refs_update_mode: None,
                 }),

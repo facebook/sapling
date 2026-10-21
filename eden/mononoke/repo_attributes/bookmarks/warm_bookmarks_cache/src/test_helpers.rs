@@ -122,6 +122,7 @@ pub async fn init_cache_with_warmers(
         &repo.bookmark_update_log_arc(),
         &repo.repo_identity_arc(),
         &repo.repo_event_publisher_arc(),
+        false,
         warmers,
         mode,
         WarmerRequirement::AllKinds,
