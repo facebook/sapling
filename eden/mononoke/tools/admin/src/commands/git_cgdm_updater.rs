@@ -6,6 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::future::Future;
+use std::panic::resume_unwind;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -38,6 +40,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionClass;
 use derivation_queue_thrift::DerivationPriority;
+use futures::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -54,6 +57,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeReposManager;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ThriftConvert;
 use mutable_blobstore::MutableRepoBlobstore;
@@ -65,6 +69,12 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use tokio_util::task::AbortOnDropHandle;
+
+#[cfg(test)]
+mod task_boundary_lifecycle_test;
+#[cfg(test)]
+mod task_boundary_test;
 
 /// Create and update Compacted Git Delta Manifest for repos
 #[derive(Parser)]
@@ -155,6 +165,20 @@ pub struct Repo {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    run_on_task(run_inner(app, args)).await
+}
+
+async fn run_on_task(future: impl Future<Output = Result<()>> + Send + 'static) -> Result<()> {
+    match AbortOnDropHandle::new(mononoke::spawn_task(future)).await {
+        Ok(result) => result,
+        Err(error) => match error.try_into_panic() {
+            Ok(payload) => resume_unwind(payload),
+            Err(error) => Err(error).context("CGDM updater task was cancelled"),
+        },
+    }
+}
+
+async fn run_inner(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let mut ctx = app.new_basic_context();
     // Force this binary to write to all blobstores
     ctx.session_mut()
@@ -169,6 +193,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             let heads = repo_args
                 .changeset_args
                 .resolve_changesets(&ctx, &repo)
+                .boxed()
                 .await?;
             update_cgdm(
                 &ctx,
@@ -286,14 +311,14 @@ async fn update_cgdm(
     );
 
     // Create a hashmap of all GDMv3 sizes for every changeset
-    let gdm_sizes = stream::iter(&cs_ids)
-        .map(async |cs_id| {
+    let gdm_sizes = stream::iter(cs_ids.iter().copied())
+        .map(|cs_id| async move {
             repo.repo_derived_data()
-                .derive::<RootGitDeltaManifestV3Id>(ctx, *cs_id, DerivationPriority::LOW)
+                .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id, DerivationPriority::LOW)
                 .await?;
             let gdm = repo
                 .repo_derived_data()
-                .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, *cs_id)
+                .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
                 .await?
                 .ok_or_else(|| anyhow!("No git delta manifest for {cs_id}"))?;
 
@@ -303,9 +328,9 @@ async fn update_cgdm(
                         .into_iter()
                         .map(|entry| entry.inlined_bytes_size() as u64)
                         .sum();
-                    anyhow::Ok((*cs_id, total_size))
+                    anyhow::Ok((cs_id, total_size))
                 }
-                GitDeltaManifestV3::Chunked(_) => Ok((*cs_id, component_max_size + 1)),
+                GitDeltaManifestV3::Chunked(_) => Ok((cs_id, component_max_size + 1)),
             }
         })
         .buffered(1024)
@@ -445,11 +470,11 @@ async fn update_cgdm(
                     .expect("generation should exist for changeset")
             });
 
-            let entries = stream::iter(&changesets)
-                .map(async |cs_id| {
+            let entries = stream::iter(changesets.iter().copied())
+                .map(|cs_id| async move {
                     let gdm = repo
                         .repo_derived_data()
-                        .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, *cs_id)
+                        .fetch_derived_direct::<RootGitDeltaManifestV3Id>(ctx, cs_id)
                         .await?
                         .ok_or_else(|| anyhow!("No git delta manifest for {cs_id}"))?;
 

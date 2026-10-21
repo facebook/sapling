@@ -33,13 +33,22 @@ rust_binary(
     ],
     test_deps = [
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
-    ],
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//xplat/folly/rust/request_context:request_context",
+            "//eden/mononoke/common/rust/request_context_ext:request_context_ext",
+        ]
+    ),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
