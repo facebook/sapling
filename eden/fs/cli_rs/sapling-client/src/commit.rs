@@ -60,17 +60,17 @@ where
         "log",
         "--traceback",
         "-T",
-        "{date}",
+        "{date|hgdate}",
         "-r",
         commit_id,
     ]);
 
     let output = spawner.output(&mut command).await?;
     let date = String::from_utf8(output.stdout().to_vec())?;
-    let date = date.parse::<f64>()?;
-    // NOTE: Sapling returns fractional seconds, but we only want whole seconds.
-    //       Truncate to the nearest second.
-    Ok(date as u64)
+    // NOTE: `hgdate` renders "<unix seconds> <offset seconds west of UTC>";
+    //       only the first field is the timestamp.
+    let unix_seconds = date.split_whitespace().next().unwrap_or("");
+    Ok(unix_seconds.parse::<f64>()? as u64)
 }
 
 pub async fn is_commit_in_repo(commit_id: &str, repo_path: Option<&Path>) -> Result<bool> {
@@ -153,8 +153,8 @@ mod tests {
         //   user:        John Elliott <jdelliot@fb.com>
         //   date:        Tue, 28 Jan 2025 10:35:17 -0800
         //   summary:     [meerkat] Improve saved state support
-        // timestamp should be 1738089317.028800, but we truncate to the nearest second
-        let timestamp_str = "1738089317.028800".to_owned();
+        // `{date|hgdate}` renders the date as "<unix seconds> <offset west of UTC>"
+        let timestamp_str = "1738089317 28800".to_owned();
         let repo_path = Path::new(CURRENT_DIR);
         let spawner = get_mock_spawner(
             get_sapling_executable_path(),
@@ -168,18 +168,16 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_get_commit_timestamp_east_of_utc() -> Result<()> {
-        // `{date}` renders the date tuple as the unix time followed by the
-        // timezone offset in seconds west of UTC, so a commit made at UTC+1
-        // renders as "<unixtime>.0-3600".
-        let timestamp_str = "1738089317.0-3600".to_owned();
+        // A commit made at UTC+1 has a negative offset west of UTC.
+        let timestamp_str = "1738089317 -3600".to_owned();
         let repo_path = Path::new(CURRENT_DIR);
         let spawner = get_mock_spawner(
             get_sapling_executable_path(),
             Some(repo_path),
             Some((0, Some(timestamp_str.as_bytes().to_vec()))),
         );
-        let result = get_commit_timestamp_impl(&spawner, COMMIT_ID, Some(repo_path)).await;
-        assert!(result.is_err());
+        let timestamp = get_commit_timestamp_impl(&spawner, COMMIT_ID, Some(repo_path)).await?;
+        assert_eq!(timestamp, 1738089317);
         Ok(())
     }
 }

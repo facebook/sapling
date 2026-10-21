@@ -101,7 +101,7 @@ where
                 "log",
                 "--traceback",
                 "-T",
-                "{node}\n{date}\n{get(extras, \"global_rev\")}",
+                "{node}\n{date|hgdate}\n{get(extras, \"global_rev\")}",
                 "-r",
                 format!("ancestor({}, {})", commit.as_ref(), mergegase_with.as_ref()).as_str(),
             ]);
@@ -138,8 +138,9 @@ fn parse_mergebase_details(mergebase_details: Vec<u8>) -> Result<Option<Mergebas
         .to_string();
     let timestamp = v
         .get(1)
+        .and_then(|t| t.split_whitespace().next())
         .and_then(|t| t.parse::<f64>().ok())
-        .map(|t| t as u64); // sl returns the fractional seconds
+        .map(|t| t as u64); // hgdate renders "<unix seconds> <offset>"
     let global_rev = if let Some(global_rev) = v.get(2) {
         Some(global_rev.parse::<u64>()?)
     } else {
@@ -161,14 +162,14 @@ mod tests {
     use crate::utils::tests::get_mock_spawner;
     use crate::utils::tests::get_mock_spawner_with_stderr;
 
-    // the format is {node}\n{date}\n{global_rev}
-    const DETAILS: &str = "0000111122223333444455556666777788889999\n1234567890.012345\n9876543210";
+    // the format is {node}\n{date|hgdate}\n{global_rev}
+    const DETAILS: &str = "0000111122223333444455556666777788889999\n1234567890 12345\n9876543210";
     const DETAILS_NO_GLOBAL_REV: &str =
-        "0000111122223333444455556666777788889999\n1234567890.012345\n";
+        "0000111122223333444455556666777788889999\n1234567890 12345\n";
     const COMMIT_ID: &str = "0000111122223333444455556666777788889999";
     const MERGEBASE_WITH: &str = "master";
     const DETAILS_EAST_OF_UTC: &str =
-        "aaaa111122223333444455556666777788889999\n1738089317.0-3600\n9876543210";
+        "aaaa111122223333444455556666777788889999\n1738089317 -3600\n9876543210";
     const COMMIT_ID_EAST_OF_UTC: &str = "aaaa111122223333444455556666777788889999";
 
     #[tokio::test]
@@ -287,7 +288,7 @@ mod tests {
             get_mergebase_details_impl(&spawner, ".", COMMIT_ID_EAST_OF_UTC, MERGEBASE_WITH)
                 .await?
                 .unwrap();
-        assert_eq!(details.timestamp, None);
+        assert_eq!(details.timestamp, Some(1738089317));
         assert_eq!(details.global_rev, Some(9876543210));
         Ok(())
     }
