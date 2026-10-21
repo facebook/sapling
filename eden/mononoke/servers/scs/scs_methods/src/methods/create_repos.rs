@@ -1759,8 +1759,17 @@ async fn create_repos_in_mononoke(
 
     // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
     // knowledge that no-one will compete with us
+    let reserved_repo_names = repo_ids_and_requests
+        .iter()
+        .map(|(_id, request)| request.repo_name.clone())
+        .collect::<Vec<_>>();
     match prepare_repo_configs_mutation_nowait(ctx.clone(), repo_ids_and_requests, configs).await {
         Ok(mutation_id) => {
+            let mut scuba = ctx.scuba().clone();
+            scuba.add("action", "create_repos_mutation_prepared");
+            scuba.add("param_repos", reserved_repo_names);
+            scuba.log_with_msg("create_repos prepared a repo creation mutation", None);
+
             retry(
                 |_| {
                     update_mutation_id_by_repo_names_for_reserved_repos(
