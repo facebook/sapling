@@ -1220,6 +1220,16 @@ def extsetup(ui) -> None:
 revsetpredicate = registrar.revsetpredicate()
 
 
+def _shelvednode(shelve):
+    """Return the node stored in an .oshelve file, or None if the file is
+    empty, malformed, or holds no valid node."""
+    try:
+        nodehex = shelve.readobsshelveinfo().get("node")
+        return nodemod.bin(nodehex) if nodehex else None
+    except (error.CorruptedState, TypeError):
+        return None
+
+
 @revsetpredicate("shelved")
 def shelved(repo, subset, x):
     """Shelved changes"""
@@ -1229,8 +1239,8 @@ def shelved(repo, subset, x):
     ]
     # filter valid files
     shelves = filter(lambda f: f.exists(), shelves)
-    # read node from each file
-    nodes = [nodemod.bin(shelve.readobsshelveinfo()["node"]) for shelve in shelves]
+    # read node from each file, skipping corrupt ones
+    nodes = [node for node in map(_shelvednode, shelves) if node is not None]
     # filter if some of the revisions are not in repo
     # local=True because shelved commits cannot be public and only public
     # commits can be lazy so we avoid remote lookups.
@@ -1248,6 +1258,6 @@ def shelvename(repo, ctx, templ, **args):
     node = ctx.node()
     for filename in listshelvesfiles(repo):
         shelve = shelvedfile(repo, filename, "oshelve")
-        if shelve.exists() and nodemod.bin(shelve.readobsshelveinfo()["node"]) == node:
+        if shelve.exists() and _shelvednode(shelve) == node:
             return shelve.name
     return ""
