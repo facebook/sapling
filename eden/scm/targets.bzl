@@ -24,8 +24,9 @@ _RUST_DEP_OVERRIDES = {
     },
 }
 
-def cas_enabled():
-    return read_bool("sl", "cas", False) and not rust_oss.is_oss_build()
+def debugcas_enabled():
+    """Whether `sl.debugcas` adds `debugcas`, which links the C++ CAS client."""
+    return read_bool("sl", "debugcas", False) and not rust_oss.is_oss_build()
 
 def edenfs_cas_select(values):
     if rust_oss.is_oss_build():
