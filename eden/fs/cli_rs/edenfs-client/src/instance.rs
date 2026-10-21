@@ -85,3 +85,42 @@ impl std::ops::Deref for EdenFsInstance {
         &self.core
     }
 }
+
+#[cfg(test)]
+mod client_name_tests {
+    use std::collections::BTreeMap;
+    use std::fs;
+
+    use tempfile::tempdir;
+
+    use crate::instance::EdenFsInstance;
+    use crate::use_case::UseCaseId;
+
+    #[fbinit::test]
+    fn test_client_name_with_nested_checkouts() {
+        let tmp = tempdir().unwrap();
+        let config_dir = tmp.path().join("eden");
+        fs::create_dir_all(&config_dir).unwrap();
+
+        let outer = tmp.path().join("outer");
+        let inner = outer.join("inner");
+        fs::create_dir_all(inner.join("src")).unwrap();
+
+        let mut map = BTreeMap::new();
+        map.insert(outer.to_string_lossy().to_string(), "outer".to_string());
+        map.insert(inner.to_string_lossy().to_string(), "inner".to_string());
+        let json = serde_json::to_string_pretty(&map).unwrap();
+        fs::write(config_dir.join("config.json"), json).unwrap();
+
+        let instance = EdenFsInstance::new(
+            UseCaseId::ExampleUseCase,
+            config_dir.clone(),
+            config_dir.clone(),
+            None,
+        );
+
+        assert_eq!(instance.client_name(&outer).unwrap(), "outer");
+        assert_eq!(instance.client_name(&inner).unwrap(), "outer");
+        assert_eq!(instance.client_name(&inner.join("src")).unwrap(), "outer");
+    }
+}

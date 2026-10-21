@@ -25,6 +25,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:mockall",
         "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/fs/service:thrift-rust-thriftclients",
