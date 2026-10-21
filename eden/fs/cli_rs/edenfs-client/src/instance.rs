@@ -120,7 +120,7 @@ mod client_name_tests {
         );
 
         assert_eq!(instance.client_name(&outer).unwrap(), "outer");
-        assert_eq!(instance.client_name(&inner).unwrap(), "outer");
-        assert_eq!(instance.client_name(&inner.join("src")).unwrap(), "outer");
+        assert_eq!(instance.client_name(&inner).unwrap(), "inner");
+        assert_eq!(instance.client_name(&inner.join("src")).unwrap(), "inner");
     }
 }

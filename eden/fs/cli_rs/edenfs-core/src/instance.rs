@@ -677,13 +677,17 @@ impl EdenFsInstance {
         // Canonicalize config paths too so both sides match
         // (resolves UNC prefix and symlink differences).
         let all_checkouts = self.get_configured_mounts_map()?;
-        if let Some(item) = all_checkouts.iter().find(|&(checkout_path, _)| {
-            checkout_path
-                .canonicalize()
-                .map(|cp| path.starts_with(&cp))
-                .unwrap_or_else(|_| path.starts_with(checkout_path))
-        }) {
-            let (_, checkout_name) = item;
+        let innermost_checkout = all_checkouts
+            .iter()
+            .filter_map(|(checkout_path, checkout_name)| {
+                let checkout_path = checkout_path
+                    .canonicalize()
+                    .unwrap_or_else(|_| checkout_path.clone());
+                path.starts_with(&checkout_path)
+                    .then(|| (checkout_path.components().count(), checkout_name))
+            })
+            .max_by_key(|(depth, _)| *depth);
+        if let Some((_, checkout_name)) = innermost_checkout {
             Ok(checkout_name.clone())
         } else {
             Err(EdenFsError::Other(anyhow!(
