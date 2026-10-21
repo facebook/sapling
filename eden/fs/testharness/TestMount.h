@@ -184,6 +184,18 @@ class TestMount {
       InodeCatalogOptions inodeCatalogOptions);
 
   /**
+   * Classify the mount as served over the given protocol: forwarded to
+   * EdenMount::initialize() as the takeover mount protocol, which overrides
+   * the checkout config (and, unlike the config path, does not depend on
+   * platform defaults like experimental:enable-nfs-server). Must be called
+   * before the mount is initialized, i.e. on a default-constructed
+   * TestMount.
+   */
+  void setMountProtocol(MountProtocol protocol) {
+    mountProtocol_ = protocol;
+  }
+
+  /**
    * Like initialize, except EdenMount::initialize is not called.
    *
    * This should only be used if the TestMount was default-constructed.
@@ -427,6 +439,7 @@ class TestMount {
   std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
 
   std::shared_ptr<EdenMount> edenMount_;
+  std::optional<MountProtocol> mountProtocol_;
   TreeInodePtr rootInode_;
 
 #ifndef _WIN32

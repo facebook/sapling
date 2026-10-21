@@ -258,7 +258,11 @@ void TestMount::initialize(
 }
 
 void TestMount::initializeEdenMount() {
-  edenMount_->initialize()
+  edenMount_
+      ->initialize(
+          [](auto) {},
+          /*takeover=*/std::nullopt, /*takeoverMountProtocol=*/
+          mountProtocol_)
       .semi()
       .via(serverExecutor_.get())
       .getVia(serverExecutor_.get());

@@ -47,6 +47,29 @@ TEST(InodeMap, invalidInodeNumber) {
       std::move(future).get(), std::runtime_error, "unknown inode number");
 }
 
+TEST(InodeMap, forgetOnUnknownInodeFromUserspaceFsPeer) {
+  // NFS and FSKit peers are userspace processes whose lookup-reference
+  // accounting can race the wire contract in ways a kernel client cannot;
+  // like lookups of unknown inode numbers (throwEstaleIfInodeIsMissing),
+  // their forgets must never abort the daemon.
+  TestMount testMount;
+  testMount.setMountProtocol(MountProtocol::NFS);
+  FakeTreeBuilder builder;
+  builder.setFile("file.txt", "contents\n");
+  testMount.initialize(builder);
+
+  // FIXME: This hits EDEN_BUG, which aborts dev builds and throws in opt
+  // builds. It should be ignored (logged and counted) without throwing.
+  EdenBugDisabler noCrash;
+  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
+  EXPECT_THROW_RE(
+      inodeMap->decFsRefcount(0x12345678_ino, 1),
+      std::runtime_error,
+      "unknown inode number");
+  auto root = testMount.getEdenMount()->getRootInode();
+  EXPECT_NE(nullptr, root.get());
+}
+
 #ifdef __linux__
 TEST(InodeMap, forgetMultipleReferencesFromLoadedInode) {
   FakeTreeBuilder builder;
