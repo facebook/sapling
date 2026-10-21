@@ -25,8 +25,7 @@ class SqliteTest : public testing::Test {
 
 TEST_F(SqliteTest, transactionAfterANonStdException) {
   EXPECT_THROW(db.transaction([](LockedSqliteConnection&) { throw 42; }), int);
-  EXPECT_THROW(
-      db.transaction([](LockedSqliteConnection&) {}), std::runtime_error);
+  EXPECT_NO_THROW(db.transaction([](LockedSqliteConnection&) {}));
 }
 
 TEST_F(SqliteTest, testStatement) {

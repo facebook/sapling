@@ -7,6 +7,8 @@
 
 #include "eden/fs/sqlite/SqliteDatabase.h"
 
+#include <folly/ExceptionString.h>
+
 #include <folly/logging/xlog.h>
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
 
@@ -118,13 +120,20 @@ LockedSqliteConnection SqliteDatabase::lock() {
 void SqliteDatabase::transaction(
     const std::function<void(LockedSqliteConnection&)>& func) {
   auto conn = lock();
+  cache_->beginTransaction.get(conn)->step();
   try {
-    cache_->beginTransaction.get(conn)->step();
     func(conn);
     cache_->commitTransaction.get(conn)->step();
-  } catch (const std::exception& ex) {
-    cache_->rollbackTransaction.get(conn)->step();
-    XLOGF(WARN, "SQLite transaction failed: {}", ex.what());
+  } catch (...) {
+    XLOGF(
+        WARN,
+        "SQLite transaction failed: {}",
+        folly::exceptionStr(std::current_exception()));
+    try {
+      cache_->rollbackTransaction.get(conn)->step();
+    } catch (const std::exception& rollbackEx) {
+      XLOGF(WARN, "SQLite rollback failed: {}", rollbackEx.what());
+    }
     throw;
   }
 }

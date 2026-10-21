@@ -7,6 +7,7 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
+        "fbsource//xplat/folly:exception_string",
         "fbsource//xplat/folly/logging:logging",
     ],
     exported_deps = [
@@ -14,6 +15,7 @@ cpp_library(
         "//eden/common/utils:path",
     ],
     exported_external_deps = [
+        "sqlite",
         ("sqlite", None, "sqlite"),
     ],
 )
