@@ -140,6 +140,10 @@ void SqliteDatabase::transaction(
 
 void SqliteDatabase::checkpoint() {
   if (auto conn = conn_.tryWLock()) {
+    if (conn->status != SqliteDbStatus::OPEN) {
+      XLOG(DBG6, "Checkpoint skipped: database is not open");
+      return;
+    }
     XLOG(DBG6, "Checkpoint thread acquired SQLite lock");
     try {
       int pnLog, pnCkpt;

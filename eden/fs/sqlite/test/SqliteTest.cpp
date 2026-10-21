@@ -30,8 +30,7 @@ TEST_F(SqliteTest, transactionAfterANonStdException) {
 
 TEST_F(SqliteTest, checkpointAfterClose) {
   db.close();
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  EXPECT_DEATH(db.checkpoint(), "");
+  EXPECT_NO_THROW(db.checkpoint());
 }
 
 TEST_F(SqliteTest, testStatement) {
