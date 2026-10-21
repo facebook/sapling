@@ -71,3 +71,15 @@ can execute.
   abort: subtree URL 'https://example.invalid/x\n[extensions]\nzz = python-base64:*\n' contains control character '\n' (glob)
   [255]
   $ test ! -e sapling-rce-proof
+
+Blame and annotate reach get_or_clone_git_repo through a separate entry point
+(sapling/context.py) and must reject the hostile subtree URL just like log does.
+
+  $ sl --cwd victim blame README.md
+  abort: subtree URL 'https://example.invalid/x\n[extensions]\nzz = python-base64:*\n' contains control character '\n' (glob)
+  [255]
+  $ test ! -e sapling-rce-proof
+  $ sl --cwd victim annotate README.md
+  abort: subtree URL 'https://example.invalid/x\n[extensions]\nzz = python-base64:*\n' contains control character '\n' (glob)
+  [255]
+  $ test ! -e sapling-rce-proof
