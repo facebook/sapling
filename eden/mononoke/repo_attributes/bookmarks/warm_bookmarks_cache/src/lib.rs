@@ -105,6 +105,8 @@ use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use stats::prelude::*;
 use tokio::sync::Notify;
+#[cfg(fbcode_build)]
+use tokio::sync::broadcast::error::RecvError;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 use unodes::RootUnodeManifestId;
@@ -168,9 +170,57 @@ impl TryFrom<BookmarkEventNotification> for ParsedBookmarkEventNotification {
     }
 }
 
+#[cfg(fbcode_build)]
+const WBC_PROCESS_BOOKMARK_NOTIFICATIONS_JUST_KNOB: &str =
+    "scm/mononoke:wbc_process_bookmark_notifications";
+
+#[cfg(fbcode_build)]
+fn event_router_coordinator_enabled(repo_name: &str) -> bool {
+    justknobs::eval(
+        WBC_PROCESS_BOOKMARK_NOTIFICATIONS_JUST_KNOB,
+        None,
+        Some(repo_name),
+    )
+}
+
+#[cfg(fbcode_build)]
+enum EventRouterCoordinatorUpdate {
+    FullRefresh(&'static str),
+    Notification(BookmarkEventNotification),
+}
+
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
     max_staleness_secs: dynamic_singleton_counter("{}.max_staleness_secs", (reponame: String)),
+    event_router_coordinator_active: dynamic_singleton_counter(
+        "{}.event_router_coordinator_active",
+        (reponame: String)
+    ),
+    event_router_notification_processed_count: dynamic_timeseries(
+        "{}.event_router_notification_processed_count",
+        (reponame: String);
+        Average, Sum, Count
+    ),
+    event_router_notification_failure_count: dynamic_timeseries(
+        "{}.event_router_notification_failure_count",
+        (reponame: String);
+        Average, Sum, Count
+    ),
+    event_router_subscription_failure_count: dynamic_timeseries(
+        "{}.event_router_subscription_failure_count.{}",
+        (reponame: String, reason: String);
+        Average, Sum, Count
+    ),
+    event_router_subscriber_lag_count: dynamic_timeseries(
+        "{}.event_router_subscriber_lag_count",
+        (reponame: String);
+        Average, Sum, Count
+    ),
+    event_router_full_refresh_count: dynamic_timeseries(
+        "{}.event_router_full_refresh_count.{}",
+        (reponame: String, reason: String);
+        Average, Sum, Count
+    ),
     global_max_staleness_secs: histogram(10, 0, 5000, Average; P 50; P 75; P 95; P 99),
 }
 
@@ -759,7 +809,7 @@ impl WarmBookmarksCache {
 
         let bookmarks_to_watch = Arc::new(RwLock::new(bookmarks_to_watch));
 
-        BookmarksCoordinator::new(
+        let coordinator = BookmarksCoordinator::new(
             bookmarks_to_watch.clone(),
             sub,
             bookmarks.clone(),
@@ -767,8 +817,25 @@ impl WarmBookmarksCache {
             repo_identity.clone(),
             repo_event_publisher.clone(),
             warmers.clone(),
-        )
-        .spawn(
+        );
+        #[cfg(fbcode_build)]
+        if event_router_coordinator_enabled(repo_identity.name()) {
+            coordinator.spawn_event_router(
+                ctx.clone(),
+                receiver,
+                notify_sync_start.clone(),
+                notify_sync_complete.clone(),
+            );
+        } else {
+            coordinator.spawn(
+                ctx.clone(),
+                receiver,
+                notify_sync_start.clone(),
+                notify_sync_complete.clone(),
+            );
+        }
+        #[cfg(not(fbcode_build))]
+        coordinator.spawn(
             ctx.clone(),
             receiver,
             notify_sync_start.clone(),
@@ -1574,13 +1641,6 @@ impl BookmarksCoordinator {
     }
 
     #[cfg(fbcode_build)]
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "wired into the EventRouter coordinator by the child diff"
-        )
-    )]
     async fn update_from_notification(
         &mut self,
         ctx: &CoreContext,
@@ -1755,6 +1815,221 @@ impl BookmarksCoordinator {
         .instrument(span);
 
         // Fire and forget. This will terminate using the `terminate` receiver.
+        std::mem::drop(mononoke::spawn_task(fut));
+    }
+
+    #[cfg(fbcode_build)]
+    fn spawn_event_router(
+        mut self,
+        ctx: CoreContext,
+        terminate: oneshot::Receiver<()>,
+        notify_sync_start: Arc<Notify>,
+        notify_sync_complete: Arc<Notify>,
+    ) {
+        let span = tracing::info_span!(
+            "wbc",
+            repo = %self.repo.repo_identity().name(),
+            source = "event_router",
+        );
+        let fut = async move {
+            tracing::info!("Started EventRouter warm bookmark cache updater");
+            let repo_name: String = self.repo.repo_identity().name().to_string();
+            STATS::event_router_coordinator_active.set_value(
+                ctx.fb,
+                1,
+                (repo_name.clone(),),
+            );
+            let mut bookmark_event_notification_subscriber = None;
+            let infinite_loop = async {
+                let mut sync_started = false;
+                let mut pending_update = None;
+                loop {
+                    let ctx = ctx.with_mutated_scuba(|scuba| scuba.with_seq("seq"));
+                    let res = match pending_update.take() {
+                        Some(EventRouterCoordinatorUpdate::Notification(notification)) => {
+                            match self.update_from_notification(&ctx, notification).await {
+                                Ok(()) => {
+                                    STATS::event_router_notification_processed_count.add_value(
+                                        1,
+                                        (repo_name.clone(),),
+                                    );
+                                    Ok(())
+                                }
+                                Err(error) => {
+                                    STATS::event_router_notification_failure_count.add_value(
+                                        1,
+                                        (repo_name.clone(),),
+                                    );
+                                    STATS::event_router_full_refresh_count.add_value(
+                                        1,
+                                        (
+                                            repo_name.clone(),
+                                            "targeted_update_failure".to_owned(),
+                                        ),
+                                    );
+                                    WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
+                                        event: Some(WarmBookmarkCacheEvent::DiscoverFailure),
+                                        ..Default::default()
+                                    });
+                                    tracing::warn!(
+                                        ?error,
+                                        "targeted bookmark update failed; falling back to full refresh"
+                                    );
+                                    self.update(&ctx).await
+                                }
+                            }
+                        }
+                        Some(EventRouterCoordinatorUpdate::FullRefresh(reason)) => {
+                            STATS::event_router_full_refresh_count.add_value(
+                                1,
+                                (repo_name.clone(), reason.to_owned()),
+                            );
+                            self.update(&ctx).await
+                        }
+                        None => Ok(()),
+                    };
+
+                    if let Err(error) = res.as_ref() {
+                        WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
+                            event: Some(WarmBookmarkCacheEvent::DiscoverFailure),
+                            ..Default::default()
+                        });
+                        tracing::warn!(?error, "failed to update bookmarks");
+                    }
+
+                    if sync_started {
+                        if let Err(join_err) = self
+                            .updaters_handles
+                            .drain()
+                            .map(|(_, handle)| handle)
+                            .collect::<FuturesUnordered<_>>()
+                            .try_collect::<Vec<_>>()
+                            .await
+                        {
+                            tracing::warn!(
+                                "failed to join updater tasks when syncing {:?}",
+                                join_err
+                            );
+                        }
+                        notify_sync_complete.notify_waiters();
+                    }
+
+                    if bookmark_event_notification_subscriber.is_none() {
+                        match self
+                            .repo
+                            .repo_event_publisher
+                            .subscribe_for_bookmark_event_notifications(&repo_name)
+                        {
+                            Ok(subscriber) => {
+                                bookmark_event_notification_subscriber = Some(subscriber);
+                            }
+                            Err(error) => {
+                                STATS::event_router_subscription_failure_count.add_value(
+                                    1,
+                                    (repo_name.clone(), "subscribe".to_owned()),
+                                );
+                                tracing::warn!(
+                                    ?error,
+                                    "failed to subscribe to EventRouter bookmark notifications; retrying after delay"
+                                );
+                            }
+                        }
+                    }
+
+                    let notified = notify_sync_start.notified();
+                    let mut subscriber_closed = false;
+                    if let Some(subscriber) = bookmark_event_notification_subscriber.as_mut() {
+                        let notification = subscriber.recv();
+                        futures::pin_mut!(notified, notification);
+                        match select(notified, notification).await {
+                            future::Either::Left(_) => {
+                                sync_started = true;
+                                pending_update =
+                                    Some(EventRouterCoordinatorUpdate::FullRefresh("sync"));
+                            }
+                            future::Either::Right((notification, _)) => {
+                                sync_started = false;
+                                match notification {
+                                    Ok(notification) => {
+                                        pending_update = Some(
+                                            EventRouterCoordinatorUpdate::Notification(notification),
+                                        );
+                                    }
+                                    Err(RecvError::Lagged(skipped)) => {
+                                        STATS::event_router_subscriber_lag_count
+                                            .add_value(1, (repo_name.clone(),));
+                                        tracing::warn!(
+                                            skipped,
+                                            "EventRouter bookmark notification loop lagged"
+                                        );
+                                        pending_update = Some(
+                                            EventRouterCoordinatorUpdate::FullRefresh(
+                                                "subscriber_lag",
+                                            ),
+                                        );
+                                    }
+                                    Err(RecvError::Closed) => {
+                                        STATS::event_router_subscription_failure_count.add_value(
+                                            1,
+                                            (repo_name.clone(), "closed".to_owned()),
+                                        );
+                                        tracing::warn!(
+                                            "EventRouter bookmark notification loop closed; retrying after delay"
+                                        );
+                                        subscriber_closed = true;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        let delay = Duration::from_millis(justknobs::get_as::<u64>(
+                            "scm/mononoke:warm_bookmark_cache_poll_interval_ms",
+                            None,
+                        ));
+                        let sleep = tokio::time::sleep(delay);
+                        futures::pin_mut!(notified, sleep);
+                        match select(notified, sleep).await {
+                            future::Either::Left(_) => {
+                                sync_started = true;
+                                pending_update =
+                                    Some(EventRouterCoordinatorUpdate::FullRefresh("sync"));
+                            }
+                            future::Either::Right(_) => sync_started = false,
+                        }
+                    }
+                    if subscriber_closed {
+                        bookmark_event_notification_subscriber = None;
+                        let delay = Duration::from_millis(justknobs::get_as::<u64>(
+                            "scm/mononoke:warm_bookmark_cache_poll_interval_ms",
+                            None,
+                        ));
+                        let notified = notify_sync_start.notified();
+                        let sleep = tokio::time::sleep(delay);
+                        futures::pin_mut!(notified, sleep);
+                        match select(notified, sleep).await {
+                            future::Either::Left(_) => {
+                                sync_started = true;
+                                pending_update =
+                                    Some(EventRouterCoordinatorUpdate::FullRefresh("sync"));
+                            }
+                            future::Either::Right(_) => sync_started = false,
+                        }
+                    }
+                }
+            }
+            .boxed();
+
+            let _ = select(infinite_loop, terminate).await;
+            STATS::event_router_coordinator_active.set_value(
+                ctx.fb,
+                0,
+                (repo_name.clone(),),
+            );
+            STATS::max_staleness_secs.set_value(ctx.fb, 0, (repo_name.clone(),));
+            tracing::info!("Stopped EventRouter warm bookmark cache updater");
+        }
+        .instrument(span);
+
         std::mem::drop(mononoke::spawn_task(fut));
     }
 }
