@@ -359,6 +359,7 @@ members = [
   "jobs/blobstore_healer",
   "jobs/cas_sync",
   "jobs/modern_sync",
+  "jobs/p4_sync",
   "jobs/statistics_collector",
   "jobs/walker",
   "lfs_import_lib",
