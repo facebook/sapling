@@ -308,8 +308,23 @@ async fn build_uploaded_tree(
     sources: ChildSources<'_>,
 ) -> Result<(HgAugmentedManifestEnvelope, DirectoryAcl)> {
     let parent = parent_entries(ctx, blobstore, manifest.p1()).await?;
-    let (children, acl) =
-        children_and_acl(ctx, blobstore, restricted_paths, manifest, sources, &parent).await?;
+    let children = load_children(
+        ctx,
+        blobstore,
+        manifest.node_id(),
+        sources,
+        &parent.directories,
+    )
+    .await?;
+    let acl = directory_acl(
+        ctx,
+        blobstore,
+        restricted_paths,
+        manifest,
+        &children,
+        &parent,
+    )
+    .await?;
     let acl_overlay = acl.node().map(|entry| entry.id);
 
     let files = &manifest.content().files;
@@ -475,24 +490,15 @@ async fn parent_entries(
         .await
 }
 
-/// Resolve the tree's child directories, then build its ACL node from them.
-async fn children_and_acl(
+/// Build the directory's ACL node from its own ACL file and its children.
+async fn directory_acl(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
     restricted_paths: &RestrictedPathsConfigBased,
     manifest: &HgBlobManifest,
-    sources: ChildSources<'_>,
+    children: &HashMap<MPathElement, ChildNode>,
     parent: &ParentEntries,
-) -> Result<(HashMap<MPathElement, ChildNode>, DirectoryAcl)> {
-    let children = load_children(
-        ctx,
-        blobstore,
-        manifest.node_id(),
-        sources,
-        &parent.directories,
-    )
-    .await?;
-
+) -> Result<DirectoryAcl> {
     let acl_file_name = restricted_paths.config().acl_file_name().to_string();
     let acl_file_element = MPathElement::new(acl_file_name.as_bytes().to_vec())?;
     let own_acl_file =
@@ -513,7 +519,7 @@ async fn children_and_acl(
         parent,
         &acl_file_element,
         own_acl_file,
-        &children,
+        children,
     )
     .await?
     {
@@ -542,7 +548,7 @@ async fn children_and_acl(
         }
     };
 
-    Ok((children, acl))
+    Ok(acl)
 }
 
 /// p1's ACL node, when the own ACL file and the child pointers are unchanged.
