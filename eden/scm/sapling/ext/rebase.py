@@ -785,25 +785,24 @@ class rebaseruntime:
             else:
                 date = self.date
 
-            removed = manifestbuilder.removed()
-            removedset = set(removed)
-            modified = manifestbuilder.modified() + list(resolved)
+            actions = manifestbuilder.pymerge_actions()
 
             def getfilectx(repo, memctx, path):
-                if path in removedset:
-                    return None
-                fctx = ctx[path]
-
                 data = resolved.get(path, None)
                 if data is not None:
                     return context.overlayfilectx(
-                        fctx,
+                        ctx[path],
                         datafunc=lambda: data,
                         copied=False,
                         ctx=memctx,
                     )
 
-                return fctx
+                action, (flags, _backup), _message = actions[path]
+                if action == "r":
+                    return None
+                # Permission-only actions retain the destination's content.
+                fctx = p1ctx[path] if action == "e" else ctx[path]
+                return context.overlayfilectx(fctx, flags=flags, ctx=memctx)
 
             merging = p2 != nullrev
             editform = cmdutil.mergeeditform(merging, "rebase")
@@ -813,7 +812,7 @@ class rebaseruntime:
                 repo,
                 parents=(repo[p1], repo[p2]),
                 text=commitmsg,
-                files=sorted(removed + modified),
+                files=sorted(actions.keys() | resolved.keys()),
                 filectxfn=getfilectx,
                 date=date,
                 extra=extra,

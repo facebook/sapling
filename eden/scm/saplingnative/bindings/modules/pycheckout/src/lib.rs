@@ -253,15 +253,10 @@ py_class!(class mergeresult |py| {
         let mut modifiedconflicts = vec![];
         for (path, conflict) in self.merge_result(py).conflicts().iter() {
             match conflict {
-                Conflict::BothChanged{ancestor, dest, src} => {
-                    if ancestor.is_some() && src.file_type == dest.file_type {
+                Conflict::BothChanged{ancestor, dest, src}
+                    if ancestor.is_some() && src.file_type == dest.file_type => {
                         modifiedconflicts.push(path.to_string()); // both modified
-                    } else {
-                        // This is either both created(ancestor.is_none), no way to do 3-way merge
-                        // Or, file type differs between src and dst - needs special handling
-                        return Ok(None);
-                    }
-                },
+                    },
                 _ => return Ok(None)
             }
         }
@@ -304,6 +299,13 @@ py_class!(class pathauditor |py| {
 py_class!(class manifestbuilder |py| {
     data actions: ActionMap;
     data _modifiedconflicts: Vec<String>;
+
+    // Actions already resolved by the manifest merge, alongside content conflicts.
+    def pymerge_actions(&self) -> PyResult<HashMap<String, (&'static str, (&'static str, bool), &'static str)>> {
+        Ok(self.actions(py).iter().map(|(path, action)|
+            (path.to_string(), action.pymerge_action())
+        ).collect())
+    }
 
     def removed(&self) -> PyResult<Vec<String>> {
         let actions = self.actions(py);

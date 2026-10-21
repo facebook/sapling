@@ -583,8 +583,17 @@ def inmemorymerge(ui, repo, src, dest, base):
 
     mergedctx = context.memctx.mirrorformutation(src, "rebase", parents=[dest])
 
-    for path in manifestbuilder.removed():
-        mergedctx[path] = None
+    for path, (
+        action,
+        (flags, _backup),
+        _msg,
+    ) in manifestbuilder.pymerge_actions().items():
+        if action == "r":
+            mergedctx[path] = None
+        else:
+            # Content updates come from src; permission-only updates retain dest.
+            fctx = dest[path] if action == "e" else src[path]
+            mergedctx[path] = context.overlayfilectx(fctx, flags=flags, ctx=mergedctx)
 
     for path, merged in resolved.items():
         mergedctx[path] = context.overlayfilectx(

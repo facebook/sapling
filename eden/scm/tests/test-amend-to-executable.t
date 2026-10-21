@@ -75,7 +75,6 @@ Replay additions, flag clears, and flag changes on existing files.
 #endif
 
 Amend an executable-bit change across a descendant content change.
-FIXME: Replay must preserve the amended executable bit in the descendant.
   $ newclientrepo
   $ setconfig diff.git=true
   $ echo one > file
@@ -85,17 +84,15 @@ FIXME: Replay must preserve the amended executable bit in the descendant.
   $ chmod +x file
   $ sl amend --to 'desc(A)'
   $ sl status
-  M file
   $ sl manifest -v -r 'desc(A)'
   755 * file
   $ sl manifest -v
-  644   file
+  755 * file
   $ sl cat -r . file
   one
   two
 
 Amend a content change across a descendant clearing the executable bit.
-FIXME: Mode-only replay must retain the destination's amended contents.
   $ newclientrepo
   $ setconfig diff.git=true
   $ echo one > file
@@ -106,13 +103,13 @@ FIXME: Mode-only replay must retain the destination's amended contents.
   $ echo two >> file
   $ sl amend --to 'desc(A)'
   $ sl status
-  M file
   $ sl manifest -v -r 'desc(A)'
   755 * file
   $ sl manifest -v
   644   file
   $ sl cat -r . file
   one
+  two
 
 Internal amend patches preserve permissions, paths, and whitespace despite diff
 preferences.
