@@ -442,8 +442,20 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         cs_ids: &[ChangesetId],
         target: PrefetchTarget,
     ) -> Result<()> {
+        // Reads of preloaded changesets never reach the persistent storage,
+        // so prefetching below them there would only fill caches that are
+        // never consulted.
+        let preloaded_edges = self.preloaded_edges.load();
+        let cs_ids: Vec<_> = cs_ids
+            .iter()
+            .filter(|cs_id| !preloaded_edges.cs_id_to_edges.contains_key(cs_id))
+            .copied()
+            .collect();
+        if cs_ids.is_empty() {
+            return Ok(());
+        }
         self.persistent_storage
-            .prefetch_many_edges(ctx, cs_ids, target)
+            .prefetch_many_edges(ctx, &cs_ids, target)
             .await
     }
 

@@ -312,13 +312,9 @@ async fn test_preloaded_prefetch_forwarding(fb: FacebookInit) -> Result<()> {
         )
         .await?;
     // F isn't preloaded, so prefetching below it is up to the underlying
-    // storage.
-    // FIXME: D and everything below it are served from the preloaded edges,
-    // so prefetching it only fills caches that reads never consult.
-    assert_eq!(
-        recording_storage.prefetched(),
-        vec![name_cs_id("D"), name_cs_id("F")]
-    );
+    // storage.  D and everything below it are served from the preloaded
+    // edges, so it isn't forwarded.
+    assert_eq!(recording_storage.prefetched(), vec![name_cs_id("F")]);
 
     Ok(())
 }
