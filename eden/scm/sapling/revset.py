@@ -577,6 +577,7 @@ def ancestorspec(repo, subset, x, n, order):
     if n < 0:
         # children lookup
         return _childrenspec(repo, subset, x, -n, order)
+    n = min(n, smartset.maxrev + 1)
     ps = set()
     cl = repo.changelog
     s = getset(repo, fullreposet(repo), x)
