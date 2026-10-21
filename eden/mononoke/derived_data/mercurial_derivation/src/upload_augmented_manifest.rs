@@ -115,88 +115,11 @@ struct ParsedTree {
     manifest: HgBlobManifest,
 }
 
-fn child_directories(
-    manifest: &HgBlobManifest,
-) -> impl Iterator<Item = (&MPathElement, HgNodeHash)> {
-    manifest
-        .content()
-        .files
-        .iter()
-        .filter_map(|(name, entry)| match entry {
-            Entry::Tree(id) => Some((name, id.into_nodehash())),
-            Entry::Leaf(_) => None,
-        })
-}
-
 #[derive(Default)]
-pub struct TreeChildren {
-    pub in_batch: Vec<(MPathElement, HgNodeHash)>,
+struct TreeChildren {
+    in_batch: Vec<(MPathElement, HgNodeHash)>,
     /// Not in the batch, so they must already be derived.
-    pub external: Vec<(MPathElement, HgNodeHash)>,
-}
-
-pub struct UploadedTreeBatch {
-    trees: Vec<ParsedTree>,
-    /// Per tree, the positions of the batch trees it contains.
-    contains: Vec<Vec<usize>>,
-    children: Vec<TreeChildren>,
-}
-
-impl UploadedTreeBatch {
-    /// Edges are node ids, not paths: identical subtrees are one node.
-    pub fn parse(envelopes: Vec<HgManifestEnvelope>) -> Result<Self> {
-        let trees = envelopes
-            .into_iter()
-            .map(|envelope| {
-                let node_id = envelope.node_id();
-                let manifest = HgBlobManifest::parse(envelope).with_context(|| {
-                    format!("parsing uploaded Mercurial manifest for tree {node_id}")
-                })?;
-                anyhow::Ok(ParsedTree { node_id, manifest })
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        let index_by_node: HashMap<HgNodeHash, usize> = trees
-            .iter()
-            .enumerate()
-            .map(|(index, tree)| (tree.node_id, index))
-            .collect();
-
-        let (contains, children) = trees
-            .iter()
-            .map(|tree| {
-                child_directories(&tree.manifest).fold(
-                    (Vec::new(), TreeChildren::default()),
-                    |(mut contains, mut children), (name, node_id)| {
-                        match index_by_node.get(&node_id) {
-                            Some(&index) => {
-                                contains.push(index);
-                                children.in_batch.push((name.clone(), node_id));
-                            }
-                            None => children.external.push((name.clone(), node_id)),
-                        }
-                        (contains, children)
-                    },
-                )
-            })
-            .unzip();
-
-        Ok(Self {
-            trees,
-            contains,
-            children,
-        })
-    }
-
-    fn top_trees(&self) -> Vec<usize> {
-        let mut contained = vec![false; self.trees.len()];
-        for &child in self.contains.iter().flatten() {
-            contained[child] = true;
-        }
-        (0..self.trees.len())
-            .filter(|&index| !contained[index])
-            .collect()
-    }
+    external: Vec<(MPathElement, HgNodeHash)>,
 }
 
 struct ChildSources<'a> {
@@ -230,20 +153,66 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
     restricted_paths: &RestrictedPathsConfigBased,
     trees: Vec<HgManifestEnvelope>,
 ) -> Result<Vec<UploadTreeAugmented>> {
-    let batch = UploadedTreeBatch::parse(trees)?;
-    let top_trees: Vec<BuildNode> = batch.top_trees().into_iter().map(BuildNode::Tree).collect();
+    let trees = trees
+        .into_iter()
+        .map(|envelope| {
+            let node_id = envelope.node_id();
+            let manifest = HgBlobManifest::parse(envelope).with_context(|| {
+                format!("parsing uploaded Mercurial manifest for tree {node_id}")
+            })?;
+            anyhow::Ok(ParsedTree { node_id, manifest })
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    // Edges are node ids, not paths: identical subtrees are one node.
+    let index_by_node: HashMap<HgNodeHash, usize> = trees
+        .iter()
+        .enumerate()
+        .map(|(index, tree)| (tree.node_id, index))
+        .collect();
+    let (contains, tree_children): (Vec<Vec<usize>>, Vec<TreeChildren>) = trees
+        .iter()
+        .map(|tree| {
+            tree.manifest.content().files.iter().fold(
+                (Vec::new(), TreeChildren::default()),
+                |(mut contains, mut children), (name, entry)| {
+                    let Entry::Tree(id) = entry else {
+                        return (contains, children);
+                    };
+                    let node_id = id.into_nodehash();
+                    match index_by_node.get(&node_id) {
+                        Some(&index) => {
+                            contains.push(index);
+                            children.in_batch.push((name.clone(), node_id));
+                        }
+                        None => children.external.push((name.clone(), node_id)),
+                    }
+                    (contains, children)
+                },
+            )
+        })
+        .unzip();
+
+    let mut contained = vec![false; trees.len()];
+    for &child in contains.iter().flatten() {
+        contained[child] = true;
+    }
+    let top_trees: Vec<BuildNode> = (0..trees.len())
+        .filter(|&index| !contained[index])
+        .map(BuildNode::Tree)
+        .collect();
     // By batch position, so the output order does not depend on build order.
     let built: Mutex<Vec<Option<UploadTreeAugmented>>> =
-        Mutex::new(batch.trees.iter().map(|_| None).collect());
+        Mutex::new(trees.iter().map(|_| None).collect());
 
-    let (batch, built_ref) = (&batch, &built);
+    let (trees, contains, tree_children, built_ref) = (&trees, &contains, &tree_children, &built);
     let traversed = bounded_traversal_dag(
         MAX_CONCURRENT_TREE_BUILDS,
         BuildNode::Root,
         move |node| {
             let children = match node {
                 BuildNode::Root => top_trees.clone(),
-                BuildNode::Tree(index) => batch.contains[index]
+                BuildNode::Tree(index) => contains[index]
                     .iter()
                     .map(|&child| BuildNode::Tree(child))
                     .collect(),
@@ -256,7 +225,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                 let BuildNode::Tree(index) = node else {
                     return Ok(None);
                 };
-                let tree = &batch.trees[index];
+                let tree = &trees[index];
                 let siblings = children
                     .iter()
                     .map(|child| (child.directory.treenode, child.as_ref()))
@@ -267,7 +236,7 @@ pub async fn build_augmented_manifests_for_uploaded_trees(
                     restricted_paths,
                     &tree.manifest,
                     ChildSources {
-                        children: &batch.children[index],
+                        children: &tree_children[index],
                         siblings: &siblings,
                     },
                 )
