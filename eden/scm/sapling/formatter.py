@@ -374,7 +374,7 @@ class jsonformatter(baseformatter):
         """do default text output while assigning data to item"""
         fieldkeys = fields.split()
         assert len(fieldkeys) == len(fielddata)
-        fielddata = list(d.decode() for d in fielddata)
+        fielddata = list(d.decode(errors="surrogateescape") for d in fielddata)
         self._item.update(zip(fieldkeys, fielddata))
 
     def end(self):
@@ -463,7 +463,7 @@ class templateformatter(baseformatter):
         """do default text output while assigning data to item"""
         fieldkeys = fields.split()
         assert len(fieldkeys) == len(fielddata)
-        fielddata = list(d.decode() for d in fielddata)
+        fielddata = list(d.decode(errors="replace") for d in fielddata)
         self._item.update(zip(fieldkeys, fielddata))
 
     def end(self):

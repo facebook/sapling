@@ -26,14 +26,28 @@ Plain cat writes the exact bytes
   
   0000: 89 50 4e 47 0d 0a 1a 0a 93 ff 00                |.PNG.......|
 
-BUG: the json and template formatters crash on the binary file, even when the
-template does not reference {data}
+The json formatter carries undecodable bytes as UTF-8b surrogates (\udcXX),
+so a consumer can recover the exact bytes
 
-  $ hg cat -Tjson bin.png 2>&1 | grep -E '^UnicodeDecodeError'
-  UnicodeDecodeError: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
-  $ hg cat -T '{abspath}\n' bin.png 2>&1 | grep -E '^UnicodeDecodeError'
-  UnicodeDecodeError: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
-  $ hg cat -T '{data}' bin.png 2>&1 | grep -E '^UnicodeDecodeError'
-  UnicodeDecodeError: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
-  $ hg cat -Tjson --output bin.json bin.png 2>&1 | grep -E '^UnicodeDecodeError'
-  UnicodeDecodeError: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte
+  $ hg cat -Tjson bin.png
+  [
+   {
+    "abspath": "bin.png",
+    "data": "\udc89PNG\r\n\u001a\n\udc93\udcff\u0000",
+    "path": "bin.png"
+   }
+  ]
+  $ hg cat -Tjson --output bin.json bin.png
+  >>> import json
+  >>> json.load(open("bin.json"))[0]["data"].encode("utf-8", "surrogateescape") == open("bin.png", "rb").read()
+  True
+
+The template formatter does not crash; a template that renders {data} shows
+U+FFFD for each undecodable byte
+
+  $ hg cat -T '{abspath}\n' bin.png
+  bin.png
+  $ hg cat -T '{data}' bin.png | f --hexdump -
+  
+  0000: ef bf bd 50 4e 47 0d 0a 1a 0a ef bf bd ef bf bd |...PNG..........|
+  0010: 00                                              |.|
