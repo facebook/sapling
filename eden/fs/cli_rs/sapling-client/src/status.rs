@@ -147,7 +147,10 @@ where
             .collect::<Vec<String>>()
     });
 
-    {
+    // A request without `second` compares `first` against the working copy,
+    // so its answer is not a function of the key and must not be cached.
+    let cacheable = params.second.is_some();
+    if cacheable {
         let mut lru_cache = STATUS_LRU_CACHE.lock().unwrap();
         let entry = lru_cache.get_mut(&params).cloned();
         if let Some(entry) = entry {
@@ -218,8 +221,10 @@ where
         SaplingGetStatusResult::Normal(status)
     };
 
-    let mut lru_cache = STATUS_LRU_CACHE.lock().unwrap();
-    lru_cache.insert(params, result.clone());
+    if cacheable {
+        let mut lru_cache = STATUS_LRU_CACHE.lock().unwrap();
+        lru_cache.insert(params, result.clone());
+    }
     Ok(result)
 }
 
@@ -347,7 +352,7 @@ mod tests {
             result,
             SaplingGetStatusResult::Normal(vec![(
                 SaplingStatus::Modified,
-                "first.txt".to_string()
+                "second.txt".to_string()
             )])
         );
         Ok(())
