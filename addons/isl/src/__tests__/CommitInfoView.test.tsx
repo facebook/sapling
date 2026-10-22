@@ -7,18 +7,22 @@
 
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {nullthrows} from 'shared/utils';
 import App from '../App';
 import {__TEST__ as ChangedFilesTestUtils} from '../ChangedFilesWithFetching';
 import {tracker} from '../analytics';
+import platform from '../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../testQueries';
 import {
   COMMIT,
   closeCommitInfoSidebar,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   openCommitInfoSidebar,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
+  simulateRepoConnected,
   simulateUncommittedChangedFiles,
   waitForWithTick,
 } from '../testUtils';
@@ -110,6 +114,127 @@ describe('CommitInfoView', () => {
         expect(withinCommitInfo().queryByText('some public base')).not.toBeInTheDocument();
         // stays on head commit
         expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
+      });
+    });
+
+    describe('description markdown preview', () => {
+      function renderedImages(): Array<HTMLImageElement> {
+        return [
+          ...screen
+            .getByTestId('commit-info-view')
+            .querySelectorAll<HTMLImageElement>('.rendered-markup img'),
+        ];
+      }
+
+      function simulateHeadDescription(description: string) {
+        act(() => {
+          simulateRepoConnected();
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public'}),
+              COMMIT('a', 'My Commit', '1'),
+              COMMIT('b', 'Head Commit', 'a', {isDot: true, description}),
+            ],
+          });
+        });
+      }
+
+      it('renders the description as markdown until it is edited', async () => {
+        simulateHeadDescription('Fixes **the bug**\n\n- step one\n- step two');
+        expectIsNOTEditingDescription();
+
+        await waitFor(() => {
+          expect(withinCommitInfo().getByText('the bug').tagName).toBe('STRONG');
+        });
+        expect(withinCommitInfo().getByText('step one').closest('li')).toBeTruthy();
+        expect(withinCommitInfo().queryByText(/\*\*the bug\*\*/)).not.toBeInTheDocument();
+
+        clickToEditDescription();
+        expectIsEditingDescription();
+        expect(getDescriptionEditor().value).toEqual(
+          expect.stringMatching(/Fixes \*\*the bug\*\*/),
+        );
+      });
+
+      it('keeps component names in angle brackets as text', async () => {
+        simulateHeadDescription('Wrap the navbar in <SafeAreaView> on iOS');
+
+        await waitFor(() => {
+          expect(withinCommitInfo().getByText(/<SafeAreaView>/)).toBeInTheDocument();
+        });
+      });
+
+      it('opens links externally instead of entering edit mode', async () => {
+        const openLink = jest
+          .spyOn(platform, 'openExternalLink')
+          .mockImplementation(() => undefined);
+        simulateHeadDescription('See [the docs](https://example.com/docs) first');
+
+        const link = await waitFor(() => withinCommitInfo().getByText('the docs'));
+        expect(link.tagName).toBe('A');
+
+        fireEvent.click(link);
+        expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
+        expectIsNOTEditingDescription();
+      });
+
+      it('renders img tags and keeps other HTML as text', async () => {
+        simulateHeadDescription(
+          'Before <img src="https://example.com/a.png" width="420" onerror="alert(1)" /> ' +
+            '<img src="javascript:alert(1)" /> <b onclick="alert(1)">bold</b>',
+        );
+
+        const image = await waitFor(() => nullthrows(renderedImages()[0]));
+        expect(image.getAttribute('src')).toEqual('https://example.com/a.png');
+        expect(image.getAttribute('width')).toEqual('420');
+        expect(image.hasAttribute('onerror')).toBe(false);
+        expect(renderedImages()).toHaveLength(1);
+        expect(
+          withinCommitInfo().getByText(/<img src="javascript:alert\(1\)" \/>/),
+        ).toBeInTheDocument();
+        expect(withinCommitInfo().getByText(/<b onclick="alert\(1\)">/)).toBeInTheDocument();
+      });
+
+      it('loads relative image paths from the server', async () => {
+        simulateHeadDescription('<img src="scratch/shot.png" width="420" />');
+
+        const request = await waitFor(() =>
+          nullthrows(getLastMessageOfTypeSentToServer('fetchLocalImage')),
+        );
+        expect(request.src).toEqual('scratch/shot.png');
+        act(() => {
+          simulateMessageFromServer({
+            type: 'fetchedLocalImage',
+            id: request.id,
+            result: {value: 'data:image/png;base64,AAAA'},
+          });
+        });
+
+        await waitFor(() => {
+          expect(renderedImages()[0]?.getAttribute('src')).toEqual('data:image/png;base64,AAAA');
+        });
+      });
+
+      it('keeps loaded images when the commits refresh', async () => {
+        const description = '<img src="scratch/refresh.png" width="420" />';
+        simulateHeadDescription(description);
+        const request = await waitFor(() =>
+          nullthrows(getLastMessageOfTypeSentToServer('fetchLocalImage')),
+        );
+        act(() => {
+          simulateMessageFromServer({
+            type: 'fetchedLocalImage',
+            id: request.id,
+            result: {value: 'data:image/png;base64,AAAA'},
+          });
+        });
+        await waitFor(() => {
+          expect(renderedImages()[0]?.getAttribute('src')).toEqual('data:image/png;base64,AAAA');
+        });
+
+        simulateHeadDescription(description);
+        await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+        expect(renderedImages()[0]?.getAttribute('src')).toEqual('data:image/png;base64,AAAA');
       });
     });
 

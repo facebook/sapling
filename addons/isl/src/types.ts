@@ -1114,6 +1114,7 @@ export type ClientToServerMessage =
       b64Content: string;
     }
   | {type: 'renderMarkup'; markup: string; id: number}
+  | {type: 'fetchLocalImage'; src: string; id: number}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
@@ -1321,6 +1322,7 @@ export type ServerToClientMessage =
     }
   | {type: 'fetchedStableLocationAutocompleteOptions'; result: Result<Array<TypeaheadResult>>}
   | {type: 'renderedMarkup'; html: string; id: number}
+  | {type: 'fetchedLocalImage'; result: Result<string>; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'gotConfiguredMergeTool'; tool: string | undefined}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
