@@ -116,6 +116,19 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_process_one_status_line_keeps_whitespace_in_paths() -> anyhow::Result<()> {
+        assert_eq!(
+            process_one_status_line("M dir/trailing.txt ")?,
+            Some((SaplingStatus::Modified, "dir/trailing.txt".to_owned()))
+        );
+        assert_eq!(
+            process_one_status_line("A  leading.txt")?,
+            Some((SaplingStatus::Added, "leading.txt".to_owned()))
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_process_one_status_line() -> anyhow::Result<()> {
         assert_eq!(
             process_one_status_line("M buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
