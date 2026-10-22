@@ -2313,7 +2313,11 @@ class localrepository:
         # The 'revs' might have been changed (ex. changelog migrated to a
         # different form).
         self._headcache.clear()
-        self._phasecache.invalidate()
+        # Do not construct the phasecache here: its construction reads heads,
+        # hence bookmarks, and bmstore.__init__ is a caller of this method.
+        phasecache, cached = isfilecached(self, "_phasecache")
+        if cached:
+            phasecache.invalidate()
         self.invalidatedagcopytrace()
 
     def invalidatedagcopytrace(self):
