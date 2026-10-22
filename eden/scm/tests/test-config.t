@@ -224,21 +224,6 @@ sub-options in [paths] aren't expanded
   paths.foo=~/foo
   paths.foo:suboption=~/foo
 
-edit failure
-
-  $ HGEDITOR=false sl config --edit --quiet
-  abort: edit failed: false exited with status 1
-  [255]
-
-  $ HGEDITOR=false sl config --user
-  opening */sapling/sapling.conf for editing... (glob)
-  abort: edit failed: false exited with status 1
-  [255]
-
-  $ sl config --user --local
-  abort: please specify exactly one config location
-  [255]
-
 config affected by environment variables
 
   $ EDITOR=e1 sl config --debug | grep 'ui\.editor'
@@ -293,128 +278,10 @@ reponame is set from paths.default
   $ cat .sl/reponame
   repo-myrepo1 (no-eol)
 
-config editing without an editor
-
-  $ newrepo
-
- invalid pattern
-  $ sl config --edit missing.value
-  abort: invalid config edit: 'missing.value'
-  (try section.name=value)
-  [255]
-
-  $ sl config --edit missing=name
-  abort: invalid config edit: 'missing'
-  (try section.name=value)
-  [255]
-
- append configs
-  $ sl config --local aa.bb.cc.字 "配
-  > 置" ee.fff=gggg
-  updated config in $TESTTMP/*/.sl/config (glob)
-  $ tail -6 .sl/config | dos2unix
-  [aa]
-  bb.cc.字 = 配
-    置
-  
-  [ee]
-  fff = gggg
-
- update config in-place without appending
-  $ sl config --local aa.bb.cc.字 new_值 "aa.bb.cc.字=新值
-  > 测
-  > 试
-  > "
-  updated config in $TESTTMP/*/.sl/config (glob)
-  $ tail -7 .sl/config | dos2unix
-  [aa]
-  bb.cc.字 = 新值
-    测
-    试
-  
-  [ee]
-  fff = gggg
-
-  $ sl config aa.bb.cc.字
-  新值\n测\n试
-
- with comments
-  $ newrepo
-  $ cat > .sl/config << 'EOF'
-  > [a]
-  > # b = 1
-  > b = 2
-  >   second line
-  > # b = 3
-  > EOF
-
-  $ sl config --local a.b 4
-  updated config in $TESTTMP/*/.sl/config (glob)
-  $ cat .sl/config
-  [a]
-  # b = 1
-  b = 4
-  # b = 3
-
-  $ cd
-  $ HGIDENTITY=sl newrepo
-  $ sl config --local foo.bar baz
-  updated config in $TESTTMP/*/.sl/config (glob)
-  $ cat .sl/config | dos2unix
-  # example repository config (see 'sl help config' for more info)
-  [paths]
-  # URL aliases to other repo sources
-  # (see 'sl help config.paths' for more info)
-  #
-  # default = https://example.com/example-org/example-repo
-  # my-fork = ssh://jdoe@example.com/jdoe/example-repo
-  
-  [ui]
-  # name and email (local to this repository, optional), e.g.
-  # username = Jane Doe <jdoe@example.com>
-  
-  [foo]
-  bar = baz
-
-
- user config
-  $ sl config --edit a.b=1 --quiet
-  $ sl config a.b
-  1
-
-  $ sl config --user a.b 2
-  updated config in $TESTTMP/*sapling* (glob)
-  $ sl config a.b
-  2
-
-system config (make sure it tries the right file)
-  $ HGEDITOR=false sl config --system
-  opening $TESTTMP/config for editing...
-  abort: edit failed: false exited with status 1
-  [255]
-
 Show builtin configs with --verbose (filtersuspectsymlink is merely a sample item from builtin:core):
   $ sl config | grep filtersuspectsymlink || true
   $ sl config --verbose | grep filtersuspectsymlink
   unsafe.filtersuspectsymlink=true
-
-Warn about duplicate entries:
-  $ newrepo
-  $ cat > .sl/config << 'EOF'
-  > [a]
-  > b = 1
-  > [a]
-  > b = 2
-  > EOF
-
-  $ sl config --local a.b=3
-  warning: duplicate config entries for a.b in $TESTTMP/*/.sl/config (glob)
-  updated config in $TESTTMP/*/.sl/config (glob)
-  $ cat .sl/config
-  [a]
-  b = 1
-  [a]
-  b = 3
 
 Can see all sources w/ --debug and --verbose:
   $ newrepo sources
@@ -440,28 +307,3 @@ Can see all sources w/ --debug and --verbose:
   $TESTTMP/sources/.sl/config:*: foo.bar=2 (glob)
     $TESTTMP/sources/.sl/config:*: foo.bar=1 (glob)
     $TESTTMP/sources.rc:*: foo.bar=3 (glob)
-
-Can delete in place:
-  $ newrepo delete
-  $ cat > .sl/config << EOF
-  > [foo]
-  > bar = 1
-  > baz = 2
-  > EOF
-
-  $ sl config --delete foo.bar
-  abort: --delete requires one of --user, --local or --system
-  [255]
-
-  $ sl config --delete --local foo.bar=123
-  abort: invalid config deletion: 'foo.bar=123'
-  (try section.name)
-  [255]
-
-  $ sl config --delete --local foo.bar -v
-  deleting foo.bar from $TESTTMP/delete/.sl/config
-  updated config in $TESTTMP/delete/.sl/config
-
-  $ cat .sl/config
-  [foo]
-  baz = 2

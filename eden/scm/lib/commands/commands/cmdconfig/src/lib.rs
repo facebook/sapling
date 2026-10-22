@@ -27,6 +27,8 @@ use serde::ser::Serialize;
 use serde::ser::SerializeStruct;
 use serde::ser::Serializer;
 
+mod edit;
+
 define_flags! {
     pub struct ConfigOpts {
         /// edit config, implying --user if no other flags set (DEPRECATED)
@@ -60,7 +62,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<ConfigOpts>, _repo: Option<&Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<ConfigOpts>, repo: Option<&Repo>) -> Result<u8> {
     let config = ctx.config();
 
     let force_rust = config
@@ -81,9 +83,7 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, _repo: Option<&Repo>) -> Result<u8> {
         || ctx.opts.system
         || ctx.opts.delete
     {
-        bail!(errors::FallbackToPython(
-            "config edit options not supported in Rust".to_owned()
-        ));
+        return edit::run(&ctx, repo);
     }
 
     let mut formatter = get_formatter(
