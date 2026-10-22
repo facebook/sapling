@@ -5,12 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use edenapi_types::BlameData;
+use edenapi_types::CheckPathPermissionData;
+use edenapi_types::HgChangesetContent;
+use edenapi_types::PathHistoryEntries;
 use edenapi_types::WireHistoryEntry;
+use edenapi_types::commit::HgInfo;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
+use types::Parents;
 
 use super::*;
 use crate::builder::HttpClientBuilder;
@@ -248,4 +254,337 @@ async fn retry_limits_and_nonretryable_errors() {
         );
         assert_eq!(requests.await.unwrap().len(), count);
     }
+}
+
+#[tokio::test]
+async fn streaming_endpoints_retry_status_errors() {
+    macro_rules! check {
+        ($method:ident($($arg:expr),* $(,)?)) => {
+            check!($method($($arg),*), false);
+        };
+        ($method:ident($($arg:expr),* $(,)?), $existing:expr) => {{
+            for enabled in [true, false] {
+                let should_retry = enabled || $existing;
+                let mut replies = vec![Reply::status(503)];
+                if should_retry {
+                    replies.push(Reply::status(200));
+                }
+                let (client, requests) = server_with_retries(replies, 1, enabled).await;
+                let result = client.$method($($arg),*).await.unwrap().flatten().await;
+                assert_eq!(result.is_ok(), should_retry, "{}: {:?}", stringify!($method), result.err());
+                let requests = requests.await.unwrap();
+                assert_eq!(requests.len(), if should_retry { 2 } else { 1 }, "{}", stringify!($method));
+                if should_retry {
+                    assert_eq!(requests[0], requests[1], "{}", stringify!($method));
+                }
+            }
+        }};
+    }
+
+    check!(path_history(
+        HgId::default(),
+        vec![RepoPathBuf::default()],
+        None,
+        vec![]
+    ));
+    check!(commit_revlog_data(vec![HgId::default()]));
+    check!(upload_filenodes_batch(vec![HgFilenodeData::default()]));
+    check!(upload_changesets(
+        vec![UploadHgChangeset::default()],
+        vec![]
+    ));
+    check!(upload_identical_changesets(vec![identical_changeset(
+        HgId::default()
+    )]));
+    check!(commit_translate_id(
+        vec![CommitId::default()],
+        CommitIdScheme::Hg,
+        None,
+        None,
+        None
+    ));
+    check!(blame(vec![Key::default()]));
+    check!(check_path_permission(CheckPathPermissionRequest {
+        paths: vec![RepoPathBuf::default()],
+        ..Default::default()
+    }));
+    check!(check_manifest_permission(CheckManifestPermissionRequest {
+        manifest_ids: vec![HgId::default()]
+    }));
+    check!(
+        files_attrs(FetchContext::default(), vec![FileSpec::default()]),
+        true
+    );
+    check!(
+        trees(FetchContext::default(), vec![Key::default()], None),
+        true
+    );
+}
+
+fn identical_changeset(node_id: HgId) -> IdenticalChangesetContent {
+    IdenticalChangesetContent {
+        bcs_id: Default::default(),
+        hg_parents: Default::default(),
+        bonsai_parents: Default::default(),
+        author: String::new(),
+        time: 0,
+        tz: 0,
+        extras: vec![],
+        bonsai_file_changes: vec![],
+        hg_file_changes: vec![],
+        message: String::new(),
+        is_snapshot: false,
+        hg_info: HgInfo {
+            node_id,
+            ..Default::default()
+        },
+        committer: None,
+        committer_time: None,
+        committer_tz: None,
+        git_extra_headers: None,
+        subtree_changes: None,
+    }
+}
+
+#[tokio::test]
+async fn keyed_endpoints_retry_only_pending_inputs() {
+    macro_rules! check {
+        ($method:ident($($arg:expr),* $(,)?), $expected:expr, $retry:expr) => {
+            check!($method($($arg),*), $expected, $retry, |entry| {
+                serde_cbor::to_vec(&entry.clone().to_wire()).unwrap()
+            });
+        };
+        ($method:ident($($arg:expr),* $(,)?), $expected:expr, $retry:expr, $encode:expr) => {{
+            let expected = $expected;
+            let retry = $retry;
+            let bodies: Vec<Vec<u8>> = expected.iter().map($encode).collect();
+            let mut partial = bodies[0].clone();
+            partial.extend_from_slice(&bodies[1][..bodies[1].len() / 2]);
+            for enabled in [true, false] {
+                let mut replies = vec![Reply::body(partial.clone(), false)];
+                if enabled {
+                    replies.push(Reply::body(bodies[1..].concat(), false));
+                }
+                let (client, requests) = server_with_retries(replies, 1, enabled).await;
+                let response = client.$method($($arg),*).await.unwrap();
+                let entries: Result<Vec<_>, _> = response.entries.try_collect().await;
+                if enabled {
+                    assert_eq!(entries.unwrap(), expected, "{} results", stringify!($method));
+                } else {
+                    assert!(entries.is_err(), "{}", stringify!($method));
+                }
+                let requests = requests.await.unwrap();
+                assert_eq!(requests.len(), if enabled { 2 } else { 1 }, "{} request count", stringify!($method));
+                if enabled {
+                    let actual: serde_cbor::Value = serde_cbor::from_slice(&requests[1]).unwrap();
+                    assert_eq!(actual, serde_cbor::value::to_value(&retry).unwrap(), "{} retry payload", stringify!($method));
+                }
+            }
+        }};
+    }
+
+    let hgids: Vec<_> = [1, 2]
+        .into_iter()
+        .map(|n| HgId::from_byte_array([n; 20]))
+        .collect();
+    let paths: Vec<_> = ["a", "b"]
+        .into_iter()
+        .map(|p| RepoPathBuf::from_string(p.into()).unwrap())
+        .collect();
+    let keys: Vec<_> = paths
+        .iter()
+        .zip(&hgids)
+        .map(|(p, id)| Key::new(p.clone(), *id))
+        .collect();
+    let cursor: Vec<_> = paths
+        .iter()
+        .map(|path| PathHistoryRequestPaginationCursor {
+            path: path.clone(),
+            starting_commits: vec![(hgids[0], None)],
+        })
+        .collect();
+
+    check!(
+        path_history(hgids[0], paths.clone(), Some(5), cursor.clone()),
+        paths
+            .iter()
+            .map(|path| PathHistoryResponse {
+                path: path.clone(),
+                entries: Ok(PathHistoryEntries::default())
+            })
+            .collect::<Vec<_>>(),
+        PathHistoryRequest {
+            commit: hgids[0],
+            paths: vec![paths[1].clone()],
+            limit: Some(5),
+            cursor: vec![cursor[1].clone()]
+        }
+        .to_wire()
+    );
+
+    check!(
+        blame(keys.clone()),
+        keys.iter()
+            .map(|key| BlameResult {
+                file: key.clone(),
+                data: Ok(BlameData::default())
+            })
+            .collect::<Vec<_>>(),
+        BlameRequest {
+            files: vec![keys[1].clone()]
+        }
+        .to_wire()
+    );
+
+    check!(
+        commit_revlog_data(hgids.clone()),
+        hgids
+            .iter()
+            .map(|id| CommitRevlogData {
+                hgid: *id,
+                revlog_data: Bytes::from_static(b"commit")
+            })
+            .collect::<Vec<_>>(),
+        CommitRevlogDataRequest {
+            hgids: vec![hgids[1]]
+        },
+        |entry: &CommitRevlogData| serde_cbor::to_vec(entry).unwrap()
+    );
+
+    let commits: Vec<_> = hgids.iter().map(|id| CommitId::Hg(*id)).collect();
+    check!(
+        commit_translate_id(
+            commits.clone(),
+            CommitIdScheme::Hg,
+            Some("source".into()),
+            Some("dest".into()),
+            Some("lookup".into())
+        ),
+        commits
+            .iter()
+            .map(|commit| CommitTranslateIdResponse {
+                commit: commit.clone(),
+                translated: commit.clone()
+            })
+            .collect::<Vec<_>>(),
+        CommitTranslateIdRequest {
+            commits: vec![commits[1].clone()],
+            scheme: CommitIdScheme::Hg,
+            from_repo: Some("source".into()),
+            to_repo: Some("dest".into()),
+            lookup_behavior: Some("lookup".into())
+        }
+        .to_wire()
+    );
+
+    check!(
+        check_path_permission(CheckPathPermissionRequest {
+            hg_cs_id: hgids[0],
+            paths: paths.clone()
+        }),
+        paths
+            .iter()
+            .map(|path| CheckPathPermissionResponse {
+                path: path.clone(),
+                result: Ok(CheckPathPermissionData::default())
+            })
+            .collect::<Vec<_>>(),
+        CheckPathPermissionRequest {
+            hg_cs_id: hgids[0],
+            paths: vec![paths[1].clone()]
+        }
+        .to_wire()
+    );
+
+    check!(
+        check_manifest_permission(CheckManifestPermissionRequest {
+            manifest_ids: hgids.clone()
+        }),
+        hgids
+            .iter()
+            .map(|id| CheckManifestPermissionResponse {
+                manifest_id: *id,
+                ..Default::default()
+            })
+            .collect::<Vec<_>>(),
+        CheckManifestPermissionRequest {
+            manifest_ids: vec![hgids[1]]
+        }
+        .to_wire()
+    );
+
+    let filenodes: Vec<_> = hgids
+        .iter()
+        .map(|id| HgFilenodeData {
+            node_id: *id,
+            ..Default::default()
+        })
+        .collect();
+    check!(
+        upload_filenodes_batch(filenodes.clone()),
+        hgids
+            .iter()
+            .map(|id| UploadTokensResponse {
+                token: UploadToken::new_fake_token(AnyId::HgFilenodeId(*id), None)
+            })
+            .collect::<Vec<_>>(),
+        Batch {
+            batch: vec![UploadHgFilenodeRequest {
+                data: filenodes[1].clone()
+            }]
+        }
+        .to_wire()
+    );
+
+    let hgids: Vec<_> = [3, 1, 2]
+        .into_iter()
+        .map(|n| HgId::from_byte_array([n; 20]))
+        .collect();
+    let changesets: Vec<_> = hgids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| UploadHgChangeset {
+            node_id: *id,
+            changeset_content: HgChangesetContent {
+                parents: if i == 0 {
+                    Parents::None
+                } else {
+                    Parents::One(hgids[i - 1])
+                },
+                ..Default::default()
+            },
+        })
+        .collect();
+    let mutations = vec![HgMutationEntryContent {
+        successor: hgids[0],
+        predecessors: vec![HgId::from_byte_array([4; 20])],
+        ..Default::default()
+    }];
+    let tokens = || {
+        hgids
+            .iter()
+            .map(|id| UploadTokensResponse {
+                token: UploadToken::new_fake_token(AnyId::HgChangesetId(*id), None),
+            })
+            .collect::<Vec<_>>()
+    };
+    check!(
+        upload_changesets(changesets.clone(), mutations.clone()),
+        tokens(),
+        UploadHgChangesetsRequest {
+            changesets: changesets[1..].to_vec(),
+            mutations: mutations.clone()
+        }
+        .to_wire()
+    );
+
+    let identical: Vec<_> = hgids.iter().map(|id| identical_changeset(*id)).collect();
+    check!(
+        upload_identical_changesets(identical.clone()),
+        tokens(),
+        UploadIdenticalChangesetsRequest {
+            changesets: identical[1..].to_vec()
+        }
+        .to_wire()
+    );
 }
