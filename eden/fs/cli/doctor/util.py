@@ -35,6 +35,7 @@ class CheckoutInfo:
         state: Optional[MountState] = None,
         mount_inode_info: Optional[MountInodeInfo] = None,
         visible_in_daemon_namespace: Optional[bool] = None,
+        config_error: Optional[Exception] = None,
     ) -> None:
         self.instance = instance
         self.path = path
@@ -44,6 +45,9 @@ class CheckoutInfo:
         self.state = state
         self.mount_inode_info = mount_inode_info
         self.visible_in_daemon_namespace = visible_in_daemon_namespace
+        # Set when the checkout's config.toml could not be read, in which case
+        # backing_repo is unknown and stays None.
+        self.config_error = config_error
 
     def get_checkout(self) -> EdenCheckout:
         state_dir = (
@@ -259,7 +263,6 @@ def get_checkouts_info(instance: EdenInstance) -> Dict[Path, CheckoutInfo]:
                 checkouts[path] = checkout
 
         # Get information about the checkouts listed in the config file
-        missing_checkouts = []
         for configured_checkout in instance.get_checkouts():
             checkout_info = checkouts.get(configured_checkout.path, None)
             if checkout_info is None:
@@ -273,22 +276,12 @@ def get_checkouts_info(instance: EdenInstance) -> Dict[Path, CheckoutInfo]:
                         configured_checkout.get_config().backing_repo
                     )
                 except Exception as ex:
-                    # Config file is missing or invalid.
-                    # Without it we can't know what the backing repo is, so
-                    # we collect all checkouts with missing configs and report
-                    # a single error at the end.
-                    missing_checkouts.append(
-                        f"{configured_checkout.path} (error: {ex})"
-                    )
+                    # Config file is missing or invalid, so the backing repo
+                    # is unknown. Keep the checkout so callers can report it.
+                    checkout_info.config_error = ex
                     continue
 
             checkout_info.configured_state_dir = configured_checkout.state_dir
-        if missing_checkouts:
-            errmsg = "\n".join(missing_checkouts)
-            print(
-                f"An error occurred while getting checkouts info: {errmsg}",
-                file=sys.stderr,
-            )
         return checkouts
     except Exception as ex:
         print(f"An error occurred while getting checkouts info: {ex}", file=sys.stderr)

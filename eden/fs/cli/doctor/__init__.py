@@ -745,6 +745,16 @@ class EdenCheckoutCorruption(Problem):
         )
 
 
+class CheckoutConfigUnreadable(Problem):
+    def __init__(self, checkout: CheckoutInfo, ex: Exception) -> None:
+        super().__init__(
+            f"{checkout.path} is configured, but EdenFS cannot mount it because "
+            f"its checkout config could not be read:\n{ex}\n"
+            "EdenFS skips this checkout on startup, so it will stay unmounted.",
+            remediation=get_reclone_msg(str(checkout.path)),
+        )
+
+
 class EdenCheckoutConfigCorruption(FixableProblem):
     _checkout_info: CheckoutInfo
     _ex: Exception
@@ -891,7 +901,10 @@ def check_mount(
     debug: bool,
     fast: bool,
 ) -> None:
-    if checkout.state is None:
+    if checkout.state is None and checkout.config_error is not None:
+        # Remounting would fail the same way, so don't offer it as a fix.
+        tracker.add_problem(CheckoutConfigUnreadable(checkout, checkout.config_error))
+    elif checkout.state is None:
         # This checkout is configured but not currently running.
         tracker.add_problem(
             CheckoutNotMounted(out, checkout, all_checkouts, checked_backing_repos)

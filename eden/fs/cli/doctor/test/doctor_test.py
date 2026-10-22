@@ -51,7 +51,7 @@ from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
 )
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
-from eden.fs.cli.doctor.util import CheckoutInfo
+from eden.fs.cli.doctor.util import CheckoutInfo, get_checkouts_info
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.redirect import Redirection, RedirectionState, RedirectionType
 from eden.fs.cli.test.lib.output import TestOutput
@@ -1266,6 +1266,77 @@ Would remount {mounts[1]}
             out=out,
         )
         return exit_code, out.getvalue(), mounts
+
+    def test_unmounted_checkout_missing_config_dry_run(self) -> None:
+        exit_code, out, instance, checkout = (
+            self._test_unmounted_checkout_missing_config(dry_run=True)
+        )
+        self.assertIn(
+            f"{checkout.path} is configured, but EdenFS cannot mount it because "
+            "its checkout config could not be read:\n",
+            out,
+        )
+        self.assertIn(f"{checkout.state_dir / 'config.toml'} does not exist", out)
+        self.assertIn("To recover, you will need to remove and reclone the repo.", out)
+        self.assertNotIn("unexpected error", out)
+        self.assertNotIn("AssertionError", out)
+        self.assertNotIn("Would remount", out)
+        self.assertEqual(exit_code, 1)
+
+    def test_unmounted_checkout_missing_config_is_not_remounted(self) -> None:
+        exit_code, out, instance, checkout = (
+            self._test_unmounted_checkout_missing_config(dry_run=False)
+        )
+        self.assertIn(f"{checkout.path} is configured, but EdenFS cannot mount it", out)
+        self.assertIn("1 issue requires manual attention.", out)
+        self.assertNotIn("unexpected error", out)
+        self.assertEqual(instance.mount_calls, [])
+        self.assertEqual(exit_code, 1)
+
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    def _test_unmounted_checkout_missing_config(
+        self,
+        mock_watchman: MagicMock,
+        dry_run: bool,
+    ) -> Tuple[int, str, FakeEdenInstance, EdenCheckout]:
+        """A checkout listed in config.json whose client directory has lost its
+        config.toml (e.g. after an interrupted `eden rm`). EdenFS skips it on
+        startup, so it is configured but not mounted, and its backing repo is
+        unknown.
+        """
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(tmp_dir)
+        instance.create_test_mount("path1")
+        checkout = instance.create_test_mount("path2", active=False)
+        os.unlink(checkout.state_dir / "config.toml")
+
+        out = TestOutput()
+        exit_code = doctor.cure_what_ails_you(
+            typing.cast(EdenInstance, instance),
+            dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
+            out=out,
+        )
+        return exit_code, out.getvalue(), instance, checkout
+
+    def test_get_checkouts_info_keeps_checkout_with_unreadable_config(self) -> None:
+        # `eden health-report` relies on such checkouts still being listed so
+        # it can report them as not mounted.
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1", active=False)
+        os.unlink(checkout.state_dir / "config.toml")
+
+        checkouts = get_checkouts_info(typing.cast(EdenInstance, instance))
+
+        info = checkouts[checkout.path]
+        self.assertIsNone(info.state)
+        self.assertIsNone(info.backing_repo)
+        self.assertIn("config.toml does not exist", str(info.config_error))
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.
