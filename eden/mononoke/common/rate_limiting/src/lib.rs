@@ -19,7 +19,7 @@ use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
-use client_memory::ClientBucket;
+use client_memory::ClientGroup;
 use client_memory::global_client_memory_registry;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
@@ -319,12 +319,8 @@ impl LoadShedLimit {
                 )
             }
             LoadSheddingMetric::top_client(top_client) => {
-                let client_bucket: ClientBucket = main_id.into();
-                let registry = global_client_memory_registry();
-                let is_top = matches!(
-                    registry.top_consumer(),
-                    Some((top_bucket, _)) if client_bucket == top_bucket
-                );
+                let group = ClientGroup::for_request(identities, main_id);
+                let is_top = global_client_memory_registry().top_group() == Some(group);
                 let value = if is_top {
                     STATS::load_shed_counter.get_value(fb, (top_client.metric.clone(),))
                 } else {
@@ -332,8 +328,8 @@ impl LoadShedLimit {
                 };
                 (
                     format!(
-                        "top_client (bucket: {}, metric: {})",
-                        client_bucket.name(),
+                        "top_client (group: {}, metric: {})",
+                        group.name(),
                         top_client.metric
                     ),
                     top_client.metric,
@@ -546,6 +542,8 @@ fn in_throttled_slice(
 
 #[cfg(test)]
 mod test {
+    #[cfg(fbcode_build)]
+    use std::collections::HashMap;
     #[cfg(fbcode_build)]
     use std::sync::Arc;
 
@@ -775,6 +773,14 @@ mod test {
     }
 
     #[cfg(fbcode_build)]
+    fn quicksand_identities() -> MononokeIdentitySet {
+        MononokeIdentitySet::from([MononokeIdentity::from_legacy_type_data(
+            "SERVICE_IDENTITY",
+            "quicksand_builder",
+        )])
+    }
+
+    #[cfg(fbcode_build)]
     #[mononoke::fbinit_test]
     fn test_top_client_load_shed_is_top_consumer_above_limit(fb: FacebookInit) {
         use client_memory::global_client_memory_registry;
@@ -787,7 +793,7 @@ mod test {
 
         // Register quicksand as the top consumer
         let registry = global_client_memory_registry();
-        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.add_weight(ClientGroup::Quicksand, 1_000_000);
 
         let limit = LoadShedLimit {
             raw_config: rate_limiting_config::LoadShedLimit {
@@ -808,7 +814,7 @@ mod test {
         // Client IS the top consumer and metric (80) > limit (75) → Fail
         let result = limit.should_load_shed(
             fb,
-            None,
+            Some(&quicksand_identities()),
             Some("SERVICE_IDENTITY:quicksand_builder"),
             &mut scuba,
             ods_counters.clone(),
@@ -830,7 +836,7 @@ mod test {
         }
 
         // Clean up
-        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.remove_weight(ClientGroup::Quicksand, 1_000_000);
     }
 
     #[cfg(fbcode_build)]
@@ -845,7 +851,7 @@ mod test {
         STATS::load_shed_counter.set_value(fb, 60, (metric_name.to_string(),));
 
         let registry = global_client_memory_registry();
-        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.add_weight(ClientGroup::Quicksand, 1_000_000);
 
         let limit = LoadShedLimit {
             raw_config: rate_limiting_config::LoadShedLimit {
@@ -866,7 +872,7 @@ mod test {
         // Client IS the top consumer but metric (60) < limit (75) → Pass
         let result = limit.should_load_shed(
             fb,
-            None,
+            Some(&quicksand_identities()),
             Some("SERVICE_IDENTITY:quicksand_builder"),
             &mut scuba,
             ods_counters,
@@ -874,7 +880,7 @@ mod test {
         );
         assert!(matches!(result, LoadShedResult::Pass));
 
-        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.remove_weight(ClientGroup::Quicksand, 1_000_000);
     }
 
     #[cfg(fbcode_build)]
@@ -890,7 +896,7 @@ mod test {
 
         // Register quicksand as top consumer, but the requesting client is "other"
         let registry = global_client_memory_registry();
-        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.add_weight(ClientGroup::Quicksand, 1_000_000);
 
         let limit = LoadShedLimit {
             raw_config: rate_limiting_config::LoadShedLimit {
@@ -911,7 +917,9 @@ mod test {
         // Client is NOT the top consumer → Pass (even though metric > limit)
         let result = limit.should_load_shed(
             fb,
-            None,
+            Some(&MononokeIdentitySet::from([
+                MononokeIdentity::from_legacy_type_data("SERVICE_IDENTITY", "some_other_client"),
+            ])),
             Some("SERVICE_IDENTITY:some_other_client"),
             &mut scuba,
             ods_counters,
@@ -919,7 +927,7 @@ mod test {
         );
         assert!(matches!(result, LoadShedResult::Pass));
 
-        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.remove_weight(ClientGroup::Quicksand, 1_000_000);
     }
 
     #[cfg(fbcode_build)]
@@ -950,7 +958,7 @@ mod test {
         // No consumers registered (or all at zero) → Pass
         let result = limit.should_load_shed(
             fb,
-            None,
+            Some(&quicksand_identities()),
             Some("SERVICE_IDENTITY:quicksand_builder"),
             &mut scuba,
             ods_counters,
@@ -970,7 +978,7 @@ mod test {
         STATS::load_shed_counter.set_value(fb, 80, (metric_name.to_string(),));
 
         let registry = global_client_memory_registry();
-        registry.add_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.add_weight(ClientGroup::Quicksand, 1_000_000);
 
         let limit = LoadShedLimit {
             raw_config: rate_limiting_config::LoadShedLimit {
@@ -992,7 +1000,7 @@ mod test {
         // request's builder is untouched.
         let result = limit.should_load_shed(
             fb,
-            None,
+            Some(&quicksand_identities()),
             Some("SERVICE_IDENTITY:quicksand_builder"),
             &mut scuba,
             ods_counters,
@@ -1001,6 +1009,125 @@ mod test {
         assert!(matches!(result, LoadShedResult::Pass));
         assert!(scuba.get_sample().get("log_tag").is_none());
 
-        registry.remove_weight(ClientBucket::Quicksand, 1_000_000);
+        registry.remove_weight(ClientGroup::Quicksand, 1_000_000);
+    }
+
+    #[cfg(fbcode_build)]
+    fn top_client_limit(fb: FacebookInit, metric_name: &str) -> LoadShedLimit {
+        use rate_limiting_config::TopClient;
+
+        STATS::load_shed_counter.set_value(fb, 80, (metric_name.to_string(),));
+        LoadShedLimit {
+            raw_config: rate_limiting_config::LoadShedLimit {
+                status: RateLimitStatus::Enforced,
+                target: None,
+                limit: 75,
+                load_shedding_metric: LoadSheddingMetric::top_client(TopClient {
+                    metric: metric_name.to_string(),
+                }),
+                ..Default::default()
+            },
+            target: None,
+        }
+    }
+
+    #[cfg(fbcode_build)]
+    fn is_shed(
+        fb: FacebookInit,
+        limit: &LoadShedLimit,
+        identities: &MononokeIdentitySet,
+        main_id: &str,
+    ) -> bool {
+        matches!(
+            limit.should_load_shed(
+                fb,
+                Some(identities),
+                Some(main_id),
+                &mut MononokeScubaSampleBuilder::with_discard(),
+                OdsCounterManager::new(fb),
+                None,
+            ),
+            LoadShedResult::Fail(_)
+        )
+    }
+
+    #[cfg(fbcode_build)]
+    fn identity(id_type: &str, id_data: &str) -> MononokeIdentitySet {
+        MononokeIdentitySet::from([MononokeIdentity::from_legacy_type_data(id_type, id_data)])
+    }
+
+    /// Adds memory for twenty Sandcastle CI aliases, as in S717136, classified
+    /// the same way the memory tracker does. Returns the weights to remove.
+    #[cfg(fbcode_build)]
+    fn add_ci_fan_out() -> Vec<(ClientGroup, i64)> {
+        let sandcastle = identity("SERVICE_IDENTITY", "sandcastle.worker.warmed");
+        (0..20)
+            .map(|i| {
+                let main_id = format!("ALIAS:build-{i}");
+                let group = ClientGroup::for_request(Some(&sandcastle), Some(&main_id));
+                global_client_memory_registry().add_weight(group, 100_000);
+                (group, 100_000)
+            })
+            .collect()
+    }
+
+    #[cfg(fbcode_build)]
+    fn remove_weights(weights: Vec<(ClientGroup, i64)>) {
+        for (group, weight) in weights {
+            global_client_memory_registry().remove_weight(group, weight);
+        }
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_identity_groups_shed_ci_fan_out_but_not_users(fb: FacebookInit) {
+        use justknobs::test_helpers::JustKnobsInMemory;
+        use justknobs::test_helpers::KnobVal;
+        use justknobs::test_helpers::with_just_knobs;
+
+        let knobs = JustKnobsInMemory::new(HashMap::from([(
+            "scm/mononoke:load_shed_client_groups_from_identities".to_string(),
+            KnobVal::Bool(true),
+        )]));
+        with_just_knobs(knobs, || {
+            let weights = add_ci_fan_out();
+            let limit = top_client_limit(fb, "test_memory_pct_identity_groups");
+
+            assert!(
+                is_shed(
+                    fb,
+                    &limit,
+                    &identity("SERVICE_IDENTITY", "sandcastle.worker.warmed"),
+                    "ALIAS:another-pipeline",
+                ),
+                "a new Sandcastle request should be shed when Sandcastle is the top group"
+            );
+            assert!(
+                !is_shed(fb, &limit, &identity("USER", "alice"), "USER:alice"),
+                "users are not shed for a Sandcastle fan-out"
+            );
+            remove_weights(weights);
+        });
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_top_client_legacy_groups_shed_users_with_ci_fan_out(fb: FacebookInit) {
+        // With the knob at its default, alias-only Sandcastle traffic is
+        // classified as `other`, so users in `other` are shed with it.
+        let weights = add_ci_fan_out();
+        let limit = top_client_limit(fb, "test_memory_pct_legacy_groups");
+
+        assert!(is_shed(
+            fb,
+            &limit,
+            &identity("SERVICE_IDENTITY", "sandcastle.worker.warmed"),
+            "ALIAS:another-pipeline",
+        ));
+        assert!(
+            is_shed(fb, &limit, &identity("USER", "alice"), "USER:alice"),
+            "the legacy classification puts users and CI aliases in the same group"
+        );
+        remove_weights(weights);
     }
 }

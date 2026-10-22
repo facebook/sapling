@@ -7,5 +7,9 @@ authors = ["Facebook"]
 edition = "2024"
 license = "GPLv2+"
 
+[dependencies]
+justknobs_ext = { version = "0.1.0", path = "../rust/justknobs_ext" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
+
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

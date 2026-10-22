@@ -150,6 +150,7 @@ async fn push(
                 request_context.ctx.fb,
                 repo_name.clone(),
                 main_client_id.as_deref(),
+                request_context.ctx.metadata().identities(),
             ))
         } else {
             None

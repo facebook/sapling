@@ -8,5 +8,8 @@ rust_library(
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
-    deps = [],
+    deps = [
+        "//eden/mononoke/common/permission_checker:permission_checker",
+        "//eden/mononoke/common/rust/justknobs_ext:justknobs",
+    ],
 )

@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 client_memory = { version = "0.1.0", path = "../../common/client_memory" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 sharding_ext = { version = "0.1.0", path = "../sharding_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 weight_observer = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

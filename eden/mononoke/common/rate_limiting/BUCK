@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_server_treehugger")
@@ -7,7 +8,14 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
-    ],
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "//eden/mononoke/common/rust/justknobs_ext:justknobs",
+        ]
+    ),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
