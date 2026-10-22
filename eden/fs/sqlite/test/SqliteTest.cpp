@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
@@ -22,6 +23,8 @@ class SqliteTest : public testing::Test {
 
   SqliteDatabase db{SqliteDatabase::inMemory};
 };
+
+static_assert(std::is_move_constructible_v<SqliteStatement>);
 
 TEST_F(SqliteTest, transactionAfterANonStdException) {
   EXPECT_THROW(db.transaction([](LockedSqliteConnection&) { throw 42; }), int);
