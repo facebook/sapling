@@ -23,6 +23,10 @@ from sapling.rcutil import (
 
 
 class testeditconfig(unittest.TestCase):
+    """Exercise editconfig backed by the Rust rcutil library."""
+
+    rust = True
+
     def setUp(self):
         fd, path = tempfile.mkstemp()
         os.close(fd)
@@ -30,6 +34,11 @@ class testeditconfig(unittest.TestCase):
 
     def tearDown(self):
         self.path.unlink()
+
+    def makeui(self):
+        ui = uimod.ui()
+        ui.setconfig("experimental", "rust-editconfig", str(self.rust))
+        return ui
 
     def testaddconfig(self):
         self.assertedit(
@@ -180,7 +189,7 @@ bar = three
 
     def testeditconfigescapesnewlines(self):
         value = "first\n[extensions]\nfoo = python:evil.py\n"
-        editconfig(uimod.ui(), self.path, "paths", "default", value)
+        editconfig(self.makeui(), self.path, "paths", "default", value)
 
         self.assertparseswithoutinjectedextension(
             self.path.read_text(),
@@ -207,7 +216,7 @@ bar = three
                     formatconfigsection(section, name, value)
                 self.path.write_text(original)
                 with self.assertRaises(error.Abort):
-                    editconfig(uimod.ui(), self.path, section, name, value)
+                    editconfig(self.makeui(), self.path, section, name, value)
                 self.assertEqual(self.path.read_text(), original)
 
     def test_editconfig_normalizes_names_before_lookup(self) -> None:
@@ -242,7 +251,7 @@ bar = three
         for value in ["bad\0value", "bad\rvalue", "bad\r", "first\n\nsecond"]:
             with self.subTest(value=value):
                 with self.assertRaises(error.Abort):
-                    editconfig(uimod.ui(), self.path, "sec1", "name1", value)
+                    editconfig(self.makeui(), self.path, "sec1", "name1", value)
                 self.assertEqual(self.path.read_text(), before)
 
     def testeditconfignormalizestrailingwhitespace(self):
@@ -250,18 +259,24 @@ bar = three
         # strips it on read, so the normalized form reads back identically.
         self.assertedit("sec1", "name1", "val ", "[sec1]\nname1 = val\n")
         self.path.write_text("[sec1]\nname1 = val\n")
-        ui = uimod.ui()
+        ui = self.makeui()
         ui.quiet = True
         editconfig(ui, self.path, "sec1", "name2", "a\nb ")
         self.assertEqual(self.path.read_text(), "[sec1]\nname1 = val\nname2 = a\n  b\n")
 
     def assertedit(self, section: str, name: str, value: Optional[str], expected: str):
-        ui = uimod.ui()
+        ui = self.makeui()
         ui.quiet = True
         editconfig(ui, self.path, section, name, value)
         self.assertEqual(
             self.path.read_bytes(), expected.replace("\n", os.linesep).encode()
         )
+
+
+class testeditconfigpython(testeditconfig):
+    """Exercise the Python editconfig implementation."""
+
+    rust = False
 
 
 class testwritehgrc(unittest.TestCase):

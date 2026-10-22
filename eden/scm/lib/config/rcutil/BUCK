@@ -1,0 +1,30 @@
+load("//eden/scm:targets.bzl", "sl_rust_library")
+
+oncall("sapling")
+
+sl_rust_library(
+    name = "rcutil",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "rcutil"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-rcutil",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/atomicfile:atomicfile",
+        "//eden/scm/lib/config/hgrc-parser:hgrc-parser",
+        "//eden/scm/lib/util:util",
+    ],
+)

@@ -546,7 +546,7 @@ class ui:
             if user is not None:
                 # Write username back to user config.
                 path = self.identity.userconfigpath()
-                rcutil.editconfig(ui, path, "ui", "username", user)
+                rcutil.editconfig(self, path, "ui", "username", user)
                 return user
         if user is None and not self.interactive() and self.plain():
             try:

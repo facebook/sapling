@@ -60,6 +60,24 @@ def editconfig(ui, path, section, name, value):
     If value is None, delete the config item. Otherwise, strip whitespace
     around section and item names before looking up the item.
     """
+    if ui.configbool("experimental", "rust-editconfig", True):
+        definitions = bindings.configloader.editconfig(
+            os.fspath(path), section, name, value
+        )
+        if definitions > 1:
+            _warnduplicates(ui, path, section, name)
+        return
+
+    _editconfigpython(ui, path, section, name, value)
+
+
+def _warnduplicates(ui, path, section, name):
+    ui.status_err(
+        _("warning: duplicate config entries for %s.%s in %s\n") % (section, name, path)
+    )
+
+
+def _editconfigpython(ui, path, section, name, value):
     if value is not None:
         section, name = bindings.configloader.normalizekey(section, name)
         formattedvalue = util.tonativeeol(formatconfigvalue(value))
@@ -76,10 +94,7 @@ def editconfig(ui, path, section, name, value):
     sources = cfg.sources(section, name)
 
     if len(sources) > 1:
-        ui.status_err(
-            _("warning: duplicate config entries for %s.%s in %s\n")
-            % (section, name, path)
-        )
+        _warnduplicates(ui, path, section, name)
 
     bcontent = content.encode()
     for _value, (_filepath, start, end, _line), _source in reversed(sources):

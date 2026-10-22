@@ -25,6 +25,7 @@ rust_python_library(
         "//eden/scm/lib/config/hgrc-parser:hgrc-parser",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/config/rcutil:rcutil",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         "//eden/scm/lib/util:util",

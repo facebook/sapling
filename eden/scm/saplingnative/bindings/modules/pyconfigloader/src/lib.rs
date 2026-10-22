@@ -51,6 +51,14 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "normalizekey",
         py_fn!(py, normalizekey(section: &str, name: &str)),
     )?;
+    m.add(
+        py,
+        "editconfig",
+        py_fn!(
+            py,
+            editconfig(path: &PyPath, section: &str, name: &str, value: Option<&str>)
+        ),
+    )?;
     m.add(py, "unset_obj", unset::create_instance(py)?)?;
 
     impl_into::register(py);
@@ -384,10 +392,26 @@ fn normalizekey(py: Python, section: &str, name: &str) -> PyResult<(String, Stri
     Ok((section.to_owned(), name.to_owned()))
 }
 
-/// Preserve the user-facing Abort exception used by Python config writers.
-fn format_result<T>(
+/// Set (or delete, when `value` is None) a config item in the file at `path`.
+/// Returns how many definitions of the item the file had before the edit.
+fn editconfig(
     py: Python,
-    result: std::result::Result<T, configformat::Error>,
+    path: &PyPath,
+    section: &str,
+    name: &str,
+    value: Option<&str>,
+) -> PyResult<usize> {
+    let outcome = format_result(
+        py,
+        rcutil::edit_config(path.as_path(), section, name, value),
+    )?;
+    Ok(outcome.definitions)
+}
+
+/// Preserve the user-facing Abort exception used by Python config writers.
+fn format_result<T, E: std::fmt::Display>(
+    py: Python,
+    result: std::result::Result<T, E>,
 ) -> PyResult<T> {
     match result {
         Ok(value) => Ok(value),

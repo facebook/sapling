@@ -80,6 +80,7 @@ members = [
   "lib/config/hgrc-parser",
   "lib/config/loader",
   "lib/config/model",
+  "lib/config/rcutil",
   "lib/config/remote-loader",
   "lib/config/set",
   "lib/config/static",
