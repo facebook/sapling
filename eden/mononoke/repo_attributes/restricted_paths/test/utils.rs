@@ -792,6 +792,38 @@ impl RestrictedPathsTestData {
         Ok(was_denied)
     }
 
+    /// Creates the configured test commit, then runs both combined path checking
+    /// and spawned enforcement against that same repository state.
+    pub async fn observe_path_check_and_enforcement_after_commit(
+        &self,
+        path: NonRootMPath,
+        enforcement_condition_sets: &[EnforcementConditionSet],
+    ) -> Result<(Vec<PathRestrictionCheckResult>, bool)> {
+        let scenario = self.setup_scenario_repo(enforcement_condition_sets).await?;
+        let bcs_id = self.create_configured_changeset(&scenario.repo).await?;
+
+        let checks = scenario
+            .repo
+            .restricted_paths()
+            .get_path_restriction_check(&self.ctx, Some(bcs_id), std::slice::from_ref(&path))
+            .await?;
+        let result = spawn_enforce_restricted_path_access(
+            &self.ctx,
+            scenario.repo.restricted_paths_arc().clone(),
+            &MPath::from(path),
+            "restricted_paths_test",
+            Some(bcs_id),
+        )
+        .await;
+        let was_denied = match result {
+            Ok(()) => false,
+            Err(RestrictedPathsError::AuthorizationError(_)) => true,
+            Err(err) => return Err(err.into()),
+        };
+
+        Ok((checks, was_denied))
+    }
+
     /// Run restricted paths testing for a single scenario.
     /// Creates a repo with the given enforcement condition sets and runs all access operations.
     /// If expect_enforcement is true, expects an AuthorizationError from the access operations.
