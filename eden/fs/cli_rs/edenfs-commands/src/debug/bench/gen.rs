@@ -13,6 +13,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blake3::Hash;
 use rand::Rng as _;
 
@@ -41,6 +42,16 @@ impl TestDir {
         Ok(TestDir {
             path: bench_dir_path,
         })
+    }
+
+    /// Uses a directory that already exists, as is: nothing is created,
+    /// wiped, or removed. For benchmarks that only read.
+    pub fn existing(test_dir: &str) -> Result<Self> {
+        let path = PathBuf::from(test_dir);
+        if !path.is_dir() {
+            return Err(anyhow!("{test_dir} is not a directory"));
+        }
+        Ok(TestDir { path })
     }
 
     /// Prepares the hash-prefix directories used by the database benchmarks.

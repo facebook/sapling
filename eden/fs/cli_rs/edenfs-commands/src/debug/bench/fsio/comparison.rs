@@ -27,7 +27,9 @@ use super::format_byte_size;
 
 #[derive(Debug, Serialize)]
 pub(super) struct FsIoDiff {
-    write: PhaseDiff,
+    // Absent for read-only runs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    write: Option<PhaseDiff>,
     // Absent when kernel caches were not dropped: the preparation phase does
     // nothing then and its wall time is noise.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -122,7 +124,15 @@ impl FsIoDiff {
     fn new(current: &FsIoResult, baseline: &FsIoResult) -> Result<Self> {
         ensure_config_matches(&current.config, &baseline.config)?;
         validate_cache_preparation(&current.cache_preparation, &baseline.cache_preparation)?;
-        validate_phase("write", &current.write, &baseline.write)?;
+        let write = match (&current.write, &baseline.write) {
+            (Some(current_write), Some(baseline_write)) => {
+                validate_phase("write", current_write, baseline_write)?;
+                Some(PhaseDiff::new(current_write, baseline_write))
+            }
+            // ensure_config_matches rejects a read-only run against a
+            // read-write baseline before this point.
+            _ => None,
+        };
         validate_phase("read", &current.read, &baseline.read)?;
 
         let remove = match (&current.remove, &baseline.remove) {
@@ -142,7 +152,7 @@ impl FsIoDiff {
         };
 
         Ok(Self {
-            write: PhaseDiff::new(&current.write, &baseline.write),
+            write,
             cache_preparation: (current.cache_preparation.drop_kernel_caches != 0).then(|| {
                 CachePreparationDiff::new(&current.cache_preparation, &baseline.cache_preparation)
             }),
@@ -412,7 +422,9 @@ pub(super) fn write_diff(formatter: &mut fmt::Formatter<'_>, diff: &FsIoDiff) ->
         formatter,
         "Lower times are faster; higher throughput is faster."
     )?;
-    write_phase_diff(formatter, "Write", "file create", &diff.write)?;
+    if let Some(write) = &diff.write {
+        write_phase_diff(formatter, "Write", "file create", write)?;
+    }
     if let Some(cache_preparation) = &diff.cache_preparation {
         write_cache_preparation_diff(formatter, cache_preparation)?;
     }
@@ -593,6 +605,7 @@ mod tests {
     fn result(scale: f64) -> FsIoResult {
         FsIoResult {
             config: FsIoConfig {
+                read_only: false,
                 number_of_files: 10,
                 files_per_dir: Some(5),
                 virtual_repo_factor: 0,
@@ -606,7 +619,7 @@ mod tests {
                     files: 10,
                 }],
             },
-            write: phase(scale),
+            write: Some(phase(scale)),
             cache_preparation: CachePreparationResult {
                 drop_kernel_caches: 0,
                 wall_seconds: scale,
@@ -638,8 +651,12 @@ mod tests {
             .expect("matching runs should compare");
 
         let diff = current.diff.as_ref().expect("diff should be populated");
-        assert_eq!(diff.write.wall_time_percent, Some(-50.0));
-        assert_eq!(diff.write.throughput_percent, Some(100.0));
+        let write = diff
+            .write
+            .as_ref()
+            .expect("read-write runs have a write diff");
+        assert_eq!(write.wall_time_percent, Some(-50.0));
+        assert_eq!(write.throughput_percent, Some(100.0));
         let output = current.to_string();
         assert!(output.contains(
             "wall 50.0% faster, filesystem calls 50.0% faster, throughput 100.0% faster"
@@ -679,7 +696,12 @@ mod tests {
         assert!(different_config.add_diff(&baseline).is_err());
 
         let mut different_calls = result(1.0);
-        different_calls.write.file_io.calls = 11;
+        different_calls
+            .write
+            .as_mut()
+            .expect("read-write runs have a write phase")
+            .file_io
+            .calls = 11;
         assert!(different_calls.add_diff(&baseline).is_err());
     }
 
