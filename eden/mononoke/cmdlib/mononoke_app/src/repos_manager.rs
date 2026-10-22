@@ -61,6 +61,7 @@ use repos::RepoSpec;
 use repos::TierManifest;
 use stats::prelude::*;
 use tokio::sync::Notify;
+use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
 use tracing::info;
 use tracing::warn;
@@ -159,10 +160,15 @@ fn lazy_for_service(repo_config: &RepoConfig, service: Option<ShardedService>) -
 /// Duplicates `add_repo` rather than sharing one body with it, because
 /// `add_repo` also needs the repo id from the resolved config and would have
 /// to resolve it a second time on every eager deep-shard load.
+///
+/// `build_permits` caps concurrent builds from every caller (first requests,
+/// Multi-Repo Land): a ceiling against bursts, not a throttle. Only a build
+/// holds a permit and no build loads another repo, so it cannot deadlock.
 struct ConfigDefinedRepoLoader {
     configs: Arc<MononokeConfigs>,
     repo_factory: Arc<RepoFactory>,
     redaction_disabled: bool,
+    build_permits: Arc<Semaphore>,
 }
 
 impl<Repo> RepoLoader<Repo> for ConfigDefinedRepoLoader
@@ -176,7 +182,9 @@ where
         let configs = self.configs.clone();
         let repo_factory = self.repo_factory.clone();
         let redaction_disabled = self.redaction_disabled;
+        let build_permits = self.build_permits.clone();
         async move {
+            let _permit = build_permits.acquire_owned().await?;
             // get_or_load_repo_config subscribes the per-repo ConfigHandle
             // internally.
             let mut repo_config = configs
@@ -202,6 +210,8 @@ where
         .boxed()
     }
 }
+
+const LAZY_REPO_BUILD_CONCURRENCY_KNOB: &str = "scm/mononoke:lazy_repo_build_concurrency";
 
 impl<Repo> MononokeReposManager<Repo> {
     // Create a new `MononokeReposManager`.
@@ -243,10 +253,14 @@ impl<Repo> MononokeReposManager<Repo> {
             + Sync
             + 'static,
     {
+        // Read once, so a change needs a restart; floored so 0 cannot block all builds.
+        let build_concurrency =
+            justknobs::get_as::<usize>(LAZY_REPO_BUILD_CONCURRENCY_KNOB, None).max(1);
         let repos = Arc::new(MononokeRepos::new_lazy(Arc::new(ConfigDefinedRepoLoader {
             configs: configs.clone(),
             repo_factory: repo_factory.clone(),
             redaction_disabled,
+            build_permits: Arc::new(Semaphore::new(build_concurrency)),
         })));
         let repo_names_in_tier = Arc::new(ArcSwap::from_pointee(HashMap::new()));
         let reconcile_driver = Arc::new(ReconcileDriver {

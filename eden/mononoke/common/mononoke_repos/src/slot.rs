@@ -258,10 +258,8 @@ impl<R> RepoSlot<R> {
                 // Unbounded here: at most one spawn per slot at a time, so
                 // concurrent builds are bounded only by how many distinct
                 // unbuilt repos callers ask for at once. The async-requests
-                // worker is bounded by how many requests it runs at once, but
-                // request-time loading has no bound yet, so a burst of
-                // requests for distinct unbuilt repos builds all of them at
-                // once.
+                // worker is bounded by how many requests it runs at once, and
+                // request-time loading by the loader `mononoke_app` installs.
                 let repo_name = self.name.clone();
                 mononoke::spawn_task(async move {
                     completion.finish(build(repo_name).await.map(Arc::new).map_err(Arc::new));
