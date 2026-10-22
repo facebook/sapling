@@ -761,7 +761,7 @@ fn remove_child_all(dir: BorrowedFd<'_>, name: CString) -> io::Result<Option<Pen
         return Ok(Some(PendingDirRemove::read(dir, name, child)?));
     }
 
-    match retry_io(|| unlinkat(dir, &name, 0)) {
+    match unlinkat_making_dir_writable(dir, &name, 0) {
         Ok(()) => Ok(None),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(err),
@@ -769,10 +769,27 @@ fn remove_child_all(dir: BorrowedFd<'_>, name: CString) -> io::Result<Option<Pen
 }
 
 fn remove_empty_dir(dir: BorrowedFd<'_>, name: &CString) -> io::Result<()> {
-    match retry_io(|| unlinkat(dir, name, libc::AT_REMOVEDIR)) {
+    match unlinkat_making_dir_writable(dir, name, libc::AT_REMOVEDIR) {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(err) => Err(err),
+    }
+}
+
+/// Unlink `name` from `dir`, first giving the owner write and search permission
+/// on `dir` if it is read-only.
+fn unlinkat_making_dir_writable(
+    dir: BorrowedFd<'_>,
+    name: &CString,
+    flags: libc::c_int,
+) -> io::Result<()> {
+    match retry_io(|| unlinkat(dir, name, flags)) {
+        Err(err) if err.kind() == io::ErrorKind::PermissionDenied => {
+            let mode = fstat(dir)?.st_mode & !libc::S_IFMT;
+            fchmod(dir, mode | libc::S_IWUSR | libc::S_IXUSR)?;
+            retry_io(|| unlinkat(dir, name, flags))
+        }
+        result => result,
     }
 }
 
