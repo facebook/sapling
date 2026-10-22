@@ -641,6 +641,12 @@ void FilteredBackingStore::workingCopyParentHint(const RootId& parent) {
   backingStore_->workingCopyParentHint(startingRootId);
 }
 
+void FilteredBackingStore::witnessDirectorySize(
+    RelativePathPiece path,
+    ObjectFetchContext::DirEntryCounts counts) {
+  backingStore_->witnessDirectorySize(path, counts);
+}
+
 std::string FilteredBackingStore::renderRootId(const RootId& rootId) {
   auto [underlyingRootId, _] = parseFilterIdFromRootId(rootId);
   return backingStore_->renderRootId(underlyingRootId);

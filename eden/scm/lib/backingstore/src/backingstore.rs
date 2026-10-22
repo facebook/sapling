@@ -660,6 +660,24 @@ impl BackingStore {
         }
     }
 
+    /// Record the size of directory `path` whose inode EdenFS loaded. Only sizes large enough
+    /// to change walk detection reach the detector; this is not a read of the directory.
+    #[instrument(level = "trace", skip(self))]
+    pub fn witness_dir_size(&self, path: &RepoPath, num_files: usize, num_dirs: usize) {
+        let inner = self.inner.load();
+
+        if inner.walk_mode == WalkMode::Off {
+            return;
+        }
+
+        if inner
+            .walk_detector
+            .is_dir_metadata_important(num_files, num_dirs)
+        {
+            inner.send_walk_event(WalkEvent::DirMetadata(path.to_owned(), num_files, num_dirs));
+        }
+    }
+
     #[instrument(level = "trace", skip(self))]
     pub fn witness_dir_read(
         &self,

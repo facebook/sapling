@@ -73,6 +73,10 @@ class FilteredBackingStore
 
   void workingCopyParentHint(const RootId& parent) override;
 
+  void witnessDirectorySize(
+      RelativePathPiece path,
+      ObjectFetchContext::DirEntryCounts counts) override;
+
   /**
    * Encodes an underlying RootId in the RootId format used by
    * FilteredBackingStore. This format is as follows:

@@ -162,6 +162,24 @@ TEST(TreeInode, loadTimeEntryCountsAreSnapshotAtLoad) {
   EXPECT_EQ(1u, dir->loadTimeEntryCounts().dirs);
 }
 
+TEST(TreeInode, loadReportsEntryCountsToBackingStore) {
+  FakeTreeBuilder builder;
+  for (int i = 0; i < 5; ++i) {
+    builder.setFile(fmt::format("dir/f{}.txt", i), "x");
+  }
+  builder.setFile("dir/sub/a.txt", "a");
+  TestMount mount{builder};
+
+  mount.getTreeInode("dir");
+  auto reported = mount.getBackingStore()->witnessedDirectorySizes();
+  auto dir = std::find_if(reported.begin(), reported.end(), [](auto& entry) {
+    return entry.first == RelativePath{"dir"};
+  });
+  ASSERT_NE(dir, reported.end());
+  EXPECT_EQ(5u, dir->second.files);
+  EXPECT_EQ(1u, dir->second.dirs);
+}
+
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());

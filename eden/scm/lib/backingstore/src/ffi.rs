@@ -442,6 +442,13 @@ pub(crate) mod ffi {
             pid: u32,
         );
 
+        pub fn sapling_backingstore_witness_dir_size(
+            store: &BackingStore,
+            path: &[u8],
+            num_files: usize,
+            num_dirs: usize,
+        );
+
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
 
         pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str);
@@ -1178,6 +1185,20 @@ pub fn sapling_backingstore_witness_dir_read(
         num_files,
         num_dirs,
         pid,
+    );
+}
+
+pub fn sapling_backingstore_witness_dir_size(
+    store: &BackingStore,
+    path: &[u8],
+    num_files: usize,
+    num_dirs: usize,
+) {
+    store.witness_dir_size(
+        // `path` comes from eden's RelativePath type, which validates for utf-8 and illegal chars.
+        unsafe { RepoPath::from_str_unchecked(str::from_utf8_unchecked(path)) },
+        num_files,
+        num_dirs,
     );
 }
 

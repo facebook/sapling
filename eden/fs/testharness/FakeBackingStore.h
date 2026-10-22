@@ -208,6 +208,17 @@ class FakeBackingStore final : public BackingStore {
     return data_.rlock()->auxDataLookups;
   }
 
+  void witnessDirectorySize(
+      RelativePathPiece path,
+      ObjectFetchContext::DirEntryCounts counts) override {
+    data_.wlock()->directorySizes.emplace_back(path.copy(), counts);
+  }
+
+  std::vector<std::pair<RelativePath, ObjectFetchContext::DirEntryCounts>>
+  witnessedDirectorySizes() const {
+    return data_.rlock()->directorySizes;
+  }
+
   /**
    * Configure the TreeAuxData returned for an object ID. Passing nullptr
    * simulates aux data that is absent from the backing store.
@@ -237,6 +248,8 @@ class FakeBackingStore final : public BackingStore {
     std::unordered_map<ObjectId, size_t> accessCounts;
     folly::F14FastMap<ObjectId, TreeAuxDataPtr> treeAuxData;
     std::vector<ObjectId> auxDataLookups;
+    std::vector<std::pair<RelativePath, ObjectFetchContext::DirEntryCounts>>
+        directorySizes;
     folly::F14FastMap<ObjectId, bool> permissionResults;
     folly::F14FastMap<ObjectId, size_t> permissionCheckCounts;
   };

@@ -1649,6 +1649,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
 
+  /**
+   * Hand the load-time entry counts to the backing store for walk detection.
+   */
+  void witnessLoadedSize();
+
   ObjectFetchContext::DirEntryCounts loadTimeEntryCounts_;
 
   folly::Synchronized<TreeInodeState> contents_;

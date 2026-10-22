@@ -401,6 +401,7 @@ TreeInode::TreeInode(
           initialLastPermissionCheck(isRestricted, initialPermissionCheck)) {
   XDCHECK_NE(ino, kRootNodeId);
   assertRestrictedPlaceholderInvariant();
+  witnessLoadedSize();
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
@@ -442,9 +443,17 @@ TreeInode::TreeInode(
       lastPermissionCheck_(
           initialLastPermissionCheck(isRestricted, initialPermissionCheck)) {
   assertRestrictedPlaceholderInvariant();
+  witnessLoadedSize();
 }
 
 TreeInode::~TreeInode() = default;
+
+void TreeInode::witnessLoadedSize() {
+  if (auto path = getPath()) {
+    getObjectStore().getBackingStore()->witnessDirectorySize(
+        *path, loadTimeEntryCounts_);
+  }
+}
 
 struct stat TreeInode::statWithCurrentRestrictionState() const {
   if (FOLLY_UNLIKELY(isRestricted())) {

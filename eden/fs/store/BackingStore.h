@@ -164,6 +164,14 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   }
 
   /**
+   * The entry counts of a directory whose inode was just loaded, for walk
+   * detection. The default ignores them.
+   */
+  virtual void witnessDirectorySize(
+      RelativePathPiece /*path*/,
+      ObjectFetchContext::DirEntryCounts /*counts*/) {}
+
+  /**
    * Directly import a manifest for a root.
    *
    * Subclasses of BackingStore can override this to opportunistically import
