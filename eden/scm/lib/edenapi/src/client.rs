@@ -168,6 +168,7 @@ use crate::retryable::BorrowedKey;
 use crate::retryable::RetryableFileAttrs;
 use crate::retryable::RetryableKeys;
 use crate::retryable::RetryableStreamRequest;
+use crate::retryable::RetryableStreamingClone;
 use crate::retryable::RetryableTrees;
 use crate::retryable::RetryableUploads;
 
@@ -1070,7 +1071,7 @@ impl Client {
         self.fetch::<SuffixQueryResponse>(vec![requests])
     }
 
-    async fn streaming_clone_attempt(
+    pub(crate) async fn streaming_clone_attempt(
         &self,
         tag: Option<String>,
     ) -> Result<Response<StreamingChangelogResponse>, SaplingRemoteApiError> {
@@ -2481,7 +2482,14 @@ impl SaplingRemoteApi for Client {
         &self,
         tag: Option<String>,
     ) -> Result<Response<StreamingChangelogResponse>, SaplingRemoteApiError> {
-        self.with_retry(|this| this.streaming_clone_attempt(tag.clone()).boxed())
+        if !self.config().stream_retries {
+            return self
+                .with_retry(|this| this.streaming_clone_attempt(tag.clone()).boxed())
+                .await;
+        }
+
+        RetryableStreamingClone::new(tag)
+            .perform_with_retries(self.clone())
             .await
     }
 

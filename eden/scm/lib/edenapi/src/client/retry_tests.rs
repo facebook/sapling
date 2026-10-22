@@ -11,6 +11,9 @@ use edenapi_types::HgChangesetContent;
 use edenapi_types::PathHistoryEntries;
 use edenapi_types::WireHistoryEntry;
 use edenapi_types::commit::HgInfo;
+use edenapi_types::legacy::Metadata;
+use edenapi_types::legacy::StreamingChangelogBlob;
+use edenapi_types::legacy::StreamingChangelogData;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
@@ -42,6 +45,12 @@ impl Reply {
             body,
             truncated,
         }
+    }
+
+    fn incomplete_cbor(mut body: Vec<u8>) -> Self {
+        // A complete HTTP body lets the decoder emit the prefix before reporting partial CBOR.
+        body.push(0xa1); // Map with one missing key/value pair.
+        Self::body(body, false)
     }
 }
 
@@ -311,6 +320,7 @@ async fn streaming_endpoints_retry_status_errors() {
     check!(check_manifest_permission(CheckManifestPermissionRequest {
         manifest_ids: vec![HgId::default()]
     }));
+    check!(streaming_clone(None));
     check!(
         files_attrs(FetchContext::default(), vec![FileSpec::default()]),
         true
@@ -587,4 +597,123 @@ async fn keyed_endpoints_retry_only_pending_inputs() {
         }
         .to_wire()
     );
+}
+
+fn clone_body(entries: &[StreamingChangelogData]) -> Vec<u8> {
+    entries
+        .iter()
+        .flat_map(|data| {
+            serde_cbor::to_vec(
+                &StreamingChangelogResponse {
+                    data: Ok(data.clone()),
+                }
+                .to_wire(),
+            )
+            .unwrap()
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn streaming_clone_retries_partial_body_and_verifies_prefix() {
+    let prefix = vec![
+        StreamingChangelogData::Metadata(Metadata {
+            index_size: 3,
+            data_size: 3,
+        }),
+        StreamingChangelogData::IndexBlobChunk(StreamingChangelogBlob {
+            chunk: Bytes::from_static(b"abc"),
+            chunk_id: 0,
+        }),
+    ];
+    for (change_prefix, short_prefix) in [(false, false), (true, false), (false, true)] {
+        let mut complete = prefix.clone();
+        if change_prefix {
+            complete[1] = StreamingChangelogData::IndexBlobChunk(StreamingChangelogBlob {
+                chunk: Bytes::from_static(b"xyz"),
+                chunk_id: 0,
+            });
+        }
+        complete.push(StreamingChangelogData::DataBlobChunk(
+            StreamingChangelogBlob {
+                chunk: Bytes::from_static(b"def"),
+                chunk_id: 0,
+            },
+        ));
+        if short_prefix {
+            complete.truncate(1);
+        }
+        let (client, requests) = server(
+            vec![
+                Reply::incomplete_cbor(clone_body(&prefix)),
+                Reply::body(clone_body(&complete), false),
+            ],
+            1,
+        )
+        .await;
+        let result = client.streaming_clone(None).await.unwrap().flatten().await;
+        if change_prefix || short_prefix {
+            assert!(matches!(
+                result,
+                Err(SaplingRemoteApiError::IncompleteResponse(_))
+            ));
+        } else {
+            let data: Vec<_> = result
+                .unwrap()
+                .into_iter()
+                .map(|entry| entry.data.unwrap())
+                .collect();
+            assert_eq!(data, complete);
+        }
+        assert_eq!(requests.await.unwrap().len(), 2);
+    }
+}
+
+#[tokio::test]
+async fn streaming_clone_retries_multiple_interruptions() {
+    let complete = vec![
+        StreamingChangelogData::Metadata(Metadata {
+            index_size: 6,
+            data_size: 3,
+        }),
+        StreamingChangelogData::IndexBlobChunk(StreamingChangelogBlob {
+            chunk: Bytes::from_static(b"abc"),
+            chunk_id: 0,
+        }),
+        StreamingChangelogData::IndexBlobChunk(StreamingChangelogBlob {
+            chunk: Bytes::from_static(b"def"),
+            chunk_id: 1,
+        }),
+        StreamingChangelogData::DataBlobChunk(StreamingChangelogBlob {
+            chunk: Bytes::from_static(b"ghi"),
+            chunk_id: 0,
+        }),
+    ];
+    let (client, requests) = server(
+        vec![
+            Reply::incomplete_cbor(clone_body(&complete[..2])),
+            Reply::incomplete_cbor(clone_body(&complete[..1])),
+            Reply::incomplete_cbor(clone_body(&complete[..3])),
+            Reply::body(clone_body(&complete), false),
+        ],
+        3,
+    )
+    .await;
+    let result = client
+        .streaming_clone(Some("snapshot".into()))
+        .await
+        .unwrap()
+        .flatten()
+        .await
+        .unwrap();
+    assert_eq!(
+        result
+            .into_iter()
+            .map(|entry| entry.data.unwrap())
+            .collect::<Vec<_>>(),
+        complete
+    );
+    let requests = requests.await.unwrap();
+    assert_eq!(requests.len(), 4);
+    assert!(requests.iter().all(|request| *request == requests[0]));
 }
