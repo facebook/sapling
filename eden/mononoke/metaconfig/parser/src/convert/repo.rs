@@ -411,6 +411,25 @@ impl Convert for RawPushrebaseParams {
                     })
                     .transpose()?
                     .unwrap_or_default(),
+                // `NonRootMPath::new`, not `new_opt`: an empty string would
+                // parse to the root prefix, which matches every path.
+                merge_resolution_take_incoming_prefixes: self
+                    .merge_resolution_take_incoming_prefixes
+                    .map(|raw| {
+                        raw.into_iter()
+                            .map(|path| {
+                                NonRootMPath::new(path.as_bytes())
+                                    .map(MPath::from)
+                                    .with_context(|| {
+                                        format!(
+                                            "merge_resolution_take_incoming_prefixes entry {path:?} must be a non-root path"
+                                        )
+                                    })
+                            })
+                            .collect::<Result<PrefixTrie>>()
+                    })
+                    .transpose()?
+                    .unwrap_or_default(),
                 merge_resolution_override: MergeResolutionOverride::UseJk, // request-scoped, not loaded from config
                 land_instance_id: None, // request-scoped, not loaded from config
                 phab_diff_id: None,     // request-scoped, not loaded from config

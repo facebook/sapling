@@ -1095,6 +1095,13 @@ pub struct PushrebaseFlags {
     /// them will be rejected as before so downstream checks (e.g. Hack
     /// type-checking in CI land) still trigger.
     pub merge_resolution_excluded_path_prefixes: PrefixTrie,
+    /// Path prefixes under which a merge-resolution conflict resolves to the
+    /// pushed side instead of rejecting the pushrebase (see
+    /// `RawPushrebaseParams.merge_resolution_take_incoming_prefixes`).
+    /// Checked after `merge_resolution_excluded_path_prefixes`; gated by the
+    /// `pushrebase_take_incoming_enabled` JustKnob. Empty everywhere by
+    /// default, in which case merge resolution is unchanged.
+    pub merge_resolution_take_incoming_prefixes: PrefixTrie,
     /// Per-request override for `pushrebase_enable_merge_resolution`.
     /// `UseJk` defers to the JustKnob; `ForceOn`/`ForceOff` wins. Request-scoped,
     /// never loaded from configerator — set on a cloned `PushrebaseFlags`
@@ -1231,6 +1238,7 @@ impl Default for PushrebaseFlags {
             not_generated_filenodes_limit: 500,
             monitoring_bookmark: None,
             merge_resolution_excluded_path_prefixes: PrefixTrie::new(),
+            merge_resolution_take_incoming_prefixes: PrefixTrie::new(),
             merge_resolution_override: MergeResolutionOverride::UseJk,
             land_instance_id: None,
             phab_diff_id: None,
