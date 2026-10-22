@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/BlobAccess.h"
+#include <folly/executors/GlobalExecutor.h>
 #include <gtest/gtest.h>
 #include <chrono>
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -56,7 +57,8 @@ struct BlobAccessTest : ::testing::Test {
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<EdenFsEventsLogger>(nullptr),
         edenConfig,
-        kPathMapDefaultCaseSensitive);
+        kPathMapDefaultCaseSensitive,
+        folly::getGlobalCPUExecutor());
 
     blobAccess = std::make_shared<BlobAccess>(objectStore, blobCache);
 

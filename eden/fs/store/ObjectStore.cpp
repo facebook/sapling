@@ -52,7 +52,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
-    CaseSensitivity caseSensitive) {
+    CaseSensitivity caseSensitive,
+    folly::Executor::KeepAlive<> executor) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
       std::move(treeCache),
@@ -60,7 +61,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       processInfoCache,
       edenFsEventsLogger,
       edenConfig,
-      caseSensitive}};
+      caseSensitive,
+      std::move(executor)}};
 }
 
 ObjectStore::ObjectStore(
@@ -70,7 +72,8 @@ ObjectStore::ObjectStore(
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
-    CaseSensitivity caseSensitive)
+    CaseSensitivity caseSensitive,
+    folly::Executor::KeepAlive<> executor)
     : blobAuxDataCache_{
           edenConfig->getEdenConfig()->metadataCacheShards.getValue(),
           edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
@@ -79,6 +82,7 @@ ObjectStore::ObjectStore(
           edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
+      executor_{std::move(executor)},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processInfoCache_(processInfoCache),
@@ -201,10 +205,17 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
 
 } // namespace
 
+template <typename T>
+ImmediateFuture<T> ObjectStore::startInline(folly::coro::Task<T> task) const {
+  return ImmediateFuture<T>{
+      folly::coro::co_withExecutor(executor_, std::move(task))
+          .startInlineUnsafe()};
+}
+
 ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) const {
-  return ImmediateFuture{
+  return startInline(
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
       folly::coro::co_invoke(
           [self = shared_from_this()](auto rootId, auto context)
@@ -213,8 +224,7 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
                 std::move(rootId), std::move(context));
           },
           RootId{rootId},
-          context.copy())
-          .semi()};
+          context.copy()));
 }
 
 folly::coro::now_task<ObjectStore::GetRootTreeResult>
@@ -256,7 +266,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
   // DEPRECATED: use co_getTree directly. Kept only because IObjectStore
   // still declares the ImmediateFuture virtual; delete once all callers
   // (checkout, diff, glob, readdir, inode loading) are migrated to coroutines.
-  return ImmediateFuture{
+  return startInline(
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
       folly::coro::co_invoke(
           [self = shared_from_this()](auto&&... args)
@@ -265,8 +275,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
                 std::forward<decltype(args)>(args)...);
           },
           ObjectId{id},
-          fetchContext.copy())
-          .semi()};
+          fetchContext.copy()));
 }
 
 folly::coro::now_task<std::shared_ptr<const Tree>> ObjectStore::co_getTree(
@@ -356,7 +365,7 @@ folly::coro::now_task<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
 ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
-  return ImmediateFuture{
+  return startInline(
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
       folly::coro::co_invoke(
           [self = shared_from_this()](ObjectId oid, ObjectFetchContextPtr ctx)
@@ -364,8 +373,7 @@ ImmediateFuture<std::optional<TreeAuxData>> ObjectStore::getTreeAuxData(
             co_return co_await self->co_getTreeAuxData(oid, ctx);
           },
           ObjectId{id},
-          fetchContext.copy())
-          .semi()};
+          fetchContext.copy()));
 }
 
 folly::coro::now_task<BackingStore::GetTreeAuxResult>
@@ -567,7 +575,7 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
   // EdenServiceHandler.cpp, VirtualInode.cpp, FileInode.cpp, and getBlobSize
   // still consume ImmediateFuture chains;
   // delete once those paths are migrated to coroutines.
-  return ImmediateFuture{
+  return startInline(
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
       folly::coro::co_invoke(
           [self = shared_from_this()](
@@ -577,8 +585,7 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
           },
           ObjectId{id},
           fetchContext.copy(),
-          blake3Needed)
-          .semi()};
+          blake3Needed));
 }
 
 folly::coro::now_task<BlobAuxData> ObjectStore::co_getBlobAuxData(
@@ -712,7 +719,7 @@ folly::coro::now_task<uint64_t> ObjectStore::co_getBlobSize(
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  return ImmediateFuture{
+  return startInline(
       // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
       folly::coro::co_invoke(
           [self = shared_from_this()](
@@ -721,8 +728,7 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
             co_return co_await self->co_getBlobSha1(id, context);
           },
           ObjectId{id},
-          context.copy())
-          .semi()};
+          context.copy()));
 }
 
 Hash32 ObjectStore::computeBlake3(const Blob& blob) const {

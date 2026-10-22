@@ -299,7 +299,8 @@ void TestMount::createMount(
       std::make_shared<ProcessInfoCache>(),
       serverState_->getEdenFsEventsLogger(),
       serverState_->getReloadableConfig(),
-      config_->getCaseSensitive());
+      config_->getCaseSensitive(),
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
   auto journal = std::make_unique<Journal>(stats_.copy());
   edenMount_ = EdenMount::create(
       std::move(config_),
@@ -410,7 +411,8 @@ void TestMount::remount(bool simulateUncleanShutdown) {
       std::make_shared<ProcessInfoCache>(),
       serverState_->getEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(edenConfig_),
-      config->getCaseSensitive());
+      config->getCaseSensitive(),
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
 
   auto journal = std::make_unique<Journal>(stats_.copy());
 
@@ -478,7 +480,8 @@ void TestMount::remountGracefully() {
       std::make_shared<ProcessInfoCache>(),
       serverState_->getEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(edenConfig_),
-      config->getCaseSensitive());
+      config->getCaseSensitive(),
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
 
   auto journal = std::make_unique<Journal>(stats_.copy());
 

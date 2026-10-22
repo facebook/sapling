@@ -3532,7 +3532,9 @@ EdenServiceHandler::streamSelectedChangesSince(
         server_->getServerState()->getProcessInfoCache(),
         server_->getServerState()->getEdenFsEventsLogger(),
         server_->getServerState()->getReloadableConfig(),
-        caseSensitivity);
+        caseSensitivity,
+        folly::getKeepAliveToken(
+            server_->getServerState()->getThreadPool().get()));
     auto callback =
         std::make_shared<StreamingDiffCallback>(sharedPublisherLock);
 

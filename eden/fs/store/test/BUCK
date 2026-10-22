@@ -47,6 +47,7 @@ cpp_unittest(
         "//eden/fs/testharness:fake_filter",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_util",
+        "//folly/executors:global_executor",
     ],
 )
 
@@ -93,6 +94,7 @@ cpp_unittest(
         "//eden/fs/utils:source_location",
         "//eden/fs/utils:static_assert",
         "//fb303:service_data",
+        "//folly/executors:global_executor",
     ],
 )
 

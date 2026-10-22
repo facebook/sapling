@@ -155,10 +155,14 @@ TEST(UnloadAfterAsyncLoad, unloadRacesDeterministicallyWithInodeLoadComplete) {
           .semi()
           .via(testMount.getServerExecutor().get());
 
-  // Complete the backing store load on a background thread. The detached
-  // executor is QueuedImmediateExecutor, so inodeLoadComplete runs inline
-  // on this thread and blocks on the fault injection checkpoint.
-  std::thread bgThread([&] { builder.setReady("dir"); });
+  // Complete the backing store load on a background thread. The tree fetch
+  // resumes on the server executor, and draining it here runs
+  // inodeLoadComplete on this thread, where it blocks on the fault
+  // injection checkpoint.
+  std::thread bgThread([&] {
+    builder.setReady("dir");
+    testMount.drainServerExecutor();
+  });
 
   // Wait for inodeLoadComplete to hit the fault point. At this point:
   // - The inode is in loadedInodes_ and the DirEntry

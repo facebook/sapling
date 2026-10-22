@@ -79,7 +79,8 @@ class DiffTest : public ::testing::Test {
         std::make_shared<ProcessInfoCache>(),
         std::make_shared<EdenFsEventsLogger>(nullptr),
         edenConfig,
-        kPathMapDefaultCaseSensitive);
+        kPathMapDefaultCaseSensitive,
+        folly::getKeepAliveToken(&executor_));
   }
 
   std::unique_ptr<DiffContext> makeDiffContext(
@@ -145,16 +146,25 @@ class DiffTest : public ::testing::Test {
       std::string systemIgnoreContents = {},
       bool listIgnored = true,
       CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
-    return diffCommitsFuture(
-               id1,
-               id2,
-               userIgnoreContents,
-               systemIgnoreContents,
-               listIgnored,
-               caseSensitive)
-        .get(100ms);
+    return getVia(diffCommitsFuture(
+        std::move(id1),
+        std::move(id2),
+        std::move(userIgnoreContents),
+        std::move(systemIgnoreContents),
+        listIgnored,
+        caseSensitive));
   }
 
+  // Fetches that suspend on the fake backing store resume on executor_, so
+  // waiting for a result has to drive it.
+  template <typename T>
+  T getVia(ImmediateFuture<T> future) {
+    return std::move(future).semi().via(&executor_).getVia(&executor_);
+  }
+
+  // Declared before store_, which holds a KeepAlive on it: a ManualExecutor
+  // waits in its destructor until every KeepAlive is released.
+  folly::ManualExecutor executor_;
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<ObjectStore> store_;
 };
@@ -162,7 +172,7 @@ class DiffTest : public ::testing::Test {
 TEST_F(DiffTest, unknownCommit) {
   auto future = diffCommits("1", "1");
   EXPECT_THROW_RE(
-      std::move(future).get(100ms), std::domain_error, "commit .* not found");
+      getVia(std::move(future)), std::domain_error, "commit .* not found");
 }
 
 TEST_F(DiffTest, sameCommit) {
@@ -172,7 +182,7 @@ TEST_F(DiffTest, sameCommit) {
   builder.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("1", builder)->setReady();
 
-  auto result = diffCommits("1", "1").get(100ms);
+  auto result = getVia(diffCommits("1", "1"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(*result.entries(), UnorderedElementsAre());
 }
@@ -198,7 +208,7 @@ TEST_F(DiffTest, basicDiff) {
   builder2.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("2", builder2)->setReady();
 
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -226,7 +236,7 @@ TEST_F(DiffTest, directoryOrdering) {
   builder2.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("2", builder2)->setReady();
 
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -234,7 +244,7 @@ TEST_F(DiffTest, directoryOrdering) {
           Pair("src/foo/aaa.txt", ScmFileStatus::ADDED),
           Pair("src/foo/zzz.txt", ScmFileStatus::ADDED)));
 
-  auto result2 = diffCommits("2", "1").get(100ms);
+  auto result2 = getVia(diffCommits("2", "1"));
   EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result2.entries(),
@@ -258,13 +268,13 @@ TEST_F(DiffTest, modeChange) {
   builder2.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("2", builder2)->setReady();
 
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 
-  auto result2 = diffCommits("2", "1").get(100ms);
+  auto result2 = getVia(diffCommits("2", "1"));
   EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result2.entries(),
@@ -290,7 +300,7 @@ TEST_F(DiffTest, newDirectory) {
   builder2.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("2", builder2)->setReady();
 
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -302,7 +312,7 @@ TEST_F(DiffTest, newDirectory) {
           Pair("src/foo/z/y/x.txt", ScmFileStatus::ADDED),
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
-  auto result2 = diffCommits("2", "1").get(100ms);
+  auto result2 = getVia(diffCommits("2", "1"));
   EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result2.entries(),
@@ -335,7 +345,7 @@ TEST_F(DiffTest, fileToDirectory) {
   builder2.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("2", builder2)->setReady();
 
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -348,7 +358,7 @@ TEST_F(DiffTest, fileToDirectory) {
           Pair("src/foo/z/y/x.txt", ScmFileStatus::ADDED),
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
-  auto result2 = diffCommits("2", "1").get(100ms);
+  auto result2 = getVia(diffCommits("2", "1"));
   EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result2.entries(),
@@ -392,7 +402,7 @@ TEST_F(DiffTest, blockedFutures) {
   builder2.finalize(backingStore_, /* setReady */ false);
   auto root2 = backingStore_->putCommit("2", builder2);
 
-  auto executor = folly::ManualExecutor{};
+  auto& executor = executor_;
   auto resultFuture = diffCommits("1", "2").semi().via(&executor);
   executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
@@ -479,7 +489,7 @@ TEST_F(DiffTest, loadTreeError) {
   builder2.finalize(backingStore_, /* setReady */ false);
   auto root2 = backingStore_->putCommit("2", builder2);
 
-  auto executor = folly::ManualExecutor{};
+  auto& executor = executor_;
 
   auto resultFuture = diffCommits("1", "2").semi().via(&executor);
   executor.drain();
@@ -589,16 +599,16 @@ TEST_F(DiffTest, nonignored_added_files) {
   auto diffContext2 =
       makeDiffContext(callback2.get(), std::move(topLevelIgnores));
 
-  auto result2 = diffAddedTree(
-                     diffContext2.get(),
-                     RelativePathPiece{"src/bar/foo"},
-                     builder2.getStoredTree(RelativePathPiece{"src/bar/foo"})
-                         ->get()
-                         .getObjectId())
-                     .thenValue([callback = std::move(callback2)](auto&&) {
-                       return callback->extractStatus();
-                     })
-                     .get(100ms);
+  auto result2 =
+      getVia(diffAddedTree(
+                 diffContext2.get(),
+                 RelativePathPiece{"src/bar/foo"},
+                 builder2.getStoredTree(RelativePathPiece{"src/bar/foo"})
+                     ->get()
+                     .getObjectId())
+                 .thenValue([callback = std::move(callback2)](auto&&) {
+                   return callback->extractStatus();
+                 }));
   EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result2.entries(),
@@ -643,16 +653,16 @@ TEST_F(DiffTest, nonignored_removed_files) {
   auto diffContext2 =
       makeDiffContext(callback2.get(), std::move(topLevelIgnores));
 
-  auto result2 = diffRemovedTree(
-                     diffContext2.get(),
-                     RelativePathPiece{"src/bar/foo"},
-                     builder.getStoredTree(RelativePathPiece{"src/bar/foo"})
-                         ->get()
-                         .getObjectId())
-                     .thenValue([callback = std::move(callback2)](auto&&) {
-                       return callback->extractStatus();
-                     })
-                     .get(100ms);
+  auto result2 =
+      getVia(diffRemovedTree(
+                 diffContext2.get(),
+                 RelativePathPiece{"src/bar/foo"},
+                 builder.getStoredTree(RelativePathPiece{"src/bar/foo"})
+                     ->get()
+                     .getObjectId())
+                 .thenValue([callback = std::move(callback2)](auto&&) {
+                   return callback->extractStatus();
+                 }));
   EXPECT_THAT(*result2.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result2.entries(),
@@ -1350,12 +1360,11 @@ TEST_F(DiffTest, directoryDiff) {
   auto diffContext =
       makeDiffContext(callback.get(), std::move(topLevelIgnores));
 
-  diffTrees(
+  getVia(diffTrees(
       diffContext.get(),
       RelativePathPiece{},
       builder1.getRoot()->get().getObjectId(),
-      builder2.getRoot()->get().getObjectId())
-      .get();
+      builder2.getRoot()->get().getObjectId()));
   auto status = callback->extractStatus();
   EXPECT_THAT(
       status,
@@ -1393,7 +1402,7 @@ TEST_F(DiffTest, restrictedEntrySkipped) {
 
   // Diff should report src/main.c as modified but NOT report
   // restricted_dir or its contents as removed.
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -1415,7 +1424,7 @@ TEST_F(DiffTest, restrictedEntryAddedSkipped) {
 
   // Diff should report the normal file change but not synthesize an added
   // subtree from the restricted directory placeholder.
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),
@@ -1437,7 +1446,7 @@ TEST_F(DiffTest, restrictedEntryBothPresent) {
   builder2.finalize(backingStore_, /* setReady */ true);
   backingStore_->putCommit("2", builder2)->setReady();
 
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   // restricted_dir content change should not be reported
   EXPECT_THAT(*result.entries(), UnorderedElementsAre());
@@ -1461,7 +1470,7 @@ TEST_F(DiffTest, restrictedOnOneSideSkipsDiff) {
 
   // The OR-guard in processBothPresent should skip restricted_dir
   // because one side is restricted, even though the other is not.
-  auto result = diffCommits("1", "2").get(100ms);
+  auto result = getVia(diffCommits("1", "2"));
   EXPECT_THAT(*result.errors(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries(),

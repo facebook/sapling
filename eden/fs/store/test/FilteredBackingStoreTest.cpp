@@ -15,6 +15,7 @@
 #include <folly/coro/Task.h>
 #include <folly/coro/Timeout.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -231,7 +232,8 @@ TEST_F(
       nullptr,
       nullptr,
       edenConfig,
-      CaseSensitivity::Sensitive);
+      CaseSensitivity::Sensitive,
+      folly::getGlobalCPUExecutor());
 
   auto rawManifestId = makeTestId("1");
   auto filteredTreeId = ObjectId{FilteredObjectId{

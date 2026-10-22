@@ -128,7 +128,8 @@ bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
       nullptr,
       nullptr,
       edenConfig,
-      CaseSensitivity::Sensitive);
+      CaseSensitivity::Sensitive,
+      folly::getKeepAliveToken(&executor));
 
   auto rootTree =
       objectStore
@@ -266,7 +267,8 @@ TEST_F(
       nullptr,
       nullptr,
       edenConfig,
-      CaseSensitivity::Sensitive);
+      CaseSensitivity::Sensitive,
+      folly::getKeepAliveToken(&executor));
   auto rootTree =
       objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(kTestTimeout);

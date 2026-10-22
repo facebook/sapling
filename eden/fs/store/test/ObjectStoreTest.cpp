@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <re2/re2.h>
@@ -65,7 +66,8 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         std::make_shared<ProcessInfoCache>(),
         makeTestEdenFsEventsLogger(),
         std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
-        GetParam());
+        GetParam(),
+        folly::getGlobalCPUExecutor());
 
     auto configWithBlake3Key = EdenConfig::createTestEdenConfig();
     configWithBlake3Key->blake3Key.setStringValue(
@@ -79,7 +81,8 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         std::make_shared<ProcessInfoCache>(),
         makeTestEdenFsEventsLogger(),
         std::make_shared<ReloadableConfig>(configWithBlake3Key),
-        GetParam());
+        GetParam(),
+        folly::getGlobalCPUExecutor());
 
     auto configWithTreeAuxPrefetching = EdenConfig::createTestEdenConfig();
     fakeBackingStoreWithTreeAuxPrefetching =
@@ -91,7 +94,8 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         std::make_shared<ProcessInfoCache>(),
         makeTestEdenFsEventsLogger(),
         std::make_shared<ReloadableConfig>(configWithTreeAuxPrefetching),
-        GetParam());
+        GetParam(),
+        folly::getGlobalCPUExecutor());
 
     readyBlobId = putReadyBlob("readyblob");
     readyTreeId = putReadyTree();
@@ -478,7 +482,8 @@ TEST_P(ObjectStoreTest, getTree_prefetchUsesTreeCacheWhenBypassDisabled) {
       std::make_shared<ProcessInfoCache>(),
       makeTestEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(config),
-      GetParam());
+      GetParam(),
+      folly::getGlobalCPUExecutor());
   auto prefetchContext = ObjectFetchContext::getNullPrefetchContext();
 
   cachingObjectStore->getTree(readyTreeId, prefetchContext).get(0ms);
@@ -758,7 +763,8 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
       std::make_shared<ProcessInfoCache>(),
       makeTestEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
-      getOppositeCaseSensitivity());
+      getOppositeCaseSensitivity(),
+      folly::getGlobalCPUExecutor());
 
   auto blobOne = putReadyBlob("foo content");
   auto blobTwo = putReadyBlob("bar content");
@@ -917,7 +923,8 @@ struct ObjectStoreCheckPermissionTest : public ::testing::Test {
         std::make_shared<ProcessInfoCache>(),
         makeTestEdenFsEventsLogger(),
         edenConfig,
-        CaseSensitivity::Sensitive);
+        CaseSensitivity::Sensitive,
+        folly::getGlobalCPUExecutor());
   }
 
   void setTtlSeconds(uint64_t seconds) {

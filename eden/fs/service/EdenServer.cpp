@@ -2548,7 +2548,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_->getProcessInfoCache(),
       serverState_->getEdenFsEventsLogger(),
       serverState_->getReloadableConfig(),
-      initialConfig->getCaseSensitive());
+      initialConfig->getCaseSensitive(),
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
   auto journal = std::make_unique<Journal>(getStats().copy());
 
   // Create the EdenMount object and insert the mount into the mountPoints_ map.

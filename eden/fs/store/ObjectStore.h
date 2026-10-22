@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Executor.h>
 #include <folly/Synchronized.h>
 #include <folly/coro/safe/NowTask.h>
 #include <atomic>
@@ -121,7 +122,8 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
-      CaseSensitivity caseSensitive);
+      CaseSensitivity caseSensitive,
+      folly::Executor::KeepAlive<> executor);
   ~ObjectStore() override;
 
   /**
@@ -469,8 +471,26 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
-      CaseSensitivity caseSensitive);
+      CaseSensitivity caseSensitive,
+      folly::Executor::KeepAlive<> executor);
   // Forbidden copy constructor and assignment operator
+
+  /**
+   * Starts a fetch coroutine on the calling thread and wraps its result.
+   *
+   * A fetch answered from an in-memory cache or the local store completes
+   * before this returns, so the ImmediateFuture is ready and the FUSE and
+   * NFS dispatchers reply without an executor hop. Only a fetch that has to
+   * wait on the backing store's import queue resumes on executor_.
+   *
+   * folly calls this start "unsafe" because the coroutine reports executor_
+   * as its executor while its synchronous prefix runs on the caller's
+   * thread. The fetch paths do not depend on which thread that prefix runs
+   * on; the SemiFuture-returning backing store methods already run the same
+   * local lookups on the caller's thread.
+   */
+  template <typename T>
+  ImmediateFuture<T> startInline(folly::coro::Task<T> task) const;
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
 
@@ -541,6 +561,8 @@ class ObjectStore : public IObjectStore,
    * Multiple ObjectStores may share the same BackingStore.
    */
   std::shared_ptr<BackingStore> backingStore_;
+  /** Resumes fetches that had to wait on the backing store. */
+  folly::Executor::KeepAlive<> executor_;
 
   EdenStatsPtr const stats_;
 

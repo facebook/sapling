@@ -180,9 +180,13 @@ class FileInodeState::BlobLoadingPromise {
    * truncated. In the second case, the future will return with a nullptr
    */
   ImmediateFuture<BlobPtr> getImmediateFuture() {
-    return ImmediateFuture{
-        promise.getSemiFuture().deferError<folly::BrokenPromise>(
-            [](auto&&) -> BlobPtr { return nullptr; })};
+    return ImmediateFuture<BlobPtr>{promise.getSemiFuture()}.thenError(
+        [](folly::exception_wrapper&& ew) -> ImmediateFuture<BlobPtr> {
+          if (ew.is_compatible_with<folly::BrokenPromise>()) {
+            return BlobPtr{nullptr};
+          }
+          return makeImmediateFuture<BlobPtr>(std::move(ew));
+        });
   }
 
   /**
@@ -1648,13 +1652,23 @@ ImmediateFuture<BlobPtr> FileInode::startLoadingData(
   // collect short-circuiting in that case. However, when loadingFuture
   // completes, it'll set the loadingPromise which will then complete the
   // collect below.
-  return ImmediateFuture{
-      folly::collect(std::move(resultFuture), std::move(loadingFuture).semi())
-          .deferValue([](std::tuple<BlobPtr, folly::Unit>&& res) {
-            return std::get<BlobPtr>(std::move(res));
-          })
-          .deferError<folly::BrokenPromise>(
-              [](auto&&) -> BlobPtr { return nullptr; })};
+  //
+  // The continuations are ImmediateFuture ones rather than deferValue and
+  // deferError: when the blob came from a local cache, collect is already
+  // complete here, and a deferred callback would hide that behind a future
+  // that only completes once an executor drives it, pushing the read reply
+  // onto the thread pool.
+  return ImmediateFuture<std::tuple<BlobPtr, folly::Unit>>{
+      folly::collect(std::move(resultFuture), std::move(loadingFuture).semi())}
+      .thenValue([](std::tuple<BlobPtr, folly::Unit>&& res) {
+        return std::get<BlobPtr>(std::move(res));
+      })
+      .thenError([](folly::exception_wrapper&& ew) -> ImmediateFuture<BlobPtr> {
+        if (ew.is_compatible_with<folly::BrokenPromise>()) {
+          return BlobPtr{nullptr};
+        }
+        return makeImmediateFuture<BlobPtr>(std::move(ew));
+      });
 }
 
 folly::coro::now_task<BlobPtr> FileInode::co_startLoadingData(

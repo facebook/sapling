@@ -1007,6 +1007,9 @@ TEST_P(TreeInodeTestBase, removeRecursivelyNotReady) {
   EXPECT_FALSE(fut.isReady());
 
   builder.setAllReady();
+  // The tree fetch resumes on the server executor once the backing store
+  // answers.
+  mount.drainServerExecutor();
   std::move(fut).get(0ms);
 
   EXPECT_THROW_ERRNO(mount.getTreeInode("somedir"_relpath), ENOENT);
