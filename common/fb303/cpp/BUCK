@@ -7,9 +7,9 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     exported_deps = [
+        "fbsource//xplat/folly:small_vector",
         "//common/fb303/if:fb303-cpp2-services",
         "//fb303:service_data",
-        "//folly:small_vector",
     ],
     exported_external_deps = [
         ("glibc", None, "rt"),
