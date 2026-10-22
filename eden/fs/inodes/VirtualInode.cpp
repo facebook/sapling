@@ -472,6 +472,9 @@ std::optional<BlobAuxData> VirtualInode::tryGetCachedBlobAuxData(
 ImmediateFuture<std::optional<TreeAuxData>> VirtualInode::getTreeAuxData(
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
+  if (isRestricted()) {
+    return std::optional<TreeAuxData>{std::nullopt};
+  }
   return match(
       variant_,
       [&](const InodePtr& inode) {
@@ -492,6 +495,9 @@ VirtualInode::co_getTreeAuxData(
   static_assert(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_getTreeAuxData");
+  if (isRestricted()) {
+    co_return std::nullopt;
+  }
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
     co_return co_await inode->asTreePtr()->co_getTreeAuxData(fetchContext);
   } else if (auto* tree = std::get_if<TreePtr>(&variant_)) {

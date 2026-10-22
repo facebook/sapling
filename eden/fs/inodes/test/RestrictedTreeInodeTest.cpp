@@ -1529,18 +1529,16 @@ CO_TEST(RestrictedTreeInode, asyncDigestOfRestrictedDirectory) {
 
   auto coroResult = co_await restricted.co_getEntryAttributes(
       attrs, "restricted"_relpath, objectStore, checkoutTime, context);
-  CO_ASSERT_TRUE(coroResult.digestSize.has_value());
-  CO_ASSERT_TRUE(coroResult.digestSize->hasValue());
-  EXPECT_EQ(1234, coroResult.digestSize->value());
-  EXPECT_TRUE(coroResult.digestHash.has_value());
+  EXPECT_FALSE(coroResult.digestSize.has_value());
+  EXPECT_FALSE(coroResult.digestHash.has_value());
 
   auto futureResult =
       restricted
           .getEntryAttributes(
               attrs, "restricted"_relpath, objectStore, checkoutTime, context)
           .get();
-  CO_ASSERT_TRUE(futureResult.digestSize.has_value());
-  EXPECT_EQ(1234, futureResult.digestSize->value());
+  EXPECT_FALSE(futureResult.digestSize.has_value());
+  EXPECT_FALSE(futureResult.digestHash.has_value());
 }
 
 CO_TEST(RestrictedTreeInode, asyncDigestOfRestrictedDirectoryWithoutAuxData) {
@@ -1559,6 +1557,5 @@ CO_TEST(RestrictedTreeInode, asyncDigestOfRestrictedDirectoryWithoutAuxData) {
       edenMount->getObjectStore(),
       edenMount->getLastCheckoutTime().toTimespec(),
       ObjectFetchContext::getNullContext());
-  CO_ASSERT_TRUE(coroResult.digestHash.has_value());
-  EXPECT_TRUE(coroResult.digestHash->hasException());
+  EXPECT_FALSE(coroResult.digestHash.has_value());
 }
