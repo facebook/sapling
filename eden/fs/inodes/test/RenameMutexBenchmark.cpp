@@ -280,27 +280,27 @@ static void BM_SharedMutexFair_CoroLockUnlock(benchmark::State& state) {
   // Amortized: drive a single Task that loops over iterations, instead
   // of scheduling a fresh Task per iteration (which would dominate
   // measurements with executor scheduling cost).
-  folly::coro::blockingWait(
-      folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+  folly::coro::blockingWait(co_withExecutor(
+      &exec, folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
         for (auto _ : state) {
           co_await m.co_scoped_lock();
         }
         co_return;
-      }).scheduleOn(&exec));
+      })));
 }
 BENCHMARK(BM_SharedMutexFair_CoroLockUnlock);
 
 static void BM_HybridRenameMutex_CoroLockUnlock(benchmark::State& state) {
   folly::CPUThreadPoolExecutor exec(1);
   HybridRenameMutex m;
-  folly::coro::blockingWait(
-      folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
+  folly::coro::blockingWait(co_withExecutor(
+      &exec, folly::coro::co_invoke([&]() -> folly::coro::Task<void> {
         for (auto _ : state) {
           co_await m.co_lock();
           m.unlock();
         }
         co_return;
-      }).scheduleOn(&exec));
+      })));
 }
 BENCHMARK(BM_HybridRenameMutex_CoroLockUnlock);
 
