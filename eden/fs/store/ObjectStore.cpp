@@ -498,7 +498,7 @@ folly::coro::now_task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
   updateProcessFetch(*fetchContext);
   fetchContext->didFetch(
       ObjectFetchContext::Blob, id, result.origin, result.blob->getSize());
-  co_return std::move(result.blob);
+  co_return std::move(result.blob).unwrap();
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(

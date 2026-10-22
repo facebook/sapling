@@ -2562,10 +2562,13 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
     auto rootTree = co_await objectStore_->co_getRootTree(
         commitId, ctxPtr->getFetchContext());
     co_await co_waitForPendingWrites();
+    // GCC 11 hits an internal compiler error when this vector is built inside
+    // the co_await expression.
+    std::vector<TreePtr> trees{std::move(rootTree.tree)};
     co_await rootInode->co_diff(
         ctxPtr,
         RelativePathPiece{},
-        std::vector{std::move(rootTree.tree)},
+        std::move(trees),
         ctxPtr->getToplevelIgnore(),
         false);
   };

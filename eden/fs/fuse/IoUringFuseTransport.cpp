@@ -1128,7 +1128,7 @@ void IoUringFuseTransport::logCanceledCqe(
         cqe.res,
         cqe.flags,
         userData,
-        queue.eventFd,
+        queue.eventFd.load(),
         isEventFd);
     return;
   }

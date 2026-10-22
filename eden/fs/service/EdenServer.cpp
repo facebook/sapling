@@ -1355,7 +1355,9 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
               EdenErrorInfo::takeover(ex)
                   .withMountPoint(std::string(mountPath.view()))
                   .withMountStatus(
-                      fmt::format("{}", info.edenMount->getState()))
+                      fmt::format(
+                          "{}",
+                          folly::to_underlying(info.edenMount->getState())))
                   .withErrorType("takeover_shutdown_failed"));
         });
         if (outcome != ErrorLogOutcome::RateLimited) {
