@@ -63,6 +63,32 @@ pub fn merge_text(base: &[u8], local: &[u8], other: &[u8]) -> MergeResult {
     }
 }
 
+/// `merge_text`, except that a region both sides changed differently
+/// resolves to `local`'s lines instead of failing. Every region only one
+/// side changed still merges as usual, so `other`'s changes elsewhere in
+/// the file are kept.
+///
+/// Binary content is still a conflict: there is no line-level region to
+/// prefer, and returning `local` whole would discard all of `other`.
+pub fn merge_text_prefer_local(base: &[u8], local: &[u8], other: &[u8]) -> MergeResult {
+    if base == local && base == other {
+        return MergeResult::Clean(base.to_vec());
+    }
+    if base == local {
+        return MergeResult::Clean(other.to_vec());
+    }
+    if base == other {
+        return MergeResult::Clean(local.to_vec());
+    }
+    if utils::is_binary(base) || utils::is_binary(local) || utils::is_binary(other) {
+        return MergeResult::Conflict("binary file changed on both sides".to_string());
+    }
+    match merge3::merge3_with(base, local, other, merge3::ConflictPolicy::PreferA) {
+        Ok(merged) => MergeResult::Clean(merged),
+        Err(description) => MergeResult::Conflict(description),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use mononoke_macros::mononoke;
@@ -168,6 +194,91 @@ mod tests {
         let changed = b"line1\nmodified\nline3\n";
         match merge_text(base, changed, changed) {
             MergeResult::Clean(result) => assert_eq!(result, changed),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_merge_text_prefer_local_resolves_overlap_keeps_other_elsewhere() {
+        // Multi-line objects, as the real manifests are: a matching line
+        // separates the two changed entries, so they are distinct regions.
+        let base = b"{\n  \"A\": {\n    \"BUILD\": 1\n  },\n  \"B\": {\n    \"BUILD\": 1\n  }\n}\n";
+        let local =
+            b"{\n  \"A\": {\n    \"BUILD\": 1\n  },\n  \"B\": {\n    \"BUILD\": 5\n  }\n}\n";
+        let other =
+            b"{\n  \"A\": {\n    \"BUILD\": 2\n  },\n  \"B\": {\n    \"BUILD\": 7\n  }\n}\n";
+        assert!(matches!(
+            merge_text(base, local, other),
+            MergeResult::Conflict(_)
+        ));
+        match merge_text_prefer_local(base, local, other) {
+            // B (both changed) is local's; A (only other changed) is other's.
+            MergeResult::Clean(result) => assert_eq!(
+                result,
+                b"{\n  \"A\": {\n    \"BUILD\": 2\n  },\n  \"B\": {\n    \"BUILD\": 5\n  }\n}\n"
+            ),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_merge_text_prefer_local_manifest_shape_keeps_other_entries() {
+        // The AOSP prebuilt manifest shape: one multi-line object per
+        // artifact, `},` and the next key between any two entries. Two
+        // artifacts changed on different sides are separate regions even
+        // when adjacent, so the pushed side's stale copy of the other
+        // artifact is never taken. Server bumps A and B; client bumps B only.
+        fn manifest(a: u32, b: u32, c: u32) -> Vec<u8> {
+            format!(
+                "{{\n    \"A\": {{\n        \"BUILD\": {a},\n        \"HASH\": \"a{a}\"\n    }},\n    \"B\": {{\n        \"BUILD\": {b},\n        \"HASH\": \"b{b}\"\n    }},\n    \"C\": {{\n        \"BUILD\": {c},\n        \"HASH\": \"c{c}\"\n    }}\n}}\n"
+            )
+            .into_bytes()
+        }
+        let base = manifest(1, 1, 1);
+        let local = manifest(1, 5, 1);
+        let other = manifest(2, 7, 1);
+        assert!(matches!(
+            merge_text(&base, &local, &other),
+            MergeResult::Conflict(_)
+        ));
+        match merge_text_prefer_local(&base, &local, &other) {
+            // A is other's (only other changed it), B is local's (both did).
+            MergeResult::Clean(result) => assert_eq!(result, manifest(2, 5, 1)),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_merge_text_prefer_local_adjacent_lines_coalesce() {
+        // With no matching line between them, a line only `other` changed
+        // and a line both changed form ONE conflict region, and PreferA
+        // emits local's lines for all of it: other's `A=2` is lost. This is
+        // the same sharp edge `git merge -X ours` has; callers must only
+        // apply it to files whose entries are separated by unchanged lines.
+        let base = b"A=1\nB=1\n";
+        let local = b"A=1\nB=5\n";
+        let other = b"A=2\nB=7\n";
+        match merge_text_prefer_local(base, local, other) {
+            MergeResult::Clean(result) => assert_eq!(result, b"A=1\nB=5\n"),
+            MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_merge_text_prefer_local_binary_still_conflicts() {
+        let base = b"a\x00b";
+        match merge_text_prefer_local(base, b"a\x00c", b"a\x00d") {
+            MergeResult::Conflict(desc) => assert!(desc.contains("binary")),
+            MergeResult::Clean(_) => panic!("binary must not resolve"),
+        }
+    }
+
+    #[mononoke::test]
+    fn test_merge_text_prefer_local_one_side_changed_is_plain() {
+        let base = b"1\n2\n";
+        let other = b"1\n3\n";
+        match merge_text_prefer_local(base, base, other) {
+            MergeResult::Clean(result) => assert_eq!(result, other),
             MergeResult::Conflict(e) => panic!("unexpected conflict: {e}"),
         }
     }

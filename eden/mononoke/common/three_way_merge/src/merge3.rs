@@ -204,10 +204,30 @@ pub(crate) fn merge_regions(
     Ok(regions)
 }
 
+/// What to do with a region both sides changed differently.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ConflictPolicy {
+    /// Fail the merge with a description of the first conflicting region.
+    Reject,
+    /// Emit side A's lines for the region; every other region merges as
+    /// usual.
+    PreferA,
+}
+
 /// Perform the full 3-way merge on line-split content.
 ///
 /// Returns `Ok(merged_bytes)` on clean merge, or `Err(description)` on conflict.
 pub(crate) fn merge3(base_bytes: &[u8], a_bytes: &[u8], b_bytes: &[u8]) -> Result<Vec<u8>, String> {
+    merge3_with(base_bytes, a_bytes, b_bytes, ConflictPolicy::Reject)
+}
+
+/// `merge3` with an explicit policy for conflicting regions.
+pub(crate) fn merge3_with(
+    base_bytes: &[u8],
+    a_bytes: &[u8],
+    b_bytes: &[u8],
+    policy: ConflictPolicy,
+) -> Result<Vec<u8>, String> {
     let base = split_lines(base_bytes);
     let a = split_lines(a_bytes);
     let b = split_lines(b_bytes);
@@ -235,6 +255,11 @@ pub(crate) fn merge3(base_bytes: &[u8], a_bytes: &[u8], b_bytes: &[u8]) -> Resul
             }
             MergeRegion::B { range } => {
                 for line in &b[range.clone()] {
+                    result.extend_from_slice(line);
+                }
+            }
+            MergeRegion::Conflict { a: a_range, .. } if policy == ConflictPolicy::PreferA => {
+                for line in &a[a_range.clone()] {
                     result.extend_from_slice(line);
                 }
             }
@@ -582,5 +607,47 @@ mod tests {
         // First region should cover lines 0..3
         assert_eq!(regions[0].base.start, 0);
         assert_eq!(regions[0].base.end, 3);
+    }
+
+    // ==================== ConflictPolicy::PreferA ====================
+
+    #[mononoke::test]
+    fn test_prefer_a_takes_a_for_conflict_region_only() {
+        let base = b"head\nx=1\nmid\ny=1\ntail\n";
+        // A changes x; B changes x differently and also y.
+        let a = b"head\nx=2\nmid\ny=1\ntail\n";
+        let b = b"head\nx=3\nmid\ny=9\ntail\n";
+        assert!(merge3(base, a, b).is_err(), "x is a real conflict");
+        let merged = merge3_with(base, a, b, ConflictPolicy::PreferA).unwrap();
+        // x resolves to A; y, which only B changed, still comes from B.
+        assert_eq!(merged, b"head\nx=2\nmid\ny=9\ntail\n");
+    }
+
+    #[mononoke::test]
+    fn test_prefer_a_insertion_conflict_drops_b_insertion() {
+        // Both insert different lines at the same point: PreferA keeps
+        // A's. Callers that cannot afford to lose B's insertion must
+        // check the result (pushrebase does, for JSON manifests).
+        let base = b"a\nz\n";
+        let a = b"a\nfrom_a\nz\n";
+        let b = b"a\nfrom_b\nz\n";
+        let merged = merge3_with(base, a, b, ConflictPolicy::PreferA).unwrap();
+        assert_eq!(merged, b"a\nfrom_a\nz\n");
+    }
+
+    #[mononoke::test]
+    fn test_reject_policy_matches_merge3() {
+        let base = b"1\n2\n3\n";
+        let a = b"1\nA\n3\n";
+        let b = b"1\nB\n3\n";
+        assert_eq!(
+            merge3(base, a, b),
+            merge3_with(base, a, b, ConflictPolicy::Reject)
+        );
+        let b_clean = b"1\n2\nC\n";
+        assert_eq!(
+            merge3(base, a, b_clean),
+            merge3_with(base, a, b_clean, ConflictPolicy::Reject)
+        );
     }
 }
