@@ -9,6 +9,7 @@
 
 mod errors;
 
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -23,21 +24,27 @@ use context::CoreContext;
 pub use errors::CasChangesetUploaderError;
 use futures::FutureExt;
 use futures::future;
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_watchdog::WatchdogExt;
 use manifest::Diff;
 use manifest::Entry;
-use manifest::Manifest;
 use manifest::ManifestOps;
+use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::HgPreloadedAugmentedManifest;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use mononoke_types::MononokeDigest;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedManifestId;
 use restricted_paths::RestrictedPathsRef;
 use scm_client::ScmCasClient;
 use scm_client::UploadOutcome;
@@ -521,8 +528,13 @@ where
     /// Upload can be limited to a specific path if provided.
     /// The implementation assumes that if hg manifest is derived, then augmented manifest is also derived.
     ///
-    /// Trees under restricted paths are never uploaded. The walk still descends into them to upload
-    /// their files, except under `UploadPolicy::TreesOnly`; a single file given via `path` is uploaded regardless.
+    /// The walk reads augmented manifests, which carry the CAS digest of every child, so each
+    /// directory costs one manifest load and one batched CAS lookup for all of its children.
+    /// Content is fetched from the blobstore only for digests that CAS reports missing.
+    ///
+    /// Restriction root trees are never uploaded; everything below them is. Each tree is checked
+    /// with `RestrictedPaths::is_restricted_manifest`, so the sources selected by `AclManifestMode`
+    /// decide. A single file given via `path` is uploaded regardless.
     pub async fn upload_single_changeset_recursively<'a>(
         &self,
         ctx: &'a CoreContext,
@@ -534,7 +546,6 @@ where
     ) -> Result<UploadStats, CasChangesetUploaderError> {
         let start_time = std::time::Instant::now();
         let upload_counter: Arc<UploadCounters> = Arc::new(Default::default());
-        let final_upload_counter = upload_counter.clone();
         let (hg_cs_id, hg_manifest_id) = self
             .get_manifest_id_from_changeset(ctx, repo, changeset_id)
             .await?;
@@ -542,8 +553,6 @@ where
         let hg_augmented_manifest_id: HgAugmentedManifestId =
             HgAugmentedManifestId::new(hg_manifest_id.into_nodehash());
 
-        // We will traverse over Mercurial manifests for now, as augmented manifests haven't been
-        // derived yet and don't yet implement Manifest.  This will be trivial to swap in later.
         let max_concurrent_manifests = if matches!(upload_policy, UploadPolicy::TreesOnly) {
             MAX_CONCURRENT_MANIFESTS_TREES_ONLY
         } else {
@@ -553,62 +562,54 @@ where
         let blobs_lookup = prior_lookup_policy.enabled_blobs();
         let trees_lookup = prior_lookup_policy.enabled_trees();
 
-        let mut hg_manifest_id_start = hg_manifest_id;
+        let mut start_manifest_id = hg_augmented_manifest_id;
 
         if let Some(ref path) = path {
-            let path = path.clone();
-            let blobstore = repo.repo_blobstore_arc();
-            let entry = hg_manifest_id
-                .find_entry(ctx.clone(), blobstore, path.clone())
+            let entry = hg_augmented_manifest_id
+                .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
                 .await?;
             match entry {
-                Some(entry) => {
-                    match entry {
-                        // adjust the starting point for the traversal below
-                        // to start with this entry instead of the root manifest
-                        Entry::Tree(treeid) => {
-                            hg_manifest_id_start = treeid;
-                        }
-                        // upload just this single file and exit
-                        Entry::Leaf(leaf) => {
-                            if !matches!(upload_policy, UploadPolicy::TreesOnly) {
-                                debug!(
-                                    "Upload single file '{}' for changeset id: {}, hg changeset id: {}",
+                // Start the traversal below from this directory instead of the root.
+                Some(Entry::Tree(treeid)) => {
+                    start_manifest_id = treeid;
+                }
+                // Upload just this single file and exit.
+                Some(Entry::Leaf(leaf)) => {
+                    if !matches!(upload_policy, UploadPolicy::TreesOnly) {
+                        let filenode_id = HgFileNodeId::new(leaf.filenode);
+                        debug!(
+                            "Upload single file '{}' for changeset id: {}, hg changeset id: {}",
+                            path, changeset_id, hg_cs_id,
+                        );
+                        let outcome = self
+                            .client
+                            .upload_file_content(
+                                ctx,
+                                repo.repo_blobstore(),
+                                &filenode_id,
+                                Some(&MononokeDigest(leaf.content_blake3, leaf.total_size)),
+                                blobs_lookup,
+                            )
+                            .await
+                            .map_err(|error| {
+                                CasChangesetUploaderError::FileUploadFailedWithFullPath(
+                                    filenode_id,
                                     path.clone(),
-                                    changeset_id,
-                                    hg_cs_id,
-                                );
-                                let outcome = self
-                                    .client
-                                    .upload_file_content(
-                                        ctx,
-                                        repo.repo_blobstore(),
-                                        &leaf.1,
-                                        None,
-                                        blobs_lookup,
-                                    )
-                                    .await
-                                    .map_err(|error| {
-                                        CasChangesetUploaderError::FileUploadFailedWithFullPath(
-                                            leaf.1,
-                                            path.clone(),
-                                            error,
-                                        )
-                                    })?;
-                                upload_counter.tick_files(ctx, outcome);
-                                upload_counter.warn_skipped_redacted(changeset_id);
-                                debug!(
-                                    "Upload completed for '{}' in {:.2} seconds",
-                                    path,
-                                    start_time.elapsed().as_secs_f64()
-                                );
-                            }
-                            return Ok(upload_counter);
-                        }
+                                    error,
+                                )
+                            })?;
+                        upload_counter.tick_files(ctx, outcome);
+                        upload_counter.warn_skipped_redacted(changeset_id);
+                        debug!(
+                            "Upload completed for '{}' in {:.2} seconds",
+                            path,
+                            start_time.elapsed().as_secs_f64()
+                        );
                     }
+                    return Ok(upload_counter);
                 }
                 None => {
-                    return Err(CasChangesetUploaderError::PathNotFound(path));
+                    return Err(CasChangesetUploaderError::PathNotFound(path.clone()));
                 }
             }
         }
@@ -619,113 +620,130 @@ where
             hg_augmented_manifest_id, changeset_id, hg_cs_id, &start_path,
         );
 
-        let restricted_path_roots: Vec<NonRootMPath> =
-            if repo.restricted_paths().may_have_restricted_paths() {
-                let restricted_paths = repo.restricted_paths();
-                let below_start = restricted_paths
-                    .find_restricted_descendants(ctx, Some(*changeset_id), vec![start_path.clone()])
-                    .await?;
-                // The start path itself may sit inside a restricted directory.
-                let above_start = match start_path.clone().into_optional_non_root_path() {
-                    Some(start_path) => {
-                        restricted_paths
-                            .get_path_restriction_info(ctx, Some(*changeset_id), &[start_path])
-                            .await?
-                    }
-                    None => Vec::new(),
-                };
-                below_start
-                    .into_iter()
-                    .chain(above_start)
-                    .map(|info| info.restriction_root)
-                    .collect()
-            } else {
-                Vec::new()
-            };
         let skipped_restricted_trees = RelaxedCounter::new(0);
 
         bounded_traversal::bounded_traversal_stream(
             max_concurrent_manifests,
-            Some((start_path.clone(), hg_manifest_id_start)),
-            |(tree_path, hg_manifest_id): (MPath, HgManifestId)| {
+            Some(start_manifest_id),
+            |manifest_id: HgAugmentedManifestId| {
                 cloned!(upload_counter);
                 let upload_policy = upload_policy.clone();
-                let restricted_path_roots = &restricted_path_roots;
                 let skipped_restricted_trees = &skipped_restricted_trees;
                 async move {
-                    if !matches!(upload_policy, UploadPolicy::BlobsOnly) {
-                        if restricted_path_roots
-                            .iter()
-                            .any(|root| root.is_prefix_of(&tree_path))
-                        {
-                            skipped_restricted_trees.inc();
-                            // TreesOnly uploads no files and every tree below is skipped too, so there is nothing to descend for.
-                            if matches!(upload_policy, UploadPolicy::TreesOnly) {
-                                return anyhow::Ok(((), Vec::new()));
+                    let upload_trees = !matches!(upload_policy, UploadPolicy::BlobsOnly);
+                    let upload_files = !matches!(upload_policy, UploadPolicy::TreesOnly);
+
+                    let envelope = manifest_id.load(ctx, repo.repo_blobstore()).await?;
+                    let manifest = HgPreloadedAugmentedManifest::load_from_sharded(
+                        envelope,
+                        ctx,
+                        repo.repo_blobstore(),
+                    )
+                    .await?;
+                    let tree_digest = MononokeDigest(
+                        manifest.augmented_manifest_id,
+                        manifest.augmented_manifest_size,
+                    );
+
+                    // Only tree uploads are restricted, so BlobsOnly skips the check.
+                    let restricted = upload_trees
+                        && self
+                            .is_restricted_tree(ctx, repo, &manifest_id, manifest.is_restricted)
+                            .await?;
+                    if restricted {
+                        skipped_restricted_trees.inc();
+                    }
+
+                    let mut files = Vec::new();
+                    let mut children = Vec::new();
+                    for (elem, entry) in manifest.children_augmented_metadata {
+                        match entry {
+                            HgAugmentedManifestEntry::FileNode(file) => {
+                                if upload_files {
+                                    let digest =
+                                        MononokeDigest(file.content_blake3, file.total_size);
+                                    files.push((elem, HgFileNodeId::new(file.filenode), digest));
+                                }
                             }
+                            HgAugmentedManifestEntry::DirectoryNode(dir) => {
+                                children.push(HgAugmentedManifestId::new(dir.treenode));
+                            }
+                        }
+                    }
+
+                    // One batched lookup covers this directory's own tree and its files.
+                    let upload_tree = upload_trees && !restricted;
+                    let to_lookup: Vec<MononokeDigest> = (upload_tree && trees_lookup)
+                        .then_some(tree_digest)
+                        .into_iter()
+                        .chain(
+                            files
+                                .iter()
+                                .filter(|_| blobs_lookup)
+                                .map(|(_, _, digest)| *digest),
+                        )
+                        .collect();
+                    let missing = if to_lookup.is_empty() {
+                        HashSet::new()
+                    } else {
+                        self.client.missing_digests(&to_lookup).await?
+                    };
+
+                    stream::iter(files)
+                        .map(|(elem, filenode_id, digest)| {
+                            cloned!(upload_counter);
+                            let missing = &missing;
+                            async move {
+                                if blobs_lookup && !missing.contains(&digest) {
+                                    upload_counter.tick_files(ctx, UploadOutcome::AlreadyPresent);
+                                    return Ok(());
+                                }
+                                let outcome = self
+                                    .client
+                                    .upload_file_content(
+                                        ctx,
+                                        repo.repo_blobstore(),
+                                        &filenode_id,
+                                        Some(&digest),
+                                        false,
+                                    )
+                                    .await
+                                    .map_err(|error| {
+                                        CasChangesetUploaderError::FileUploadFailed(
+                                            filenode_id,
+                                            elem,
+                                            error,
+                                        )
+                                    })?;
+                                upload_counter.tick_files(ctx, outcome);
+                                anyhow::Ok(())
+                            }
+                        })
+                        .buffer_unordered(MAX_CONCURRENT_FILES_PER_MANIFEST)
+                        .try_collect::<()>()
+                        .await?;
+
+                    // Upload the tree after its files, so a tree present in CAS implies its files are too.
+                    if upload_tree {
+                        let outcome = if trees_lookup && !missing.contains(&tree_digest) {
+                            UploadOutcome::AlreadyPresent
                         } else {
-                            let hg_augmented_manifest_id: HgAugmentedManifestId =
-                                HgAugmentedManifestId::new(hg_manifest_id.into_nodehash());
-                            let outcome = self
-                                .client
+                            self.client
                                 .upload_augmented_tree(
                                     ctx,
                                     repo.repo_blobstore(),
-                                    &hg_augmented_manifest_id,
-                                    None,
-                                    trees_lookup,
+                                    &manifest_id,
+                                    Some(&tree_digest),
+                                    false,
                                 )
                                 .await
                                 .map_err(|error| {
-                                    CasChangesetUploaderError::TreeUploadFailed(
-                                        hg_augmented_manifest_id,
-                                        error,
-                                    )
-                                })?;
-                            upload_counter.tick_trees(ctx, outcome);
-                        }
+                                    CasChangesetUploaderError::TreeUploadFailed(manifest_id, error)
+                                })?
+                        };
+                        upload_counter.tick_trees(ctx, outcome);
                     }
-                    let hg_manifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
-                    let mut children = Vec::new();
-                    hg_manifest
-                        .list(ctx, repo.repo_blobstore())
-                        .await?
-                        .try_for_each_concurrent(
-                            MAX_CONCURRENT_FILES_PER_MANIFEST,
-                            |(elem, entry)| match entry {
-                                Entry::Tree(tree) => {
-                                    children.push((tree_path.join(&elem), tree));
-                                    future::ok(()).left_future()
-                                }
-                                Entry::Leaf(leaf) => {
-                                    cloned!(upload_counter);
-                                    let upload_policy = upload_policy.clone();
-                                    async move {
-                                        if !matches!(upload_policy, UploadPolicy::TreesOnly) {
-                                            let outcome = self
-                                                .client
-                                                .upload_file_content(
-                                                    ctx,
-                                                    repo.repo_blobstore(),
-                                                    &leaf.1,
-                                                    None,
-                                                    blobs_lookup,
-                                                )
-                                                .await
-                                                .map_err(|error| {
-                                                    CasChangesetUploaderError::FileUploadFailed(
-                                                        leaf.1, elem, error,
-                                                    )
-                                                })?;
-                                            upload_counter.tick_files(ctx, outcome);
-                                        }
-                                        Ok(())
-                                    }
-                                    .right_future()
-                                }
-                            },
-                        )
-                        .await?;
+
                     anyhow::Ok(((), children))
                 }
                 .boxed()
@@ -737,13 +755,13 @@ where
         let skipped_restricted_trees = skipped_restricted_trees.get();
         if skipped_restricted_trees > 0 {
             info!(
-                "Skipped {} trees under restricted paths for changeset {}",
+                "Skipped {} restriction root trees for changeset {}",
                 skipped_restricted_trees, changeset_id,
             );
         }
-        final_upload_counter.warn_skipped_redacted(changeset_id);
+        upload_counter.warn_skipped_redacted(changeset_id);
 
-        final_upload_counter.log(ctx);
+        upload_counter.log(ctx);
         debug!(
             "Upload of (bonsai) changeset {} to CAS (recursively) for path: '{}' took {:.2} seconds, corresponding hg changeset is {}. Upload included {}.",
             changeset_id,
@@ -757,7 +775,30 @@ where
             }
         );
         STATS::uploaded_changesets_recursive.add_value(1);
-        Ok(final_upload_counter)
+        Ok(upload_counter)
+    }
+
+    /// Whether this tree is a restriction root, according to the restriction sources the repo is
+    /// configured with. `acl_manifest_is_restricted` is the AclManifest bit loaded with the tree.
+    async fn is_restricted_tree<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        repo: &impl Repo,
+        manifest_id: &HgAugmentedManifestId,
+        acl_manifest_is_restricted: bool,
+    ) -> Result<bool, CasChangesetUploaderError> {
+        let restricted_paths = repo.restricted_paths();
+        if !restricted_paths.may_have_restricted_paths() {
+            return Ok(false);
+        }
+        Ok(restricted_paths
+            .is_restricted_manifest(
+                ctx,
+                &RestrictedManifestId::new(manifest_id.as_bytes().into()),
+                &ManifestType::HgAugmented,
+                acl_manifest_is_restricted,
+            )
+            .await?)
     }
 
     /// Check if a given Changeset is already uploaded to a CAS backend by validating the presence of the hg root augmented manifest.

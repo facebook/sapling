@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::Error;
 use anyhow::anyhow;
 use blobstore::KeyedBlobstore;
@@ -34,6 +36,8 @@ define_stats! {
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
+const MAX_DIGESTS_PER_LOOKUP: usize = 500;
+const MAX_CONCURRENT_LOOKUPS: usize = 4;
 const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 3_000_000;
 const SMALL_BLOBS_THRESHOLD: u64 = 2_621_440;
 
@@ -61,6 +65,21 @@ where
 
     async fn lookup_digest(&self, digest: &MononokeDigest) -> Result<bool, Error> {
         self.client.lookup_blob(digest).await
+    }
+
+    /// Return the subset of `digests` that is absent from the CAS backend, looked up in batches.
+    pub async fn missing_digests(
+        &self,
+        digests: &[MononokeDigest],
+    ) -> Result<HashSet<MononokeDigest>, Error> {
+        stream::iter(digests.chunks(MAX_DIGESTS_PER_LOOKUP).map(<[_]>::to_vec))
+            .map(|chunk| async move { self.client.missing_digests(&chunk).await })
+            .buffer_unordered(MAX_CONCURRENT_LOOKUPS)
+            .try_fold(HashSet::new(), |mut missing, chunk_missing| async move {
+                missing.extend(chunk_missing);
+                Ok(missing)
+            })
+            .await
     }
 
     fn log_upload_size(&self, size: u64) {
