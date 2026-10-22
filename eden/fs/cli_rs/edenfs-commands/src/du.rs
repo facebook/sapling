@@ -45,6 +45,7 @@ use edenfs_utils::get_env_with_buck_version;
 use edenfs_utils::get_environment_suitable_for_subprocess;
 use edenfs_utils::path_from_bytes;
 use edenfs_utils::trace_env;
+use hg_util::no_follow::NoFollowRoot;
 use serde::Serialize;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
@@ -610,8 +611,14 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+/// Delete an orphaned redirection the same way `sl worktree remove` deletes
+/// redirection backing storage.
 fn remove_orphaned_redirection(redir: &Path) -> Result<()> {
-    fs::remove_dir_all(redir)
+    let (Some(parent), Some(name)) = (redir.parent(), redir.file_name()) else {
+        return Err(anyhow!("Found invalid redirection: {}", redir.display()));
+    };
+    NoFollowRoot::new(parent)
+        .and_then(|parent| parent.remove_dir_all(Path::new(name)))
         .with_context(|| format!("Failed to recursively remove {}", redir.display()))
 }
 
@@ -1232,11 +1239,8 @@ mod tests {
         );
     }
 
-    #[cfg(unix)]
     #[test]
     fn remove_orphaned_redirection_deletes_read_only_directories() {
-        use std::os::unix::fs::PermissionsExt;
-
         let scratch = tempdir().expect("temporary scratch root should be created");
         let orphan = scratch.path().join("edenfsZredirectionsZbuck-out");
         let action_out = orphan.join("v2/gen/action-out");
@@ -1249,20 +1253,9 @@ mod tests {
         fs::set_permissions(&action_out, permissions)
             .expect("action output directory should become read-only");
 
-        let error = remove_orphaned_redirection(&orphan)
-            .expect_err("read-only directories should block removal");
+        remove_orphaned_redirection(&orphan).expect("orphaned redirection should be deleted");
 
-        // FIXME: the orphaned redirection should be deleted once removal can
-        // delete entries from read-only directories.
-        assert_eq!(
-            error
-                .downcast_ref::<std::io::Error>()
-                .map(std::io::Error::kind),
-            Some(std::io::ErrorKind::PermissionDenied)
-        );
-        assert!(action_out.join("file").exists());
-        fs::set_permissions(&action_out, fs::Permissions::from_mode(0o755))
-            .expect("action output directory should become writable for cleanup");
+        assert!(!orphan.exists(), "orphaned redirection should be gone");
     }
 
     #[test]
