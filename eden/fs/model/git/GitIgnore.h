@@ -31,8 +31,8 @@ class GitIgnorePattern;
  * - The .gitignore file in the directory containing the path.
  * - The .gitignore file in each subsequent parent directory, all the way up to
  *   the root of the repository.
- * - Any eden client-wide exclude file
- * - The user's personal exclude file.
+ * - The user's personal exclude file (~/.edenignore).
+ * - The system-wide exclude file (/etc/eden/ignore).
  *
  * At each step, the GitIgnore object may return that the path was explicitly
  * excluded, explicitly included, or was not matched.  If the path was

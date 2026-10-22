@@ -7,10 +7,67 @@
 
 #include "eden/fs/model/git/GitIgnorePattern.h"
 
+#include <string>
+
 using folly::StringPiece;
 using std::optional;
 
 namespace facebook::eden {
+
+namespace {
+
+size_t skipBracketExpression(StringPiece pattern, size_t openIdx) {
+  size_t idx = openIdx + 1;
+  if (idx < pattern.size() && (pattern[idx] == '!' || pattern[idx] == '^')) {
+    ++idx;
+  }
+  if (idx < pattern.size() && pattern[idx] == ']') {
+    ++idx;
+  }
+  while (idx < pattern.size() && pattern[idx] != ']') {
+    if (pattern[idx] == '\\' && idx + 1 < pattern.size()) {
+      ++idx;
+    }
+    ++idx;
+  }
+  return idx < pattern.size() ? idx + 1 : openIdx + 1;
+}
+
+std::string normalizeStarRuns(StringPiece pattern) {
+  std::string result;
+  result.reserve(pattern.size());
+  size_t idx = 0;
+  while (idx < pattern.size()) {
+    char c = pattern[idx];
+    if (c == '\\' && idx + 1 < pattern.size()) {
+      result.append(pattern.data() + idx, 2);
+      idx += 2;
+    } else if (c == '[') {
+      size_t end = skipBracketExpression(pattern, idx);
+      result.append(pattern.data() + idx, end - idx);
+      idx = end;
+    } else if (c == '*') {
+      size_t runEnd = idx;
+      while (runEnd < pattern.size() && pattern[runEnd] == '*') {
+        ++runEnd;
+      }
+      bool atComponentStart = idx == 0 || pattern[idx - 1] == '/';
+      bool atComponentEnd = runEnd == pattern.size() || pattern[runEnd] == '/';
+      if (runEnd - idx >= 2 && atComponentStart && atComponentEnd) {
+        result.append("**");
+      } else {
+        result.push_back('*');
+      }
+      idx = runEnd;
+    } else {
+      result.push_back(c);
+      ++idx;
+    }
+  }
+  return result;
+}
+
+} // namespace
 
 optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   uint32_t flags = 0;
@@ -48,20 +105,22 @@ optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   }
 
   // Trim all unescaped trailing spaces.
-  const char* pos = line.end();
-  while (pos > line.begin()) {
-    if (*(pos - 1) != ' ') {
-      break;
+  size_t end = line.size();
+  while (end > 0 && line[end - 1] == ' ') {
+    size_t precedingBackslashes = 0;
+    while (precedingBackslashes + 1 < end &&
+           line[end - 2 - precedingBackslashes] == '\\') {
+      ++precedingBackslashes;
     }
-    if ((pos - 2) >= line.begin() && *(pos - 2) == '\\') {
+    if (precedingBackslashes % 2 == 1) {
       // This space is backslash escaped, so stop here, and include
       // it in the pattern.
       break;
     }
     // Ignore this unescaped trailing space.
-    --pos;
+    --end;
   }
-  line.assign(line.begin(), pos);
+  line.subtract(line.size() - end);
   if (line.empty()) {
     return std::nullopt;
   }
@@ -129,10 +188,16 @@ optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
     }
   }
 
+  auto normalized = normalizeStarRuns(line);
+  if (normalized == "**") {
+    normalized = "*";
+    flags |= FLAG_BASENAME_ONLY;
+  }
+
   // Create the GlobMatcher. Note in gitignore(5), a '**' should include path
   // components that start with '.', so we do not enable the IGNORE_DOTFILES
   // option.
-  auto matcher = GlobMatcher::create(line, GlobOptions::DEFAULT);
+  auto matcher = GlobMatcher::create(normalized, GlobOptions::DEFAULT);
   if (!matcher.hasValue()) {
     return std::nullopt;
   }
