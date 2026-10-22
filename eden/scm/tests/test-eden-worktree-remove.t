@@ -38,18 +38,20 @@ test worktree remove - subdirectory path gives clear error
   [255]
   $ cd $TESTTMP/myrepo
 
-test worktree remove - basic remove cleans redirection backing storage
+test worktree remove - basic remove cleans redirection backing storage with read-only files
 
 #if no-windows
   $ eden redirect add --mount $TESTTMP/linked_from_subdir scratch symlink
   $ backing="$(readlink $TESTTMP/linked_from_subdir/scratch)"
   $ echo contents > "$backing/contents"
+  $ chmod a-w "$backing/contents"
 #endif
 #if linux
   $ eden redirect add --mount $TESTTMP/linked_from_subdir bind1 bind
   $ eden redirect list --json --mount $TESTTMP/linked_from_subdir > $TESTTMP/redirections.json
   $ bind_backing1="$(python -c 'import json, sys; print(next(r["target"] for r in json.load(open(sys.argv[-1])) if r["repo_path"] == "bind1"))' $TESTTMP/redirections.json)"
   $ echo contents > $TESTTMP/linked_from_subdir/bind1/contents
+  $ chmod a-w $TESTTMP/linked_from_subdir/bind1/contents
   $ test -f "$bind_backing1/contents"
 #endif
   $ sl worktree remove $TESTTMP/linked_from_subdir -y
@@ -182,6 +184,7 @@ test worktree remove - direct removal empties backing when a redirection can't b
   $ backing="$(readlink $TESTTMP/direct_stuck_redirection/scratch)"
   $ mkdir "$backing/nested"
   $ echo contents > "$backing/nested/contents"
+  $ chmod a-w "$backing/nested/contents"
   $ chmod a-w $TESTTMP/direct_stuck_redirection
   $ sl worktree remove $TESTTMP/direct_stuck_redirection -y > $TESTTMP/stuck-remove.log 2>&1
   $ python -c 'import pathlib, sys; log = pathlib.Path(sys.argv[-1]).read_text(); print("Error unmounting redirections for" in log and "failed to unmount redirection scratch" in log)' $TESTTMP/stuck-remove.log

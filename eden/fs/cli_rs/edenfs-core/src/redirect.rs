@@ -3753,6 +3753,49 @@ mod tests {
         );
     }
 
+    #[test]
+    fn scratch_cleanup_deletes_read_only_files() {
+        let temp_dir = tempdir().expect("temporary directory should be created");
+        let target = temp_dir.path().join("target");
+        let contents = temp_dir.path().join("contents");
+        for backing in [&target, &contents] {
+            std::fs::create_dir_all(backing.join("nested"))
+                .expect("backing tree should be created");
+            for file in [backing.join("artifact"), backing.join("nested/artifact")] {
+                std::fs::write(&file, "data").expect("backing file should be created");
+                let mut permissions = std::fs::metadata(&file)
+                    .expect("backing file metadata should be readable")
+                    .permissions();
+                permissions.set_readonly(true);
+                std::fs::set_permissions(&file, permissions)
+                    .expect("backing file should become read-only");
+            }
+        }
+
+        scratch_cleanup_action(temp_dir.path(), target.clone())
+            .expect("scratch target should be safe")
+            .expect("scratch target should exist")
+            .execute()
+            .expect("scratch cleanup should delete read-only files");
+        scratch_cleanup_action(temp_dir.path(), contents.clone())
+            .expect("scratch target should be safe")
+            .expect("scratch target should exist")
+            .execute_contents()
+            .expect("contents cleanup should delete read-only files");
+
+        assert!(
+            !target.exists(),
+            "resolved backing target should be deleted"
+        );
+        assert_eq!(
+            std::fs::read_dir(&contents)
+                .expect("target should be readable")
+                .count(),
+            0,
+            "every entry in the target should be deleted"
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn scratch_cleanup_rejects_symlinked_root_ancestor_and_target() {
