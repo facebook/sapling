@@ -93,7 +93,6 @@ struct Inner {
     treestore: Arc<dyn TreeStore>,
     repo: Arc<Repo>,
     mount_path: PathBuf,
-    eden_client_dir: Option<PathBuf>,
 
     // We store these so we can maintain them when reloading ourself.
     extra_configs: Vec<PinnedConfig>,
@@ -240,29 +239,7 @@ impl BackingStore {
         mount: impl AsRef<Path>,
         extra_configs: &[String],
     ) -> Result<Self> {
-        Self::new_with_config_inner(root.as_ref(), mount.as_ref(), None, extra_configs)
-    }
-
-    pub fn new_with_config_and_client_dir(
-        root: impl AsRef<Path>,
-        mount: impl AsRef<Path>,
-        eden_client_dir: impl AsRef<Path>,
-        extra_configs: &[String],
-    ) -> Result<Self> {
-        Self::new_with_config_inner(
-            root.as_ref(),
-            mount.as_ref(),
-            Some(eden_client_dir.as_ref()),
-            extra_configs,
-        )
-    }
-
-    fn new_with_config_inner(
-        root: &Path,
-        mount: &Path,
-        eden_client_dir: Option<&Path>,
-        extra_configs: &[String],
-    ) -> Result<Self> {
+        let (root, mount) = (root.as_ref(), mount.as_ref());
         let extra_configs = extra_configs
             .iter()
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
@@ -274,7 +251,6 @@ impl BackingStore {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root,
                 mount,
-                eden_client_dir,
                 &extra_configs,
                 touch_file_mtime(),
                 parent_hint.clone(),
@@ -287,7 +263,6 @@ impl BackingStore {
     fn new_inner(
         root: &Path,
         mount: &Path,
-        eden_client_dir: Option<&Path>,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
         parent_hint: Arc<RwLock<Option<String>>>,
@@ -376,16 +351,6 @@ impl BackingStore {
         }
 
         walk_detector.set_root(Some(mount.to_path_buf()));
-        if config.get_or("backingstore", "walk-metadata-persistence", || true)? {
-            if let Some(eden_client_dir) = eden_client_dir {
-                walk_detector.set_persistence_path(walk_metadata_persistence_path(eden_client_dir));
-                walk_detector.load_persisted_metadata();
-            } else {
-                walk_detector.clear_persistence_path();
-            }
-        } else {
-            walk_detector.clear_persistence_path();
-        }
 
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
             let prefetch_config = prefetch::Config {
@@ -460,7 +425,6 @@ impl BackingStore {
             filestore,
             repo,
             mount_path: mount.to_path_buf(),
-            eden_client_dir: eden_client_dir.map(Path::to_path_buf),
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -836,7 +800,6 @@ impl BackingStore {
             match Self::new_inner(
                 inner.repo.path(),
                 &inner.mount_path,
-                inner.eden_client_dir.as_deref(),
                 &inner.extra_configs,
                 new_mtime,
                 self.parent_hint.clone(),
@@ -907,7 +870,6 @@ impl Inner {
             treestore: self.treestore.clone(),
             repo: self.repo.clone(),
             mount_path: self.mount_path.clone(),
-            eden_client_dir: self.eden_client_dir.clone(),
             extra_configs: self.extra_configs.clone(),
 
             touch_file_mtime,
@@ -958,10 +920,6 @@ impl Inner {
 
         let _ = self.prefetch_send.try_send(());
     }
-}
-
-fn walk_metadata_persistence_path(eden_client_dir: &Path) -> PathBuf {
-    eden_client_dir.join("walk_detector_metadata.jsonl")
 }
 
 fn touch_file_mtime() -> Option<SystemTime> {
@@ -1320,17 +1278,6 @@ mod tests {
     use types::fetch_mode::FetchMode;
 
     use super::*;
-
-    #[test]
-    fn test_walk_metadata_persistence_path_uses_eden_client_dir() {
-        let mount = Path::new("/eden/mount/repo");
-        let eden_client_dir = Path::new("/home/user/.eden/clients/repo");
-
-        let path = walk_metadata_persistence_path(eden_client_dir);
-
-        assert_eq!(path, eden_client_dir.join("walk_detector_metadata.jsonl"));
-        assert!(!path.starts_with(mount));
-    }
 
     #[test]
     fn test_get_cache_path_for_stats_joins_reponame_and_cachepath() {

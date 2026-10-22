@@ -30,7 +30,6 @@ pub(crate) struct GcResult {
     pub(crate) deleted_nodes: usize,
     pub(crate) remaining_nodes: usize,
     pub(crate) deleted_walks: usize,
-    pub(crate) important_metadata: Option<Vec<(RepoPathBuf, usize, usize)>>,
 }
 
 /// Tree structure to track active walks. This makes it efficient to find a file's
@@ -681,13 +680,12 @@ impl WalkNode {
     }
 
     /// Delete nodes not accessed within timeout.
-    pub(crate) fn gc(&mut self, config: &Config, collect_metadata: bool) -> GcResult {
+    pub(crate) fn gc(&mut self, config: &Config) -> GcResult {
         // Return (nodes_deleted, nodes_remaining, walks_deleted, walks_remaining, keep_me)
         fn inner(
             config: &Config,
             path: &mut RepoPathBuf,
             node: &mut WalkNode,
-            important_metadata_entries: &mut Option<Vec<(RepoPathBuf, usize, usize)>>,
         ) -> (usize, usize, usize, usize, bool) {
             let mut walks_removed = 0;
             let mut deleted = 0;
@@ -697,7 +695,7 @@ impl WalkNode {
             node.children.retain(|name, child| {
                 path.push(name);
 
-                let (d, r, w, wr, keep) = inner(config, path, child, important_metadata_entries);
+                let (d, r, w, wr, keep) = inner(config, path, child);
 
                 deleted += d;
                 retained += r;
@@ -742,15 +740,6 @@ impl WalkNode {
             }
 
             if keep_me {
-                if let Some(entries) = important_metadata_entries.as_mut() {
-                    if important_metadata {
-                        entries.push((
-                            path.clone(),
-                            node.total_files().unwrap_or_default(),
-                            node.total_dirs().unwrap_or_default(),
-                        ));
-                    }
-                }
                 retained += 1;
             } else {
                 deleted += 1;
@@ -759,13 +748,8 @@ impl WalkNode {
             (deleted, retained, walks_removed, walks_remaining, keep_me)
         }
 
-        let mut important_metadata = collect_metadata.then(Vec::new);
-        let (mut deleted, remaining, mut walks_deleted, walks_remaining, keep_me) = inner(
-            config,
-            &mut RepoPathBuf::new(),
-            self,
-            &mut important_metadata,
-        );
+        let (mut deleted, remaining, mut walks_deleted, walks_remaining, keep_me) =
+            inner(config, &mut RepoPathBuf::new(), self);
 
         self.descendant_might_have_walk = walks_remaining > 0;
 
@@ -791,7 +775,6 @@ impl WalkNode {
             deleted_nodes: deleted,
             remaining_nodes: remaining,
             deleted_walks: walks_deleted,
-            important_metadata,
         }
     }
 

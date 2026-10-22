@@ -46,7 +46,6 @@ const auto kTestTimeout = 10s;
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_queued_hg_backing_store_test"};
   AbsolutePath testPath = canonicalPath(testDir.path().string());
-  AbsolutePath clientPath = testPath + "client"_pc;
   HgRepo repo{testPath + "repo"_pc};
   RootId commit1;
   Hash20 manifest1;
@@ -113,7 +112,6 @@ bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
   auto backingStore = std::make_shared<SaplingBackingStore>(
       testRepo.repo.path(),
       testRepo.repo.path(),
-      testRepo.clientPath,
       kPathMapDefaultCaseSensitive,
       stats.copy(),
       &executor,
@@ -168,7 +166,6 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
-          clientPath,
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor,
@@ -193,7 +190,6 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
-          clientPath,
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor,
@@ -219,7 +215,6 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
-          clientPath,
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor,
@@ -837,7 +832,6 @@ struct SaplingBackingStoreErrorLoggingTest : SaplingBackingStoreTestBase {
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           repo.path(),
-          clientPath,
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor,

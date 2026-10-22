@@ -170,7 +170,6 @@ HgImportTraceEvent::HgImportTraceEvent(
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     AbsolutePathPiece mount,
-    AbsolutePathPiece clientDirectory,
     CaseSensitivity caseSensitive,
     EdenStatsPtr stats,
     UnboundedQueueExecutor* serverThreadPool,
@@ -198,9 +197,6 @@ SaplingBackingStore::SaplingBackingStore(
           sapling::sapling_backingstore_new(
               rust::Str{repository.view().data(), repository.view().size()},
               rust::Str{mount.view().data(), mount.view().size()},
-              rust::Str{
-                  clientDirectory.view().data(),
-                  clientDirectory.view().size()},
               config_->getEdenConfig()->backingstoreWalkMode.getValue(),
               edenFsEventsLogger_)
               .into_raw(),
@@ -248,7 +244,6 @@ SaplingBackingStore::SaplingBackingStore(
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     AbsolutePathPiece mount,
-    AbsolutePathPiece clientDirectory,
     CaseSensitivity caseSensitive,
     EdenStatsPtr stats,
     folly::Executor* executor,
@@ -276,9 +271,6 @@ SaplingBackingStore::SaplingBackingStore(
           sapling::sapling_backingstore_new(
               rust::Str{repository.view().data(), repository.view().size()},
               rust::Str{mount.view().data(), mount.view().size()},
-              rust::Str{
-                  clientDirectory.view().data(),
-                  clientDirectory.view().size()},
               config_->getEdenConfig()->backingstoreWalkMode.getValue(),
               edenFsEventsLogger_)
               .into_raw(),

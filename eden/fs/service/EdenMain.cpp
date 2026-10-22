@@ -235,7 +235,6 @@ std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
   return std::make_shared<SaplingBackingStore>(
       repoPath,
       config.getMountPath(),
-      config.getClientDirectory(),
       config.getCaseSensitive(),
       params.sharedStats.copy(),
       params.serverState->getThreadPool().get(),

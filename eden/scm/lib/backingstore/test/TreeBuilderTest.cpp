@@ -365,8 +365,7 @@ TEST(SaplingBackingStoreTelemetryTest, GlobalBindingDoesNotRetainLogger) {
   // Logger binding happens before loading the repository. An empty directory
   // lets us exercise the production static binding without a Sapling repo.
   EXPECT_THROW(
-      sapling_backingstore_new(
-          Str{repository}, Str{}, Str{}, Str{}, eventsLogger),
+      sapling_backingstore_new(Str{repository}, Str{}, Str{}, eventsLogger),
       rust::Error);
 
   EXPECT_EQ(eventsLogger.use_count(), 1);

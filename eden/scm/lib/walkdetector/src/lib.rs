@@ -9,10 +9,6 @@
 mod tests;
 mod walk_node;
 
-use std::borrow::Cow;
-use std::io::BufRead;
-use std::io::BufWriter;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -32,8 +28,6 @@ use coarsetime::Instant;
 #[cfg(test)]
 use mock_instant::Instant;
 use parking_lot::RwLock;
-use serde::Deserialize;
-use serde::Serialize;
 use tracing::Level;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -49,8 +43,6 @@ use walk_node::WalkNode;
 pub struct Detector {
     config: Config,
     root: Option<PathBuf>,
-    persistence_path: Option<PathBuf>,
-    last_persisted_metadata_fingerprint: Arc<AtomicU64>,
     inner: Arc<RwLock<Inner>>,
 }
 
@@ -70,48 +62,8 @@ impl Default for Inner {
     }
 }
 
-const METADATA_FINGERPRINT_UNKNOWN: u64 = 0;
-const METADATA_FINGERPRINT_PERSISTING: u64 = 1;
-
-/// How long bookkeeping operations (GC, metadata persistence) can take before
-/// we warn that they were slow.
+/// How long GC can take before we warn that it was slow.
 const SLOW_OPERATION_THRESHOLD: Duration = Duration::from_millis(100);
-
-fn metadata_fingerprint(entries: &[(RepoPathBuf, usize, usize)]) -> u64 {
-    let (xor, sum) = entries
-        .iter()
-        .fold((0u64, 0u64), |(xor, sum), (dir, files, dirs)| {
-            let hash = metadata_entry_hash(dir.as_str(), *files, *dirs);
-            (xor ^ hash, sum.wrapping_add(hash))
-        });
-
-    let mut fingerprint = 0xcbf29ce484222325;
-    fnv1a_update(&mut fingerprint, &(entries.len() as u64).to_le_bytes());
-    fnv1a_update(&mut fingerprint, &xor.to_le_bytes());
-    fnv1a_update(&mut fingerprint, &sum.to_le_bytes());
-
-    match fingerprint {
-        METADATA_FINGERPRINT_UNKNOWN | METADATA_FINGERPRINT_PERSISTING => fingerprint + 2,
-        _ => fingerprint,
-    }
-}
-
-fn metadata_entry_hash(path: &str, files: usize, dirs: usize) -> u64 {
-    let mut hash = 0xcbf29ce484222325;
-    fnv1a_update(&mut hash, path.as_bytes());
-    fnv1a_update(&mut hash, b"\0");
-    fnv1a_update(&mut hash, &files.to_le_bytes());
-    fnv1a_update(&mut hash, b"\0");
-    fnv1a_update(&mut hash, &dirs.to_le_bytes());
-    hash
-}
-
-fn fnv1a_update(hash: &mut u64, bytes: &[u8]) {
-    for byte in bytes {
-        *hash ^= u64::from(*byte);
-        *hash = hash.wrapping_mul(0x100000001b3);
-    }
-}
 
 impl Detector {
     pub fn new() -> Self {
@@ -149,258 +101,15 @@ impl Detector {
         self.root = root;
     }
 
-    /// Set path for persisting large directory metadata across restarts.
-    pub fn set_persistence_path(&mut self, path: PathBuf) {
-        self.persistence_path = Some(path);
-        self.clear_last_persisted_metadata_fingerprint();
-    }
-
-    pub fn clear_persistence_path(&mut self) {
-        self.persistence_path = None;
-        self.clear_last_persisted_metadata_fingerprint();
-    }
-
-    /// Load previously persisted large directory metadata. Should be called after
-    /// config is set up (since config affects which metadata is considered "important").
-    pub fn load_persisted_metadata(&self) {
-        let path = match &self.persistence_path {
-            Some(p) => p,
-            None => return,
-        };
-
-        let start = std::time::Instant::now();
-        let file = match std::fs::File::open(path) {
-            Ok(f) => f,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return,
-            Err(e) => {
-                tracing::warn!(?e, ?path, "error opening persisted walk metadata");
-                return;
-            }
-        };
-
-        let mut entries = Vec::new();
-        for line in std::io::BufReader::new(file).lines() {
-            let line = match line {
-                Ok(l) => l,
-                Err(e) => {
-                    tracing::debug!(?e, "error reading line from walk metadata");
-                    continue;
-                }
-            };
-            match serde_json::from_str::<PersistedMetadata<'_>>(&line) {
-                Ok(entry) => {
-                    if entry.version != PERSISTED_METADATA_VERSION {
-                        tracing::debug!(
-                            version = entry.version,
-                            "skipping unsupported walk metadata version"
-                        );
-                        continue;
-                    }
-
-                    match RepoPathBuf::from_string(entry.dir.into_owned()) {
-                        Ok(repo_path) => {
-                            entries.push((repo_path, entry.files, entry.dirs));
-                        }
-                        Err(e) => {
-                            tracing::debug!(
-                                ?e,
-                                "skipping persisted walk metadata with invalid path"
-                            );
-                        }
-                    }
-                }
-                Err(e) => {
-                    tracing::debug!(?e, "skipping malformed walk metadata");
-                }
-            }
-        }
-
-        let mut inner = self.inner.write();
-        for (repo_path, files, dirs) in &entries {
-            inner.set_metadata(&self.config, repo_path.as_ref(), *files, *dirs);
-        }
-        drop(inner);
-        self.last_persisted_metadata_fingerprint
-            .store(metadata_fingerprint(&entries), Ordering::Release);
-
-        let elapsed = start.elapsed();
-        if elapsed > SLOW_OPERATION_THRESHOLD {
-            tracing::warn!(
-                ?elapsed,
-                count = entries.len(),
-                ?path,
-                "loading persisted walk metadata was slow"
-            );
-        } else {
-            tracing::debug!(
-                ?elapsed,
-                count = entries.len(),
-                ?path,
-                "loaded persisted walk metadata"
-            );
-        }
-    }
-
-    /// Persist current large directory metadata to disk.
-    fn persist_metadata(&self, entries: Vec<(RepoPathBuf, usize, usize)>) {
-        let path = match &self.persistence_path {
-            Some(p) => p,
-            None => return,
-        };
-
-        let start = std::time::Instant::now();
-        let fingerprint = metadata_fingerprint(&entries);
-
-        if !self.try_claim_metadata_persist(fingerprint) {
-            let elapsed = start.elapsed();
-            if elapsed > SLOW_OPERATION_THRESHOLD {
-                tracing::warn!(
-                    ?elapsed,
-                    count = entries.len(),
-                    ?path,
-                    "checking persisted walk metadata was slow"
-                );
-            } else {
-                tracing::debug!(
-                    ?elapsed,
-                    count = entries.len(),
-                    ?path,
-                    "persisted walk metadata is unchanged or already being persisted"
-                );
-            }
-            return;
-        }
-
-        if entries.is_empty() {
-            // Remove stale file if no important metadata exists.
-            let result = match std::fs::remove_file(path) {
-                Ok(()) => Ok(()),
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-                Err(e) => {
-                    tracing::warn!(?e, ?path, "error removing stale persisted walk metadata");
-                    Err(e)
-                }
-            };
-            let elapsed = start.elapsed();
-            if result.is_ok() {
-                self.set_last_persisted_metadata_fingerprint(fingerprint);
-                if elapsed > SLOW_OPERATION_THRESHOLD {
-                    tracing::warn!(?elapsed, ?path, "persisting empty walk metadata was slow");
-                }
-            } else {
-                self.mark_metadata_persist_failed();
-            }
-            return;
-        }
-
-        let result = atomicfile::atomic_write(path, 0o644, false, |file| {
-            let mut file = BufWriter::new(file);
-            for (dir, files, dirs) in &entries {
-                serde_json::to_writer(
-                    &mut file,
-                    &PersistedMetadata {
-                        version: PERSISTED_METADATA_VERSION,
-                        dir: Cow::Borrowed(dir.as_str()),
-                        files: *files,
-                        dirs: *dirs,
-                    },
-                )
-                .map_err(std::io::Error::other)?;
-                file.write_all(b"\n")?;
-            }
-            file.flush()
-        })
-        .map(|_| ());
-
-        let elapsed = start.elapsed();
-        match result {
-            Ok(()) => {
-                self.set_last_persisted_metadata_fingerprint(fingerprint);
-                if elapsed > SLOW_OPERATION_THRESHOLD {
-                    tracing::warn!(
-                        ?elapsed,
-                        count = entries.len(),
-                        ?path,
-                        "persisting walk metadata was slow"
-                    );
-                } else {
-                    tracing::debug!(
-                        ?elapsed,
-                        count = entries.len(),
-                        ?path,
-                        "persisted walk metadata"
-                    );
-                }
-            }
-            Err(e) => {
-                self.mark_metadata_persist_failed();
-                tracing::warn!(?e, ?path, "error persisting walk metadata");
-            }
-        }
-    }
-
-    fn try_claim_metadata_persist(&self, fingerprint: u64) -> bool {
-        loop {
-            let current = self
-                .last_persisted_metadata_fingerprint
-                .load(Ordering::Acquire);
-            if current == fingerprint || current == METADATA_FINGERPRINT_PERSISTING {
-                return false;
-            }
-            if self
-                .last_persisted_metadata_fingerprint
-                .compare_exchange(
-                    current,
-                    METADATA_FINGERPRINT_PERSISTING,
-                    Ordering::AcqRel,
-                    Ordering::Acquire,
-                )
-                .is_ok()
-            {
-                return true;
-            }
-        }
-    }
-
-    fn set_last_persisted_metadata_fingerprint(&self, fingerprint: u64) {
-        self.last_persisted_metadata_fingerprint
-            .store(fingerprint, Ordering::Release);
-    }
-
-    fn mark_metadata_persist_failed(&self) {
-        let _ = self.last_persisted_metadata_fingerprint.compare_exchange(
-            METADATA_FINGERPRINT_PERSISTING,
-            METADATA_FINGERPRINT_UNKNOWN,
-            Ordering::AcqRel,
-            Ordering::Acquire,
-        );
-    }
-
-    fn clear_last_persisted_metadata_fingerprint(&self) {
-        self.last_persisted_metadata_fingerprint
-            .store(METADATA_FINGERPRINT_UNKNOWN, Ordering::Release);
-    }
-
-    fn maybe_persist_metadata(&self, important_metadata: Option<Vec<(RepoPathBuf, usize, usize)>>) {
-        if let Some(entries) = important_metadata {
-            self.persist_metadata(entries);
-        }
-    }
-
-    /// Run GC if needed, then persist any metadata collected by GC after dropping the write lock.
+    /// Run GC if needed. Returns whether a walk was removed.
     fn maybe_gc(&self) -> bool {
         if !self.inner.read().needs_gc(&self.config) {
             return false;
         }
-        let mut inner = self.inner.write();
-        let (walk_changed, important_metadata) =
-            match inner.maybe_gc(&self.config, self.persistence_path.is_some()) {
-                Some(result) => (result.deleted_walks > 0, result.important_metadata),
-                None => (false, None),
-            };
-        drop(inner);
-        self.maybe_persist_metadata(important_metadata);
-        walk_changed
+        self.inner
+            .write()
+            .maybe_gc(&self.config)
+            .is_some_and(|result| result.deleted_walks > 0)
     }
 
     /// Return list of (walk root dir, walk depth) representing active file content walks.
@@ -576,7 +285,7 @@ impl Detector {
         }
 
         if is_interesting_metadata {
-            // Fill in interesting metadata before GC so a GC triggered by this access can persist it.
+            // Fill in interesting metadata that informs detection of file content walks.
             self.inner
                 .write()
                 .set_metadata(&self.config, path, num_files, num_dirs);
@@ -1073,14 +782,14 @@ impl Inner {
     }
 
     /// Returns GC stats, or None if GC did not run.
-    fn maybe_gc(&mut self, config: &Config, collect_metadata: bool) -> Option<GcResult> {
+    fn maybe_gc(&mut self, config: &Config) -> Option<GcResult> {
         if !self.needs_gc(config) {
             return None;
         }
 
         let start = std::time::Instant::now();
 
-        let result = self.node.gc(config, collect_metadata);
+        let result = self.node.gc(config);
 
         let elapsed = start.elapsed();
 
@@ -1114,20 +823,6 @@ impl Inner {
         tracing::trace!(%dir, num_files, num_dirs, "setting directory metadata");
         self.node.set_metadata(config, dir, num_files, num_dirs);
     }
-}
-
-const PERSISTED_METADATA_VERSION: u32 = 1;
-
-#[derive(Deserialize, Serialize)]
-struct PersistedMetadata<'a> {
-    #[serde(rename = "v")]
-    version: u32,
-    #[serde(rename = "d", borrow)]
-    dir: Cow<'a, str>,
-    #[serde(rename = "f")]
-    files: usize,
-    #[serde(rename = "s")]
-    dirs: usize,
 }
 
 /// Check if existing walks at nodes `ancestor_distance` below `ancestor` should be "merged" into a
