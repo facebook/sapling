@@ -1,6 +1,6 @@
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 
-oncall("scm_server_treehugger")
+oncall("scm_server_infra")
 
 rust_binary(
     name = "tokio_v2",

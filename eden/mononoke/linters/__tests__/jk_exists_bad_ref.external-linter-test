@@ -1,5 +1,5 @@
 code = "RUSTJKEXISTS"
-oncall = "scm_server_treehugger"
+oncall = "scm_server_infra"
 command = [
   "{{JK_LINTER}}",
   "--jk-command",

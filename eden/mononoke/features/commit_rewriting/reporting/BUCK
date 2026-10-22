@@ -1,6 +1,6 @@
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
-oncall("scm_server_treehugger")
+oncall("scm_server_infra")
 
 # TODO(T182311609): get rid of this library
 rust_library(

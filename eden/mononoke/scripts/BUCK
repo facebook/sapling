@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 
-oncall("scm_server_treehugger")
+oncall("scm_server_infra")
 
 python_binary(
     name = "merge_resolution_blame_checker",
