@@ -71,7 +71,8 @@ def get_dependent_repos(
 ) -> List[Path]:
     dependent_repos = []
     for repo in all_repos:
-        if repo.get_backing_repo() == backing_repo:
+        # Checkouts with an unreadable config have no backing repo.
+        if repo.backing_repo == backing_repo:
             dependent_repos.append(repo.path)
     return dependent_repos
 

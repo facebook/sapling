@@ -51,7 +51,11 @@ from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
 )
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
-from eden.fs.cli.doctor.util import CheckoutInfo, get_checkouts_info
+from eden.fs.cli.doctor.util import (
+    CheckoutInfo,
+    get_checkouts_info,
+    get_dependent_repos,
+)
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.redirect import Redirection, RedirectionState, RedirectionType
 from eden.fs.cli.test.lib.output import TestOutput
@@ -1323,6 +1327,20 @@ Would remount {mounts[1]}
             out=out,
         )
         return exit_code, out.getvalue(), instance, checkout
+
+    def test_get_dependent_repos_skips_checkout_with_unreadable_config(self) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        healthy = instance.create_test_mount("path1", active=False)
+        broken = instance.create_test_mount("path2", active=False)
+        os.unlink(broken.state_dir / "config.toml")
+        checkouts = get_checkouts_info(typing.cast(EdenInstance, instance))
+
+        self.assertEqual(
+            get_dependent_repos(
+                instance.default_backing_repo, list(checkouts.values())
+            ),
+            [healthy.path],
+        )
 
     def test_get_checkouts_info_keeps_checkout_with_unreadable_config(self) -> None:
         # `eden health-report` relies on such checkouts still being listed so
