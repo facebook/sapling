@@ -1671,6 +1671,13 @@ impl BookmarksCoordinator {
             .bookmarks
             .with_read(|bookmarks| bookmarks.get(&key).and_then(BookmarkState::log_id));
         if cached_log_id.is_some_and(|cached_log_id| log_id <= cached_log_id) {
+            tracing::info!(
+                repo = %self.repo.repo_identity().name(),
+                bookmark = %key,
+                notification_log_id = ?log_id,
+                cached_log_id = ?cached_log_id,
+                "Skipped stale or duplicate EventRouter warm bookmark cache notification"
+            );
             return Ok(());
         }
 
@@ -1690,7 +1697,7 @@ impl BookmarksCoordinator {
             .with_context(|| format!("reading current bookmark {key}"))?
             .filter(|(bookmark, _)| bookmark.key() == &key);
 
-        match current_bookmark {
+        let notification_outcome = match current_bookmark {
             Some((bookmark, changeset_id)) => {
                 warm_bookmark_from_notification(ctx, &key, changeset_id, log_id, &self.warmers)
                     .await?;
@@ -1698,14 +1705,24 @@ impl BookmarksCoordinator {
                 state.set_all_tracked(changeset_id);
                 state.set_log_id(log_id);
                 self.bookmarks.with_write(|bookmarks| {
-                    bookmarks.insert(key, state);
+                    bookmarks.insert(key.clone(), state);
                 });
+                "updated"
             }
             None => {
                 self.bookmarks
                     .with_write(|bookmarks| bookmarks.remove(&key));
+                "deleted"
             }
-        }
+        };
+        tracing::info!(
+            repo = %self.repo.repo_identity().name(),
+            bookmark = %key,
+            notification_log_id = ?log_id,
+            cached_log_id = ?cached_log_id,
+            notification_outcome,
+            "Applied EventRouter warm bookmark cache notification"
+        );
         Ok(())
     }
 
