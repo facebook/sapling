@@ -79,6 +79,8 @@ impl Default for Config {
 /// How often the manager checks whether a paused prefetch can resume. Kicks only arrive when
 /// walks change, and a walker catching up changes nothing the detector reports.
 const RESUME_CHECK_INTERVAL: Duration = Duration::from_millis(100);
+/// How often a prefetch waiting for a fetch permit checks whether it was canceled.
+const PERMIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 /// Directory walks at most this deep are prefetched together, this many per thread, since each
 /// one is small.
@@ -910,29 +912,25 @@ impl ConcurrencyLimiter {
         })
     }
 
-    /// Wait for a permit, or for `handle` to stop.
+    /// Wait for a permit, or for `handle` to stop. A plain timed receive is used rather than a
+    /// `flume::Selector` over the permit and cancellation channels: a selector that is woken for
+    /// a permit which a concurrent `try_acquire` takes first parks again without re-registering,
+    /// and then sleeps through every later release.
     fn acquire(&self, handle: &PrefetchHandle) -> Option<ConcurrencyPermit> {
-        if !handle.is_in_progress() {
-            return None;
-        }
-
-        enum Selection {
-            Permit(Result<(), flume::RecvError>),
-            Canceled,
-        }
-
-        match flume::Selector::new()
-            .recv(&self.available, Selection::Permit)
-            .recv(handle.cancellation_receiver(), |_| Selection::Canceled)
-            .wait()
-        {
-            Selection::Permit(Ok(())) => {
-                let permit = ConcurrencyPermit {
-                    release: self.release.clone(),
-                };
-                handle.is_in_progress().then_some(permit)
+        loop {
+            if !handle.is_in_progress() {
+                return None;
             }
-            Selection::Permit(Err(_)) | Selection::Canceled => None,
+            match self.available.recv_timeout(PERMIT_POLL_INTERVAL) {
+                Ok(()) => {
+                    let permit = ConcurrencyPermit {
+                        release: self.release.clone(),
+                    };
+                    return handle.is_in_progress().then_some(permit);
+                }
+                Err(flume::RecvTimeoutError::Timeout) => {}
+                Err(flume::RecvTimeoutError::Disconnected) => return None,
+            }
         }
     }
 }
@@ -1044,8 +1042,6 @@ impl Matcher for WalkMatcher {
 #[derive(Debug)]
 struct PrefetchState {
     status: AtomicU8,
-    cancellation_send: flume::Sender<()>,
-    cancellation_recv: flume::Receiver<()>,
     /// Where a paused prefetch left off: the last file it fetched, or None if it fetched nothing.
     resume_after: parking_lot::Mutex<Option<RepoPathBuf>>,
 }
@@ -1057,12 +1053,9 @@ pub(crate) struct PrefetchHandle {
 
 impl Default for PrefetchHandle {
     fn default() -> Self {
-        let (cancellation_send, cancellation_recv) = flume::bounded(1);
         Self {
             state: Arc::new(PrefetchState {
                 status: AtomicU8::new(Self::IN_PROGRESS),
-                cancellation_send,
-                cancellation_recv,
                 resume_after: Default::default(),
             }),
         }
@@ -1077,22 +1070,12 @@ impl PrefetchHandle {
     /// End a running prefetch. The thread's own copy of the handle drops when it returns, so a
     /// prefetch that paused stays paused and one that finished is marked done.
     pub(crate) fn cancel(&self) {
-        if self
-            .state
-            .status
-            .compare_exchange(
-                Self::IN_PROGRESS,
-                Self::DONE,
-                Ordering::AcqRel,
-                Ordering::Relaxed,
-            )
-            .is_ok()
-        {
-            self.state
-                .cancellation_send
-                .try_send(())
-                .expect("newly canceled prefetch should have an empty notification channel");
-        }
+        let _ = self.state.status.compare_exchange(
+            Self::IN_PROGRESS,
+            Self::DONE,
+            Ordering::AcqRel,
+            Ordering::Relaxed,
+        );
     }
 
     /// Mark the prefetch paused after `resume_after`, unless it was canceled meanwhile.
@@ -1104,10 +1087,6 @@ impl PrefetchHandle {
             Ordering::AcqRel,
             Ordering::Relaxed,
         );
-    }
-
-    fn cancellation_receiver(&self) -> &flume::Receiver<()> {
-        &self.state.cancellation_recv
     }
 
     pub(crate) fn is_done(&self) -> bool {
@@ -1903,6 +1882,76 @@ mod test {
 
         drop(held_permit);
         assert!(limiter.try_acquire().is_some());
+    }
+
+    #[test]
+    fn test_concurrency_limiter_wait_wakes_on_release() {
+        let limiter = ConcurrencyLimiter::new(1);
+        let held_permit = limiter.try_acquire().unwrap();
+        let handle = PrefetchHandle::default();
+        let waiting_handle = handle.clone();
+        let waiting_limiter = limiter.clone();
+        let (result_send, result_recv) = std::sync::mpsc::channel();
+
+        let waiter = std::thread::spawn(move || {
+            let got = waiting_limiter.acquire(&waiting_handle);
+            result_send.send(got.is_some()).unwrap();
+            drop(got);
+        });
+
+        std::thread::sleep(Duration::from_millis(50));
+        drop(held_permit);
+        assert_eq!(result_recv.recv_timeout(Duration::from_secs(2)), Ok(true));
+        waiter.join().unwrap();
+        assert!(limiter.try_acquire().is_some());
+    }
+
+    #[test]
+    fn test_concurrency_limiter_wait_survives_stolen_permits() {
+        // While a prefetch is blocked waiting for a fetch permit, other prefetches keep taking
+        // released permits with try_acquire before the waiter runs. The waiter must still wake
+        // up once a permit stays free.
+        let limiter = ConcurrencyLimiter::new(1);
+        let held = limiter.try_acquire().unwrap();
+        let handle = PrefetchHandle::default();
+        let waiting_handle = handle.clone();
+        let waiting_limiter = limiter.clone();
+        let (result_send, result_recv) = std::sync::mpsc::channel();
+        let waiter = std::thread::spawn(move || {
+            let got = waiting_limiter.acquire(&waiting_handle);
+            result_send.send(got.is_some()).unwrap();
+        });
+        std::thread::sleep(Duration::from_millis(20));
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let thieves: Vec<_> = (0..4)
+            .map(|_| {
+                let limiter = limiter.clone();
+                let stop = stop.clone();
+                std::thread::spawn(move || {
+                    let mut stolen = 0u64;
+                    while !stop.load(Ordering::Relaxed) {
+                        if let Some(permit) = limiter.try_acquire() {
+                            stolen += 1;
+                            drop(permit);
+                        }
+                    }
+                    stolen
+                })
+            })
+            .collect();
+        std::thread::sleep(Duration::from_millis(20));
+        drop(held);
+        std::thread::sleep(Duration::from_millis(200));
+        stop.store(true, Ordering::Relaxed);
+        let stolen: u64 = thieves.into_iter().map(|t| t.join().unwrap()).sum();
+        let woke = result_recv.recv_timeout(Duration::from_millis(500));
+        handle.cancel();
+        waiter.join().unwrap();
+        assert_eq!(
+            woke,
+            Ok(true),
+            "waiter asleep with a free permit after {stolen} steals"
+        );
     }
 
     #[test]
