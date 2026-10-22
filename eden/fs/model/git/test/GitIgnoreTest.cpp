@@ -119,6 +119,8 @@ TEST(GitIgnore, testTrailingSpaces) {
       "foobar   \n"
       "withspace\\ \n"
       "3space\\  \\  \n"
+      "even\\\\ \n"
+      "odd\\\\\\ \n"
       "example   \n");
 
   EXPECT_IGNORE(ignore, EXCLUDE, "foobar");
@@ -130,6 +132,12 @@ TEST(GitIgnore, testTrailingSpaces) {
   EXPECT_IGNORE(ignore, NO_MATCH, "3space    ");
   EXPECT_IGNORE(ignore, NO_MATCH, "3space ");
   EXPECT_IGNORE(ignore, NO_MATCH, "3space");
+  if (!folly::kIsWindows) {
+    EXPECT_IGNORE(ignore, NO_MATCH, "even\\");
+    EXPECT_IGNORE(ignore, EXCLUDE, "even\\ ");
+    EXPECT_IGNORE(ignore, EXCLUDE, "odd\\ ");
+    EXPECT_IGNORE(ignore, NO_MATCH, "odd\\");
+  }
   EXPECT_IGNORE(ignore, EXCLUDE, "example");
   EXPECT_IGNORE(ignore, NO_MATCH, "example   ");
 }
@@ -332,10 +340,66 @@ TEST(GitIgnore, testStarStar) {
   EXPECT_IGNORE(ignore, NO_MATCH, "ab/foo/def/readme.txt");
   EXPECT_IGNORE(ignore, NO_MATCH, "foo/def/1/2/abc/readme.txt");
 
-  // The gitignore(5) man page says that "**" is invalid outside of a leading
-  // "**/", a trailing "/**", or "/**/".  Our code (and git's) does process
-  // "**" in other locations, but we don't include tests for it here since the
-  // behavior is technically undefined.
+  ignore.loadFile("/**\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/b");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "x");
+
+  ignore.loadFile("/**/\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/b");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "x");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "x/y");
+
+  ignore.loadFile(
+      "*\n"
+      "!/**/\n"
+      "!*.c\n");
+  EXPECT_IGNORE_DIR(ignore, EXCLUDE, "lib");
+  EXPECT_IGNORE(ignore, INCLUDE, "lib/test.c");
+  EXPECT_IGNORE(ignore, EXCLUDE, "lib/test.o");
+
+  ignore.loadFile("**\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/b");
+
+  ignore.loadFile("**/**\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/b");
+
+  ignore.loadFile(
+      "**build/\n"
+      "**__pycache__/\n");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "build");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "src/build");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "mybuild");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "src/__pycache__");
+  EXPECT_IGNORE(ignore, NO_MATCH, "build");
+  EXPECT_IGNORE_DIR(ignore, NO_MATCH, "src/build2");
+
+  ignore.loadFile("a**\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "ab");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/ab");
+  EXPECT_IGNORE(ignore, NO_MATCH, "b");
+
+  ignore.loadFile("a**/b\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "ab/b");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a/b");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/ab/b");
+
+  ignore.loadFile("a/**b\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a/xb");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a/b");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a/x/b");
+
+  ignore.loadFile("***\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "a");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/b");
+
+  ignore.loadFile("***/foo\n");
+  EXPECT_IGNORE(ignore, NO_MATCH, "foo");
+  EXPECT_IGNORE(ignore, NO_MATCH, "x/y/foo");
+  EXPECT_IGNORE(ignore, NO_MATCH, "foobar");
 }
 
 TEST(GitIgnore, testQMark) {
