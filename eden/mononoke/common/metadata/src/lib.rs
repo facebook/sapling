@@ -44,7 +44,7 @@ impl ClientPathAclCompatibility {
     }
 }
 
-/// Identity-derived RIM attribution with a fixed workload/instance hierarchy.
+/// RIM attribution with a fixed workload/instance hierarchy.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RimTenancyPath {
     region: Option<String>,
@@ -407,7 +407,7 @@ impl Metadata {
                 .iter()
                 .find_map(|ty| self.identities.identity_type_filtered_concat(ty))
         };
-        let workload = match category {
+        let mut workload = match category {
             ClientCategory::DevEnv => self
                 .identities
                 .on_demand_type()
@@ -444,6 +444,12 @@ impl Metadata {
         })
         .filter(|workload| !workload.is_empty())
         .unwrap_or_else(|| "unknown".to_owned());
+        if let Some(cause @ ("sl-prefetch" | "edenfs-prefetch" | "eden-walk-prefetch")) =
+            self.fetch_cause()
+        {
+            workload.push(':');
+            workload.push_str(cause);
+        }
         // Every category must have the same depth; a single default child adds no sharing.
         let instance = if category == ClientCategory::DevEnv {
             self.identities
@@ -679,6 +685,61 @@ mod tests {
             metadata.rim_tenancy_path(None).into_vec(),
             vec!["root", "ci_sandcastle", "ALIAS:build", "default"]
         );
+        metadata = metadata.set_fetch_cause(Some("sl-prefetch".to_owned()));
+        assert_eq!(
+            metadata.rim_tenancy_path(None).into_vec(),
+            vec![
+                "root",
+                "ci_sandcastle",
+                "ALIAS:build:sl-prefetch",
+                "default"
+            ]
+        );
+    }
+
+    #[mononoke::test]
+    fn rim_separates_prefetch_workload_allocations() {
+        for (cause, workload) in [
+            (Some("sl-prefetch"), "www_fbsource_configerator:sl-prefetch"),
+            (
+                Some("edenfs-prefetch"),
+                "www_fbsource_configerator:edenfs-prefetch",
+            ),
+            (
+                Some("eden-walk-prefetch"),
+                "www_fbsource_configerator:eden-walk-prefetch",
+            ),
+            (None, "www_fbsource_configerator"),
+            (Some("edenfs-fs"), "www_fbsource_configerator"),
+            (Some("sl-checkout"), "www_fbsource_configerator"),
+            (Some("edenfs-mixed"), "www_fbsource_configerator"),
+            (Some("unspecified"), "www_fbsource_configerator"),
+            (Some("unknown-prefetch"), "www_fbsource_configerator"),
+        ] {
+            let metadata = metadata(&[
+                ("SERVICE_IDENTITY", "ondemand_www_fbsource_configerator"),
+                ("MACHINE", "od1.ldc.facebook.com"),
+            ])
+            .set_fetch_cause(cause.map(str::to_owned));
+            for region in [None, Some("ldc")] {
+                let expected: Vec<_> = once("root")
+                    .chain(region)
+                    .chain(["dev_env", workload, workload, "od1.ldc.facebook.com"])
+                    .collect();
+                assert_eq!(
+                    metadata
+                        .rim_tenancy_path(region)
+                        .with_workload_allocation(|category, name| {
+                            assert_eq!(category, "dev_env");
+                            assert_eq!(name, workload);
+                            true
+                        })
+                        .into_vec(),
+                    expected,
+                    "fetch cause: {cause:?}",
+                );
+            }
+        }
     }
 
     #[mononoke::test]
