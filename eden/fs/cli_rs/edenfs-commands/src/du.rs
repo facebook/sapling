@@ -13,6 +13,7 @@ use std::fmt;
 use std::fs;
 #[cfg(target_os = "macos")]
 use std::io::IsTerminal;
+use std::path::Path;
 use std::path::PathBuf;
 #[cfg(target_os = "macos")]
 use std::process::Command;
@@ -609,6 +610,11 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+fn remove_orphaned_redirection(redir: &Path) -> Result<()> {
+    fs::remove_dir_all(redir)
+        .with_context(|| format!("Failed to recursively remove {}", redir.display()))
+}
+
 #[cfg(target_os = "macos")]
 fn get_purgeable_size() -> Result<u64> {
     let instance = get_edenfs_instance();
@@ -903,9 +909,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 if !orphaned_redirections.is_empty() {
                     if self.clean_orphaned || self.should_clean() {
                         for redir in orphaned_redirections.iter() {
-                            fs::remove_dir_all(redir).with_context(|| {
-                                format!("Failed to recursively remove {}", redir.display())
-                            })?;
+                            remove_orphaned_redirection(redir)?;
                         }
                     }
                 }
@@ -1226,6 +1230,39 @@ mod tests {
         assert!(
             output.contains("Not cleaned. Directories listed above. Check and remove manually")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn remove_orphaned_redirection_deletes_read_only_directories() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let scratch = tempdir().expect("temporary scratch root should be created");
+        let orphan = scratch.path().join("edenfsZredirectionsZbuck-out");
+        let action_out = orphan.join("v2/gen/action-out");
+        fs::create_dir_all(&action_out).expect("orphaned redirection should be created");
+        fs::write(action_out.join("file"), "data").expect("action output should be created");
+        let mut permissions = fs::metadata(&action_out)
+            .expect("action output directory metadata should be readable")
+            .permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&action_out, permissions)
+            .expect("action output directory should become read-only");
+
+        let error = remove_orphaned_redirection(&orphan)
+            .expect_err("read-only directories should block removal");
+
+        // FIXME: the orphaned redirection should be deleted once removal can
+        // delete entries from read-only directories.
+        assert_eq!(
+            error
+                .downcast_ref::<std::io::Error>()
+                .map(std::io::Error::kind),
+            Some(std::io::ErrorKind::PermissionDenied)
+        );
+        assert!(action_out.join("file").exists());
+        fs::set_permissions(&action_out, fs::Permissions::from_mode(0o755))
+            .expect("action output directory should become writable for cleanup");
     }
 
     #[test]
