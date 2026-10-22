@@ -22,6 +22,7 @@ edenfs-asserted-states-client = { version = "0.1.0", path = "../../rust/edenfs-a
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-remove = { version = "0.1.0", path = "../edenfs-remove" }
+edenfs-telemetry = { path = "../../rust/edenfs-telemetry" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fail = { version = "0.5.1", features = ["failpoints"] }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }

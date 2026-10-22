@@ -5,6 +5,15 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-asserted-states",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "oss_dependencies_override": {
+                "dependencies": {
+                    "edenfs-telemetry": {"path": "../edenfs-telemetry"},
+                },
+            },
+        },
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

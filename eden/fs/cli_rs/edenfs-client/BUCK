@@ -16,8 +16,13 @@ rust_library(
                     "fb303_core_clients": {"path": "../../../../fb303/thrift/rust/clients"},
                     "fbinit-tokio": {"path": "../../../../common/rust/shed/fbinit/fbinit-tokio"},
                 },
-            }
-        }
+            },
+            "oss_dependencies_override": {
+                "dependencies": {
+                    "edenfs-telemetry": {"path": "../../rust/edenfs-telemetry"},
+                },
+            },
+        },
     },
     named_deps = {
         "hg_util": "//eden/scm/lib/util:util",
