@@ -1066,7 +1066,7 @@ pub(crate) fn pwrite(path: &Path, offset: i64, data: &[u8]) {
 fn test_read_entry_rejects_data_len_overflow() {
     let dir = tempdir().unwrap();
     let mut log = Log::open(dir.path(), Vec::new()).unwrap();
-    log.append(&[b'x'; 100]).unwrap();
+    log.append([b'x'; 100]).unwrap();
     let primary_len = log.sync().unwrap();
     let entry_len = (primary_len - PRIMARY_START_OFFSET) as usize;
 
