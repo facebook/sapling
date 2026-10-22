@@ -921,7 +921,7 @@ const DEFAULT_WALK_RATIO: f64 = 0.03;
 const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(10);
 
 // How stale a walk must be before we remove it.
-const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(3);
+const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(1);
 
 #[derive(Clone)]
 struct Config {
