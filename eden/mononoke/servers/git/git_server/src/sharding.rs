@@ -59,7 +59,6 @@ impl RepoShardedProcess for MononokeGitServerProcess {
         }
         WeightTracker::on_shard_added(self.fb, repo_name);
         Ok(Arc::new(MononokeGitServerExecutor {
-            fb: self.fb,
             repo_name: repo_name.to_string(),
             repos_mgr: self.repos_mgr.clone(),
         }))
@@ -69,7 +68,6 @@ impl RepoShardedProcess for MononokeGitServerProcess {
 /// Struct representing the execution of the Mononoke Git Server for a
 /// particular repo when sharding by repo.
 pub struct MononokeGitServerExecutor {
-    fb: FacebookInit,
     repo_name: String,
     repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
@@ -101,7 +99,6 @@ impl RepoShardedProcessExecutor for MononokeGitServerExecutor {
             .unwrap_or(false);
         if is_deep_sharded {
             self.repos_mgr.remove_repo(&self.repo_name);
-            WeightTracker::on_shard_removed(self.fb, &self.repo_name);
             info!(
                 "No longer serving repo {} in Mononoke Git Server",
                 &self.repo_name,
