@@ -270,8 +270,11 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
 
     // Lock the source checkout path only while snapshotting the source state that
     // needs to be copied into the new worktree.
-    let (prepared, source_status) =
-        with_worktree_path_op_lock(&shared_store_path, &canonical_repo_path, || {
+    let (prepared, source_status) = with_worktree_path_op_lock(
+        repo.config().as_ref(),
+        &shared_store_path,
+        &canonical_repo_path,
+        || {
             let prepared = source.capture(requested_target)?;
             let source_status = if ctx.opts.snapshot && use_direct_copy {
                 logger.info("computing working copy status...");
@@ -281,7 +284,8 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
                 None
             };
             Ok((prepared, source_status))
-        })?;
+        },
+    )?;
 
     // Reserve a slot before cloning. The reservation counts against max-count,
     // so a concurrent add racing for the last slot fails fast here rather than
@@ -328,7 +332,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
     };
 
     // Lock the destination path while creating and initializing that checkout.
-    with_worktree_path_op_lock(&shared_store_path, &dest, || {
+    with_worktree_path_op_lock(repo.config().as_ref(), &shared_store_path, &dest, || {
         if dest.exists() {
             abort!("destination path '{}' already exists", dest.display());
         }

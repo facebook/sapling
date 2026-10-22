@@ -149,7 +149,12 @@ impl ContentLock {
         let file = match try_lock_exclusive(&self.lock_path) {
             Ok(lock_file) => lock_file,
             Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
-                let contents = fs_err::read(&self.content_path)?;
+                // A holder that locked `lock_path` without this type (such as
+                // an older binary) leaves no contents; it is still a holder.
+                let contents = match fs_err::read(&self.content_path) {
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => Vec::new(),
+                    contents => contents?,
+                };
                 return Err(LockContendedError {
                     path: self.content_path.clone(),
                     contents,

@@ -20,6 +20,7 @@ fs-err = { version = "3.3.2", features = ["tokio"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "../repo/repo-minimal-info" }
+sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

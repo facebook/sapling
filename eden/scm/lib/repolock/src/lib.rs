@@ -199,6 +199,7 @@ impl RepoLockerInner {
                     &self.config,
                     &self.store_path,
                     STORE_NAME,
+                    STORE_NAME,
                     lock_contents()?.as_bytes(),
                 )?
             } else {
@@ -228,6 +229,7 @@ impl RepoLockerInner {
                 lock(
                     &self.config,
                     &wc_dot_hg,
+                    WORKING_COPY_NAME,
                     WORKING_COPY_NAME,
                     lock_contents()?.as_bytes(),
                 )?
@@ -323,12 +325,14 @@ fn lock_contents() -> Result<String, LockError> {
 
 /// lock loops until it can acquire the specified lock, subject to
 /// ui.timeout timeout. Errors other than lock contention are
-/// propagated immediately with no retries.
+/// propagated immediately with no retries. `desc` names the lock in the
+/// progress bar and wait metric.
 #[tracing::instrument(skip_all, fields(name))]
 fn lock(
     config: &LockConfigs,
     dir: &Path,
     name: &str,
+    desc: &str,
     contents: &[u8],
 ) -> Result<LockHandle, LockError> {
     let start = Instant::now();
@@ -342,7 +346,7 @@ fn lock(
                 if elapsed >= config.backoff {
                     // If we actually waited, log how long we waited.
                     hg_metrics::increment_counter(
-                        format!("lock_{name}"),
+                        format!("lock_{desc}"),
                         elapsed.as_millis() as u64,
                     );
                 }
@@ -369,10 +373,10 @@ fn lock(
                     }
 
                     if let Some(pid) = pid_from_lock_contents(contents) {
-                        bar.set_message(format!("{name} held by pid {pid}"));
+                        bar.set_message(format!("{desc} held by pid {pid}"));
                     } else {
                         bar.set_message(format!(
-                            "{name} held by {}",
+                            "{desc} held by {}",
                             util::utf8::escape_non_utf8(contents)
                         ));
                     }
@@ -421,6 +425,24 @@ impl LockPaths {
 /// Similar to `try_lock`, but fills the contents by default
 pub fn try_lock_with_contents(dir: &Path, name: &str) -> Result<LockHandle, LockError> {
     try_lock(dir, name, lock_contents()?.as_bytes())
+}
+
+/// Similar to `try_lock_with_contents`, but waits for the lock subject to
+/// `ui.timeout`, showing the holder's pid while it waits. `desc` names the
+/// lock in the progress bar and wait metric.
+pub fn lock_with_contents(
+    config: &dyn Config,
+    dir: &Path,
+    name: &str,
+    desc: &str,
+) -> Result<LockHandle, LockError> {
+    lock(
+        &LockConfigs::new(config)?,
+        dir,
+        name,
+        desc,
+        lock_contents()?.as_bytes(),
+    )
 }
 
 /// try_lock attempts to acquire an advisory file lock and write
@@ -625,10 +647,10 @@ mod tests {
         let mut cfg = BTreeMap::from([("ui.timeout", "0.001"), ("devel.lock_backoff", "0.001")]);
         let lock_cfg = LockConfigs::new(&cfg)?;
 
-        let first = lock(&lock_cfg, tmp.path(), "foo", "contents".as_bytes())?;
+        let first = lock(&lock_cfg, tmp.path(), "foo", "foo", "contents".as_bytes())?;
 
         assert!(matches!(
-            lock(&lock_cfg, tmp.path(), "foo", "contents".as_bytes()),
+            lock(&lock_cfg, tmp.path(), "foo", "foo", "contents".as_bytes()),
             Err(LockError::Contended(_))
         ));
 
@@ -640,7 +662,7 @@ mod tests {
             drop(first);
         });
 
-        assert!(lock(&lock_cfg, tmp.path(), "foo", "contents".as_bytes()).is_ok());
+        assert!(lock(&lock_cfg, tmp.path(), "foo", "foo", "contents".as_bytes()).is_ok());
 
         dropper.join().unwrap();
 

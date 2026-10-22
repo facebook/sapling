@@ -116,18 +116,23 @@ fn remove_and_update_registry(
     let mut removed_paths = Vec::new();
     let mut remove_error: Option<Error> = None;
     for &target in targets {
-        let result = with_worktree_path_op_lock(&current_group.shared_store_path, target, || {
-            pre_hooks.run_hooks(
-                Some(repo),
-                false,
-                Some(&HashMap::from([(
-                    "path".to_string(),
-                    target.display().to_string(),
-                )])),
-            )?;
-            run_eden_remove(ctx, repo, target)?;
-            Ok(())
-        });
+        let result = with_worktree_path_op_lock(
+            repo.config().as_ref(),
+            &current_group.shared_store_path,
+            target,
+            || {
+                pre_hooks.run_hooks(
+                    Some(repo),
+                    false,
+                    Some(&HashMap::from([(
+                        "path".to_string(),
+                        target.display().to_string(),
+                    )])),
+                )?;
+                run_eden_remove(ctx, repo, target)?;
+                Ok(())
+            },
+        );
         match result {
             Ok(()) => {
                 removed_paths.push(target);
@@ -198,7 +203,13 @@ fn run_remove_all(
     sorted_paths.sort();
     let _path_locks = sorted_paths
         .iter()
-        .map(|path| lock_worktree_path_op(&current_group.shared_store_path, path))
+        .map(|path| {
+            lock_worktree_path_op(
+                repo.config().as_ref(),
+                &current_group.shared_store_path,
+                path,
+            )
+        })
         .collect::<Result<Vec<_>>>()?;
 
     // Some selected paths may have been removed while this command waited for
