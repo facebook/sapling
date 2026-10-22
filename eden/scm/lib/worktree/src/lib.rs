@@ -495,14 +495,20 @@ pub fn check_dest_not_in_repo(dest: &Path) -> Result<()> {
 // --- Registry Persistence ---
 
 pub fn load_registry(shared_store_path: &Path) -> Result<Registry> {
+    Ok(read_registry(shared_store_path)?.0)
+}
+
+/// Load the registry along with the file content it was parsed from, or `None`
+/// if the file does not exist.
+fn read_registry(shared_store_path: &Path) -> Result<(Registry, Option<String>)> {
     let path = shared_store_path.join("worktrees.json");
     match fs::read_to_string(&path) {
         Ok(content) => {
             let registry: Registry = serde_json::from_str(&content)
                 .with_context(|| format!("failed to parse registry at {}", path.display()))?;
-            Ok(registry)
+            Ok((registry, Some(content)))
         }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Registry::new()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok((Registry::new(), None)),
         Err(e) => Err(e.into()),
     }
 }
@@ -533,8 +539,15 @@ pub fn worktree_info(shared_store_path: &Path, repo_path: &Path) -> Result<Optio
 }
 
 pub fn save_registry(shared_store_path: &Path, registry: &Registry) -> Result<()> {
+    write_registry(shared_store_path, &serialize_registry(registry)?)
+}
+
+fn serialize_registry(registry: &Registry) -> Result<String> {
+    serde_json::to_string_pretty(registry).context("failed to serialize registry")
+}
+
+fn write_registry(shared_store_path: &Path, content: &str) -> Result<()> {
     let path = shared_store_path.join("worktrees.json");
-    let content = serde_json::to_string_pretty(registry).context("failed to serialize registry")?;
     util::file::atomic_write(&path, |f| {
         use std::io::Write;
         f.write_all(content.as_bytes())
@@ -562,7 +575,8 @@ pub fn dissolve_group_if_empty(registry: &mut Registry, group_id: &str) {
     }
 }
 
-/// Lock the registry file, load it, run `f`, and write back the result.
+/// Lock the registry file, load it, run `f`, and write back the result if `f`
+/// changed it.
 ///
 /// This lock is intentionally coarse and should stay scoped to the
 /// `worktrees.json` read-modify-write sequence. Callers that need to serialize
@@ -576,9 +590,18 @@ pub fn with_registry_lock<T>(
     let _scope = RegistryLockScope::enter()?;
     let lock_path = shared_store_path.join("worktrees.lock");
     let _lock = PathLock::exclusive(&lock_path)?;
-    let mut registry = load_registry(shared_store_path)?;
+    let (mut registry, old_content) = read_registry(shared_store_path)?;
     let result = f(&mut registry)?;
-    save_registry(shared_store_path, &registry)?;
+    // `sl worktree list` runs this on every call, usually without changing
+    // anything, so skip writes that would leave the file as it was.
+    let new_content = serialize_registry(&registry)?;
+    let unchanged = match &old_content {
+        Some(old_content) => *old_content == new_content,
+        None => registry.groups.is_empty(),
+    };
+    if !unchanged {
+        write_registry(shared_store_path, &new_content)?;
+    }
     Ok(result)
 }
 
@@ -1207,6 +1230,33 @@ mod tests {
         // Registry should still be empty since the closure failed.
         let loaded = load_registry(dir.path()).unwrap();
         assert!(loaded.groups.is_empty());
+    }
+
+    #[test]
+    fn test_with_registry_lock_skips_unchanged_writes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("worktrees.json");
+
+        // Without groups there is nothing to write.
+        with_registry_lock(dir.path(), |_registry| Ok(())).unwrap();
+        assert!(!path.exists());
+
+        let mut registry = Registry::new();
+        registry
+            .groups
+            .insert("grp".to_string(), Group::new(PathBuf::from("/tmp/main")));
+        save_registry(dir.path(), &registry).unwrap();
+        #[cfg(unix)]
+        let inode = std::os::unix::fs::MetadataExt::ino(&std::fs::metadata(&path).unwrap());
+
+        // An unchanged registry keeps the same file.
+        with_registry_lock(dir.path(), |_registry| Ok(())).unwrap();
+        #[cfg(unix)]
+        assert_eq!(
+            std::os::unix::fs::MetadataExt::ino(&std::fs::metadata(&path).unwrap()),
+            inode
+        );
+        assert_eq!(load_registry(dir.path()).unwrap().groups.len(), 1);
     }
 
     // --- Other tests ---

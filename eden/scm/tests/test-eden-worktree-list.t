@@ -55,6 +55,11 @@ test worktree list - not in a group
   $ touch f.txt && sl add f.txt && sl commit -m "init"
   $ sl worktree list
   this worktree is not part of a group
+
+Listing a checkout outside any group doesn't write the registry.
+
+  $ sl debugshell -c "print(repo.svfs.exists('worktrees.json'))"
+  False
   $ cd $TESTTMP/myrepo
 
 test worktree list - group isolation
