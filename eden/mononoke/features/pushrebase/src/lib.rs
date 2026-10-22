@@ -131,13 +131,19 @@ use thiserror::Error;
 
 mod merge_resolution_summary;
 mod queue;
+mod take_incoming;
 pub use merge_resolution_summary::MR_PATH_SAMPLE_CAP;
 pub use merge_resolution_summary::MergeResolutionSummary;
 pub use queue::PushrebaseQueue;
 pub use queue::PushrebaseRequest;
 use queue::QueuedPushrebaseRequest;
+use take_incoming::Resolution;
+use take_incoming::TakeIncoming;
+use take_incoming::log_take_incoming;
+use take_incoming::take_incoming_prefixes;
 use three_way_merge::MergeResult;
 use three_way_merge::merge_text;
+use three_way_merge::merge_text_prefer_local;
 use tracing::info;
 use tracing::warn;
 
@@ -876,6 +882,7 @@ pub async fn rebase_stack_onto_manifest(
                 max_conflicts,
                 max_file_size,
                 &config.merge_resolution_excluded_path_prefixes,
+                take_incoming_prefixes(config, reponame),
             ) {
                 Ok(overrides) => (Some(overrides), conflicts.len() as u64),
                 Err(err) => {
@@ -1882,6 +1889,8 @@ struct MergedFileInfo {
     base: Option<BaseFile>,
     /// `None`: absent in the new parent.
     server: Option<BaseFile>,
+    /// How the cascade resolves a both-sides-changed region of this path.
+    resolution: Resolution,
 }
 
 struct ConflictCheckResult {
@@ -2052,6 +2061,7 @@ async fn check_pushrebase_conflicts_with(
                         max_merge_file_size,
                         derive_manifests,
                         &config.merge_resolution_excluded_path_prefixes,
+                        take_incoming_prefixes(config, reponame),
                     )
                     .await,
                 )
@@ -2740,9 +2750,9 @@ async fn root_manifest_is_derived(
 
 /// What the stack saw at a path.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct BaseFile {
-    content_id: ContentId,
-    file_type: FileType,
+pub(crate) struct BaseFile {
+    pub(crate) content_id: ContentId,
+    pub(crate) file_type: FileType,
 }
 
 /// Base content for `paths` from `root`'s manifest, `None` meaning absent,
@@ -2897,6 +2907,7 @@ fn collect_overlap_states(
     max_conflicts: usize,
     max_file_size: u64,
     excluded_path_prefixes: &PrefixTrie,
+    take_incoming_prefixes: Option<&PrefixTrie>,
 ) -> Result<Vec<MergedFileInfo>, MergeResolutionError> {
     if conflicts.iter().any(|c| c.left != c.right) {
         return Err(MergeResolutionError::Skipped(
@@ -2942,6 +2953,20 @@ fn collect_overlap_states(
             if changes.is_empty() {
                 return Err(MergeResolutionError::Skipped(format!(
                     "file {path} not a tracked change in pushed changeset",
+                )));
+            }
+            // Taking the pushed side needs the on-branch range to rule out
+            // content that already landed and was superseded; this mode has
+            // only the two manifests, so a path that would be taken verbatim
+            // keeps today's outcome under a reason of its own, and a text
+            // path merges as usual.
+            if take_incoming_prefixes.is_some_and(|trie| trie.contains_prefix(&path))
+                && changes
+                    .iter()
+                    .all(|fc| matches!(fc, FileChange::Change(tc) if tc.git_lfs().is_lfs_pointer()))
+            {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {path} is under a take-incoming prefix but the baseline is off-branch",
                 )));
             }
             // Safe to skip the merge guards below: the cascade equalises both
@@ -3005,6 +3030,7 @@ fn collect_overlap_states(
                 path,
                 base: base_state,
                 server: onto_state,
+                resolution: Resolution::Merge,
             })
         })
         .collect()
@@ -3112,6 +3138,7 @@ async fn merge_file_by_content_ids(
     base_content_id: ContentId,
     local_content_id: ContentId,
     other_content_id: ContentId,
+    prefer_incoming: bool,
 ) -> FileMergeOutcome {
     let (base_bytes, local_bytes, other_bytes) = futures::join!(
         filestore::fetch_concat(repo.repo_blobstore(), ctx, base_content_id),
@@ -3119,14 +3146,22 @@ async fn merge_file_by_content_ids(
         filestore::fetch_concat(repo.repo_blobstore(), ctx, other_content_id),
     );
 
-    match (base_bytes, local_bytes, other_bytes) {
-        (Ok(base), Ok(local), Ok(other)) => match merge_text(&base, &local, &other) {
-            MergeResult::Clean(merged) => FileMergeOutcome::Clean(Bytes::from(merged)),
-            MergeResult::Conflict(desc) => {
-                FileMergeOutcome::Conflict(format!("file {path}: {desc}"))
-            }
-        },
-        (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => FileMergeOutcome::Error(e),
+    let (base, local, other) = match (base_bytes, local_bytes, other_bytes) {
+        (Ok(base), Ok(local), Ok(other)) => (base, local, other),
+        (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return FileMergeOutcome::Error(e),
+    };
+
+    // A clean merge is a clean merge whatever the path; the pushed side is
+    // preferred only where the ordinary merge conflicts.
+    let merged = match merge_text(&base, &local, &other) {
+        MergeResult::Conflict(_) if prefer_incoming => {
+            merge_text_prefer_local(&base, &local, &other)
+        }
+        merged => merged,
+    };
+    match merged {
+        MergeResult::Clean(merged) => FileMergeOutcome::Clean(Bytes::from(merged)),
+        MergeResult::Conflict(desc) => FileMergeOutcome::Conflict(format!("file {path}: {desc}")),
     }
 }
 
@@ -3171,6 +3206,7 @@ async fn collect_merge_file_info(
     max_file_size: u64,
     derive_manifests: bool,
     excluded_path_prefixes: &PrefixTrie,
+    take_incoming_prefixes: Option<&PrefixTrie>,
 ) -> Result<Vec<MergedFileInfo>, MergeResolutionError> {
     // Only handle exact path matches (not prefix conflicts like dir vs dir/file)
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
@@ -3271,6 +3307,12 @@ async fn collect_merge_file_info(
             }
         };
 
+        let resolution = Resolution::for_path(
+            take_incoming_prefixes,
+            &non_root_path,
+            client_fc.git_lfs().is_lfs_pointer(),
+        );
+
         // Both sides landed the same bytes: nothing to merge, so the LFS and
         // size limits below do not apply. The rebase loop sees it as already
         // applied.
@@ -3284,40 +3326,62 @@ async fn collect_merge_file_info(
                     content_id: server_fc.content_id().clone(),
                     file_type: server_fc.file_type(),
                 }),
+                resolution,
             });
             continue;
         }
 
-        // An LFS-tracked file's bonsai content is the blob behind the pointer;
-        // merged bytes would exist on no LFS server.
-        if client_fc.git_lfs().is_lfs_pointer() {
+        // The pushed content already reached the destination once and has
+        // since been superseded there (a replay of a landed stack, or a push
+        // retry after a lost response). Taking it would re-land stale
+        // content over newer; reject, as the plain merge does.
+        if resolution.takes_incoming()
+            && server_bcs.iter().any(|bcs| {
+                matches!(
+                    bcs.file_changes_map().get(&non_root_path),
+                    Some(FileChange::Change(tc)) if tc.content_id() == client_fc.content_id()
+                )
+            })
+        {
             return Err(MergeResolutionError::Skipped(format!(
-                "file {path} is LFS-tracked",
+                "file {path} was already landed and superseded in the destination",
             )));
         }
 
-        // Skip files that are too large
-        if client_fc.size() > max_file_size {
-            return Err(MergeResolutionError::Skipped(format!(
-                "file {} is too large ({} bytes)",
-                path,
-                client_fc.size(),
-            )));
-        }
+        // An LFS pointer taken verbatim is never fetched, so neither the LFS
+        // restriction nor the merge size limit applies to it.
+        if resolution != Resolution::IncomingVerbatim {
+            // An LFS-tracked file's bonsai content is the blob behind the pointer;
+            // merged bytes would exist on no LFS server.
+            if client_fc.git_lfs().is_lfs_pointer() {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {path} is LFS-tracked",
+                )));
+            }
 
-        if server_fc.git_lfs().is_lfs_pointer() {
-            return Err(MergeResolutionError::Skipped(format!(
-                "file {path} is LFS-tracked on server",
-            )));
-        }
+            // Skip files that are too large
+            if client_fc.size() > max_file_size {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {} is too large ({} bytes)",
+                    path,
+                    client_fc.size(),
+                )));
+            }
 
-        // Also check server file size
-        if server_fc.size() > max_file_size {
-            return Err(MergeResolutionError::Skipped(format!(
-                "file {} is too large on server ({} bytes)",
-                path,
-                server_fc.size(),
-            )));
+            if server_fc.git_lfs().is_lfs_pointer() {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {path} is LFS-tracked on server",
+                )));
+            }
+
+            // Also check server file size
+            if server_fc.size() > max_file_size {
+                return Err(MergeResolutionError::Skipped(format!(
+                    "file {} is too large on server ({} bytes)",
+                    path,
+                    server_fc.size(),
+                )));
+            }
         }
 
         let local_file_type = client_fc.file_type();
@@ -3360,8 +3424,14 @@ async fn collect_merge_file_info(
                 content_id: server_fc.content_id().clone(),
                 file_type: local_file_type,
             }),
+            resolution,
         });
     }
+
+    let take_incoming_count = merged_file_changes
+        .iter()
+        .filter(|info| info.resolution.takes_incoming())
+        .count();
 
     // Log success
     ctx.scuba()
@@ -3369,6 +3439,10 @@ async fn collect_merge_file_info(
         .add("repo_name", repo.repo_identity().name())
         .add("merge_resolution_outcome", "success")
         .add("merge_resolution_files", merged_file_changes.len() as i64)
+        .add(
+            "merge_resolution_take_incoming_files",
+            take_incoming_count as i64,
+        )
         .log_with_msg("Pushrebase merge resolution succeeded", None);
 
     info!(
@@ -3406,7 +3480,11 @@ fn reconcile_merge_file_info(
     for info in delta {
         match by_path.entry(info.path.clone()) {
             Entry::Occupied(mut e) => {
-                e.get_mut().server = info.server;
+                let carried = e.get_mut();
+                carried.server = info.server;
+                // Path-determined, so carried and delta agree unless the
+                // config or knob changed between attempts; the latest wins.
+                carried.resolution = info.resolution;
             }
             Entry::Vacant(e) => {
                 e.insert(info.clone());
@@ -3515,12 +3593,14 @@ async fn create_rebased_changesets_with(
     let mut merge_paths: HashSet<NonRootMPath> = HashSet::new();
     let mut old_parent_content: HashMap<NonRootMPath, Option<BaseFile>> = HashMap::new();
     let mut new_parent_content: HashMap<NonRootMPath, Option<BaseFile>> = HashMap::new();
+    let mut resolutions: HashMap<NonRootMPath, Resolution> = HashMap::new();
 
     if let Some(ref overrides) = merged_file_overrides {
         for info in overrides {
             merge_paths.insert(info.path.clone());
             old_parent_content.insert(info.path.clone(), info.base);
             new_parent_content.insert(info.path.clone(), info.server);
+            resolutions.insert(info.path.clone(), info.resolution);
         }
     }
 
@@ -3575,6 +3655,36 @@ async fn create_rebased_changesets_with(
                 _ => return Err(same_path_conflict(path)),
             };
 
+            let resolution = resolutions.get(path).copied().unwrap_or(Resolution::Merge);
+
+            // Under a take-incoming prefix, the pushed LFS pointer is the
+            // result: nothing to fetch or merge, and the rebased commit keeps
+            // the pushed change exactly (pointer flag included).
+            if resolution == Resolution::IncomingVerbatim {
+                // The pushed commit did not change the file (a touch): the
+                // destination's change is the only real one and there is
+                // nothing of the pushed side to take.
+                if base == local_file {
+                    return Err(same_path_conflict(path));
+                }
+                log_take_incoming(
+                    ctx,
+                    repo,
+                    TakeIncoming {
+                        bcs: &bcs_old,
+                        path,
+                        resolution,
+                        base: &base,
+                        local: &local_file,
+                        other: &other_file,
+                    },
+                );
+                merged_paths.entry(id_old).or_default().push(path.clone());
+                old_parent_content.insert(path.clone(), local);
+                new_parent_content.insert(path.clone(), local);
+                continue;
+            }
+
             match merge_file_by_content_ids(
                 ctx,
                 repo,
@@ -3582,10 +3692,25 @@ async fn create_rebased_changesets_with(
                 base.content_id,
                 local_file.content_id,
                 other_file.content_id,
+                resolution == Resolution::PreferIncoming,
             )
             .await
             {
                 FileMergeOutcome::Clean(merged_bytes) => {
+                    if resolution == Resolution::PreferIncoming {
+                        log_take_incoming(
+                            ctx,
+                            repo,
+                            TakeIncoming {
+                                bcs: &bcs_old,
+                                path,
+                                resolution,
+                                base: &base,
+                                local: &local_file,
+                                other: &other_file,
+                            },
+                        );
+                    }
                     let size = merged_bytes.len() as u64;
                     let meta = filestore::store(
                         repo.repo_blobstore(),

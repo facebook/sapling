@@ -5350,6 +5350,7 @@ fn reconcile_merge_file_info_basic() {
             path: NonRootMPath::new(path).unwrap(),
             base: file(base),
             server: file(server),
+            resolution: Resolution::Merge,
         }
     };
 
@@ -8253,5 +8254,306 @@ async fn falsify_manifest_rebase_dropped_commit_reports_no_merged_paths(
         }
         ref other => panic!("expected Succeeded, got {other:?}"),
     }
+    Ok(())
+}
+
+// ==================== merge_resolution_take_incoming_prefixes ====================
+
+/// Merge resolution on, with the take-incoming knob set as given.
+fn init_just_knobs_for_take_incoming_test(enabled: bool) {
+    override_just_knobs(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:pushrebase_enable_merge_resolution".to_string() => KnobVal::Bool(true),
+        "scm/mononoke:pushrebase_merge_resolution_derive_fsnodes".to_string() => KnobVal::Bool(true),
+        "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
+        "scm/mononoke:pushrebase_take_incoming_enabled".to_string() => KnobVal::Bool(enabled),
+        "scm/mononoke:pushrebase_max_merge_conflicts".to_string() => KnobVal::Int(100),
+        // Below the APK payloads' size on purpose: an LFS pointer taken
+        // verbatim is never fetched, so the limit must not apply to it.
+        "scm/mononoke:pushrebase_max_merge_file_size".to_string() => KnobVal::Int(2_000),
+    }));
+}
+
+fn take_incoming_flags(prefixes: &[&str]) -> PushrebaseFlags {
+    PushrebaseFlags {
+        merge_resolution_take_incoming_prefixes: prefixes
+            .iter()
+            .map(|p| MPath::from(NonRootMPath::new(p).unwrap()))
+            .collect(),
+        ..Default::default()
+    }
+}
+
+/// A prebuilt manifest with one multi-line entry per artifact, in the
+/// shape the AOSP prebuilt repos use.
+fn manifest(a_build: u32, b_build: u32) -> String {
+    format!(
+        "{{\n    \"ArtA\": {{\n        \"BUILD\": {a_build},\n        \"HASH\": \"a{a_build}\"\n    }},\n    \"ArtB\": {{\n        \"BUILD\": {b_build},\n        \"HASH\": \"b{b_build}\"\n    }}\n}}\n"
+    )
+}
+
+/// APK payload above the test's merge size limit.
+fn apk(version: u32) -> String {
+    format!("apk v{version} ").repeat(400)
+}
+
+/// Base with artifacts A and B; server bumps both A (to 2) and B (to 2);
+/// client, from the same base, bumps only A (to 3). A same-artifact race.
+async fn take_incoming_race(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+) -> Result<(BookmarkKey, BonsaiChangeset), Error> {
+    let lfs = GitLfs::canonical_pointer();
+    let base = CreateCommitContext::new_root(ctx, repo)
+        .add_file("prebuilt_manifest.json", manifest(1, 1))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(1), FileType::Regular, lfs)
+        .add_file_with_type_and_lfs("ArtB/pkg.apk", apk(1), FileType::Regular, lfs)
+        .add_file("README", "v1\n")
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(ctx, repo, vec![base])
+        .add_file("prebuilt_manifest.json", manifest(2, 2))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(2), FileType::Regular, lfs)
+        .add_file_with_type_and_lfs("ArtB/pkg.apk", apk(2), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let book = BookmarkKey::new("master")?;
+    let hg_server = repo.derive_hg_changeset(ctx, server).await?;
+    set_bookmark(ctx.clone(), repo, &book, &format!("{hg_server}")).await?;
+
+    let client = CreateCommitContext::new(ctx, repo, vec![base])
+        .add_file("prebuilt_manifest.json", manifest(3, 1))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(3), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    Ok((book, client.load(ctx, repo.repo_blobstore()).await?))
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_resolves_same_artifact_race(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let (book, client_bcs) = take_incoming_race(&ctx, &repo).await?;
+
+    init_just_knobs_for_take_incoming_test(true);
+    let flags = take_incoming_flags(&["ArtA", "prebuilt_manifest.json"]);
+    let result =
+        do_pushrebase_bonsai(&ctx, &repo, &flags, &book, &hashset![client_bcs], &[]).await?;
+
+    // ArtA is the client's (incoming wins); ArtB, which only the server
+    // changed, is the server's; the pointer is the client's, still LFS.
+    let result_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
+    ensure_content(
+        &ctx,
+        result_hg,
+        &repo,
+        btreemap! {
+            "prebuilt_manifest.json".to_string() => manifest(3, 2),
+            "ArtA/pkg.apk".to_string() => apk(3),
+            "ArtB/pkg.apk".to_string() => apk(2),
+            "README".to_string() => "v1\n".to_string(),
+        },
+    )
+    .await?;
+    let result_bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
+    match result_bcs
+        .file_changes_map()
+        .get(&NonRootMPath::new("ArtA/pkg.apk")?)
+    {
+        Some(FileChange::Change(tc)) => assert!(tc.git_lfs().is_lfs_pointer()),
+        other => panic!("unexpected ArtA/pkg.apk change: {other:?}"),
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_off_is_todays_conflict(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let (book, client_bcs) = take_incoming_race(&ctx, &repo).await?;
+
+    // Prefixes configured but knob off: the LFS conflict rejects as before.
+    init_just_knobs_for_take_incoming_test(false);
+    let flags = take_incoming_flags(&["ArtA", "prebuilt_manifest.json"]);
+    let res = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &flags,
+        &book,
+        &hashset![client_bcs.clone()],
+        &[],
+    )
+    .await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+
+    // Knob on but no prefixes configured: likewise, and the knob is not read.
+    init_just_knobs_for_merge_test();
+    let res = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &Default::default(),
+        &book,
+        &hashset![client_bcs],
+        &[],
+    )
+    .await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_rejects_conflict_outside_prefixes(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let (book, client_bcs) = take_incoming_race(&ctx, &repo).await?;
+
+    // Only the manifest is covered: the APK conflict is outside the prefixes
+    // and the whole land rejects, exactly as today.
+    init_just_knobs_for_take_incoming_test(true);
+    let flags = take_incoming_flags(&["prebuilt_manifest.json"]);
+    let res = do_pushrebase_bonsai(&ctx, &repo, &flags, &book, &hashset![client_bcs], &[]).await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_rejects_already_landed_and_superseded(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // The client's exact APK bytes reached the branch earlier (its own land,
+    // response lost) and a newer build then landed. A retry must not take
+    // the stale bytes back over the newer ones.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let lfs = GitLfs::canonical_pointer();
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("prebuilt_manifest.json", manifest(1, 1))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(1), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let landed = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("prebuilt_manifest.json", manifest(3, 1))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(3), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let newer = CreateCommitContext::new(&ctx, &repo, vec![landed])
+        .add_file("prebuilt_manifest.json", manifest(4, 1))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(4), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let book = BookmarkKey::new("master")?;
+    let hg_newer = repo.derive_hg_changeset(&ctx, newer).await?;
+    set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_newer}")).await?;
+
+    let retry = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("prebuilt_manifest.json", manifest(3, 1))
+        .add_file_with_type_and_lfs("ArtA/pkg.apk", apk(3), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let retry_bcs = retry.load(&ctx, repo.repo_blobstore()).await?;
+
+    init_just_knobs_for_take_incoming_test(true);
+    let flags = take_incoming_flags(&["ArtA", "prebuilt_manifest.json"]);
+    let res = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &flags,
+        &book,
+        &hashset![retry_bcs.clone()],
+        &[],
+    )
+    .await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+
+    // And for that reason: without the check the manifest would merge (3
+    // over 4 is a clean prefer-incoming) and the pointer would be taken.
+    let apk_path = NonRootMPath::new("ArtA/pkg.apk")?;
+    let conflicts = vec![PushrebaseConflict::new(
+        apk_path.clone().into(),
+        apk_path.into(),
+    )];
+    let server_bcs = fetch_bonsai_range_ancestor_not_included(&ctx, &repo, base, newer).await?;
+    let no_excluded = PrefixTrie::new();
+    let err = collect_merge_file_info(
+        &ctx,
+        &repo,
+        &conflicts,
+        base,
+        Bases::ProbeThenRead,
+        &server_bcs,
+        &[retry_bcs],
+        100,
+        2_000,
+        true,
+        &no_excluded,
+        Some(&flags.merge_resolution_take_incoming_prefixes),
+    )
+    .await
+    .expect_err("the superseded pointer must be rejected");
+    match err {
+        MergeResolutionError::Skipped(reason) => {
+            assert!(reason.contains("already landed and superseded"), "{reason}")
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_manifest_mode_keeps_todays_outcome(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Off-branch baselines go through the manifest-diff rebase, which has
+    // no server-side range to rule out superseded content, so a pointer
+    // under a take-incoming prefix still conflicts there.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let (book, client_bcs) = take_incoming_race(&ctx, &repo).await?;
+    let client = client_bcs.get_changeset_id();
+    let base = client_bcs.parents().next().expect("client has a parent");
+    let server = get_bookmark_value(&ctx, &repo, &book)
+        .await?
+        .expect("server head set");
+    derive_content_manifests(&ctx, &repo, &[base, server]).await?;
+
+    init_just_knobs_for_take_incoming_test(true);
+    let flags = PushrebaseFlags {
+        rewritedates: false,
+        merge_resolution_override: MergeResolutionOverride::ForceOn,
+        ..take_incoming_flags(&["ArtA", "prebuilt_manifest.json"])
+    };
+    let res =
+        rebase_stack_onto_manifest(&ctx, &repo, &flags, base, client, server, MAX_PATHS).await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+
+    // A text path under the prefix that merges cleanly still does: the
+    // prefix never makes a clean merge worse. Server bumps only ArtB.
+    let lfs = GitLfs::canonical_pointer();
+    let server_b_only = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file("prebuilt_manifest.json", manifest(1, 2))
+        .add_file_with_type_and_lfs("ArtB/pkg.apk", apk(2), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    derive_content_manifests(&ctx, &repo, &[server_b_only]).await?;
+    let rebased =
+        rebase_stack_onto_manifest(&ctx, &repo, &flags, base, client, server_b_only, MAX_PATHS)
+            .await?;
+    changesets_creation::save_changesets(&ctx, &repo, rebased.rebased_bonsais.clone()).await?;
+    let new_hg = repo.derive_hg_changeset(&ctx, rebased.new_head).await?;
+    ensure_content(
+        &ctx,
+        new_hg,
+        &repo,
+        btreemap! {
+            "prebuilt_manifest.json".to_string() => manifest(3, 2),
+            "ArtA/pkg.apk".to_string() => apk(3),
+            "ArtB/pkg.apk".to_string() => apk(2),
+            "README".to_string() => "v1\n".to_string(),
+        },
+    )
+    .await?;
     Ok(())
 }
