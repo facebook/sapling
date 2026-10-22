@@ -10,6 +10,7 @@
 import argparse
 import binascii
 import collections
+import collections.abc
 import datetime
 import inspect
 import json
