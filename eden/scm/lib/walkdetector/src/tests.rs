@@ -458,6 +458,76 @@ fn test_merge_cousins() {
 }
 
 #[test]
+fn test_merge_siblings_walked_over_time() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(3);
+    detector.set_gc_timeout(Duration::from_secs(2));
+
+    // Each sibling walk expires before the third arrives, so the three are never live together.
+    insert_walk(&detector, p("root/a"), WalkType::File, 0);
+    MockClock::advance(Duration::from_secs(1));
+    insert_walk(&detector, p("root/b"), WalkType::File, 0);
+    MockClock::advance(Duration::from_secs(1));
+    assert_eq!(detector.file_walks(), vec![(p("root/b"), 0)]);
+
+    insert_walk(&detector, p("root/c"), WalkType::File, 0);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
+
+    // A gap longer than the GC timeout forgets siblings whose walks have expired.
+    insert_walk(&detector, p("other/x"), WalkType::File, 0);
+    MockClock::advance(Duration::from_secs(3));
+    insert_walk(&detector, p("other/y"), WalkType::File, 0);
+    insert_walk(&detector, p("other/z"), WalkType::File, 0);
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("other/y"), 0), (p("other/z"), 0)]
+    );
+
+    insert_walk(&detector, p("other/w"), WalkType::File, 0);
+    assert_eq!(detector.file_walks(), vec![(p("other"), 1)]);
+}
+
+#[test]
+fn test_walked_siblings_do_not_block_advancing_parent() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    insert_walk(&detector, p("root"), WalkType::File, 1);
+
+    // Children walking deeper than the parent's walk advance it rather than re-merging into it.
+    insert_walk(&detector, p("root/a"), WalkType::File, 1);
+    insert_walk(&detector, p("root/b"), WalkType::File, 1);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
+
+    insert_walk(&detector, p("root/c"), WalkType::File, 2);
+    insert_walk(&detector, p("root/d"), WalkType::File, 2);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
+}
+
+#[test]
+fn test_merge_siblings_keeps_live_walks_after_gap() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(3);
+    detector.set_gc_timeout(Duration::from_secs(2));
+
+    // "root/a" stays busy while "root" itself sees no activity, so it still counts once "root/b"
+    // and "root/c" arrive.
+    insert_walk(&detector, p("root/a"), WalkType::File, 0);
+    MockClock::advance(Duration::from_secs(1));
+    detector.file_loaded(p("root/a/file1"), 0);
+    MockClock::advance(Duration::from_secs(1));
+    detector.file_loaded(p("root/a/file2"), 0);
+    insert_walk(&detector, p("root/b"), WalkType::File, 0);
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("root/a"), 0), (p("root/b"), 0)]
+    );
+
+    insert_walk(&detector, p("root/c"), WalkType::File, 0);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
+}
+
+#[test]
 fn test_gc() {
     // Test with a low interval so full GC is invoked often, and test with a large interval so full
     // GC is not invoked.

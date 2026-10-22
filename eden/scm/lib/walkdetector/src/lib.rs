@@ -570,6 +570,8 @@ impl Inner {
     }
 
     /// If `dir` (and its siblings) imply a walk at `dir.parent()`, insert a walk at `dir.parent()`.
+    /// Siblings count once they have had a walk during the parent's current run of activity, so
+    /// they don't all need to be live at the same time.
     fn maybe_merge_into_parent<'a>(
         &mut self,
         config: &Config,
@@ -578,14 +580,26 @@ impl Inner {
     ) -> Option<()> {
         tracing::trace!(%dir, "maybe_merge_into_parent");
 
-        let parent_dir = dir.parent()?;
-        let parent_node = self.node.get_node(parent_dir)?;
+        let (parent_dir, name) = dir.split_last_component()?;
+        let parent_node = self.node.get_node_mut(parent_dir)?;
+
+        // A parent walk that already reaches one level down contains anything this could insert;
+        // activity under it counts towards advancing that walk instead.
+        if parent_node
+            .get_dominating_walk(walk_type)
+            .is_some_and(|w| w.depth >= 1)
+        {
+            return None;
+        }
+
+        let kin_count = parent_node.insert_walked_child(walk_type, name.to_owned());
 
         let walk = should_merge_into_ancestor(
             config.walk_threshold,
             config.walk_ratio,
             walk_type,
             dir,
+            kin_count,
             parent_node,
             1,
         )?;
@@ -619,11 +633,14 @@ impl Inner {
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
 
+        let kin_count = live_kin_count(grandparent_node, walk_type, 2);
+
         let walk = should_merge_into_ancestor(
             config.walk_threshold,
             config.walk_ratio,
             walk_type,
             dir,
+            kin_count,
             grandparent_node,
             2,
         )?;
@@ -825,27 +842,32 @@ impl Inner {
     }
 }
 
-/// Check if existing walks at nodes `ancestor_distance` below `ancestor` should be "merged" into a
-/// new walk at `ancestor`. Returns the new walk to be inserted, if any.
-fn should_merge_into_ancestor(
-    walk_threshold: usize,
-    walk_ratio: f64,
-    walk_type: WalkType,
-    dir: &RepoPath,
-    ancestor: &WalkNode,
-    ancestor_distance: usize,
-) -> Option<Walk> {
+/// Count nodes `distance` below `ancestor` that have a live walk of `walk_type`.
+fn live_kin_count(ancestor: &WalkNode, walk_type: WalkType, distance: usize) -> usize {
     let mut kin_count = 0;
     ancestor.iter(|node, depth| -> bool {
-        if depth == ancestor_distance {
+        if depth == distance {
             if node.get_walk_for_type(walk_type).is_some() {
                 kin_count += 1;
             }
         }
 
-        depth < ancestor_distance
+        depth < distance
     });
+    kin_count
+}
 
+/// Check if `kin_count` walks at nodes `ancestor_distance` below `ancestor` should be "merged"
+/// into a new walk at `ancestor`. Returns the new walk to be inserted, if any.
+fn should_merge_into_ancestor(
+    walk_threshold: usize,
+    walk_ratio: f64,
+    walk_type: WalkType,
+    dir: &RepoPath,
+    kin_count: usize,
+    ancestor: &WalkNode,
+    ancestor_distance: usize,
+) -> Option<Walk> {
     tracing::trace!(
         %dir,
         kin_count,

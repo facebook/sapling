@@ -52,6 +52,11 @@ pub(crate) struct WalkNode {
     pub(crate) advanced_file_children: HashMap<PathComponentBuf, usize>,
     pub(crate) advanced_dir_children: HashMap<PathComponentBuf, usize>,
 
+    // Child directories that have had a walk rooted at them while we had no walk
+    // covering them (only used before transitioning to walk).
+    pub(crate) walked_file_children: HashSet<PathComponentBuf>,
+    pub(crate) walked_dir_children: HashSet<PathComponentBuf>,
+
     // File names seen so far (only used before transitioning to walk).
     pub(crate) seen_files: HashSet<PathComponentBuf>,
     // Dir names seen so far (only used before transitioning to walk).
@@ -87,6 +92,8 @@ impl WalkNode {
             children: Default::default(),
             advanced_file_children: Default::default(),
             advanced_dir_children: Default::default(),
+            walked_file_children: Default::default(),
+            walked_dir_children: Default::default(),
             seen_files: Default::default(),
             seen_dirs: Default::default(),
             total_dirs: None,
@@ -106,6 +113,16 @@ impl WalkNode {
                 .children
                 .get(head)
                 .and_then(|child| child.get_node(tail)),
+            None => Some(self),
+        }
+    }
+
+    pub(crate) fn get_node_mut(&mut self, dir: &RepoPath) -> Option<&mut Self> {
+        match dir.split_first_component() {
+            Some((head, tail)) => self
+                .children
+                .get_mut(head)
+                .and_then(|child| child.get_node_mut(tail)),
             None => Some(self),
         }
     }
@@ -262,6 +279,7 @@ impl WalkNode {
                 let walk_ratio = config.walk_ratio;
 
                 self.clear_advanced_children(walk_type);
+                self.walked_children_mut(walk_type).clear();
 
                 // This can have a side effect of adding to self.advanced_children.
                 self.remove_contained(walk_type, &walk, threshold, walk_ratio);
@@ -416,6 +434,46 @@ impl WalkNode {
             WalkType::File => self.advanced_file_children.clear(),
             WalkType::Directory => self.advanced_dir_children.clear(),
         }
+    }
+
+    fn walked_children_mut(&mut self, walk_type: WalkType) -> &mut HashSet<PathComponentBuf> {
+        match walk_type {
+            WalkType::File => &mut self.walked_file_children,
+            WalkType::Directory => &mut self.walked_dir_children,
+        }
+    }
+
+    /// Record that direct child `name` has a walk of `walk_type`, and count this as activity on
+    /// self. Once self has gone `gc_timeout` without activity, the record starts over from the
+    /// children whose walks are still live. Returns the number of recorded children.
+    pub(crate) fn insert_walked_child(
+        &mut self,
+        walk_type: WalkType,
+        name: PathComponentBuf,
+    ) -> usize {
+        let expired = self.expired();
+        let children = &self.children;
+        let walked = match walk_type {
+            WalkType::File => &mut self.walked_file_children,
+            WalkType::Directory => &mut self.walked_dir_children,
+        };
+
+        if expired {
+            walked.clear();
+            walked.extend(
+                children
+                    .iter()
+                    .filter(|(_, child)| child.get_walk_for_type(walk_type).is_some())
+                    .map(|(name, _)| name.clone()),
+            );
+        }
+
+        walked.insert(name);
+        let count = walked.len();
+
+        self.last_access.bump();
+
+        count
     }
 
     /// Recursively remove all walks contained within a walk of depth `depth`.
@@ -791,6 +849,8 @@ impl WalkNode {
         self.last_access.reset();
         self.advanced_file_children.clear();
         self.advanced_dir_children.clear();
+        self.walked_file_children.clear();
+        self.walked_dir_children.clear();
         self.seen_files.clear();
 
         // No harm in retaining self.total_dirs and self.total_files, or the important tallies in
