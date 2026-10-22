@@ -503,6 +503,13 @@ pub fn load_registry(shared_store_path: &Path) -> Result<Registry> {
 fn read_registry(shared_store_path: &Path) -> Result<(Registry, Option<String>)> {
     let path = shared_store_path.join("worktrees.json");
     match fs::read_to_string(&path) {
+        // Before registry writes were fsynced, a host crash could leave the
+        // renamed file empty. It holds no groups, and `with_registry_lock`
+        // rewrites it because its content differs from the serialized registry.
+        Ok(content) if content.is_empty() => {
+            tracing::warn!("worktree registry {} is empty", path.display());
+            Ok((Registry::new(), Some(content)))
+        }
         Ok(content) => {
             let registry: Registry = serde_json::from_str(&content)
                 .with_context(|| format!("failed to parse registry at {}", path.display()))?;
@@ -1270,6 +1277,18 @@ mod tests {
         std::fs::write(dir.path().join("worktrees.json"), "not valid json!!!").unwrap();
         let result = load_registry(dir.path());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_empty_registry_is_read_as_empty_and_rewritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("worktrees.json");
+        std::fs::write(&path, "").unwrap();
+        assert!(load_registry(dir.path()).unwrap().groups.is_empty());
+
+        with_registry_lock(dir.path(), |_registry| Ok(())).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(serde_json::from_str::<Registry>(&content).is_ok());
     }
 
     #[test]

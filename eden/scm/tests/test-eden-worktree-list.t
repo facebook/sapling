@@ -60,6 +60,15 @@ Listing a checkout outside any group doesn't write the registry.
 
   $ sl debugshell -c "print(repo.svfs.exists('worktrees.json'))"
   False
+
+An empty registry, which a host crash could leave behind, lists as no groups
+and gets rewritten.
+
+  $ sl debugshell -c "open(repo.svfs.join('worktrees.json'), 'w').close()"
+  $ sl worktree list
+  this worktree is not part of a group
+  $ sl debugshell -c "import json; print(json.load(open(repo.svfs.join('worktrees.json'))))"
+  {'version': 1, 'groups': {}}
   $ cd $TESTTMP/myrepo
 
 test worktree list - group isolation
