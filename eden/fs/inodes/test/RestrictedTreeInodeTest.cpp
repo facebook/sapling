@@ -1497,3 +1497,68 @@ TEST(
   EXPECT_TRUE(listsRestrictedChild(parentInode));
 }
 #endif // _WIN32
+
+CO_TEST(RestrictedTreeInode, asyncDigestOfRestrictedDirectory) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto objectStore = edenMount->getObjectStore();
+  auto context = ObjectFetchContext::getNullContext();
+  auto checkoutTime = edenMount->getLastCheckoutTime().toTimespec();
+  auto attrs = ENTRY_ATTRIBUTE_DIGEST_HASH | ENTRY_ATTRIBUTE_DIGEST_SIZE;
+
+  auto restricted = testMount.getVirtualInode("restricted"_relpath);
+  CO_ASSERT_EQ(
+      VirtualInode::ContainedType::Tree, restricted.testGetContainedType());
+  CO_ASSERT_TRUE(restricted.isRestricted());
+  auto restrictedId = restricted.getObjectId();
+  CO_ASSERT_TRUE(restrictedId.has_value());
+
+  Hash32 digest;
+  testMount.getBackingStore()->putTreeAuxData(
+      *restrictedId, std::make_shared<TreeAuxData>(digest, 1234));
+
+  auto syncResult = restricted.tryGetEntryAttributesSync(
+      attrs, "restricted"_relpath, objectStore, checkoutTime, context);
+  CO_ASSERT_TRUE(syncResult.has_value());
+  EXPECT_FALSE(syncResult->digestHash.has_value());
+  EXPECT_FALSE(syncResult->digestSize.has_value());
+
+  auto coroResult = co_await restricted.co_getEntryAttributes(
+      attrs, "restricted"_relpath, objectStore, checkoutTime, context);
+  CO_ASSERT_TRUE(coroResult.digestSize.has_value());
+  CO_ASSERT_TRUE(coroResult.digestSize->hasValue());
+  EXPECT_EQ(1234, coroResult.digestSize->value());
+  EXPECT_TRUE(coroResult.digestHash.has_value());
+
+  auto futureResult =
+      restricted
+          .getEntryAttributes(
+              attrs, "restricted"_relpath, objectStore, checkoutTime, context)
+          .get();
+  CO_ASSERT_TRUE(futureResult.digestSize.has_value());
+  EXPECT_EQ(1234, futureResult.digestSize->value());
+}
+
+CO_TEST(RestrictedTreeInode, asyncDigestOfRestrictedDirectoryWithoutAuxData) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/secret.txt", "secret");
+  builder.setDirIsRestricted("restricted");
+  TestMount testMount{builder};
+
+  auto edenMount = testMount.getEdenMount();
+  auto restricted = testMount.getVirtualInode("restricted"_relpath);
+  CO_ASSERT_TRUE(restricted.isRestricted());
+
+  auto coroResult = co_await restricted.co_getEntryAttributes(
+      ENTRY_ATTRIBUTE_DIGEST_HASH,
+      "restricted"_relpath,
+      edenMount->getObjectStore(),
+      edenMount->getLastCheckoutTime().toTimespec(),
+      ObjectFetchContext::getNullContext());
+  CO_ASSERT_TRUE(coroResult.digestHash.has_value());
+  EXPECT_TRUE(coroResult.digestHash->hasException());
+}
