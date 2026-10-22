@@ -26,15 +26,25 @@ pub fn break_parent_func_cycle<F>(parent_func: F) -> impl Fn(Vertex) -> Result<V
 where
     F: Fn(Vertex) -> Result<Vec<Vertex>>,
 {
+    enum Known {
+        /// Referenced by an accepted edge. Parents are not calculated yet.
+        Referenced,
+        /// Calculated parents.
+        Parents(Vec<Vertex>),
+    }
     #[derive(Default)]
     struct State {
-        /// Previously calculated parents.
-        known: HashMap<Vertex, Vec<Vertex>>,
+        /// Vertices that were evaluated or referenced by an accepted edge.
+        known: HashMap<Vertex, Known>,
     }
     impl State {
         fn is_ancestor(&self, ancestor: &Vertex, descentant: &Vertex) -> bool {
             if ancestor == descentant {
                 return true;
+            }
+            // Vertices not in `known` have no incoming accepted edges.
+            if !self.known.contains_key(ancestor) {
+                return false;
             }
             let mut to_visit = vec![descentant];
             let mut visited = HashSet::new();
@@ -42,7 +52,7 @@ where
                 if !visited.insert(v) {
                     continue;
                 }
-                if let Some(parents) = self.known.get(v) {
+                if let Some(Known::Parents(parents)) = self.known.get(v) {
                     for p in parents {
                         if p == ancestor {
                             return true;
@@ -58,7 +68,7 @@ where
 
     move |v: Vertex| -> Result<Vec<Vertex>> {
         let mut state = state.lock().unwrap();
-        if let Some(parents) = state.known.get(&v) {
+        if let Some(Known::Parents(parents)) = state.known.get(&v) {
             return Ok(parents.clone());
         }
         let parents = parent_func(v.clone())?;
@@ -66,10 +76,11 @@ where
         for p in parents {
             if !state.is_ancestor(&v, &p) {
                 // Not a cycle.
+                state.known.entry(p.clone()).or_insert(Known::Referenced);
                 result.push(p);
             }
         }
-        state.known.insert(v, result.clone());
+        state.known.insert(v, Known::Parents(result.clone()));
         Ok(result)
     }
 }
@@ -279,6 +290,8 @@ pub fn beautify_graph(parents: &[Vec<usize>], priorities: &[usize]) -> Vec<usize
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+
     use super::*;
 
     #[test]
@@ -312,6 +325,50 @@ mod tests {
         assert_eq!(parent_func_no_cycle(v("0"))?, vec![]);
         assert_eq!(parent_func_no_cycle(v("3"))?, vec![v("2")]);
         assert_eq!(parent_func_no_cycle(v("7"))?, vec![v("6")]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_break_parent_func_cycle_shared_ancestors() -> Result<()> {
+        let edges = HashMap::from([
+            (v("A"), vec![]),
+            (v("B"), vec![v("A")]),
+            (v("C"), vec![v("B")]),
+            (v("X"), vec![v("C"), v("Y")]),
+            (v("Y"), vec![v("C"), v("X"), v("Y")]),
+            (v("Z"), vec![v("A"), v("Y")]),
+        ]);
+        for order in ["ABCXYZ", "CBAXYZ", "ZYXCBA"] {
+            let parents = break_parent_func_cycle(|n: Vertex| Ok(edges[&n].clone()));
+            for name in order.chars() {
+                let expected = match (order, name) {
+                    ("ZYXCBA", 'Y') => vec![v("C"), v("X")],
+                    ("ZYXCBA", 'X') => vec![v("C")],
+                    (_, 'Y') => vec![v("C")],
+                    _ => edges[&v(name)].clone(),
+                };
+                assert_eq!(parents(v(name))?, expected, "{order}: {name}");
+                assert_eq!(parents(v(name))?, expected, "cached {order}: {name}");
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_break_parent_func_cycle_retry() -> Result<()> {
+        let fail = Cell::new(true);
+        let parents = break_parent_func_cycle(|n: Vertex| {
+            if n == v("A") {
+                Ok(vec![v("B")])
+            } else if fail.replace(false) {
+                programming("parent lookup failed")
+            } else {
+                Ok(vec![v("A")])
+            }
+        });
+        assert_eq!(parents(v("A"))?, vec![v("B")]);
+        assert!(parents(v("B")).is_err());
+        assert_eq!(parents(v("B"))?, Vec::<Vertex>::new());
         Ok(())
     }
 
