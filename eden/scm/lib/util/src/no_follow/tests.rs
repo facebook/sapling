@@ -1391,6 +1391,47 @@ fn remove_dir_all_removes_readonly_file_on_windows() -> io::Result<()> {
 }
 
 #[test]
+fn remove_dir_all_removes_read_only_directories() -> io::Result<()> {
+    let dir = tempdir()?;
+    fs::create_dir_all(dir.path().join("tree/files"))?;
+    fs::write(dir.path().join("tree/files/file"), b"contents")?;
+    fs::create_dir_all(dir.path().join("tree/dirs/empty"))?;
+    let read_only_dirs = [dir.path().join("tree/files"), dir.path().join("tree/dirs")];
+    for path in &read_only_dirs {
+        let mut permissions = fs::metadata(path)?.permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(path, permissions)?;
+    }
+    let root = NoFollowRoot::new(dir.path())?;
+
+    let result = root.remove_dir_all(Path::new("tree"));
+
+    // FIXME: Unix should remove the tree too once `remove_dir_all` can delete
+    // entries from read-only directories.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        assert_eq!(
+            result
+                .expect_err("read-only directories should block removal")
+                .kind(),
+            io::ErrorKind::PermissionDenied
+        );
+        assert!(dir.path().join("tree").exists());
+        for path in &read_only_dirs {
+            fs::set_permissions(path, fs::Permissions::from_mode(0o755))?;
+        }
+    }
+    #[cfg(windows)]
+    {
+        result?;
+        assert!(!dir.path().join("tree").exists());
+    }
+    Ok(())
+}
+
+#[test]
 fn remove_dir_all_rejects_leaf_symlink_to_directory() -> io::Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join("target"))?;

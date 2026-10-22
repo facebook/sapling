@@ -196,6 +196,34 @@ test worktree remove - direct removal empties backing when a redirection can't b
   []
 #endif
 
+#if no-windows
+test worktree remove - direct removal deletes read-only directories in backing storage
+
+  $ sl worktree add $TESTTMP/direct_read_only_dirs
+  created linked worktree at $TESTTMP/direct_read_only_dirs
+  $ eden redirect add --mount $TESTTMP/direct_read_only_dirs scratch symlink
+  $ backing="$(readlink $TESTTMP/direct_read_only_dirs/scratch)"
+  $ mkdir "$backing/out"
+  $ echo contents > "$backing/out/contents"
+  $ chmod a-w "$backing/out"
+
+FIXME: once read-only directories can be deleted, this should print no warning
+and leave no backing storage behind
+
+  $ sl worktree remove $TESTTMP/direct_read_only_dirs -y
+  Unmounting redirections...
+  Deleting redirection backing storage: *scratch... (glob)
+  Redirection backing cleanup did not finish for $TESTTMP/direct_read_only_dirs: failed to delete 1 redirection backing target(s):
+  *scratch: failed to delete redirection backing target *: Permission denied (os error 13)*. Continuing with removal. * (glob)
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/direct_read_only_dirs
+  $ test -d $TESTTMP/direct_read_only_dirs
+  [1]
+  $ test -f "$backing/out/contents"
+  $ chmod u+w "$backing/out"
+#endif
+
 re-create linked worktrees for remaining tests
 
   $ sl worktree add $TESTTMP/linked1
