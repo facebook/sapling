@@ -53,8 +53,8 @@ class PersistentSqliteStatement {
   PersistentSqliteStatement& operator=(const PersistentSqliteStatement&) =
       delete;
 
-  PersistentSqliteStatement(PersistentSqliteStatement&&) = default;
-  PersistentSqliteStatement& operator=(PersistentSqliteStatement&&) = default;
+  PersistentSqliteStatement(PersistentSqliteStatement&&) = delete;
+  PersistentSqliteStatement& operator=(PersistentSqliteStatement&&) = delete;
 
   struct Guard {
     explicit Guard(SqliteStatement& stmt) : stmt_(stmt) {}

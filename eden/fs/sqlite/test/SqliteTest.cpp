@@ -24,7 +24,8 @@ class SqliteTest : public testing::Test {
   SqliteDatabase db{SqliteDatabase::inMemory};
 };
 
-static_assert(std::is_move_constructible_v<SqliteStatement>);
+static_assert(!std::is_move_constructible_v<SqliteStatement>);
+static_assert(!std::is_move_constructible_v<PersistentSqliteStatement>);
 
 TEST_F(SqliteTest, transactionAfterANonStdException) {
   EXPECT_THROW(db.transaction([](LockedSqliteConnection&) { throw 42; }), int);
