@@ -11,6 +11,7 @@ add_executable(
 target_link_libraries(
   eden_fuse_privhelper_test
   PUBLIC
+    Boost::filesystem
     eden_fuse_privhelper
     edencommon::edencommon_utils
     eden_testharness

@@ -60,6 +60,7 @@ add_library(
 target_link_libraries(
   eden_service
   PUBLIC
+    Boost::filesystem
     eden_service_thrift_util
     streamingeden_thrift_cpp
     eden_build_config

@@ -18,6 +18,7 @@ add_library(
 target_link_libraries(
   eden_config
   PUBLIC
+    Boost::filesystem
     Folly::folly
     edencommon::edencommon_os
     edencommon::edencommon_utils

@@ -16,6 +16,7 @@ if (NOT WIN32)
   target_link_libraries(
     eden_fscatalog
     PUBLIC
+      Boost::filesystem
       eden_overlay_thrift_cpp
       eden_fuse
       eden_utils

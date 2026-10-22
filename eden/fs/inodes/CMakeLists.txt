@@ -44,6 +44,7 @@ add_library(
 target_link_libraries(
   eden_inodes
   PUBLIC
+    Boost::filesystem
     eden_config
     eden_digest
     eden_inodes_inodenumber

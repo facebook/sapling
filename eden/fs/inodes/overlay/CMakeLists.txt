@@ -17,6 +17,12 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/OverlayChecker.h
 )
 
+target_link_libraries(
+  eden_overlay_checker
+  PRIVATE
+    Boost::filesystem
+)
+
 if (NOT WIN32)
   target_link_libraries(
     eden_overlay_checker
