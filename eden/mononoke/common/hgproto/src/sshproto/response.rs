@@ -91,8 +91,6 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             Bytes::from(out)
         }
 
-        ClientTelemetry(hostname) => Bytes::from(hostname),
-
         Debugwireargs(res) => res,
 
         Heads(set) => {

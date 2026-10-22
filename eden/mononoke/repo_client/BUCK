@@ -38,7 +38,6 @@ rust_library(
         "//common/rust/shed/futures_01_ext:futures_01_ext",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
-        "//common/rust/shed/hostname:hostname",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobstore:blobstore",

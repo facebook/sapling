@@ -98,14 +98,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
                     .boxed(),
                 ok(instream).boxed(),
             ),
-            SingleRequest::ClientTelemetry { args } => (
-                hgcmds
-                    .clienttelemetry(args)
-                    .map_ok(SingleResponse::ClientTelemetry)
-                    .into_stream()
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
             SingleRequest::Debugwireargs { one, two, all_args } => (
                 self.debugwireargs(one, two, all_args)
                     .map_ok(SingleResponse::Debugwireargs)
@@ -328,11 +320,6 @@ pub trait HgCommands {
     // @wireprotocommand('capabilities')
     fn capabilities(&self) -> HgCommandRes<Vec<String>> {
         unimplemented("capabilities")
-    }
-
-    // @wireprotocommand('clienttelemetry')
-    fn clienttelemetry(&self, _args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        unimplemented("clienttelemetry")
     }
 
     // @wireprotocommand('heads')

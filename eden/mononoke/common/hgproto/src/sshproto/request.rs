@@ -466,11 +466,6 @@ fn parse_with_params(
                 all_args: kv,
             })
         }),
-        parse_command("clienttelemetry", parse_params, 1, |kv| {
-            Ok(ClientTelemetry{
-                args: kv,
-            })
-        }),
         command!("heads", Heads, parse_params, {}),
         command!("hello", Hello, parse_params, {}),
         command!("listkeys", Listkeys, parse_params, {

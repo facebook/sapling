@@ -15,8 +15,6 @@ use std::hash::Hasher;
 use std::num::NonZeroU64;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -59,7 +57,6 @@ use getbundle_response::SessionLfsParams;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
 use hook_manager::manager::HookManagerArc;
-use hostname::get_hostname;
 use maplit::hashmap;
 use mercurial_bundles::Bundle2Item;
 use mercurial_derivation::DeriveHgChangeset;
@@ -106,7 +103,6 @@ define_stats! {
 }
 
 mod ops {
-    pub static CLIENTTELEMETRY: &str = "clienttelemetry";
     pub static HELLO: &str = "hello";
     pub static UNBUNDLE: &str = "unbundle";
     pub static HEADS: &str = "heads";
@@ -132,7 +128,6 @@ fn default_timeout() -> Duration {
 
 fn wireprotocaps() -> Vec<String> {
     vec![
-        "clienttelemetry".to_string(),
         "lookup".to_string(),
         "known".to_string(),
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
@@ -189,7 +184,6 @@ pub struct RepoClient<R: Repo> {
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     session_bookmarks_cache: Arc<SessionBookmarkCache<Arc<R>>>,
     maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
-    force_lfs: Arc<AtomicBool>,
 
     request_perf_counters: Arc<PerfCounters>,
 }
@@ -209,7 +203,6 @@ impl<R: Repo> RepoClient<R> {
             logging,
             session_bookmarks_cache,
             maybe_push_redirector_args,
-            force_lfs: Arc::new(AtomicBool::new(false)),
             request_perf_counters: Arc::new(PerfCounters::default()),
         }
     }
@@ -238,7 +231,7 @@ impl<R: Repo> RepoClient<R> {
         sampling_rate: SamplingRate,
     ) -> (CoreContext, CommandLogger) {
         match command {
-            "hello" | "clienttelemetry" => debug!("{}", command),
+            "hello" => debug!("{}", command),
             _ => info!("{}", command),
         }
 
@@ -288,34 +281,28 @@ impl<R: Repo> RepoClient<R> {
     }
 
     fn lfs_params(&self) -> SessionLfsParams {
-        if self.force_lfs.load(Ordering::Relaxed) {
+        let client_hostname = self.session.metadata().client_hostname();
+        let percentage = self.repo.repo_config().lfs.rollout_percentage;
+
+        let allowed = match client_hostname {
+            Some(client_hostname) => {
+                let mut hasher = DefaultHasher::new();
+                client_hostname.hash(&mut hasher);
+                hasher.finish() % 100 < u64::from(percentage)
+            }
+            None => {
+                // Randomize in case source hostname is not set to avoid
+                // sudden jumps in traffic
+                rand::random_ratio(percentage, 100)
+            }
+        };
+
+        if allowed {
             SessionLfsParams {
                 threshold: self.repo.repo_config().lfs.threshold,
             }
         } else {
-            let client_hostname = self.session.metadata().client_hostname();
-            let percentage = self.repo.repo_config().lfs.rollout_percentage;
-
-            let allowed = match client_hostname {
-                Some(client_hostname) => {
-                    let mut hasher = DefaultHasher::new();
-                    client_hostname.hash(&mut hasher);
-                    hasher.finish() % 100 < u64::from(percentage)
-                }
-                None => {
-                    // Randomize in case source hostname is not set to avoid
-                    // sudden jumps in traffic
-                    rand::random_ratio(percentage, 100)
-                }
-            };
-
-            if allowed {
-                SessionLfsParams {
-                    threshold: self.repo.repo_config().lfs.threshold,
-                }
-            } else {
-                SessionLfsParams { threshold: None }
-            }
+            SessionLfsParams { threshold: None }
         }
     }
 
@@ -433,45 +420,6 @@ impl<R: Repo> RepoClient<R> {
 }
 
 impl<R: Repo> HgCommands for RepoClient<R> {
-    // @wireprotocommand('clienttelemetry')
-    fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        self.command_future(
-            ops::CLIENTTELEMETRY,
-            UNSAMPLED,
-            |ctx, mut command_logger| {
-                let hostname = match get_hostname() {
-                    Err(_) => format!("session {}", ctx.metadata().session_id()),
-                    Ok(host) => format!("{} session {}", host, ctx.metadata().session_id()),
-                };
-
-                if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
-                    command_logger.add_scuba_extra(
-                        "client_correlator",
-                        String::from_utf8_lossy(client_correlator).into_owned(),
-                    );
-                }
-
-                if let Some(command) = args.get(b"command" as &[u8]) {
-                    command_logger.add_scuba_extra(
-                        "hg_short_command",
-                        String::from_utf8_lossy(command).into_owned(),
-                    );
-                }
-
-                if let Some(val) = args.get(b"wantslfspointers" as &[u8]) {
-                    if val == b"True" {
-                        self.force_lfs.store(true, Ordering::Relaxed);
-                    }
-                }
-
-                future::ok(hostname).timed().map(move |(stats, res)| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    res
-                })
-            },
-        )
-    }
-
     // @wireprotocommand('heads')
     fn heads(&self) -> HgCommandRes<HashSet<HgChangesetId>> {
         // Get a stream of heads and collect them into a HashSet

@@ -47,9 +47,6 @@ impl Request {
 pub enum SingleRequest {
     Branchmap,
     Capabilities,
-    ClientTelemetry {
-        args: HashMap<Vec<u8>, Vec<u8>>,
-    },
     Debugwireargs {
         one: Vec<u8>,
         two: Vec<u8>,
@@ -85,7 +82,6 @@ impl SingleRequest {
         match *self {
             SingleRequest::Branchmap => "branchmap",
             SingleRequest::Capabilities => "capabilities",
-            SingleRequest::ClientTelemetry { .. } => "clienttelemetry",
             SingleRequest::Debugwireargs { .. } => "debugwireargs",
             SingleRequest::Heads => "heads",
             SingleRequest::Hello => "hello",
@@ -109,7 +105,6 @@ pub enum Response {
 pub enum SingleResponse {
     Branchmap(HashMap<String, HashSet<HgChangesetId>>),
     Capabilities(Vec<String>),
-    ClientTelemetry(String),
     Debugwireargs(Bytes),
     Heads(HashSet<HgChangesetId>),
     Hello(HashMap<String, Vec<String>>),
