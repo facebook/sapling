@@ -146,6 +146,22 @@ TEST_P(TreeInodeTestBase, renameOrdersUnrelatedDestinationChildLock) {
   }
 }
 
+TEST(TreeInode, loadTimeEntryCountsAreSnapshotAtLoad) {
+  FakeTreeBuilder builder;
+  builder.setFile("dir/a.txt", "a");
+  builder.setFile("dir/b.txt", "b");
+  builder.setFile("dir/sub/c.txt", "c");
+  TestMount mount{builder};
+
+  auto dir = mount.getTreeInode("dir");
+  EXPECT_EQ(2u, dir->loadTimeEntryCounts().files);
+  EXPECT_EQ(1u, dir->loadTimeEntryCounts().dirs);
+
+  mount.addFile("dir/d.txt", "d");
+  EXPECT_EQ(2u, dir->loadTimeEntryCounts().files);
+  EXPECT_EQ(1u, dir->loadTimeEntryCounts().dirs);
+}
+
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());

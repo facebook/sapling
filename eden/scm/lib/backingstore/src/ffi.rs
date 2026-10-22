@@ -428,6 +428,9 @@ pub(crate) mod ffi {
             path: &str,
             local: bool,
             pid: u32,
+            dir_size_known: bool,
+            dir_num_files: usize,
+            dir_num_dirs: usize,
         );
 
         pub fn sapling_backingstore_witness_dir_read(
@@ -1145,10 +1148,18 @@ pub fn sapling_backingstore_witness_file_read(
     path: &str,
     local: bool,
     pid: u32,
+    dir_size_known: bool,
+    dir_num_files: usize,
+    dir_num_dirs: usize,
 ) {
     // `path` comes from eden's RelativePath type, which validates for utf-8 and illegal chars.
     // This is performance sensitive code, so skip the checks.
-    store.witness_file_read(unsafe { RepoPath::from_str_unchecked(path) }, local, pid);
+    store.witness_file_read(
+        unsafe { RepoPath::from_str_unchecked(path) },
+        local,
+        pid,
+        dir_size_known.then_some((dir_num_files, dir_num_dirs)),
+    );
 }
 
 pub fn sapling_backingstore_witness_dir_read(

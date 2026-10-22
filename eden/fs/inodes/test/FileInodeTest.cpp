@@ -19,6 +19,7 @@
 
 #include "eden/common/utils/StatTimes.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
+#include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -873,6 +874,37 @@ CO_TEST(FileInode, materializationPreservesCachedHashes) {
       mount.getEdenMount()->getOverlayFileAccess()->getBlake3(
           *inode, std::optional<std::string>{std::string(32, 'k')});
   EXPECT_EQ(*cachedAuxData.blake3, materializedBlake3);
+}
+
+TEST(FileInode, loadAttachesParentDirEntryCountsToFetchContext) {
+  FakeTreeBuilder builder;
+  builder.setFiles(
+      {{"dir/a.txt", "a"}, {"dir/b.txt", "b"}, {"dir/sub/c.txt", "c"}});
+  TestMount mount{builder};
+
+  ObjectFetchContextPtr context = makeRefPtr<FsObjectFetchContext>();
+  EXPECT_FALSE(context->getParentDirEntryCounts().has_value());
+
+  auto inode = mount.getFileInode("dir/a.txt");
+  EXPECT_EQ("a", inode->readAll(context).get(0ms));
+
+  auto counts = context->getParentDirEntryCounts();
+  ASSERT_TRUE(counts.has_value());
+  EXPECT_EQ(2, counts->files);
+  EXPECT_EQ(1, counts->dirs);
+}
+
+TEST(FileInode, loadSkipsParentDirEntryCountsWhenDisabled) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"dir/a.txt", "a"}, {"dir/b.txt", "b"}});
+  TestMount mount{builder};
+  mount.updateEdenConfig({{"experimental:walk-dir-size-hints", "false"}});
+
+  ObjectFetchContextPtr context = makeRefPtr<FsObjectFetchContext>();
+  auto inode = mount.getFileInode("dir/a.txt");
+  EXPECT_EQ("a", inode->readAll(context).get(0ms));
+
+  EXPECT_FALSE(context->getParentDirEntryCounts().has_value());
 }
 
 // TODO: test multiple flags together

@@ -1832,6 +1832,16 @@ class EdenConfig : private ConfigSettingManager {
       "",
       this};
 
+  /**
+   * Whether a file load tells the walk detector how many entries the file's
+   * directory had when its inode was loaded, so small and large directories
+   * are recognized even when their trees were already cached.
+   */
+  ConfigSetting<bool> walkDirSizeHints{
+      "experimental:walk-dir-size-hints",
+      true,
+      this};
+
   // [telemetry]
 
   /**

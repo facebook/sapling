@@ -48,6 +48,35 @@ fn test_walk_big_dir() {
 }
 
 #[test]
+fn test_file_loaded_with_dir_size() {
+    let mut detector = Detector::new();
+    detector.set_walk_threshold(TEST_WALK_THRESHOLD);
+
+    // The hint says "dir" holds a single file, so its first load is a walk.
+    assert!(detector.file_loaded_with_dir_size(p("dir/a"), Some((1, 0)), 0));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+
+    // Without a hint the usual threshold applies.
+    assert!(!detector.file_loaded_with_dir_size(p("other/a"), None, 0));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+
+    // A large hint raises the threshold above the base threshold.
+    assert!(!detector.file_loaded_with_dir_size(p("huge/a"), Some((1000, 0)), 0));
+    assert!(!detector.file_loaded_with_dir_size(p("huge/b"), Some((1000, 0)), 0));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+
+    // A hint of zero files cannot describe the directory of a loaded file, so it is ignored.
+    assert!(!detector.file_loaded_with_dir_size(p("stale/a"), Some((0, 1)), 0));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+
+    // A size the detector already knows is not replaced by the hint.
+    detector.dir_loaded(p("big"), 1000, 0, 0);
+    assert!(!detector.file_loaded_with_dir_size(p("big/a"), Some((1, 0)), 0));
+    assert!(!detector.file_loaded_with_dir_size(p("big/b"), Some((1, 0)), 0));
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
+}
+
+#[test]
 fn test_bfs_walk() {
     let mut detector = Detector::new();
     detector.set_walk_threshold(TEST_WALK_THRESHOLD);

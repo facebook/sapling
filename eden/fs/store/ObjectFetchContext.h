@@ -327,6 +327,25 @@ class ObjectFetchContext : public RefCounted {
   virtual void addPrefetchedBlobSize(uint64_t /* bytes */) {}
 
   /**
+   * Number of file and directory entries in a directory.
+   */
+  struct DirEntryCounts {
+    uint32_t files;
+    uint32_t dirs;
+  };
+
+  /**
+   * Entry counts of the directory containing the blob being fetched, as
+   * recorded when that directory's TreeInode was loaded. A hint for walk
+   * detection; nullopt when unknown.
+   */
+  virtual std::optional<DirEntryCounts> getParentDirEntryCounts() const {
+    return std::nullopt;
+  }
+
+  virtual void setParentDirEntryCounts(DirEntryCounts /* counts */) {}
+
+  /**
    * Return a no-op fetch context suitable when no tracking is desired.
    */
   static ObjectFetchContextPtr getNullContext();

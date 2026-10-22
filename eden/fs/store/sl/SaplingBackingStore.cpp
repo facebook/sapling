@@ -554,11 +554,15 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
 
   if (result.data != nullptr) {
     if (ObjectFetchContext::shouldTriggerWalkDetection(context->getCause())) {
+      auto dirCounts = context->getParentDirEntryCounts();
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{path.view().data(), path.view().size()},
           fetchMode == sapling::FetchMode::LocalOnly,
-          context->getClientPid().valueOrZero().get());
+          context->getClientPid().valueOrZero().get(),
+          dirCounts.has_value(),
+          dirCounts ? dirCounts->files : 0,
+          dirCounts ? dirCounts->dirs : 0);
     }
 
     return GetBlobResult{
@@ -2167,13 +2171,17 @@ sapling::BatchFetchStats SaplingBackingStore::nativeGetBlobBatch(
         });
 
     if (ObjectFetchContext::shouldTriggerWalkDetection(request.cause)) {
+      auto dirCounts = request.context->getParentDirEntryCounts();
       sapling_backingstore_witness_file_read(
           *store_.get(),
           rust::Str{
               request.oid.path().view().data(),
               request.oid.path().view().size()},
           fetch_mode == sapling::FetchMode::LocalOnly,
-          request.context->getClientPid().valueOrZero().get());
+          request.context->getClientPid().valueOrZero().get(),
+          dirCounts.has_value(),
+          dirCounts ? dirCounts->files : 0,
+          dirCounts ? dirCounts->dirs : 0);
     }
   }
 

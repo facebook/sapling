@@ -126,7 +126,7 @@ struct Inner {
 /// A remote read that no active walk covered, reported to the walk detector off the filesystem
 /// thread because creating or extending walks takes the detector's write lock.
 enum WalkEvent {
-    FileLoaded(RepoPathBuf, u32),
+    FileLoaded(RepoPathBuf, Option<(usize, usize)>, u32),
     DirLoaded(RepoPathBuf, usize, usize, u32),
     DirMetadata(RepoPathBuf, usize, usize),
 }
@@ -162,7 +162,9 @@ fn handle_walk_event(
     event: WalkEvent,
 ) {
     let walk_changed = match event {
-        WalkEvent::FileLoaded(path, pid) => detector.file_loaded(&path, pid),
+        WalkEvent::FileLoaded(path, dir_size, pid) => {
+            detector.file_loaded_with_dir_size(&path, dir_size, pid)
+        }
         WalkEvent::DirLoaded(path, num_files, num_dirs, pid) => {
             detector.dir_loaded(&path, num_files, num_dirs, pid)
         }
@@ -635,8 +637,16 @@ impl BackingStore {
             .check_path_permissions(hg_cs_id, path_bufs)
     }
 
+    /// `dir_size` is the `(num_files, num_dirs)` of the directory containing `path`, if the
+    /// caller knows it.
     #[instrument(level = "trace", skip(self))]
-    pub fn witness_file_read(&self, path: &RepoPath, local: bool, pid: u32) {
+    pub fn witness_file_read(
+        &self,
+        path: &RepoPath,
+        local: bool,
+        pid: u32,
+        dir_size: Option<(usize, usize)>,
+    ) {
         let inner = self.inner.load();
 
         if inner.walk_mode == WalkMode::Off {
@@ -646,7 +656,7 @@ impl BackingStore {
         if local {
             inner.walk_detector.file_read(path, pid);
         } else if !inner.walk_detector.file_loaded_fast(path, pid) {
-            inner.send_walk_event(WalkEvent::FileLoaded(path.to_owned(), pid));
+            inner.send_walk_event(WalkEvent::FileLoaded(path.to_owned(), dir_size, pid));
         }
     }
 
@@ -1525,6 +1535,7 @@ mod tests {
         for name in ["dir/a", "dir/b"] {
             send.send(WalkEvent::FileLoaded(
                 RepoPathBuf::from_string(name.to_string())?,
+                None,
                 0,
             ))?;
         }

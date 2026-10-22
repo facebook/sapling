@@ -1584,11 +1584,23 @@ class FileInode::LoadingOngoing {
   FileInodePtr inode_;
 };
 
+void FileInode::attachParentDirEntryCounts(
+    const ObjectFetchContextPtr& fetchContext) {
+  if (!getMount()->getEdenConfig()->walkDirSizeHints.getValue()) {
+    return;
+  }
+  if (auto parent = getParentRacy()) {
+    fetchContext->setParentDirEntryCounts(parent->loadTimeEntryCounts());
+  }
+}
+
 ImmediateFuture<BlobPtr> FileInode::startLoadingData(
     LockedState state,
     BlobCache::Interest interest,
     const ObjectFetchContextPtr& fetchContext) {
   XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
+
+  attachParentDirEntryCounts(fetchContext);
 
   // Start the blob load first in case this throws an exception.
   // Ideally the state transition is no-except in tandem with the
@@ -1663,6 +1675,8 @@ folly::coro::now_task<BlobPtr> FileInode::co_startLoadingData(
 
   // Unlock state_ while we wait on the blob data to load
   state.unlock();
+
+  attachParentDirEntryCounts(fetchContext);
 
   // Load the blob and fulfill the promise. LoadingOngoing RAII ensures that
   // if the coroutine is cancelled, completeDataLoad(BrokenPromise) is called

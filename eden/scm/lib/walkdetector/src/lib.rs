@@ -444,9 +444,21 @@ impl Detector {
     /// Observe a "heavy" or remote file (content) read of `path`.
     /// Returns whether an active walk changed (either created or removed).
     pub fn file_loaded(&self, path: impl AsRef<RepoPath>, pid: u32) -> bool {
+        self.file_loaded_with_dir_size(path, None, pid)
+    }
+
+    /// Like `file_loaded`, but `dir_size` optionally reports the `(num_files, num_dirs)` of the
+    /// directory containing `path`, which fills in that directory's metadata if the detector
+    /// hasn't seen the directory itself load.
+    pub fn file_loaded_with_dir_size(
+        &self,
+        path: impl AsRef<RepoPath>,
+        dir_size: Option<(usize, usize)>,
+        pid: u32,
+    ) -> bool {
         let path = path.as_ref();
 
-        tracing::trace!(%path, "file_loaded");
+        tracing::trace!(%path, ?dir_size, "file_loaded");
 
         // Try lightweight read-only path.
         if self.mark_read(path, WalkType::File, true, pid).is_some() {
@@ -464,6 +476,18 @@ impl Detector {
 
         let walk_threshold = self.config.walk_threshold;
         let walk_ratio = self.config.walk_ratio;
+
+        // A hint of zero files for the directory of a file being loaded is stale.
+        if let Some((num_files, num_dirs)) = dir_size
+            && num_files > 0
+            && interesting_metadata(walk_threshold, walk_ratio, Some(num_files), Some(num_dirs))
+            && inner
+                .node
+                .get_node(dir_path)
+                .is_none_or(|node| node.total_files().is_none())
+        {
+            inner.set_metadata(&self.config, dir_path, num_files, num_dirs);
+        }
 
         let (owner, suffix) =
             inner

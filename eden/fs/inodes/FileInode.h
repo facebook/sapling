@@ -541,6 +541,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const ObjectFetchContextPtr& fetchContext);
 
   /**
+   * Give the walk detector the parent directory's entry counts along with
+   * the blob load, unless `experimental:walk-dir-size-hints` is off.
+   */
+  void attachParentDirEntryCounts(const ObjectFetchContextPtr& fetchContext);
+
+  /**
    * Complete the load of a blob.
    *
    * Called internally by startLoadingData when the load completes or the

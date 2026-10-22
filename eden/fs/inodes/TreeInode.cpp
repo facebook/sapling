@@ -329,6 +329,18 @@ std::chrono::steady_clock::time_point initialLastPermissionCheck(
   return std::chrono::steady_clock::now();
 }
 
+static ObjectFetchContext::DirEntryCounts countEntries(const DirContents& dir) {
+  ObjectFetchContext::DirEntryCounts counts{};
+  for (const auto& entry : dir) {
+    if (entry.second.isDirectory()) {
+      ++counts.dirs;
+    } else {
+      ++counts.files;
+    }
+  }
+  return counts;
+}
+
 TreeInode::TreeInode(
     InodeNumber ino,
     TreeInodePtr parent,
@@ -340,14 +352,33 @@ TreeInode::TreeInode(
           parent,
           name,
           initialMode,
-          std::nullopt,
           [&] {
             XCHECK(!tree->isRestricted());
             return saveDirFromTree(ino, tree.get(), parent->getMount());
           }(),
           tree->getObjectId(),
-          /*isRestricted=*/false,
           tree->hasACL()) {}
+
+TreeInode::TreeInode(
+    InodeNumber ino,
+    TreeInodePtr parent,
+    PathComponentPiece name,
+    mode_t initialMode,
+    TreeDirContents&& dir,
+    std::optional<ObjectId> treeId,
+    std::optional<bool> hasACL)
+    : TreeInode(
+          ino,
+          std::move(parent),
+          name,
+          initialMode,
+          std::nullopt,
+          std::move(dir.contents),
+          std::move(treeId),
+          /*isRestricted=*/false,
+          hasACL,
+          InitialPermissionCheck::Unknown,
+          dir.entryCounts) {}
 
 TreeInode::TreeInode(
     InodeNumber ino,
@@ -359,8 +390,10 @@ TreeInode::TreeInode(
     std::optional<ObjectId> treeId,
     bool isRestricted,
     std::optional<bool> hasACL,
-    InitialPermissionCheck initialPermissionCheck)
+    InitialPermissionCheck initialPermissionCheck,
+    std::optional<ObjectFetchContext::DirEntryCounts> entryCounts)
     : Base(ino, initialMode, initialTimestamps, parent, name),
+      loadTimeEntryCounts_(entryCounts ? *entryCounts : countEntries(dir)),
       contents_(std::in_place, std::move(dir), std::move(treeId)),
       aclRootState_{
           static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
@@ -380,12 +413,29 @@ TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
 
 TreeInode::TreeInode(
     EdenMount* mount,
+    TreeDirContents&& dir,
+    const std::optional<ObjectId>& treeId,
+    bool isRestricted,
+    std::optional<bool> hasACL)
+    : TreeInode(
+          mount,
+          std::move(dir.contents),
+          treeId,
+          isRestricted,
+          hasACL,
+          InitialPermissionCheck::Unknown,
+          dir.entryCounts) {}
+
+TreeInode::TreeInode(
+    EdenMount* mount,
     DirContents&& dir,
     const std::optional<ObjectId>& treeId,
     bool isRestricted,
     std::optional<bool> hasACL,
-    InitialPermissionCheck initialPermissionCheck)
+    InitialPermissionCheck initialPermissionCheck,
+    std::optional<ObjectFetchContext::DirEntryCounts> entryCounts)
     : Base(mount),
+      loadTimeEntryCounts_(entryCounts ? *entryCounts : countEntries(dir)),
       contents_(std::in_place, std::move(dir), treeId),
       aclRootState_{
           static_cast<uint8_t>(makeAclRootState(isRestricted, hasACL))},
@@ -1791,7 +1841,9 @@ ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     std::move(dirContents.contents),
                     treeId,
                     /*isRestricted=*/false,
-                    preferKnownAclState(tree->hasACL(), entryHasACL));
+                    preferKnownAclState(tree->hasACL(), entryHasACL),
+                    InitialPermissionCheck::Unknown,
+                    dirContents.entryCounts);
               };
 
               return maybeAddAsyncPoint(std::move(loadOverlayDirFunc));
@@ -2078,7 +2130,7 @@ void TreeInode::saveOverlayDir(
   return getOverlay()->saveOverlayDir(inodeNumber, contents, isMaterialized);
 }
 
-DirContents TreeInode::saveDirFromTree(
+TreeInode::TreeDirContents TreeInode::saveDirFromTree(
     InodeNumber inodeNumber,
     const Tree* tree,
     EdenMount* mount) {
@@ -2087,12 +2139,12 @@ DirContents TreeInode::saveDirFromTree(
       tree, overlay, mount->getCheckoutConfig()->getCaseSensitive());
 
   // buildDirFromTree just allocated inode numbers; they should be saved.
-  overlay->saveOverlayDir(inodeNumber, dir, /*isMaterialized=*/false);
+  overlay->saveOverlayDir(inodeNumber, dir.contents, /*isMaterialized=*/false);
 
   return dir;
 }
 
-DirContents TreeInode::buildDirFromTree(
+TreeInode::TreeDirContents TreeInode::buildDirFromTree(
     const Tree* tree,
     Overlay* overlay,
     CaseSensitivity caseSensitive) {
@@ -2103,19 +2155,27 @@ DirContents TreeInode::buildDirFromTree(
   folly::fbvector<std::pair<PathComponent, DirEntry>> entries;
   entries.reserve(tree->size());
 
+  ObjectFetchContext::DirEntryCounts entryCounts{};
   uint64_t inodeOffset = 0;
   for (const auto& treeEntry : *tree) {
+    auto type = treeEntry.second.getType();
+    if (type == TreeEntryType::TREE) {
+      ++entryCounts.dirs;
+    } else {
+      ++entryCounts.files;
+    }
     entries.emplace_back(
         treeEntry.first,
         DirEntry{
-            modeFromTreeEntryType(treeEntry.second.getType()),
+            modeFromTreeEntryType(type),
             InodeNumber{startInode.get() + inodeOffset++},
             treeEntry.second.getObjectId(),
             treeEntry.second.isRestricted(),
             treeEntry.second.hasACL()});
   }
 
-  return DirContents{std::move(entries), caseSensitive};
+  return TreeDirContents{
+      DirContents{std::move(entries), caseSensitive}, entryCounts};
 }
 
 TreeInode::BuildUnrestrictedDirContentsResult
@@ -2147,12 +2207,16 @@ TreeInode::buildUnrestrictedDirContents(
           diffString);
     }
     return BuildUnrestrictedDirContentsResult{
-        std::move(overlayDir), refreshedStaleDeniedAclRootStates};
+        std::move(overlayDir),
+        refreshedStaleDeniedAclRootStates,
+        /*entryCounts=*/std::nullopt};
   }
 
+  auto dir = saveDirFromTree(inodeNumber, &tree, getMount());
   return BuildUnrestrictedDirContentsResult{
-      saveDirFromTree(inodeNumber, &tree, getMount()),
-      /*refreshedStaleDeniedAclRootStates=*/false};
+      std::move(dir.contents),
+      /*refreshedStaleDeniedAclRootStates=*/false,
+      dir.entryCounts};
 }
 
 FileInodePtr TreeInode::createImpl(

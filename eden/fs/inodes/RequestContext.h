@@ -78,7 +78,24 @@ class FsObjectFetchContext : public ObjectFetchContext {
     }
   }
 
+  std::optional<DirEntryCounts> getParentDirEntryCounts() const override {
+    auto packed = parentDirEntryCounts_.load(std::memory_order_acquire);
+    if (packed == kNoParentDirEntryCounts) {
+      return std::nullopt;
+    }
+    return DirEntryCounts{
+        static_cast<uint32_t>(packed >> 32), static_cast<uint32_t>(packed)};
+  }
+
+  void setParentDirEntryCounts(DirEntryCounts counts) override {
+    parentDirEntryCounts_.store(
+        (uint64_t{counts.files} << 32) | counts.dirs,
+        std::memory_order_release);
+  }
+
  private:
+  static constexpr uint64_t kNoParentDirEntryCounts = ~uint64_t{0};
+
   EdenTopStats edenTopStats_;
 
   /**
@@ -89,6 +106,8 @@ class FsObjectFetchContext : public ObjectFetchContext {
    * at the same time.
    */
   std::atomic<ImportPriority> priority_{kDefaultFsImportPriority};
+
+  std::atomic<uint64_t> parentDirEntryCounts_{kNoParentDirEntryCounts};
 };
 
 using FsObjectFetchContextPtr = RefPtr<FsObjectFetchContext>;

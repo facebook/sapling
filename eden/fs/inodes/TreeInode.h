@@ -32,6 +32,7 @@
 #include "eden/fs/model/EntryAttributeFlags.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxDataFwd.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/MiniTracer.h"
 
 namespace facebook::eden {
@@ -169,6 +170,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   };
 
   /**
+   * Directory contents built from a source control tree, with the entry
+   * counts taken while building them.
+   */
+  struct TreeDirContents {
+    DirContents contents;
+    ObjectFetchContext::DirEntryCounts entryCounts;
+  };
+
+  /**
    * Construct a TreeInode from an unrestricted source control tree.
    */
   TreeInode(
@@ -181,6 +191,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Construct an inode that only has backing in the Overlay area.
    * Set isRestricted=true for directories denied by server-side path ACLs.
+   * The entries of dir are counted unless entryCounts is given.
    */
   TreeInode(
       InodeNumber ino,
@@ -193,7 +204,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool isRestricted = false,
       std::optional<bool> hasACL = std::nullopt,
       InitialPermissionCheck initialPermissionCheck =
-          InitialPermissionCheck::Unknown);
+          InitialPermissionCheck::Unknown,
+      std::optional<ObjectFetchContext::DirEntryCounts> entryCounts =
+          std::nullopt);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
@@ -202,6 +215,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   /**
    * Construct the root inode from data saved in the overlay.
+   * The entries of dir are counted unless entryCounts is given.
    */
   TreeInode(
       EdenMount* mount,
@@ -210,7 +224,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool isRestricted = false,
       std::optional<bool> hasACL = std::nullopt,
       InitialPermissionCheck initialPermissionCheck =
-          InitialPermissionCheck::Unknown);
+          InitialPermissionCheck::Unknown,
+      std::optional<ObjectFetchContext::DirEntryCounts> entryCounts =
+          std::nullopt);
 
   ~TreeInode() override;
 
@@ -405,6 +421,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   }
   folly::Synchronized<TreeInodeState>& getContentsUnchecked() {
     return contents_;
+  }
+
+  /**
+   * Number of file and directory entries this inode had when it was loaded.
+   * Not updated as entries are added or removed afterwards.
+   */
+  ObjectFetchContext::DirEntryCounts loadTimeEntryCounts() const {
+    return loadTimeEntryCounts_;
   }
 
   /**
@@ -1039,16 +1063,32 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const DirContents& contents,
       bool isMaterialized = true) const;
 
+  TreeInode(
+      InodeNumber ino,
+      TreeInodePtr parent,
+      PathComponentPiece name,
+      mode_t initialMode,
+      TreeDirContents&& dir,
+      std::optional<ObjectId> treeId,
+      std::optional<bool> hasACL);
+
+  TreeInode(
+      EdenMount* mount,
+      TreeDirContents&& dir,
+      const std::optional<ObjectId>& treeId,
+      bool isRestricted,
+      std::optional<bool> hasACL);
+
   /**
    * Converts a Tree to a Dir and saves it to the Overlay under the given inode
    * number.
    */
-  static DirContents
+  static TreeDirContents
   saveDirFromTree(InodeNumber inodeNumber, const Tree* tree, EdenMount* mount);
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  static DirContents buildDirFromTree(
+  static TreeDirContents buildDirFromTree(
       const Tree* tree,
       Overlay* overlay,
       CaseSensitivity caseSensitive);
@@ -1200,6 +1240,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   struct BuildUnrestrictedDirContentsResult {
     DirContents contents;
     bool refreshedStaleDeniedAclRootStates{false};
+    std::optional<ObjectFetchContext::DirEntryCounts> entryCounts;
   };
 
   BuildUnrestrictedDirContentsResult buildUnrestrictedDirContents(
@@ -1607,6 +1648,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       folly::Synchronized<TreeInodeState>::LockedPtr& contents,
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
+
+  ObjectFetchContext::DirEntryCounts loadTimeEntryCounts_;
 
   folly::Synchronized<TreeInodeState> contents_;
 
