@@ -16,9 +16,12 @@ use crate::client::Client;
 use crate::errors::SaplingRemoteApiError;
 
 mod files;
+mod keys;
 mod trees;
 
 pub(crate) use files::RetryableFileAttrs;
+pub(crate) use keys::BorrowedKey;
+pub(crate) use keys::RetryableKeys;
 pub(crate) use trees::RetryableTrees;
 
 #[async_trait]

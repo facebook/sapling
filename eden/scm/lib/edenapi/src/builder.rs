@@ -154,6 +154,7 @@ pub struct HttpClientBuilder {
     min_transfer_speed: Option<MinTransferSpeed>,
     handler_min_transfer_speeds: HashMap<String, MinTransferSpeed>,
     max_retry_per_request: usize,
+    stream_retries: Option<bool>,
     http_config: http_client::Config,
 }
 
@@ -333,6 +334,8 @@ impl HttpClientBuilder {
         let max_retry_per_request =
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(3);
 
+        let stream_retries = get_config(config, "experimental", "slapi-stream-retries")?;
+
         let max_concurrent_streams =
             get_config::<usize>(config, "edenapi", "max-concurrent-streams")?;
 
@@ -368,6 +371,7 @@ impl HttpClientBuilder {
             min_transfer_speed,
             handler_min_transfer_speeds,
             max_retry_per_request,
+            stream_retries,
             http_config,
         };
 
@@ -469,6 +473,13 @@ impl HttpClientBuilder {
         self
     }
 
+    /// Enable streamed retries for history, queries, uploads, and streaming clone.
+    /// Defaults to true; also set by `experimental.slapi-stream-retries`.
+    pub fn stream_retries(mut self, enabled: bool) -> Self {
+        self.stream_retries = Some(enabled);
+        self
+    }
+
     /// Timeout for HTTP requests sent by the client.
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
@@ -556,6 +567,7 @@ pub(crate) struct Config {
     pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
     pub(crate) handler_min_transfer_speeds: HashMap<String, MinTransferSpeed>,
     pub(crate) max_retry_per_request: usize,
+    pub(crate) stream_retries: bool,
     pub(crate) http_config: http_client::Config,
 }
 
@@ -589,6 +601,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             min_transfer_speed,
             handler_min_transfer_speeds,
             max_retry_per_request,
+            stream_retries,
             http_config,
         } = builder;
 
@@ -636,6 +649,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             min_transfer_speed,
             handler_min_transfer_speeds,
             max_retry_per_request,
+            stream_retries: stream_retries.unwrap_or(true),
             http_config,
         })
     }
@@ -662,6 +676,33 @@ mod tests {
         base.into_iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect()
+    }
+
+    #[test]
+    fn test_stream_retries_config() {
+        for (value, enabled) in [(None, true), (Some("true"), true), (Some("false"), false)] {
+            let entries = value
+                .map(|value| vec![("experimental.slapi-stream-retries", value)])
+                .unwrap_or_default();
+            let config: Config = HttpClientBuilder::from_config(&make_config(entries))
+                .unwrap()
+                .try_into()
+                .unwrap();
+            assert_eq!(config.stream_retries, enabled);
+        }
+        let config: Config = HttpClientBuilder::new()
+            .repo_name("test")
+            .server_url("https://example.com/".parse().unwrap())
+            .try_into()
+            .unwrap();
+        assert!(config.stream_retries);
+        assert!(
+            HttpClientBuilder::from_config(&make_config(vec![(
+                "experimental.slapi-stream-retries",
+                "invalid"
+            )]))
+            .is_err()
+        );
     }
 
     #[test]

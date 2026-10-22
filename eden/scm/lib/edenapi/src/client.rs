@@ -164,9 +164,14 @@ use crate::builder::Config;
 use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
 use crate::response::ResponseMeta;
+use crate::retryable::BorrowedKey;
 use crate::retryable::RetryableFileAttrs;
+use crate::retryable::RetryableKeys;
 use crate::retryable::RetryableStreamRequest;
 use crate::retryable::RetryableTrees;
+
+#[cfg(test)]
+mod retry_tests;
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
@@ -929,11 +934,11 @@ impl Client {
         self.fetch_single::<AlterSnapshotResponse>(request).await
     }
 
-    async fn history_attempt(
+    async fn history_request(
         &self,
         keys: Vec<Key>,
         length: Option<u32>,
-    ) -> Result<Response<HistoryEntry>, SaplingRemoteApiError> {
+    ) -> Result<Response<HistoryResponseChunk>, SaplingRemoteApiError> {
         tracing::info!("Requesting history for {} file(s)", keys.len());
 
         if keys.is_empty() {
@@ -963,15 +968,7 @@ impl Client {
             },
         )?;
 
-        let Response { entries, stats } = self.fetch::<HistoryResponseChunk>(requests)?;
-
-        // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
-        let entries = entries
-            .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
-            .try_flatten()
-            .boxed();
-
-        Ok(Response { entries, stats })
+        self.fetch::<HistoryResponseChunk>(requests)
     }
 
     async fn path_history_attempt(
@@ -1615,8 +1612,37 @@ impl SaplingRemoteApi for Client {
         keys: Vec<Key>,
         length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, SaplingRemoteApiError> {
-        self.with_retry(|this| this.history_attempt(keys.clone(), length.clone()).boxed())
-            .await
+        let Response { entries, stats } = if self.config().stream_retries {
+            if length == Some(0) {
+                return Ok(Response::empty());
+            }
+
+            RetryableKeys::new(
+                keys,
+                move |client: Client, keys| {
+                    async move { client.history_request(keys, length).await }.boxed()
+                },
+                |pending, chunk: &HistoryResponseChunk| {
+                    // The first entry identifies the requested key; the chunk contains its full response.
+                    if let Some(entry) = chunk.entries.first() {
+                        pending.remove(&BorrowedKey {
+                            path: &chunk.path,
+                            hgid: entry.node,
+                        });
+                    }
+                },
+            )
+            .perform_with_retries(self.clone())
+            .await?
+        } else {
+            self.with_retry(|this| this.history_request(keys.clone(), length).boxed())
+                .await?
+        };
+        let entries = entries
+            .map_ok(|chunk| stream::iter(chunk.into_iter().map(Ok)))
+            .try_flatten()
+            .boxed();
+        Ok(Response { entries, stats })
     }
 
     async fn path_history(
