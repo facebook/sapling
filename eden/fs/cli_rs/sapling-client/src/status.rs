@@ -310,6 +310,50 @@ mod tests {
     }
 
     #[tokio::test]
+    pub async fn test_get_status_against_the_working_copy_twice() -> Result<()> {
+        let params = GetStatusParams {
+            first: "cccc111122223333444455556666777788889999".to_string(),
+            second: None,
+            limit_results: 1000,
+            case_insensitive_suffix_compares: false,
+            repository_root: None,
+            root: None,
+            included_roots: None,
+            included_suffixes: None,
+            excluded_roots: None,
+            excluded_suffixes: None,
+        };
+        let before_edit = get_mock_spawner(
+            get_sapling_executable_path(),
+            None,
+            Some((0, Some(b"M first.txt\n".to_vec()))),
+        );
+        let result = get_status_impl(&before_edit, params.clone()).await?;
+        assert_eq!(
+            result,
+            SaplingGetStatusResult::Normal(vec![(
+                SaplingStatus::Modified,
+                "first.txt".to_string()
+            )])
+        );
+
+        let after_edit = get_mock_spawner(
+            get_sapling_executable_path(),
+            None,
+            Some((0, Some(b"M second.txt\n".to_vec()))),
+        );
+        let result = get_status_impl(&after_edit, params).await?;
+        assert_eq!(
+            result,
+            SaplingGetStatusResult::Normal(vec![(
+                SaplingStatus::Modified,
+                "first.txt".to_string()
+            )])
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     pub async fn test_get_status_basic() -> Result<()> {
         let output = r"M fbcode/buck2/app/buck2_audit/src/lib.rs
 M fbcode/buck2/app/buck2_audit_server/src/lib.rs
