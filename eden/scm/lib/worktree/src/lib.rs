@@ -548,10 +548,13 @@ fn serialize_registry(registry: &Registry) -> Result<String> {
 
 fn write_registry(shared_store_path: &Path, content: &str) -> Result<()> {
     let path = shared_store_path.join("worktrees.json");
-    util::file::atomic_write(&path, |f| {
+    // fsync so a host crash can't leave a renamed but unflushed, empty
+    // registry, which every later worktree command would fail to parse.
+    atomicfile::atomic_write(&path, 0o644, true, |f| {
         use std::io::Write;
         f.write_all(content.as_bytes())
-    })?;
+    })
+    .with_context(|| format!("failed to write registry at {}", path.display()))?;
     Ok(())
 }
 
