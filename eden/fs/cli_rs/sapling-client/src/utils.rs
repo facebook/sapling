@@ -77,7 +77,7 @@ pub(crate) fn process_one_status_line(
     if space != ' ' {
         return Err(anyhow::anyhow!("Invalid status line: {line}"));
     }
-    let path = line.chars().skip(1).collect::<String>().trim().to_owned();
+    let path = chars.as_str().to_owned();
     let result = match status {
         'M' => Some((SaplingStatus::Modified, path)),
         'A' => Some((SaplingStatus::Added, path)),
@@ -119,11 +119,11 @@ pub(crate) mod tests {
     fn test_process_one_status_line_keeps_whitespace_in_paths() -> anyhow::Result<()> {
         assert_eq!(
             process_one_status_line("M dir/trailing.txt ")?,
-            Some((SaplingStatus::Modified, "dir/trailing.txt".to_owned()))
+            Some((SaplingStatus::Modified, "dir/trailing.txt ".to_owned()))
         );
         assert_eq!(
             process_one_status_line("A  leading.txt")?,
-            Some((SaplingStatus::Added, "leading.txt".to_owned()))
+            Some((SaplingStatus::Added, " leading.txt".to_owned()))
         );
         Ok(())
     }
