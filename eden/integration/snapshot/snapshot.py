@@ -245,10 +245,21 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         """Update hgrc so that it matches the location of the unpacked snapshot."""
         hgrc_dir = self.data_dir / "repo" / self.repo_dir_name / "hgrc"
         with hgrc_dir.open("r") as f:
-            match = re.search(r"\/tmp/eden_data\.\w+", f.read())
-            old_dir = match.group(0) if match is not None else None
+            hgrc = f.read()
+        match = re.search(r"\/tmp/eden_data\.\w+", hgrc)
+        old_dir = match.group(0) if match is not None else None
         if old_dir is not None:
             self._replace_file_contents(hgrc_dir, bytes(Path(old_dir)), bytes(base_dir))
+        # The snapshot's remote is an eagerepo at a fixed /tmp path, so give each
+        # unpacked snapshot its own to keep concurrent tests from racing to
+        # create the same repo.
+        match = re.search(r"eager://(/tmp/eden_test\.\w+/eagerepo\w*)", hgrc)
+        if match is not None:
+            self._replace_file_contents(
+                hgrc_dir,
+                match.group(1).encode(),
+                bytes(self.transient_dir / "eagerepo"),
+            )
 
     def _update_eden_state(self, base_dir: Path, uid: int, gid: int) -> None:
         """Update Eden's stored state for the snapshot so it will work in a new
