@@ -155,7 +155,7 @@ void MemInodeCatalog::renameChild(
       auto childIno =
           InodeNumber(folly::copy(dstChild->second.inodeNumber().value()));
       auto childOdir = store->find(childIno);
-      if (childOdir != store->end()) {
+      if (childOdir != store->end() && !childOdir->second.entries()->empty()) {
         throw NonEmptyError("cannot overwrite non-empty directory");
       }
     }

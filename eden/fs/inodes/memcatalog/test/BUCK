@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = ["MemInodeCatalogTest.cpp"],
+    network_access = network_access_utils.none(),
+    deps = [
+        "fbsource//xplat/folly/portability:gtest",
+        "fbsource//xplat/folly/portability:sys_stat",
+        "//eden/common/utils:path",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes/memcatalog:meminodecatalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+    ],
+)
