@@ -1136,6 +1136,7 @@ bool Overlay::maybeCompactWal(
               walCompactionMultiplier_ * content.size())
         : walCompactionMultiplier_ *
             std::max(content.size(), static_cast<size_t>(10));
+    threshold = std::max(threshold, static_cast<size_t>(1));
     if (walCompactionRng_() % threshold != 0) {
       return false;
     }

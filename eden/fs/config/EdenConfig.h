@@ -2679,7 +2679,8 @@ class EdenConfig : private ConfigSettingManager {
    * capped by `overlay:wal-compaction-cap`. Larger values let the WAL
    * absorb more appends before paying the rewrite cost; smaller values
    * keep load-time replay shorter at the cost of more frequent
-   * compactions. Snapshot at Overlay construction.
+   * compactions. A multiplier of 0 compacts on every append. Snapshot at
+   * Overlay construction.
    */
   ConfigSetting<size_t> overlayWalCompactionMultiplier{
       "overlay:wal-compaction-multiplier",
