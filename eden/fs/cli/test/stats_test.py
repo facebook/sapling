@@ -11,7 +11,13 @@ from io import StringIO
 from typing import Optional
 
 from .. import stats_print
-from ..stats import DiagInfoCounters, get_store_latency
+from ..stats import (
+    DiagInfoCounters,
+    get_fuse_counters,
+    get_fuse_latency,
+    get_store_latency,
+    get_thrift_latency,
+)
 
 
 class StatsTest(unittest.TestCase):
@@ -145,3 +151,31 @@ class SaplingBackingStoreStatsTest(unittest.TestCase):
                 ["9920 μs", "9930 μs", "9940 μs", "9910 μs"],
             ],
         )
+
+
+class CounterParserTest(unittest.TestCase):
+    def test_fuse_latency_with_a_p95_counter(self) -> None:
+        counters: DiagInfoCounters = {
+            "fuse.read_us.p50": 5,
+            "fuse.read_us.p95": 7,
+            "fuse.read_us.sum": 1234,
+        }
+        with self.assertRaises(KeyError):
+            get_fuse_latency(counters, all_flg=False)
+
+    def test_fuse_counters_with_a_live_requests_counter(self) -> None:
+        counters: DiagInfoCounters = {
+            "fuse.fbsource.live_requests.count": 3,
+            "fuse.read_us.count.60": 5,
+            "fuse.read_us.count": 9,
+        }
+        with self.assertRaises(KeyError):
+            get_fuse_counters(counters, all_flg=True)
+
+    def test_thrift_latency_with_a_p10_counter(self) -> None:
+        counters: DiagInfoCounters = {
+            "thrift.EdenService.getCounters.time_process_us.avg.60": 12,
+            "thrift.EdenService.getCounters.time_process_us.p10": 11,
+        }
+        with self.assertRaises(KeyError):
+            get_thrift_latency(counters)
