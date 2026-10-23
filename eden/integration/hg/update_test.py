@@ -1752,17 +1752,6 @@ class UpdateDedicatedExecutorTest(EdenHgTestCase):
             "eden.fs.inodes.CheckoutContext": "DBG5",
         }
 
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        parent_config = super().edenfs_extra_config()
-        if parent_config is None:
-            parent_config = {}
-        if "thrift" not in parent_config:
-            parent_config["thrift"] = []
-
-        parent_config["thrift"].append("use-checkout-executor = true")
-
-        return parent_config
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
         repo.write_file(".gitignore", "ignoreme\n")

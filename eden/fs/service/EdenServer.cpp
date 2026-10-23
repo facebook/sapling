@@ -519,14 +519,9 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
 #endif // __linux__
 
 std::shared_ptr<folly::Executor> makeCheckoutRevisionThreads(
-    bool useCheckoutExecutor,
     std::shared_ptr<const EdenConfig>& edenConfig) {
-  if (useCheckoutExecutor) {
-    return std::make_shared<UnboundedQueueExecutor>(
-        edenConfig->numCheckoutThreads.getValue(),
-        "CheckoutRevisionThreadPool");
-  }
-  return nullptr;
+  return std::make_shared<UnboundedQueueExecutor>(
+      edenConfig->numCheckoutThreads.getValue(), "CheckoutRevisionThreadPool");
 }
 
 std::shared_ptr<folly::Executor> makePrefetchFilesV2Threads(
@@ -844,10 +839,7 @@ EdenServer::EdenServer(
       thriftUseResourcePools_{edenConfig->thriftUseResourcePools.getValue()},
       thriftUseSerialExecution_{
           edenConfig->thriftUseSerialExecution.getValue()},
-      thriftUseCheckoutExecutor_{
-          edenConfig->thriftUseCheckoutExecutor.getValue()},
-      checkoutRevisionExecutor_{
-          makeCheckoutRevisionThreads(thriftUseCheckoutExecutor_, edenConfig)},
+      checkoutRevisionExecutor_{makeCheckoutRevisionThreads(edenConfig)},
       thriftUsePrefetchExecutor_{
           edenConfig->thriftUsePrefetchExecutor.getValue()},
       prefetchFilesV2Executor_{
@@ -2933,23 +2925,15 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
 
-  // Set the detached executor on the fetch context if the checkout executor is
-  // enabled. This allows inode loading during checkout to run on the
-  // checkout executor instead of the immediate executor.
-  if (thriftUseCheckoutExecutor_) {
-    fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
-  }
+  // Inode loading during checkout runs on the checkout executor instead of
+  // the immediate executor.
+  fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
 
-  ImmediateFuture<folly::Unit> asyncPoint{std::in_place};
-  if (thriftUseCheckoutExecutor_) {
-    // Insert an async point to ensure work happens on the checkout executor.
-    // Without this, any sync work in edenMount.checkout will run on the
-    // Thrift worker thread instead of the checkout executor.
-    asyncPoint = makeNotReadyImmediateFuture();
-  }
-
+  // Start from a not-ready future so that the synchronous part of
+  // edenMount.checkout runs on the checkout executor rather than the Thrift
+  // worker thread.
   auto checkoutFuture =
-      std::move(asyncPoint)
+      makeNotReadyImmediateFuture()
           .thenValue([&edenMount,
                       rootInode = mountHandle.getRootInode(),
                       root,
@@ -2969,25 +2953,23 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
                 this, std::move(result), checkoutMode, isNfs, mountPath);
           });
 
-  if (thriftUseCheckoutExecutor_) {
-    // This is an UnboundedQueueExecutor, which is guaranteed to never block
-    // nor throw (except OOM), nor execute inline from `add()`.
-    //
-    // Thrift documentation states that "it is almost never a good idea to send
-    // work off Thrift’s CPU worker". However, it also notes that "user code may
-    // delegate the rest of the work to other thread pools, thus shifting load
-    // off Thrift’s CPU Workers thread and letting the thread pick up new
-    // incoming work" but warns that "if there is work offloaded to other thread
-    // pools, there should be backpressure mechanism that would block Thrift CPU
-    // Workers thread when those internal thread pools are overloaded."
-    //
-    // Without backpressure, EdenFS would see an increase in memory pressure.
-    // potential slowdowns, and/or OOMS. EdenFS only allows one checkout at a
-    // time (https://fburl.com/code/a6eoy8wu), which acts as the aforementioned
-    // backpressure mechanism.
-    checkoutFuture =
-        std::move(checkoutFuture).semi().via(checkoutRevisionExecutor_.get());
-  }
+  // This is an UnboundedQueueExecutor, which is guaranteed to never block
+  // nor throw (except OOM), nor execute inline from `add()`.
+  //
+  // Thrift documentation states that "it is almost never a good idea to send
+  // work off Thrift’s CPU worker". However, it also notes that "user code may
+  // delegate the rest of the work to other thread pools, thus shifting load
+  // off Thrift’s CPU Workers thread and letting the thread pick up new
+  // incoming work" but warns that "if there is work offloaded to other thread
+  // pools, there should be backpressure mechanism that would block Thrift CPU
+  // Workers thread when those internal thread pools are overloaded."
+  //
+  // Without backpressure, EdenFS would see an increase in memory pressure.
+  // potential slowdowns, and/or OOMS. EdenFS only allows one checkout at a
+  // time (https://fburl.com/code/a6eoy8wu), which acts as the aforementioned
+  // backpressure mechanism.
+  checkoutFuture =
+      std::move(checkoutFuture).semi().via(checkoutRevisionExecutor_.get());
 
   return std::move(checkoutFuture).ensure([mountHandle] {});
 }
@@ -3021,10 +3003,8 @@ folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
 
-  // Helper that runs the checkout body. Extracted into a Task so it can
-  // either be scheduled on the dedicated checkout executor (when
-  // `thriftUseCheckoutExecutor_=true`) or run inline on the current
-  // executor.
+  // Helper that runs the checkout body. Extracted into a Task so it can be
+  // scheduled on the dedicated checkout executor.
   //
   // Captures are explicit (no [&]) so the lambda owns mountHandle and
   // doesn't alias stack locals if the Task is later detached.
@@ -3042,16 +3022,11 @@ folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
         checkoutMode);
   };
 
-  CheckoutResult result;
-  if (thriftUseCheckoutExecutor_) {
-    fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
-    // Pin the checkout body to the dedicated executor to isolate long
-    // checkouts from thrift worker thread starvation.
-    result = co_await folly::coro::co_withExecutor(
-        checkoutRevisionExecutor_.get(), checkoutBody());
-  } else {
-    result = co_await checkoutBody();
-  }
+  fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
+  // Pin the checkout body to the dedicated executor to isolate long
+  // checkouts from thrift worker thread starvation.
+  auto result = co_await folly::coro::co_withExecutor(
+      checkoutRevisionExecutor_.get(), checkoutBody());
 
   co_return finishCheckoutPostProcessing(
       this, std::move(result), checkoutMode, isNfs, AbsolutePath{mountPath});
