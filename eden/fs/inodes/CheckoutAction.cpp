@@ -193,7 +193,7 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
       .thenValue(
           [self = shared_from_this()](
               auto&&) -> ImmediateFuture<CheckoutActionResult> {
-            if (!self->errors_.empty()) {
+            if (auto errors = self->errors_.copy(); !errors.empty()) {
               // If multiple errors occurred, we log them all, but only
               // propagate up the first one.  If necessary we could change this
               // to create a single exception that contains all of the messages
@@ -201,11 +201,11 @@ ImmediateFuture<CheckoutActionResult> CheckoutAction::run(
               XLOG(
                   ERR,
                   "multiple errors while attempting to load data for checkout action:");
-              for (const auto& ew : self->errors_) {
+              for (const auto& ew : errors) {
                 XLOGF(ERR, "CheckoutAction error: {}", folly::exceptionStr(ew));
               }
               return makeImmediateFuture<CheckoutActionResult>(
-                  self->errors_[0]);
+                  std::move(errors.front()));
             }
 
             self->handleOldTreeRestriction();
@@ -334,14 +334,14 @@ folly::coro::now_task<CheckoutActionResult> CheckoutAction::co_run(
     }
   }
 
-  if (!errors_.empty()) {
+  if (auto errors = errors_.copy(); !errors.empty()) {
     XLOG(
         ERR,
         "multiple errors while attempting to load data for checkout action:");
-    for (const auto& ew : errors_) {
+    for (const auto& ew : errors) {
       XLOGF(ERR, "CheckoutAction error: {}", folly::exceptionStr(ew));
     }
-    errors_[0].throw_exception();
+    errors.front().throw_exception();
   }
 
   handleOldTreeRestriction();
@@ -381,7 +381,7 @@ void CheckoutAction::error(
     folly::StringPiece msg,
     folly::exception_wrapper&& ew) {
   XLOGF(ERR, "error performing checkout action: {}: {}", msg, ew);
-  errors_.push_back(std::move(ew));
+  errors_.wlock()->push_back(std::move(ew));
 }
 
 void CheckoutAction::handleOldTreeRestriction() {

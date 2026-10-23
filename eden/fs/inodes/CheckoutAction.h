@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
+#include <folly/Synchronized.h>
 #include <folly/coro/safe/NowTask.h>
 #include <memory>
 #include <optional>
@@ -15,10 +17,6 @@
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Tree.h"
-
-namespace folly {
-class exception_wrapper;
-}
 
 namespace facebook::eden {
 
@@ -274,10 +272,12 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
   bool removeLocalOnly_ = false;
 
   /**
-   * The errors vector keeps track of any errors that occurred while trying to
-   * load the data needed to perform the checkout action.
+   * The errors that occurred while loading the data needed to perform the
+   * checkout action. The load continuations complete on different executor
+   * threads, so concurrent failures append under the lock. The lock is only
+   * held for the push and for copying the vector out, never while formatting
+   * an error or calling into an inode, so it nests under every other lock.
    */
-  // TODO: Add locking?
-  std::vector<folly::exception_wrapper> errors_;
+  folly::Synchronized<std::vector<folly::exception_wrapper>> errors_;
 };
 } // namespace facebook::eden

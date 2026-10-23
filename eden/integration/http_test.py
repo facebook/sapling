@@ -110,18 +110,11 @@ class HttpCheckoutErrorRaceTest(testcase.EdenTestCase):
                     daemon_died = await self._exercise_checkout_errors(pid)
                     if daemon_died:
                         break
-                # The paired tree errors are appended to the same unsynchronized
-                # vector from two executor threads. ThreadSanitizer reports the
-                # race and halts the daemon; optimized builds survive it, so the
-                # race is only observable here under TSan.
-                # TODO(lean-check): wrong behaviour; flipped in the next commit
-                self.assertEqual(
-                    os.environ.get("EDEN_TEST_TSAN") == "1",
-                    daemon_died,
-                    "daemon died collecting concurrent checkout errors",
+                # Both tree errors of every directory are appended to the
+                # action's error list from two executor threads.
+                self.assertFalse(
+                    daemon_died, "daemon died collecting concurrent checkout errors"
                 )
-                if daemon_died:
-                    return
                 with lock:
                     self.assertEqual(32, len(counts))
                     self.assertTrue(all(n >= 16 for n in counts.values()), counts)
