@@ -134,7 +134,6 @@ SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
     "legacy",
     "sqlite",
     "inmemory",
-    "legacydev",
     "legacyephemeral",
 }
 
@@ -1680,7 +1679,6 @@ class EdenCheckout:
             inode_catalog_type = inode_catalog_type.lower()
             if sys.platform == "win32" and inode_catalog_type in [
                 "legacy",
-                "legacydev",
                 "legacyephemeral",
             ]:
                 raise CheckoutConfigCorruptedError(
@@ -2389,7 +2387,6 @@ def create_checkout_config(
     overlay_type = overlay_type.lower()
     if sys.platform == "win32" and overlay_type in [
         "legacy",
-        "legacydev",
         "legacyephemeral",
     ]:
         raise Exception(

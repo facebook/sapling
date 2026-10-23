@@ -100,8 +100,6 @@ enum InodeCatalogType {
     Sqlite,
     #[strum(serialize = "inmemory")]
     InMemory,
-    #[strum(serialize = "legacydev")]
-    LegacyDev,
     #[strum(serialize = "legacyephemeral")]
     LegacyEphemeral,
 }

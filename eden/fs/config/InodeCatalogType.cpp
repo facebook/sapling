@@ -15,12 +15,11 @@ namespace facebook::eden {
 
 namespace {
 
-constexpr std::array<std::pair<InodeCatalogType, std::string_view>, 5>
+constexpr std::array<std::pair<InodeCatalogType, std::string_view>, 4>
     kInodeCatalogTypeNames{{
         {InodeCatalogType::Legacy, "Legacy"},
         {InodeCatalogType::Sqlite, "Sqlite"},
         {InodeCatalogType::InMemory, "InMemory"},
-        {InodeCatalogType::LegacyDev, "LegacyDev"},
         {InodeCatalogType::LegacyEphemeral, "LegacyEphemeral"},
     }};
 

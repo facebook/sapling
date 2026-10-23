@@ -2728,7 +2728,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Determines if EdenFS should use Write-Ahead Logging (WAL) for overlay
-   * directory writes. Only applies to Legacy and LegacyDev catalog types.
+   * directory writes. Only applies to the Legacy catalog type.
    */
   ConfigSetting<bool> overlayUseWal{"overlay:use-wal", true, this};
 
@@ -2749,7 +2749,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Persist an upper bound on allocated inode numbers so an unclean startup
    * can skip startup fsck when online-fsck is enabled and the reservation is
-   * available. Reservation applies to Legacy and LegacyDev catalog types.
+   * available. Reservation applies to the Legacy catalog type.
    */
   ConfigSetting<bool> overlayInodeReservation{
       "overlay:inode-reservation",

@@ -12,7 +12,7 @@ These tests exercise crash-recovery, fsck, and concurrency scenarios that
 unit tests cannot cover end-to-end. WAL is enabled per-class via the
 edenfs_extra_config override below — not as a global default — so other
 integration tests keep their non-WAL coverage. The tests depend on the
-Legacy / LegacyDev inode catalog; on platforms that don't use that
+Legacy inode catalog; on platforms that don't use that
 catalog the tests skip.
 """
 
@@ -90,7 +90,7 @@ def _encode_wal_add(name: str, inode: int, mode: int = 0o100644) -> bytes:
 @testcase.eden_nfs_repo_test
 @unittest.skipIf(
     sys.platform == "win32",
-    "WAL is only implemented for the Legacy/LegacyDev FsInodeCatalog "
+    "WAL is only implemented for the Legacy FsInodeCatalog "
     "(Linux/macOS). Windows uses the Sqlite catalog which has its own "
     "semantic addChild/removeChild path and does not produce .wal files.",
 )

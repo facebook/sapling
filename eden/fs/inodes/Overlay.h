@@ -38,7 +38,6 @@
 #ifndef _WIN32
 #include "eden/fs/inodes/fscatalog/EphemeralFsInodeCatalog.h"
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
-#include "eden/fs/inodes/fscatalog_dev/FsInodeCatalogDev.h"
 #endif
 
 namespace facebook::eden {

@@ -927,7 +927,7 @@ def _replicate_eden_nfs_repo_test_with_wal_variant(
     base_variants = list(
         _replicate_eden_nfs_repo_test(test_class, run_io_uring=run_io_uring)
     )
-    # WAL is only implemented for the Legacy/LegacyDev FsInodeCatalog
+    # WAL is only implemented for the Legacy FsInodeCatalog
     # (Linux/macOS). Windows uses the Sqlite catalog, so the WAL variants
     # would exercise the same code path as the base variants.
     if sys.platform == "win32":

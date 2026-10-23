@@ -187,7 +187,6 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 #ifdef _WIN32
   (void)fileContentStore;
   if (inodeCatalogType == InodeCatalogType::Legacy ||
-      inodeCatalogType == InodeCatalogType::LegacyDev ||
       inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
@@ -200,11 +199,6 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
       "Sqlite overlay type is not supported. Please reclone.");
 #endif
 #else
-  if (inodeCatalogType == InodeCatalogType::LegacyDev) {
-    XLOG(DBG4, "LegacyDev overlay being used.");
-    return std::make_unique<FsInodeCatalogDev>(
-        static_cast<FsFileContentStoreDev*>(fileContentStore));
-  }
   if (inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     XLOG(
         WARN,
@@ -220,23 +214,18 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 
 std::unique_ptr<FileContentStore> makeFileContentStore(
     AbsolutePathPiece localDir,
-    InodeCatalogType inodeCatalogType,
     bool directFileCreate,
     bool cacheWalFiles,
     size_t walFileCacheSize,
     WalFormat walFormat) {
 #ifdef _WIN32
   (void)localDir;
-  (void)inodeCatalogType;
   (void)directFileCreate;
   (void)cacheWalFiles;
   (void)walFileCacheSize;
   (void)walFormat;
   return nullptr;
 #else
-  if (inodeCatalogType == InodeCatalogType::LegacyDev) {
-    return std::make_unique<FsFileContentStoreDev>(localDir);
-  }
   return std::make_unique<FsFileContentStore>(
       localDir, directFileCreate, cacheWalFiles, walFileCacheSize, walFormat);
 #endif
@@ -307,7 +296,6 @@ Overlay::Overlay(
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(
           localDir,
-          inodeCatalogType,
           config.experimentalOverlayDirectFileCreate.getValue(),
           config.experimentalOverlayCacheWalFiles.getValue(),
           config.overlayWalFileCacheSize.getValue(),
@@ -333,8 +321,7 @@ Overlay::Overlay(
       useDirectFileWrites_(config.overlayDirectFileWrites.getValue()),
       useInodeReservation_{
           !folly::kIsWindows && config.overlayInodeReservation.getValue() &&
-          (inodeCatalogType == InodeCatalogType::Legacy ||
-           inodeCatalogType == InodeCatalogType::LegacyDev)},
+          inodeCatalogType == InodeCatalogType::Legacy},
       // Only `Legacy` supports the online fsck config.
       useOnlineFsck_{
           useInodeReservation_ &&
@@ -356,7 +343,6 @@ Overlay::Overlay(
   // record; DB-backed catalogs write records cheaply and would only gain
   // orphan rows from preallocation.
   if (inodeCatalogType == InodeCatalogType::Legacy ||
-      inodeCatalogType == InodeCatalogType::LegacyDev ||
       inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     dirPreallocPoolSize_ = config.overlayDirPreallocPoolSize.getValue();
   }
