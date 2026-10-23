@@ -25,7 +25,7 @@ cpp_library(
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest",
+        "fbsource//third-party/googletest:gtest_prod_headers",
         "fbsource//xplat/folly:file",
         "fbsource//xplat/folly:range",
         "//eden/common/utils:path",

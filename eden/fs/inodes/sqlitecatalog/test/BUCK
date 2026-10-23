@@ -6,6 +6,9 @@ oncall("scm_client_infra")
 cpp_unittest(
     name = "sqlite_inode_catalog",
     srcs = ["SqliteInodeCatalogTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
     network_access = network_access_utils.none(),
     supports_static_listing = False,
     deps = [

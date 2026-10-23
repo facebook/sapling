@@ -107,44 +107,6 @@ cpp_lionhead_harness(
     ],
 )
 
-# The LMDB content store that Overlay pairs with the InMemory and LMDB inode
-# catalogs. Not a parser: createOverlayFile hands the input to
-# LMDBStoreInterface::saveBlob as one iovec, and an empty input is the
-# null-base, zero-length iovec of T289739917.
-cpp_lionhead_harness(
-    name = "OverlayLmdbFileContentStoreFuzz",
-    srcs = ["OverlayLmdbFuzz.cpp"],
-    annotations = [
-        lh.PathAnnotation(
-            alert = True,
-            include_path_globs = [
-                "fbcode/eden/fs/inodes/lmdbcatalog/**/*",
-            ],
-            target_symbols = [
-                "facebook::eden::LMDBFileContentStore::createOverlayFile$",
-                "facebook::eden::LMDBStoreInterface::saveBlob$",
-            ],
-        ),
-    ],
-    compatible_with = [
-        "ovr_config//os:linux",
-    ],
-    context_task = "T139646881",
-    ftest_name = ("OverlayLmdb", "create_overlay_file"),
-    metadata = edenfs_metadata,
-    deps = [
-        "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
-        ":overlay_file_fuzz_fixture",
-        "//eden/common/testharness:temp_file",
-        "//eden/common/utils:path",
-        "//eden/fs/inodes:inode_number",
-        "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
-        "//eden/fs/telemetry:structured_logger",
-        "//folly:range",
-        "//folly/testing:test_util",
-    ],
-)
-
 cpp_binary(
     name = "overlay_fuzz_seed_corpus",
     srcs = ["OverlayFuzzSeedCorpus.cpp"],

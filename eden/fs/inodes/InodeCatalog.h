@@ -150,7 +150,7 @@ class InodeCatalog {
    * Whether this catalog can use the directory write-ahead log (WAL) to
    * defer full `saveOverlayDir` writes. The WAL is a file-system based
    * mechanism specific to the legacy `Fs*` catalogs; other backends
-   * (LMDB, Sqlite, in-memory) manage their own durability and do not
+   * (Sqlite, in-memory) manage their own durability and do not
    * use it.
    *
    * Pure virtual so adding a new `InodeCatalog` subclass forces an explicit

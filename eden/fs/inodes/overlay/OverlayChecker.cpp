@@ -659,8 +659,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       InodeNumber number,
       const AbsolutePath& archivePath,
       mode_t mode) const {
-    auto input = std::get<folly::File>(repair.fcs()->openFile(
-        number, FsFileContentStore::kHeaderIdentifierFile));
+    auto input = repair.fcs()->openFile(
+        number, FsFileContentStore::kHeaderIdentifierFile);
 
     // If the file is a symlink, try to create the file in the archive
     // directory as a symlink.
@@ -1996,14 +1996,10 @@ bool OverlayChecker::isContentlessOrphanFile(const fsck::InodeInfo& info) {
     return false;
   }
   try {
-    auto opened = impl_->fcs->openFileNoVerify(info.number);
-    auto* file = std::get_if<folly::File>(&opened);
-    if (!file) {
-      return false;
-    }
+    auto file = impl_->fcs->openFileNoVerify(info.number);
     struct stat st{};
     folly::checkUnixError(
-        fstat(file->fd(), &st), "failed to fstat orphan overlay file");
+        fstat(file.fd(), &st), "failed to fstat orphan overlay file");
     return st.st_size <= static_cast<off_t>(FsFileContentStore::kHeaderLength);
   } catch (const std::exception&) {
     // Let the normal orphan handling report unreadable files.

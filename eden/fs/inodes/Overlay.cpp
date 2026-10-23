@@ -57,12 +57,6 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/EdenError.h"
 
-#if !defined(_WIN32) && EDEN_HAVE_LMDB
-#include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual
-#include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h" // @manual
-#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
-#endif
-
 namespace facebook::eden {
 
 namespace {
@@ -137,8 +131,6 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 #if !EDEN_HAVE_SQLITE3
   (void)localDir;
   (void)logger;
-#endif
-#if !EDEN_HAVE_SQLITE3 && !EDEN_HAVE_LMDB
   (void)inodeCatalogOptions;
   (void)config;
 #endif
@@ -199,9 +191,6 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
       inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
-  } else if (inodeCatalogType == InodeCatalogType::LMDB) {
-    throw std::runtime_error(
-        "LMDB overlay type is not supported. Please reclone.");
   }
 #if EDEN_HAVE_SQLITE3
   XLOG(DBG4, "Sqlite overlay being used.");
@@ -211,21 +200,6 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
       "Sqlite overlay type is not supported. Please reclone.");
 #endif
 #else
-  if (inodeCatalogType == InodeCatalogType::LMDB) {
-#if EDEN_HAVE_LMDB
-    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-      XLOG(DBG4, "Buffered LMDB overlay being used");
-      return std::make_unique<BufferedLMDBInodeCatalog>(
-          static_cast<LMDBFileContentStore*>(fileContentStore), config);
-    }
-    XLOG(DBG4, "LMDB overlay being used");
-    return std::make_unique<LMDBInodeCatalog>(
-        static_cast<LMDBFileContentStore*>(fileContentStore));
-#else
-    throw std::runtime_error(
-        "LMDB overlay type is not supported. Please reclone.");
-#endif
-  }
   if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     XLOG(DBG4, "LegacyDev overlay being used.");
     return std::make_unique<FsInodeCatalogDev>(
@@ -246,7 +220,6 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 
 std::unique_ptr<FileContentStore> makeFileContentStore(
     AbsolutePathPiece localDir,
-    const std::shared_ptr<EdenFsEventsLogger>& logger,
     InodeCatalogType inodeCatalogType,
     bool directFileCreate,
     bool cacheWalFiles,
@@ -254,30 +227,18 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
     WalFormat walFormat) {
 #ifdef _WIN32
   (void)localDir;
-  (void)logger;
+  (void)inodeCatalogType;
   (void)directFileCreate;
   (void)cacheWalFiles;
   (void)walFileCacheSize;
   (void)walFormat;
   return nullptr;
 #else
-  // LegacyEphemeral only applies to the inode catalog, not the file content
-  // store
-  if (inodeCatalogType == InodeCatalogType::Legacy ||
-      inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
-    return std::make_unique<FsFileContentStore>(
-        localDir, directFileCreate, cacheWalFiles, walFileCacheSize, walFormat);
-  } else if (inodeCatalogType == InodeCatalogType::LegacyDev) {
+  if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     return std::make_unique<FsFileContentStoreDev>(localDir);
-  } else {
-#if EDEN_HAVE_LMDB
-    return std::make_unique<LMDBFileContentStore>(localDir, logger);
-#else
-    (void)localDir;
-    (void)logger;
-    return nullptr;
-#endif
   }
+  return std::make_unique<FsFileContentStore>(
+      localDir, directFileCreate, cacheWalFiles, walFileCacheSize, walFormat);
 #endif
 }
 } // namespace
@@ -294,9 +255,14 @@ std::shared_ptr<Overlay> Overlay::create(
     ErrorLogger& errorLogger,
     EdenStatsPtr stats,
     const EdenConfig& config) {
-  if (!folly::kIsWindows && inodeCatalogType == InodeCatalogType::InMemory) {
+  if (!folly::kIsWindows &&
+      (inodeCatalogType == InodeCatalogType::InMemory ||
+       inodeCatalogType == InodeCatalogType::Sqlite)) {
     throw std::runtime_error(
-        "InMemory overlay type is only supported on Windows.");
+        fmt::format(
+            "{} overlay type is only supported on Windows.",
+            FieldConverter<InodeCatalogType>{}.toDebugString(
+                inodeCatalogType)));
   }
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
@@ -341,7 +307,6 @@ Overlay::Overlay(
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(
           localDir,
-          logger,
           inodeCatalogType,
           config.experimentalOverlayDirectFileCreate.getValue(),
           config.experimentalOverlayCacheWalFiles.getValue(),
@@ -442,14 +407,6 @@ void Overlay::close() {
 #endif // !_WIN32
 
   inodeCatalog_->close(optNextInodeNumber);
-  // TODO(helsel): if SQLiteInodeCatalog maintained a pointer to the
-  // fileContentStore, it could call close() on the core in its own close()
-  // method. We could get rid of this codeblock in that case.
-  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy &&
-      inodeCatalogType_ != InodeCatalogType::LegacyDev &&
-      inodeCatalogType_ != InodeCatalogType::LegacyEphemeral) {
-    fileContentStore_->close();
-  }
 }
 
 bool Overlay::isClosed() {
@@ -521,35 +478,8 @@ void Overlay::initOverlay(
   IORequest req{this};
   auto optNextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
-  if (fileContentStore_ && inodeCatalogType_ == InodeCatalogType::Sqlite) {
-    // Initialize the file content store after the inode catalog has been.
-    // The fileContentStore will only exist on non-Windows platforms.
-    //
-    // We only need to do this for Sqlite overlays because they use a Legacy
-    // FileContentStore on non-Windows platforms. Other InodeCatalogTypes use
-    // their corresponding FileContentStore, meaning calling `initialize` here
-    // would double-initialize the FileContentStore the objects.
-    //
-    // If we had a SQLiteFileContentStore, this code block would be unnecessary.
-    // Alternatively, if SqliteInodeCatalog maintained a pointer to the
-    // fileContentStore, it could call `initialize` on the fileContentStore in
-    // its own `initialize` method and also make this code block unnecessary.
-    // TODO(helsel): teach SqliteInodeCatalog to manage its own fileContentStore
-    fileContentStore_->initialize(/*createIfNonExisting=*/true);
-  }
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32
-    // FSCK is not currently supported for LMDB overlays. If we cannot load the
-    // next inode number, then we cannot continue. LMDB should always be able to
-    // load the inode number, if this case is hit, then the assumption about
-    // LMDB being resilient is incorrect (unless the user manually corrupted
-    // their overlay directory).
-    if (inodeCatalogType_ == InodeCatalogType::LMDB) {
-      throw std::runtime_error(
-          "Corrupted LMDB overlay " + localDir_.asString() +
-          ": could not load next inode number");
-    }
-
     if (inodeCatalogType_ == InodeCatalogType::LegacyEphemeral) {
       throw std::runtime_error(
           "EphemeralFsInodeCatalog::initOverlay should either throw or always "
@@ -1631,9 +1561,7 @@ Overlay::tryClaimPreparedFile(folly::ByteRange contents) {
     std::lock_guard<std::mutex> guard{preallocMutex_};
     if (preallocPool_.empty()) {
       stats_->increment(&OverlayStats::preallocFileMissed);
-      if (!preallocBroken_) {
-        preallocCondVar_.notify_one();
-      }
+      preallocCondVar_.notify_one();
       return std::nullopt;
     }
     prepared = std::move(preallocPool_.back());
@@ -1703,7 +1631,6 @@ std::optional<InodeNumber> Overlay::tryClaimPreparedDir() {
 void Overlay::preallocThreadLoop() {
   folly::setThreadName("OverlayPrealloc");
   bool backoff = false;
-  bool filePoolBroken = false;
   // Reserving inode numbers writes to the overlay directory and fails the
   // same way the file and directory writes below do. An exception escaping
   // this thread would terminate the process.
@@ -1730,16 +1657,14 @@ void Overlay::preallocThreadLoop() {
       } else {
         preallocCondVar_.wait(lock, [&] {
           return preallocStop_ ||
-              (!preallocBroken_ &&
-               preallocPool_.size() < filePreallocPoolSize_) ||
+              preallocPool_.size() < filePreallocPoolSize_ ||
               preallocDirPool_.size() < dirPreallocPoolSize_;
         });
       }
       if (preallocStop_) {
         return;
       }
-      wantFiles =
-          preallocBroken_ ? 0 : filePreallocPoolSize_ - preallocPool_.size();
+      wantFiles = filePreallocPoolSize_ - preallocPool_.size();
       wantDirs = dirPreallocPoolSize_ - preallocDirPool_.size();
     }
     for (size_t i = 0; i < wantFiles; ++i) {
@@ -1752,33 +1677,12 @@ void Overlay::preallocThreadLoop() {
       }
       auto number = *allocated;
       try {
-        auto created =
+        auto file =
             fileContentStore_->createOverlayFile(number, folly::ByteRange{});
-        auto* file = std::get_if<folly::File>(&created);
-        if (!file) {
-          XLOG(
-              WARN,
-              "overlay file preallocation is not supported by this "
-              "FileContentStore; disabling the file pool");
-          filePoolBroken = true;
-          // The store may have persisted the file even though it did not
-          // return an fd (the LMDB store does); remove it so the probe
-          // leaves no orphan behind.
-          try {
-            fileContentStore_->removeOverlayFile(number);
-          } catch (const std::exception& removeEx) {
-            XLOGF(
-                WARN,
-                "failed to remove prealloc probe file {}: {}",
-                number,
-                folly::exceptionStr(removeEx));
-          }
-          break;
-        }
         // A whole batch takes milliseconds, long enough for claimers to
         // drain the pool, so each entry is published as soon as it exists.
         std::lock_guard<std::mutex> guard{preallocMutex_};
-        preallocPool_.push_back(PreparedFile{number, std::move(*file)});
+        preallocPool_.push_back(PreparedFile{number, std::move(file)});
       } catch (const std::exception& ex) {
         // Likely ENOSPC or an unusable overlay directory. Keep what we
         // have and retry after a delay instead of spinning.
@@ -1828,18 +1732,6 @@ void Overlay::preallocThreadLoop() {
         backoff = true;
         break;
       }
-    }
-    bool allPoolsInactive;
-    {
-      std::lock_guard<std::mutex> guard{preallocMutex_};
-      if (filePoolBroken) {
-        preallocBroken_ = true;
-      }
-      allPoolsInactive = (filePreallocPoolSize_ == 0 || preallocBroken_) &&
-          dirPreallocPoolSize_ == 0;
-    }
-    if (allPoolsInactive) {
-      return;
     }
   }
 }

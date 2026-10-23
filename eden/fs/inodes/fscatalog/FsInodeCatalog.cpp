@@ -1850,11 +1850,11 @@ FsFileContentStore::createHeader(
   return headerStorage;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::openFile(
+folly::File FsFileContentStore::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
   // Open the overlay file
-  auto file = std::get<folly::File>(openFileNoVerify(inodeNumber));
+  auto file = openFileNoVerify(inodeNumber);
 
   // Read the contents
   std::string contents;
@@ -1871,8 +1871,7 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::openFile(
   return file;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::openFileNoVerify(
-    InodeNumber inodeNumber) {
+folly::File FsFileContentStore::openFileNoVerify(InodeNumber inodeNumber) {
   auto path = getFilePath(inodeNumber);
   return openFileNoVerifyWithFlags(
       dirFile_.fd(), localDir_, inodeNumber, path, O_RDWR);
@@ -2018,7 +2017,7 @@ folly::File FsFileContentStore::createOverlayFileImpl(
   return file;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
+folly::File FsFileContentStore::createOverlayFile(
     InodeNumber inodeNumber,
     ByteRange contents) {
   auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion);
@@ -2036,7 +2035,7 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
       /*removeOnFailure=*/true);
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
+folly::File FsFileContentStore::createOverlayFile(
     InodeNumber inodeNumber,
     const IOBuf& contents) {
   // In the common case where there is just one element in the chain, use the
@@ -2153,7 +2152,7 @@ std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfo(
     InodeNumber number) {
   folly::File file;
   try {
-    file = std::get<folly::File>(openFileNoVerify(number));
+    file = openFileNoVerify(number);
   } catch (const std::exception& ex) {
     return makeInodeError(
         number, "error opening file: ", folly::exceptionStr(ex));

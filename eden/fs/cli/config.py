@@ -134,7 +134,6 @@ SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
     "legacy",
     "sqlite",
     "inmemory",
-    "lmdb",
     "legacydev",
     "legacyephemeral",
 }

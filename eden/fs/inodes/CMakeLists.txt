@@ -80,7 +80,6 @@ else()
     PUBLIC
       eden_fuse
       eden_fscatalog
-      eden_lmdb_catalog
       eden_overlay_checker
   )
 endif()
@@ -119,5 +118,4 @@ add_subdirectory(overlay)
 add_subdirectory(fscatalog)
 add_subdirectory(memcatalog)
 add_subdirectory(sqlitecatalog)
-add_subdirectory(lmdbcatalog)
 add_subdirectory(test)

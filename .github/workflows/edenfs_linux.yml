@@ -54,9 +54,6 @@ jobs:
     - name: Install Rust Stable
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Fetch lmdb
-      if: ${{ steps.paths.outputs.lmdb_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests lmdb
     - name: Fetch ninja
       if: ${{ steps.paths.outputs.ninja_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests ninja

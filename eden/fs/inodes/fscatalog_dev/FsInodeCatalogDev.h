@@ -79,7 +79,7 @@ class FsFileContentStoreDev : public FileContentStore {
   /**
    * Helper function that creates an overlay file for a new FileInode.
    */
-  std::variant<folly::File, InodeNumber> createOverlayFile(
+  folly::File createOverlayFile(
       InodeNumber inodeNumber,
       folly::ByteRange contents) override;
 
@@ -87,7 +87,7 @@ class FsFileContentStoreDev : public FileContentStore {
    * Helper function to write an overlay file for a FileInode with existing
    * contents.
    */
-  std::variant<folly::File, InodeNumber> createOverlayFile(
+  folly::File createOverlayFile(
       InodeNumber inodeNumber,
       const folly::IOBuf& contents) override;
 
@@ -100,15 +100,13 @@ class FsFileContentStoreDev : public FileContentStore {
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header, and returns the file.
    */
-  std::variant<folly::File, InodeNumber> openFile(
-      InodeNumber inodeNumber,
-      folly::StringPiece headerId) override;
+  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId)
+      override;
 
   /**
    * Open an existing overlay file without verifying the header.
    */
-  std::variant<folly::File, InodeNumber> openFileNoVerify(
-      InodeNumber inodeNumber) override;
+  folly::File openFileNoVerify(InodeNumber inodeNumber) override;
 
   bool hasOverlayFile(InodeNumber inodeNumber) override;
 

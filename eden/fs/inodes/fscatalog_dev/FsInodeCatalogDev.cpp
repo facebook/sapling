@@ -445,11 +445,11 @@ FsFileContentStoreDev::createHeader(
   return headerStorage;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStoreDev::openFile(
+folly::File FsFileContentStoreDev::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
   // Open the overlay file
-  auto file = std::get<folly::File>(openFileNoVerify(inodeNumber));
+  auto file = openFileNoVerify(inodeNumber);
 
   // Read the contents
   std::string contents;
@@ -466,8 +466,7 @@ std::variant<folly::File, InodeNumber> FsFileContentStoreDev::openFile(
   return file;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStoreDev::openFileNoVerify(
-    InodeNumber inodeNumber) {
+folly::File FsFileContentStoreDev::openFileNoVerify(InodeNumber inodeNumber) {
   auto path = FsFileContentStoreDev::getFilePath(inodeNumber);
 
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
@@ -587,7 +586,7 @@ folly::File FsFileContentStoreDev::createOverlayFileImpl(
   return file;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStoreDev::createOverlayFile(
+folly::File FsFileContentStoreDev::createOverlayFile(
     InodeNumber inodeNumber,
     ByteRange contents) {
   auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion);
@@ -600,7 +599,7 @@ std::variant<folly::File, InodeNumber> FsFileContentStoreDev::createOverlayFile(
   return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStoreDev::createOverlayFile(
+folly::File FsFileContentStoreDev::createOverlayFile(
     InodeNumber inodeNumber,
     const IOBuf& contents) {
   // In the common case where there is just one element in the chain, use the
@@ -708,7 +707,7 @@ std::optional<fsck::InodeInfo> FsFileContentStoreDev::loadInodeInfo(
   // Open the inode file
   folly::File file;
   try {
-    file = std::get<folly::File>(openFileNoVerify(number));
+    file = openFileNoVerify(number);
   } catch (const std::exception& ex) {
     return inodeError("error opening file: ", folly::exceptionStr(ex));
   }

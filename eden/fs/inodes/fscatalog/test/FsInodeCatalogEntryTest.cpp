@@ -427,8 +427,8 @@ TEST_F(FsInodeCatalogEntryTest, emptyDirByteIdentical) {
   catalog_->saveOverlayDir(InodeNumber{60}, overlay::OverlayDir{odir});
   saveFromOverlayDir(*catalog_, InodeNumber{61}, odir);
 
-  auto file1 = std::get<folly::File>(store_->openFileNoVerify(InodeNumber{60}));
-  auto file2 = std::get<folly::File>(store_->openFileNoVerify(InodeNumber{61}));
+  auto file1 = store_->openFileNoVerify(InodeNumber{60});
+  auto file2 = store_->openFileNoVerify(InodeNumber{61});
 
   std::string contents1, contents2;
   ASSERT_TRUE(folly::readFile(file1.fd(), contents1));
@@ -451,8 +451,8 @@ TEST_F(FsInodeCatalogEntryTest, singleEntryByteIdentical) {
   catalog_->saveOverlayDir(InodeNumber{62}, overlay::OverlayDir{odir});
   saveFromOverlayDir(*catalog_, InodeNumber{63}, odir);
 
-  auto file1 = std::get<folly::File>(store_->openFileNoVerify(InodeNumber{62}));
-  auto file2 = std::get<folly::File>(store_->openFileNoVerify(InodeNumber{63}));
+  auto file1 = store_->openFileNoVerify(InodeNumber{62});
+  auto file2 = store_->openFileNoVerify(InodeNumber{63});
 
   std::string contents1, contents2;
   ASSERT_TRUE(folly::readFile(file1.fd(), contents1));

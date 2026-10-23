@@ -780,7 +780,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::vector<PreparedFile> preallocPool_;
   std::vector<InodeNumber> preallocDirPool_;
   bool preallocStop_{false};
-  bool preallocBroken_{false};
   std::thread preallocThread_;
 #endif // !_WIN32
 

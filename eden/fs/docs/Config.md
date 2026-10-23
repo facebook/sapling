@@ -44,7 +44,7 @@ source code.
 ```
 [overlay]
 buffered = true
-inode-catalog-type = "lmdb"
+inode-reservation = true
 
 [experimental]
 enable-nfs-server = false
@@ -68,7 +68,7 @@ In the given example, EdenFS would get the config values from the following
 locations
 
 - `overlay:buffered = true # /etc/eden/edenfs.rc`
-- `overlay:inode-catalog-type = "lmdb" # /etc/eden/edenfs.rc`
+- `overlay:inode-reservation = true # /etc/eden/edenfs.rc`
 - `experimental:enable-nfs-server = true # /etc/eden/edenfs_dynamic.rc, overrides /etc/eden/edenfs.rc`
 - `mount:readdir-prefetch = "trees" # ~/.edenrc, doesn't exist in any /etc/eden files`
 

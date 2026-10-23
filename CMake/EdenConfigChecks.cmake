@@ -77,11 +77,6 @@ include_directories(${BLAKE3_INCLUDE_DIR})
 # dependencies, since we have alternate LocalStore implementations.
 find_package(Sqlite3 REQUIRED)
 set(EDEN_HAVE_SQLITE3 ${SQLITE3_FOUND})
-if (NOT WIN32)
-  find_package(LMDB REQUIRED)
-  set(EDEN_HAVE_LMDB ${LMDB_FOUND})
-  include_directories(${LMDB_INCLUDE_DIR})
-endif()
 
 find_package(python-toml REQUIRED)
 find_package(python-filelock REQUIRED)

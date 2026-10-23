@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <variant>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -76,24 +75,23 @@ class FileContentStore {
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header, and returns the file.
    */
-  virtual std::variant<folly::File, InodeNumber> openFile(
+  virtual folly::File openFile(
       InodeNumber inodeNumber,
       folly::StringPiece headerId) = 0;
 
   /**
    * Open an existing overlay file without verifying the header.
    */
-  virtual std::variant<folly::File, InodeNumber> openFileNoVerify(
-      InodeNumber inodeNumber) = 0;
+  virtual folly::File openFileNoVerify(InodeNumber inodeNumber) = 0;
 
   /**
    * Helper function that creates an overlay file for a new FileInode.
    *
-   * When a folly::File is returned, its offset is at the end of the written
-   * data (the header plus `contents`), so the caller can append further
-   * contents without seeking.
+   * The returned file's offset is at the end of the written data (the header
+   * plus `contents`), so the caller can append further contents without
+   * seeking.
    */
-  virtual std::variant<folly::File, InodeNumber> createOverlayFile(
+  virtual folly::File createOverlayFile(
       InodeNumber inodeNumber,
       folly::ByteRange contents) = 0;
 
@@ -101,7 +99,7 @@ class FileContentStore {
    * Helper function to write an overlay file for a FileInode with existing
    * contents.
    */
-  virtual std::variant<folly::File, InodeNumber> createOverlayFile(
+  virtual folly::File createOverlayFile(
       InodeNumber inodeNumber,
       const folly::IOBuf& contents) = 0;
 #endif

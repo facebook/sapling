@@ -7,35 +7,35 @@
 
 #include "eden/fs/config/InodeCatalogType.h"
 
+#include <algorithm>
+#include <array>
+#include <utility>
+
 namespace facebook::eden {
 
 namespace {
 
-constexpr auto inodeCatalogTypeStr = [] {
-  std::array<string_view, 8> mapping{};
-  mapping[folly::to_underlying(InodeCatalogType::Legacy)] = "Legacy";
-  mapping[folly::to_underlying(InodeCatalogType::Sqlite)] = "Sqlite";
-  mapping[folly::to_underlying(InodeCatalogType::InMemory)] = "InMemory";
-  mapping[folly::to_underlying(InodeCatalogType::LMDB)] = "LMDB";
-  mapping[folly::to_underlying(InodeCatalogType::LegacyDev)] = "LegacyDev";
-  mapping[folly::to_underlying(InodeCatalogType::LegacyEphemeral)] =
-      "LegacyEphemeral";
-  return mapping;
-}();
+constexpr std::array<std::pair<InodeCatalogType, std::string_view>, 5>
+    kInodeCatalogTypeNames{{
+        {InodeCatalogType::Legacy, "Legacy"},
+        {InodeCatalogType::Sqlite, "Sqlite"},
+        {InodeCatalogType::InMemory, "InMemory"},
+        {InodeCatalogType::LegacyDev, "LegacyDev"},
+        {InodeCatalogType::LegacyEphemeral, "LegacyEphemeral"},
+    }};
 
 } // namespace
 
 folly::Expected<InodeCatalogType, std::string> inodeCatalogTypeFromString(
     std::string_view value) {
-  for (auto type = 0ul; type < inodeCatalogTypeStr.size(); type++) {
-    auto typeStr = inodeCatalogTypeStr[type];
+  for (const auto& [type, name] : kInodeCatalogTypeNames) {
     if (std::equal(
             value.begin(),
             value.end(),
-            typeStr.begin(),
-            typeStr.end(),
+            name.begin(),
+            name.end(),
             folly::AsciiCaseInsensitive())) {
-      return static_cast<InodeCatalogType>(type);
+      return type;
     }
   }
 
@@ -53,7 +53,12 @@ FieldConverter<InodeCatalogType>::fromString(
 
 std::string FieldConverter<InodeCatalogType>::toDebugString(
     InodeCatalogType value) const {
-  return std::string{inodeCatalogTypeStr[folly::to_underlying(value)]};
+  for (const auto& [type, name] : kInodeCatalogTypeNames) {
+    if (type == value) {
+      return std::string{name};
+    }
+  }
+  return fmt::format("InodeCatalogType({})", folly::to_underlying(value));
 }
 
 } // namespace facebook::eden

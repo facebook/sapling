@@ -411,6 +411,16 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
         inodeCatalogTypeConverter.fromString(*inodeCatalogTypeStr, {});
     if (result.hasValue()) {
       inodeCatalogType = result.value();
+    } else if (!folly::kIsWindows) {
+      // On Linux and macOS the overlay holds the only copy of materialized
+      // data, and opening it with a different catalog type would discard it.
+      // Windows overlays are rebuilt from the on-disk PrjFS state, so falling
+      // back to the default catalog is safe there.
+      throwf<std::runtime_error>(
+          "unsupported inode-catalog-type '{}' in {}: this overlay format is "
+          "no longer supported, reclone the checkout",
+          *inodeCatalogTypeStr,
+          configPath);
     }
   }
   config->inodeCatalogType_ = inodeCatalogType;

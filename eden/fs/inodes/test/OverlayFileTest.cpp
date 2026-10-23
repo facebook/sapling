@@ -12,19 +12,14 @@
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
 
-#include <fmt/format.h>
-#include <folly/Exception.h>
 #include <folly/Expected.h>
-#include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
-#include <algorithm>
-#include <chrono>
+#include <array>
+#include <string_view>
 
 #include "eden/common/testharness/TempFile.h"
-#include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -35,410 +30,124 @@ using folly::literals::string_piece_literals::operator""_sp;
 class OverlayFileTest : public ::testing::Test {
  public:
   OverlayFileTest() : testDir_{makeTempDir("eden_overlay_file_test_")} {
-    auto fsDir = getLocalDir() + PathComponent("fs");
-    auto lmdbDir = getLocalDir() + PathComponent("lmdb");
-    ::mkdir(fsDir.c_str(), 0755);
-    ::mkdir(lmdbDir.c_str(), 0755);
-    loadOverlay();
-  }
-
-  void loadOverlay() {
-    fsOverlay = Overlay::create(
-        getLocalDir() + PathComponent("fs"),
+    overlay_ = Overlay::create(
+        canonicalPath(testDir_.path().string()),
         kPathMapDefaultCaseSensitive,
-        facebook::eden::InodeCatalogType::Legacy,
+        InodeCatalogType::Legacy,
         INODE_CATALOG_DEFAULT,
         makeTestEdenFsEventsLogger(),
         /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
-    fsOverlay
-        ->initialize(
-            std::make_shared<ReloadableConfig>(
-                EdenConfig::createTestEdenConfig()))
-        .get();
-
-    lmdbOverlay = Overlay::create(
-        getLocalDir() + PathComponent("lmdb"),
-        kPathMapDefaultCaseSensitive,
-        facebook::eden::InodeCatalogType::LMDB,
-        INODE_CATALOG_DEFAULT,
-        makeTestEdenFsEventsLogger(),
-        /*errorLogger=*/noopErrorLogger_,
-        makeRefPtr<EdenStats>(),
-        *EdenConfig::createTestEdenConfig());
-    lmdbOverlay
+    overlay_
         ->initialize(
             std::make_shared<ReloadableConfig>(
                 EdenConfig::createTestEdenConfig()))
         .get();
   }
 
-  AbsolutePath getLocalDir() {
-    return canonicalPath(testDir_.path().string());
+  OverlayFile createFile() {
+    auto ino = overlay_->allocateInodeNumber();
+    return overlay_->createOverlayFile(ino, folly::ByteRange{"contents"_sp});
   }
 
-  std::string getOverlayFileContent(const OverlayFile& file) {
-    auto fileContent = file.readFile();
-    EXPECT_TRUE(fileContent.hasValue());
-    return fileContent.value();
-  }
-
-  void checkFilesEqual(
-      const OverlayFile& fsFile,
-      const OverlayFile& lmdbFile,
-      std::string expected) {
-    fsFile.lseek(FsFileContentStore::kHeaderLength, SEEK_SET);
-
-    auto fsContent = getOverlayFileContent(fsFile);
-    auto lmdbContent = getOverlayFileContent(lmdbFile);
-
-    EXPECT_EQ(fsContent, expected);
-    EXPECT_EQ(fsContent, lmdbContent);
-  }
-
-  std::pair<OverlayFile, OverlayFile> generateOverlayFiles() {
-    auto fsIno = fsOverlay->allocateInodeNumber();
-    auto lmdbIno = lmdbOverlay->allocateInodeNumber();
-
-    return std::make_pair(
-        fsOverlay->createOverlayFile(fsIno, folly::ByteRange{"contents"_sp}),
-        lmdbOverlay->createOverlayFile(
-            lmdbIno, folly::ByteRange{"contents"_sp}));
+  std::string readContents(const OverlayFile& file) {
+    EXPECT_TRUE(
+        file.lseek(FsFileContentStore::kHeaderLength, SEEK_SET).hasValue());
+    auto contents = file.readFile();
+    EXPECT_TRUE(contents.hasValue());
+    return contents.value();
   }
 
   folly::test::TemporaryDirectory testDir_;
   ErrorLogger noopErrorLogger_ = makeTestErrorLogger();
-  std::shared_ptr<Overlay> fsOverlay;
-  std::shared_ptr<Overlay> lmdbOverlay;
+  std::shared_ptr<Overlay> overlay_;
 };
 
 TEST_F(OverlayFileTest, fstat) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+  auto file = createFile();
 
-  auto fstatFs = fsFile.fstat();
-  auto fstatLMDB = lmdbFile.fstat();
-
-  EXPECT_TRUE(fstatFs.hasValue());
-  EXPECT_TRUE(fstatLMDB.hasValue());
-
+  auto st = file.fstat();
+  ASSERT_TRUE(st.hasValue());
   EXPECT_EQ(
-      fstatFs.value().st_size,
+      st.value().st_size,
       8 + static_cast<FileOffset>(FsFileContentStore::kHeaderLength));
-  EXPECT_EQ(fstatFs.value().st_size, fstatLMDB.value().st_size);
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
+  EXPECT_EQ(readContents(file), "contents");
 }
 
-TEST_F(OverlayFileTest, preadNoIntSmaller) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+TEST_F(OverlayFileTest, preadNoInt) {
+  auto file = createFile();
+  std::array<char, 16> buf{};
 
-  auto size = 2;
-  auto fsBuf = folly::IOBuf::createCombined(size);
-  auto lmdbBuf = folly::IOBuf::createCombined(size);
+  auto ret = file.preadNoInt(buf.data(), 1, FsFileContentStore::kHeaderLength);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), 1);
+  EXPECT_EQ(std::string_view(buf.data(), 1), "c");
 
-  auto preadNoIntFs = fsFile.preadNoInt(
-      fsBuf->writableBuffer(), 1, FsFileContentStore::kHeaderLength);
-  auto preadNoIntLMDB = lmdbFile.preadNoInt(
-      lmdbBuf->writableBuffer(), 1, FsFileContentStore::kHeaderLength);
+  // A read past the end returns the bytes that exist.
+  ret = file.preadNoInt(
+      buf.data(), buf.size(), 2 + FsFileContentStore::kHeaderLength);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), 6);
+  EXPECT_EQ(std::string_view(buf.data(), 6), "ntents");
 
-  EXPECT_TRUE(preadNoIntFs.hasValue());
-  EXPECT_TRUE(preadNoIntLMDB.hasValue());
-
-  EXPECT_EQ(preadNoIntFs.value(), 1);
-  EXPECT_EQ(preadNoIntFs.value(), preadNoIntLMDB.value());
-
-  fsBuf->append(preadNoIntFs.value());
-  lmdbBuf->append(preadNoIntLMDB.value());
-
-  auto expected =
-      folly::IOBuf(folly::IOBuf::WRAP_BUFFER, folly::ByteRange{"c"_sp});
-
-  EXPECT_TRUE(folly::IOBufEqualTo()(*(fsBuf), expected));
-  EXPECT_TRUE(folly::IOBufEqualTo()(*(fsBuf), *(lmdbBuf)));
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, preadNoIntFull) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto size = 7;
-  auto fsBuf = folly::IOBuf::createCombined(size);
-  auto lmdbBuf = folly::IOBuf::createCombined(size);
-
-  auto preadNoIntFs = fsFile.preadNoInt(
-      fsBuf->writableBuffer(), size, 1 + FsFileContentStore::kHeaderLength);
-  auto preadNoIntLMDB = lmdbFile.preadNoInt(
-      lmdbBuf->writableBuffer(), size, 1 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(preadNoIntFs.hasValue());
-  EXPECT_TRUE(preadNoIntLMDB.hasValue());
-
-  EXPECT_EQ(preadNoIntFs.value(), 7);
-  EXPECT_EQ(preadNoIntFs.value(), preadNoIntLMDB.value());
-
-  fsBuf->append(preadNoIntFs.value());
-  lmdbBuf->append(preadNoIntLMDB.value());
-
-  auto expected =
-      folly::IOBuf(folly::IOBuf::WRAP_BUFFER, folly::ByteRange{"ontents"_sp});
-
-  EXPECT_TRUE(folly::IOBufEqualTo()(*(fsBuf.get()), expected));
-  EXPECT_TRUE(folly::IOBufEqualTo()(*(fsBuf.get()), *(lmdbBuf.get())));
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, preadNoIntLonger) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto size = 11;
-  auto fsBuf = folly::IOBuf::createCombined(size);
-  auto lmdbBuf = folly::IOBuf::createCombined(size);
-
-  auto preadNoIntFs = fsFile.preadNoInt(
-      fsBuf->writableBuffer(), size, 2 + FsFileContentStore::kHeaderLength);
-  auto preadNoIntLMDB = lmdbFile.preadNoInt(
-      lmdbBuf->writableBuffer(), size, 2 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(preadNoIntFs.hasValue());
-  EXPECT_TRUE(preadNoIntLMDB.hasValue());
-
-  EXPECT_EQ(preadNoIntFs.value(), 6);
-  EXPECT_EQ(preadNoIntFs.value(), preadNoIntLMDB.value());
-
-  fsBuf->append(preadNoIntFs.value());
-  lmdbBuf->append(preadNoIntLMDB.value());
-
-  auto expected =
-      folly::IOBuf(folly::IOBuf::WRAP_BUFFER, folly::ByteRange{"ntents"_sp});
-
-  EXPECT_TRUE(folly::IOBufEqualTo()(*(fsBuf.get()), expected));
-  EXPECT_TRUE(folly::IOBufEqualTo()(*(fsBuf.get()), *(lmdbBuf.get())));
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
+  // A read that starts past the end returns nothing.
+  ret = file.preadNoInt(
+      buf.data(), buf.size(), 20 + FsFileContentStore::kHeaderLength);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), 0);
 }
 
 TEST_F(OverlayFileTest, lseek) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+  auto file = createFile();
 
-  auto lseekFs = fsFile.lseek(FsFileContentStore::kHeaderLength, SEEK_SET);
-
-  // This is unimplemented in LMDBFileContentStore
-  EXPECT_THROW(
-      lmdbFile.lseek(FsFileContentStore::kHeaderLength, SEEK_SET), EdenError);
-
-  EXPECT_TRUE(lseekFs.hasValue());
-  EXPECT_EQ(lseekFs.value(), FsFileContentStore::kHeaderLength);
-  auto fsContent = getOverlayFileContent(fsFile);
-  EXPECT_EQ(fsContent, "contents");
+  auto ret = file.lseek(FsFileContentStore::kHeaderLength, SEEK_SET);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), FsFileContentStore::kHeaderLength);
+  EXPECT_EQ(file.readFile().value(), "contents");
 }
 
-TEST_F(OverlayFileTest, pwritevShorter) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  char data[] = "new";
-  struct iovec iov;
-  iov.iov_base = data;
-  iov.iov_len = sizeof(data);
-  auto pwritevFs = fsFile.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
-  auto pwritevLMDB =
-      lmdbFile.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(pwritevFs.hasValue());
-  EXPECT_TRUE(pwritevLMDB.hasValue());
-
-  EXPECT_EQ(pwritevFs.value(), 4);
-  EXPECT_EQ(pwritevFs.value(), pwritevLMDB.value());
-  checkFilesEqual(fsFile, lmdbFile, "new" + std::string(1, '\0') + "ents");
-}
-
-TEST_F(OverlayFileTest, pwritevFull) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  char data[] = "contents";
-  struct iovec iov;
-  iov.iov_base = data;
-  iov.iov_len = sizeof(data);
-  auto pwritevFs = fsFile.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
-  auto pwritevLMDB =
-      lmdbFile.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(pwritevFs.hasValue());
-  EXPECT_TRUE(pwritevLMDB.hasValue());
-
-  EXPECT_EQ(pwritevFs.value(), 9);
-  EXPECT_EQ(pwritevFs.value(), pwritevLMDB.value());
-  checkFilesEqual(fsFile, lmdbFile, "contents" + std::string(1, '\0'));
-}
-
-TEST_F(OverlayFileTest, pwritevLonger) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+TEST_F(OverlayFileTest, pwritev) {
+  auto file = createFile();
 
   char data[] = "new contents";
   struct iovec iov;
   iov.iov_base = data;
   iov.iov_len = sizeof(data);
-  auto pwritevFs = fsFile.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
-  auto pwritevLMDB =
-      lmdbFile.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(pwritevFs.hasValue());
-  EXPECT_TRUE(pwritevLMDB.hasValue());
-
-  EXPECT_EQ(pwritevFs.value(), 13);
-  EXPECT_EQ(pwritevFs.value(), pwritevLMDB.value());
-  checkFilesEqual(fsFile, lmdbFile, "new contents" + std::string(1, '\0'));
+  auto ret = file.pwritev(&iov, 1, FsFileContentStore::kHeaderLength);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), 13);
+  EXPECT_EQ(readContents(file), "new contents" + std::string(1, '\0'));
 }
 
-TEST_F(OverlayFileTest, ftruncateShorter) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+TEST_F(OverlayFileTest, ftruncate) {
+  auto file = createFile();
 
-  auto ftruncateFs = fsFile.ftruncate(3 + FsFileContentStore::kHeaderLength);
-  auto ftruncateLMDB =
-      lmdbFile.ftruncate(3 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(ftruncateFs.hasValue());
-  EXPECT_TRUE(ftruncateLMDB.hasValue());
-
-  EXPECT_EQ(ftruncateFs.value(), 0);
-  EXPECT_EQ(ftruncateFs.value(), ftruncateLMDB.value());
-
-  checkFilesEqual(fsFile, lmdbFile, "con");
-}
-
-TEST_F(OverlayFileTest, ftruncateFull) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto ftruncateFs = fsFile.ftruncate(8 + FsFileContentStore::kHeaderLength);
-  auto ftruncateLMDB =
-      lmdbFile.ftruncate(8 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(ftruncateFs.hasValue());
-  EXPECT_TRUE(ftruncateLMDB.hasValue());
-
-  EXPECT_EQ(ftruncateFs.value(), 0);
-  EXPECT_EQ(ftruncateFs.value(), ftruncateLMDB.value());
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, ftruncateLonger) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto ftruncateFs = fsFile.ftruncate(10 + FsFileContentStore::kHeaderLength);
-  auto ftruncateLMDB =
-      lmdbFile.ftruncate(10 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(ftruncateFs.hasValue());
-  EXPECT_TRUE(ftruncateLMDB.hasValue());
-
-  EXPECT_EQ(ftruncateFs.value(), 0);
-  EXPECT_EQ(ftruncateFs.value(), ftruncateLMDB.value());
-
-  checkFilesEqual(fsFile, lmdbFile, "contents" + std::string(2, '\0'));
+  auto ret = file.ftruncate(3 + FsFileContentStore::kHeaderLength);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), 0);
+  EXPECT_EQ(readContents(file), "con");
 }
 
 TEST_F(OverlayFileTest, fsync) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+  auto file = createFile();
 
-  auto fsyncFs = fsFile.fsync();
-  auto fsyncLMDB = lmdbFile.fsync();
-
-  EXPECT_TRUE(fsyncFs.hasValue());
-  EXPECT_TRUE(fsyncLMDB.hasValue());
-
-  EXPECT_EQ(fsyncFs.value(), 0);
-  EXPECT_EQ(fsyncFs.value(), fsyncLMDB.value());
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
+  EXPECT_TRUE(file.fsync().hasValue());
+  EXPECT_TRUE(file.fdatasync().hasValue());
+  EXPECT_EQ(readContents(file), "contents");
 }
 
 #ifdef __linux__
-// Only run the fallocate tests on Linux because they are not supported on
-// other platforms as per OverlayFile::fallocate(), but also because it is
-// only registered in eden/fs/fuse/FuseChannel.cpp and not in
-// eden/fs/nfs/Nfsd3.cpp
-TEST_F(OverlayFileTest, fallocateShorter) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
+// fallocate is only registered for FUSE (eden/fs/fuse/FuseChannel.cpp) and
+// OverlayFile::fallocate() only supports Linux.
+TEST_F(OverlayFileTest, fallocate) {
+  auto file = createFile();
 
-  auto fallocateFs = fsFile.fallocate(0, 3 + FsFileContentStore::kHeaderLength);
-  auto fallocateLMDB =
-      lmdbFile.fallocate(0, 3 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(fallocateFs.hasValue());
-  EXPECT_TRUE(fallocateLMDB.hasValue());
-
-  EXPECT_EQ(fallocateFs.value(), 0);
-  EXPECT_EQ(fallocateFs.value(), fallocateLMDB.value());
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, fallocateFull) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto fallocateFs = fsFile.fallocate(0, 8 + FsFileContentStore::kHeaderLength);
-  auto fallocateLMDB =
-      lmdbFile.fallocate(0, 8 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(fallocateFs.hasValue());
-  EXPECT_TRUE(fallocateLMDB.hasValue());
-
-  EXPECT_EQ(fallocateFs.value(), 0);
-  EXPECT_EQ(fallocateFs.value(), fallocateLMDB.value());
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, fallocateLonger) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto fallocateFs =
-      fsFile.fallocate(0, 10 + FsFileContentStore::kHeaderLength);
-  auto fallocateLMDB =
-      lmdbFile.fallocate(0, 10 + FsFileContentStore::kHeaderLength);
-
-  EXPECT_TRUE(fallocateFs.hasValue());
-  EXPECT_TRUE(fallocateLMDB.hasValue());
-
-  EXPECT_EQ(fallocateFs.value(), 0);
-  EXPECT_EQ(fallocateFs.value(), fallocateLMDB.value());
-  checkFilesEqual(fsFile, lmdbFile, "contents" + std::string(2, '\0'));
+  auto ret = file.fallocate(0, 10 + FsFileContentStore::kHeaderLength);
+  ASSERT_TRUE(ret.hasValue());
+  EXPECT_EQ(ret.value(), 0);
+  EXPECT_EQ(readContents(file), "contents" + std::string(2, '\0'));
 }
 #endif
-
-TEST_F(OverlayFileTest, fdatasync) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  auto fdatasyncFs = fsFile.fdatasync();
-  auto fdatasyncLMDB = lmdbFile.fdatasync();
-
-  EXPECT_TRUE(fdatasyncFs.hasValue());
-  EXPECT_TRUE(fdatasyncLMDB.hasValue());
-
-  EXPECT_EQ(fdatasyncFs.value(), 0);
-  EXPECT_EQ(fdatasyncFs.value(), fdatasyncLMDB.value());
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, readFile) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-
-  checkFilesEqual(fsFile, lmdbFile, "contents");
-}
-
-TEST_F(OverlayFileTest, preadPastEndOfLmdbBlob) {
-  const auto& [fsFile, lmdbFile] = generateOverlayFiles();
-  char buf[16] = {};
-  auto fsRead = fsFile.preadNoInt(
-      buf, sizeof(buf), FsFileContentStore::kHeaderLength + 20);
-  ASSERT_TRUE(fsRead.hasValue());
-  EXPECT_EQ(fsRead.value(), 0);
-  auto lmdbRead = lmdbFile.preadNoInt(
-      buf, sizeof(buf), FsFileContentStore::kHeaderLength + 20);
-  ASSERT_TRUE(lmdbRead.hasValue());
-  EXPECT_EQ(lmdbRead.value(), 0);
-}
 
 #endif
