@@ -1836,11 +1836,16 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
     uint64_t walMinCompactionThreshold = 0,
     bool cacheWalFiles = true,
     bool useWal = true,
-    bool writeWalV2 = false) {
+    bool writeWalV2 = false,
+    std::optional<size_t> walCompactionMultiplier = std::nullopt) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(useWal, ConfigSourceType::CommandLine);
   rawConfig->overlayWalWriteV2.setValue(
       writeWalV2, ConfigSourceType::CommandLine);
+  if (walCompactionMultiplier) {
+    rawConfig->overlayWalCompactionMultiplier.setValue(
+        *walCompactionMultiplier, ConfigSourceType::CommandLine);
+  }
   rawConfig->experimentalOverlayCacheWalFiles.setValue(
       cacheWalFiles, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayWalMinCompactionThreshold.setValue(
@@ -2081,6 +2086,60 @@ TEST(WalCompactionTest, compactsWhenRngHits) {
   EXPECT_FALSE(bundle.store->hasWal(parent));
 
   bundle.overlay->close();
+}
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || \
+    defined(_M_IX86)
+#define EDEN_WAL_ZERO_DIV_DIES 1
+#else
+#define EDEN_WAL_ZERO_DIV_DIES 0
+#endif
+
+TEST(WalCompactionTest, zeroMultiplierWithoutMinimumThreshold) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  folly::test::TemporaryDirectory tmp("eden_wal_compact");
+  auto dir = canonicalPath(tmp.path().string());
+#if EDEN_WAL_ZERO_DIV_DIES
+  EXPECT_DEATH(
+      {
+        auto bundle = makeWalLifecycleOverlay(
+            dir,
+            kPathMapDefaultCaseSensitive,
+            /*walMinCompactionThreshold=*/0,
+            /*cacheWalFiles=*/true,
+            /*useWal=*/true,
+            /*writeWalV2=*/false,
+            /*walCompactionMultiplier=*/0);
+        OverlayTestHelper::setWalCompactionRng(
+            *bundle.overlay, [] { return 7u; });
+        auto parent = bundle.overlay->allocateInodeNumber();
+        DirContents content(kPathMapDefaultCaseSensitive);
+        bundle.store->appendWalEntry(
+            parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
+        OverlayTestHelper::maybeCompactWal(*bundle.overlay, parent, content);
+        bundle.overlay->close();
+        std::exit(0);
+      },
+      "");
+#else
+  auto bundle = makeWalLifecycleOverlay(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      /*walMinCompactionThreshold=*/0,
+      /*cacheWalFiles=*/true,
+      /*useWal=*/true,
+      /*writeWalV2=*/false,
+      /*walCompactionMultiplier=*/0);
+  ASSERT_NE(nullptr, bundle.store);
+  OverlayTestHelper::setWalCompactionRng(*bundle.overlay, [] { return 7u; });
+  auto parent = bundle.overlay->allocateInodeNumber();
+  DirContents content(kPathMapDefaultCaseSensitive);
+  bundle.store->appendWalEntry(
+      parent, WalOpType::REMOVE, PathComponentPiece{"x"}, nullptr);
+  OverlayTestHelper::maybeCompactWal(*bundle.overlay, parent, content);
+  EXPECT_TRUE(bundle.store->hasWal(parent));
+  bundle.overlay->close();
+#endif
 }
 
 TEST(WalCompactionTest, smallDirectoryUsesMinimumThreshold) {
