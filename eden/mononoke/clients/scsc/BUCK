@@ -86,6 +86,8 @@ rpm.builder(
         rpm.install(
             src = ":scsc",
             dst = "/usr/local/bin/scsc",
+            # Symbols ship in fb-scsc-debuginfo, found by build ID.
+            strip_all = True,
         ),
     ],
     summary = "Source Control Service Client",
