@@ -29,6 +29,12 @@ add_fbthrift_library(
 if (BUILD_SHARED_LIBS)
   set_property(TARGET fb303_thrift_cpp PROPERTY VERSION ${PACKAGE_VERSION})
 endif ()
+# The names fb303-targets.cmake exports, for projects that build fb303 from
+# source.
+add_library(fb303::fb303_thrift_cpp ALIAS fb303_thrift_cpp)
+add_library(
+  fb303::fb303_thrift_cpp.thrift_includes ALIAS fb303_thrift_cpp.thrift_includes
+)
 
 install(
   TARGETS fb303_thrift_cpp
