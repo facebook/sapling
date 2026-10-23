@@ -59,7 +59,7 @@ Restart mononoke to pick up corrupted blobs
 
 Prefetch should fail with corruption error
   $ cd $TESTTMP/repo-client
-  $ hg pull --config ui.disable-stream-clone=true
+  $ hg pull
   pulling from mono:repo
 
   $ LOG=revisionstore=debug hg prefetch -r ":" 2>&1 | grep "Invalid hash"

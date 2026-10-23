@@ -68,7 +68,6 @@ from .. import (
     simplemerge,
     smartset,
     sslutil,
-    streamclone,
     templater,
     treestate,
     util,
@@ -206,14 +205,6 @@ def debugapi(ui, repo, serverpath=None, **opts) -> None:
         raise error.Abort(e)
     formatted = bindings.pprint.pformat(response)
     ui.write(_("%s\n") % formatted)
-
-
-@command("debugapplystreamclonebundle", [], "FILE")
-def debugapplystreamclonebundle(ui, repo, fname) -> None:
-    """apply a stream clone bundle file"""
-    f = hg.openpath(ui, fname)
-    gen = exchange.readbundle(ui, f, fname)
-    gen.apply(repo)
 
 
 @command("debugbacktrace|debugbt", [], _("PID"), norepo=True)
@@ -995,24 +986,6 @@ def _debugdisplaystyle(ui) -> None:
 
             ui.write(", ".join(labelparts(e) for e in effects.split()))
         ui.write("\n")
-
-
-@command("debugcreatestreamclonebundle", [], "FILE")
-def debugcreatestreamclonebundle(ui, repo, fname: Optional[str]) -> None:
-    """create a stream clone bundle file
-
-    Stream bundles are special bundles that are essentially archives of
-    revlog files. They are commonly used for cloning very quickly.
-    """
-    # TODO we may want to turn this into an abort when this functionality
-    # is moved into `hg bundle`.
-    if phases.hassecret(repo):
-        ui.warn(_("(warning: stream clone bundle will contain secret revisions)\n"))
-
-    requirements, gen = streamclone.generatebundlev1(repo)
-    changegroup.writechunks(ui, gen, fname)
-
-    ui.write(_("bundle requirements: %s\n") % ", ".join(sorted(requirements)))
 
 
 @command(

@@ -395,8 +395,6 @@ pub fn write_sparse_config(source_content: &[u8], dest_dot_dir: &Path) -> Result
 }
 
 /// Get the tag to use for streaming clone from config.
-///
-/// This is shared between wireproto and SLAPI streaming clone implementations.
 pub fn get_streaming_clone_tag(config: &dyn Config) -> Option<String> {
     if let Some(tag) = config.get("stream_out_shallow", "tag") {
         return Some(tag.to_string());

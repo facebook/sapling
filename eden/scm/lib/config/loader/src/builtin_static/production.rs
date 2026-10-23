@@ -233,10 +233,6 @@ rename.default=remote
 resolvenodes=False
 selectivepulldefault=master
 
-[server]
-preferuncompressed=True
-uncompressed=True
-
 [sigtrace]
 interval=30
 

@@ -13,30 +13,12 @@ import stat
 import time
 from typing import Dict, IO, Iterable, List, Set
 
-from sapling import (
-    context,
-    error,
-    exchange,
-    extensions,
-    sshserver,
-    store,
-    util,
-    wireproto,
-)
+from sapling import context, error, extensions, sshserver, util, wireproto
 from sapling.extensions import wrapfunction
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid
 
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack
-
-try:
-    from sapling import streamclone
-
-    streamclone._walkstreamfiles
-    hasstreamclone = True
-except Exception:
-    hasstreamclone = False
-
 
 onetime = False
 
@@ -53,63 +35,6 @@ def onetimesetup(ui):
     wireproto.commands["getfile"] = (getfile, "file node")
     wireproto.commands["getpackv1"] = (getpackv1, "*")
     wireproto.commands["getpackv2"] = (getpackv2, "*")
-
-    state = wireproto._streamstate
-
-    # don't clone filelogs to shallow clients
-    def _walkstreamfiles(orig, repo):
-        if state.shallowremote:
-            # if we are shallow ourselves, stream our local commits
-            if shallowrepo.requirement in repo.requirements:
-                striplen = len(repo.store.path) + 1
-                readdir = repo.store.rawvfs.readdir
-                visit = [
-                    os.path.join(repo.store.path, "packs"),
-                    os.path.join(repo.store.path, "data"),
-                ]
-                while visit:
-                    p = visit.pop()
-
-                    try:
-                        dirents = readdir(p, stat=True)
-                    except OSError as ex:
-                        if ex.errno != errno.ENOENT:
-                            raise
-                        continue
-
-                    for f, kind, st in dirents:
-                        fp = p + "/" + f
-                        if kind == stat.S_IFREG:
-                            if not fp.endswith(".i") and not fp.endswith(".d"):
-                                n = util.pconvert(fp[striplen:])
-                                yield (store.decodedir(n), n, st.st_size)
-                        if kind == stat.S_IFDIR:
-                            visit.append(fp)
-
-            shallowtrees = repo.ui.configbool("remotefilelog", "shallowtrees", False)
-            for x in repo.store.topfiles():
-                if shallowtrees and x[0][:15] == "00manifesttree.":
-                    continue
-                if state.noflatmf and x[0][:11] == "00manifest.":
-                    continue
-                yield x
-
-        elif shallowrepo.requirement in repo.requirements:
-            # don't allow cloning from a shallow repo to a full repo
-            # since it would require fetching every version of every
-            # file in order to create the revlogs.
-            raise error.Abort(_("Cannot clone from a shallow repo to a full repo."))
-        else:
-            for x in orig(repo):
-                yield x
-
-    # This function moved in Mercurial 3.5 and 3.6
-    if hasstreamclone:
-        wrapfunction(streamclone, "_walkstreamfiles", _walkstreamfiles)
-    elif hasattr(wireproto, "_walkstreamfiles"):
-        wrapfunction(wireproto, "_walkstreamfiles", _walkstreamfiles)
-    else:
-        wrapfunction(exchange, "_walkstreamfiles", _walkstreamfiles)
 
     # We no longer use getbundle_shallow commands, but we must still
     # support it for migration purposes

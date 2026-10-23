@@ -228,9 +228,6 @@ class eagerpeer(repository.peer):
         )
         return changed
 
-    def stream_out(self, shallow=False):
-        raise NotImplementedError()
-
     def unbundle(self, bundle, heads, url):
         raise NotImplementedError()
 

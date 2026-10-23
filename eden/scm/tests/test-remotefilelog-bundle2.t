@@ -6,14 +6,11 @@
   $ grep generaldelta master/.sl/requires
   generaldelta
   $ cd master
-preferuncompressed = False so that we can make both generaldelta and non-generaldelta clones
   $ cat >> .sl/config <<EOF
   > [remotefilelog]
   > server=True
   > [experimental]
   > bundle2-exp = True
-  > [server]
-  > preferuncompressed = False
   > EOF
   $ echo x > x
   $ sl commit -qAm x

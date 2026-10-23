@@ -276,7 +276,6 @@ bookmarks-pushkey-compat=True
 bundle1=True
 compressionengines=<class 'list'>
 maxhttpheaderlen=1024
-uncompressed=True
 zliblevel=-1
 
 [smallcommitmetadata]

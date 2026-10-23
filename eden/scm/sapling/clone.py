@@ -7,14 +7,23 @@
 
 import bindings
 
-from . import bookmarks as bookmod, changelog2, error, streamclone, util
+from . import bookmarks as bookmod, changelog2, error, util
 from .i18n import _
 from .node import bin, hex
 
 
-def _slapi_streaming_clone(repo, source) -> None:
+def _streaming_clone_tag(ui):
+    tag = ui.config("stream_out_shallow", "tag")
+    if not tag and ui.configbool("stream_out_shallow", "auto"):
+        names = ui.configlist("remotenames", "selectivepulldefault")
+        if names:
+            tag = names[0]
+    return tag
+
+
+def _slapi_streaming_clone(repo) -> None:
     """Perform streaming clone using SLAPI/EdenAPI."""
-    tag = streamclone.get_streaming_clone_tag(repo.ui)
+    tag = _streaming_clone_tag(repo.ui)
 
     store_path = repo.store_path
     repo.ui.status(_("streaming changelog via SLAPI\n"))
@@ -39,30 +48,6 @@ def _slapi_streaming_clone(repo, source) -> None:
     repo.invalidatechangelog()
 
 
-def _wireproto_streaming_clone(repo, source) -> None:
-    """Perform streaming clone using legacy wireproto."""
-    with repo.conn(source) as conn:
-        # Assume the remote server supports streamclone.
-        peer = conn.peer
-        fp = peer.stream_out(shallow=True)
-
-        l = fp.readline()
-        if l.strip() != b"0":
-            raise error.ResponseError(_("unexpected response from remote server:"), l)
-
-        l = fp.readline()
-        try:
-            filecount, bytecount = list(map(int, l.split(b" ", 1)))
-        except (ValueError, TypeError):
-            raise error.ResponseError(_("unexpected response from remote server:"), l)
-
-        # Get 00changelog.{i,d}. This does not write bookmarks or remotenames.
-        streamclone.consumev1(repo, fp, filecount, bytecount)
-        # repo.changelog needs to be reloaded.
-        repo.invalidate()
-        repo.invalidatechangelog()
-
-
 def revlogclone(source, repo) -> None:
     """clone from source into an empty remotefilelog repo using revlog changelog"""
 
@@ -81,12 +66,9 @@ def revlogclone(source, repo) -> None:
 
         repo.ui.status(_("fetching changelog\n"))
 
-        # Use SLAPI streaming clone if enabled and edenapi is available
-        use_slapi = repo.ui.configbool("experimental", "use-slapi-streaming-clone")
-        if use_slapi and repo.nullableedenapi:
-            _slapi_streaming_clone(repo, source)
-        else:
-            _wireproto_streaming_clone(repo, source)
+        if repo.nullableedenapi is None:
+            raise error.Abort(_("streaming clone requires a SaplingRemoteAPI server"))
+        _slapi_streaming_clone(repo)
 
         # Fetch selected remote bookmarks.
         repo.ui.status(_("fetching selected remote bookmarks\n"))

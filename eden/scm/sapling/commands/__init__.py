@@ -65,7 +65,6 @@ from .. import (
     scmutil,
     server,
     sshserver,
-    streamclone,
     templatekw,
     templater,
     ui as uimod,
@@ -1533,13 +1532,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         raise error.Abort(
             str(e),
             hint=_("see '@prog@ help bundlespec' for supported values for --type"),
-        )
-
-    # Packed bundles are a pseudo bundle format for now.
-    if cgversion == "s1":
-        raise error.Abort(
-            _('packed bundles cannot be produced by "@prog@ bundle"'),
-            hint=_("use '@prog@ debugcreatestreamclonebundle'"),
         )
 
     if opts.get("all"):
@@ -6199,11 +6191,6 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 f = hg.openpath(ui, fname)
                 gen = exchange.readbundle(ui, f, fname)
 
-                if isinstance(gen, streamclone.streamcloneapplier):
-                    raise error.Abort(
-                        _('packed bundles cannot be applied with "@prog@ unbundle"'),
-                        hint=_('use "@prog@ debugapplystreamclonebundle"'),
-                    )
                 url = "bundle:" + fname
                 txnname = "unbundle"
                 if not isinstance(gen, bundle2.unbundle20):

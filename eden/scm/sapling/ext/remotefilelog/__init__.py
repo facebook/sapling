@@ -137,14 +137,6 @@ from . import (
 # ensures debug commands are registered
 hgdebugcommands.command
 
-try:
-    from sapling import streamclone
-
-    streamclone._walkstreamfiles
-    hasstreamclone = True
-except Exception:
-    hasstreamclone = False
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -565,8 +557,7 @@ def onetimeclientsetup(ui):
 
     if ui.configbool("remotefilelog", "lfs"):
         # Make bundle choose changegroup3 instead of changegroup2. This affects
-        # "hg bundle" command. Note: it does not cover all bundle formats like
-        # "packed1". Using "packed1" with lfs will likely cause trouble.
+        # "hg bundle" command.
         names = [k for k, v in exchange._bundlespeccgversions.items() if v == "02"]
         for k in names:
             exchange._bundlespeccgversions[k] = "03"

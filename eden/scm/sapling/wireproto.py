@@ -30,7 +30,6 @@ from . import (
     pushkey as pushkeymod,
     replay,
     repository,
-    streamclone,
     util,
 )
 from .i18n import _
@@ -366,25 +365,6 @@ class wirepeer(repository.legacypeer):
         for l in output.splitlines(True):
             self.ui.status(_("remote: "), l)
         yield d
-
-    def stream_out(self, shallow=False):
-        fullclone = self.ui.configbool("clone", "requestfullclone")
-        if shallow and fullclone:
-            raise error.Abort(
-                _("--shallow is incompatible with clone.requestfullclone")
-            )
-        if shallow and self.capable("remotefilelog"):
-            opts = {}
-            opts["noflatmanifest"] = "True"
-            tag = streamclone.get_streaming_clone_tag(self.ui)
-            if tag:
-                opts["tag"] = tag
-            return self._callstream("stream_out_shallow", **opts)
-        if self.capable("stream_option"):
-            args = {"fullclone": str(fullclone)}
-            return self._callstream("stream_out_option", **args)
-        else:
-            return self._callstream("stream_out")
 
     def getbundle(self, source, **kwargs):
         kwargs = kwargs
@@ -968,17 +948,6 @@ def _capabilities(repo, proto):
     """
     # copy to prevent modification of the global list
     caps = list(wireprotocaps)
-    if streamclone.allowservergeneration(repo):
-        if repo.ui.configbool("server", "preferuncompressed"):
-            caps.append("stream-preferred")
-        requiredformats = repo.requirements & repo.supportedformats
-        # if our local revlogs are just revlogv1, add 'stream' cap
-        if not requiredformats - {"revlogv1"}:
-            caps.append("stream")
-        # otherwise, add 'streamreqs' detailing our local revlog format
-        else:
-            caps.append("streamreqs=%s" % ",".join(sorted(requiredformats)))
-        caps.append("stream_option")
     if repo.ui.configbool("experimental", "bundle2-advertise"):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append("bundle2=" + urlreq.quote(capsblob))
@@ -1163,82 +1132,6 @@ def pushkey(repo, proto, namespace, key, old, new):
 
     r = repo.pushkey(namespace, key, old, new)
     return "%s\n" % int(r)
-
-
-@wireprotocommand("stream_out")
-def stream(repo, proto):
-    """If the server supports streaming clone, it advertises the "stream"
-    capability with a value representing the version and flags of the repo
-    it is serving. Client checks to see if it understands the format.
-    """
-    if not streamclone.allowservergeneration(repo):
-        return b"1\n"
-
-    def getstream(it):
-        yield b"0\n"
-        for chunk in it:
-            yield chunk
-
-    try:
-        # LockError may be raised before the first result is yielded. Don't
-        # emit output until we're sure we got the lock successfully.
-        it = streamclone.generatev1wireproto(repo)
-        return streamres(gen=getstream(it))
-    except error.LockError:
-        return b"2\n"
-
-
-class streamstate:
-    shallowremote = False
-    noflatmf = False
-
-
-# XXX: Consider move this to another state.
-_streamstate = streamstate()
-
-
-@wireprotocommand("stream_out_shallow", "*")
-def stream_out_shallow(repo, proto, other):
-    oldshallow = _streamstate.shallowremote
-    oldnoflatmf = _streamstate.noflatmf
-    try:
-        _streamstate.shallowremote = True
-        _streamstate.noflatmf = other.get("noflatmanifest") == "True"
-        s = stream(repo, proto)
-
-        # Force the first value to execute, so the file list is computed
-        # within the try/finally scope
-        first = next(s.gen)
-        second = next(s.gen)
-
-        def gen():
-            yield first
-            yield second
-            for value in s.gen:
-                yield value
-
-        return streamres(gen())
-    finally:
-        _streamstate.shallowremote = oldshallow
-        _streamstate.noflatmf = oldnoflatmf
-
-
-@wireprotocommand("stream_out_option", "*")
-def streamoption(repo, proto, options):
-    if (
-        repo.ui.configbool("server", "requireexplicitfullclone")
-        and options.get("fullclone", False) != "True"
-    ):
-        # For large repositories, we want to block accidental full clones.
-        repo.ui.warn(
-            _(
-                "unable to perform an implicit streaming clone - "
-                "make sure remotefilelog is enabled\n"
-            )
-        )
-        return "1\n"
-
-    return stream(repo, proto)
 
 
 @wireprotocommand("unbundlereplay", "heads replaydata respondlightly")

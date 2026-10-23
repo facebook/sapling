@@ -33,7 +33,6 @@ from . import (
     phases,
     scmutil,
     sslutil,
-    streamclone,
     url as urlmod,
     util,
 )
@@ -47,7 +46,6 @@ urlreq = util.urlreq
 _bundlespeccgversions = {
     "v1": "01",
     "v2": "02",
-    "packed1": "s1",
     "bundle2": "02",  # legacy
 }
 
@@ -143,10 +141,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
             # Default to bundlev2
             version = "v2"
         elif spec in _bundlespeccgversions:
-            if spec == "packed1":
-                compression = "none"
-            else:
-                compression = "bzip2"
+            compression = "bzip2"
             version = spec
         else:
             raise error.UnsupportedBundleSpecification(
@@ -158,18 +153,6 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         raise error.UnsupportedBundleSpecification(
             _("compression engine %s is not supported on v1 bundles") % compression
         )
-
-    # The specification for packed1 can optionally declare the data formats
-    # required to apply it. If we see this metadata, compare against what the
-    # repo supports and error if the bundle isn't compatible.
-    if version == "packed1" and "requirements" in params:
-        requirements = set(params["requirements"].split(","))
-        missingreqs = requirements - repo.supportedformats
-        if missingreqs:
-            raise error.UnsupportedBundleSpecification(
-                _("missing support for repository features: %s")
-                % ", ".join(sorted(missingreqs))
-            )
 
     if not externalnames:
         engine = util.compengines.forbundlename(compression)
@@ -202,8 +185,6 @@ def readbundle(ui, fh, fname, vfs=None):
         return changegroup.cg1unpacker(fh, alg)
     elif version.startswith("2"):
         return bundle2.getunbundler(ui, fh, magicstring=magic + version)
-    elif version == "S1":
-        return streamclone.streamcloneapplier(fh)
     else:
         raise error.Abort(_("%s: unknown bundle version %s") % (fname, version))
 
@@ -255,10 +236,6 @@ def getbundlespec(ui, fh):
             raise error.Abort(_("could not identify changegroup version in bundle"))
 
         return "%s-%s" % (comp, version)
-    elif isinstance(b, streamclone.streamcloneapplier):
-        requirements = streamclone.readbundle1header(fh)[2]
-        params = "requirements=%s" % ",".join(sorted(requirements))
-        return "none-packed1;%s" % urlreq.quote(params)
     else:
         raise error.Abort(_("unknown bundle type: %s") % b)
 
@@ -1181,7 +1158,6 @@ class pulloperation:
         force=False,
         bookmarks=(),
         remotebookmarks=None,
-        exactbyteclone=False,
         extras=None,
     ):
         # repo we pull into
@@ -1214,7 +1190,6 @@ class pulloperation:
         self.clonebundleattempted = False
         # Whether clones should do an exact byte clone. This is used for hgsql
         # to avoid the extra semantic pull after a streaming clone.
-        self.exactbyteclone = exactbyteclone
         # extra information
         self.extras = extras or {}
 
@@ -1336,22 +1311,14 @@ def pull(
         # This should ideally be in _pullbundle2(). However, it needs to run
         # before discovery to avoid extra work.
         _maybeapplyclonebundle(pullop)
-        cloned = streamclone.maybeperformlegacystreamclone(pullop)
-
-        # hgsql needs byte-for-byte identical clones, so let's skip the semantic
-        # pull stage since it can result in different bytes (different deltas,
-        # etc).
-        if not (cloned and pullop.exactbyteclone):
-            _pulldiscovery(pullop)
-            if pullop.canusebundle2 and not _httpcommitgraphenabled(pullop):
-                _pullbundle2(pullop)
-            _pullchangeset(pullop)
-            if pullop.extras.get("phases", True):
-                _pullphase(pullop)
-            if pullop.remotebookmarks is not None and pullop.extras.get(
-                "bookmarks", True
-            ):
-                _pullbookmarks(pullop)
+        _pulldiscovery(pullop)
+        if pullop.canusebundle2 and not _httpcommitgraphenabled(pullop):
+            _pullbundle2(pullop)
+        _pullchangeset(pullop)
+        if pullop.extras.get("phases", True):
+            _pullphase(pullop)
+        if pullop.remotebookmarks is not None and pullop.extras.get("bookmarks", True):
+            _pullbookmarks(pullop)
         pullop.trmanager.close()
     finally:
         lockmod.release(pullop.trmanager, lock)
@@ -1441,10 +1408,6 @@ def _pullbundle2(pullop):
     For now, the only supported data are changegroup."""
     kwargs = {"bundlecaps": caps20to10(pullop.repo)}
 
-    # At the moment we don't do stream clones over bundle2. If that is
-    # implemented then here's where the check for that will go.
-    streaming = False
-
     # pulling changegroup
     pullop.stepsdone.add("changegroup")
 
@@ -1492,9 +1455,7 @@ def _pullbundle2(pullop):
     ):
         kwargs["cbattempted"] = pullop.clonebundleattempted
 
-    if streaming:
-        pullop.repo.ui.status(_("streaming all changes\n"))
-    elif not pullop.fetch:
+    if not pullop.fetch:
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
     else:
@@ -2255,11 +2216,7 @@ def trypullbundlefromurl(ui, repo, url):
         try:
             fh = urlmod.open(ui, url)
             cg = readbundle(ui, fh, "stream")
-
-            if isinstance(cg, streamclone.streamcloneapplier):
-                cg.apply(repo)
-            else:
-                bundle2.applybundle(repo, cg, tr, "clonebundles", url)
+            bundle2.applybundle(repo, cg, tr, "clonebundles", url)
             return True
         except urlerr.httperror as e:
             ui.warn(_("HTTP error fetching bundle: %s\n") % str(e))

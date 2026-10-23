@@ -259,9 +259,6 @@ class localpeer(repository.peer):
     def pushkey(self, namespace, key, old, new):
         return self._repo.pushkey(namespace, key, old, new)
 
-    def stream_out(self, shallow=False):
-        raise errormod.Abort(_("cannot perform stream clone against local peer"))
-
     def unbundle(self, cg, heads, url):
         """apply a bundle on a repo
 

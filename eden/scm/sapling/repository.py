@@ -175,13 +175,6 @@ class _basewirecommands(abc.ABC):
         """
 
     @abc.abstractmethod
-    def stream_out(self, shallow=False):
-        """Obtain streaming clone data.
-
-        Successful result should be a generator of data chunks.
-        """
-
-    @abc.abstractmethod
     def unbundle(self, bundle, heads, url):
         """Transfer repository data to the peer.
 

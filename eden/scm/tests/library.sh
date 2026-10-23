@@ -14,8 +14,6 @@ remotefilelog=
 rebase=
 [ui]
 ssh=$(dummysshcmd)
-[server]
-preferuncompressed=True
 [experimental]
 changegroup3=True
 [rebase]

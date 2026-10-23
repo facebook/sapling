@@ -67,16 +67,6 @@ for most needs.
 Bundle files can be generated with the :prog:`bundle` command. Typically
 :prog:`bundle --all` is used to produce a bundle of the entire repository.
 
-:prog:`debugcreatestreamclonebundle` can be used to produce a special
-*streaming clone bundle*. These are bundle files that are extremely efficient
-to produce and consume (read: fast). However, they are larger than
-traditional bundle formats and require that clients support the exact set
-of repository data store formats in use by the repository that created them.
-Typically, a newer server can serve data that is compatible with older clients.
-However, *streaming clone bundles* don't have this guarantee. **Server
-operators need to be aware that newer versions of Mercurial may produce
-streaming clone bundles incompatible with older Mercurial versions.**
-
 A server operator is responsible for creating a ``.hg/clonebundles.manifest``
 file containing the list of available bundle files suitable for seeding
 clones. If this file does not exist, the repository will not advertise the
