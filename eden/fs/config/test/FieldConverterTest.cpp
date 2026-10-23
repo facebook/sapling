@@ -9,10 +9,6 @@
 
 #include <gtest/gtest.h>
 
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
 using namespace facebook::eden;
 
 TEST(FieldConverterTest, expandsEveryOccurrenceOfAVariable) {
@@ -22,14 +18,9 @@ TEST(FieldConverterTest, expandsEveryOccurrenceOfAVariable) {
   EXPECT_EQ("data/testuser/testuser", result.value().asString());
 }
 
-#ifndef _WIN32
 TEST(FieldConverterTest, variableValueContainingItsOwnToken) {
   std::map<std::string, std::string> variables{{"HOME", "home/${HOME}"}};
-  EXPECT_DEATH(
-      {
-        alarm(1);
-        FieldConverter<RelativePath>{}.fromString("${HOME}/.edenrc", variables);
-      },
-      "");
+  auto result =
+      FieldConverter<RelativePath>{}.fromString("${HOME}/.edenrc", variables);
+  EXPECT_EQ("home/${HOME}/.edenrc", result.value().asString());
 }
-#endif

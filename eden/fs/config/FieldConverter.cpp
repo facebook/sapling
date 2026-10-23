@@ -44,12 +44,14 @@ std::string expandConvData(
       auto envVar = fmt::format("${{{}}}", varName);
       // There may be multiple ${USER} tokens to replace, so loop
       // until we've processed all of them
+      size_t searchStart = 0;
       while (true) {
-        auto idx = sString.find(envVar);
+        auto idx = sString.find(envVar, searchStart);
         if (idx == string::npos) {
           break;
         }
         sString.replace(idx, envVar.size(), it->second);
+        searchStart = idx + it->second.size();
       }
     }
   }
