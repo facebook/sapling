@@ -465,6 +465,17 @@ class EdenServer : private TakeoverHandler {
    */
   folly::coro::Task<void> co_waitForInFlightRequests();
 
+  /**
+   * The executor for the work a diff of the working copy entails: loading
+   * inodes from the overlay and hashing materialized files. Checkout runs on
+   * it, and status does when thrift:use-status-executor is on. A status is
+   * refused while a checkout is in progress, so the two overlap only when a
+   * checkout starts during a status, and then they share the pool's threads.
+   */
+  folly::Executor* getDiffWorkExecutor() const {
+    return diffWorkExecutor_.get();
+  }
+
   const std::shared_ptr<ServerState>& getServerState() const {
     return serverState_;
   }
@@ -1023,8 +1034,8 @@ class EdenServer : private TakeoverHandler {
   bool thriftUseSerialExecution_;
 
   /**
-   * Executor for the diff work of checkout: loading inodes from the overlay
-   * and hashing materialized files, kept off the Thrift worker threads.
+   * Executor for the diff work of checkout and status; see
+   * getDiffWorkExecutor().
    */
   std::shared_ptr<folly::Executor> diffWorkExecutor_;
 

@@ -5505,6 +5505,8 @@ EdenServiceHandler::co_getScmStatusV2(
   helper->getThriftFetchContext().fillClientRequestInfo(scmParams->cri());
 
   auto& fetchContext = helper->getFetchContext();
+  auto edenConfig =
+      server_->getServerState()->getReloadableConfig()->getEdenConfig();
 
   auto mountHandle = lookupMount(scmParams->mountPoint());
 
@@ -5514,23 +5516,50 @@ EdenServiceHandler::co_getScmStatusV2(
       std::move(*scmParams->commit()), rootIdOptions, mountHandle);
   auto rootId = mountHandle.getObjectStore().parseRootId(parsedCommit);
 
-  const auto& enforceParents = server_->getServerState()
-                                   ->getReloadableConfig()
-                                   ->getEdenConfig()
-                                   ->enforceParents.getValue();
+  const auto& enforceParents = edenConfig->enforceParents.getValue();
 
   // The connection token fires when the client goes away, the request token
   // when EdenFS cancels the request, for example for a forced restart.
   auto requestToken = fetchContext->getCancellationToken();
-  auto status = co_await mountHandle.getEdenMount().co_diff(
-      mountHandle.getRootInode(),
-      rootId,
-      folly::cancellation_token_merge(
-          context->getConnectionContext()->getCancellationToken(),
-          requestToken),
-      fetchContext,
-      *scmParams->listIgnored(),
-      enforceParents);
+
+  // Owns its arguments, so the Task can run on another executor.
+  auto diffBody = [mountHandle,
+                   rootId,
+                   cancellation = folly::cancellation_token_merge(
+                       context->getConnectionContext()->getCancellationToken(),
+                       requestToken),
+                   fetchContext = fetchContext.copy(),
+                   listIgnored = *scmParams->listIgnored(),
+                   enforceParents = enforceParents]() mutable
+      -> folly::coro::Task<std::unique_ptr<ScmStatus>> {
+    co_return co_await mountHandle.getEdenMount().co_diff(
+        mountHandle.getRootInode(),
+        rootId,
+        cancellation,
+        fetchContext,
+        listIgnored,
+        enforceParents);
+  };
+
+  std::unique_ptr<ScmStatus> status;
+  folly::Executor* executor = edenConfig->thriftUseStatusExecutor.getValue()
+      ? server_->getDiffWorkExecutor()
+      : nullptr;
+  if (executor) {
+    // The diff's coroutines run inline until they suspend, and with the
+    // default inline detached executor nothing in the walk suspends: the
+    // overlay reads of materialized directories complete before the children
+    // are visited and hashing is synchronous, so the whole diff runs on one
+    // thread. The detached executor makes each directory load asynchronous
+    // work on the diff work executor, so a child suspends on its load and
+    // resumes on that pool; that is what spreads the walk, and the hashing in
+    // it, across the pool. The pin puts those resumptions on the pool rather
+    // than on this Thrift worker.
+    fetchContext->setDetachedExecutor(executor);
+    status = co_await folly::coro::co_withExecutor(executor, diffBody());
+  } else {
+    status = co_await diffBody();
+  }
   // A cancelled diff returns what it had walked so far. A client that is
   // still connected must not take that for the full status.
   if (requestToken.isCancellationRequested()) {

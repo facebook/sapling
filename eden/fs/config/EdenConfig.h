@@ -591,6 +591,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether status runs the overlay reads and content hashing it needs for
+   * materialized files on the diff work executor, in parallel, instead of
+   * inline on the Thrift worker handling the request. Checkout uses the same
+   * executor; see EdenServer::getDiffWorkExecutor().
+   */
+  ConfigSetting<bool> thriftUseStatusExecutor{
+      "thrift:use-status-executor",
+      true,
+      this};
+
+  /**
    * Whether Eden should use a dedicated executor for prefetchFilesV2 requests.
    * This is meant to help with prefetch performance while using serial
    * execution for other Thrift requests.
