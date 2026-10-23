@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_client_infra']
-apply_to_regex: 'eden/fs/.*\.(cpp|h|rs|py)$'
-apply_to_content: 'CPUThreadPoolExecutor|ThreadPoolExecutor|IGNORE_RESULT|addBatch|processBatch'
+name: acr-thread-pool-batching
+metadata:
+  oncalls: ['scm_client_infra']
+  strict: true
+  apply_to_path: 'eden/fs/.*\.(cpp|h|rs|py)$'
+  apply_to_content: 'CPUThreadPoolExecutor|ThreadPoolExecutor|IGNORE_RESULT|addBatch|processBatch'
 ---
 
 # Thread Pool Self-Deadlock and Request Batching Type Confusion
