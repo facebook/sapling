@@ -9,7 +9,14 @@
 
 pub mod cmd;
 pub mod dbio;
+#[cfg(fbcode_build)]
+mod facebook;
 pub mod fsio;
 pub mod r#gen;
+#[cfg(not(fbcode_build))]
+mod oss;
 pub mod traversal;
 pub mod types;
+
+#[cfg(not(fbcode_build))]
+use oss as facebook;

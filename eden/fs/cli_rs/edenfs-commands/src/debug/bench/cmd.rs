@@ -17,6 +17,7 @@ use clap::Parser;
 use serde_json;
 
 use super::dbio;
+use super::facebook;
 use super::fsio;
 use super::r#gen;
 use super::traversal;
@@ -299,8 +300,7 @@ impl crate::Subcommand for BenchCmd {
                         random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
                     );
-                    println!("{}", dbio::bench_lmdb_write_mfmd(&test_dir, &random_data)?);
-                    println!("{}", dbio::bench_lmdb_read_mfmd(&test_dir, &random_data)?);
+                    facebook::run_lmdb_benchmarks(&test_dir, &random_data)?;
                     println!(
                         "{}",
                         dbio::bench_sqlite_write_mfmd(&test_dir, &random_data)?
