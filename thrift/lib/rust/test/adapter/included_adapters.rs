@@ -170,8 +170,6 @@ impl ThriftAdapter for AssetAdapter {
             type_: match value.type_ {
                 crate::ThriftAssetType::LAPTOP => AssetType::Laptop,
                 crate::ThriftAssetType::SERVER => AssetType::Server,
-                // Rust Thrift will NOT use 0 as the default enum value by default, but instead
-                // will use i32::MIN.
                 _ => AssetType::Unknown,
             },
             id: value.id.try_into().context("invalid i64 for id")?,

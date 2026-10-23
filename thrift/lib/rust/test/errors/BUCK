@@ -11,7 +11,6 @@ oncall("rust_thrift")
 thrift_library(
     name = "thrift_test",
     languages = ["rust"],
-    thrift_rust_options = ["deprecated_default_enum_min_i32"],
     thrift_srcs = {
         "test.thrift": [],
     },

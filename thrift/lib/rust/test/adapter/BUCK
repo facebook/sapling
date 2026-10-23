@@ -20,7 +20,6 @@ thrift_library(
         "included_adapters.rs",
     ],
     rust_unittests = True,
-    thrift_rust_options = ["deprecated_default_enum_min_i32"],
     thrift_srcs = {
         "test.thrift": [],
     },

@@ -828,6 +828,33 @@ fn test_nested_containers_end_detection() -> Result<()> {
 }
 
 #[test]
+fn test_deprecated_nested_containers_end_detection() -> Result<()> {
+    let mut m = BTreeMap::new();
+    m.insert("a".to_string(), 1);
+    m.insert("b".to_string(), 2);
+    let r = test_deprecated_default_enum_min_i32_if::MainStruct {
+        m,
+        l: vec![
+            test_deprecated_default_enum_min_i32_if::Small {
+                num: 1,
+                two: 2,
+                ..Default::default()
+            },
+            test_deprecated_default_enum_min_i32_if::Small {
+                num: 3,
+                two: 4,
+                ..Default::default()
+            },
+        ],
+        int_keys: [(10, 20), (30, 40)].into_iter().collect(),
+        ..Default::default()
+    };
+    let serialized = serialize(&r);
+    assert_eq!(r, deserialize(serialized)?);
+    Ok(())
+}
+
+#[test]
 fn test_map_with_whitespace_before_end() -> Result<()> {
     let input = r#"{"m":{"k1":"v1" , "k2":"v2"  }}"#;
     let c: Containers = deserialize(input).unwrap();
