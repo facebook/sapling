@@ -16,7 +16,6 @@ import sys
 import threading
 from contextlib import asynccontextmanager
 from enum import Enum
-from itertools import product
 from textwrap import dedent
 from threading import Thread
 from typing import AsyncGenerator, Awaitable, Dict, List, Optional, Set
@@ -1121,45 +1120,6 @@ class UpdateTest(EdenHgTestCase):
         # Setting the experimental.repair-eden-dirstate config option to true (the default) will fix the issue
         self.hg("config", "--local", "experimental.repair-eden-dirstate", "True")
         self.repo.status()
-
-    async def test_update_reports_checkout_error(self) -> None:
-        self.write_configs(
-            {"experimental": ["propagate-checkout-errors = false"]},
-            self.eden.user_rc_path,
-        )
-        async with self.eden.get_async_thrift_client() as client:
-            await client.reloadConfig()
-            for use_rust, clean in product((False, True), repeat=2):
-                with self.subTest(use_rust=use_rust, clean=clean):
-                    self.hg("config", "--local", "checkout.use-rust", str(use_rust))
-                    self.repo.update(self.commit3, clean=True)
-                    # Materialized files are applied after the fault point.
-                    self.write_file("foo/bar.txt", "updated in commit 3\n")
-                    await client.injectFault(
-                        FaultDefinition(
-                            keyClass="TreeInode::checkout",
-                            keyValueRegex="foo, false",
-                            errorType="runtime_error",
-                            errorMessage="intentional checkout error",
-                            count=1,
-                        )
-                    )
-                    with self.assertRaisesRegex(
-                        hgrepo.HgError, "intentional checkout error"
-                    ):
-                        self.repo.update(self.commit2, clean=clean)
-                    self.assertEqual(
-                        "updated in commit 3\n", self.read_file("foo/bar.txt")
-                    )
-                    # Eden already moved to the destination before reporting
-                    # the error. The dirstate parent stays behind, status is
-                    # computed against Eden's parent, and rerunning the update
-                    # resynchronizes the two.
-                    self.assertEqual(self.commit3, self.repo.get_head_hash())
-                    self.assertEqual({"foo/bar.txt": "M"}, self.repo.status())
-                    self.assertEqual(self.commit3, self.repo.get_head_hash())
-                    self.repo.update(self.commit2, clean=clean)
-                    self.assertEqual(self.commit2, self.repo.get_head_hash())
 
 
 class PrjFsState(Enum):

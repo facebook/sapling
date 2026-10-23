@@ -59,11 +59,6 @@ TEST_P(CheckoutCancellationTest, CheckoutLeavesInterruptedState) {
   auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
   commit2->setReady();
 
-  // Enable propagateCheckoutErrors so cancelled checkouts enter interrupted
-  // state
-  testMount.updateEdenConfig(
-      {{"experimental:propagate-checkout-errors", "true"}});
-
   // Verify initial state - no checkout in progress
   auto initialParentCommit =
       testMount.getEdenMount()->getCheckoutConfig()->getParentCommit();
@@ -179,11 +174,6 @@ TEST_P(CheckoutCancellationTest, CancellationAtInodeCheckoutStage) {
   auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
   commit2->setReady();
 
-  // Enable propagateCheckoutErrors so cancelled checkouts enter interrupted
-  // state
-  testMount.updateEdenConfig(
-      {{"experimental:propagate-checkout-errors", "true"}});
-
   // Verify initial state - no checkout in progress
   auto initialParentCommit =
       testMount.getEdenMount()->getCheckoutConfig()->getParentCommit();
@@ -298,9 +288,6 @@ TEST_F(CheckoutCancellationTest, CancelledCheckoutLogsError) {
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
   commit2->setReady();
-
-  testMount.updateEdenConfig(
-      {{"experimental:propagate-checkout-errors", "true"}});
 
   folly::CancellationSource cancelSource;
   auto cancellationToken = cancelSource.getToken();

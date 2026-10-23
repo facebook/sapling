@@ -319,7 +319,6 @@ class EdenTestCase(EdenTestCaseBase):
         configs = {
             "experimental": [
                 "enable-nfs-server = true",
-                "propagate-checkout-errors = true",
                 "overlay-direct-file-create = true",
                 "overlay-cache-wal-files = true",
                 'overlay-wal-min-compaction-threshold = "50"',

@@ -879,11 +879,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool reportLocalOnlyAsConflicts,
       bool removeLocalOnly);
 
-  folly::Try<CheckoutFinalizeState> processCheckoutActionResults(
-      CheckoutContext* ctx,
-      const std::vector<std::shared_ptr<CheckoutAction>>& actions,
+  static folly::Try<CheckoutFinalizeState> processCheckoutActionResults(
       bool shouldInvalidateDirectory,
-      bool propagateErrors,
       bool hadConflicts,
       bool localOnlyRemains,
       std::vector<folly::Try<CheckoutActionResult>>& actionResults);

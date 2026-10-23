@@ -33,6 +33,7 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "experimental:glob-skip-redundant-origin-hashes",
     "experimental:ignore-prefetch-result",
     "experimental:prefetch-optimizations-v2",
+    "experimental:propagate-checkout-errors",
     "experimental:skip-checkout-child-overlay-writes",
     "glob:allowed-suffix-queries",
     "glob:use-edenapi-suffix-query",

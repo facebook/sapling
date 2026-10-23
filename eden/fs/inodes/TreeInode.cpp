@@ -4639,14 +4639,12 @@ struct TreeInode::CheckoutSetup {
   std::optional<MiniTracer::Span> checkoutSpan;
   std::vector<std::shared_ptr<CheckoutAction>> actions;
   bool shouldInvalidateDirectory{false};
-  bool propagateErrors{false};
   bool hadConflicts{false};
   bool localOnlyRemains{false};
 };
 
 struct TreeInode::CheckoutFinalizeState {
   bool shouldInvalidateDirectory{false};
-  size_t numErrors{0};
   bool hadConflicts{false};
   bool localOnlyRemains{false};
 };
@@ -4678,9 +4676,6 @@ TreeInode::CheckoutSetup TreeInode::beginCheckout(
   setup.shouldInvalidateDirectory =
       getMount()->getEdenConfig()->alwaysInvalidateDirectory.getValue();
 
-  setup.propagateErrors =
-      getMount()->getEdenConfig()->propagateCheckoutErrors.getValue();
-
   computeCheckoutActions(
       ctx,
       fromTree.get(),
@@ -4703,10 +4698,7 @@ TreeInode::CheckoutSetup TreeInode::beginCheckout(
 
 folly::Try<TreeInode::CheckoutFinalizeState>
 TreeInode::processCheckoutActionResults(
-    CheckoutContext* ctx,
-    const std::vector<std::shared_ptr<CheckoutAction>>& actions,
     bool shouldInvalidateDirectory,
-    bool propagateErrors,
     bool hadConflicts,
     bool localOnlyRemains,
     std::vector<folly::Try<CheckoutActionResult>>& actionResults) {
@@ -4715,30 +4707,16 @@ TreeInode::processCheckoutActionResults(
   state.hadConflicts = hadConflicts;
   state.localOnlyRemains = localOnlyRemains;
 
-  // Record any errors that occurred
-  for (size_t n = 0; n < actionResults.size(); ++n) {
-    auto& result = actionResults[n];
-    if (!result.hasException()) {
-      state.hadConflicts |= result.value().hadConflicts;
-      state.localOnlyRemains |= result.value().localOnlyRemains;
-      state.shouldInvalidateDirectory |=
-          (result.value().invalidationRequired == InvalidationRequired::Yes);
-      continue;
-    }
-
-    if (propagateErrors) {
-      // If propagating errors... propagate the error. This will cause
-      // the checkout operation to fail at the top level, and leave us
-      // in an interrupted checkout state.
+  for (auto& result : actionResults) {
+    if (result.hasException()) {
+      // Fail the checkout at the top level and leave the mount in the
+      // interrupted checkout state.
       return folly::Try<CheckoutFinalizeState>{result.exception()};
-    } else {
-      // Not propagating errors - hide this error away as a "conflict".
-      // Sapling can see the error, but we pretend the checkout succeeded,
-      // which makes it hard if not impossible to recover properly.
-      ++state.numErrors;
-      state.hadConflicts = true;
-      ctx->addError(this, actions[n]->getEntryName(), result.exception());
     }
+    state.hadConflicts |= result.value().hadConflicts;
+    state.localOnlyRemains |= result.value().localOnlyRemains;
+    state.shouldInvalidateDirectory |=
+        (result.value().invalidationRequired == InvalidationRequired::Yes);
   }
 
   return folly::Try<CheckoutFinalizeState>{state};
@@ -4760,31 +4738,29 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
   // Start the actions after the fault check so injected faults can stop this
   // directory before it is modified.
   return std::move(faultFuture)
-      .thenValue([ctx, self = inodePtrFromThis(), actions = setup.actions](
-                     auto&&) mutable {
+      .thenValue([ctx,
+                  self = inodePtrFromThis(),
+                  actions = std::move(setup.actions)](auto&&) mutable {
         std::vector<ImmediateFuture<CheckoutActionResult>> actionFutures;
         actionFutures.reserve(actions.size());
         for (const auto& action : actions) {
           actionFutures.emplace_back(action->run(ctx, &self->getObjectStore()));
         }
-        return collectAll(std::move(actionFutures));
+        // The actions must outlive the futures they produced.
+        return collectAll(std::move(actionFutures))
+            .ensure([actions = std::move(actions)] {});
       })
       .thenValue(
           [ctx,
            self = inodePtrFromThis(),
            toTree = std::move(toTree),
-           actions = std::move(setup.actions),
            shouldInvalidateDirectory = setup.shouldInvalidateDirectory,
-           propagateErrors = setup.propagateErrors,
            hadConflicts = setup.hadConflicts,
            localOnlyRemains = setup.localOnlyRemains](
               vector<folly::Try<CheckoutActionResult>> actionResults) mutable
               -> ImmediateFuture<CheckoutSubtreeResult> {
-            auto finalizeStateTry = self->processCheckoutActionResults(
-                ctx,
-                actions,
+            auto finalizeStateTry = processCheckoutActionResults(
                 shouldInvalidateDirectory,
-                propagateErrors,
                 hadConflicts,
                 localOnlyRemains,
                 actionResults);
@@ -4826,7 +4802,6 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
                 .thenValue([self,
                             ctx,
                             toTree = std::move(toTree),
-                            numErrors = finalizeState.numErrors,
                             hadConflicts = finalizeState.hadConflicts,
                             localOnlyRemains =
                                 finalizeState.localOnlyRemains](auto&&) {
@@ -4835,9 +4810,8 @@ ImmediateFuture<CheckoutSubtreeResult> TreeInode::checkout(
 
                   XLOGF(
                       DBG4,
-                      "checkout: finished update of {}: {} errors",
-                      self->getLogPath(),
-                      numErrors);
+                      "checkout: finished update of {}",
+                      self->getLogPath());
                   return CheckoutSubtreeResult{hadConflicts, localOnlyRemains};
                 });
           })
@@ -4881,11 +4855,8 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
   auto actionResults =
       co_await folly::coro::collectAllTryRange(std::move(actionTasks));
 
-  auto finalizeStateTry = self->processCheckoutActionResults(
-      ctx,
-      setup.actions,
+  auto finalizeStateTry = processCheckoutActionResults(
       setup.shouldInvalidateDirectory,
-      setup.propagateErrors,
       setup.hadConflicts,
       setup.localOnlyRemains,
       actionResults);
@@ -4913,11 +4884,7 @@ folly::coro::now_task<CheckoutSubtreeResult> TreeInode::co_checkout(
   }
 
   self->saveOverlayPostCheckout(ctx, toTree.get());
-  XLOGF(
-      DBG4,
-      "checkout: finished update of {}: {} errors",
-      self->getLogPath(),
-      finalizeState.numErrors);
+  XLOGF(DBG4, "checkout: finished update of {}", self->getLogPath());
 
   co_return CheckoutSubtreeResult{
       finalizeState.hadConflicts, finalizeState.localOnlyRemains};

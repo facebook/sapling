@@ -2224,20 +2224,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether EdenFS propagates errors during the core checkout
-   * operation. The old behavior was to "propagate" as conflict errors (which
-   * Sapling might ignore). The new behavior is to propagate errors as top-level
-   * command errors.
-   *
-   * Once the new behavior is validated, this flag (and the old code) should be
-   * removed.
-   */
-  ConfigSetting<bool> propagateCheckoutErrors{
-      "experimental:propagate-checkout-errors",
-      true,
-      this};
-
-  /**
    * When true, EdenFS will convert the backing store to a FilteredBackingStore
    * with the "null" filter when it restarts. The real filter info will be
    * written to a special file under .hg folder and will be applied next time
