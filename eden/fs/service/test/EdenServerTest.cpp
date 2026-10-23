@@ -27,9 +27,13 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/ScopeGuard.h>
 #include <folly/io/IOBufQueue.h>
+#include <folly/io/async/AsyncSocket.h>
+#include <folly/io/async/EventBase.h>
 #include <folly/test/TestUtils.h>
 #include <gflags/gflags.h>
 #include <gtest/gtest.h>
+#include <thrift/lib/cpp/transport/TTransportException.h>
+#include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
@@ -38,6 +42,7 @@
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/EdenStateDir.h"
+#include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #ifdef __linux__
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -754,6 +759,41 @@ TEST(EdenServerTakeoverTest, DoesNotWaitWhenTheGracePeriodIsOff) {
   serverThread.join();
   ASSERT_NO_THROW(serverThread.throwIfServeFailed());
   EXPECT_TRUE(server.performCleanup());
+}
+
+TEST(EdenServerShutdownTest, StopsCleanlyWithAnIdleClientConnected) {
+  TestServer::Options options;
+  options.enableNfsServer = true;
+  auto testServer = std::make_unique<TestServer>(options);
+  auto& server = testServer->getServer();
+  auto serverThread = std::make_unique<ScopedServerThread>(server);
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
+
+  // A header connection, as the Sapling clients open. The stop drains rocket
+  // connections before serve() returns, but an idle header connection is left
+  // alone until the server object is destroyed, so this one is still open
+  // when the EdenServer goes away.
+  folly::EventBase clientEventBase;
+  auto socketPath = EdenStateDir{server.getEdenDir()}.getThriftSocketPath();
+  apache::thrift::Client<EdenService> client{
+      apache::thrift::HeaderClientChannel::newChannel(
+          apache::thrift::HeaderClientChannel::WithoutRocketUpgrade{},
+          folly::AsyncSocket::newSocket(
+              &clientEventBase,
+              folly::SocketAddress::makeFromPath(socketPath.view())))};
+  EXPECT_EQ(client.sync_getPid(), getpid());
+
+  server.stop();
+  ASSERT_TRUE(serverThread->waitForExit(5s));
+  ASSERT_NO_THROW(serverThread->throwIfServeFailed());
+  serverThread.reset();
+  ASSERT_TRUE(server.performCleanup());
+  testServer.reset();
+
+  EXPECT_THROW(
+      client.sync_getPid(), apache::thrift::transport::TTransportException);
 }
 
 TEST_F(EdenServerTest, RepeatedTakeoverFailuresDoNotBreakShutdownFuture) {

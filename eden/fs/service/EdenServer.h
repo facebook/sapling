@@ -834,11 +834,9 @@ class EdenServer : private TakeoverHandler {
    * mount's nfsd. NFS requests must not wait behind the main EventBase,
    * whose periodic tasks can block it for tens of seconds (the backing
    * store flush syncs the hgcache), and soft mounts turn such a stall into
-   * ETIMEDOUT for the application. Declared before the Thrift server,
-   * mountPoints_ and serverState_: a mount's NFS channel and the NFS servers
-   * are destroyed on this thread, so it must outlive every holder of the
-   * ServerState, including the Thrift connections that server_ drops when
-   * it is destroyed.
+   * ETIMEDOUT for the application. Declared before mountPoints_ and
+   * serverState_: a mount's NFS channel and the NFS servers are destroyed on
+   * this thread, so it must outlive them.
    */
   folly::ScopedEventBaseThread nfsEventBaseThread_{"NfsEventBase"};
 

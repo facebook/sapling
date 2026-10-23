@@ -1011,6 +1011,12 @@ void EdenServer::registerXplatTransforms() {
 #endif
 
 EdenServer::~EdenServer() {
+  // Each Thrift connection's processor holds the ServerState through its
+  // ThriftPermissionChecker, and the Thrift server drops its connections only
+  // when it is destroyed. Doing that first keeps everything the ServerState
+  // tears down on its way out, such as the NFS event base, alive until the
+  // last connection has let go.
+  server_.reset();
 #ifdef __linux__
   cgroupFileCacheReclaimState_->enabled.store(false, std::memory_order_release);
 #endif

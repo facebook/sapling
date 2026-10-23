@@ -695,8 +695,10 @@ python_unittest(
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",
         "//eden/fs/py/eden/thrift:client",
+        "//eden/fs/service:thrift-python-clients",
         "//eden/integration/lib:lib",
         "//thrift/lib/python:types",
+        "//thrift/lib/python/client:base",
     ],
 )
 

@@ -17,7 +17,9 @@ from typing import Callable, List, Optional
 from eden.fs.cli import proc_utils as proc_utils_mod
 from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until
+from eden.fs.service.eden.thrift_clients import EdenService
 from eden.thrift.client import create_thrift_client, EdenNotRunningError
+from thrift.python.client import ClientType, get_sync_client
 from thrift.python.exceptions import TransportError
 
 from .lib.edenclient import can_run_fake_edenfs
@@ -253,6 +255,26 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
         with self.spawn_fake_edenfs(self.eden_dir, ["--exitWithoutCleanupOnStop"]):
             stop_process = self.spawn_stop(["--timeout", "10"])
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
+
+
+@eden_test
+class StopWithIdleClientTest(EdenTestCase):
+    def test_stop_exits_cleanly_with_an_idle_client_connected(self) -> None:
+        # A header connection, as the Sapling clients open, that makes one call
+        # and then stays connected and silent while the daemon stops. The daemon
+        # drains rocket connections before it stops serving but leaves an idle
+        # header connection open until it exits. shutdown() fails the test if
+        # the daemon exits with a non-zero status.
+        with get_sync_client(
+            EdenService,
+            path=str(self.eden.eden_dir / "socket"),
+            timeout=30,
+            client_type=ClientType.THRIFT_HEADER_CLIENT_TYPE,
+        ) as client:
+            self.assertGreater(client.getPid(), 0)
+            self.eden.shutdown()
+            with self.assertRaises(TransportError):
+                client.getPid()
 
 
 @eden_test
