@@ -19,10 +19,13 @@ use fbthrift::builtin_types::OrderedFloat;
 use fbthrift::compact_protocol::deserialize;
 use fbthrift::compact_protocol::serialize;
 use fbthrift_test_if::Double;
+use fbthrift_test_if::Emptiable;
+use fbthrift_test_if::EmptiableException;
 use fbthrift_test_if::En;
 use fbthrift_test_if::NewInt;
 use fbthrift_test_if::TerseEnum;
 use fbthrift_test_if::TerseNewType;
+use fbthrift_test_if::TerseStruct;
 use fbthrift_test_if::TerseUnion;
 use fbthrift_test_if::Un;
 use fbthrift_test_if::UnOne;
@@ -88,5 +91,55 @@ fn test_terse_newtype() {
     assert_eq!(
         serialize(&negative_zero).as_ref(),
         &[0x27, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    );
+}
+
+#[test]
+fn test_terse_struct() {
+    assert_eq!(
+        serialize(TerseStruct::default()).as_ref(),
+        &[0x2c, 0x15, 0x00, 0x16, 0x00, 0x00, 0x00]
+    );
+
+    let nested = TerseStruct {
+        emptiable: Emptiable {
+            terse: "a".to_owned(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(
+        serialize(&nested).as_ref(),
+        &[
+            0x1c, 0x28, 0x01, 0x61, 0x00, 0x1c, 0x15, 0x00, 0x16, 0x00, 0x00, 0x00
+        ]
+    );
+
+    let optional_set = TerseStruct {
+        emptiable: Emptiable {
+            opt: Some(0),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(
+        serialize(&optional_set).as_ref(),
+        &[
+            0x1c, 0x15, 0x00, 0x00, 0x1c, 0x15, 0x00, 0x16, 0x00, 0x00, 0x00
+        ]
+    );
+
+    let exception = TerseStruct {
+        ex: EmptiableException {
+            message: Some(String::new()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    assert_eq!(
+        serialize(&exception).as_ref(),
+        &[
+            0x2c, 0x15, 0x00, 0x16, 0x00, 0x00, 0x1c, 0x18, 0x00, 0x00, 0x00
+        ]
     );
 }

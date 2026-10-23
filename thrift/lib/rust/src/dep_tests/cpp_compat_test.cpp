@@ -235,4 +235,29 @@ TEST(TerseTest, NewType) {
       std::string("\x27\x80\x00\x00\x00\x00\x00\x00\x00\x00", 10));
 }
 
+TEST(TerseTest, Struct) {
+  TerseStruct defaults;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(defaults),
+      std::string("\x2c\x15\x00\x16\x00\x00\x00", 7));
+
+  TerseStruct nested;
+  nested.emptiable()->terse() = "a";
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(nested),
+      std::string("\x1c\x28\x01\x61\x00\x1c\x15\x00\x16\x00\x00\x00", 12));
+
+  TerseStruct optionalSet;
+  optionalSet.emptiable()->opt() = 0;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(optionalSet),
+      std::string("\x1c\x15\x00\x00\x1c\x15\x00\x16\x00\x00\x00", 11));
+
+  TerseStruct exception;
+  exception.ex()->message() = "";
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(exception),
+      std::string("\x2c\x15\x00\x16\x00\x00\x1c\x18\x00\x00\x00", 11));
+}
+
 } // namespace facebook

@@ -122,6 +122,25 @@ struct TerseNewType {
   2: Double d;
 }
 
+struct Emptiable {
+  1: optional i32 opt;
+  @thrift.TerseWrite
+  2: string terse;
+}
+
+exception EmptiableException {
+  1: optional string message;
+}
+
+struct TerseStruct {
+  @thrift.TerseWrite
+  1: Emptiable emptiable;
+  @thrift.TerseWrite
+  2: Small never_empty;
+  @thrift.TerseWrite
+  3: EmptiableException ex;
+}
+
 safe stateful server exception TestException {
   1: string message;
 }
