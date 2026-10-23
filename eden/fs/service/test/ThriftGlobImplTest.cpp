@@ -284,4 +284,26 @@ TEST_F(ThriftGlobImplTest, recordsMemoLimitBreachesInOds) {
   EXPECT_EQ(before + 1, after);
 }
 
+CO_TEST_F(ThriftGlobImplTest, missingSearchRootWithSuppressedFileList) {
+  auto serverState = createTestServerState();
+  auto edenMount = mount_.getEdenMount();
+  auto fetchContext = ObjectFetchContext::getNullContext();
+
+  GlobParams listing;
+  listing.searchRoot() = "does/not/exist";
+  auto listingGlobber = ThriftGlobImpl{listing};
+  auto listed = co_await folly::coro::co_awaitTry(
+      listingGlobber.glob(edenMount, serverState, {"**/*.txt"}, fetchContext));
+  EXPECT_TRUE(listed.hasException());
+
+  GlobParams suppressed;
+  suppressed.searchRoot() = "does/not/exist";
+  suppressed.suppressFileList() = true;
+  suppressed.prefetchFiles() = true;
+  auto suppressedGlobber = ThriftGlobImpl{suppressed};
+  auto quiet = co_await folly::coro::co_awaitTry(suppressedGlobber.glob(
+      edenMount, serverState, {"**/*.txt"}, fetchContext));
+  EXPECT_FALSE(quiet.hasException());
+}
+
 } // namespace facebook::eden
