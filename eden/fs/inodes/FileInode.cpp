@@ -10,6 +10,8 @@
 #include <fmt/format.h>
 #include <optional>
 
+#include <folly/ExceptionWrapper.h>
+#include <folly/Try.h>
 #include <folly/coro/Collect.h>
 #include <folly/coro/Invoke.h>
 #include <folly/coro/Task.h>
@@ -312,37 +314,37 @@ FileInode::runWhileMaterialized(
             getMount(), BlobCache::Interest::UnlikelyNeededAgain);
       }
       if (blob) {
+        logAccess(*fetchContext);
         // We have the blob data loaded.
         // Materialize the file now.
         materializeNow(state, blob, fetchContext);
-        // Call materializeInParent before we return, after we are
-        // sure the state lock has been released.  This does mean that our
-        // parent won't have updated our state until after the caller's function
-        // runs, but this is okay.  There is always a brief gap between when we
-        // materialize ourself and when our parent gets updated to indicate
-        // this. If we do crash during this period it is not too unreasonable
-        // that recent change right before the crash might be reverted to their
-        // non-materialized state.
-        SCOPE_EXIT {
-          XCHECK(state.isNull());
-          materializeInParent();
-          // Add materialize event after parent finishes its materialization
-          getMount()->publishInodeTraceEvent(InodeTraceEvent(
-              startTime.value(),
-              getNodeId(),
-              InodeType::FILE,
-              InodeEventType::MATERIALIZE,
-              InodeEventProgress::END,
-              getNameRacy()));
-        };
-        logAccess(*fetchContext);
         // Note that we explicitly create a temporary LockedState object
         // to pass to the caller to ensure that the state lock will be released
         // when they return, even if the caller's function accepts the state as
         // an rvalue-reference and does not release it themselves.
-        return makeImmediateFutureWith([&] {
+        auto result = makeImmediateFutureWith([&] {
           return std::forward<Fn>(fn)(LockedState{std::move(state)});
         });
+        XCHECK(state.isNull());
+        // Update our parent now that the state lock has been released.  This
+        // does mean that our parent won't have updated our state until after
+        // the caller's function runs, but this is okay.  There is always a
+        // brief gap between when we materialize ourself and when our parent
+        // gets updated to indicate this. If we do crash during this period it
+        // is not too unreasonable that recent change right before the crash
+        // might be reverted to their non-materialized state.
+        //
+        // The parent's overlay save can throw, so this must not run inside a
+        // noexcept scope guard: the error is returned to the caller instead,
+        // unless the caller's function already failed.
+        if (auto parentError = completeMaterialization(startTime.value())) {
+          return std::move(result).thenValue(
+              [parentError = std::move(parentError)](
+                  auto&&) -> std::invoke_result_t<Fn, LockedState&&> {
+                parentError.throw_exception();
+              });
+        }
+        return result;
       }
 
       // The blob must be loaded, so kick that off. There's no point in caching
@@ -418,30 +420,29 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
 
       // Now that materializeAndTruncate() has succeeded, extract the
       // blobLoadingPromise, it'll be fulfilled with a BrokenPromise on scope
-      // exit.
+      // exit, after the parent has been updated below.
       auto loadingPromise = std::move(state->blobLoadingPromise);
       state->blobLoadingPromise.reset();
-      // Also call materializeInParent() as we exit, before fulfilling the
-      // blobLoadingPromise.
-      SCOPE_EXIT {
-        XCHECK(state.isNull());
-        materializeInParent();
-        // Publish to TraceBus after parent finishes its materialization
-        getMount()->publishInodeTraceEvent(InodeTraceEvent(
-            startTime,
-            getNodeId(),
-            InodeType::FILE,
-            InodeEventType::MATERIALIZE,
-            InodeEventProgress::END,
-            getNameRacy()));
-      };
 
       // Now invoke the input function.
       // Note that we explicitly create a temporary LockedState object
       // to pass to the caller to ensure that the state lock will be released
       // when they return, even if the caller's function accepts the state as
       // an rvalue-reference and does not release it themselves.
-      return std::forward<Fn>(fn)(LockedState{std::move(state)});
+      auto result = folly::makeTryWith(
+          [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
+      XCHECK(state.isNull());
+
+      // Update our parent now that the state lock has been released. The
+      // parent's overlay save can throw, so this must not run inside a
+      // noexcept scope guard: the error is returned to the caller instead,
+      // unless the caller's function already failed.
+      if (auto parentError = completeMaterialization(startTime)) {
+        if (!result.hasException()) {
+          result.emplaceException(std::move(parentError));
+        }
+      }
+      return std::move(result).value();
     }
     case State::MATERIALIZED_IN_OVERLAY:
       // We are already materialized.
@@ -920,6 +921,28 @@ void FileInode::materializeInParent() {
     loc.parent->childMaterialized(renameLock, loc.name);
   }
 }
+
+#ifndef _WIN32
+folly::exception_wrapper FileInode::completeMaterialization(
+    std::chrono::system_clock::time_point startTime) {
+  auto parentError = folly::try_and_catch([this] { materializeInParent(); });
+  if (parentError) {
+    XLOGF(
+        ERR,
+        "failed to record the materialization of {} in its parent: {}",
+        getLogPath(),
+        folly::exceptionStr(parentError));
+  }
+  getMount()->publishInodeTraceEvent(InodeTraceEvent(
+      startTime,
+      getNodeId(),
+      InodeType::FILE,
+      InodeEventType::MATERIALIZE,
+      InodeEventProgress::END,
+      getNameRacy()));
+  return parentError;
+}
+#endif // !_WIN32
 
 #ifndef _WIN32
 ImmediateFuture<vector<string>> FileInode::listxattr() {

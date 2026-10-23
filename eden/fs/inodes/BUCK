@@ -197,6 +197,7 @@ cpp_library(
         "//eden/fs/utils:linux_kernel_version",
         "//eden/fs/utils:nfs_socket",
         "//eden/scm/lib/util/sigbus-memops:sigbus_memops",
+        "//folly:try",
         "//thrift/lib/cpp2/protocol:protocol",
     ] + select({
         "DEFAULT": [],

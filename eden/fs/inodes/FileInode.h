@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/ExceptionWrapper.h>
 #include <folly/Synchronized.h>
 #include <folly/coro/safe/NowTask.h>
 #include <folly/futures/SharedPromise.h>
@@ -609,6 +610,21 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * The state_ lock must not be held when calling this method.
    */
   void materializeInParent();
+
+#ifndef _WIN32
+  /**
+   * Finish a materialization started at startTime: mark this FileInode
+   * materialized in its parent directory, then publish the MATERIALIZE END
+   * trace event.
+   *
+   * Returns the exception thrown while updating the parent, or an empty
+   * exception_wrapper on success. The END event is published either way.
+   *
+   * The state_ lock must not be held when calling this method.
+   */
+  folly::exception_wrapper completeMaterialization(
+      std::chrono::system_clock::time_point startTime);
+#endif // !_WIN32
 
   /**
    * Helper function for isSameAs().

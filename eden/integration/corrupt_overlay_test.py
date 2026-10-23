@@ -18,10 +18,7 @@ import sys
 from typing import List
 
 import eden.integration.lib.overlay as overlay_mod
-from eden.fs.cli import util
 from eden.integration.lib import testcase
-from eden.integration.lib.edenclient import is_process_running
-from eden.thrift.client import EdenNotRunningError
 
 
 @testcase.eden_repo_test
@@ -62,17 +59,12 @@ class OverlayWriteErrorTest(testcase.EdenRepoTest):
             )
         finally:
             os.chmod(shard, mode)
-        # TODO(lean-check): wrong behaviour; flipped in the next commit. The
-        # parent's overlay save throws inside the noexcept SCOPE_EXIT of
-        # FileInode::truncateAndRun, so the daemon aborts instead of returning
-        # EACCES, and the mount disappears with it.
-        util.poll_until(lambda: None if is_process_running(pid) else True, timeout=30)
-        with self.assertRaises(EdenNotRunningError):
-            with self.eden.get_thrift_client(timeout=10) as client:
-                client.getDaemonInfo()
-        self.assertNotEqual(errno.EACCES, result.returncode)
-        with self.assertRaises(OSError):
-            self.read_file("hello")
+        with self.eden.get_thrift_client(timeout=10) as client:
+            self.assertEqual(pid, client.getDaemonInfo().pid)
+        self.assertEqual(errno.EACCES, result.returncode)
+        self.assertEqual("healthy\n", self.read_file("hello"))
+        self.write_file("dir/file", "recovered\n")
+        self.assertEqual("recovered\n", self.read_file("dir/file"))
 
 
 @testcase.eden_nfs_repo_test_with_wal_variant
