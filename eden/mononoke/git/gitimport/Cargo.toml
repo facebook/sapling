@@ -53,7 +53,7 @@ restricted_paths = { version = "0.1.0", path = "../../repo_attributes/restricted
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.21"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

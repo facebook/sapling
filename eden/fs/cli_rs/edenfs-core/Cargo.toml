@@ -24,7 +24,7 @@ regex = "1.13.1"
 sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 shlex = "2.0.1"
 strum = { version = "0.28.0", features = ["derive"] }
 subprocess = "0.2.15"

@@ -29,7 +29,7 @@ sapling-config-remote-loader = { version = "0.1.0", path = "../../../scm/lib/con
 sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 strum = { version = "0.28.0", features = ["derive"] }
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }

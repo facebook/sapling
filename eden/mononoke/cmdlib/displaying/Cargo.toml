@@ -22,4 +22,4 @@ unicode-width = "0.2.2"
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
-serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

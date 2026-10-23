@@ -59,7 +59,7 @@ permission_checker = { version = "0.1.0", path = "../common/permission_checker" 
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 tempfile = "3.27.0"
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
