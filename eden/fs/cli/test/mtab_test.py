@@ -6,10 +6,18 @@
 
 # pyre-strict
 
+import errno
+import multiprocessing.context
 import unittest
 from typing import Optional
+from unittest.mock import create_autospec
 
-from eden.fs.cli.mtab import MountInfo, parse_macos_mount_output, parse_mtab
+from eden.fs.cli.mtab import (
+    LinuxMountTable,
+    MountInfo,
+    parse_macos_mount_output,
+    parse_mtab,
+)
 
 
 class MTabTest(unittest.TestCase):
@@ -51,3 +59,23 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
             ],
             parse_macos_mount_output(contents),
         )
+
+
+class CloseHangingProcessTest(unittest.TestCase):
+    def test_helper_that_survives_kill(self) -> None:
+        helper = create_autospec(multiprocessing.context.SpawnProcess, instance=True)
+        helper.is_alive.return_value = True
+        helper.close.side_effect = ValueError(
+            "Cannot close a process while it is still running. "
+            "You should first call join() or terminate()."
+        )
+        timeout_error = OSError(
+            errno.ETIMEDOUT, "Stating the mount timed out, mount point hangs"
+        )
+
+        with self.assertRaises(ValueError):
+            LinuxMountTable().close_hanging_process(helper, timeout_error)
+
+        helper.terminate.assert_called_once_with()
+        helper.kill.assert_called_once_with()
+        self.assertEqual(helper.join.call_count, 2)
