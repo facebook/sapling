@@ -37,9 +37,9 @@ class MTabTest(unittest.TestCase):
         self.assertEqual(
             mount_points,
             [
-                b"/data/users/alice/my\\040repo",
-                b"/data/users/alice/tab\\011repo",
-                b"/data/users/alice/back\\134slash",
+                b"/data/users/alice/my repo",
+                b"/data/users/alice/tab\trepo",
+                b"/data/users/alice/back\\slash",
             ],
         )
 
