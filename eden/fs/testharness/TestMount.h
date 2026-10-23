@@ -175,7 +175,7 @@ class TestMount {
       const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType,
+      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault,
       InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
   void initialize(
@@ -204,7 +204,7 @@ class TestMount {
       const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady,
-      InodeCatalogType inodeCatalogType = kDefaultInodeCatalogType,
+      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault,
       InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void createMountWithoutInitializing(
       FakeTreeBuilder& rootBuilder,
@@ -414,7 +414,7 @@ class TestMount {
 
  private:
   void createMount(
-      InodeCatalogType InodeCatalogType = kDefaultInodeCatalogType,
+      InodeCatalogType InodeCatalogType = kInodeCatalogTypeDefault,
       InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
   void initTestDirectory(CaseSensitivity caseSensitivity);
   void setInitialCommit(const RootId& commitId);

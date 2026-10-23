@@ -33,8 +33,8 @@ DEFINE_bool(
     "Set this parameter to test copying instead of serializing");
 DEFINE_string(
     overlayType,
-    kDefaultInodeCatalogType == InodeCatalogType::Sqlite ? "Sqlite" : "Legacy",
-    "Type of overlay to be used. Defaults: Windows - Sqlite; Linux|macOS - Legacy");
+    FieldConverter<InodeCatalogType>{}.toDebugString(kInodeCatalogTypeDefault),
+    "Type of overlay to be used. Defaults: Windows - InMemory; Linux|macOS - Legacy");
 
 namespace {
 

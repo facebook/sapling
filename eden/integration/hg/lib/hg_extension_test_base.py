@@ -79,7 +79,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
     repo: hgrepo.HgRepository
     backing_repo: hgrepo.HgRepository
-    inode_catalog_type: Optional[str] = None
     backing_store_type: Optional[str] = None
     adtl_repos: List[Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]] = []
     enable_status_cache: bool = False
@@ -110,10 +109,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         configs = super().edenfs_extra_config()
         if configs is None:
             configs = {}
-        if (inode_catalog_type := self.inode_catalog_type) is not None:
-            configs.setdefault("overlay", []).append(
-                f'inode-catalog-type = "{inode_catalog_type}"'
-            )
         enabled = "true" if self.enable_status_cache else "false"
         configs.setdefault("hg", []).append(f"enable-scm-status-cache = {enabled}")
         return configs
@@ -619,30 +614,23 @@ def _replicate_hg_test(
     if eden.config.HAVE_FILTEREDHG:
         scm_variants.append(("FilteredHg", [FilteredTestMixin]))
 
-    overlay_variants: MixinList = [("", [])]
-    if sys.platform == "win32":
-        overlay_variants.append(("InMemory", [InMemoryOverlayTestMixin]))
-
     for tree_label, tree_mixins in tree_variants:
-        for overlay_label, overlay_mixins in overlay_variants:
-            for scm_label, scm_mixins in scm_variants:
+        for scm_label, scm_mixins in scm_variants:
 
-                class VariantHgRepoTest(
-                    # pyrefly: ignore [invalid-inheritance]
-                    *tree_mixins,
-                    # pyrefly: ignore [invalid-inheritance]
-                    *overlay_mixins,
-                    # pyrefly: ignore [invalid-inheritance]
-                    *scm_mixins,
-                    test_class,
-                ):
-                    pass
+            class VariantHgRepoTest(
+                # pyrefly: ignore [invalid-inheritance]
+                *tree_mixins,
+                # pyrefly: ignore [invalid-inheritance]
+                *scm_mixins,
+                test_class,
+            ):
+                pass
 
-                yield from _replicate_io_uring_variant(
-                    f"{tree_label}{overlay_label}{scm_label}",
-                    typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
-                    run_io_uring,
-                )
+            yield from _replicate_io_uring_variant(
+                f"{tree_label}{scm_label}",
+                typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
+                run_io_uring,
+            )
 
     if run_coroutines:
 
@@ -700,10 +688,6 @@ def _replicate_status_cache_enabled_test(
                 f"{hg_test_label}{cache_config_label}",
                 typing.cast(Type[FilteredHgTestCase], VariantHgRepoTest),
             )
-
-
-class InMemoryOverlayTestMixin:
-    inode_catalog_type = "inmemory"
 
 
 class FilteredTestMixin:

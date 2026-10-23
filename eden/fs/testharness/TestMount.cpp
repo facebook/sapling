@@ -463,7 +463,7 @@ void TestMount::remount(bool simulateUncleanShutdown) {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kDefaultInodeCatalogType,
+      kInodeCatalogTypeDefault,
       kDefaultInodeCatalogOptions);
   initializeEdenMount();
 }
@@ -515,7 +515,7 @@ void TestMount::remountGracefully() {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kDefaultInodeCatalogType,
+      kInodeCatalogTypeDefault,
       kDefaultInodeCatalogOptions);
   edenMount_
       ->initialize(

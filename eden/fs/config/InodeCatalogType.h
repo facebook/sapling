@@ -22,7 +22,7 @@ enum class InodeCatalogType : uint8_t {
 };
 
 constexpr InodeCatalogType kInodeCatalogTypeDefault =
-    folly::kIsWindows ? InodeCatalogType::Sqlite : InodeCatalogType::Legacy;
+    folly::kIsWindows ? InodeCatalogType::InMemory : InodeCatalogType::Legacy;
 
 folly::Expected<InodeCatalogType, std::string> inodeCatalogTypeFromString(
     std::string_view value);

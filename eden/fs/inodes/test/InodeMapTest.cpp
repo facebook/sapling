@@ -712,6 +712,10 @@ struct InodePersistenceTreeTest : ::testing::Test {
   FakeTreeBuilder builder;
 };
 
+// Inode numbers only survive a remount when the overlay is durable. The
+// Windows overlay is rebuilt from the on-disk PrjFS state, so these tests
+// only apply to Linux and macOS.
+#ifndef _WIN32
 struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
   InodePersistenceTakeoverTest()
       : testMount{builder}, edenMount{testMount.getEdenMount()} {}
@@ -736,15 +740,7 @@ struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
     tree.reset();
     file1.reset();
     file2.reset();
-#ifdef _WIN32
-    // Windows doesn't support graceful restart yet. Here these tests help
-    // test the consistency of the overlay. On Windows we are using Sqlite
-    // Overlay which maintains the same inode number for each inode, after
-    // remounts.
-    testMount.remount();
-#else
     testMount.remountGracefully();
-#endif
     edenMount = testMount.getEdenMount();
   }
 
@@ -764,11 +760,9 @@ TEST_F(
   auto file2 = testMount.getInode("dir/file2.txt"_relpath);
   auto file1 = testMount.getInode("dir/file1.txt"_relpath);
 
-#ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFsRefcount());
   EXPECT_EQ(1, file1->debugGetFsRefcount());
   EXPECT_EQ(1, file2->debugGetFsRefcount());
-#endif // !1
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
@@ -786,12 +780,6 @@ TEST_F(
       edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
 }
 
-// The following test will not work on Windows, because on Windows we remount
-// instead of remountGracefully and remount doesn't pre-populate the InodeMap.
-// The lookupFirstByName above will work because checking by name will populate
-// the InodeMap for us.
-
-#ifndef _WIN32
 TEST_F(
     InodePersistenceTakeoverTest,
     preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByNumber) {
@@ -818,17 +806,14 @@ TEST_F(
   auto file2 = testMount.getInode("dir/file2.txt"_relpath);
   auto file1 = testMount.getInode("dir/file1.txt"_relpath);
 
-#ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFsRefcount());
   EXPECT_EQ(1, file1->debugGetFsRefcount());
   EXPECT_EQ(1, file2->debugGetFsRefcount());
-#endif // !_WIN32
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
-#endif
 
 /**
  * clang and gcc use the inode number of a header to determine whether it's the
@@ -864,15 +849,7 @@ TEST_F(
   tree.reset();
   file1.reset();
   file2.reset();
-#ifdef _WIN32
-  // Windows doesn't support graceful restart yet. Here these tests help
-  // test the consistency of the overlay. On Windows we are using Sqlite
-  // Overlay which maintains the same inode number for each inode, after
-  // remounts.
-  testMount.remount();
-#else
   testMount.remountGracefully();
-#endif
 
   edenMount = testMount.getEdenMount();
 
@@ -886,7 +863,6 @@ TEST_F(
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
 
-#ifndef _WIN32
 TEST_F(InodePersistenceTreeTest, preservesLastGcRefTimeDuringTakeover) {
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();

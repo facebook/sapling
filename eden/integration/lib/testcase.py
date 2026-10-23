@@ -683,7 +683,7 @@ class EdenRepoTest(EdenTestCase):
         super().setup_eden_test()
 
         self.repo_name = "main"
-        self.inode_catalog_type = "sqlite" if sys.platform == "win32" else "legacy"
+        self.inode_catalog_type = "inmemory" if sys.platform == "win32" else "legacy"
         self.repo = self.create_repo(self.repo_name)
         self.populate_repo()
         self.report_time("repository setup done")
@@ -928,7 +928,7 @@ def _replicate_eden_nfs_repo_test_with_wal_variant(
         _replicate_eden_nfs_repo_test(test_class, run_io_uring=run_io_uring)
     )
     # WAL is only implemented for the Legacy FsInodeCatalog
-    # (Linux/macOS). Windows uses the Sqlite catalog, so the WAL variants
+    # (Linux/macOS). Windows uses the InMemory catalog, so the WAL variants
     # would exercise the same code path as the base variants.
     if sys.platform == "win32":
         return base_variants

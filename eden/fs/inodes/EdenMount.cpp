@@ -333,10 +333,7 @@ InodeCatalogType EdenMount::getInodeCatalogType(
   //        test code
   //   2. optional inode-catalog-type setting in CheckoutConfig
   //        (`checkoutConfig_->getInodeCatalogType()`)
-  //   3. enable-sqlite-overlay setting in CheckoutConfig
-  //        (`checkoutConfig_->getEnableSqliteOverlay()`)
-  //     a. True -> variant of Sqlite
-  //     b. False -> from EdenConfig
+  //   3. the EdenConfig default
 
   if (inodeCatalogType.has_value()) {
     return inodeCatalogType.value();
@@ -346,11 +343,7 @@ InodeCatalogType EdenMount::getInodeCatalogType(
     return checkoutConfig_->getInodeCatalogType().value();
   }
 
-  if (checkoutConfig_->getEnableSqliteOverlay()) {
-    return InodeCatalogType::Sqlite;
-  } else {
-    return serverState_->getEdenConfig()->inodeCatalogType.getValue();
-  }
+  return serverState_->getEdenConfig()->inodeCatalogType.getValue();
 }
 
 InodeCatalogOptions EdenMount::getInodeCatalogOptions(

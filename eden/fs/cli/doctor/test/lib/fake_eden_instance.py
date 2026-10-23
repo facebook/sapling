@@ -162,7 +162,6 @@ class FakeEdenInstance(AbstractEdenInstance):
             redirections={},
             redirection_targets={},
             active_prefetch_profiles=[],
-            enable_sqlite_overlay=True,
             use_write_back_cache=False,
             re_use_case="buck2-default",
             inode_catalog_type=None,

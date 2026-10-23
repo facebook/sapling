@@ -244,15 +244,16 @@ TEST_F(RenameCaseVariantTest, replaceTakesRequestedSpelling) {
   EXPECT_EQ((Names{"B", "src"}), rootNames());
   EXPECT_EQ((Names{"B", "src"}), rootOverlayNames());
 
+#ifndef _WIN32
+  // A Windows remount rebuilds the InMemory overlay from the ProjFS scan, and
+  // TestMount has no projected disk state, so the root reverts to the SCM
+  // spelling.
   src.reset();
   file.reset();
   root_.reset();
   mount_->remount();
   root_ = mount_->getEdenMount()->getRootInode();
   EXPECT_EQ((Names{"B", "src"}), rootNames());
-#ifndef _WIN32
-  // Windows remount runs ProjFS fsck. TestMount has no projected disk state,
-  // so fsck restores this unmaterialized entry from SCM.
   EXPECT_EQ("new\n", mount_->readFile("B"));
 #endif
 }
@@ -276,12 +277,17 @@ TEST_F(RenameCaseVariantTest, caseOnlyFileRenameTakesRequestedSpelling) {
   EXPECT_EQ((Names{"B", "src"}), rootNames());
   EXPECT_EQ((Names{"B", "src"}), rootOverlayNames());
 
+#ifndef _WIN32
+  // A Windows remount rebuilds the InMemory overlay from the ProjFS scan, and
+  // TestMount has no projected disk state, so the root reverts to the SCM
+  // spelling.
   file.reset();
   root_.reset();
   mount_->remount();
   root_ = mount_->getEdenMount()->getRootInode();
   EXPECT_EQ((Names{"B", "src"}), rootNames());
   EXPECT_EQ("old\n", mount_->readFile("B"));
+#endif
 }
 
 TEST_F(RenameCaseVariantTest, caseOnlyDirectoryRenameTakesRequestedSpelling) {

@@ -1063,14 +1063,6 @@ def create_filtered_rootid(root_id: str, filter_id: bytes) -> bytes:
     return varint + root_id.encode() + filter_id
 
 
-def get_enable_sqlite_overlay(overlay_type: Optional[str]) -> bool:
-    if overlay_type is None:
-        # The sqlite backed overlay is default only on Windows
-        return sys.platform == "win32"
-
-    return overlay_type == "sqlite"
-
-
 def maybe_edensparse_migration(
     instance: "EdenInstance", step: EdensparseMigrationStep
 ) -> None:

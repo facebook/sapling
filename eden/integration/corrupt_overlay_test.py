@@ -10,7 +10,7 @@ import logging
 import os
 import pathlib
 import stat
-from typing import List
+from typing import Dict, List, Optional
 
 import eden.integration.lib.overlay as overlay_mod
 from eden.fs.service.eden.thrift_types import MountState
@@ -113,6 +113,11 @@ class CorruptSqliteOverlayTest(testcase.EdenRepoTest):
         self.repo.write_file("dir/b", "b\n")
 
         self.repo.commit("Initial commit.")
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config() or {}
+        configs.setdefault("overlay", []).append('inode-catalog-type = "sqlite"')
+        return configs
 
     def test_integrity_corrupt_sqlite(self) -> None:
         """Slightly corrupt the sqlite database so opening it doesn't catch the

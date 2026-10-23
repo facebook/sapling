@@ -588,7 +588,9 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
         self.write_file("adir/File", "Bar\n")
         self.eden.start()
 
-        self.assertEqual(await self.eden_status(), {b"adir/file": 1})
+        # The InMemory overlay is rebuilt from the on-disk state at startup, so
+        # the entry takes the spelling found on disk.
+        self.assertEqual(await self.eden_status(), {b"adir/File": 1})
 
         # Make sure we can revert the change:
         await self._update_clean()
@@ -639,6 +641,11 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {"eden.fs.inodes.sqlitecatalog.WindowsFsck": "DBG9"}
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config() or {}
+        configs.setdefault("overlay", []).append('inode-catalog-type = "sqlite"')
+        return configs
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")

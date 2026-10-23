@@ -45,7 +45,6 @@ constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
 constexpr folly::StringPiece kMountProtocol{"protocol"};
 constexpr folly::StringPiece kInodeCatalogType{"inode-catalog-type"};
 constexpr folly::StringPiece kRequireUtf8Path{"require-utf8-path"};
-constexpr folly::StringPiece kEnableSqliteOverlay{"enable-sqlite-overlay"};
 constexpr folly::StringPiece kUseWriteBackCache{"use-write-back-cache"};
 constexpr folly::StringPiece kReCas{"recas"};
 constexpr folly::StringPiece kReUseCase{"use-case"};
@@ -424,17 +423,6 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
     }
   }
   config->inodeCatalogType_ = inodeCatalogType;
-
-  // TODO(xavierd): Remove the Windows check once D44683911 has been rolled out
-  // for several months at which point all the CheckoutConfig will have been
-  // rewritten to contain `enable-sqlite-overlay = true`
-  if (!folly::kIsWindows) {
-    auto enableSqliteOverlay =
-        repository->get_as<bool>(kEnableSqliteOverlay.str());
-    // SqliteOverlay is default on Windows
-    config->enableSqliteOverlay_ =
-        enableSqliteOverlay.value_or(folly::kIsWindows);
-  }
 
   auto useWriteBackCache = repository->get_as<bool>(kUseWriteBackCache.str());
   config->useWriteBackCache_ = useWriteBackCache.value_or(false);

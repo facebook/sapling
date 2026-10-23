@@ -822,8 +822,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::atomic<uint32_t> checkoutDeferralCount_{0};
 };
 
-constexpr InodeCatalogType kDefaultInodeCatalogType =
-    folly::kIsWindows ? InodeCatalogType::Sqlite : InodeCatalogType::Legacy;
 constexpr InodeCatalogOptions kDefaultInodeCatalogOptions =
     INODE_CATALOG_DEFAULT;
 

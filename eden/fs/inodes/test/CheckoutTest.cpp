@@ -849,8 +849,11 @@ void testModifyConflict(
       break;
   }
 
-  // Unmount and remount the mount point, and verify the changes persisted
-  // across the remount as expected.
+    // Unmount and remount the mount point, and verify the changes persisted
+    // across the remount as expected.
+#ifndef _WIN32
+  // A Windows remount rebuilds the InMemory overlay from the ProjFS scan, and
+  // TestMount has no projected disk state, so materialized changes revert.
   postInode.reset();
   testMount.remount();
   postInode = testMount.getFileInode(path);
@@ -870,6 +873,7 @@ void testModifyConflict(
       EXPECT_FILE_INODE(ddddInode, "new dddd contents\n", 0644);
       break;
   }
+#endif
 }
 
 void runModifyConflictTests(CheckoutMode checkoutMode, bool useCoroutines) {

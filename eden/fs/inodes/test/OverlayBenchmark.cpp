@@ -27,8 +27,8 @@ using namespace folly::string_piece_literals;
 DEFINE_string(overlayPath, "", "Directory where the test overlay is created");
 DEFINE_string(
     overlayType,
-    kDefaultInodeCatalogType == InodeCatalogType::Sqlite ? "Sqlite" : "Legacy",
-    "Type of overlay to be used. Defaults: Windows - Sqlite; Linux|macOS - Legacy");
+    FieldConverter<InodeCatalogType>{}.toDebugString(kInodeCatalogTypeDefault),
+    "Type of overlay to be used. Defaults: Windows - InMemory; Linux|macOS - Legacy");
 DEFINE_uint64(numDirs, 100000, "Number of directories to save/load");
 DEFINE_uint32(threads, 1, "Number of threads for parallel save/load");
 DEFINE_uint32(

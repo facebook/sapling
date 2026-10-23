@@ -228,7 +228,6 @@ class CheckoutConfig(typing.NamedTuple):
     redirections: Dict[str, "RedirectionType"]
     redirection_targets: Dict[str, str]
     active_prefetch_profiles: List[str]
-    enable_sqlite_overlay: bool
     use_write_back_cache: bool
     re_use_case: str
     inode_catalog_type: Optional[str]
@@ -1512,7 +1511,6 @@ class EdenCheckout:
                 "protocol": checkout_config.mount_protocol,
                 "case-sensitive": checkout_config.case_sensitive,
                 "require-utf8-path": checkout_config.require_utf8_path,
-                "enable-sqlite-overlay": checkout_config.enable_sqlite_overlay,
                 "use-write-back-cache": checkout_config.use_write_back_cache,
                 "inode-catalog-type": checkout_config.inode_catalog_type,
                 "off-mount-repo-dir": checkout_config.off_mount_repo_dir,
@@ -1643,14 +1641,6 @@ class EdenCheckout:
 
                     prefetch_profiles.append(profile)
 
-        enable_sqlite_overlay = repository.get("enable-sqlite-overlay")
-        # SqliteOverlay is default on Windows
-        if not isinstance(enable_sqlite_overlay, bool):
-            enable_sqlite_overlay = sys.platform == "win32"
-        elif sys.platform == "win32":
-            # SqliteOverlay is always enabled on Windows
-            enable_sqlite_overlay = True
-
         use_write_back_cache = repository.get("use-write-back-cache")
         if not isinstance(use_write_back_cache, bool):
             use_write_back_cache = False
@@ -1704,7 +1694,6 @@ class EdenCheckout:
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
             active_prefetch_profiles=prefetch_profiles,
-            enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
             inode_catalog_type=inode_catalog_type,
@@ -2369,14 +2358,11 @@ def create_checkout_config(
 ) -> CheckoutConfig:
     mount_protocol = util.get_protocol(nfs)
 
-    enable_sqlite_overlay = util.get_enable_sqlite_overlay(overlay_type)
-
     if overlay_type is None:
         # Not specified - read from EdenConfig, fallback to default.
         overlay_type = instance.get_config_value(
             "overlay.inode-catalog-type",
-            # SqliteOverlay is default on Windows
-            "sqlite" if sys.platform == "win32" else "legacy",
+            "inmemory" if sys.platform == "win32" else "legacy",
         )
         if overlay_type not in SUPPORTED_INODE_CATALOG_TYPES:
             raise Exception(
@@ -2412,7 +2398,6 @@ def create_checkout_config(
         redirections={},
         redirection_targets={},
         active_prefetch_profiles=[],
-        enable_sqlite_overlay=enable_sqlite_overlay,
         use_write_back_cache=False,
         re_use_case=re_use_case or "buck2-default",
         inode_catalog_type=overlay_type,
