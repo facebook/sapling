@@ -55,6 +55,10 @@ pub struct RimTenancyPath {
 }
 
 impl RimTenancyPath {
+    pub fn category(&self) -> ClientCategory {
+        self.category
+    }
+
     pub fn with_workload_allocation(mut self, is_named: impl FnOnce(&str, &str) -> bool) -> Self {
         self.allocation = Some(if is_named(self.category.as_str(), &self.workload) {
             self.workload.clone()
@@ -424,8 +428,9 @@ impl Metadata {
                 .map(str::to_owned),
             ClientCategory::InteractiveDev => identity(&["USER"]),
             ClientCategory::CiSandcastle => self
-                .sandcastle_alias()
-                .map(|alias| format!("ALIAS:{alias}")),
+                .ci_purpose()
+                .filter(|purpose| !purpose.is_empty())
+                .map(|purpose| format!("CI_PURPOSE:{purpose}")),
             ClientCategory::Mast => identity(&["DATA_PROJECT"]),
             ClientCategory::FaaS => identity(&["CREWMATE", "ASYNC_JOB_ID"]),
             ClientCategory::HealthCheck
@@ -444,8 +449,9 @@ impl Metadata {
         })
         .filter(|workload| !workload.is_empty())
         .unwrap_or_else(|| "unknown".to_owned());
-        if let Some(cause @ ("sl-prefetch" | "edenfs-prefetch" | "eden-walk-prefetch")) =
-            self.fetch_cause()
+        if category != ClientCategory::CiSandcastle
+            && let Some(cause @ ("sl-prefetch" | "edenfs-prefetch" | "eden-walk-prefetch")) =
+                self.fetch_cause()
         {
             workload.push(':');
             workload.push_str(cause);
@@ -678,23 +684,23 @@ mod tests {
     }
 
     #[mononoke::test]
-    fn rim_uses_ci_alias_without_request_main_id() {
+    fn rim_uses_ci_purpose_without_splitting_fetch_causes() {
         let mut metadata = metadata(&[("SERVICE_IDENTITY", "sandcastle.worker.warmed")]);
-        metadata.add_client_info(ClientInfo::from_json(r#"{"sandcastle_alias":"build"}"#).unwrap());
-        assert_eq!(
-            metadata.rim_tenancy_path(None).into_vec(),
-            vec!["root", "ci_sandcastle", "ALIAS:build", "default"]
+        metadata.add_client_info(
+            ClientInfo::from_json(r#"{"sandcastle_alias":"build","ci_purpose":"land"}"#).unwrap(),
         );
-        metadata = metadata.set_fetch_cause(Some("sl-prefetch".to_owned()));
-        assert_eq!(
-            metadata.rim_tenancy_path(None).into_vec(),
-            vec![
-                "root",
-                "ci_sandcastle",
-                "ALIAS:build:sl-prefetch",
-                "default"
-            ]
-        );
+        for cause in [
+            None,
+            Some("sl-prefetch"),
+            Some("edenfs-prefetch"),
+            Some("eden-walk-prefetch"),
+        ] {
+            let metadata = metadata.clone().set_fetch_cause(cause.map(str::to_owned));
+            assert_eq!(
+                metadata.rim_tenancy_path(None).into_vec(),
+                vec!["root", "ci_sandcastle", "CI_PURPOSE:land", "default"]
+            );
+        }
     }
 
     #[mononoke::test]

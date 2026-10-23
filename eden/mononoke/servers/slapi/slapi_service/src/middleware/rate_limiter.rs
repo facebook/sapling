@@ -48,9 +48,9 @@ use crate::utils::rim_rate_limiter::legacy_tenancy_path;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::report_load;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::request_requirements;
+use crate::utils::rim_rate_limiter::request_attribution;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::workload_tenancy_path;
+use crate::utils::rim_rate_limiter::request_requirements;
 
 #[cfg(fbcode_build)]
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
@@ -82,8 +82,10 @@ async fn apply_rim_decision(
     tenancy_path: &[String],
     rim_backend: RimBackend,
     requirements: &HashMap<String, f64>,
+    selection_key: Option<&str>,
 ) -> Option<Response<Body>> {
-    let decision = check_rate_limit(ctx, tenancy_path, rim_backend, requirements).await;
+    let decision =
+        check_rate_limit(ctx, tenancy_path, rim_backend, requirements, selection_key).await;
     // The deployed backends use demand_equals_usage: report all work offered
     // to this stage, including requests this stage rejects.
     if decision != RimDecision::FailOpen {
@@ -175,13 +177,15 @@ impl Middleware for ThrottleMiddleware {
             let paths = state.try_borrow::<MetadataState>().map(|metadata| {
                 scopes.map(|scope| {
                     let (backend, region) = scope?;
-                    let path = if let Some(config) = &config {
-                        let path = metadata.metadata().rim_tenancy_path(region);
-                        workload_tenancy_path(path, config, backend)
+                    let (path, selection_key) = if let Some(config) = &config {
+                        request_attribution(metadata.metadata(), region, config, backend)
                     } else {
-                        legacy_tenancy_path(&metadata.metadata().tenant_info(), region)?
+                        (
+                            legacy_tenancy_path(&metadata.metadata().tenant_info(), region)?,
+                            None,
+                        )
                     };
-                    Some((backend, path))
+                    Some((backend, path, selection_key))
                 })
             });
             if let Some(paths) = paths {
@@ -208,10 +212,17 @@ impl Middleware for ThrottleMiddleware {
                     })
                     .flatten();
                 // Global accounting sees only traffic that proceeds past the regional stage.
-                for (backend, path) in paths.into_iter().flatten() {
+                for (backend, path, selection_key) in paths.into_iter().flatten() {
                     let requirements = request_requirements(config.as_deref(), backend, fetches);
-                    if let Some(response) =
-                        apply_rim_decision(state, &ctx, &path, backend, &requirements).await
+                    if let Some(response) = apply_rim_decision(
+                        state,
+                        &ctx,
+                        &path,
+                        backend,
+                        &requirements,
+                        selection_key.as_deref(),
+                    )
+                    .await
                     {
                         return Some(response);
                     }

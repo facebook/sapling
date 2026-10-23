@@ -12,7 +12,9 @@ rust_library(
         else {
             "MononokeSaplingApiRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeSaplingApiRequest_ods3-rust",
             "backend_if": "//configerator/structs/rim/if:backend_if-rust",
+            "rim_if": "//rim/if:rim_if-rust",
             "rim_ligen": "//rim/ligen:rim_ligen-rs_bindings",
+            "rim_ligen_ext": "//eden/mononoke/facebook/rim:rim_ligen_ext-rs_bindings",
         }
     ),
     test_deps = [
