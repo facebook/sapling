@@ -56,12 +56,10 @@ target_link_libraries(
     eden_nfs_nfsd3
     eden_overlay_thrift_cpp
     eden_service_thrift_util
-    eden_sqlite
     eden_store
     eden_takeover_thrift
     eden_telemetry
     eden_utils
-    eden_sqlite_catalog
     Folly::folly
     edencommon::edencommon_utils
   PRIVATE
@@ -117,5 +115,4 @@ target_link_libraries(
 add_subdirectory(overlay)
 add_subdirectory(fscatalog)
 add_subdirectory(memcatalog)
-add_subdirectory(sqlitecatalog)
 add_subdirectory(test)

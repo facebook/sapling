@@ -945,23 +945,6 @@ struct EdenMountHealthIssue : public EdenFSEvent {
   }
 };
 
-struct SqliteIntegrityCheck : public EdenFSEvent {
-  double duration = 0.0;
-  int64_t numErrors = 0;
-
-  SqliteIntegrityCheck(double duration, int64_t numErrors)
-      : duration(duration), numErrors(numErrors) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addDouble("duration", duration);
-    event.addInt("num_errors", numErrors);
-  }
-
-  const char* getType() const override {
-    return "sqlite_integrity_check";
-  }
-};
-
 struct NfsCrawlDetected : public EdenFSEvent {
   int64_t readCount = 0;
   int64_t readThreshold = 0;

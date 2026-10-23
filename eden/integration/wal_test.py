@@ -91,8 +91,8 @@ def _encode_wal_add(name: str, inode: int, mode: int = 0o100644) -> bytes:
 @unittest.skipIf(
     sys.platform == "win32",
     "WAL is only implemented for the Legacy FsInodeCatalog "
-    "(Linux/macOS). Windows uses the Sqlite catalog which has its own "
-    "semantic addChild/removeChild path and does not produce .wal files.",
+    "(Linux/macOS). Windows uses the InMemory catalog, which does not "
+    "produce .wal files.",
 )
 class WalTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """End-to-end WAL recovery tests.

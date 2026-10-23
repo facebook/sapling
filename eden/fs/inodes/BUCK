@@ -1,5 +1,4 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_client_infra")
 
@@ -201,17 +200,7 @@ cpp_library(
         "//eden/fs/utils:nfs_socket",
         "//eden/scm/lib/util/sigbus-memops:sigbus_memops",
         "//thrift/lib/cpp2/protocol:protocol",
-    ]
-    + (
-        []
-        if rust_oss.is_oss_build()
-        else [
-            "//eden/fs/inodes/sqlitecatalog:bufferedsqliteinodecatalog",
-            "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
-            "//eden/fs/sqlite:sqlite",
-        ]
-    )
-    + select({
+    ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
             "//eden/fs/inodes/fscatalog:fsinodecatalog",

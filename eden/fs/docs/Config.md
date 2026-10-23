@@ -43,7 +43,7 @@ source code.
 
 ```
 [overlay]
-buffered = true
+use-wal = true
 inode-reservation = true
 
 [experimental]
@@ -67,7 +67,7 @@ readdir-prefetch = "trees"
 In the given example, EdenFS would get the config values from the following
 locations
 
-- `overlay:buffered = true # /etc/eden/edenfs.rc`
+- `overlay:use-wal = true # /etc/eden/edenfs.rc`
 - `overlay:inode-reservation = true # /etc/eden/edenfs.rc`
 - `experimental:enable-nfs-server = true # /etc/eden/edenfs_dynamic.rc, overrides /etc/eden/edenfs.rc`
 - `mount:readdir-prefetch = "trees" # ~/.edenrc, doesn't exist in any /etc/eden files`

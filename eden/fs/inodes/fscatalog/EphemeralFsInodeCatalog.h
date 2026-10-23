@@ -103,8 +103,6 @@ class EphemeralFsInodeCatalog : public InodeCatalog {
       PathComponentPiece srcName,
       PathComponentPiece dstName) override;
 
-  void maintenance() override {}
-
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:

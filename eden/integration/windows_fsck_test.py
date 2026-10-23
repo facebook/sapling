@@ -7,10 +7,9 @@
 # pyre-unsafe
 
 import os
-import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from eden.fs.service.eden.thrift_types import (
     CheckoutConflict,
@@ -18,7 +17,6 @@ from eden.fs.service.eden.thrift_types import (
     CheckOutRevisionParams,
     ScmFileStatus,
     SyncBehavior,
-    TreeInodeDebugInfo,
 )
 
 from .lib import prjfs_test, testcase
@@ -631,172 +629,3 @@ MATERIALIZED = True
 UNMATERIALIZED = False
 FILE_MODE = 32768
 DIR_MODE = 16384
-
-
-@testcase.eden_repo_test
-class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
-    """Windows fsck integration tests"""
-
-    initial_commit: str = ""
-
-    def edenfs_logging_settings(self) -> Dict[str, str]:
-        return {"eden.fs.inodes.sqlitecatalog.WindowsFsck": "DBG9"}
-
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        configs = super().edenfs_extra_config() or {}
-        configs.setdefault("overlay", []).append('inode-catalog-type = "sqlite"')
-        return configs
-
-    def populate_repo(self) -> None:
-        self.repo.write_file("hello", "hola\n")
-        self.repo.write_file("adir/file1", "foo!\n")
-        self.repo.write_file("subdir/bdir/file2", "foo!\n")
-        self.repo.write_file("subdir/cdir/file3", "foo!\n")
-        self.repo.write_file(".gitignore", "ignored/\n")
-        self.repo.write_file("otherdir/file4", "foo!/\n")
-        self.initial_commit = self.repo.commit("Initial commit.")
-
-    def select_storage_engine(self) -> str:
-        return "sqlite"
-
-    async def _eden_inode_info(self) -> Sequence[TreeInodeDebugInfo]:
-        async with self.get_async_thrift_client() as client:
-            return await client.debugInodeStatus(
-                mountPoint=self.mount.encode(),
-                path=b"",
-                # Force it to return all inodes, not just loaded ones.
-                flags=1,
-                sync=SyncBehavior(),
-            )
-
-    async def get_inodes(self) -> Set[Tuple[str, int, bool, bytes]]:
-        inodes = await self._eden_inode_info()
-        entries = set()
-        ignored = {
-            b".hg",
-        }
-        for inode in inodes:
-            if inode.path in ignored:
-                continue
-            for entry in inode.entries:
-                if entry.name in ignored:
-                    continue
-                entries.add(
-                    (
-                        entry.name.decode("utf8"),
-                        entry.mode,
-                        entry.materialized,
-                        entry.hash,
-                    )
-                )
-        return entries
-
-    async def stop_eden(self) -> Set[Tuple[str, int, bool, bytes]]:
-        preInodes = await self.get_inodes()
-        self.eden.shutdown()
-        self.assertTrue(preInodes)
-        return preInodes
-
-    async def start_eden(self) -> Set[Tuple[str, int, bool, bytes]]:
-        self.eden.start()
-        postInodes = await self.get_inodes()
-        return postInodes
-
-    async def rebuild_overlay(
-        self, from_backup=False
-    ) -> Dict[str, Tuple[Union[bool, bytes, int, str], ...]]:
-        preInodes = await self.stop_eden()
-
-        if from_backup:
-            self.restore_overlay()
-        else:
-            # Clear the overlay
-            os.unlink(
-                os.path.join(
-                    self.eden_dir, "clients", self.repo_name, "local", "treestore.db"
-                )
-            )
-
-        postInodes = await self.start_eden()
-        if preInodes != postInodes:
-            print("PreInodes: %s" % preInodes)
-        self.assertEqual(preInodes, postInodes)
-
-        # Make a dict for easy access to verify individual files.
-        return {inode[0]: inode[1:] for inode in postInodes}
-
-    def backup_overlay(self) -> None:
-        path = os.path.join(
-            self.eden_dir, "clients", self.repo_name, "local", "treestore.db"
-        )
-        backup = os.path.join(
-            self.eden_dir, "clients", self.repo_name, "local", "treestore.db.bak"
-        )
-        shutil.copy(path, backup)
-
-    def restore_overlay(self) -> None:
-        path = os.path.join(
-            self.eden_dir, "clients", self.repo_name, "local", "treestore.db"
-        )
-        backup = os.path.join(
-            self.eden_dir, "clients", self.repo_name, "local", "treestore.db.bak"
-        )
-        shutil.copy(backup, path)
-
-    async def test_rebuild_entire_overlay(self) -> None:
-        # Test a not yet loaded overlay
-        await self.rebuild_overlay()
-
-        # Test an empty overlay
-        self.repo.update("null")
-        self.repo.update(self.initial_commit)
-        await self.rebuild_overlay()
-
-        # Test a partially materialized overlay
-        self.read_file("subdir/bdir/file2")
-        await self.rebuild_overlay()
-
-        # Test with non-tracked changes
-        self.write_file("subdir/bdir/untracked", "asdf")
-        await self.rebuild_overlay()
-
-    async def test_rebuild_partial_overlay(self) -> None:
-        # Clear then partially load the overlay
-        self.repo.update("null")
-        self.repo.update(self.initial_commit)
-        self.read_file("subdir/bdir/file2")
-
-        initialInodes = await self.get_inodes()
-        initialInodes = {inode[0]: inode[1:] for inode in initialInodes}
-        self.assertEqual(initialInodes["subdir"][1], UNMATERIALIZED)
-
-        # Create a backup of the overlay. Later we'll restore this backup
-        # to simulate a crash where the overlay was out of date since the
-        # OverlayBuffer hadn't been flushed yet.
-        self.backup_overlay()
-
-        # Test loading a file, but not changing it (i.e. not materializing)
-        self.assertEqual(self.read_file("adir/file1"), "foo!\n")
-
-        # Test changing a file to a directory
-        self.rm("hello")
-        self.write_file("hello/innerfile", "asdf")
-
-        # Test adding an untracked file
-        self.write_file("subdir/untracked", "asdf")
-
-        # Test deleting a file
-        self.rm(".gitignore")
-
-        # Test deleting a file in a directory
-        self.rm("otherdir/file4")
-
-        inodes = await self.rebuild_overlay(from_backup=True)
-        self.assertEqual(inodes["file1"][1], UNMATERIALIZED)
-        self.assertTrue(".gitignore" not in inodes)
-        self.assertEqual(inodes["untracked"][1], MATERIALIZED)
-        self.assertEqual(inodes["subdir"][1], MATERIALIZED)
-        self.assertEqual(inodes["cdir"][1], UNMATERIALIZED)
-        self.assertEqual(inodes["hello"][:2], (DIR_MODE, MATERIALIZED))
-        self.assertEqual(inodes["innerfile"][:2], (FILE_MODE, MATERIALIZED))
-        self.assertEqual(inodes["otherdir"][:2], (DIR_MODE, MATERIALIZED))

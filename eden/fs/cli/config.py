@@ -132,7 +132,6 @@ SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
 
 SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
     "legacy",
-    "sqlite",
     "inmemory",
     "legacyephemeral",
 }
@@ -1655,16 +1654,16 @@ class EdenCheckout:
         if not isinstance(off_mount_repo_dir, bool):
             off_mount_repo_dir = False
 
+        # A type this CLI does not know is kept as written rather than
+        # rejected: the daemon refuses to mount such a checkout, and the user
+        # still needs `eden rm`, `eden list` and `eden doctor` to work on it.
+        # `eden clone` validates the type for new checkouts.
         inode_catalog_type = repository.get("inode-catalog-type")
         if inode_catalog_type is not None:
-            if (
-                not isinstance(inode_catalog_type, str)
-                or inode_catalog_type.lower() not in SUPPORTED_INODE_CATALOG_TYPES
-            ):
+            if not isinstance(inode_catalog_type, str):
                 raise CheckoutConfigCorruptedError(
-                    f'repository "{config_path}" has unsupported inode catalog (overlay) type '
-                    f'"{inode_catalog_type}". Supported inode catalog (overlay) types are: '
-                    f"{', '.join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}."
+                    f'repository "{config_path}" has a non-string inode catalog '
+                    f'(overlay) type "{inode_catalog_type}".'
                 )
             inode_catalog_type = inode_catalog_type.lower()
             if sys.platform == "win32" and inode_catalog_type in [
@@ -1673,12 +1672,12 @@ class EdenCheckout:
             ]:
                 raise CheckoutConfigCorruptedError(
                     "Legacy inode catalog (overlay) type not supported on Windows. "
-                    "Use Sqlite or InMemory on Windows."
+                    "Use InMemory on Windows."
                 )
             elif sys.platform != "win32" and inode_catalog_type == "inmemory":
                 raise CheckoutConfigCorruptedError(
                     "InMemory inode catalog (overlay) type is only supported on Windows. "
-                    "Use Legacy or Sqlite on Linux and MacOS."
+                    "Use Legacy on Linux and MacOS."
                 )
 
         return CheckoutConfig(
@@ -1731,19 +1730,6 @@ class EdenCheckout:
         old_config = self.get_config()
 
         new_config = old_config._replace(mount_protocol=new_mount_protocol)
-
-        self.save_config(new_config)
-
-    def migrate_inode_catalog(self, new_inode_catalog_type: str) -> None:
-        """
-        Migrate this checkout to the new_inode_catalog_type. This will only take
-        effect if EdenFS is restarted. It is recommended to only run this while
-        EdenFS is stopped.
-        """
-
-        old_config = self.get_config()
-
-        new_config = old_config._replace(inode_catalog_type=new_inode_catalog_type)
 
         self.save_config(new_config)
 
@@ -1987,54 +1973,6 @@ def get_transport_mismatches(
     if is_nfs_transport_mismatch_restart_enabled(instance):
         mismatches.extend(get_nfs_transport_mismatches(instance))
     return mismatches
-
-
-_MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG = "core.migrate_existing_to_in_memory_catalog"
-
-
-def should_migrate_inode_catalog_to_in_memory(instance: AbstractEdenInstance) -> bool:
-    if sys.platform != "win32":
-        return False
-
-    if util.is_sandcastle():
-        return False
-
-    # default to migration, allow override in Eden config
-    if instance.get_config_bool(_MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG, default=True):
-        return True
-
-    return False
-
-
-def count_non_in_memory_inode_catalogs(instance: AbstractEdenInstance) -> int:
-    count = 0
-    for checkout in instance.get_checkouts():
-        if (
-            checkout.get_config().inode_catalog_type
-            != util.INODE_CATALOG_TYPE_IN_MEMORY_STRING
-        ):
-            count += 1
-    return count
-
-
-# Checks for any non in memory catalogs and migrates them to in memory.
-def _do_in_memory_inode_catalog_migration(instance: EdenInstance) -> None:
-    if count_non_in_memory_inode_catalogs(instance) == 0:
-        # most the time this should be the case. we only need to migrate catalogs
-        # once, and then we should just be able to skip this all other times.
-        return
-
-    print("migrating mounts to inmemory inode catalog...")
-
-    for checkout in instance.get_checkouts():
-        if (
-            checkout.get_config().inode_catalog_type
-            != util.INODE_CATALOG_TYPE_IN_MEMORY_STRING
-        ):
-            checkout.migrate_inode_catalog(util.INODE_CATALOG_TYPE_IN_MEMORY_STRING)
-
-    instance.log_sample("migrate_existing_clones_to_in_memory")
-    print("Successfully migrated all your mounts to inmemory inode catalog.\n")
 
 
 def _do_manual_migration(
@@ -2377,12 +2315,12 @@ def create_checkout_config(
     ]:
         raise Exception(
             "Legacy overlay (inode catalog) type not supported on Windows. "
-            "Use Sqlite or InMemory on Windows."
+            "Use InMemory on Windows."
         )
     elif sys.platform != "win32" and overlay_type == "inmemory":
         raise Exception(
             "InMemory overlay (inode catalog) type is only supported on Windows. "
-            "Use Legacy or Sqlite on Linux and MacOS."
+            "Use Legacy on Linux and MacOS."
         )
 
     # This is a valid repository path.

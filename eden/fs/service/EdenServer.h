@@ -773,9 +773,6 @@ class EdenServer : private TakeoverHandler {
   // while.
   void refreshBackingStore();
 
-  // Tree overlay needs periodically run checkpoint to flush its journal file.
-  void manageOverlay();
-
   // Run a garbage collection cycle over the inodes hierarchy.
   void garbageCollectAllMounts();
 
@@ -1136,7 +1133,6 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::refreshBackingStore> backingStoreTask_{
       this,
       "backing_store"};
-  PeriodicFnTask<&EdenServer::manageOverlay> overlayTask_{this, "overlay"};
   PeriodicFnTask<&EdenServer::garbageCollectAllMounts> gcTask_{
       this,
       "inode_gc"};

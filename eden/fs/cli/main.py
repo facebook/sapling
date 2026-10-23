@@ -2441,8 +2441,6 @@ class StartCmd(Subcmd):
                 instance, daemon_binary, args.edenfs_args, args.preserved_vars
             )
 
-        if config_mod.should_migrate_inode_catalog_to_in_memory(instance):
-            config_mod._do_in_memory_inode_catalog_migration(instance)
         result = daemon.start_edenfs_service(
             instance, daemon_binary, args.edenfs_args, args.preserved_vars
         )

@@ -34,7 +34,6 @@ class OverlayFileTest : public ::testing::Test {
         canonicalPath(testDir_.path().string()),
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::Legacy,
-        INODE_CATALOG_DEFAULT,
         makeTestEdenFsEventsLogger(),
         /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),

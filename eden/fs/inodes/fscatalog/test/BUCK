@@ -37,7 +37,6 @@ cpp_unittest(
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//eden/fs/inodes/sqlitecatalog:sqliteinodecatalog",
         "//eden/fs/inodes/test:overlay_test_util",
         "//eden/fs/model:model",
         "//eden/fs/telemetry:stats",

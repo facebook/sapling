@@ -64,7 +64,7 @@ class RemoveLegacyEphemeralCheckoutsTest(unittest.TestCase):
         checkout3 = instance.create_test_mount("mount3")
 
         config1 = checkout1.get_config()
-        checkout1.save_config(config1._replace(inode_catalog_type="sqlite"))
+        checkout1.save_config(config1._replace(inode_catalog_type="legacy"))
 
         config2 = checkout2.get_config()
         checkout2.save_config(config2._replace(inode_catalog_type="legacy"))
@@ -149,7 +149,7 @@ class RemoveLegacyEphemeralCheckoutsTest(unittest.TestCase):
         checkout1.save_config(config1._replace(inode_catalog_type="legacyephemeral"))
 
         config2 = checkout2.get_config()
-        checkout2.save_config(config2._replace(inode_catalog_type="sqlite"))
+        checkout2.save_config(config2._replace(inode_catalog_type="legacy"))
 
         config3 = checkout3.get_config()
         checkout3.save_config(config3._replace(inode_catalog_type="legacyephemeral"))

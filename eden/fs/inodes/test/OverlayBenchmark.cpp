@@ -116,7 +116,6 @@ void benchmarkOverlay(
       overlayPath,
       kPathMapDefaultCaseSensitive,
       overlayType,
-      kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
       /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),

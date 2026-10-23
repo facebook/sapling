@@ -101,8 +101,6 @@ class MemInodeCatalog : public InodeCatalog {
       AbsolutePathPiece mountPath,
       InodeCatalog::LookupCallback& callback) override;
 
-  void maintenance() override {}
-
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:

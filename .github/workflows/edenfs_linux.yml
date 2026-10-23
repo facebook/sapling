@@ -141,9 +141,6 @@ jobs:
     - name: Fetch rocksdb
       if: ${{ steps.paths.outputs.rocksdb_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rocksdb
-    - name: Fetch sqlite3
-      if: ${{ steps.paths.outputs.sqlite3_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests sqlite3
     - name: Fetch liboqs
       if: ${{ steps.paths.outputs.liboqs_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests liboqs

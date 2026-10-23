@@ -252,8 +252,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
     EdenStatsPtr stats,
-    std::optional<InodeCatalogType> inodeCatalogType,
-    std::optional<InodeCatalogOptions> inodeCatalogOptions) {
+    std::optional<InodeCatalogType> inodeCatalogType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config),
@@ -262,8 +261,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
           std::move(serverState),
           std::move(journal),
           std::move(stats),
-          std::move(inodeCatalogType),
-          std::move(inodeCatalogOptions)},
+          std::move(inodeCatalogType)},
       EdenMountDeleter{}};
 }
 
@@ -274,8 +272,7 @@ EdenMount::EdenMount(
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
     EdenStatsPtr stats,
-    std::optional<InodeCatalogType> inodeCatalogType,
-    std::optional<InodeCatalogOptions> inodeCatalogOptions)
+    std::optional<InodeCatalogType> inodeCatalogType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
 #ifdef _WIN32
@@ -297,7 +294,6 @@ EdenMount::EdenMount(
           checkoutConfig_->getOverlayPath(),
           checkoutConfig_->getCaseSensitive(),
           getInodeCatalogType(inodeCatalogType),
-          getInodeCatalogOptions(inodeCatalogOptions),
           serverState_->getEdenFsEventsLogger(),
           serverState_->getErrorLogger(),
           std::move(stats),
@@ -344,29 +340,6 @@ InodeCatalogType EdenMount::getInodeCatalogType(
   }
 
   return serverState_->getEdenConfig()->inodeCatalogType.getValue();
-}
-
-InodeCatalogOptions EdenMount::getInodeCatalogOptions(
-    std::optional<InodeCatalogOptions> inodeCatalogOptions) {
-  if (inodeCatalogOptions.has_value()) {
-    return inodeCatalogOptions.value();
-  }
-
-  auto options = INODE_CATALOG_DEFAULT;
-
-  if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
-    options |= INODE_CATALOG_UNSAFE_IN_MEMORY;
-  }
-
-  if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
-    options |= INODE_CATALOG_SYNCHRONOUS_OFF;
-  }
-
-  if (getEdenConfig()->overlayBuffered.getValue()) {
-    options |= INODE_CATALOG_BUFFERED;
-  }
-
-  return options;
 }
 
 [[nodiscard]] ImmediateFuture<folly::Unit> EdenMount::initialize(

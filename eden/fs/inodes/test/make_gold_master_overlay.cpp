@@ -48,7 +48,6 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       overlayPath,
       CaseSensitivity::Sensitive,
       InodeCatalogType::Legacy,
-      kDefaultInodeCatalogOptions,
       makeTestEdenFsEventsLogger(),
       /*errorLogger=*/noopErrorLogger,
       makeRefPtr<EdenStats>(),

@@ -56,7 +56,6 @@ cpp_library(
         ":config_thrift-cpp2-types",
         "//common/rust/shed/hostcaps:hostcaps_ffi",
         "//eden/common/utils:case_sensitivity",
-        "//eden/common/utils:option_set",
         "//eden/common/utils:path",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",

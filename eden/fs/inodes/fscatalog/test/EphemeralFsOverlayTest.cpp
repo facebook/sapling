@@ -48,7 +48,6 @@ class EphemeralFsOverlayTest : public ::testing::Test {
         canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
         InodeCatalogType::LegacyEphemeral,
-        INODE_CATALOG_DEFAULT,
         makeTestEdenFsEventsLogger(),
         /*errorLogger=*/noopErrorLogger_,
         makeRefPtr<EdenStats>(),

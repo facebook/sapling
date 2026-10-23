@@ -456,58 +456,49 @@ ImmediateFuture<bool> processChildren(
 void windowsFsckScanLocalChanges(
     std::shared_ptr<ReloadableConfig> config,
     InodeCatalog& inodeCatalog,
-    InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,
     InodeCatalog::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   auto view = inodeCatalog.loadOverlayDir(kRootNodeId);
-  if (view.has_value() || inodeCatalogType == InodeCatalogType::InMemory) {
-    auto insensitiveOverlayDir = toPathMap(view);
-    std::atomic<uint64_t> traversedDirectories = 1;
-    // TODO: Handler errors or no trees
+  auto insensitiveOverlayDir = toPathMap(view);
+  std::atomic<uint64_t> traversedDirectories = 1;
+  // TODO: Handler errors or no trees
 
-    auto executor = folly::getGlobalCPUExecutor();
-    if (!config->getEdenConfig()->multiThreadedFsck.getValue()) {
-      executor = folly::SerialExecutor::create();
-    }
-
-    folly::via(
-        executor,
-        [&callback]() { return callback(nullptr, ""_relpath).semi(); })
-        .thenValue(
-            [&inodeCatalog,
-             mountPath,
-             insensitiveOverlayDir = std::move(insensitiveOverlayDir),
-             &traversedDirectories,
-             &callback,
-             logFrequency =
-                 config->getEdenConfig()->fsckLogFrequency.getValue(),
-             fsckRenamedFiles =
-                 config->getEdenConfig()->prjfsFsckDetectRenames.getValue()](
-                std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
-              auto scmTree =
-                  std::get<std::shared_ptr<const Tree>>(std::move(scmEntry));
-              return processChildren(
-                         inodeCatalog,
-                         ""_relpath,
-                         mountPath,
-                         kRootNodeId,
-                         insensitiveOverlayDir,
-                         scmTree,
-                         callback,
-                         logFrequency,
-                         traversedDirectories,
-                         fsckRenamedFiles,
-                         DirectoryOnDiskState::Placeholder)
-                  .semi();
-            })
-        .get();
-    XLOGF(INFO, "Scanning complete for {}", mountPath);
-  } else {
-    XLOG(
-        INFO,
-        "Unable to start fsck since root inode is not present and not an InMemory overlay. Possibly new mount.");
+  auto executor = folly::getGlobalCPUExecutor();
+  if (!config->getEdenConfig()->multiThreadedFsck.getValue()) {
+    executor = folly::SerialExecutor::create();
   }
+
+  folly::via(
+      executor, [&callback]() { return callback(nullptr, ""_relpath).semi(); })
+      .thenValue(
+          [&inodeCatalog,
+           mountPath,
+           insensitiveOverlayDir = std::move(insensitiveOverlayDir),
+           &traversedDirectories,
+           &callback,
+           logFrequency = config->getEdenConfig()->fsckLogFrequency.getValue(),
+           fsckRenamedFiles =
+               config->getEdenConfig()->prjfsFsckDetectRenames.getValue()](
+              std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
+            auto scmTree =
+                std::get<std::shared_ptr<const Tree>>(std::move(scmEntry));
+            return processChildren(
+                       inodeCatalog,
+                       ""_relpath,
+                       mountPath,
+                       kRootNodeId,
+                       insensitiveOverlayDir,
+                       scmTree,
+                       callback,
+                       logFrequency,
+                       traversedDirectories,
+                       fsckRenamedFiles,
+                       DirectoryOnDiskState::Placeholder)
+                .semi();
+          })
+      .get();
+  XLOGF(INFO, "Scanning complete for {}", mountPath);
 }
 
 } // namespace facebook::eden

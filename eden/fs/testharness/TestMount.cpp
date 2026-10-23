@@ -246,14 +246,9 @@ void TestMount::initialize(
     const RootId& initialCommitId,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions) {
+    InodeCatalogType inodeCatalogType) {
   createMountWithoutInitializing(
-      initialCommitId,
-      rootBuilder,
-      startReady,
-      inodeCatalogType,
-      inodeCatalogOptions);
+      initialCommitId, rootBuilder, startReady, inodeCatalogType);
   initializeEdenMount();
 }
 
@@ -273,8 +268,7 @@ void TestMount::createMountWithoutInitializing(
     const RootId& initialCommitId,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions) {
+    InodeCatalogType inodeCatalogType) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -286,12 +280,10 @@ void TestMount::createMountWithoutInitializing(
   setInitialCommit(initialCommitId, rootTree->get().getObjectId());
 
   // Create edenMount_
-  createMount(inodeCatalogType, inodeCatalogOptions);
+  createMount(inodeCatalogType);
 }
 
-void TestMount::createMount(
-    InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions) {
+void TestMount::createMount(InodeCatalogType inodeCatalogType) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       backingStore_,
       treeCache_,
@@ -309,8 +301,7 @@ void TestMount::createMount(
       serverState_,
       std::move(journal),
       stats_.copy(),
-      inodeCatalogType,
-      inodeCatalogOptions);
+      inodeCatalogType);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
 #endif
@@ -329,18 +320,6 @@ RootId TestMount::nextCommitId() {
 
 void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
   initialize(nextCommitId(), rootBuilder, startReady);
-}
-
-void TestMount::initialize(
-    FakeTreeBuilder& rootBuilder,
-    InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions) {
-  initialize(
-      nextCommitId(),
-      rootBuilder,
-      /* startReady */ true,
-      inodeCatalogType,
-      inodeCatalogOptions);
 }
 
 void TestMount::createMountWithoutInitializing(
@@ -463,8 +442,7 @@ void TestMount::remount(bool simulateUncleanShutdown) {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kInodeCatalogTypeDefault,
-      kDefaultInodeCatalogOptions);
+      kInodeCatalogTypeDefault);
   initializeEdenMount();
 }
 
@@ -515,8 +493,7 @@ void TestMount::remountGracefully() {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kInodeCatalogTypeDefault,
-      kDefaultInodeCatalogOptions);
+      kInodeCatalogTypeDefault);
   edenMount_
       ->initialize(
           [](auto) {},

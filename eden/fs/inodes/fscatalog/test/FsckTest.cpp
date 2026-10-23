@@ -21,7 +21,6 @@
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/fscatalog/InodePath.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
-#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -43,7 +42,7 @@ class TestDir;
 
 class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
  public:
-  explicit TestOverlay(InodeCatalogType type);
+  TestOverlay();
 
   /*
    * Initialize the TestOverlay object.
@@ -76,9 +75,6 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
 
   void closeCleanly() {
     inodeCatalog_->close(getNextInodeNumber());
-    if (type_ != InodeCatalogType::Legacy) {
-      fcs_.close();
-    }
   }
 
   void corruptInodeHeader(InodeNumber number, StringPiece headerData) {
@@ -89,8 +85,6 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
     folly::checkUnixError(ret, "failed to replace file inode header");
   }
 
-  void recreateSqliteInodeCatalog();
-
   std::shared_ptr<EdenConfig> getTestConfig() {
     return testConfig_;
   }
@@ -100,7 +94,6 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   AbsolutePath tmpDirPath_;
   FsFileContentStore fcs_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
-  InodeCatalogType type_;
   uint64_t nextInodeNumber_{0};
   std::shared_ptr<EdenConfig> testConfig_;
 };
@@ -209,36 +202,19 @@ class TestDir {
   overlay::OverlayDir contents_;
 };
 
-TestOverlay::TestOverlay(InodeCatalogType type)
+TestOverlay::TestOverlay()
     : tmpDir_(makeTempDir()),
       tmpDirPath_(canonicalPath(tmpDir_.path().string())),
       // fsck will write its output in a sibling directory to the overlay,
       // so make sure we put the overlay at least 1 directory deep inside our
       // temporary directory
       fcs_(tmpDirPath_ + "overlay"_pc),
-      type_(type),
-      testConfig_{EdenConfig::createTestEdenConfig()} {
-  if (type != InodeCatalogType::Legacy) {
-    inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
-        tmpDirPath_ + "overlay"_pc, makeTestEdenFsEventsLogger());
-  } else {
-    inodeCatalog_ = std::make_unique<FsInodeCatalog>(&fcs_);
-  }
-}
-
-void TestOverlay::recreateSqliteInodeCatalog() {
-  if (type_ != InodeCatalogType::Legacy) {
-    inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
-        tmpDirPath_ + "overlay"_pc, makeTestEdenFsEventsLogger());
-  }
-}
+      inodeCatalog_(std::make_unique<FsInodeCatalog>(&fcs_)),
+      testConfig_{EdenConfig::createTestEdenConfig()} {}
 
 TestDir TestOverlay::init() {
   auto nextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
-  if (type_ != InodeCatalogType::Legacy) {
-    fcs_.initialize(/*createIfNonExisting=*/true);
-  }
   XCHECK(nextInodeNumber.has_value());
   XCHECK_GT(nextInodeNumber.value(), kRootNodeId);
   nextInodeNumber_ = nextInodeNumber.value().get();
@@ -361,12 +337,7 @@ std::string readLostNFoundFile(
 
 } // namespace
 
-class FsckTest : public ::testing::TestWithParam<InodeCatalogType> {
- protected:
-  InodeCatalogType overlayType() const {
-    return GetParam();
-  }
-};
+class FsckTest : public ::testing::Test {};
 
 TEST(InodeInfoTest, addParentIsDeterministic) {
   fsck::InodeInfo info{InodeNumber{42}, fsck::InodeType::File};
@@ -390,22 +361,14 @@ TEST(InodeInfoTest, addParentIsDeterministic) {
   EXPECT_EQ(info.modeFromParent, reverseInfo.modeFromParent);
 }
 
-TEST_P(FsckTest, testNoErrors) {
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testNoErrors) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   testOverlay->closeCleanly();
-
-  testOverlay->recreateSqliteInodeCatalog();
   FsFileContentStore& fcs = testOverlay->fcs();
   InodeCatalog* catalog = testOverlay->inodeCatalog();
-  std::optional<InodeNumber> nextInode;
-  if (overlayType() == InodeCatalogType::Legacy) {
-    nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
-  } else {
-    nextInode = catalog->initOverlay(/*createIfNonExisting=*/true);
-    fcs.initialize(/*createIfNonExisting=*/false);
-  }
+  auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
@@ -437,22 +400,14 @@ TEST_P(FsckTest, testNoErrors) {
           .toString());
 }
 
-TEST_P(FsckTest, testNoErrorsMemoryEfficientScanDisabled) {
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testNoErrorsMemoryEfficientScanDisabled) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   testOverlay->closeCleanly();
-
-  testOverlay->recreateSqliteInodeCatalog();
   FsFileContentStore& fcs = testOverlay->fcs();
   InodeCatalog* catalog = testOverlay->inodeCatalog();
-  std::optional<InodeNumber> nextInode;
-  if (overlayType() == InodeCatalogType::Legacy) {
-    nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
-  } else {
-    nextInode = catalog->initOverlay(/*createIfNonExisting=*/true);
-    fcs.initialize(/*createIfNonExisting=*/false);
-  }
+  auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
@@ -472,14 +427,8 @@ TEST_P(FsckTest, testNoErrorsMemoryEfficientScanDisabled) {
       checker.computePath(layout.src_foo_x_y_zTxt.number()).toString());
 }
 
-TEST_P(FsckTest, testMissingNextInodeNumber) {
-  // This test is not applicable for Sqlite and InMemory backed overlays since
-  // they implicitly track the next inode number
-  if (overlayType() == InodeCatalogType::Sqlite ||
-      overlayType() == InodeCatalogType::InMemory) {
-    return;
-  }
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testMissingNextInodeNumber) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   // Close the overlay without saving the next inode number
@@ -510,14 +459,8 @@ TEST_P(FsckTest, testMissingNextInodeNumber) {
   catalog->close(checker.getNextInodeNumber());
 }
 
-TEST_P(FsckTest, testBadNextInodeNumber) {
-  // This test is not applicable for SQLite and InMemory backed overlays since
-  // they implicitly track the next inode number
-  if (overlayType() == InodeCatalogType::Sqlite ||
-      overlayType() == InodeCatalogType::InMemory) {
-    return;
-  }
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testBadNextInodeNumber) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   auto actualNextInodeNumber = testOverlay->getNextInodeNumber();
@@ -550,8 +493,8 @@ TEST_P(FsckTest, testBadNextInodeNumber) {
   catalog->close(checker.getNextInodeNumber());
 }
 
-TEST_P(FsckTest, testBadFileData) {
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testBadFileData) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
@@ -602,7 +545,7 @@ TEST_P(FsckTest, testBadFileData) {
 }
 
 TEST(FsckProgressTest, repairReportsSlowPhases) {
-  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
@@ -656,7 +599,7 @@ TEST(FsckProgressTest, repairReportsSlowPhases) {
 }
 
 TEST(FsckRepairTest, orphanRepairPreservesSubtreeWhenChildReloadFails) {
-  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   root.save();
 
@@ -692,15 +635,8 @@ TEST(FsckRepairTest, orphanRepairPreservesSubtreeWhenChildReloadFails) {
   EXPECT_TRUE(testOverlay->fcs().hasOverlayFile(file.number()));
 }
 
-TEST_P(FsckTest, testTruncatedDirData) {
-  // This test doesn't work for SQLite or InMemory backed overlays because it
-  // directly manipluates the written overlay data on disk to simulate file
-  // corruption, which is not applicable for sqlite backed overlays
-  if (overlayType() == InodeCatalogType::Sqlite ||
-      overlayType() == InodeCatalogType::InMemory) {
-    return;
-  }
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testTruncatedDirData) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
@@ -786,7 +722,7 @@ TEST_P(FsckTest, testTruncatedDirData) {
 }
 
 TEST(FsckScanTest, partiallyParsedDirDoesNotLinkChildren) {
-  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
@@ -826,7 +762,7 @@ TEST(FsckScanTest, partiallyParsedDirDoesNotLinkChildren) {
 }
 
 TEST(FsckScanTest, unreadableParentProducesDescriptivePath) {
-  auto testOverlay = make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
@@ -853,15 +789,8 @@ TEST(FsckScanTest, unreadableParentProducesDescriptivePath) {
       checker.computePath(layout.src_foo_x_y_zTxt.number()).toString());
 }
 
-TEST_P(FsckTest, testMissingDirData) {
-  // This test doesn't work for SQLite or InMemory backed overlays because it
-  // directly manipluates the written overlay metadata on disk to simulate
-  // file corruption, which is not applicable for sqlite backed overlays
-  if (overlayType() == InodeCatalogType::Sqlite ||
-      overlayType() == InodeCatalogType::InMemory) {
-    return;
-  }
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testMissingDirData) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
@@ -959,8 +888,8 @@ TEST_P(FsckTest, testMissingDirData) {
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
-TEST_P(FsckTest, testHardLink) {
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, testHardLink) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   // Add an entry to src/foo/x/y/z.txt in src/foo
@@ -1001,8 +930,8 @@ TEST_P(FsckTest, testHardLink) {
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
-TEST_P(FsckTest, hardLinkRepairKeepsTheTrackedName) {
-  auto testOverlay = make_shared<TestOverlay>(overlayType());
+TEST_F(FsckTest, hardLinkRepairKeepsTheTrackedName) {
+  auto testOverlay = make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   // A rename of z.txt.tmp over z.txt whose directory write never completed:
@@ -1046,14 +975,6 @@ TEST_P(FsckTest, hardLinkRepairKeepsTheTrackedName) {
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    FsckTest,
-    FsckTest,
-    ::testing::Values(
-        InodeCatalogType::Legacy,
-        InodeCatalogType::Sqlite,
-        InodeCatalogType::InMemory));
-
 namespace {
 
 // Run fsck repair on a Legacy overlay. The catalog is left open so callers can
@@ -1079,7 +1000,7 @@ void runFsckRepair(
 } // namespace
 
 TEST(FsckWalTest, repairReplaysWalAfterReadOnlyScan) {
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   // Materialize root so it has a real overlay file on disk for fsck to
   // load.
@@ -1110,7 +1031,7 @@ TEST(FsckWalTest, repairReplaysWalAfterReadOnlyScan) {
 }
 
 TEST(FsckWalTest, danglingWalIsRemoved) {
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   testOverlay->init();
   testOverlay->closeCleanly();
 
@@ -1136,7 +1057,7 @@ TEST(FsckWalTest, danglingWalIsRemoved) {
 }
 
 TEST(FsckWalTest, corruptWalDoesNotCrashFsck) {
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   root.save();
   testOverlay->closeCleanly();
@@ -1162,7 +1083,7 @@ TEST(FsckWalTest, corruptWalDoesNotCrashFsck) {
 TEST(FsckWalTest, scanForErrorsLeavesWalUntouched) {
   // Regression for `eden fsck --dry-run` mutating the overlay. scanForErrors()
   // must not merge or unlink any WAL file.
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   root.save();
   testOverlay->closeCleanly();
@@ -1240,7 +1161,7 @@ TEST(FsckWalTest, emptyOrphanDirWithWalIsReportedNotReclaimed) {
   // An empty, parentless dir record whose WAL has not been merged may
   // still gain children when the WAL replays; it must be reported as an
   // orphan rather than classified as a reclaimable contentless record.
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   root.save();
   testOverlay->closeCleanly();
@@ -1291,7 +1212,7 @@ TEST(FsckWalTest, repairReplaysWalOntoMissingBase) {
   // is present (e.g. daemon crashed between appendWalEntry and the first
   // saveOverlayDir), the WAL must be replayed onto an empty base so its
   // ADD'd children don't become orphans.
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   // Allocate a directory inode and link it into root, but do not save its
   // base file - simulates a crash between appendWalEntry and the first
@@ -1338,7 +1259,7 @@ TEST(FsckWalTest, caseInsensitiveCollapsedAddRekeysBaseEntry) {
   // ordering, applying them as independent entries; the REMOVE would then
   // erase the freshly-inserted FOO and saveOverlayDir would persist a
   // missing entry on macOS/Windows mounts.
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   auto baseChildIno = testOverlay->allocateInodeNumber();
   auto walChildIno = testOverlay->allocateInodeNumber();
@@ -1371,7 +1292,7 @@ TEST(FsckWalTest, caseInsensitiveCollapsedAddRekeysBaseEntry) {
 }
 
 TEST(FsckWalTest, tornSameDirectoryRenameKeepsOnlyTheDestination) {
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   auto file = root.create("old.txt", "contents\n");
   root.save();
@@ -1399,7 +1320,7 @@ TEST(FsckWalTest, tornSameDirectoryRenameKeepsOnlyTheDestination) {
 }
 
 TEST(FsckWalTest, hardLinkRepairKeepsTheLinkTheWalAdded) {
-  auto testOverlay = std::make_shared<TestOverlay>(InodeCatalogType::Legacy);
+  auto testOverlay = std::make_shared<TestOverlay>();
   auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   testOverlay->closeCleanly();

@@ -96,8 +96,6 @@ enum MountProtocol {
 enum InodeCatalogType {
     #[strum(serialize = "legacy")]
     Legacy,
-    #[strum(serialize = "sqlite")]
-    Sqlite,
     #[strum(serialize = "inmemory")]
     InMemory,
     #[strum(serialize = "legacyephemeral")]

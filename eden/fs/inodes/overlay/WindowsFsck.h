@@ -10,7 +10,6 @@
 #ifdef _WIN32
 
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 
 namespace facebook::eden {
@@ -54,7 +53,6 @@ class ReloadableConfig;
 void windowsFsckScanLocalChanges(
     std::shared_ptr<ReloadableConfig> config,
     InodeCatalog& overlay,
-    InodeCatalogType inodeCatalogType,
     AbsolutePathPiece mountPath,
     InodeCatalog::LookupCallback& callback);
 

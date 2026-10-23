@@ -149,9 +149,8 @@ class InodeCatalog {
   /**
    * Whether this catalog can use the directory write-ahead log (WAL) to
    * defer full `saveOverlayDir` writes. The WAL is a file-system based
-   * mechanism specific to the legacy `Fs*` catalogs; other backends
-   * (Sqlite, in-memory) manage their own durability and do not
-   * use it.
+   * mechanism specific to the legacy `Fs*` catalogs; the in-memory catalog
+   * has nothing to persist and does not use it.
    *
    * Pure virtual so adding a new `InodeCatalog` subclass forces an explicit
    * decision instead of silently inheriting WAL behavior.
@@ -159,9 +158,9 @@ class InodeCatalog {
   virtual bool supportsWal() const = 0;
 
   /**
-   * Get all of the `InodeNumber`s corresponding to directories. This is only
-   * implemented for SqliteInodeCatalog for use in OverlayChecker to facilitate
-   * loading of all of the known inodes.
+   * Get all of the `InodeNumber`s corresponding to directories. OverlayChecker
+   * uses this to enumerate the known inodes of catalogs that do not keep one
+   * file per directory on disk.
    */
   virtual std::vector<InodeNumber> getAllParentInodeNumbers() = 0;
 
@@ -333,10 +332,6 @@ class InodeCatalog {
       [[maybe_unused]] std::shared_ptr<ReloadableConfig> config,
       [[maybe_unused]] AbsolutePathPiece mountPath,
       [[maybe_unused]] LookupCallback& callback) {
-    EDEN_BUG() << "UNIMPLEMENTED";
-  }
-
-  virtual void maintenance() {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 

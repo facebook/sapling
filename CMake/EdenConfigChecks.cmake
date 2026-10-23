@@ -73,11 +73,6 @@ find_package(gflags CONFIG REQUIRED)
 find_package(BLAKE3 REQUIRED CONFIG)
 include_directories(${BLAKE3_INCLUDE_DIR})
 
-# TODO: It shouldn't be too hard to turn sqlite3 into optional
-# dependencies, since we have alternate LocalStore implementations.
-find_package(Sqlite3 REQUIRED)
-set(EDEN_HAVE_SQLITE3 ${SQLITE3_FOUND})
-
 find_package(python-toml REQUIRED)
 find_package(python-filelock REQUIRED)
 find_package(python-psutil REQUIRED)

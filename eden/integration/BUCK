@@ -113,7 +113,6 @@ python_unittest(
     network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
-        "//eden/fs/service:thrift-python-types",
         "//eden/integration/lib:lib",
     ],
 )

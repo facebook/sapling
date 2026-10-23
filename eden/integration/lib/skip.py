@@ -321,9 +321,7 @@ if sys.platform != "win32":
     TEST_DISABLED.update(
         {
             "changes_test.ChangesTestWin": True,
-            "corrupt_overlay_test.CorruptSqliteOverlayTest": True,
             "windows_fsck_test.WindowsFsckTest": True,
-            "windows_fsck_test.WindowsRebuildOverlayTest": True,
             "prjfs_stress.PrjFSStress": True,
             "prjfs_stress.PrjfsStressNoListenToFull": True,
             "projfs_buffer.PrjFSBuffer": True,

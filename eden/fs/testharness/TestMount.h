@@ -175,13 +175,8 @@ class TestMount {
       const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault,
-      InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
+      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault);
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
-  void initialize(
-      FakeTreeBuilder& rootBuilder,
-      InodeCatalogType inodeCatalogType,
-      InodeCatalogOptions inodeCatalogOptions);
 
   /**
    * Classify the mount as served over the given protocol: forwarded to
@@ -204,8 +199,7 @@ class TestMount {
       const RootId& initialCommitId,
       FakeTreeBuilder& rootBuilder,
       bool startReady,
-      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault,
-      InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
+      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault);
   void createMountWithoutInitializing(
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
@@ -281,8 +275,8 @@ class TestMount {
    * When simulateUncleanShutdown is true, the overlay's saved next inode
    * number is deleted after the old mount is destroyed, so the new mount
    * takes the same fsck recovery path as a mount whose daemon crashed. The
-   * Sqlite catalog used on Windows keeps no such file and reconciles the
-   * overlay with the disk on every start, so the option does nothing there.
+   * InMemory catalog used on Windows keeps no such file and rebuilds the
+   * overlay from the disk on every start, so the option does nothing there.
    */
   void remount(bool simulateUncleanShutdown = false);
 
@@ -414,8 +408,7 @@ class TestMount {
 
  private:
   void createMount(
-      InodeCatalogType InodeCatalogType = kInodeCatalogTypeDefault,
-      InodeCatalogOptions inodeCatalogOptions = kDefaultInodeCatalogOptions);
+      InodeCatalogType inodeCatalogType = kInodeCatalogTypeDefault);
   void initTestDirectory(CaseSensitivity caseSensitivity);
   void setInitialCommit(const RootId& commitId);
   void setInitialCommit(const RootId& commitId, ObjectId rootTreeId);

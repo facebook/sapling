@@ -2582,50 +2582,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * DANGER: this option will put overlay into memory and skip persisting any
-   * actual data to disk. This will guarantee to cause EdenFS corruption after
-   * restart. Use with caution.
-   */
-  ConfigSetting<bool> unsafeInMemoryOverlay{
-      "overlay:unsafe-in-memory-overlay",
-      false,
-      this};
-
-  /**
-   * The synchronous mode used when using a SQLite backed overlay. Currently it
-   * only supports "off" or "normal". Setting this to off may cause data loss.
-   */
-  ConfigSetting<std::string> overlaySynchronousMode{
-      "overlay:synchronous-mode",
-      folly::kIsWindows ? "off" : "normal",
-      this};
-
-  /**
-   * This option controls how often we run SQLite WAL checkpoint in a SQLite
-   * backed overlay. This option is ignored in other overlay types.
-   */
-  ConfigSetting<std::chrono::nanoseconds> overlayMaintenanceInterval{
-      "overlay:maintenance-interval",
-      std::chrono::minutes(1),
-      this};
-
-  /**
-   * Determines if EdenFS should enable the option to buffer overlay writes.
-   * This only works with SQLite backed overlays.
-   */
-  ConfigSetting<bool> overlayBuffered{"overlay:buffered", true, this};
-
-  /**
-   * Number of bytes worth of Overlay data to keep in memory before pausing
-   * enqueues to the BufferedSqliteInodeCatalog's worker thread. This is a per
-   * overlay setting.
-   */
-  ConfigSetting<size_t> overlayBufferSize{
-      "overlay:buffer-size",
-      64 * 1024 * 1024,
-      this};
-
-  /**
    * Number of OverlayFile and metadata cached in memory.
    */
   ConfigSetting<size_t> overlayFileAccessCacheSize{

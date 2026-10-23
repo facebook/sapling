@@ -512,8 +512,6 @@ class FsInodeCatalog : public InodeCatalog {
 
   bool hasOverlayDir(InodeNumber inodeNumber) override;
 
-  void maintenance() override {}
-
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
   std::optional<fsck::InodeInfo> loadInodeInfoAndEntries(

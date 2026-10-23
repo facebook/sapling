@@ -16,7 +16,6 @@ namespace facebook::eden {
  */
 enum class InodeCatalogType : uint8_t {
   Legacy = 0,
-  Sqlite = 1,
   InMemory = 2,
   LegacyEphemeral = 5,
 };

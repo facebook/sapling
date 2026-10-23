@@ -27,7 +27,6 @@
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
-#include "eden/fs/config/InodeCatalogOptions.h"
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -96,7 +95,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
-      InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<EdenFsEventsLogger> logger,
       ErrorLogger& errorLogger,
       EdenStatsPtr stats,
@@ -356,13 +354,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       const DirContents& srcContent,
       const DirContents& dstContent);
 
-  /*
-   * Some inode catalogs (SqliteInodeCatalog) requires periodic task to maintain
-   * their underlying storage. This method is called periodically by an
-   * EdenServer task in the configured interval.
-   */
-  void maintenance();
-
   /**
    * Update a child entry in the overlay to mark it as materialized
    * (clear its source control hash). When WAL is enabled, appends a
@@ -433,7 +424,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
-      InodeCatalogOptions inodeCatalogOptions,
       std::shared_ptr<EdenFsEventsLogger> logger,
       ErrorLogger& errorLogger,
       EdenStatsPtr stats,
@@ -521,8 +511,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   /**
    * A request for the background GC thread.  There are three types of
-   * requests: recursively forget data underneath a given directory, perform
-   * some maintenance of the overlay or complete a promise.  The latter is used
+   * requests: recursively forget data underneath a given directory or
+   * complete a promise.  The latter is used
    * for synchronization with the GC thread, primarily in unit tests.
    *
    * If additional request types are added in the future, consider renaming to
@@ -535,9 +525,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
     using FlushRequest = folly::Promise<folly::Unit>;
     explicit GCRequest(FlushRequest p) : requestType{std::move(p)} {}
-
-    struct MaintenanceRequest {};
-    explicit GCRequest(MaintenanceRequest req) : requestType{std::move(req)} {}
 
     /**
      * Request to recursively remove an overlay directory tree in the
@@ -558,7 +545,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     explicit GCRequest(RemoveInodeRequest req) : requestType{std::move(req)} {}
 
     std::variant<
-        MaintenanceRequest,
         overlay::OverlayDir,
         FlushRequest,
         InodeNumber,
@@ -649,7 +635,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::unique_ptr<FileContentStore> fileContentStore_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType inodeCatalogType_;
-  InodeCatalogOptions inodeCatalogOptions_;
 
   /**
    * Indicates if the backing overlay supports semantic operations, see
@@ -821,9 +806,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   // checkout threads, read by parallel inode-load workers in loadOverlayDir().
   std::atomic<uint32_t> checkoutDeferralCount_{0};
 };
-
-constexpr InodeCatalogOptions kDefaultInodeCatalogOptions =
-    INODE_CATALOG_DEFAULT;
 
 /**
  * Used to reference count IO requests. In any place that there

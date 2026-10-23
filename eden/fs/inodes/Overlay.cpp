@@ -37,7 +37,6 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -45,11 +44,6 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/memcatalog/MemInodeCatalog.h"
-#if EDEN_HAVE_SQLITE3
-#include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
-#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
-#include "eden/fs/sqlite/SqliteDatabase.h"
-#endif
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -122,82 +116,16 @@ AclRootState getOverlayEntryAclRootState(const overlay::OverlayEntry& entry) {
 }
 
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
-    AbsolutePathPiece localDir,
     InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions,
-    const EdenConfig& config,
-    FileContentStore* fileContentStore,
-    const std::shared_ptr<EdenFsEventsLogger>& logger) {
-#if !EDEN_HAVE_SQLITE3
-  (void)localDir;
-  (void)logger;
-  (void)inodeCatalogOptions;
-  (void)config;
-#endif
-  if (inodeCatalogType == InodeCatalogType::Sqlite) {
-#if EDEN_HAVE_SQLITE3
-    // Controlled via EdenConfig::unsafeInMemoryOverlay
-    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_UNSAFE_IN_MEMORY)) {
-      // Controlled via EdenConfig::overlayBuffered
-      if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-        XLOG(
-            WARN,
-            "In-memory Sqlite buffered overlay requested. This will cause data loss.");
-        return std::make_unique<BufferedSqliteInodeCatalog>(
-            std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
-      } else {
-        XLOG(
-            WARN,
-            "In-memory Sqlite overlay requested. This will cause data loss.");
-        return std::make_unique<SqliteInodeCatalog>(
-            std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
-      }
-    }
-    // Controlled via EdenConfig::overlaySynchronousMode
-    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_SYNCHRONOUS_OFF)) {
-      // Controlled via EdenConfig::overlayBuffered
-      if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-        XLOG(
-            DBG2,
-            "Buffered Sqlite overlay being used with synchronous-mode = off");
-        return std::make_unique<BufferedSqliteInodeCatalog>(
-            localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
-      } else {
-        XLOG(DBG2, "Sqlite overlay being used with synchronous-mode = off");
-        return std::make_unique<SqliteInodeCatalog>(
-            localDir, logger, SqliteTreeStore::SynchronousMode::Off);
-      }
-    }
-    // Controlled via EdenConfig::overlayBuffered
-    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
-      XLOG(DBG4, "Buffered Sqlite overlay being used");
-      return std::make_unique<BufferedSqliteInodeCatalog>(
-          localDir, logger, config);
-    }
-    XLOG(DBG4, "Sqlite overlay being used.");
-    return std::make_unique<SqliteInodeCatalog>(localDir, logger);
-#else
-    throw std::runtime_error(
-        "Sqlite overlay type is not supported. Please reclone.");
-#endif
-  } else if (inodeCatalogType == InodeCatalogType::InMemory) {
-    XLOG(DBG4, "In-memory overlay being used.");
-    return std::make_unique<MemInodeCatalog>();
-  }
+    FileContentStore* fileContentStore) {
 #ifdef _WIN32
   (void)fileContentStore;
-  if (inodeCatalogType == InodeCatalogType::Legacy ||
-      inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
+  if (inodeCatalogType != InodeCatalogType::InMemory) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }
-#if EDEN_HAVE_SQLITE3
-  XLOG(DBG4, "Sqlite overlay being used.");
-  return std::make_unique<SqliteInodeCatalog>(localDir, logger);
-#else
-  throw std::runtime_error(
-      "Sqlite overlay type is not supported. Please reclone.");
-#endif
+  XLOG(DBG4, "In-memory overlay being used.");
+  return std::make_unique<MemInodeCatalog>();
 #else
   if (inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     XLOG(
@@ -239,19 +167,13 @@ std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<EdenFsEventsLogger> logger,
     ErrorLogger& errorLogger,
     EdenStatsPtr stats,
     const EdenConfig& config) {
-  if (!folly::kIsWindows &&
-      (inodeCatalogType == InodeCatalogType::InMemory ||
-       inodeCatalogType == InodeCatalogType::Sqlite)) {
+  if (!folly::kIsWindows && inodeCatalogType == InodeCatalogType::InMemory) {
     throw std::runtime_error(
-        fmt::format(
-            "{} overlay type is only supported on Windows.",
-            FieldConverter<InodeCatalogType>{}.toDebugString(
-                inodeCatalogType)));
+        "InMemory overlay type is only supported on Windows.");
   }
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
@@ -259,7 +181,6 @@ std::shared_ptr<Overlay> Overlay::create(
         AbsolutePathPiece localDir,
         CaseSensitivity caseSensitive,
         InodeCatalogType inodeCatalogType,
-        InodeCatalogOptions inodeCatalogOptions,
         std::shared_ptr<EdenFsEventsLogger> logger,
         ErrorLogger& errorLogger,
         EdenStatsPtr stats,
@@ -268,7 +189,6 @@ std::shared_ptr<Overlay> Overlay::create(
               localDir,
               caseSensitive,
               inodeCatalogType,
-              inodeCatalogOptions,
               logger,
               errorLogger,
               std::move(stats),
@@ -278,7 +198,6 @@ std::shared_ptr<Overlay> Overlay::create(
       localDir,
       caseSensitive,
       inodeCatalogType,
-      inodeCatalogOptions,
       logger,
       errorLogger,
       std::move(stats),
@@ -289,7 +208,6 @@ Overlay::Overlay(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
-    InodeCatalogOptions inodeCatalogOptions,
     std::shared_ptr<EdenFsEventsLogger> logger,
     ErrorLogger& errorLogger,
     EdenStatsPtr stats,
@@ -301,15 +219,9 @@ Overlay::Overlay(
           config.overlayWalFileCacheSize.getValue(),
           config.overlayWalWriteV2.getValue() ? WalFormat::Version2
                                               : WalFormat::Version1)},
-      inodeCatalog_{makeInodeCatalog(
-          localDir,
-          inodeCatalogType,
-          inodeCatalogOptions,
-          config,
-          fileContentStore_ ? fileContentStore_.get() : nullptr,
-          logger)},
+      inodeCatalog_{
+          makeInodeCatalog(inodeCatalogType, fileContentStore_.get())},
       inodeCatalogType_{inodeCatalogType},
-      inodeCatalogOptions_(inodeCatalogOptions),
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
       filterAppleDouble_{
           folly::kIsApple && !config.allowAppleDouble.getValue()},
@@ -553,9 +465,9 @@ void Overlay::initOverlay(
 
     optNextInodeNumber = checker.getNextInodeNumber();
 #else
-    // SqliteInodeCatalog will always return the value of next Inode number, if
-    // we end up here - it's a bug.
-    EDEN_BUG() << "Tree Overlay is null value for NextInodeNumber";
+    // The InMemory catalog always returns a next inode number, so reaching
+    // this is a bug.
+    EDEN_BUG() << "InMemory overlay returned no next inode number";
 #endif
   } else {
     hadCleanStartup_ = true;
@@ -1853,12 +1765,6 @@ void Overlay::gcThread() noexcept {
 void Overlay::handleGCRequest(GCRequest& request) {
   IORequest req{this};
 
-  if (std::holds_alternative<GCRequest::MaintenanceRequest>(
-          request.requestType)) {
-    inodeCatalog_->maintenance();
-    return;
-  }
-
   if (auto* flush =
           std::get_if<GCRequest::FlushRequest>(&request.requestType)) {
     flush->setValue();
@@ -2141,7 +2047,4 @@ void Overlay::materializeChild(
   }
 }
 
-void Overlay::maintenance() {
-  gcQueue_.lock()->queue.emplace_back(Overlay::GCRequest::MaintenanceRequest{});
-}
 } // namespace facebook::eden
