@@ -147,10 +147,8 @@ class MountTable(abc.ABC):
                 proc.join(timeout=kMountStaleSecondsTimeout)
             # if the process is alive at this point the only thing that we
             # can hope to kill it is the umount that we will trigger later.
-            # But we can still close all the resources the process might be
-            # holding on to to prevent deadlocks and such.
-            if proc.is_alive():
-                proc.close()
+            # Process.close() refuses a live process, so leave it to the
+            # interpreter's exit handlers.
             raise error
 
     def check_path_access(self, path: bytes, mount_type: bytes) -> None:

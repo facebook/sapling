@@ -73,9 +73,11 @@ class CloseHangingProcessTest(unittest.TestCase):
             errno.ETIMEDOUT, "Stating the mount timed out, mount point hangs"
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(OSError) as raised:
             LinuxMountTable().close_hanging_process(helper, timeout_error)
 
+        self.assertEqual(raised.exception.errno, errno.ETIMEDOUT)
         helper.terminate.assert_called_once_with()
         helper.kill.assert_called_once_with()
         self.assertEqual(helper.join.call_count, 2)
+        helper.close.assert_not_called()
