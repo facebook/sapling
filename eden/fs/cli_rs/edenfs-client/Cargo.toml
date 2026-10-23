@@ -15,9 +15,10 @@ edenfs-core = { version = "0.1.0", path = "../edenfs-core" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-telemetry = { path = "../../rust/edenfs-telemetry" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
-fbinit = { version = "0.2.0", path = "../../../../common/rust/shed/fbinit", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
-futures_stats = { version = "0.1.0", path = "../../../../common/rust/shed/futures_stats", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hex = { version = "0.4.3", features = ["alloc"] }
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
 libc = "0.2.186"
@@ -32,11 +33,13 @@ serde_json = { version = "1.0.151", features = ["alloc", "float_roundtrip", "raw
 strum = { version = "0.28.0", features = ["derive"] }
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
+tokio-io-timeout = "1.2.1"
+tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 whoami = "2.1.3"
 
 [dev-dependencies]
-fb303_core_clients = { version = "0.0.0", path = "../../../../fb303/thrift/rust/clients", git = "https://github.com/facebook/fb303.git", branch = "main" }
-fbinit-tokio = { version = "0.1.2", path = "../../../../common/rust/shed/fbinit/fbinit-tokio", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mockall = "0.13.1"
 tempfile = "3.27.0"

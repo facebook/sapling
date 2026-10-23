@@ -14,6 +14,7 @@ use remote_loader::should_fetch_configs;
 use strum::EnumString;
 use strum::IntoStaticStr;
 
+use crate::facebook;
 use crate::use_case::helpers;
 use crate::use_case::remote_config_snapshot::REMOTE_CONFIG_SNAPSHOT;
 use crate::use_case::thrift_types::scm_usecases_types::ScmUseCase;
@@ -118,9 +119,9 @@ impl UseCase {
     }
 
     fn get_use_case(&self) -> Option<ScmUseCase> {
-        let is_pub = cpe::x2p::supports_vpnless();
+        let is_pub = facebook::supports_vpnless();
         let config_url = helpers::config_url(is_pub);
-        let proxy_url = cpe::x2p::proxy_url_http1();
+        let proxy_url = facebook::proxy_url_http1();
         let proxy_sock_path: Option<&str> = if proxy_url.is_empty() {
             None
         } else {

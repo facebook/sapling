@@ -21,11 +21,15 @@ pub mod counters;
 pub mod current_snapshot;
 pub mod daemon;
 pub mod daemon_info;
+#[cfg(fbcode_build)]
+mod facebook;
 pub mod file_access_monitor;
 pub mod glob_files;
 pub mod instance;
 pub mod journal;
 pub mod methods;
+#[cfg(not(fbcode_build))]
+mod oss;
 pub mod prefetch_files;
 mod prefetch_profiles_ext;
 pub mod readdir;
@@ -37,6 +41,9 @@ mod thrift_daemon;
 pub mod types;
 pub mod unmount;
 pub mod use_case;
+
+#[cfg(not(fbcode_build))]
+use oss as facebook;
 
 pub mod checkout {
     pub use edenfs_core::checkout::*;

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-mod connector;
+pub(crate) mod connector;
 pub mod mock_client;
 pub mod mock_service;
 pub mod thrift_client;
@@ -21,7 +21,6 @@ use async_trait::async_trait;
 use edenfs_error::ConnectAndRequestError;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
-use fbinit::FacebookInit;
 
 use crate::client::connector::Connector;
 use crate::client::connector::StreamingEdenFsConnector;
@@ -67,14 +66,13 @@ pub trait Client: Send + Sync {
     ///
     /// # Parameters
     ///
-    /// * `fb` - Facebook initialization context
     /// * `use_case` - Use case configuration settings
     /// * `socket_file` - Path to the EdenFS socket file
     ///
     /// # Returns
     ///
     /// Returns a new `Client` instance.
-    fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self;
+    fn new(use_case: Arc<UseCase>, socket_file: PathBuf) -> Self;
 
     /// Sets a custom stats handler for the client.
     ///
@@ -163,15 +161,13 @@ impl EdenFsClient {
     ///
     /// # Parameters
     ///
-    /// * `fb` - Facebook initialization context
-    ///
     /// * `use_case_id` - A unique identifier for a use case - used to access configuration settings and attribute usage to a given use case.
     /// * `socket_file` - Path to the EdenFS socket file
     /// # Returns
     ///
     /// Returns a new `EdenFsClient` instance.
-    pub(crate) fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
-        Self(ThriftClient::new(fb, use_case, socket_file))
+    pub(crate) fn new(use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
+        Self(ThriftClient::new(use_case, socket_file))
     }
 }
 

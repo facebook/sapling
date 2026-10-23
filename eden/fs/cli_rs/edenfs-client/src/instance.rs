@@ -21,7 +21,6 @@ use std::sync::Arc;
 use edenfs_core::daemon::EdenFsDaemon;
 pub use edenfs_core::instance::DEFAULT_CONFIG_DIR;
 pub use edenfs_core::instance::DEFAULT_ETC_EDEN_DIR;
-use fbinit::expect_init;
 
 use crate::client::EdenFsClient;
 use crate::use_case::UseCase;
@@ -56,7 +55,7 @@ impl EdenFsInstance {
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
         let use_case = Arc::new(UseCase::new(&config_dir, use_case_id));
-        let client = Arc::new(EdenFsClient::new(expect_init(), use_case, socketfile));
+        let client = Arc::new(EdenFsClient::new(use_case, socketfile));
         let daemon: Arc<dyn EdenFsDaemon> = client.clone();
         Self {
             core: edenfs_core::instance::EdenFsInstance::with_daemon(

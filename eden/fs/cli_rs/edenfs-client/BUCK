@@ -7,15 +7,14 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "fbinit": {"path": "../../../../common/rust/shed/fbinit"},
-                    "futures_stats": {"path": "../../../../common/rust/shed/futures_stats"},
-                },
-                "dev-dependencies": {
-                    "fb303_core_clients": {"path": "../../../../fb303/thrift/rust/clients"},
-                    "fbinit-tokio": {"path": "../../../../common/rust/shed/fbinit/fbinit-tokio"},
-                },
+            # Open-source builds connect through the public socket transport,
+            # see src/oss.rs.
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:tokio-io-timeout",
+                    "//common/rust/shed/fbthrift_ext:socket",
+                    "//common/rust/shed/tokio-uds-compat:tokio-uds-compat",
+                ],
             },
             "oss_dependencies_override": {
                 "dependencies": {

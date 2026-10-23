@@ -23,7 +23,6 @@ use edenfs_telemetry::EdenSample;
 use edenfs_telemetry::QueueingScubaLogger;
 use edenfs_telemetry::SampleLogger;
 use edenfs_telemetry::create_logger;
-use fbinit::FacebookInit;
 use futures_stats::TimedTryFutureExt;
 use parking_lot::Mutex;
 use rand::RngExt as _;
@@ -76,8 +75,8 @@ pub struct ThriftClient {
 
 #[async_trait]
 impl Client for ThriftClient {
-    fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
-        let connector = StreamingEdenFsConnector::new(fb, socket_file.clone());
+    fn new(use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
+        let connector = StreamingEdenFsConnector::new(socket_file.clone());
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
             client: connector.connect(None, None),

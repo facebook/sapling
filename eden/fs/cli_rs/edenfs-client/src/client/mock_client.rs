@@ -18,7 +18,6 @@ use std::time::Duration;
 use async_trait::async_trait;
 use edenfs_error::ConnectAndRequestError;
 use edenfs_error::HasErrorHandlingStrategy;
-use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream;
@@ -49,7 +48,7 @@ impl MockThriftClient {
 
 #[async_trait]
 impl Client for MockThriftClient {
-    fn new(_fb: FacebookInit, _use_case: Arc<UseCase>, _socket_file: PathBuf) -> Self {
+    fn new(_use_case: Arc<UseCase>, _socket_file: PathBuf) -> Self {
         Self {
             thrift_service: None,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
