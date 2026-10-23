@@ -50,6 +50,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
   ImmediateFuture<folly::Unit> run() override {
     return std::move(inodeFuture_)
         .thenValue([this](InodePtr inode) -> ImmediateFuture<folly::Unit> {
+          inode->markGcRef();
           auto treeInode = inode.asTreePtrOrNull();
           if (!treeInode.get()) {
             return EDEN_BUG_FUTURE(Unit)
@@ -68,6 +69,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
 
   folly::coro::now_task<folly::Unit> co_run() override {
     auto inode = co_await std::move(inodeFuture_).semi();
+    inode->markGcRef();
     auto treeInode = inode.asTreePtrOrNull();
     if (!treeInode.get()) {
       throw EDEN_BUG_EXCEPTION()
@@ -109,6 +111,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     // TODO: Load the inode in parallel with loading the source control data
     // below.
     return std::move(inodeFuture_).thenValue([this](InodePtr inode) {
+      inode->markGcRef();
       if (scmEntries_[0].isTree()) {
         return runForScmTree(inode);
       } else {
@@ -119,6 +122,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
 
   folly::coro::now_task<folly::Unit> co_run() override {
     auto inode = co_await std::move(inodeFuture_).semi();
+    inode->markGcRef();
     if (scmEntries_[0].isTree()) {
       co_await co_runForScmTree(inode);
     } else {

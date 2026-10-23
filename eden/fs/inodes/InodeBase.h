@@ -130,6 +130,9 @@ class InodeBase {
       auto prevValue =
           numFsReferences_.fetch_sub(count, std::memory_order_acq_rel);
       XDCHECK_GE(prevValue, count);
+      if (prevValue == count) {
+        fsReleasedLastReference();
+      }
     } else {
       XDCHECK_GE(count, 1u);
       clearFsRefcount();
@@ -142,7 +145,12 @@ class InodeBase {
    * (NFS and Windows).
    */
   bool clearFsRefcount() {
-    return numFsReferences_.exchange(0u, std::memory_order_acq_rel) != 0;
+    bool wasReferenced =
+        numFsReferences_.exchange(0u, std::memory_order_acq_rel) != 0;
+    if (wasReferenced) {
+      fsReleasedLastReference();
+    }
+    return wasReferenced;
   }
 
   /**
@@ -763,10 +771,23 @@ class InodeBase {
   folly::Synchronized<LocationInfo> location_;
 
   /**
+   * The filesystem released its last reference to this inode. As far as GC is
+   * concerned the inode has not been referenced since the beginning of time:
+   * it is eligible for the next sweep however recently it was used, unless
+   * something references it again first.
+   */
+  void fsReleasedLastReference() {
+    lastGcRefTime_.store(EdenTimestamp{timespec{}}, std::memory_order_relaxed);
+  }
+
+  /**
    * The last time this inode was referenced, as far as inode garbage
    * collection is concerned: every FUSE and NFS request involving the inode
-   * records one. GC treats an inode whose last reference is older than its
-   * cutoff as unused and collects it.
+   * records one, and so does a status walk that compares it. When the
+   * filesystem releases its last reference to the inode the time is reset to
+   * zero, so the kernel's own eviction makes the inode eligible for the next
+   * sweep. GC treats an inode whose last reference is older than its cutoff
+   * as unused and collects it.
    *
    * Note1: This field is distinct from atime and is not persisted to disk via
    * InodeTable.

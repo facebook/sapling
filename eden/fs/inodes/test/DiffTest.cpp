@@ -215,6 +215,22 @@ ScmStatus DiffTest::resetCommitAndDiff(
   return EXPECT_FUTURE_RESULT(df);
 }
 
+TEST(DiffTest, diffMarksVisitedInodesReferenced) {
+  DiffTest test;
+  auto& mount = test.getMount();
+  mount.loadAllInodes();
+  auto dir = mount.getTreeInode("src");
+  auto file = mount.getFileInode("toplevel.txt");
+  auto loadedAt = dir->getLastGcRefTime();
+  EXPECT_EQ(loadedAt, file->getLastGcRefTime());
+
+  mount.getClock().advance(1h);
+  test.diff();
+
+  EXPECT_LT(loadedAt, dir->getLastGcRefTime());
+  EXPECT_LT(loadedAt, file->getLastGcRefTime());
+}
+
 class DiffTestParam : public ::testing::Test {
  protected:
   DiffTest createTest() {

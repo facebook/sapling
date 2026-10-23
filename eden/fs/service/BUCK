@@ -428,6 +428,7 @@ cpp_library(
         "//eden/common/utils:user_info",
         "//eden/fs/config:config",
         "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inode_metadata",
         "//eden/fs/journal:journal",
         "//eden/fs/model:model",
         "//eden/fs/model/git:gitignore",

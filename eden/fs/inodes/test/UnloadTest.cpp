@@ -9,11 +9,13 @@
 
 #include <thread>
 
+#include <folly/chrono/Conv.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -200,13 +202,10 @@ TEST(UnloadLastAccessedBefore, unloadsInodesByLastGcRefTimeNotMetadataAtime) {
   const auto* edenMount = testMount.getEdenMount().get();
   auto inodeMap = edenMount->getInodeMap();
 
-  // Load both files and give them FUSE references so they stay loaded
+  // Load both files. They stay loaded once the InodePtrs are released.
   auto oldInode = testMount.getInode("old.txt"_relpath);
   auto newInode = testMount.getInode("new.txt"_relpath);
-  auto oldIno = oldInode->getNodeId();
   auto newIno = newInode->getNodeId();
-  oldInode->incFsRefcount();
-  newInode->incFsRefcount();
 
   // Advance the clock and touch only "new.txt" via markGcRef.
   // Both inodes start with lastGcRefTime from mount creation.
@@ -218,13 +217,8 @@ TEST(UnloadLastAccessedBefore, unloadsInodesByLastGcRefTimeNotMetadataAtime) {
   auto cutoff = oldInode->getLastGcRefTime().toTimespec();
   cutoff.tv_sec += 60;
 
-  // Release InodePtrs (FUSE refcount keeps them alive in InodeMap)
   oldInode.reset();
   newInode.reset();
-
-  // Drop FUSE references so inodes are eligible for unloading
-  inodeMap->decFsRefcount(oldIno, 1);
-  inodeMap->decFsRefcount(newIno, 1);
 
   auto countsBefore = inodeMap->getInodeCounts();
 
@@ -356,6 +350,75 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   EXPECT_EQ(2, counts.treeCount);
   EXPECT_EQ(1, counts.fileCount);
   EXPECT_EQ(0, counts.unloadedInodeCount);
+}
+
+TEST(UnloadUnreferencedByFuse, cutoffKeepsRecentlyReferencedInodes) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/file.txt", "contents");
+  // Start the clock well after the epoch, which a released reference's zero
+  // time and the default clock would otherwise share.
+  TestMount testMount;
+  testMount.getClock().set(
+      std::chrono::system_clock::time_point{} +
+      std::chrono::hours{24 * 365 * 50});
+  testMount.initialize(builder);
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  // Loaded the way a Thrift request loads it: no filesystem reference.
+  testMount.getInode("src/file.txt"_relpath);
+  auto now = testMount.getClock().getTimePoint();
+
+  // Nothing was referenced more than an hour ago.
+  EXPECT_EQ(
+      0,
+      edenMount->getRootInode()->unloadChildrenUnreferencedByFs(
+          {}, EdenTimestamp{folly::to<timespec>(now - 1h)}));
+  auto counts = inodeMap->getInodeCounts();
+  EXPECT_EQ(3, counts.treeCount);
+  EXPECT_EQ(5, counts.fileCount);
+
+  // Everything was referenced before an hour from now.
+  EXPECT_GT(
+      edenMount->getRootInode()->unloadChildrenUnreferencedByFs(
+          {}, EdenTimestamp{folly::to<timespec>(now + 1h)}),
+      0);
+  counts = inodeMap->getInodeCounts();
+  EXPECT_EQ(1, counts.treeCount);
+  EXPECT_EQ(0, counts.fileCount);
+}
+
+TEST(UnloadUnreferencedByFuse, kernelReleaseMakesInodeEligibleDespiteCutoff) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/file.txt", "contents");
+  TestMount testMount;
+  testMount.getClock().set(
+      std::chrono::system_clock::time_point{} +
+      std::chrono::hours{24 * 365 * 50});
+  testMount.initialize(builder);
+
+  const auto* edenMount = testMount.getEdenMount().get();
+  auto inodeMap = edenMount->getInodeMap();
+  auto inode = testMount.getInode("src/file.txt"_relpath);
+  auto inodeNumber = inode->getNodeId();
+  inode->incFsRefcount();
+  inode.reset();
+  inodeMap->decFsRefcount(inodeNumber, 1);
+  EXPECT_EQ(
+      EdenTimestamp{timespec{}},
+      testMount.getInode("src/file.txt"_relpath)->getLastGcRefTime());
+
+  auto now = testMount.getClock().getTimePoint();
+  auto before = inodeMap->getInodeCounts();
+  EXPECT_EQ(
+      1,
+      edenMount->getRootInode()->unloadChildrenUnreferencedByFs(
+          {}, EdenTimestamp{folly::to<timespec>(now - 1h)}));
+  auto after = inodeMap->getInodeCounts();
+  EXPECT_EQ(before.treeCount, after.treeCount);
+  EXPECT_EQ(before.fileCount - 1, after.fileCount);
 }
 
 TEST(UnloadUnreferencedByFuse, cancellationStopsUnloading) {

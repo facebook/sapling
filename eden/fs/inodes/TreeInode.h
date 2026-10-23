@@ -722,10 +722,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Unload all children, recursively, neither referenced internally by Eden
    * nor by FUSE or ProjectedFS.
    *
+   * When a cutoff is given, a child is only unloaded if it has not been
+   * referenced since then (see InodeBase::getLastGcRefTime), so an inode
+   * that a recent status or Thrift request loaded survives the way one the
+   * kernel holds does. Inode GC passes its cutoff; checkout passes none.
+   *
    * Returns the number of inodes unloaded.
    */
   size_t unloadChildrenUnreferencedByFs(
-      const folly::CancellationToken& cancellationToken = {});
+      const folly::CancellationToken& cancellationToken = {},
+      std::optional<EdenTimestamp> cutoff = std::nullopt);
 
   struct InodeGCUnloadResult {
     size_t unloaded{0};
@@ -733,7 +739,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   };
 
   InodeGCUnloadResult unloadChildrenUnreferencedByFsForInodeGC(
-      const folly::CancellationToken& cancellationToken = {});
+      const folly::CancellationToken& cancellationToken = {},
+      std::optional<EdenTimestamp> cutoff = std::nullopt);
 
 #ifndef _WIN32
   /**

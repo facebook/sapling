@@ -757,6 +757,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether the sweep that follows an inode GC run's invalidation phase
+   * applies the run's cutoff to inodes without a filesystem reference, so
+   * one that a status or Thrift request referenced recently is kept. When
+   * off, every inode without a filesystem reference is unloaded on each run.
+   */
+  ConfigSetting<bool> gcSweepHonorsCutoff{
+      "mount:gc-sweep-honors-cutoff",
+      true,
+      this};
+
+  /**
    * Cancel an inode GC run after this many tree-load failures, and have
    * pressure-based GC wait the regular garbage-collection-period before
    * running again. Zero disables the limit.

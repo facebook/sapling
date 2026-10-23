@@ -4025,6 +4025,10 @@ folly::coro::now_task<folly::Unit> TreeInode::co_diff(
     co_return folly::unit;
   }
 
+  // Status is a use of this directory as far as inode GC is concerned, so a
+  // directory it keeps walking stays loaded like one the kernel keeps using.
+  markGcRef();
+
   InodePtr inode;
   auto gitignoreInodeFuture = ImmediateFuture<InodePtr>::makeEmpty();
   vector<IncompleteInodeLoad> pendingLoads;
@@ -6985,8 +6989,24 @@ void TreeInode::recheckHiddenRestrictedDescendants(
   }
 }
 
+/**
+ * Whether the GC sweep may unload an inode nobody holds: it must have no
+ * filesystem reference and, when a cutoff is given, not have been referenced
+ * since it. An inode the kernel released reads as never referenced, so it is
+ * always eligible; see InodeBase::lastGcRefTime_.
+ */
+static bool isUnreferencedForSweep(
+    const InodeBase* inode,
+    const std::optional<EdenTimestamp>& cutoff) {
+  if (inode->getFsRefcount() != 0) {
+    return false;
+  }
+  return !cutoff || inode->getLastGcRefTime() < *cutoff;
+}
+
 size_t TreeInode::unloadChildrenUnreferencedByFs(
-    const folly::CancellationToken& cancellationToken) {
+    const folly::CancellationToken& cancellationToken,
+    std::optional<EdenTimestamp> cutoff) {
   auto shouldCancel = [&] {
     return cancellationToken.isCancellationRequested();
   };
@@ -6995,17 +7015,20 @@ size_t TreeInode::unloadChildrenUnreferencedByFs(
       this,
       getInodeMap(),
       treeChildren,
-      [&cancellationToken](TreeInode& child) {
-        return child.unloadChildrenUnreferencedByFs(cancellationToken);
+      [&cancellationToken, cutoff](TreeInode& child) {
+        return child.unloadChildrenUnreferencedByFs(cancellationToken, cutoff);
       },
-      [](InodeBase* child) { return child->getFsRefcount() == 0; },
+      [cutoff](InodeBase* child) {
+        return isUnreferencedForSweep(child, cutoff);
+      },
       [](InodeBase*, const InodeMapLock&) { return false; },
       shouldCancel);
 }
 
 TreeInode::InodeGCUnloadResult
 TreeInode::unloadChildrenUnreferencedByFsForInodeGC(
-    const folly::CancellationToken& cancellationToken) {
+    const folly::CancellationToken& cancellationToken,
+    std::optional<EdenTimestamp> cutoff) {
   InodeGCUnloadResult result;
   auto shouldCancel = [&] {
     return cancellationToken.isCancellationRequested();
@@ -7015,13 +7038,15 @@ TreeInode::unloadChildrenUnreferencedByFsForInodeGC(
       this,
       getInodeMap(),
       treeChildren,
-      [&cancellationToken, &result](TreeInode& child) {
-        auto childResult =
-            child.unloadChildrenUnreferencedByFsForInodeGC(cancellationToken);
+      [&cancellationToken, &result, cutoff](TreeInode& child) {
+        auto childResult = child.unloadChildrenUnreferencedByFsForInodeGC(
+            cancellationToken, cutoff);
         result.zeroFsRefTreesRetained += childResult.zeroFsRefTreesRetained;
         return childResult.unloaded;
       },
-      [](InodeBase* child) { return child->getFsRefcount() == 0; },
+      [cutoff](InodeBase* child) {
+        return isUnreferencedForSweep(child, cutoff);
+      },
       [inodeMap = getInodeMap(), &result](
           InodeBase* child, const InodeMapLock& lock) {
         auto* tree = dynamic_cast<TreeInode*>(child);

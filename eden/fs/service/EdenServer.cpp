@@ -91,6 +91,7 @@
 #include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
@@ -3840,6 +3841,13 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
       shutdownToken, lease.getCancellationToken());
   auto keepRememberedParentTreesLoaded =
       pressureBased && mount.getFuseChannel() != nullptr;
+  // The sweep that follows applies the same cutoff, so an inode without a
+  // kernel reference that a status or Thrift request used recently is kept
+  // instead of being unloaded on every run.
+  std::optional<EdenTimestamp> sweepCutoff;
+  if (mount.getServerState()->getEdenConfig()->gcSweepHonorsCutoff.getValue()) {
+    sweepCutoff = EdenTimestamp{folly::to<timespec>(cutoff)};
+  }
   return inode
       // First step of garbage collection varies by platform (e.g., Linux,
       // macOS, Windows)
@@ -3864,7 +3872,7 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
           })
       // Second step of garbage collection deletes all the unreferenced inodes
       .thenTry(
-          [inode, gcToken, keepRememberedParentTreesLoaded](
+          [inode, gcToken, keepRememberedParentTreesLoaded, sweepCutoff](
               folly::Try<uint64_t>&& invalidatedTry) -> InodeGCResult {
             size_t numUnloaded = 0;
             size_t zeroFsRefTreesRetained = 0;
@@ -3872,11 +3880,13 @@ ImmediateFuture<uint64_t> garbageCollectInodesWithLease(
             if (!cancelled) {
               if (keepRememberedParentTreesLoaded) {
                 auto unloadResult =
-                    inode->unloadChildrenUnreferencedByFsForInodeGC(gcToken);
+                    inode->unloadChildrenUnreferencedByFsForInodeGC(
+                        gcToken, sweepCutoff);
                 numUnloaded = unloadResult.unloaded;
                 zeroFsRefTreesRetained = unloadResult.zeroFsRefTreesRetained;
               } else {
-                numUnloaded = inode->unloadChildrenUnreferencedByFs(gcToken);
+                numUnloaded =
+                    inode->unloadChildrenUnreferencedByFs(gcToken, sweepCutoff);
               }
               // The sweep stops early once cancelled, so a partial count
               // must not be judged either.
