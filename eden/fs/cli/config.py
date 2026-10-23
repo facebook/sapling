@@ -1782,7 +1782,7 @@ def get_snapshot(snapshot_path: Path, scm_type: str) -> SnapshotState:
                 raise RuntimeError("SNAPSHOT file too short")
             (toLength,) = struct.unpack(">L", f.read(4))
             toParent = f.read(toLength)
-            if len(fromParent) != toLength:
+            if len(toParent) != toLength:
                 raise RuntimeError("SNAPSHOT file too short")
 
             decoded_to, _ = parse_snapshot_component(toParent, scm_type)

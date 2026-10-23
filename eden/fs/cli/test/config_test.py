@@ -427,8 +427,11 @@ class SnapshotFileTest(EdenTestCaseBase):
             util.create_filtered_rootid("b" * 40, b"V1:filter2"),
             4242,
         )
-        with self.assertRaisesRegex(RuntimeError, "SNAPSHOT file too short"):
+        with self.assertRaises(config_mod.InProgressCheckoutError) as context:
             config_mod.get_snapshot(snapshot_path, "filteredhg")
+        self.assertEqual("a" * 40, context.exception.from_commit)
+        self.assertEqual("b" * 40, context.exception.to_commit)
+        self.assertEqual(4242, context.exception.pid)
 
 
 class EdenConfigParserTest(unittest.TestCase):
