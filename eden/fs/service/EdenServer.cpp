@@ -4569,8 +4569,18 @@ void EdenServer::accidentalUnmountRecovery() {
 
       auto edenClientPath =
           edenDir_.getCheckoutStateDir(client.second.stringPiece());
-      auto initialConfig =
-          CheckoutConfig::loadFromClientDirectory(mountPath, edenClientPath);
+      std::unique_ptr<CheckoutConfig> initialConfig;
+      try {
+        initialConfig =
+            CheckoutConfig::loadFromClientDirectory(mountPath, edenClientPath);
+      } catch (const std::exception& ex) {
+        XLOGF(
+            WARN,
+            "Skipping unmount recovery for {}: {}",
+            mountPath,
+            folly::exceptionStr(ex));
+        continue;
+      }
       if (initialConfig->isIntentionallyUnmounted()) {
         XLOGF(
             DBG5,

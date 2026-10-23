@@ -60,6 +60,21 @@ const RelativePathPiece kIntentionallyUnmountedFile{"intentionally-unmounted"};
 // File holding mapping of client directories.
 const RelativePathPiece kClientDirectoryMap{"config.json"};
 
+std::string getRequiredRepositoryString(
+    const cpptoml::table& repository,
+    folly::StringPiece key,
+    AbsolutePathPiece configPath) {
+  auto value = repository.get_as<std::string>(key.str());
+  if (!value) {
+    throwf<std::runtime_error>(
+        "{}: [{}] has no string key {}",
+        configPath,
+        kRepoSection.str(),
+        key.str());
+  }
+  return *value;
+}
+
 // Constants for use with the SNAPSHOT file
 //
 // - 4 byte identifier: "eden"
@@ -380,8 +395,14 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
 
   // Load repository information
   auto repository = configRoot->get_table(kRepoSection.str());
-  config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
-  config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
+  if (!repository) {
+    throwf<std::runtime_error>(
+        "{}: missing [{}] table", configPath, kRepoSection.str());
+  }
+  config->repoType_ =
+      getRequiredRepositoryString(*repository, kRepoTypeKey, configPath);
+  config->repoSource_ =
+      getRequiredRepositoryString(*repository, kRepoSourceKey, configPath);
 
   FieldConverter<MountProtocol> mountProtocolConverter;
   MountProtocol mountProtocol = kMountProtocolDefault;

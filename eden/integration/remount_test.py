@@ -11,9 +11,7 @@ import os
 import pathlib
 import sys
 
-from eden.fs.cli.util import EdenStartError
-from eden.fs.service.eden.thrift_types import MountArgument
-from thrift.python.exceptions import TransportError
+from eden.fs.service.eden.thrift_types import EdenError, MountArgument, MountState
 
 from .lib import edenclient, testcase
 
@@ -251,17 +249,17 @@ class CorruptCheckoutConfigTest(testcase.EdenRepoTest):
     async def test_mount_config_toml_without_repository_section(self) -> None:
         if sys.platform != "linux":
             self.skipTest("Linux daemon reliability regression")
+        self.addCleanup(self.eden.shutdown, retry=True)
         mount2, client_dir = self._prepare_unmounted_checkout()
         config_toml = client_dir / "config.toml"
         config_toml.write_text('[redirection-targets]\nfoo = "bar"\n')
 
         async with self.eden.get_async_thrift_client(timeout=30) as client:
-            # TODO(lean-check): wrong behaviour; flipped in the next commit.
-            # The daemon dies with SIGSEGV inside the mount call, so the
-            # client sees EOF instead of an EdenError.
-            with self.assertRaises(TransportError):
+            pid = (await client.getDaemonInfo()).pid
+            with self.assertRaises(EdenError) as ctx:
                 await self._mount(client, mount2, client_dir)
-        self.assertNotEqual(0, self.eden.wait_for_exit())
+            self.assertIn("missing [repository] table", str(ctx.exception))
+            await self._assert_daemon_healthy(client, pid)
 
     async def test_mount_config_toml_without_repository_section_control(
         self,
@@ -289,8 +287,14 @@ class CorruptCheckoutConfigTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         config_toml.write_text('[redirection-targets]\nfoo = "bar"\n')
 
-        # TODO(lean-check): wrong behaviour; flipped in the next commit.
-        # The daemon dies with SIGSEGV while remounting the corrupt checkout,
-        # so it never becomes healthy and the healthy checkout is lost too.
-        with self.assertRaises(EdenStartError):
-            self.eden.start()
+        # The daemon must come up and serve the healthy checkout; only the
+        # corrupt one may fail to remount.
+        self.eden.start()
+        self.assertEqual("hola\n", self.read_file("hello"))
+        with self.eden.get_thrift_client() as client:
+            self.assertEqual(
+                MountState.RUNNING,
+                self.eden.get_mount_state(pathlib.Path(self.mount), client),
+            )
+            self.assertIsNone(self.eden.get_mount_state(pathlib.Path(mount2), client))
+            self.assertEqual(1, client.getCounter("startup_mount_failures"))

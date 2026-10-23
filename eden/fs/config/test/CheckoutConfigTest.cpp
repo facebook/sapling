@@ -411,3 +411,45 @@ TEST_F(CheckoutConfigTest, testBadSnapshotV2) {
   testBadSnapshot<std::out_of_range>(
       StringPiece{"eden\0\0\0\2\x00\x00\x00\x02\x32", 13}, "string underflow");
 }
+
+TEST_F(CheckoutConfigTest, testMissingRepositorySection) {
+  writeFile(
+      configDotToml_,
+      folly::StringPiece{"[redirection-targets]\nfoo = \"bar\"\n"})
+      .value();
+  EXPECT_THROW_RE(
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_),
+      std::runtime_error,
+      "config.toml: missing \\[repository\\] table");
+}
+
+TEST_F(CheckoutConfigTest, testRepositoryNotATable) {
+  writeFile(configDotToml_, folly::StringPiece{"repository = \"hg\"\n"})
+      .value();
+  EXPECT_THROW_RE(
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_),
+      std::runtime_error,
+      "config.toml: missing \\[repository\\] table");
+}
+
+TEST_F(CheckoutConfigTest, testMissingRepositoryType) {
+  writeFile(
+      configDotToml_,
+      folly::StringPiece{"[repository]\npath = \"/data/users/x/fbsource\"\n"})
+      .value();
+  EXPECT_THROW_RE(
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_),
+      std::runtime_error,
+      "config.toml: \\[repository\\] has no string key type");
+}
+
+TEST_F(CheckoutConfigTest, testNonStringRepositoryPath) {
+  writeFile(
+      configDotToml_,
+      folly::StringPiece{"[repository]\ntype = \"hg\"\npath = 42\n"})
+      .value();
+  EXPECT_THROW_RE(
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_),
+      std::runtime_error,
+      "config.toml: \\[repository\\] has no string key path");
+}
