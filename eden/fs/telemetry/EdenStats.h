@@ -707,6 +707,10 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   // already opened the file.
   Counter createdFdCached{"overlay.created_fd_cached"};
   Counter createdFdAlreadyOpen{"overlay.created_fd_already_open"};
+  // SHA-1 requests for materialized files that had to read and hash the
+  // file, rather than being served from the inode's cache or settled by a
+  // size mismatch.
+  Counter fileHashComputed{"overlay.file_hash_computed"};
 
   Counter loadOverlayDirSuccessful{"overlay.load_overlay_dir_successful"};
   Counter loadOverlayDirFailure{"overlay.load_overlay_dir_failure"};

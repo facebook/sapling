@@ -250,6 +250,7 @@ cpp_unittest(
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//eden/fs/testharness:test_util",
+        "//fb303:service_data",
     ],
 )
 

@@ -37,6 +37,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -523,6 +524,7 @@ Hash20 FileInodeState::MaterializedState::getSha1(FileInode& inode) {
   if (sha1_.has_value()) {
     return sha1_.value();
   }
+  inode.getMount()->getStats()->increment(&OverlayStats::fileHashComputed);
 
 #ifdef _WIN32
   auto sha1 = getFileSha1(inode.getMaterializedFilePath());
@@ -843,28 +845,33 @@ folly::coro::now_task<bool> FileInode::co_isSameAs(
     co_return result.value();
   }
 
-  // Run the SHA-1 fetches in parallel via folly::coro::collectAllTry.
-  auto results = co_await folly::coro::collectAllTry(
-      folly::coro::co_invoke(
-          [self = this,
-           fetchContext = fetchContext.copy()]() -> folly::coro::Task<Hash20> {
-            co_return co_await self->co_getSha1(fetchContext);
-          }),
-      folly::coro::co_invoke(
-          [&store = getObjectStore(),
-           blobID,
-           fetchContext = fetchContext.copy()]() -> folly::coro::Task<Hash20> {
-            co_return co_await store.co_getBlobSha1(blobID, fetchContext);
-          }));
-  auto& [t1, t2] = results;
-  if (t1.hasException() || t2.hasException()) {
-    XLOGF(
-        DBG2,
-        "Assuming changed: {}",
-        t1.hasException() ? t1.exception() : t2.exception());
+  // The blob's size arrives together with its SHA-1, and the size of a
+  // materialized file is at most an fstat away, so a size mismatch settles
+  // the comparison without reading and hashing the file.
+  auto auxTry = co_await folly::coro::co_awaitTry(
+      getObjectStore().co_getBlobAuxData(blobID, fetchContext));
+  if (auxTry.hasException()) {
+    XLOGF(DBG2, "Assuming changed: {}", auxTry.exception());
     co_return false;
   }
-  co_return t1.value() == t2.value();
+  auto sizeTry = folly::makeTryWith([&] { return getMaterializedSize(); });
+  if (sizeTry.hasException()) {
+    XLOGF(DBG2, "Assuming changed: {}", sizeTry.exception());
+    co_return false;
+  }
+  if (sizeTry.value().has_value() && *sizeTry.value() != auxTry->size) {
+    co_return false;
+  }
+  co_return co_await co_isSameAsSlowImpl(
+      this, auxTry->sha1, fetchContext.copy());
+}
+
+std::optional<uint64_t> FileInode::getMaterializedSize() {
+  auto state = LockedState{this};
+  if (state->tag != State::MATERIALIZED_IN_OVERLAY) {
+    return std::nullopt;
+  }
+  return state->materializedState.getSize(*this);
 }
 
 #ifndef _WIN32

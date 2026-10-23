@@ -623,6 +623,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeEntryType entryType);
 
   /**
+   * Returns the size of the file's contents if it is materialized, and
+   * std::nullopt otherwise. Costs at most an fstat of the overlay file.
+   */
+  std::optional<uint64_t> getMaterializedSize();
+
+  /**
    * Helper function for isSameAs().
    *
    * This does the second portion of the check which requires an

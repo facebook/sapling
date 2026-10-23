@@ -9,6 +9,7 @@
 
 #include "eden/fs/inodes/FileInode.h"
 
+#include <fb303/ServiceData.h>
 #include <fmt/format.h>
 #include <folly/Range.h>
 #include <folly/coro/GtestHelpers.h>
@@ -905,6 +906,60 @@ TEST(FileInode, loadSkipsParentDirEntryCountsWhenDisabled) {
   EXPECT_EQ("a", inode->readAll(context).get(0ms));
 
   EXPECT_FALSE(context->getParentDirEntryCounts().has_value());
+}
+
+namespace {
+int64_t getFileHashesComputed(TestMount& mount) {
+  mount.getServerState()->getStats()->flush();
+  return facebook::fb303::ServiceData::get()
+      ->getCounterIfExists("overlay.file_hash_computed.sum")
+      .value_or(0);
+}
+} // namespace
+
+CO_TEST(FileInode, isSameAsSkipsHashWhenSizesDiffer) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"test.txt", "Hello World"}});
+  TestMount mount{builder};
+  auto fetchContext = ObjectFetchContext::getNullContext();
+
+  auto inode = mount.getFileInode("test.txt");
+  auto blobId = inode->getObjectId().value();
+  inode->write("Hello World, longer"_sp, 0, fetchContext).get(0ms);
+
+  auto before = getFileHashesComputed(mount);
+  EXPECT_FALSE(
+      co_await inode->co_isSameAs(
+          blobId, TreeEntryType::REGULAR_FILE, fetchContext));
+  EXPECT_EQ(before, getFileHashesComputed(mount));
+}
+
+CO_TEST(FileInode, isSameAsHashesWhenSizesMatch) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"test.txt", "Hello World"}});
+  TestMount mount{builder};
+  auto fetchContext = ObjectFetchContext::getNullContext();
+
+  auto inode = mount.getFileInode("test.txt");
+  auto blobId = inode->getObjectId().value();
+  inode->write("Hello Earth"_sp, 0, fetchContext).get(0ms);
+
+  auto before = getFileHashesComputed(mount);
+  EXPECT_FALSE(
+      co_await inode->co_isSameAs(
+          blobId, TreeEntryType::REGULAR_FILE, fetchContext));
+  EXPECT_EQ(before + 1, getFileHashesComputed(mount));
+
+  // The hash is cached on the inode until the next write.
+  EXPECT_FALSE(
+      co_await inode->co_isSameAs(
+          blobId, TreeEntryType::REGULAR_FILE, fetchContext));
+  EXPECT_EQ(before + 1, getFileHashesComputed(mount));
+
+  inode->write("Hello World"_sp, 0, fetchContext).get(0ms);
+  EXPECT_TRUE(
+      co_await inode->co_isSameAs(
+          blobId, TreeEntryType::REGULAR_FILE, fetchContext));
 }
 
 // TODO: test multiple flags together
