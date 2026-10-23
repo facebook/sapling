@@ -6,14 +6,73 @@
 
 # pyre-strict
 
+from __future__ import annotations
+
+import errno
 import logging
 import os
 import pathlib
 import stat
+import subprocess
+import sys
 from typing import List
 
 import eden.integration.lib.overlay as overlay_mod
+from eden.fs.cli import util
 from eden.integration.lib import testcase
+from eden.integration.lib.edenclient import is_process_running
+from eden.thrift.client import EdenNotRunningError
+
+
+@testcase.eden_repo_test
+class OverlayWriteErrorTest(testcase.EdenRepoTest):
+    def populate_repo(self) -> None:
+        self.repo.write_file("dir/file", "original\n")
+        self.repo.write_file("hello", "healthy\n")
+        self.repo.commit("Initial commit.")
+
+    def test_truncate_survives_parent_overlay_write_error(self) -> None:
+        if sys.platform != "linux" or os.geteuid() == 0:
+            self.skipTest("Requires Linux permission checks for a non-root daemon")
+        self.addCleanup(self.eden.shutdown, retry=True)
+        parent_inode = os.stat(self.mount_path / "dir").st_ino
+        file_inode = os.stat(self.mount_path / "dir/file").st_ino
+        self.assertNotEqual(parent_inode % 256, file_inode % 256)
+        shard = (
+            self.eden.overlay_dir_for_mount(self.mount_path)
+            / f"{parent_inode % 256:02x}"
+        )
+        mode = stat.S_IMODE(shard.stat().st_mode)
+        pid = self.eden.get_pid_via_thrift()
+        os.chmod(shard, 0o500)
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys\n"
+                    "try:\n"
+                    "    with open(sys.argv[1], 'w'):\n"
+                    "        pass\n"
+                    "except OSError as error:\n"
+                    "    sys.exit(error.errno)\n",
+                    str(self.mount_path / "dir/file"),
+                ],
+                timeout=15,
+            )
+        finally:
+            os.chmod(shard, mode)
+        # TODO(lean-check): wrong behaviour; flipped in the next commit. The
+        # parent's overlay save throws inside the noexcept SCOPE_EXIT of
+        # FileInode::truncateAndRun, so the daemon aborts instead of returning
+        # EACCES, and the mount disappears with it.
+        util.poll_until(lambda: None if is_process_running(pid) else True, timeout=30)
+        with self.assertRaises(EdenNotRunningError):
+            with self.eden.get_thrift_client(timeout=10) as client:
+                client.getDaemonInfo()
+        self.assertNotEqual(errno.EACCES, result.returncode)
+        with self.assertRaises(OSError):
+            self.read_file("hello")
 
 
 @testcase.eden_nfs_repo_test_with_wal_variant
