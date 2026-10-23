@@ -17,6 +17,23 @@
 use anyhow::Result;
 use fbthrift::compact_protocol::deserialize;
 use fbthrift::compact_protocol::serialize;
+use fbthrift_test_if::En;
+use fbthrift_test_if::TerseEnum;
+
+#[test]
+fn test_terse_enum() {
+    let empty = TerseEnum {
+        e: En(0),
+        ..Default::default()
+    };
+    assert_eq!(serialize(&empty).as_ref(), &[0x00]);
+
+    let two = TerseEnum {
+        e: En::TWO,
+        ..Default::default()
+    };
+    assert_eq!(serialize(&two).as_ref(), &[0x15, 0x04, 0x00]);
+}
 
 #[test]
 fn test_deprecated_terse_enum() -> Result<()> {

@@ -190,4 +190,17 @@ TEST(ConstsTest, consts) {
   ASSERT_EQ(expected, custom);
 }
 
+TEST(TerseTest, Enum) {
+  TerseEnum empty;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(empty),
+      std::string("\x00", 1));
+
+  TerseEnum two;
+  two.e() = En::TWO;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(two),
+      std::string("\x15\x04\x00", 3));
+}
+
 } // namespace facebook
