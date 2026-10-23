@@ -6,18 +6,25 @@
 
 # pyre-strict
 
+import argparse
 import unittest
+from contextlib import redirect_stdout
 from io import StringIO
-from typing import Optional
+from typing import Optional, Type
+from unittest import mock
 
-from .. import stats_print
+from .. import cmd_util, stats_print
 from ..stats import (
     DiagInfoCounters,
+    get_counter_table,
     get_fuse_counters,
     get_fuse_latency,
     get_store_latency,
     get_thrift_latency,
+    ObjectStoreCommand,
+    SaplingBackingStoreLatencyCmd,
 )
+from ..subcmd import Subcmd
 
 
 class StatsTest(unittest.TestCase):
@@ -200,3 +207,51 @@ class CounterParserTest(unittest.TestCase):
                 ]
             },
         )
+
+
+class StoreCommandsTest(unittest.TestCase):
+    SAPLING_COUNTERS: DiagInfoCounters = {
+        "store.sapling.get_tree_us.count": 3,
+        "store.sapling.get_tree_us.count.60": 1,
+        "store.sapling.get_tree_us.p50": 5,
+        "store.sapling.get_tree_us.p50.60": 6,
+        "store.sapling.fetch_tree_local.count": 2,
+    }
+    OBJECT_STORE_COUNTERS: DiagInfoCounters = {
+        "object_store.get_blob.memory.count": 10,
+        "object_store.get_blob.memory.count.60": 1,
+        "object_store.get_blob.memory.count.600": 2,
+        "object_store.get_blob.backing_store.count": 4,
+        "object_store.get_blob.backing_store.count.60": 0,
+        "object_store.get_blob.backing_store.count.600": 0,
+    }
+
+    def _run_command(
+        self, command_class: Type[Subcmd], counters: DiagInfoCounters
+    ) -> str:
+        client = mock.MagicMock()
+        client.getCounters.return_value = counters
+        client.getRegexCounters.return_value = counters
+        instance = mock.MagicMock()
+        instance.get_thrift_client.return_value.__enter__.return_value = client
+        out = StringIO()
+        with (
+            mock.patch.object(cmd_util, "get_eden_instance", return_value=instance),
+            redirect_stdout(out),
+        ):
+            exit_code = command_class(argparse.ArgumentParser()).run(
+                argparse.Namespace()
+            )
+        self.assertEqual(exit_code, 0)
+        return out.getvalue()
+
+    def test_hg_latency_with_sapling_counters(self) -> None:
+        output = self._run_command(SaplingBackingStoreLatencyCmd, self.SAPLING_COUNTERS)
+        self.assertNotIn("get_tree", output)
+        self.assertEqual(get_store_latency(self.SAPLING_COUNTERS, "hg"), {})
+
+    def test_object_store_with_count_counters(self) -> None:
+        output = self._run_command(ObjectStoreCommand, self.OBJECT_STORE_COUNTERS)
+        self.assertNotIn("get_blob.memory", output)
+        with self.assertRaises(KeyError):
+            get_counter_table(self.OBJECT_STORE_COUNTERS, ["object_store"], ["count"])
