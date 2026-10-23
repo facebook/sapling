@@ -203,4 +203,17 @@ TEST(TerseTest, Enum) {
       std::string("\x15\x04\x00", 3));
 }
 
+TEST(TerseTest, Union) {
+  TerseUnion empty;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(empty),
+      std::string("\x00", 1));
+
+  TerseUnion set;
+  set.u()->un1().emplace();
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(set),
+      std::string("\x1c\x1c\x15\x00\x00\x00\x00", 7));
+}
+
 } // namespace facebook

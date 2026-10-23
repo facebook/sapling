@@ -102,6 +102,11 @@ struct TerseEnum {
   1: En e;
 }
 
+struct TerseUnion {
+  @thrift.TerseWrite
+  1: Un u;
+}
+
 @rust.NewType
 @rust.Ord
 @rust.Type{name = "OrderedFloat<f64>"}

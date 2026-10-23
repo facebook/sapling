@@ -19,6 +19,9 @@ use fbthrift::compact_protocol::deserialize;
 use fbthrift::compact_protocol::serialize;
 use fbthrift_test_if::En;
 use fbthrift_test_if::TerseEnum;
+use fbthrift_test_if::TerseUnion;
+use fbthrift_test_if::Un;
+use fbthrift_test_if::UnOne;
 
 #[test]
 fn test_terse_enum() {
@@ -48,4 +51,18 @@ fn test_deprecated_terse_enum() -> Result<()> {
         zero
     );
     Ok(())
+}
+
+#[test]
+fn test_terse_union() {
+    assert_eq!(serialize(TerseUnion::default()).as_ref(), &[0x00]);
+
+    let set = TerseUnion {
+        u: Un::un1(UnOne::default()),
+        ..Default::default()
+    };
+    assert_eq!(
+        serialize(&set).as_ref(),
+        &[0x1c, 0x1c, 0x15, 0x00, 0x00, 0x00, 0x00]
+    );
 }
