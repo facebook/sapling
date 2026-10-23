@@ -338,8 +338,9 @@ class Overlay:
                     f"unsupported file type {file_type:#o}"
                 )
 
-        path = Path(self.get_path(inode_number))
-        path.unlink()
+        if remove:
+            path = Path(self.get_path(inode_number))
+            path.unlink()
 
     def extract_dir(
         self, inode_number: int, output_path: Path, remove: bool = False

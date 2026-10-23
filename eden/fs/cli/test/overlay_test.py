@@ -49,7 +49,7 @@ class OverlayExtractTest(EdenTestCaseBase):
         self.write_file_inode(5, b"hello")
         self.overlay.extract_file(5, self.output_dir / "five", stat.S_IFREG | 0o644)
         self.assertEqual(b"hello", (self.output_dir / "five").read_bytes())
-        self.assertFalse(self.overlay_file_exists(5))
+        self.assertTrue(self.overlay_file_exists(5))
 
     def test_extract_file_with_remove(self) -> None:
         self.write_file_inode(5, b"hello")
@@ -67,8 +67,8 @@ class OverlayExtractTest(EdenTestCaseBase):
         self.assertEqual(b"seven", (self.output_dir / "a").read_bytes())
         self.assertEqual(b"eight", (self.output_dir / "b").read_bytes())
         self.assertTrue(self.overlay_file_exists(6))
-        self.assertFalse(self.overlay_file_exists(7))
-        self.assertFalse(self.overlay_file_exists(8))
+        self.assertTrue(self.overlay_file_exists(7))
+        self.assertTrue(self.overlay_file_exists(8))
 
     def test_extract_dir_with_remove(self) -> None:
         self.write_file_inode(7, b"seven")
