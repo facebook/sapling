@@ -10,6 +10,7 @@ import configparser
 import io
 import os
 import re
+import struct
 import sys
 import unittest
 from collections import namedtuple
@@ -23,7 +24,7 @@ from eden.fs.cli import configinterpolator
 from eden.fs.cli.config import EdenInstance
 from eden.test_support.testcase import EdenTestCaseBase
 
-from .. import config as config_mod, configutil
+from .. import config as config_mod, configutil, util
 from ..configinterpolator import EdenConfigInterpolator
 from ..configutil import EdenConfigParser, UnexpectedType
 
@@ -391,6 +392,43 @@ inode-catalog-type = "Sqlite"
             client_dir,
         )
         self.assertEqual("sqlite", checkout.get_config().inode_catalog_type)
+
+
+class SnapshotFileTest(EdenTestCaseBase):
+    def write_in_progress_snapshot(
+        self, from_component: bytes, to_component: bytes, pid: int
+    ) -> Path:
+        snapshot_path = self.tmp_dir / "SNAPSHOT"
+        snapshot_path.write_bytes(
+            util.SNAPSHOT_MAGIC_3
+            + struct.pack(">L", pid)
+            + struct.pack(">L", len(from_component))
+            + from_component
+            + struct.pack(">L", len(to_component))
+            + to_component
+        )
+        return snapshot_path
+
+    def test_in_progress_snapshot_with_equal_component_lengths(self) -> None:
+        snapshot_path = self.write_in_progress_snapshot(
+            util.create_filtered_rootid("a" * 40, b"null"),
+            util.create_filtered_rootid("b" * 40, b"null"),
+            4242,
+        )
+        with self.assertRaises(config_mod.InProgressCheckoutError) as context:
+            config_mod.get_snapshot(snapshot_path, "filteredhg")
+        self.assertEqual("a" * 40, context.exception.from_commit)
+        self.assertEqual("b" * 40, context.exception.to_commit)
+        self.assertEqual(4242, context.exception.pid)
+
+    def test_in_progress_snapshot_with_different_component_lengths(self) -> None:
+        snapshot_path = self.write_in_progress_snapshot(
+            util.create_filtered_rootid("a" * 40, b"null"),
+            util.create_filtered_rootid("b" * 40, b"V1:filter2"),
+            4242,
+        )
+        with self.assertRaisesRegex(RuntimeError, "SNAPSHOT file too short"):
+            config_mod.get_snapshot(snapshot_path, "filteredhg")
 
 
 class EdenConfigParserTest(unittest.TestCase):
