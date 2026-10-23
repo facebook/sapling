@@ -186,11 +186,7 @@ class EdenTestCase(EdenTestCaseBase):
         # to point to our test home directory for the duration of the test.
         self.setenv("HOME", str(self.eden.home_dir))
 
-        extra_config = dict(self.edenfs_extra_config() or {})
-        fuse_config = list(extra_config.get("fuse", []))
-        extra_config["fuse"] = fuse_config
-        fuse_config.extend(edenclient.fuse_transport_config(self.use_io_uring()))
-        self.write_configs(extra_config, self.eden.system_rc_path)
+        self.write_edenfs_system_config()
 
         # Default to using the Rust version of commands when running
         # integration tests. An empty edenfsctl_rollout file means that all
@@ -223,6 +219,18 @@ class EdenTestCase(EdenTestCaseBase):
             storage_engine=storage_engine,
             expected_fuse_transport="io_uring" if self.use_io_uring() else "devfuse",
         )
+
+    def write_edenfs_system_config(self) -> None:
+        """
+        Write edenfs_extra_config() to the system edenfs.rc that the daemon
+        reads at startup. A test that changes edenfs_extra_config() between
+        two daemons calls this before starting the second one.
+        """
+        extra_config = dict(self.edenfs_extra_config() or {})
+        fuse_config = list(extra_config.get("fuse", []))
+        extra_config["fuse"] = fuse_config
+        fuse_config.extend(edenclient.fuse_transport_config(self.use_io_uring()))
+        self.write_configs(extra_config, self.eden.system_rc_path)
 
     def write_configs(
         self, config_dict: Dict[str, List[str]], config_file_path
