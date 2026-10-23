@@ -141,6 +141,17 @@ struct TerseStruct {
   3: EmptiableException ex;
 }
 
+struct TerseAdapted {
+  @rust.Adapter{name = "::fbthrift::adapter::IdentityAdapter<>", serde = true}
+  @thrift.TerseWrite
+  1: string s;
+}
+
+struct TerseAdaptedStruct {
+  @thrift.TerseWrite
+  1: TerseAdapted adapted;
+}
+
 safe stateful server exception TestException {
   1: string message;
 }

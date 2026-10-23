@@ -187,3 +187,14 @@ struct TransitiveStruct {
 
 @rust.NewType
 typedef TransitiveStruct TransitiveStructWrapper
+
+struct TerseCustomString {
+  @rust.Adapter{name = "::adapters::StringAdapter"}
+  @thrift.TerseWrite
+  1: string s;
+}
+
+struct TerseCustomStringStruct {
+  @thrift.TerseWrite
+  1: TerseCustomString inner;
+}

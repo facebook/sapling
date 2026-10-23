@@ -19,6 +19,7 @@ use std::num::NonZeroI64;
 
 use adapters::CustomString;
 use adapters::SortedVec;
+use fbthrift::compact_protocol;
 use fbthrift::simplejson_protocol;
 use thrift_test::AdaptedListNewType;
 use thrift_test::Asset;
@@ -26,6 +27,8 @@ use thrift_test::AssetType;
 use thrift_test::Bar;
 use thrift_test::BorrowedFields;
 use thrift_test::Foo;
+use thrift_test::TerseCustomString;
+use thrift_test::TerseCustomStringStruct;
 use thrift_test::TransitiveStructWrapper;
 use thrift_test::WrappedAdaptedBytes;
 use thrift_test::WrappedAdaptedString;
@@ -488,5 +491,34 @@ fn test_annotations() {
     assert_eq!(
         simplejson_protocol::serialize(deser),
         r#"{"test_field":"boo","test_field_2":"spooky"}"#
+    );
+}
+
+#[test]
+fn test_terse_adapted_field_checks_wire_value() {
+    assert_eq!(
+        compact_protocol::serialize(TerseCustomString::default()).as_ref(),
+        &[0x00]
+    );
+    assert_eq!(
+        compact_protocol::serialize(TerseCustomStringStruct::default()).as_ref(),
+        &[0x00]
+    );
+
+    let inner = TerseCustomString {
+        s: CustomString("a".to_owned()),
+        ..Default::default()
+    };
+    assert_eq!(
+        compact_protocol::serialize(&inner).as_ref(),
+        &[0x18, 0x01, 0x61, 0x00]
+    );
+    let nested = TerseCustomStringStruct {
+        inner,
+        ..Default::default()
+    };
+    assert_eq!(
+        compact_protocol::serialize(&nested).as_ref(),
+        &[0x1c, 0x18, 0x01, 0x61, 0x00, 0x00]
     );
 }

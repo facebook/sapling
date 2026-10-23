@@ -260,4 +260,28 @@ TEST(TerseTest, Struct) {
       std::string("\x2c\x15\x00\x16\x00\x00\x1c\x18\x00\x00\x00", 11));
 }
 
+TEST(TerseTest, Adapted) {
+  TerseAdapted empty;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(empty),
+      std::string("\x00", 1));
+
+  TerseAdapted adapted;
+  adapted.s() = "a";
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(adapted),
+      std::string("\x18\x01\x61\x00", 4));
+
+  TerseAdaptedStruct emptyStruct;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(emptyStruct),
+      std::string("\x00", 1));
+
+  TerseAdaptedStruct nested;
+  nested.adapted() = adapted;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(nested),
+      std::string("\x1c\x18\x01\x61\x00\x00", 6));
+}
+
 } // namespace facebook

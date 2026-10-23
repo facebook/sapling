@@ -23,6 +23,8 @@ use fbthrift_test_if::Emptiable;
 use fbthrift_test_if::EmptiableException;
 use fbthrift_test_if::En;
 use fbthrift_test_if::NewInt;
+use fbthrift_test_if::TerseAdapted;
+use fbthrift_test_if::TerseAdaptedStruct;
 use fbthrift_test_if::TerseEnum;
 use fbthrift_test_if::TerseNewType;
 use fbthrift_test_if::TerseStruct;
@@ -141,5 +143,27 @@ fn test_terse_struct() {
         &[
             0x2c, 0x15, 0x00, 0x16, 0x00, 0x00, 0x1c, 0x18, 0x00, 0x00, 0x00
         ]
+    );
+}
+
+#[test]
+fn test_terse_adapted() {
+    assert_eq!(serialize(TerseAdapted::default()).as_ref(), &[0x00]);
+
+    let adapted = TerseAdapted {
+        s: "a".to_owned(),
+        ..Default::default()
+    };
+    assert_eq!(serialize(&adapted).as_ref(), &[0x18, 0x01, 0x61, 0x00]);
+
+    assert_eq!(serialize(TerseAdaptedStruct::default()).as_ref(), &[0x00]);
+
+    let nested = TerseAdaptedStruct {
+        adapted,
+        ..Default::default()
+    };
+    assert_eq!(
+        serialize(&nested).as_ref(),
+        &[0x1c, 0x18, 0x01, 0x61, 0x00, 0x00]
     );
 }
