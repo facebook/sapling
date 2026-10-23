@@ -209,17 +209,15 @@ folly::coro::now_task<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   auto globTries =
       co_await folly::coro::collectAllTryRange(std::move(globTasks));
 
-  // The per-task errors below are only examined when a file list is wanted,
-  // so a cancelled glob with suppressFileList would otherwise look complete.
   fetchContext->throwIfCanceled();
+  for (auto& t : globTries) {
+    t.throwUnlessValue();
+  }
 
   // Post-process: sort and dedup results
   std::vector<GlobResult> sortedResults;
   if (!suppressFileList) {
     std::swap(sortedResults, *globResults->wlock());
-    for (auto& t : globTries) {
-      t.throwUnlessValue();
-    }
     std::sort(sortedResults.begin(), sortedResults.end());
     auto resultsNewEnd =
         std::unique(sortedResults.begin(), sortedResults.end());

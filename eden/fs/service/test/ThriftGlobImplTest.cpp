@@ -303,7 +303,7 @@ CO_TEST_F(ThriftGlobImplTest, missingSearchRootWithSuppressedFileList) {
   auto suppressedGlobber = ThriftGlobImpl{suppressed};
   auto quiet = co_await folly::coro::co_awaitTry(suppressedGlobber.glob(
       edenMount, serverState, {"**/*.txt"}, fetchContext));
-  EXPECT_FALSE(quiet.hasException());
+  EXPECT_TRUE(quiet.hasException());
 }
 
 } // namespace facebook::eden
