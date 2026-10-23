@@ -114,6 +114,8 @@ class diffopts:
             raise error.Abort(
                 _("diff context lines count must be an integer, not %r") % self.context
             )
+        if self.context < 0:
+            self.context = self.defaults["context"]
 
     def copy(self, **kwargs):
         opts = dict((k, getattr(self, k)) for k in self.defaults)
@@ -496,7 +498,7 @@ def _unidiff(
     hunk = None
     ignoredlines = 0
     # tracks '~' blocks, at most `opts.context` of them fit in a hunk's context
-    ignored = collections.deque(maxlen=max(opts.context, 0))
+    ignored = collections.deque(maxlen=opts.context)
     has_hunks = False
     # pyre-fixme[6]: For 1st param expected `str` but got `bytes`.
     # pyre-fixme[6]: For 2nd param expected `str` but got `bytes`.

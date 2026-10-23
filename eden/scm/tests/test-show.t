@@ -232,7 +232,10 @@ Check behavior with nonsensical integers.
   diff -r fd78c1ae39e0 -r 8e33115c1596 file
   --- a/file	Thu Jan 01 00:00:00 1970 +0000
   +++ b/file	Thu Jan 01 00:00:00 1970 +0000
-  @@ -13,-14 +13,-9 @@
+  @@ -3,3 +3,8 @@
+   line3
+   line4
+   line5
   +line6
   +line7
   +line8
