@@ -12,6 +12,7 @@
 
 
 import base64
+import collections
 import re
 import struct
 import zlib
@@ -430,10 +431,11 @@ def _unidiff(
     lastfunc = [0, b""]
 
     def yieldhunk(hunk):
-        (astart, a2, bstart, b2, delta) = hunk
+        (astart, a2, bstart, b2, delta, skew) = hunk
         aend = contextend(a2, len(l1))
         alen = aend - astart
         blen = b2 - bstart + aend - a2
+        bstart += skew
 
         func = b""
         if opts.showfunc:
@@ -477,11 +479,13 @@ def _unidiff(
                     hunklines[i] += b"\n"
                     hunklines.insert(i + 1, _missing_newline_marker)
                     break
-        if not skip and t2[-1:] != b"\n" and bstart + blen == len(l2) + 1:
+        if not skip and t2[-1:] != b"\n":
             for i in range(len(hunklines) - 1, -1, -1):
                 if hunklines[i][0:1] == b"+":
-                    hunklines[i] += b"\n"
-                    hunklines.insert(i + 1, _missing_newline_marker)
+                    # Only the last line of t2 can lack a newline
+                    if not hunklines[i].endswith(b"\n"):
+                        hunklines[i] += b"\n"
+                        hunklines.insert(i + 1, _missing_newline_marker)
                     break
         yield hunkrange, hunklines
 
@@ -491,6 +495,8 @@ def _unidiff(
     #
     hunk = None
     ignoredlines = 0
+    # tracks '~' blocks, at most `opts.context` of them fit in a hunk's context
+    ignored = collections.deque(maxlen=max(opts.context, 0))
     has_hunks = False
     # pyre-fixme[6]: For 1st param expected `str` but got `bytes`.
     # pyre-fixme[6]: For 2nd param expected `str` but got `bytes`.
@@ -502,7 +508,9 @@ def _unidiff(
                 # blank lines are ignored, the new lines offsets must
                 # be adjusted as if equivalent blocks ('~') had the
                 # same sizes on both sides.
-                ignoredlines += (b2 - b1) - (a2 - a1)
+                n = (b2 - b1) - (a2 - a1)
+                ignoredlines += n
+                ignored.append((a2, n))
             continue
         delta = []
         old = l1[a1:a2]
@@ -512,6 +520,10 @@ def _unidiff(
         b2 -= ignoredlines
         astart = contextstart(a1)
         bstart = contextstart(b1)
+        # only the '~' blocks in a hunk's context need the ignoredlines
+        # adjustment. a new hunk starts after earlier ones and moves it in t2
+        skew = ignoredlines - sum(n for end, n in ignored if end > astart)
+        ignored.clear()
         prev = None
         if hunk:
             # join with the previous hunk if it falls inside the context
@@ -536,7 +548,7 @@ def _unidiff(
             delta = hunk[4]
         else:
             # create a new hunk
-            hunk = [astart, a2, bstart, b2, delta]
+            hunk = [astart, a2, bstart, b2, delta, skew]
 
         delta[len(delta) :] = [b" " + x for x in l1[astart:a1]]
         delta[len(delta) :] = [b"-" + x for x in old]

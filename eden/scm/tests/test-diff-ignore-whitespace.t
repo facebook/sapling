@@ -500,12 +500,11 @@ Test hunk offsets adjustments with --ignore-blank-lines
   +y
    d
   $ sl diff -B --nodates b > ../diffb
-FIXME: the hunk should start at +2
   $ cat ../diffb
   diff -r 0e66aa54f318 b
   --- a/b
   +++ b/b
-  @@ -1,3 +1,3 @@
+  @@ -1,3 +2,3 @@
    b
   -y
   +x
@@ -559,7 +558,6 @@ Capitalize the first and last lines and add a blank line after five:
 
 >>> two diffs dropping the blank line, with TWELVE still at line 13 <<<
 
-FIXME: the second hunk should start at +10 and end with "\ No newline at end of file"
   $ sl ndiff -B c
   diff -r 036d09193e15 c
   --- a/c
@@ -570,15 +568,15 @@ FIXME: the second hunk should start at +10 and end with "\ No newline at end of 
    whitespace
    my
    old
-  @@ -9,4 +9,4 @@
+  @@ -9,4 +10,4 @@
    nine
    ten
    eleven
   -twelve
   \ No newline at end of file
-  +TWELVE (no-eol)
+  +TWELVE
+  \ No newline at end of file
 
-FIXME: the second hunk should start at +13 and end with "\ No newline at end of file"
   $ sl ndiff -B -U0 c
   diff -r 036d09193e15 c
   --- a/c
@@ -586,10 +584,11 @@ FIXME: the second hunk should start at +13 and end with "\ No newline at end of 
   @@ -1,1 +1,1 @@
   -hello
   +HELLO
-  @@ -12,1 +12,1 @@
+  @@ -12,1 +13,1 @@
   -twelve
   \ No newline at end of file
-  +TWELVE (no-eol)
+  +TWELVE
+  \ No newline at end of file
 
   $ sl revert -C c
 
@@ -631,7 +630,6 @@ hunk joining one and four:
 
 >>> one diff dropping the blank line, with TWELVE still at line 13 <<<
 
-FIXME: the second hunk should start at +10
   $ sl ndiff -B d
   diff -r e7a593c8fc19 d
   --- a/d
@@ -646,7 +644,7 @@ FIXME: the second hunk should start at +10
    five
    six
    seven
-  @@ -9,4 +9,4 @@
+  @@ -9,4 +10,4 @@
    nine
    ten
    eleven
@@ -684,7 +682,6 @@ Add a blank line after one and capitalize the last line, still without a newline
 
 >>> two diffs dropping the blank line, keeping both markers <<<
 
-FIXME: the hunk should end with "\ No newline at end of file"
   $ sl ndiff -B e
   diff -r e1765c270327 e
   --- a/e
@@ -695,14 +692,15 @@ FIXME: the hunk should end with "\ No newline at end of file"
    three
   -four
   \ No newline at end of file
-  +FOUR (no-eol)
+  +FOUR
+  \ No newline at end of file
 
-FIXME: the hunk should start at +5 and end with "\ No newline at end of file"
   $ sl ndiff -B -U0 e
   diff -r e1765c270327 e
   --- a/e
   +++ b/e
-  @@ -4,1 +4,1 @@
+  @@ -4,1 +5,1 @@
   -four
   \ No newline at end of file
-  +FOUR (no-eol)
+  +FOUR
+  \ No newline at end of file
