@@ -500,6 +500,7 @@ Test hunk offsets adjustments with --ignore-blank-lines
   +y
    d
   $ sl diff -B --nodates b > ../diffb
+FIXME: the hunk should start at +2
   $ cat ../diffb
   diff -r 0e66aa54f318 b
   --- a/b
@@ -520,3 +521,188 @@ Test hunk offsets adjustments with --ignore-blank-lines
   applying ../diffb
   $ sl revert -aC
   reverting b
+
+Ignored blank lines do not shift the new file offsets of later hunks
+
+  $ printf 'hello\nwhitespace\nmy\nold\nfriend\nsix\nseven\neight\nnine\nten\neleven\ntwelve' > c
+  $ sl add c
+  $ sl ci -m c
+
+Capitalize the first and last lines and add a blank line after five:
+
+  $ printf 'HELLO\nwhitespace\nmy\nold\nfriend\n\nsix\nseven\neight\nnine\nten\neleven\nTWELVE' > c
+
+>>> one diff showing the blank line moving TWELVE to line 13 <<<
+
+  $ sl ndiff c
+  diff -r 036d09193e15 c
+  --- a/c
+  +++ b/c
+  @@ -1,12 +1,13 @@
+  -hello
+  +HELLO
+   whitespace
+   my
+   old
+   friend
+  +
+   six
+   seven
+   eight
+   nine
+   ten
+   eleven
+  -twelve
+  \ No newline at end of file
+  +TWELVE
+  \ No newline at end of file
+
+>>> two diffs dropping the blank line, with TWELVE still at line 13 <<<
+
+FIXME: the second hunk should start at +10 and end with "\ No newline at end of file"
+  $ sl ndiff -B c
+  diff -r 036d09193e15 c
+  --- a/c
+  +++ b/c
+  @@ -1,4 +1,4 @@
+  -hello
+  +HELLO
+   whitespace
+   my
+   old
+  @@ -9,4 +9,4 @@
+   nine
+   ten
+   eleven
+  -twelve
+  \ No newline at end of file
+  +TWELVE (no-eol)
+
+FIXME: the second hunk should start at +13 and end with "\ No newline at end of file"
+  $ sl ndiff -B -U0 c
+  diff -r 036d09193e15 c
+  --- a/c
+  +++ b/c
+  @@ -1,1 +1,1 @@
+  -hello
+  +HELLO
+  @@ -12,1 +12,1 @@
+  -twelve
+  \ No newline at end of file
+  +TWELVE (no-eol)
+
+  $ sl revert -C c
+
+Ignored blank lines inside a joined hunk do not shift the new file offsets of
+later hunks either
+
+  $ printf 'one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\n' > d
+  $ sl add d
+  $ sl ci -m d
+
+Capitalize one, four and twelve, and add a blank line after two, inside the
+hunk joining one and four:
+
+  $ printf 'ONE\ntwo\n\nthree\nFOUR\nfive\nsix\nseven\neight\nnine\nten\neleven\nTWELVE\n' > d
+
+>>> one diff showing the blank line moving TWELVE to line 13 <<<
+
+  $ sl ndiff d
+  diff -r e7a593c8fc19 d
+  --- a/d
+  +++ b/d
+  @@ -1,7 +1,8 @@
+  -one
+  +ONE
+   two
+  +
+   three
+  -four
+  +FOUR
+   five
+   six
+   seven
+  @@ -9,4 +10,4 @@
+   nine
+   ten
+   eleven
+  -twelve
+  +TWELVE
+
+>>> one diff dropping the blank line, with TWELVE still at line 13 <<<
+
+FIXME: the second hunk should start at +10
+  $ sl ndiff -B d
+  diff -r e7a593c8fc19 d
+  --- a/d
+  +++ b/d
+  @@ -1,7 +1,7 @@
+  -one
+  +ONE
+   two
+   three
+  -four
+  +FOUR
+   five
+   six
+   seven
+  @@ -9,4 +9,4 @@
+   nine
+   ten
+   eleven
+  -twelve
+  +TWELVE
+
+  $ sl revert -C d
+
+A hunk ending a file without a newline keeps its marker when the hunk holds
+ignored blank lines
+
+  $ printf 'one\ntwo\nthree\nfour' > e
+  $ sl add e
+  $ sl ci -m e
+
+Add a blank line after one and capitalize the last line, still without a newline:
+
+  $ printf 'one\n\ntwo\nthree\nFOUR' > e
+
+>>> one diff showing the blank line and both markers <<<
+
+  $ sl ndiff e
+  diff -r e1765c270327 e
+  --- a/e
+  +++ b/e
+  @@ -1,4 +1,5 @@
+   one
+  +
+   two
+   three
+  -four
+  \ No newline at end of file
+  +FOUR
+  \ No newline at end of file
+
+>>> two diffs dropping the blank line, keeping both markers <<<
+
+FIXME: the hunk should end with "\ No newline at end of file"
+  $ sl ndiff -B e
+  diff -r e1765c270327 e
+  --- a/e
+  +++ b/e
+  @@ -1,4 +1,4 @@
+   one
+   two
+   three
+  -four
+  \ No newline at end of file
+  +FOUR (no-eol)
+
+FIXME: the hunk should start at +5 and end with "\ No newline at end of file"
+  $ sl ndiff -B -U0 e
+  diff -r e1765c270327 e
+  --- a/e
+  +++ b/e
+  @@ -4,1 +4,1 @@
+  -four
+  \ No newline at end of file
+  +FOUR (no-eol)
