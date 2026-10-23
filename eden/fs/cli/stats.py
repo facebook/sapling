@@ -382,32 +382,39 @@ def backing_store_latency(store: str, args: argparse.Namespace) -> int:
     return 0
 
 
+STORE_COUNTER_PREFIXES: Dict[str, str] = {"hg": "store.sapling."}
+
+
 def get_store_latency(counters: DiagInfoCounters, store: str) -> Table2D:
     table: Table2D = {}
+    prefix = STORE_COUNTER_PREFIXES.get(store, "store.{}.".format(store))
 
     for key in counters:
-        if key.startswith("store.{}".format(store)) and key.find(".count") == -1:
-            tokens = key.split(".")
-            method = tokens[2]
-            percentile = tokens[3]
-            period = None
-            if len(tokens) > 4:
-                period = tokens[4]
-            insert_latency_record(table, counters[key], method, percentile, period)
+        if not key.startswith(prefix):
+            continue
+        tokens = key[len(prefix) :].split(".")
+        if len(tokens) not in (2, 3):
+            continue
+        method = tokens[0]
+        if method.endswith("_us"):
+            method = method[: -len("_us")]
+        percentile = tokens[1]
+        period = tokens[2] if len(tokens) == 3 else None
+        insert_latency_record(table, counters[key], method, percentile, period)
     return table
 
 
 @stats_cmd("object-store", "Show information about the object store pipeline")
 class ObjectStoreCommand(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        TITLE = "Percentages of where data was found by the object store"
+        TITLE = "Counts of where data was found by the object store"
         stats_print.write_heading(TITLE, sys.stdout)
 
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client() as thrift:
             counters = thrift.getRegexCounters("object_store\\..*")
 
-        table = get_counter_table(counters, ["object_store"], ["pct"])
+        table = get_counter_table(counters, ["object_store"], ["count"])
         stats_print.write_table(table, "Object Store", sys.stdout)
 
         return 0
@@ -423,7 +430,9 @@ def get_counter_table(counters: DiagInfoCounters, prefix: List, suffix: List) ->
         if tags[-len(suffix) :] == suffix and tags[0 : len(prefix)] == prefix:
             TIME_SUFFIXES = (".60", ".600", ".3600", "")
             row_name = ".".join(tags[len(prefix) : -len(suffix)])
-            table[row_name] = [counters[key + suffix] for suffix in TIME_SUFFIXES]
+            table[row_name] = [
+                counters.get(key + suffix, 0) for suffix in TIME_SUFFIXES
+            ]
 
     return table
 

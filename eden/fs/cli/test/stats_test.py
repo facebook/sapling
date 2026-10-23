@@ -247,11 +247,26 @@ class StoreCommandsTest(unittest.TestCase):
 
     def test_hg_latency_with_sapling_counters(self) -> None:
         output = self._run_command(SaplingBackingStoreLatencyCmd, self.SAPLING_COUNTERS)
-        self.assertNotIn("get_tree", output)
-        self.assertEqual(get_store_latency(self.SAPLING_COUNTERS, "hg"), {})
+        self.assertIn("get_tree", output)
+        self.assertEqual(
+            get_store_latency(self.SAPLING_COUNTERS, "hg"),
+            {
+                "get_tree": [
+                    ["", "", "", ""],
+                    ["6 \u03bcs", "", "", "5 \u03bcs"],
+                    ["", "", "", ""],
+                    ["", "", "", ""],
+                ]
+            },
+        )
 
     def test_object_store_with_count_counters(self) -> None:
         output = self._run_command(ObjectStoreCommand, self.OBJECT_STORE_COUNTERS)
-        self.assertNotIn("get_blob.memory", output)
-        with self.assertRaises(KeyError):
-            get_counter_table(self.OBJECT_STORE_COUNTERS, ["object_store"], ["count"])
+        self.assertIn("get_blob.memory", output)
+        self.assertEqual(
+            get_counter_table(self.OBJECT_STORE_COUNTERS, ["object_store"], ["count"]),
+            {
+                "get_blob.memory": [1, 2, 0, 10],
+                "get_blob.backing_store": [0, 0, 0, 4],
+            },
+        )
