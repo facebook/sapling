@@ -1,5 +1,4 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
-load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
@@ -172,11 +171,12 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "utimensat",
     srcs = ["utimensat_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",
@@ -288,11 +288,12 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "xattr",
     srcs = ["xattr_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         ":base",

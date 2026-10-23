@@ -129,12 +129,13 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "overlay_corruption",
     srcs = ["overlay_corruption_test.py"],
     # Other platforms use NFS or a different overlay.
     compatible_with = ["ovr_config//os:linux"],
     env = artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
