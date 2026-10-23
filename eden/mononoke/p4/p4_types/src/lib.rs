@@ -62,3 +62,28 @@ pub enum CaseHandling {
     Sensitive,
     Insensitive,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Depot {
+    /// Text, not bytes: callers pass `//{name}/...` to `submitted_changes`.
+    pub name: String,
+    pub depot_type: DepotType,
+    pub map: Vec<u8>,
+    /// The number of slashes in a stream's name after the depot name. Stream depots only.
+    pub stream_depth: Option<u32>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DepotType {
+    Local,
+    Stream,
+    Remote,
+    Spec,
+    Archive,
+    Unload,
+    Tangent,
+    Graph,
+    /// Any other type: one added by a newer server, or `extension` and `trait`, which only
+    /// the server's hidden depots have.
+    Other(String),
+}
