@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/Portability.h>
 #include <gtest/gtest.h>
 
 #include "eden/common/utils/PathFuncs.h"
@@ -39,28 +38,27 @@ void addTwoEmptyDirectories(Catalog& catalog) {
 TEST(EphemeralFsInodeCatalogRenameTest, directoryOverEmptyDirectory) {
   EphemeralFsInodeCatalog catalog{nullptr};
   addTwoEmptyDirectories(catalog);
-  EXPECT_THROW(
-      catalog.renameChild(InodeNumber{10}, InodeNumber{10}, "e"_pc, "d"_pc),
-      NonEmptyError);
+  EXPECT_NO_THROW(
+      catalog.renameChild(InodeNumber{10}, InodeNumber{10}, "e"_pc, "d"_pc));
   auto parent = catalog.loadOverlayDir(InodeNumber{10});
   ASSERT_TRUE(parent.has_value());
-  EXPECT_EQ(2, parent->entries()->size());
+  ASSERT_EQ(1, parent->entries()->size());
+  EXPECT_EQ(11, *parent->entries()->at("d").inodeNumber());
 }
 
 TEST(EphemeralFsInodeCatalogRenameTest, intoParentWithoutRecord) {
-  if (!folly::kIsSanitizeAddress) {
-    GTEST_SKIP() << "the use after free is only detected under ASAN";
-  }
-  GTEST_FLAG_SET(death_test_style, "threadsafe");
-  EXPECT_DEATH(
-      {
-        EphemeralFsInodeCatalog catalog{nullptr};
-        catalog.saveOverlayDir(InodeNumber{100}, overlay::OverlayDir{});
-        overlay::OverlayDir source;
-        source.entries()->emplace("x", makeDirectoryEntry(2000));
-        catalog.saveOverlayDir(InodeNumber{1000}, std::move(source));
-        catalog.renameChild(
-            InodeNumber{1000}, InodeNumber{3000}, "x"_pc, "y"_pc);
-      },
-      "AddressSanitizer");
+  EphemeralFsInodeCatalog catalog{nullptr};
+  catalog.saveOverlayDir(InodeNumber{100}, overlay::OverlayDir{});
+  overlay::OverlayDir source;
+  source.entries()->emplace("x", makeDirectoryEntry(2000));
+  catalog.saveOverlayDir(InodeNumber{1000}, std::move(source));
+  catalog.renameChild(InodeNumber{1000}, InodeNumber{3000}, "x"_pc, "y"_pc);
+
+  auto oldParent = catalog.loadOverlayDir(InodeNumber{1000});
+  ASSERT_TRUE(oldParent.has_value());
+  EXPECT_TRUE(oldParent->entries()->empty());
+  auto newParent = catalog.loadOverlayDir(InodeNumber{3000});
+  ASSERT_TRUE(newParent.has_value());
+  ASSERT_EQ(1, newParent->entries()->size());
+  EXPECT_EQ(2000, *newParent->entries()->at("y").inodeNumber());
 }

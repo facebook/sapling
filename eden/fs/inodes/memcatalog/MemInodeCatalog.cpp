@@ -152,23 +152,27 @@ void MemInodeCatalog::renameChild(
 
   // Check if src directory exits
   auto srcOdir = store->find(src);
-  if (srcOdir != store->end()) {
-    // Check if src named child exists
-    auto srcEntries = srcOdir->second.entries();
-    auto srcChild = srcEntries->find(srcName.asString());
-    if (srcChild != srcEntries->end()) {
-      if (dstOdir == store->end()) {
-        // Create dst and include src child in entries
-        overlay::OverlayDir odir;
-        odir.entries()->emplace(dstName.asString(), srcChild->second);
-        store->emplace(dst, std::move(odir));
-      } else {
-        // Use existing dst
-        auto dstEntries = dstOdir->second.entries();
-        dstEntries[dstName.asString()] = srcChild->second;
-      }
-      srcEntries->erase(srcChild);
-    }
+  if (srcOdir == store->end()) {
+    return;
+  }
+  // Check if src named child exists
+  auto srcEntries = srcOdir->second.entries();
+  auto srcChild = srcEntries->find(srcName.asString());
+  if (srcChild == srcEntries->end()) {
+    return;
+  }
+  auto child = std::move(srcChild->second);
+  srcEntries->erase(srcChild);
+
+  if (dstOdir == store->end()) {
+    // Create dst and include src child in entries
+    overlay::OverlayDir odir;
+    odir.entries()->emplace(dstName.asString(), std::move(child));
+    store->emplace(dst, std::move(odir));
+  } else {
+    // Use existing dst
+    auto dstEntries = dstOdir->second.entries();
+    dstEntries[dstName.asString()] = std::move(child);
   }
 }
 

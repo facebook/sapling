@@ -20,7 +20,6 @@ cpp_unittest(
         "fbsource//xplat/folly:exception",
         "fbsource//xplat/folly:expected",
         "fbsource//xplat/folly:file_util",
-        "fbsource//xplat/folly:portability",
         "fbsource//xplat/folly:range",
         "fbsource//xplat/folly:string",
         "fbsource//xplat/folly:varint",
