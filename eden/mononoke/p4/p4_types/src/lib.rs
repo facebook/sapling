@@ -42,3 +42,23 @@ pub enum Action {
     Purge,
     Archive,
 }
+
+/// What `p4 info` reports about the server, enough to tell one server from another.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ServerInfo {
+    /// `None` until set with `p4 serverid`.
+    pub server_id: Option<String>,
+    /// `unknown` for an `rsh:` server.
+    pub address: String,
+    pub version: String,
+    pub case_handling: CaseHandling,
+    pub unicode: bool,
+    /// For example `standard` or `forwarding-standby`.
+    pub services: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaseHandling {
+    Sensitive,
+    Insensitive,
+}
