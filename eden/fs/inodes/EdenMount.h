@@ -96,7 +96,6 @@ class OverlayFileAccess;
 class PrjfsChannel;
 class ServerState;
 class Tree;
-class TreePrefetchLease;
 class UnboundedQueueExecutor;
 template <typename T>
 class ImmediateFuture;
@@ -1114,20 +1113,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       RelativePathPiece fromRoot,
       const ObjectFetchContextPtr& context);
 
-  /**
-   * Request to start a new tree prefetch.
-   *
-   * Returns a new TreePrefetchLease if you can start a new prefetch, or
-   * std::nullopt if there are too many prefetches already in progress and a new
-   * one should not be started.  If a TreePrefetchLease object is returned the
-   * caller should hold onto it until the prefetch is complete.  When the
-   * TreePrefetchLease is destroyed this will inform the EdenMount that the
-   * prefetch has finished.
-   */
-  [[nodiscard]] std::optional<TreePrefetchLease> tryStartTreePrefetch(
-      TreeInodePtr treeInode,
-      const ObjectFetchContext& context);
-
   /** Holds GC admission for either a background GC or checkout. */
   class InodeGCLease {
    public:
@@ -1368,8 +1353,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ~EdenMount();
 
-  friend class TreePrefetchLease;
-  void treePrefetchFinished() noexcept;
   void releaseInodeGCLease(bool representsRunningGc) noexcept;
 
   const std::unique_ptr<const CheckoutConfig> checkoutConfig_;
@@ -1529,11 +1512,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * returned via initStatData().
    */
   folly::Synchronized<Owner> owner_;
-
-  /**
-   * The number of tree prefetches in progress for this mount point.
-   */
-  std::atomic<uint64_t> numPrefetchesInProgress_{0};
 
   struct InodeGCState {
     bool gcRunning{false};

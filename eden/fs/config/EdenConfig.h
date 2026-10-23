@@ -30,7 +30,6 @@
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/NfsAccessMode.h"
-#include "eden/fs/config/ReaddirPrefetch.h"
 #include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/eden-config.h"
 
@@ -905,14 +904,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Specifies which directory children will be prefetched upon readdir.
-   */
-  ConfigSetting<ReaddirPrefetch> readdirPrefetch{
-      "mount:readdir-prefetch",
-      ReaddirPrefetch::None,
-      this};
-
-  /**
    * Keep the inode-number-ordered index that readdir builds for a directory
    * across the requests of one listing, instead of rebuilding it for every
    * request. The index is dropped once the listing ends or the directory
@@ -979,15 +970,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint32_t> fetchHeavyThreshold{
       "store:fetch-heavy-threshold",
       100000,
-      this};
-
-  /**
-   * The maximum number of tree prefetch operations to allow in parallel for any
-   * checkout.  Setting this to 0 will disable prefetch operations.
-   */
-  ConfigSetting<uint64_t> maxTreePrefetches{
-      "store:max-tree-prefetches",
-      5,
       this};
 
   /**

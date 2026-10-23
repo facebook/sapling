@@ -98,7 +98,6 @@ cpp_library(
         "ServerState.cpp",
         "Traverse.cpp",
         "TreeInode.cpp",
-        "TreePrefetchLease.cpp",
         "VirtualInode.cpp",
     ],
     headers = [
@@ -137,7 +136,6 @@ cpp_library(
         "ServerState.h",
         "Traverse.h",
         "TreeInode.h",
-        "TreePrefetchLease.h",
         "UnmaterializedUnloadedBlobDirEntry.h",
         "VirtualInode.h",
         "VirtualInodeLoader.h",

@@ -163,8 +163,6 @@ inline constexpr ImportPriority kDefaultImportPriority{
     ImportPriority::Class::Normal};
 inline constexpr ImportPriority kDefaultFsImportPriority{
     ImportPriority::Class::High};
-inline constexpr ImportPriority kReaddirPrefetchPriority{
-    ImportPriority::Class::Low};
 inline constexpr ImportPriority kThriftPrefetchPriority{
     ImportPriority::Class::Low};
 

@@ -1070,7 +1070,6 @@ std::optional<BlobAuxData> FileInode::tryGetCachedBlobAuxData(
 
 ImmediateFuture<struct stat> FileInode::stat(
     const ObjectFetchContextPtr& context) {
-  notifyParentOfStat(/*isFile=*/true, *context);
   logAccess(*context);
 
   auto built = buildStatUnderLock(false);
@@ -1096,7 +1095,6 @@ folly::coro::now_task<struct stat> FileInode::co_stat(
     const ObjectFetchContextPtr& context) {
   // Keep this FileInode alive across the co_await.
   [[maybe_unused]] auto self = inodePtrFromThis();
-  notifyParentOfStat(/*isFile=*/true, *context);
   logAccess(*context);
 
   auto built = buildStatUnderLock(false);

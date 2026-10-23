@@ -513,12 +513,6 @@ class InodeBase {
   void updateJournal();
 
   /**
-   * Our prefetch heuristics (detection of recursive crawls) kick in when a
-   * child has been stat(). The parent inode must be notified by the children.
-   */
-  void notifyParentOfStat(bool isFile, const ObjectFetchContext& context);
-
-  /**
    * Log accesses via the ServerState's InodeAccessLogger.
    */
   void logAccess(const ObjectFetchContext& fetchContext);

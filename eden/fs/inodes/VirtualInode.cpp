@@ -1280,8 +1280,8 @@ folly::coro::now_task<struct stat> VirtualInode::co_stat(
   static_assert(
       std::variant_size_v<detail::VariantVirtualInode> == 4,
       "New variant type added to VariantVirtualInode - update co_stat");
-  // Route InodePtr through the child inode's co_stat to preserve
-  // logAccess + notifyParentOfStat side effects.
+  // Route InodePtr through the child inode's co_stat to preserve the
+  // logAccess side effect.
   if (auto* inode = std::get_if<InodePtr>(&variant_)) {
     co_return co_await (*inode)->co_stat(fetchContext);
   }

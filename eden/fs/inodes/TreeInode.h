@@ -849,11 +849,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool followSymlink) override;
 #endif
 
-  /**
-   * Called by the child's inode (while it's location lock is held!)
-   */
-  void childWasStat(bool isFile, const ObjectFetchContext& context);
-
   uint64_t getInMemoryDescendants();
 
   void increaseInMemoryDescendants(int64_t inc);
@@ -1091,19 +1086,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       CaseSensitivity caseSensitive);
 
   void updateAtime();
-
-  void considerReaddirPrefetch(const ObjectFetchContextPtr& context);
-
-  /**
-   * Bitset indicating what entry types should be prefetched.
-   */
-  using PrefetchSet = uint8_t;
-  enum : PrefetchSet {
-    PrefetchFiles = 1,
-    PrefetchTrees = 2,
-  };
-
-  void doPrefetch(PrefetchSet prefetchSet, const ObjectFetchContext& context);
 
   /**
    * Get a TreeInodePtr to ourself.
@@ -1670,29 +1652,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * this to now() and resumes TTL throttling.
    */
   std::atomic<std::chrono::steady_clock::time_point> lastPermissionCheck_{};
-
-  /**
-   * Valid state transitions:
-   *   NeverEnumerated -> Enumerated
-   *   Enumerated -> PrefetchedTrees
-   *   Enumerated -> PrefetchedAll
-   *   PrefetchedTrees -> PrefetchedAll
-   */
-  enum PrefetchState : uint8_t {
-    /// readdir() has not been called on this inode since it was loaded.
-    NeverEnumerated,
-    /// readdir() has been called.
-    Enumerated,
-    /// A child tree was stat() and we have prefetched all child trees.
-    PrefetchedTrees,
-    /// A child file was stat() and we have prefetched inodes for all children.
-    PrefetchedAll,
-  };
-
-  /**
-   * Only prefetch children aux data once.
-   */
-  std::atomic<PrefetchState> prefetchState_{NeverEnumerated};
 
   /**
    * Index shared by the requests of a listing in flight; see readdirImpl.

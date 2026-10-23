@@ -189,7 +189,7 @@ class VirtualInode {
    * Sync peek: build a complete EntryAttributes value from in-memory state,
    * returning nullopt if any requested attribute needs an async fetch.
    *
-   * Pure peek: no logAccess / notifyParentOfStat side effects — an
+   * Pure peek: no logAccess side effect — an
    * intentional trade-off vs the async path to keep the cache-hot
    * children-attributes fanout cheap. The async fallback still logs.
    */

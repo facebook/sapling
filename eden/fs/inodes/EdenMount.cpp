@@ -45,7 +45,6 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/inodes/TreePrefetchLease.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -3325,21 +3324,6 @@ ImmediateFuture<TreeInodePtr> EdenMount::ensureDirectoryExists(
   return ensureDirectoryExistsHelper(getRootInode(), childName, rest, context);
 }
 
-std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
-    TreeInodePtr treeInode,
-    const ObjectFetchContext& context) {
-  auto config = serverState_->getEdenConfig();
-  auto maxTreePrefetches = config->maxTreePrefetches.getValue();
-  auto numInProgress =
-      numPrefetchesInProgress_.fetch_add(1, std::memory_order_acq_rel);
-  if (numInProgress < maxTreePrefetches) {
-    return TreePrefetchLease{std::move(treeInode), context};
-  } else {
-    numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);
-    return std::nullopt;
-  }
-}
-
 std::optional<EdenMount::InodeGCLease> EdenMount::tryStartInodeGC() {
   auto mount = shared_from_this();
   auto failureLimit = getEdenConfig()->gcMaxTreeLoadFailures.getValue();
@@ -3428,12 +3412,6 @@ void EdenMount::releaseInodeGCLease(bool representsRunningGc) noexcept {
     XDCHECK_GT(state->inhibitorCount, 0u);
     --state->inhibitorCount;
   }
-}
-
-void EdenMount::treePrefetchFinished() noexcept {
-  auto oldValue =
-      numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);
-  XDCHECK_NE(uint64_t{0}, oldValue);
 }
 
 bool EdenMount::MountingUnmountingState::fsChannelMountStarted()

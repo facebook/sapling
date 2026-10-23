@@ -621,18 +621,6 @@ void InodeBase::updateJournal() {
   }
 }
 
-void InodeBase::notifyParentOfStat(
-    bool isFile,
-    const ObjectFetchContext& context) {
-  // This is called from a hot function, so it would be nice to avoid needing to
-  // increment the parent's reference count, but the location lock is the bottom
-  // of the lock hierarchy. Therefore, it is not safe to acquire the parent's
-  // contents lock, which is necessary for prefetching.
-  if (auto parent = location_.rlock()->parent) {
-    parent->childWasStat(isFile, context);
-  }
-}
-
 void InodeBase::logAccess(const ObjectFetchContext& fetchContext) {
   auto ino = getNodeId();
 

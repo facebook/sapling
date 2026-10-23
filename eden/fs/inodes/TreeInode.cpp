@@ -52,7 +52,6 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/inodes/ServerState.h"
-#include "eden/fs/inodes/TreePrefetchLease.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxData.h"
@@ -712,7 +711,6 @@ ImmediateFuture<folly::Unit> TreeInode::transitionToUnrestricted(
 ImmediateFuture<struct stat> TreeInode::stat(
     const ObjectFetchContextPtr& context) {
   logAccess(*context);
-  notifyParentOfStat(/*isFile=*/false, *context);
 
   if (FOLLY_UNLIKELY(isRestricted())) {
     return recheckPermissionIfExpired(context).thenValue(
@@ -730,7 +728,6 @@ folly::coro::now_task<struct stat> TreeInode::co_stat(
   // this TreeInode alive while recheckPermissionIfExpired runs.
   auto self = inodePtrFromThis();
   logAccess(*context);
-  notifyParentOfStat(/*isFile=*/false, *context);
 
   if (FOLLY_UNLIKELY(isRestricted())) {
     co_await recheckPermissionIfExpired(context).semi();
@@ -3854,16 +3851,6 @@ bool TreeInode::readdirImpl(
 
   updateAtime();
 
-  // It's very common for userspace to readdir() a directory to completion and
-  // serially stat() every entry. Since stat() returns a file's size and a
-  // directory's entry count in the st_nlink field, treat readdir() as a signal
-  // that we may want to prefetch aux data for all children.
-#ifndef _WIN32
-  // TODO: enable readdir prefetching on Windows
-  considerReaddirPrefetch(context);
-#else
-  (void)context;
-#endif
   // Possible offset values are:
   //   0: start at the beginning
   //   1: start after .
@@ -8078,43 +8065,6 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
 
 #endif
 
-void TreeInode::childWasStat(bool isFile, const ObjectFetchContext& context) {
-  auto currentState = prefetchState_.load(std::memory_order_relaxed);
-  PrefetchState desiredState;
-  PrefetchSet prefetchSet = 0;
-
-  do {
-    switch (currentState) {
-      case NeverEnumerated:
-        // The parent hasn't been readdir, so assume this is a one-off lookup of
-        // a known path.
-        return;
-      case Enumerated:
-        desiredState = isFile ? PrefetchedAll : PrefetchedTrees;
-        prefetchSet = isFile ? (PrefetchFiles | PrefetchTrees) : PrefetchTrees;
-        break;
-      case PrefetchedTrees:
-        if (isFile) {
-          desiredState = PrefetchedAll;
-          prefetchSet = PrefetchFiles;
-          break;
-        } else {
-          // Already prefetched trees.
-          return;
-        }
-      case PrefetchedAll:
-        // Readdir must have happened prior to a child's stat(). Ignore.
-        return;
-    }
-  } while (!prefetchState_.compare_exchange_weak(
-      currentState,
-      desiredState,
-      std::memory_order_acq_rel,
-      std::memory_order_acquire));
-
-  doPrefetch(prefetchSet, context);
-}
-
 uint64_t TreeInode::getInMemoryDescendants() {
   int64_t inMemoryDescendants =
       inMemoryDescendants_.load(std::memory_order_relaxed);
@@ -8127,150 +8077,6 @@ uint64_t TreeInode::getInMemoryDescendants() {
 
 void TreeInode::increaseInMemoryDescendants(int64_t inc) {
   inMemoryDescendants_.fetch_add(inc, std::memory_order_relaxed);
-}
-
-void TreeInode::considerReaddirPrefetch(
-    const ObjectFetchContextPtr& /*context*/) {
-  auto currentState = prefetchState_.load(std::memory_order_relaxed);
-  switch (currentState) {
-    case NeverEnumerated:
-      // Attempt transition to Enumerated.
-      break;
-    case Enumerated:
-      // Second readdir. Ignore.
-      return;
-    case PrefetchedTrees:
-    case PrefetchedAll:
-      // Readdir must have happened prior to a child's stat(). Ignore.
-      return;
-  }
-
-  if (!prefetchState_.compare_exchange_strong(
-          currentState,
-          Enumerated,
-          std::memory_order_acq_rel,
-          std::memory_order_acquire)) {
-    // Someone beat us to the punch. No need to retry, because any
-    // state transition means there's nothing to do.
-    return;
-  }
-}
-
-void TreeInode::doPrefetch(
-    PrefetchSet prefetchSet,
-    const ObjectFetchContext& context) {
-  XCHECK_NE(0, prefetchSet)
-      << "The caller should never pass an empty prefetch set";
-
-  auto config = getMount()->getServerState()->getEdenConfig();
-  switch (config->readdirPrefetch.getValue()) {
-    case ReaddirPrefetch::None:
-      prefetchSet = 0;
-      break;
-    case ReaddirPrefetch::Files:
-      prefetchSet &= PrefetchFiles;
-      break;
-    case ReaddirPrefetch::Trees:
-      prefetchSet &= PrefetchTrees;
-      break;
-    case ReaddirPrefetch::Both:
-      break;
-  }
-  if (!prefetchSet) {
-    XLOGF(
-        DBG4,
-        "skipping prefetch for {}: filtered out by configuration",
-        getLogPath());
-    return;
-  }
-
-  // doPrefetch() is called by stat(), under the assumption that a readdir()
-  // followed by stat() on a child will precede stat() calls on the remainder of
-  // the children. For example, `ls -l` or `find -ls`. To optimize that common
-  // situation, load trees and blob aux data in parallel here.
-
-  auto prefetchLease =
-      getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);
-  if (!prefetchLease) {
-    XLOGF(
-        DBG3,
-        "skipping prefetch for {}: too many prefetches already in progress",
-        getLogPath());
-    // TODO(chadaustin): Ideally, we'd roll back the prefetchState, but I intend
-    // to remove TreePrefetchLease entirely.
-    return;
-  }
-  XLOGF(
-      DBG4,
-      "starting prefetch for {} of {}",
-      getLogPath(),
-      ((prefetchSet & (PrefetchFiles | PrefetchTrees)) ==
-               (PrefetchFiles | PrefetchTrees)
-           ? "files and trees"
-           : (prefetchSet & PrefetchFiles) == PrefetchFiles ? "files"
-           : (prefetchSet & PrefetchTrees) == PrefetchTrees ? "trees"
-                                                            : "nothing"));
-
-  folly::via(
-      getMount()->getServerThreadPool().get(),
-      [prefetchSet, lease = std::move(*prefetchLease)]() mutable {
-        std::vector<IncompleteInodeLoad> pendingLoads;
-        std::vector<ImmediateFuture<Unit>> inodeFutures;
-        // The aliveness of this context is guaranteed by the `.thenTry`
-        // capture at the end of this lambda
-        auto& context = lease.getContext();
-
-        {
-          auto contents = lease.getTreeInode()->lockContentsWrite();
-
-          for (auto& [name, entry] : contents->entries.all()) {
-            if (entry.getInode()) {
-              // Already loaded
-              continue;
-            }
-
-            if (entry.isDirectory()) {
-              if (0 == (prefetchSet & PrefetchTrees)) {
-                continue;
-              }
-            } else {
-              if (0 == (prefetchSet & PrefetchFiles)) {
-                continue;
-              }
-            }
-
-            // Userspace will commonly issue a readdir() followed by a series
-            // of stat()s. In FUSE, that translates into readdir() and then
-            // lookup(), which returns the same information as a stat(),
-            // including the number of directory entries or number of bytes in
-            // a file. Perform those operations here by loading inodes, trees,
-            // and blob sizes.
-            inodeFutures.emplace_back(
-                lease.getTreeInode()
-                    ->loadChildLocked(name, entry, pendingLoads, context)
-                    .thenValue([context = context.copy()](InodePtr inode) {
-                      return inode->stat(context).semi();
-                    })
-                    .unit());
-          }
-        }
-
-        // Hook up the pending load futures to properly complete the loading
-        // process then the futures are ready.  We can only do this after
-        // releasing the contents_ lock.
-        for (auto& load : pendingLoads) {
-          load.finish();
-        }
-
-        return collectAllSafe(std::move(inodeFutures))
-            .thenTry([lease = std::move(lease)](auto&&) {
-              XLOGF(
-                  DBG4,
-                  "finished prefetch for {}",
-                  lease.getTreeInode()->getLogPath());
-            })
-            .semi();
-      });
 }
 
 ImmediateFuture<struct stat> TreeInode::setattr(
