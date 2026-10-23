@@ -50,8 +50,6 @@ class EphemeralFsInodeCatalog : public InodeCatalog {
     return false;
   }
 
-  std::vector<InodeNumber> getAllParentInodeNumbers() override;
-
   /**
    * Returns the next inode number to start at when allocating new inodes.
    */

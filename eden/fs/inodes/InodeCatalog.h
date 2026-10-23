@@ -158,13 +158,6 @@ class InodeCatalog {
   virtual bool supportsWal() const = 0;
 
   /**
-   * Get all of the `InodeNumber`s corresponding to directories. OverlayChecker
-   * uses this to enumerate the known inodes of catalogs that do not keep one
-   * file per directory on disk.
-   */
-  virtual std::vector<InodeNumber> getAllParentInodeNumbers() = 0;
-
-  /**
    * Initialize the overlay, run necessary operations to bootstrap the overlay.
    * The `close` method should be used to clean up any acquired resource for the
    * overlay and persist `nextInodeNumber` if needed.

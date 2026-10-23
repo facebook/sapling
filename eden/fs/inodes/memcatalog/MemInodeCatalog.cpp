@@ -26,17 +26,6 @@ bool MemInodeCatalog::initialized() const {
   return false;
 }
 
-std::vector<InodeNumber> MemInodeCatalog::getAllParentInodeNumbers() {
-  auto store = store_.rlock();
-  std::vector<InodeNumber> result;
-  std::transform(
-      store->begin(),
-      store->end(),
-      std::back_inserter(result),
-      [](const auto& kv) { return kv.first; });
-  return result;
-}
-
 std::optional<InodeNumber> MemInodeCatalog::initOverlay(
     bool /* createIfNonExisting */,
     bool /* bypassLockFile */) {

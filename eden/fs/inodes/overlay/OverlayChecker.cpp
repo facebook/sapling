@@ -1528,20 +1528,6 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
 
   folly::Synchronized<std::vector<std::unique_ptr<Error>>> errors;
 
-  // TODO: parallelize these loads
-  std::vector<InodeNumber> dirs =
-      this->impl_->inodeCatalog->getAllParentInodeNumbers();
-
-  for (const auto& d : dirs) {
-    auto inodeInfoOpt = loadInodeInfoFromInodeCatalog(d, errors);
-    if (inodeInfoOpt.has_value()) {
-      auto inodeInfo = std::move(inodeInfoOpt).value();
-      auto inodeNumber = inodeInfo.number;
-      updateMaxInodeNumber(inodeNumber);
-      impl_->inodes.emplace(inodeNumber, std::move(inodeInfo));
-    }
-  }
-
   auto recordInode = [this, progressCallback, &progress10pct](
                          std::optional<InodeInfo> inodeInfoOpt) -> bool {
     if (inodeInfoOpt.has_value()) {
@@ -1693,19 +1679,6 @@ std::optional<InodeInfo> OverlayChecker::loadInodeSharded(
   }
 
   return loadInodeInfoFromFileContentStore(number, errors);
-}
-
-std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromInodeCatalog(
-    InodeNumber number,
-    folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const {
-  auto info = this->impl_->inodeCatalog->loadInodeInfo(number);
-
-  if (info.has_value() && info.value().type == InodeType::Error) {
-    errors.wlock()->push_back(
-        make_error<InodeDataError>(
-            info.value().number, getInodeErrorMessage(info.value())));
-  }
-  return loadDirectoryChildren(std::move(info), errors);
 }
 
 std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(

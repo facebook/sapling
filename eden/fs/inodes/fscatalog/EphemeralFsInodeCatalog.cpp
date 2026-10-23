@@ -64,17 +64,6 @@ void EphemeralFsInodeCatalog::close(
   core_->close();
 }
 
-std::vector<InodeNumber> EphemeralFsInodeCatalog::getAllParentInodeNumbers() {
-  auto store = store_.rlock();
-  std::vector<InodeNumber> result;
-  std::transform(
-      store->begin(),
-      store->end(),
-      std::back_inserter(result),
-      [](const auto& kv) { return kv.first; });
-  return result;
-}
-
 std::optional<overlay::OverlayDir> EphemeralFsInodeCatalog::loadOverlayDir(
     InodeNumber inodeNumber) {
   auto store = store_.rlock();
