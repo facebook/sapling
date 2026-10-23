@@ -906,3 +906,22 @@ python_unittest(
         "//eden/integration/lib:lib",
     ],
 )
+
+http_artifacts = get_test_env_and_deps()
+
+python_integration_test(
+    name = "http",
+    srcs = ["http_test.py"],
+    env = selects.apply(
+        sanitizers.get_sanitizer_v2(),
+        lambda sanitizer: dict(
+            http_artifacts["env"],
+            EDEN_TEST_TSAN = "1" if sanitizer and "thread" in sanitizer else "0",
+        ),
+    ),
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+        "//thrift/lib/python:types",
+    ],
+)
