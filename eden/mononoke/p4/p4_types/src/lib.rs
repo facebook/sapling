@@ -10,16 +10,17 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Changelist {
     pub number: u64,
-    pub user: Vec<u8>,
+    pub user: String,
     /// Seconds since the epoch at which the changelist was submitted.
     pub time: u64,
-    pub description: Vec<u8>,
+    pub description: String,
     pub files: Vec<FileRevision>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileRevision {
-    pub depot_path: Vec<u8>,
+    /// Strict UTF-8 is exactly the bytes p4 sent, so passing it back to p4 is lossless.
+    pub depot_path: String,
     pub action: Action,
     pub file_type: String,
     pub revision: u32,
@@ -65,10 +66,9 @@ pub enum CaseHandling {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Depot {
-    /// Text, not bytes: callers pass `//{name}/...` to `submitted_changes`.
     pub name: String,
     pub depot_type: DepotType,
-    pub map: Vec<u8>,
+    pub map: String,
     /// The number of slashes in a stream's name after the depot name. Stream depots only.
     pub stream_depth: Option<u32>,
 }
