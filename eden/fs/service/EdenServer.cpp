@@ -518,10 +518,10 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
 }
 #endif // __linux__
 
-std::shared_ptr<folly::Executor> makeCheckoutRevisionThreads(
+std::shared_ptr<folly::Executor> makeDiffWorkThreads(
     std::shared_ptr<const EdenConfig>& edenConfig) {
   return std::make_shared<UnboundedQueueExecutor>(
-      edenConfig->numCheckoutThreads.getValue(), "CheckoutRevisionThreadPool");
+      edenConfig->numDiffWorkThreads.getValue(), "DiffWorkThreadPool");
 }
 
 std::shared_ptr<folly::Executor> makePrefetchFilesV2Threads(
@@ -839,7 +839,7 @@ EdenServer::EdenServer(
       thriftUseResourcePools_{edenConfig->thriftUseResourcePools.getValue()},
       thriftUseSerialExecution_{
           edenConfig->thriftUseSerialExecution.getValue()},
-      checkoutRevisionExecutor_{makeCheckoutRevisionThreads(edenConfig)},
+      diffWorkExecutor_{makeDiffWorkThreads(edenConfig)},
       thriftUsePrefetchExecutor_{
           edenConfig->thriftUsePrefetchExecutor.getValue()},
       prefetchFilesV2Executor_{
@@ -2925,12 +2925,12 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
 
-  // Inode loading during checkout runs on the checkout executor instead of
+  // Inode loading during checkout runs on the diff work executor instead of
   // the immediate executor.
-  fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
+  fetchContext->setDetachedExecutor(diffWorkExecutor_.get());
 
   // Start from a not-ready future so that the synchronous part of
-  // edenMount.checkout runs on the checkout executor rather than the Thrift
+  // edenMount.checkout runs on the diff work executor rather than the Thrift
   // worker thread.
   auto checkoutFuture =
       makeNotReadyImmediateFuture()
@@ -2969,7 +2969,7 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
   // time (https://fburl.com/code/a6eoy8wu), which acts as the aforementioned
   // backpressure mechanism.
   checkoutFuture =
-      std::move(checkoutFuture).semi().via(checkoutRevisionExecutor_.get());
+      std::move(checkoutFuture).semi().via(diffWorkExecutor_.get());
 
   return std::move(checkoutFuture).ensure([mountHandle] {});
 }
@@ -3004,7 +3004,7 @@ folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
       enumerateInProgressCheckouts() + 1);
 
   // Helper that runs the checkout body. Extracted into a Task so it can be
-  // scheduled on the dedicated checkout executor.
+  // scheduled on the diff work executor.
   //
   // Captures are explicit (no [&]) so the lambda owns mountHandle and
   // doesn't alias stack locals if the Task is later detached.
@@ -3022,11 +3022,11 @@ folly::coro::now_task<CheckoutResult> EdenServer::co_checkOutRevision(
         checkoutMode);
   };
 
-  fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
-  // Pin the checkout body to the dedicated executor to isolate long
+  fetchContext->setDetachedExecutor(diffWorkExecutor_.get());
+  // Pin the checkout body to the diff work executor to isolate long
   // checkouts from thrift worker thread starvation.
   auto result = co_await folly::coro::co_withExecutor(
-      checkoutRevisionExecutor_.get(), checkoutBody());
+      diffWorkExecutor_.get(), checkoutBody());
 
   co_return finishCheckoutPostProcessing(
       this, std::move(result), checkoutMode, isNfs, AbsolutePath{mountPath});

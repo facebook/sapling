@@ -582,10 +582,10 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Number of threads that will service the checkoutRevision Thrift endpoint
-   * when using its own executor.
+   * Number of threads in the diff work executor, which runs the inode loads
+   * and file hashing that a diff of the working copy entails.
    */
-  ConfigSetting<uint64_t> numCheckoutThreads{
+  ConfigSetting<uint64_t> numDiffWorkThreads{
       "thrift:checkout-revision-num-servicing-threads",
       folly::available_concurrency(),
       this};

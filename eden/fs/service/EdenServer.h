@@ -1023,10 +1023,10 @@ class EdenServer : private TakeoverHandler {
   bool thriftUseSerialExecution_;
 
   /**
-   * Dedicated executor for the checkoutRevision Thrift endpoint, which keeps
-   * long checkouts off the Thrift worker threads.
+   * Executor for the diff work of checkout: loading inodes from the overlay
+   * and hashing materialized files, kept off the Thrift worker threads.
    */
-  std::shared_ptr<folly::Executor> checkoutRevisionExecutor_;
+  std::shared_ptr<folly::Executor> diffWorkExecutor_;
 
   /**
    * If the Thrift Server created at startup is configured to use a dedicated
