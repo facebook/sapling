@@ -97,6 +97,11 @@ struct FloatingPoint {
   2: double f64;
 }
 
+struct TerseEnum {
+  @thrift.TerseWrite
+  1: En e;
+}
+
 @rust.NewType
 @rust.Ord
 @rust.Type{name = "OrderedFloat<f64>"}

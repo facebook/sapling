@@ -22,7 +22,7 @@ fn main() {
         .base_path("../../../../../..")
         .types_crate("test_if__types")
         .clients_crate("test_if__clients")
-        .options("deprecated_default_enum_min_i32,serde")
+        .options("serde")
         .run(["../test_thrift.thrift"])
         .expect("Failed while running thrift compilation");
 }

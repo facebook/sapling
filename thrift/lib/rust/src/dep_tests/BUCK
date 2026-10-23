@@ -18,7 +18,6 @@ thrift_library(
         "json",
     ],
     thrift_rust_options = [
-        "deprecated_default_enum_min_i32",
         "serde",
     ],
     thrift_srcs = {
@@ -49,6 +48,23 @@ thrift_library(
 )
 
 thrift_library(
+    name = "test_deprecated_default_enum_min_i32_if",
+    languages = ["rust"],
+    rust_autocargo = {"cargo_toml_dir": "cargo_thrift_enummin"},
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {
+        "test_thrift.thrift": [],
+    },
+    deps = [
+        "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
+    ],
+)
+
+thrift_library(
     name = "test_competing_defaults_if",
     languages = [
         "rust",
@@ -66,6 +82,9 @@ thrift_library(
 thrift_rust_unittest(
     name = "fbthrift_test",
     srcs = glob(["*.rs"]),
+    named_deps = {
+        "test_deprecated_default_enum_min_i32_if": ":test_deprecated_default_enum_min_i32_if-rust",
+    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:approx",

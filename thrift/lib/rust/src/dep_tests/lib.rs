@@ -24,3 +24,4 @@ mod exceptions;
 mod json5;
 mod proptest;
 mod simplejson;
+mod terse;
