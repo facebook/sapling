@@ -579,22 +579,9 @@ class TakeoverNfsServerDisabledTest(TakeoverTestCase):
         self._restart_with_nfs_server(enabled=True)
         self._assert_nfs_mount_served()
 
-    def test_takeover_of_nfs_mount_into_daemon_with_nfs_server_disabled(
-        self,
-    ) -> None:
-        # TODO(lean-check): wrong behaviour; flipped in the next commit.
-        # The new daemon has no NfsServer and dereferences it in
-        # makeNfsChannel, so it dies before it becomes healthy. The old
-        # daemon already handed its mounts over and exited.
-        self.addCleanup(
-            subprocess.call, ["sudo", "-n", "/bin/umount", "-lf", self.mount]
-        )
-        with self.assertRaisesRegex(
-            EdenStartError, "edenfs exited before becoming healthy"
-        ):
-            self._restart_with_nfs_server(enabled=False)
-        self.assertEqual(0, self.eden.wait_for_exit())
-        self.assertFalse(self.eden.is_healthy())
+    def test_takeover_keeps_nfs_mount_with_nfs_server_disabled(self) -> None:
+        self._restart_with_nfs_server(enabled=False)
+        self._assert_nfs_mount_served()
 
 
 @testcase.eden_repo_test

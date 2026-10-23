@@ -2144,6 +2144,10 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls whether EdenFS exports itself as an NFS server.
+   *
+   * A graceful restart hands NFS mounts over whatever this setting says in
+   * the new daemon, and the new daemon then runs an NFS server for them until
+   * the next full restart. New mounts follow this setting.
    */
   ConfigSetting<bool> enableNfsServer{
       "experimental:enable-nfs-server",

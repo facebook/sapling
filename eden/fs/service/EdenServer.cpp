@@ -85,6 +85,7 @@
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/common/utils/UserInfo.h"
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/RestrictedContentMode.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -1908,6 +1909,26 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
       oldDaemonPid_ = oldDaemonPid.value();
     }
     server_->useExistingSocket(takeoverData.thriftSocket.release());
+
+    // The kernel keeps the NFS mounts the old daemon handed over, and only an
+    // NfsServer in this process can serve them, so build one even when the
+    // config has turned the NFS server off: the alternative is a daemon that
+    // dereferences a null NfsServer, or a mount nothing serves.
+    const auto nfsMounts = std::count_if(
+        takeoverData.mountPoints.begin(),
+        takeoverData.mountPoints.end(),
+        [](const TakeoverData::MountInfo& info) {
+          return info.getMountProtocol() == MountProtocol::NFS;
+        });
+    if (nfsMounts > 0 && !serverState_->getNfsServer()) {
+      logger->warn(
+          "experimental:enable-nfs-server is false, but the previous edenfs "
+          "handed over ",
+          nfsMounts,
+          " NFS mount(s); serving them with an NFS server until the next "
+          "full restart");
+      serverState_->createNfsServerForTakeover();
+    }
 #else
     NOT_IMPLEMENTED();
 #endif // !_WIN32

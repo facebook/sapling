@@ -80,7 +80,7 @@ ServerState::ServerState(
     std::shared_ptr<IScribeLogger> scribeLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
-    [[maybe_unused]] folly::EventBase* nfsEventBase,
+    folly::EventBase* nfsEventBase,
     std::shared_ptr<Notifier> notifier,
     bool enableFaultDetection,
     std::shared_ptr<InodeAccessLogger> inodeAccessLogger,
@@ -98,17 +98,10 @@ ServerState::ServerState(
       errorLogger_{std::move(errorLogger)},
       scribeLogger_{std::move(scribeLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
+      nfsEventBase_{nfsEventBase},
       nfs_{
           initialConfig.enableNfsServer.getValue()
-              ? std::make_shared<NfsServer>(
-                    privHelper_.get(),
-                    nfsEventBase,
-                    fsChannelThreadPool_,
-                    initialConfig.runInternalRpcbind.getValue(),
-                    edenFsEventsLogger_,
-                    initialConfig.maxFsChannelInflightRequests.getValue(),
-                    initialConfig.highFsRequestsLogInterval.getValue(),
-                    initialConfig.longRunningFSRequestThreshold.getValue())
+              ? makeNfsServer(initialConfig)
               : nullptr},
       config_{std::move(reloadableConfig)},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
@@ -179,6 +172,26 @@ void ServerState::shutdown() {
     }
     threadPool_->join();
   });
+}
+
+std::shared_ptr<NfsServer> ServerState::makeNfsServer(
+    const EdenConfig& config) const {
+  return std::make_shared<NfsServer>(
+      privHelper_.get(),
+      nfsEventBase_,
+      fsChannelThreadPool_,
+      config.runInternalRpcbind.getValue(),
+      edenFsEventsLogger_,
+      config.maxFsChannelInflightRequests.getValue(),
+      config.highFsRequestsLogInterval.getValue(),
+      config.longRunningFSRequestThreshold.getValue());
+}
+
+void ServerState::createNfsServerForTakeover() {
+  if (nfs_) {
+    return;
+  }
+  nfs_ = makeNfsServer(*getEdenConfig());
 }
 
 GlobMatchOptions ServerState::getGlobMatchOptions() {

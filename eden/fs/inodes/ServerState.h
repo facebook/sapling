@@ -177,9 +177,25 @@ class ServerState {
     return clock_;
   }
 
+  /**
+   * The NfsServer, or null when experimental:enable-nfs-server is false and
+   * no graceful restart handed NFS mounts over (see
+   * createNfsServerForTakeover).
+   */
   const std::shared_ptr<NfsServer>& getNfsServer() const& {
     return nfs_;
   }
+
+  /**
+   * Build the NfsServer although experimental:enable-nfs-server is false.
+   *
+   * A graceful restart hands NFS mounts over whatever the new daemon's config
+   * says, and only an NfsServer in this process can serve them. EdenServer
+   * calls this while it prepares the takeover, before any mount exists and
+   * before anything reads getNfsServer(). New mounts still follow the config;
+   * a full restart mounts everything the way the config says.
+   */
+  void createNfsServerForTakeover();
 
   const std::shared_ptr<ProcessInfoCache>& getProcessInfoCache() const {
     return processInfoCache_;
@@ -279,6 +295,7 @@ class ServerState {
 
  private:
   void shutdownPreloadCleanup();
+  std::shared_ptr<NfsServer> makeNfsServer(const EdenConfig& config) const;
 
   AbsolutePath socketPath_;
   UserInfo userInfo_;
@@ -294,6 +311,7 @@ class ServerState {
   std::shared_ptr<ErrorLogger> errorLogger_;
   std::shared_ptr<IScribeLogger> scribeLogger_;
   std::unique_ptr<FaultInjector> const faultInjector_;
+  folly::EventBase* const nfsEventBase_;
   std::shared_ptr<NfsServer> nfs_;
 
   std::shared_ptr<ReloadableConfig> config_;
