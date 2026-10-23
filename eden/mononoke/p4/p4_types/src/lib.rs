@@ -7,6 +7,8 @@
 
 //! Perforce's data model, independent of how it is read.
 
+use std::fmt;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Changelist {
     pub number: u64,
@@ -26,6 +28,39 @@ pub struct FileRevision {
     pub revision: u32,
     /// `None` for `delete` and `move/delete`.
     pub size: Option<u64>,
+    /// Of the content `p4 print` sends. Never without `size`, but may be missing with it.
+    pub digest: Option<Md5Digest>,
+}
+
+/// Shown as uppercase hex, as p4 reports it.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Md5Digest([u8; 16]);
+
+impl Md5Digest {
+    /// 32 hex digits in either case.
+    pub fn from_hex(hex: &[u8]) -> Option<Self> {
+        if hex.len() != 32 {
+            return None;
+        }
+        let nibble = |digit: u8| char::from(digit).to_digit(16);
+        let mut digest = [0; 16];
+        for (byte, [high, low]) in digest.iter_mut().zip(hex.as_chunks::<2>().0) {
+            *byte = u8::try_from(nibble(*high)? << 4 | nibble(*low)?).ok()?;
+        }
+        Some(Self(digest))
+    }
+}
+
+impl fmt::Display for Md5Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.iter().try_for_each(|byte| write!(f, "{byte:02X}"))
+    }
+}
+
+impl fmt::Debug for Md5Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Md5Digest({self})")
+    }
 }
 
 /// The revision's current state, not necessarily the action submitted: Perforce rewrites
@@ -87,3 +122,6 @@ pub enum DepotType {
     /// the server's hidden depots have.
     Other(String),
 }
+
+#[cfg(test)]
+mod tests;

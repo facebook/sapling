@@ -5,4 +5,7 @@ oncall("scm_server_infra")
 rust_library(
     name = "p4_types",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
 )
