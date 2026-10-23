@@ -230,7 +230,6 @@ Overlay::Overlay(
       edenFsEventsLogger_{std::move(logger)},
       errorLogger_(errorLogger),
       stats_{std::move(stats)},
-      useDirectFileWrites_(config.overlayDirectFileWrites.getValue()),
       useInodeReservation_{
           !folly::kIsWindows && config.overlayInodeReservation.getValue() &&
           inodeCatalogType == InodeCatalogType::Legacy},
@@ -1043,11 +1042,10 @@ void Overlay::saveOverlayDir(
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::saveOverlayDir};
   IORequest req{this};
 
-  // Set crashSafe=false If config flag is enabled and the directory is _not_
-  // materialized. Non-materialized directories match source control, so are not
-  // "precious" data. crashSafe=false causes the FsInodeCatalog to skip the temp
-  // file + rename, instead writing directly to the overlay file.
-  bool crashSafe = isMaterialized || !useDirectFileWrites_;
+  // Non-materialized directories match source control, so they are not
+  // precious data: the catalog writes them directly to the overlay file
+  // instead of through a temp file and rename.
+  bool crashSafe = isMaterialized;
 
   try {
     inodeCatalog_->saveOverlayEntries(

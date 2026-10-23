@@ -48,6 +48,7 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "nfs:wheel-access-rate-limit-window-seconds",
     "overlay:buffer-size",
     "overlay:buffered",
+    "overlay:direct-file-writes",
     "overlay:direct-serialization",
     "overlay:maintenance-interval",
     "overlay:synchronous-mode",

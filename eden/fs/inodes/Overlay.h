@@ -702,8 +702,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   friend class IORequest;
 
-  bool useDirectFileWrites_;
-
   bool useInodeReservation_;
   bool useOnlineFsck_;
 

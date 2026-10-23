@@ -331,7 +331,6 @@ class EdenTestCase(EdenTestCaseBase):
             # framework runs tests on each CPU core.
             "hg": ['num-retry-threads = "2"'],
             "overlay": [
-                "direct-file-writes = true",
                 'file-prealloc-pool-size = "64"',
                 'dir-prealloc-pool-size = "64"',
             ],
