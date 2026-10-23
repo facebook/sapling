@@ -24,6 +24,25 @@ class MTabTest(unittest.TestCase):
     # The diffs for what is written to stdout can be large.
     maxDiff: Optional[int] = None
 
+    def test_parse_mtab_with_escaped_mount_point(self) -> None:
+        contents = (
+            b"edenfs: /data/users/alice/my\\040repo fuse "
+            b"rw,nosuid,relatime,user_id=1000,group_id=100 0 0\n"
+            b"edenfs: /data/users/alice/tab\\011repo fuse "
+            b"rw,nosuid,relatime,user_id=1000,group_id=100 0 0\n"
+            b"edenfs: /data/users/alice/back\\134slash fuse "
+            b"rw,nosuid,relatime,user_id=1000,group_id=100 0 0\n"
+        )
+        mount_points = [mount.mount_point for mount in parse_mtab(contents)]
+        self.assertEqual(
+            mount_points,
+            [
+                b"/data/users/alice/my\\040repo",
+                b"/data/users/alice/tab\\011repo",
+                b"/data/users/alice/back\\134slash",
+            ],
+        )
+
     def test_parse_mtab(self) -> None:
         contents = b"""\
 homedir.eden.com:/home109/chadaustin/public_html /mnt/public/chadaustin nfs rw,context=user_u:object_r:user_home_dir_t,relatime,vers=3,rsize=65536,wsize=65536,namlen=255,soft,nosharecache,proto=tcp6,timeo=100,retrans=2,sec=krb5i,mountaddr=2401:db00:fffe:1007:face:0000:0:4007,mountvers=3,mountport=635,mountproto=udp6,local_lock=none,addr=2401:db00:fffe:1007:0000:b00c:0:4007 0 0
