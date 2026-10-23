@@ -144,6 +144,7 @@ cpp_unittest(
         "//eden/fs/testharness:fake_fuse",
         "//eden/fs/testharness:stored_object",
         "//eden/fs/testharness:test_mount",
+        "//eden/fs/utils:linux_kernel_version",
     ],
 )
 

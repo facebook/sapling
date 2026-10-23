@@ -26,6 +26,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/utils/LinuxKernelVersion.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -45,6 +46,18 @@ constexpr auto kTooLongPiece = folly::StringPiece{
 static_assert(256 == kTooLongPiece.size(), "256 is one larger than the max!");
 
 static const auto kTooLong = PathComponentPiece{kTooLongPiece};
+
+// Mirrors the INVAL_ENTRY mitigation in
+// FuseDispatcherImpl::computeNegativeEntryTtl().
+uint64_t expectedNegativeTtl(uint64_t configured) {
+#ifdef __linux__
+  auto version = getRunningLinuxKernelVersion();
+  if (version.major > 6 || (version.major == 6 && version.minor >= 19)) {
+    return 0;
+  }
+#endif
+  return configured;
+}
 } // namespace
 
 TEST_F(EdenDispatcherTest, mknodReturnsNameTooLong) {
@@ -262,8 +275,8 @@ TEST(RawEdenDispatcherTest, lookup_returns_default_negative_dcache_ttl) {
                    .get(0ms);
 
   EXPECT_EQ(0u, entry.nodeid);
-  EXPECT_EQ(60u, entry.entry_valid);
-  EXPECT_EQ(60u, entry.attr_valid);
+  EXPECT_EQ(expectedNegativeTtl(60), entry.entry_valid);
+  EXPECT_EQ(expectedNegativeTtl(60), entry.attr_valid);
 }
 
 TEST(RawEdenDispatcherTest, lookup_returns_configured_negative_dcache_ttl) {
@@ -282,8 +295,8 @@ TEST(RawEdenDispatcherTest, lookup_returns_configured_negative_dcache_ttl) {
                    .get(0ms);
 
   EXPECT_EQ(0u, entry.nodeid);
-  EXPECT_EQ(7u, entry.entry_valid);
-  EXPECT_EQ(7u, entry.attr_valid);
+  EXPECT_EQ(expectedNegativeTtl(7), entry.entry_valid);
+  EXPECT_EQ(expectedNegativeTtl(7), entry.attr_valid);
 }
 
 TEST(RawEdenDispatcherTest, lookup_returns_dynamic_ttl_with_pressure_gc) {
