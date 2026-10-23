@@ -216,4 +216,23 @@ TEST(TerseTest, Union) {
       std::string("\x1c\x1c\x15\x00\x00\x00\x00", 7));
 }
 
+TEST(TerseTest, NewType) {
+  TerseNewType empty;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(empty),
+      std::string("\x00", 1));
+
+  TerseNewType integer;
+  integer.i() = 5;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(integer),
+      std::string("\x15\x0a\x00", 3));
+
+  TerseNewType negativeZero;
+  negativeZero.d() = -0.0;
+  EXPECT_EQ(
+      apache::thrift::CompactSerializer::serialize<std::string>(negativeZero),
+      std::string("\x27\x80\x00\x00\x00\x00\x00\x00\x00\x00", 10));
+}
+
 } // namespace facebook

@@ -15,10 +15,14 @@
  */
 
 use anyhow::Result;
+use fbthrift::builtin_types::OrderedFloat;
 use fbthrift::compact_protocol::deserialize;
 use fbthrift::compact_protocol::serialize;
+use fbthrift_test_if::Double;
 use fbthrift_test_if::En;
+use fbthrift_test_if::NewInt;
 use fbthrift_test_if::TerseEnum;
+use fbthrift_test_if::TerseNewType;
 use fbthrift_test_if::TerseUnion;
 use fbthrift_test_if::Un;
 use fbthrift_test_if::UnOne;
@@ -64,5 +68,25 @@ fn test_terse_union() {
     assert_eq!(
         serialize(&set).as_ref(),
         &[0x1c, 0x1c, 0x15, 0x00, 0x00, 0x00, 0x00]
+    );
+}
+
+#[test]
+fn test_terse_newtype() {
+    assert_eq!(serialize(TerseNewType::default()).as_ref(), &[0x00]);
+
+    let int = TerseNewType {
+        i: NewInt(5),
+        ..Default::default()
+    };
+    assert_eq!(serialize(&int).as_ref(), &[0x15, 0x0a, 0x00]);
+
+    let negative_zero = TerseNewType {
+        d: Double(OrderedFloat(-0.0)),
+        ..Default::default()
+    };
+    assert_eq!(
+        serialize(&negative_zero).as_ref(),
+        &[0x27, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
     );
 }

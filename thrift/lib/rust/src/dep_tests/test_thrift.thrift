@@ -112,6 +112,16 @@ struct TerseUnion {
 @rust.Type{name = "OrderedFloat<f64>"}
 typedef double Double
 
+@rust.NewType
+typedef i32 NewInt
+
+struct TerseNewType {
+  @thrift.TerseWrite
+  1: NewInt i;
+  @thrift.TerseWrite
+  2: Double d;
+}
+
 safe stateful server exception TestException {
   1: string message;
 }
