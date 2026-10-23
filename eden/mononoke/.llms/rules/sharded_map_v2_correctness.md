@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_server_infra']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'ShardedMapV2|WEIGHT_LIMIT|sharded_map_v2|from_entries_and_partial_maps|LoadableShardedMapV2Node'
+name: sharded-map-v2-correctness
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'ShardedMapV2|WEIGHT_LIMIT|sharded_map_v2|from_entries_and_partial_maps|LoadableShardedMapV2Node'
 ---
 
 # ShardedMapV2 Correctness
