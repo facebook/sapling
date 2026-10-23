@@ -160,8 +160,18 @@ class CounterParserTest(unittest.TestCase):
             "fuse.read_us.p95": 7,
             "fuse.read_us.sum": 1234,
         }
-        with self.assertRaises(KeyError):
-            get_fuse_latency(counters, all_flg=False)
+        table = get_fuse_latency(counters, all_flg=False)
+        self.assertEqual(
+            table,
+            {
+                "read": [
+                    ["", "", "", ""],
+                    ["", "", "", "5 \u03bcs"],
+                    ["", "", "", ""],
+                    ["", "", "", ""],
+                ]
+            },
+        )
 
     def test_fuse_counters_with_a_live_requests_counter(self) -> None:
         counters: DiagInfoCounters = {
@@ -169,13 +179,24 @@ class CounterParserTest(unittest.TestCase):
             "fuse.read_us.count.60": 5,
             "fuse.read_us.count": 9,
         }
-        with self.assertRaises(KeyError):
-            get_fuse_counters(counters, all_flg=True)
+        self.assertEqual(
+            get_fuse_counters(counters, all_flg=True), {"read": [5, 0, 0, 9]}
+        )
 
     def test_thrift_latency_with_a_p10_counter(self) -> None:
         counters: DiagInfoCounters = {
             "thrift.EdenService.getCounters.time_process_us.avg.60": 12,
             "thrift.EdenService.getCounters.time_process_us.p10": 11,
         }
-        with self.assertRaises(KeyError):
-            get_thrift_latency(counters)
+        table = get_thrift_latency(counters)
+        self.assertEqual(
+            table,
+            {
+                "getCounters": [
+                    ["12 \u03bcs", "", "", ""],
+                    ["", "", "", ""],
+                    ["", "", "", ""],
+                    ["", "", "", ""],
+                ]
+            },
+        )

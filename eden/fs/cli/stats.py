@@ -187,6 +187,13 @@ def get_fuse_counters(counters: DiagInfoCounters, all_flg: bool) -> Table:
     for key in counters:
         if key.startswith("fuse") and key.find(".count") >= 0:
             tokens = key.split(".")
+            if (
+                len(tokens) not in (3, 4)
+                or not tokens[1].endswith("_us")
+                or tokens[2] != "count"
+                or (len(tokens) == 4 and tokens[3] not in index)
+            ):
+                continue
             syscall = tokens[1][:-3]  # _us
             if not all_flg and syscall not in syscalls:
                 continue
@@ -212,6 +219,11 @@ def insert_latency_record(
             return str(i) + " \u03bcs"  # mu for micro
         else:
             return str(i) + "   "
+
+    if percentile not in percentile_table:
+        return
+    if period is not None and period not in period_table:
+        return
 
     if operation not in table.keys():
         # pyre-ignore[6]: T38220626
@@ -280,6 +292,8 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
     for key in counters:
         if key.startswith("fuse") and key.find(".count") == -1:
             tokens = key.split(".")
+            if len(tokens) < 3 or not tokens[1].endswith("_us"):
+                continue
             syscall = tokens[1][:-3]
             if not all_flg and syscall not in syscalls:
                 continue
