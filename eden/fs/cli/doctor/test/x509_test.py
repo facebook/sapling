@@ -43,13 +43,11 @@ class ValidateX509Test(unittest.TestCase):
         not_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
             hours=3
         )
-        result = self.validate_with_time_zone("Asia/Tokyo", not_after)
-        self.assertTrue(result.startswith("x509 cert expired"), result)
+        self.assertEqual("", self.validate_with_time_zone("Asia/Tokyo", not_after))
 
     def test_certificate_expired_three_hours_ago_west_of_utc(self) -> None:
         not_after = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
             hours=3
         )
-        self.assertEqual(
-            "", self.validate_with_time_zone("America/Los_Angeles", not_after)
-        )
+        result = self.validate_with_time_zone("America/Los_Angeles", not_after)
+        self.assertTrue(result.startswith("x509 cert expired"), result)
