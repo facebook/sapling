@@ -5,19 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
 use anyhow::bail;
 use clap::Args;
-use cloned::cloned;
 use context::CoreContext;
 use futures::StreamExt;
-use futures::stream;
 use mononoke_macros::mononoke;
 
 use super::Repo;
@@ -71,49 +66,35 @@ pub async fn clean_bubbles(
     }
     if !args.dryrun {
         let total = expired_bubbles.len();
-        let finished = Arc::new(AtomicUsize::new(0));
-        let already_deleted = Arc::new(AtomicUsize::new(0));
-        let failed = Arc::new(AtomicUsize::new(0));
         let started = Instant::now();
-        let ctx = ctx.clone();
-        let store = repo.repo_ephemeral_store.clone();
-        let result = mononoke::spawn_task({
-            cloned!(finished, already_deleted, failed);
-            async move {
-                stream::iter(expired_bubbles)
-                    .for_each_concurrent(args.concurrency, |id| {
-                        cloned!(ctx, store, finished, already_deleted, failed);
-                        async move {
-                            match store.delete_bubble(&ctx, id).await {
-                                Ok(outcome) => {
-                                    finished.fetch_add(1, Ordering::Relaxed);
-                                    if outcome.keys_already_deleted > 0 {
-                                        already_deleted.fetch_add(1, Ordering::Relaxed);
-                                    }
-                                    println!(
-                                        "Cleaned up bubble {id} and deleted {} blob keys contained in it",
-                                        outcome.keys_deleted
-                                    );
-                                }
-                                Err(err) => {
-                                    failed.fetch_add(1, Ordering::Relaxed);
-                                    eprintln!("Failed to clean up bubble {id}: {err:#}");
-                                }
-                            }
+        let deletions = repo
+            .repo_ephemeral_store
+            .delete_bubbles(ctx, expired_bubbles, args.concurrency)
+            .fold(
+                (0, 0, 0),
+                |(finished, already_deleted, failed), (id, result)| async move {
+                    match result {
+                        Ok(outcome) => {
+                            println!(
+                                "Cleaned up bubble {id} and deleted {} blob keys contained in it",
+                                outcome.keys_deleted
+                            );
+                            let already_deleted =
+                                already_deleted + usize::from(outcome.keys_already_deleted > 0);
+                            (finished + 1, already_deleted, failed)
                         }
-                    })
-                    .await
-            }
-        })
-        .await;
-        let failed = failed.load(Ordering::Relaxed);
+                        Err(err) => {
+                            eprintln!("Failed to clean up bubble {id}: {err:#}");
+                            (finished, already_deleted, failed + 1)
+                        }
+                    }
+                },
+            );
+        let (finished, already_deleted, failed) = mononoke::spawn_task(deletions).await?;
         println!(
-            "Deleted {} of {total} expired bubbles in {:.1?}, {} of them had blob keys that were already deleted, {failed} failed",
-            finished.load(Ordering::Relaxed),
-            started.elapsed(),
-            already_deleted.load(Ordering::Relaxed)
+            "Deleted {finished} of {total} expired bubbles in {:.1?}, {already_deleted} of them had blob keys that were already deleted, {failed} failed",
+            started.elapsed()
         );
-        result?;
         if failed > 0 {
             bail!("Failed to clean up {failed} of {total} expired bubbles");
         }

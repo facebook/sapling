@@ -16,6 +16,9 @@ use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use context::PerfCounterType;
 use derivative::Derivative;
+use futures::Stream;
+use futures::StreamExt;
+use futures::stream;
 use futures_lazy_shared::LazyShared;
 use metaconfig_types::BubbleDeletionMode;
 use mononoke_types::ChangesetId;
@@ -780,6 +783,27 @@ impl RepoEphemeralStore {
         bubble_id: BubbleId,
     ) -> Result<DeleteBubbleOutcome> {
         self.inner()?.delete_bubble(ctx, bubble_id).await
+    }
+
+    /// Deletes the given bubbles, running up to `concurrency` deletions at a time,
+    /// and yields each bubble's outcome as soon as its deletion finishes.
+    /// NOTE: Deletes the bubbles regardless of their expiry status. Make sure the
+    /// bubbles are suitable for deletion.
+    pub fn delete_bubbles(
+        &self,
+        ctx: &CoreContext,
+        bubble_ids: Vec<BubbleId>,
+        concurrency: usize,
+    ) -> impl Stream<Item = (BubbleId, Result<DeleteBubbleOutcome>)> + Send + 'static {
+        let store = self.clone();
+        let ctx = ctx.clone();
+        stream::iter(bubble_ids)
+            .map(move |bubble_id| {
+                let store = store.clone();
+                let ctx = ctx.clone();
+                async move { (bubble_id, store.delete_bubble(&ctx, bubble_id).await) }
+            })
+            .buffer_unordered(concurrency)
     }
 
     /// Gets the vector of bubbles that are past their expiry period
@@ -1565,6 +1589,65 @@ mod test {
         let deleted = eph.delete_bubble(&ctx, bubble1.bubble_id()).await?;
         // Should be 4 based on the input data added
         assert_eq!(deleted.keys_deleted, 4);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn delete_bubbles_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_hours(30 * 24);
+        let grace = Duration::from_hours(6);
+        let (ctx, blobstore, repo_blobstore, eph) =
+            bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let empty_bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let nonempty_bubble = eph.create_bubble(&ctx, None, vec![]).await?;
+        let nonempty_repo = nonempty_bubble.wrap_repo_blobstore(repo_blobstore);
+        for key in ["test_key_1", "test_key_2"] {
+            nonempty_repo
+                .put(
+                    &ctx,
+                    key.to_string(),
+                    BlobstoreBytes::from_bytes("test data"),
+                )
+                .await?;
+        }
+        let missing_bubble = BubbleId::new(std::num::NonZeroU64::new(99999).unwrap());
+
+        let mut results = eph
+            .delete_bubbles(
+                &ctx,
+                vec![
+                    empty_bubble.bubble_id(),
+                    nonempty_bubble.bubble_id(),
+                    missing_bubble,
+                ],
+                2,
+            )
+            .collect::<Vec<_>>()
+            .await;
+        results.sort_by_key(|(bubble_id, _)| *bubble_id);
+
+        let [(_, empty), (_, nonempty), (_, missing)] = results.as_slice() else {
+            panic!(
+                "Every requested bubble should be reported, got {} results",
+                results.len()
+            );
+        };
+        assert!(
+            matches!(empty, Ok(outcome) if outcome.keys_deleted == 0),
+            "The empty bubble should be deleted without deleting any keys"
+        );
+        assert!(
+            matches!(nonempty, Ok(outcome) if outcome.keys_deleted == 2),
+            "Both keys of the non-empty bubble should be deleted"
+        );
+        assert!(
+            missing.is_err(),
+            "Deleting an unknown bubble should fail without affecting the others"
+        );
+        let enumerated = blobstore
+            .enumerate(&ctx, &BlobstoreKeyParam::from(..))
+            .await?;
+        assert!(enumerated.keys.is_empty(), "No bubble data should remain");
         Ok(())
     }
 
