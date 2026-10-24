@@ -101,6 +101,10 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
                 .map(move |j| (Id(i)..=Id(j)).into())
         })
         .collect(); // 1471 samples
+    let sample_sparse_sets: Vec<IdSet> = (0..1000)
+        .step_by(97)
+        .map(|i| IdSet::from_spans((i..parents.len() as u64).step_by(97).map(Id)))
+        .collect();
 
     bench("ancestors", || {
         elapsed(|| {
@@ -204,6 +208,14 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     bench("parents", || {
         elapsed(|| {
             for set in &sample_sets {
+                dag.parents(set.clone()).unwrap();
+            }
+        })
+    });
+
+    bench("parents (many spans)", || {
+        elapsed(|| {
+            for set in &sample_sparse_sets {
                 dag.parents(set.clone()).unwrap();
             }
         })
