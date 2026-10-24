@@ -12,11 +12,11 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
+use anyhow::bail;
 use clap::Args;
 use cloned::cloned;
 use context::CoreContext;
 use futures::StreamExt;
-use futures::TryStreamExt;
 use futures::stream;
 use mononoke_macros::mononoke;
 
@@ -73,42 +73,50 @@ pub async fn clean_bubbles(
         let total = expired_bubbles.len();
         let finished = Arc::new(AtomicUsize::new(0));
         let already_deleted = Arc::new(AtomicUsize::new(0));
+        let failed = Arc::new(AtomicUsize::new(0));
         let started = Instant::now();
         let ctx = ctx.clone();
         let store = repo.repo_ephemeral_store.clone();
         let result = mononoke::spawn_task({
-            cloned!(finished, already_deleted);
+            cloned!(finished, already_deleted, failed);
             async move {
                 stream::iter(expired_bubbles)
-                    .map(Ok)
-                    .map_ok(|id| {
-                        cloned!(ctx, store, finished, already_deleted);
+                    .for_each_concurrent(args.concurrency, |id| {
+                        cloned!(ctx, store, finished, already_deleted, failed);
                         async move {
-                            let outcome = store.delete_bubble(&ctx, id).await?;
-                            finished.fetch_add(1, Ordering::Relaxed);
-                            if outcome.keys_already_deleted > 0 {
-                                already_deleted.fetch_add(1, Ordering::Relaxed);
+                            match store.delete_bubble(&ctx, id).await {
+                                Ok(outcome) => {
+                                    finished.fetch_add(1, Ordering::Relaxed);
+                                    if outcome.keys_already_deleted > 0 {
+                                        already_deleted.fetch_add(1, Ordering::Relaxed);
+                                    }
+                                    println!(
+                                        "Cleaned up bubble {id} and deleted {} blob keys contained in it",
+                                        outcome.keys_deleted
+                                    );
+                                }
+                                Err(err) => {
+                                    failed.fetch_add(1, Ordering::Relaxed);
+                                    eprintln!("Failed to clean up bubble {id}: {err:#}");
+                                }
                             }
-                            println!(
-                                "Cleaned up bubble {id} and deleted {} blob keys contained in it",
-                                outcome.keys_deleted
-                            );
-                            anyhow::Ok(())
                         }
                     })
-                    .try_buffer_unordered(args.concurrency)
-                    .try_collect::<Vec<_>>()
                     .await
             }
         })
         .await;
+        let failed = failed.load(Ordering::Relaxed);
         println!(
-            "Deleted {} of {total} expired bubbles in {:.1?}, {} of them had blob keys that were already deleted",
+            "Deleted {} of {total} expired bubbles in {:.1?}, {} of them had blob keys that were already deleted, {failed} failed",
             finished.load(Ordering::Relaxed),
             started.elapsed(),
             already_deleted.load(Ordering::Relaxed)
         );
-        result??;
+        result?;
+        if failed > 0 {
+            bail!("Failed to clean up {failed} of {total} expired bubbles");
+        }
     } else {
         println!(
             "Executing cleanup in dry-run mode. The following bubbles were fetched for deletion:"
