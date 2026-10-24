@@ -770,64 +770,69 @@ pub trait IdDagAlgorithm: IdDagStore {
     ///
     /// Note: [`IdSet`] does not preserve order. Use [`IdDag::parent_ids`] if
     /// order is needed.
-    fn parents(&self, mut set: IdSet) -> Result<IdSet> {
+    fn parents(&self, set: IdSet) -> Result<IdSet> {
         fn trace(msg: &dyn Fn() -> String) {
             trace!(target: "dag::algo::parents", "{}", msg());
         }
         debug!(target: "dag::algo::parents", "parents({:?})", &set);
 
-        let mut result = IdSet::empty();
+        // Collect the parents as spans and build the result once at the end.
+        // Updating the result and the remaining set for each segment would
+        // take time quadratic in the number of spans.
+        let mut parents: Vec<IdSpan> = Vec::new();
         let max_level = self.max_level()?;
 
-        'outer: while let Some(head) = set.max() {
-            trace(&|| format!("check head {head:?}"));
-            // For high-level segments. If the set covers the entire segment, then
-            // the parents is (the segment - its head + its parents).
-            for level in (1..=max_level).rev() {
-                if let Some(seg) = self.find_segment_by_head_and_level(head, level)? {
-                    let seg_span = seg.span()?;
-                    if set.contains(seg_span) {
-                        let seg_set = IdSet::from(seg_span);
-                        let mut parent_set = seg_set.difference(&head.into());
-                        parent_set.push_set(&IdSet::from_spans(seg.parents()?));
-                        set = set.difference(&seg_set);
-                        result = result.union(&parent_set);
-                        trace(&|| format!(" push lv{level} {parent_set:?}"));
-                        continue 'outer;
+        for span in set.iter_span_desc() {
+            // Walk the span from its top, a segment at a time.
+            let mut head = span.high;
+            'span: loop {
+                trace(&|| format!("check head {head:?}"));
+                // For high-level segments. If the span covers the entire segment, then
+                // the parents is (the segment - its head + its parents).
+                for level in (1..=max_level).rev() {
+                    if let Some(seg) = self.find_segment_by_head_and_level(head, level)? {
+                        let seg_span = seg.span()?;
+                        if seg_span.low >= span.low {
+                            if seg_span.low < head {
+                                parents.push(IdSpan::new(seg_span.low, head - 1));
+                            }
+                            parents.extend(seg.parents()?.into_iter().map(IdSpan::from));
+                            trace(&|| format!(" push lv{level} {seg_span:?}"));
+                            if seg_span.low == span.low {
+                                break 'span;
+                            }
+                            head = seg_span.low - 1;
+                            continue 'span;
+                        }
                     }
                 }
+
+                // A flat segment contains information to calculate
+                // parents(subset of the segment).
+                let seg = match self.find_flat_segment_including_id(head)? {
+                    Some(seg) => seg,
+                    None => return head.not_found(),
+                };
+                let seg_low = seg.span()?.low;
+                let low = seg_low.max(span.low);
+                // Within the segment, parent(i) is (i - 1), except for its low.
+                if low == seg_low {
+                    if low < head {
+                        parents.push(IdSpan::new(low, head - 1));
+                    }
+                    parents.extend(seg.parents()?.into_iter().map(IdSpan::from));
+                } else {
+                    parents.push(IdSpan::new(low - 1, head - 1));
+                }
+                trace(&|| format!(" push lv0 {low:?}..={head:?}"));
+                if low == span.low {
+                    break;
+                }
+                head = low - 1;
             }
-
-            // A flat segment contains information to calculate
-            // parents(subset of the segment).
-            let seg = match self.find_flat_segment_including_id(head)? {
-                Some(seg) => seg,
-                None => return head.not_found(),
-            };
-            let seg_span = seg.span()?;
-            let seg_low = seg_span.low;
-            let seg_set: IdSet = seg_span.into();
-            let seg_set = seg_set.intersection(&set);
-
-            // Get parents for a linear set (ex. parent(i) is (i - 1)).
-            fn parents_linear(set: &IdSet) -> IdSet {
-                debug_assert!(!set.contains(Id::MIN));
-                IdSet::from_sorted_spans(set.as_spans().iter().map(|s| s.low - 1..=s.high - 1))
-            }
-
-            let parent_set = if seg_set.contains(seg_low) {
-                let mut parent_set = parents_linear(&seg_set.difference(&IdSet::from(seg_low)));
-                parent_set.push_set(&IdSet::from_spans(seg.parents()?));
-                parent_set
-            } else {
-                parents_linear(&seg_set)
-            };
-
-            set = set.difference(&seg_set);
-            trace(&|| format!(" push lv0 {parent_set:?}"));
-            result = result.union(&parent_set);
         }
 
+        let result = IdSet::from_spans(parents);
         trace(&|| format!(" result: {result:?}"));
 
         Ok(result)
@@ -2193,6 +2198,37 @@ mod tests {
         let all = dag.all().unwrap();
         assert_eq!(dbg(&all), "3 4 5 10..=20 30..=40");
         assert_eq!(all.count(), 25);
+    }
+
+    #[test]
+    fn test_parents() {
+        let mut dag = IdDag::new_in_memory();
+        dag.build_segments(Id(1001), &get_parents).unwrap();
+        assert!(dag.max_level().unwrap() > 0);
+
+        let sets = [
+            // Entire high-level segments.
+            dag.all().unwrap(),
+            IdSet::from_spans([Id(3)..=Id(1001)]),
+            // Parts of segments.
+            IdSet::from_spans([Id(100)..=Id(200), Id(500)..=Id(510)]),
+            // Many scattered commits.
+            IdSet::from_spans((3..=1001).step_by(7).map(Id)),
+            IdSet::from_spans((3..=1001).step_by(2).map(Id)),
+            IdSet::empty(),
+        ];
+        for set in sets {
+            let expected = IdSet::from_spans(
+                set.iter_desc()
+                    .flat_map(|id| dag.parent_ids(id).unwrap())
+                    .collect::<Vec<_>>(),
+            );
+            assert_eq!(
+                dbg(&dag.parents(set.clone()).unwrap()),
+                dbg(&expected),
+                "parents of {set:?}"
+            );
+        }
     }
 
     #[test]
