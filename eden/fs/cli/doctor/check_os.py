@@ -109,7 +109,7 @@ def _run_linux_os_checks(
 
 def _windows_has_projfs_bug(build: int, revision: int) -> bool:
     # Check for KB5022906, which has the fix for the ProjFS bug.
-    return build <= 10945 and revision < 2673
+    return build <= 19045 and revision < 2673
 
 
 _WINDOWS_VERSION_PATTERN: "re.Pattern[str]" = re.compile(
