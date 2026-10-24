@@ -23,6 +23,12 @@ class OperatingSystemsCheckTest(DoctorTestBase):
         tmp_dir = self.make_temporary_directory()
         self.instance = FakeEdenInstance(tmp_dir, config=test_config)
 
+    def test_windows_projfs_bug_builds(self) -> None:
+        self.assertTrue(check_os._windows_has_projfs_bug(10944, 2672))
+        self.assertFalse(check_os._windows_has_projfs_bug(19042, 2486))
+        self.assertFalse(check_os._windows_has_projfs_bug(19045, 2486))
+        self.assertFalse(check_os._windows_has_projfs_bug(19045, 2673))
+
     def test_kernel_version_split(self) -> None:
         test_versions = (
             ("1", (1, 0, 0, 0)),
