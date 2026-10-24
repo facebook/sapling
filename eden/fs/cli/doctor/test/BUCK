@@ -11,6 +11,7 @@ python_unittest(
         "doctor_test.py",
         "os_test.py",
         "util_test.py",
+        "x509_test.py",
     ],
     network_access = network_access_utils.none(),
     supports_static_listing = False,
