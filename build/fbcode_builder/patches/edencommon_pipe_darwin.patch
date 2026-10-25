@@ -1,0 +1,22 @@
+diff --git a/eden/common/utils/Pipe.cpp b/eden/common/utils/Pipe.cpp
+index 1724dbd1..67e188b2 100644
+--- a/eden/common/utils/Pipe.cpp
++++ b/eden/common/utils/Pipe.cpp
+@@ -43,7 +43,7 @@ Pipe::Pipe(bool nonBlocking) {
+ #else
+   int fds[2];
+   int res;
+-#if FOLLY_HAVE_PIPE2
++#if FOLLY_HAVE_PIPE2 && !defined(__APPLE__)
+   res = pipe2(fds, (nonBlocking ? O_NONBLOCK : 0) | O_CLOEXEC);
+ #else
+   res = pipe(fds);
+@@ -58,7 +58,7 @@ Pipe::Pipe(bool nonBlocking) {
+   read = FileDescriptor(fds[0], FileDescriptor::FDType::Pipe);
+   write = FileDescriptor(fds[1], FileDescriptor::FDType::Pipe);
+ 
+-#if !FOLLY_HAVE_PIPE2
++#if !FOLLY_HAVE_PIPE2 || defined(__APPLE__)
+   read.setCloExec();
+   write.setCloExec();
+   if (nonBlocking) {

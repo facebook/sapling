@@ -9,6 +9,7 @@ repo_url = https://github.com/facebookexperimental/edencommon.git
 
 [build]
 builder = cmake
+patchfile = edencommon_pipe_darwin.patch
 
 [dependencies]
 boost
