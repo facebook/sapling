@@ -336,7 +336,7 @@ void DefaultEdenMain::init(int* argc, char*** argv) {
 #ifdef EDEN_HAVE_FBINIT
   facebook::init::initFacebookLight(argc, argv);
 #else
-  folly::init(argc, argv);
+  folly::unsafe_unscoped_init(argc, argv);
 #endif
 }
 
