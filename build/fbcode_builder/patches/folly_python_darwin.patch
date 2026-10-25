@@ -1,0 +1,13 @@
+diff --git a/folly/python/CMakeLists.txt b/folly/python/CMakeLists.txt
+--- a/folly/python/CMakeLists.txt
++++ b/folly/python/CMakeLists.txt
+@@ -137,6 +137,9 @@
+ add_dependencies(folly_python_cpp folly create_post_binding_symlink)
+ set_property(TARGET folly_python_cpp PROPERTY VERSION ${PACKAGE_VERSION})
+ target_compile_definitions(folly_python_cpp PRIVATE BOOST_NO_AUTO_PTR)
++if(APPLE)
++  target_include_directories(folly_python_cpp BEFORE PRIVATE "${CMAKE_SOURCE_DIR}")
++endif()
+ target_include_directories(folly_python_cpp PRIVATE "${_cybld}")
+ target_link_libraries(folly_python_cpp PUBLIC folly)
+ apply_folly_compile_options_to_target(folly_python_cpp)

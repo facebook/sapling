@@ -42,8 +42,8 @@ fb_find_or_fetch(FBThrift)
 include_directories(${FBTHRIFT_INCLUDE_DIR})
 
 # The Python CLI uses fb303's thrift-python modules, which, like thrift-python,
-# getdeps only builds on Linux.
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+# getdeps builds on Linux and macOS.
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE)
   set(FB303_THRIFT_PYTHON ON)
 endif()
 fb_find_or_fetch(fb303)
@@ -153,9 +153,9 @@ if (NOT BLAKE3_FOUND)
 endif()
 include_directories(${BLAKE3_INCLUDE_DIR})
 
-# The Python CLI uses thrift-python, which getdeps only builds on Linux, and
-# the thrift-python modules that fb303 builds with FB303_THRIFT_PYTHON.
-if (ENABLE_THRIFT_PYTHON AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+# The Python CLI uses thrift-python and the thrift-python modules that fb303
+# builds with FB303_THRIFT_PYTHON. getdeps provides them on Linux and macOS.
+if (ENABLE_THRIFT_PYTHON AND (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE))
   include(FBThriftPythonLibrary)
   if (ENABLE_THRIFT_PYTHON STREQUAL "AUTO")
     fb_find_thrift_python_runtime(QUIET)
