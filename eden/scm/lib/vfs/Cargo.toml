@@ -28,7 +28,7 @@ slex = { version = "0.1.0", path = "../slex" }
 thiserror = "2.0.21"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-unicode-normalization = "0.1.25"
+unicode-normalization = "0.1.26"
 
 [dev-dependencies]
 tempfile = "3.27.0"
