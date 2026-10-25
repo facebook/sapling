@@ -9,3 +9,14 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 -set (CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
  set (CMAKE_DEBUG_POSTFIX d)
+diff --git a/src/logging.cc b/src/logging.cc
+--- a/src/logging.cc
++++ b/src/logging.cc
+@@ -35,6 +35,7 @@
+ #include <cassert>
+ #include <iomanip>
+ #include <string>
++#include <type_traits>
+ #ifdef HAVE_UNISTD_H
+ # include <unistd.h>  // For _exit.
+ #endif

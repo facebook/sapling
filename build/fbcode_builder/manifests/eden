@@ -37,15 +37,13 @@ rust-shed
 [dependencies.fbsource=on]
 rust
 
-[dependencies.os=darwin]
-osxfuse
-
 [dependencies.not(os=windows)]
 # TODO: teach getdeps to compile curl on Windows.
 # Enabling curl on Windows requires us to find a way to compile libcurl with
 # msvc.
 libcurl
-# Added so that OSS doesn't see system "python" which is python 2 on darwin and some linux
+
+# Avoid finding a system "python" that may still be Python 2.
 python
 
 [dependencies.test=on]
