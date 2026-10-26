@@ -58,6 +58,7 @@ inline constexpr std::string_view kDeadConfigKeys[] = {
     "predictive-prefetch-profiles:size",
     "prefetch-profiles:predictive-prefetching-enabled",
     "store:max-tree-prefetches",
+    "telemetry:enable-obc-on-eden",
     "telemetry:enable-xplatlogger-cli-usage",
     "telemetry:enable-xplatlogger-errors",
     "telemetry:enable-xplatlogger-events",

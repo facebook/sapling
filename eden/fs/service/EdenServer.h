@@ -49,9 +49,6 @@
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
-#ifdef EDEN_HAVE_OBC
-#include "monitoring/obc/OBCAvg.h"
-#endif
 
 DECLARE_bool(takeover);
 DECLARE_bool(forceTakeover);
@@ -679,11 +676,6 @@ class EdenServer : private TakeoverHandler {
   void startPeriodicTasks();
   void updatePeriodicTaskIntervals(const EdenConfig& config);
 
-#ifdef EDEN_HAVE_OBC
-  // Calculates EdenFS RSS memory usage.
-  monitoring::OBCAvg memory_vm_rss_bytes_;
-#endif
-
   /**
    * Schedule a call to unloadInodes() to happen after timeout
    * has expired.
@@ -772,9 +764,6 @@ class EdenServer : private TakeoverHandler {
   void registerInodePopulationReportsCallback();
   void unregisterInodePopulationReportsCallback();
 
-  // Report memory usage statistics to ServiceData.
-  void reportMemoryStats();
-
 #ifdef __linux__
   void scheduleCgroupFileCacheReclaim();
 #endif
@@ -817,7 +806,8 @@ class EdenServer : private TakeoverHandler {
    * each store
    */
   std::vector<size_t> collectSaplingBackingStoreCounters(
-      std::function<size_t(const SaplingBackingStore&)> getCounterFromStore);
+      const std::function<size_t(const SaplingBackingStore&)>&
+          getCounterFromStore);
 
   /*
    * Member variables.
@@ -1131,9 +1121,6 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::checkLockValidity> checkValidityTask_{
       this,
       "check_lock_validity"};
-  PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{
-      this,
-      "mem_stats"};
   PeriodicFnTask<&EdenServer::refreshBackingStore> backingStoreTask_{
       this,
       "backing_store"};

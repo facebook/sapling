@@ -110,7 +110,6 @@
 #include "eden/fs/service/ThriftStreamStartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
@@ -131,7 +130,6 @@
 #include "eden/fs/telemetry/XplatKeys.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
-#include "eden/fs/utils/EdenTaskQueue.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/MountHealthCheck.h"
 #include "eden/fs/utils/NfsSocket.h"
@@ -144,7 +142,6 @@
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
 #include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
-#include "common/network/Hostname.h"
 #include "eden/fs/service/facebook/ServerObserver.h" // @manual
 #endif
 
@@ -379,7 +376,7 @@ void scheduleMountHealthCheckRuntimeTimeout(
 std::shared_ptr<Notifier> getPlatformNotifier(
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
-    std::string version) {
+    const std::string& version) {
 #if defined(_WIN32)
   /*
    * If the E-Menu is disabled, we should create a Null Notifier
@@ -500,7 +497,7 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
   constexpr StringPiece kFusePendingRequestFile{"waiting"};
 
   auto mount_path = mount->getPath().c_str();
-  struct stat file_metadata;
+  struct stat file_metadata{};
 
   folly::checkUnixError(
       lstat(mount_path, &file_metadata),
@@ -1292,7 +1289,7 @@ folly::SemiFuture<Unit> EdenServer::unmountAll() {
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
   return folly::collectAll(futures).deferValue(
-      [](std::vector<folly::Try<Unit>> results) {
+      [](const std::vector<folly::Try<Unit>>& results) {
         for (const auto& result : results) {
           result.throwUnlessValue();
         }
@@ -1436,25 +1433,6 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
 
 void EdenServer::startPeriodicTasks() {
   auto config = serverState_->getReloadableConfig()->getEdenConfig();
-#ifdef EDEN_HAVE_OBC
-  if (config->enableOBCOnEden.getValue()) {
-    // Get the hostname without the ".facebook.com" suffix
-    auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
-    std::vector<std::string> entities;
-    auto reWorkerID = std::getenv("REMOTE_EXECUTION_WORKER");
-    if (reWorkerID == nullptr) {
-      entities = {hostname};
-    } else {
-      entities = {hostname, fmt::format("{}:{}", hostname, reWorkerID)};
-    }
-    memory_vm_rss_bytes_ = monitoring::OBCAvg(
-        monitoring::OdsCategoryId::ODS_EDEN,
-        fmt::format("eden.{}", kMemoryVmRssBytes),
-        entities);
-    // Report memory usage stats once every 60 seconds
-    memoryStatsTask_.updateInterval(60s);
-  }
-#endif
   updatePeriodicTaskIntervals(*config);
 
 #ifndef _WIN32
@@ -2610,7 +2588,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
         return makeImmediateFuture<folly::Unit>(std::move(ew));
       })
       .thenValue([this,
-                  doTakeover,
+                  doTakeover = doTakeover,
                   readOnly,
                   edenMount,
                   mountStopWatch,
@@ -2625,7 +2603,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
               mountFinished(edenMount.get(), std::nullopt);
               return makeFuture<folly::Unit>(std::move(ew));
             })
-            .thenValue([edenMount, doTakeover, this](folly::Unit) mutable {
+            .thenValue([edenMount, doTakeover = doTakeover, this](
+                           folly::Unit) mutable {
               registerStats(edenMount);
 
               // Now that we've started the workers, arrange to call
@@ -2652,7 +2631,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
                 // case as they are already mounted.
                 return edenMount->performBindMounts()
                     .deferValue([edenMount](auto&&) { return edenMount; })
-                    .deferError([edenMount](folly::exception_wrapper ew) {
+                    .deferError([edenMount](
+                                    const folly::exception_wrapper& ew) {
                       XLOG(
                           ERR,
                           "Error while performing bind mounts, will continue with mount anyway: {}",
@@ -3106,7 +3086,8 @@ EdenServer::getSaplingBackingStores() {
 }
 
 std::vector<size_t> EdenServer::collectSaplingBackingStoreCounters(
-    std::function<size_t(const SaplingBackingStore&)> getCounterFromStore) {
+    const std::function<size_t(const SaplingBackingStore&)>&
+        getCounterFromStore) {
   std::vector<size_t> counters;
   for (const auto& store : this->getSaplingBackingStores()) {
     counters.emplace_back(getCounterFromStore(*store));
@@ -3701,16 +3682,6 @@ void EdenServer::flushStatsNow() {
 
   // Sapling ODS counters are buffered somewhat in memory - flush them now.
   SaplingBackingStore::flushCounters();
-}
-
-void EdenServer::reportMemoryStats() {
-#ifdef EDEN_HAVE_OBC
-  auto memoryStats = facebook::eden::proc_util::readMemoryStats();
-  if (memoryStats) {
-    // Bump the OBC counters for the current memory usage
-    memory_vm_rss_bytes_ += memoryStats->resident;
-  }
-#endif
 }
 
 #ifdef __linux__

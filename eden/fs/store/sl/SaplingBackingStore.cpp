@@ -57,10 +57,6 @@
 #ifdef EDEN_HAVE_SERVER_OBSERVER
 #include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
 #endif
-#ifdef EDEN_HAVE_OBC
-#include "common/network/Hostname.h"
-#include "eden/fs/facebook/NormalizedHostname.h"
-#endif
 
 DEFINE_bool(
     hg_fetch_missing_trees,
@@ -228,12 +224,6 @@ SaplingBackingStore::SaplingBackingStore(
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
-
-#ifdef EDEN_HAVE_OBC
-  if (config_->getEdenConfig()->enableOBCOnEden.getValue()) {
-    initializeOBCCounters();
-  }
-#endif
 }
 
 /**
@@ -302,12 +292,6 @@ SaplingBackingStore::SaplingBackingStore(
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
-
-#ifdef EDEN_HAVE_OBC
-  if (config_->getEdenConfig()->enableOBCOnEden.getValue()) {
-    initializeOBCCounters();
-  }
-#endif
 }
 
 SaplingBackingStore::~SaplingBackingStore() {
@@ -316,25 +300,6 @@ SaplingBackingStore::~SaplingBackingStore() {
     thread.join();
   }
 }
-
-#ifdef EDEN_HAVE_OBC
-void SaplingBackingStore::initializeOBCCounters() {
-  // Get the hostname without the ".facebook.com" suffix
-  auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
-  if (config_->getEdenConfig()->aggregateContainerOdsHostnames.getValue()) {
-    hostname = detail::getOdsHostname(hostname);
-  }
-  getBlobPerRepoLatencies_ = monitoring::OBCP99P95P50(
-      monitoring::OdsCategoryId::ODS_EDEN,
-      fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName_),
-      {hostname});
-  getTreePerRepoLatencies_ = monitoring::OBCP99P95P50(
-      monitoring::OdsCategoryId::ODS_EDEN,
-      fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName_),
-      {std::move(hostname)});
-  isOBCEnabled_ = true;
-}
-#endif
 
 void SaplingBackingStore::processHgEvent(const HgImportTraceEvent& event) {
   switch (event.eventType) {
@@ -390,11 +355,6 @@ void SaplingBackingStore::setFetchBlobCounters(
     return;
   }
 
-#ifdef EDEN_HAVE_OBC
-  if (isOBCEnabled_) {
-    getBlobPerRepoLatencies_ += watch.elapsed().count();
-  }
-#endif
   stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
@@ -651,11 +611,6 @@ void SaplingBackingStore::getTreeBatch(
       }
     }
 
-#ifdef EDEN_HAVE_OBC
-    if (isOBCEnabled_) {
-      getTreePerRepoLatencies_ += batchWatch.elapsed().count();
-    }
-#endif
     stats_->addDuration(
         &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
 
