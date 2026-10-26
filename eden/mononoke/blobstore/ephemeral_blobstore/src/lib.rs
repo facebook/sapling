@@ -19,6 +19,7 @@ mod error;
 mod file;
 mod handle;
 mod store;
+mod unlink;
 mod view;
 
 pub use crate::bubble::Bubble;
@@ -34,4 +35,6 @@ pub use crate::store::ExtendBubbleTtlOutcome;
 pub use crate::store::RepoEphemeralStore;
 pub use crate::store::RepoEphemeralStoreArc;
 pub use crate::store::RepoEphemeralStoreRef;
+pub use crate::unlink::UnlinkPolicy;
+pub use crate::unlink::UnlinkRetry;
 pub use crate::view::EphemeralRepoView;

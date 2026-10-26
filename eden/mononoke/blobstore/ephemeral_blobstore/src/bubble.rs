@@ -34,6 +34,7 @@ use futures::future::try_join_all;
 use futures::pin_mut;
 use futures::stream::TryStreamExt;
 use futures_lazy_shared::LazyShared;
+use futures_retry::retry;
 use metaconfig_types::RepoConfigArc;
 use mononoke_types::DateTime;
 use mononoke_types::RepositoryId;
@@ -62,6 +63,7 @@ use crate::commit_graph::EphemeralOnlyChangesetStorage;
 use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
 use crate::store::DeleteBubbleOutcome;
+use crate::unlink::Unlinker;
 use crate::view::EphemeralRepoView;
 
 pub enum StorageLocation {
@@ -324,6 +326,7 @@ impl Bubble {
     pub(crate) async fn delete_blobs_in_bubble(
         &self,
         ctx: &CoreContext,
+        unlinker: &Unlinker,
     ) -> Result<DeleteBubbleOutcome> {
         let key_stream = self.get_keys_in_bubble(ctx, None).await;
         let mut outcome = DeleteBubbleOutcome::default();
@@ -332,8 +335,11 @@ impl Bubble {
             // As long as the unlink operation on underlying blobstores is "truly" async
             // (i.e. they yield on cross service I/O), the below will execute the unlinking
             // concurrently and terminate early on the first error encountered.
-            let unlink_outcomes =
-                try_join_all(keys.iter().map(|key| self.ensure_unlinked(ctx, key))).await?;
+            let unlink_outcomes = try_join_all(
+                keys.iter()
+                    .map(|key| self.ensure_unlinked(ctx, key, unlinker)),
+            )
+            .await?;
             for unlink_outcome in unlink_outcomes {
                 match unlink_outcome {
                     UnlinkOutcome::Unlinked => outcome.keys_deleted += 1,
@@ -346,7 +352,43 @@ impl Bubble {
         Ok(outcome)
     }
 
-    async fn ensure_unlinked(&self, ctx: &CoreContext, key: &str) -> Result<UnlinkOutcome> {
+    async fn ensure_unlinked(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+        unlinker: &Unlinker,
+    ) -> Result<UnlinkOutcome> {
+        let Some(retry_policy) = unlinker.retry() else {
+            unlinker.until_ready().await;
+            return self.unlink_or_confirm_absent(ctx, key).await;
+        };
+        let bubble_id = self.bubble_id;
+        let max_attempts = retry_policy.max_attempts.get();
+        let (outcome, _attempts) = retry(
+            move |_attempt| async move {
+                unlinker.until_ready().await;
+                self.unlink_or_confirm_absent(ctx, key).await
+            },
+            retry_policy.initial_delay,
+        )
+        .binary_exponential_backoff()
+        .max_attempts(max_attempts)
+        .max_interval(retry_policy.max_delay)
+        .jitter(retry_policy.initial_delay)
+        .inspect_err(move |attempt, err: &anyhow::Error| {
+            if attempt < max_attempts {
+                warn!(%bubble_id, key, "Retrying unlink after attempt {attempt} of {max_attempts} failed: {err:#}");
+            }
+        })
+        .await?;
+        Ok(outcome)
+    }
+
+    async fn unlink_or_confirm_absent(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+    ) -> Result<UnlinkOutcome> {
         let Err(err) = self.blobstore.unlink(ctx, key).await else {
             return Ok(UnlinkOutcome::Unlinked);
         };

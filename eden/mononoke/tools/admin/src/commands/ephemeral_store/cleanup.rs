@@ -12,6 +12,7 @@ use anyhow::Result;
 use anyhow::bail;
 use clap::Args;
 use context::CoreContext;
+use ephemeral_blobstore::UnlinkPolicy;
 use futures::StreamExt;
 use mononoke_macros::mononoke;
 
@@ -69,7 +70,12 @@ pub async fn clean_bubbles(
         let started = Instant::now();
         let deletions = repo
             .repo_ephemeral_store
-            .delete_bubbles(ctx, expired_bubbles, args.concurrency)
+            .delete_bubbles(
+                ctx,
+                expired_bubbles,
+                args.concurrency,
+                UnlinkPolicy::default(),
+            )
             .fold(
                 (0, 0, 0),
                 |(finished, already_deleted, failed), (id, result)| async move {
