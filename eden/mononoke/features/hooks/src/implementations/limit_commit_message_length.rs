@@ -17,10 +17,26 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_commit_message_length` hook.
+    pub(crate) struct LimitCommitMessageLengthMessages for "limit_commit_message_length" {
+        /// The commit message is at least `length_limit` bytes long.
+        too_long(
+            /// The start of the message's first line.
+            title,
+            /// Length of the message, in bytes.
+            length,
+            /// The limit, in bytes.
+            limit,
+        ) = "Commit message length for '${title}' (${length}) exceeds length limit (>= ${limit})";
+    }
+}
 
 const DEFAULT_TITLE_LENGTH: usize = 80;
 
@@ -35,15 +51,22 @@ pub struct LimitCommitMessageLengthConfig {
 #[derive(Clone, Debug)]
 pub struct LimitCommitMessageLengthHook {
     config: LimitCommitMessageLengthConfig,
+    messages: LimitCommitMessageLengthMessages,
 }
 
 impl LimitCommitMessageLengthHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: LimitCommitMessageLengthMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: LimitCommitMessageLengthConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: LimitCommitMessageLengthMessages::default(),
+        })
     }
 }
 
@@ -74,13 +97,11 @@ impl ChangesetHook for LimitCommitMessageLengthHook {
                     .unwrap_or(DEFAULT_TITLE_LENGTH),
             );
 
-            HookExecution::rejected(HookRejectionInfo::new_long(
-                "Commit message too long",
-                format!(
-                    "Commit message length for '{}' ({}) exceeds length limit (>= {})",
-                    title, len, self.config.length_limit
-                ),
-            ))
+            HookExecution::rejected(
+                self.messages
+                    .too_long(title, len, self.config.length_limit)
+                    .into_rejection("Commit message too long"),
+            )
         } else {
             HookExecution::accepted()
         };

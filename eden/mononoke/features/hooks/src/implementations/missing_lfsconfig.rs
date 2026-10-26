@@ -18,19 +18,34 @@ use mononoke_types::NonRootMPath;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PathContent;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `missing_lfsconfig` hook.
+    pub(crate) struct MissingLfsConfigMessages for "missing_lfsconfig" {
+        /// The commit adds an LFS pointer, but the repository has no
+        /// `.lfsconfig`.
+        missing() = "You need to add a properly defined .lfsconfig at the root directory of the repository prior to pushing.";
+    }
+}
 
 #[derive(Clone, Debug)]
-pub struct MissingLFSConfigHook {}
+pub struct MissingLFSConfigHook {
+    messages: MissingLfsConfigMessages,
+}
 
 impl MissingLFSConfigHook {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: MissingLfsConfigMessages::new(config),
+        }
     }
 }
 
@@ -71,10 +86,7 @@ impl ChangesetHook for MissingLFSConfigHook {
         for (_, change) in changeset.file_changes() {
             if let Some(git_lfs) = change.git_lfs() {
                 if git_lfs.is_lfs_pointer() {
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "This commit add an LFS pointer but there is no .lfsconfig in this repository.",
-                        "You need to add a properly defined .lfsconfig at the root directory of the repository prior to pushing.".to_string(),
-                    )));
+                    return Ok(HookExecution::rejected(self.messages.missing().into_rejection("This commit add an LFS pointer but there is no .lfsconfig in this repository.")));
                 }
             }
         }

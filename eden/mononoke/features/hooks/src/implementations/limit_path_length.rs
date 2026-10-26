@@ -19,9 +19,35 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_path_length` hook.
+    pub(crate) struct LimitPathLengthMessages for "limit_path_length" {
+        /// A changed file's path is at least `length_limit` bytes long.
+        path_too_long(
+            /// Path of the file.
+            path,
+            /// Length of the path, in bytes.
+            length,
+            /// The limit, in bytes.
+            limit,
+        ) = "Path length for '${path}' (${length}) exceeds length limit (>= ${limit})";
+        /// A component of the file's path, as Mercurial would store it, is
+        /// too long for Mercurial.
+        component_too_long(
+            /// The encoded path component, as a list of bytes.
+            component,
+            /// Length of the component, in bytes.
+            length,
+            /// The limit, in bytes.
+            limit,
+        ) = "Path component length for ${component} (${length}) exceeds length limit (>= ${limit})";
+    }
+}
 
 // The filesystem max is 255.
 const MAX_PATH_COMPONENT_LIMIT: usize = 255;
@@ -37,15 +63,22 @@ pub struct LimitPathLengthConfig {
 #[derive(Clone, Debug)]
 pub struct LimitPathLengthHook {
     config: LimitPathLengthConfig,
+    messages: LimitPathLengthMessages,
 }
 
 impl LimitPathLengthHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: LimitPathLengthMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: LimitPathLengthConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: LimitPathLengthMessages::default(),
+        })
     }
 }
 
@@ -70,20 +103,18 @@ impl FileHook for LimitPathLengthHook {
 
         // Encode file in mercurial encoding to make sure mercurial can accept those files
         // as well
-        if let Some(rejection) = check_path(path)? {
+        if let Some(rejection) = check_path(path, &self.messages)? {
             return Ok(rejection);
         }
 
         let len = path.len();
 
         let execution = if len >= self.config.length_limit {
-            HookExecution::rejected(HookRejectionInfo::new_long(
-                "Path too long",
-                format!(
-                    "Path length for '{}' ({}) exceeds length limit (>= {})",
-                    path, len, self.config.length_limit
-                ),
-            ))
+            HookExecution::rejected(
+                self.messages
+                    .path_too_long(path, len, self.config.length_limit)
+                    .into_rejection("Path too long"),
+            )
         } else {
             HookExecution::accepted()
         };
@@ -92,7 +123,10 @@ impl FileHook for LimitPathLengthHook {
     }
 }
 
-fn check_path(path: &NonRootMPath) -> Result<Option<HookExecution>, Error> {
+fn check_path(
+    path: &NonRootMPath,
+    messages: &LimitPathLengthMessages,
+) -> Result<Option<HookExecution>, Error> {
     let mut elements = path
         .as_ref()
         .iter()
@@ -111,15 +145,15 @@ fn check_path(path: &NonRootMPath) -> Result<Option<HookExecution>, Error> {
 
     for component in encoded_index_path.iter() {
         if component.len() > MAX_PATH_COMPONENT_LIMIT {
-            return Ok(Some(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Path component too long",
-                format!(
-                    "Path component length for {:?} ({}) exceeds length limit (>= {})",
-                    component,
-                    component.len(),
-                    MAX_PATH_COMPONENT_LIMIT,
-                ),
-            ))));
+            return Ok(Some(HookExecution::rejected(
+                messages
+                    .component_too_long(
+                        format!("{component:?}"),
+                        component.len(),
+                        MAX_PATH_COMPONENT_LIMIT,
+                    )
+                    .into_rejection("Path component too long"),
+            )));
         }
     }
 
@@ -135,12 +169,20 @@ mod test {
     #[mononoke::test]
     fn test_path_bad() {
         let path = NonRootMPath::new("flib/intern/__generated__/GraphQLMeerkatStep/flib/intern/entschema/generated/entity/profile_plus/EntPlatformToolViewerContextCallsiteMigrationRuleAction.php/GQLG_Intern__PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload__EntPlatformToolViewerContextCallsiteMigrationRuleAction__genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php").unwrap();
-        assert!(check_path(&path).unwrap().is_some());
+        assert!(
+            check_path(&path, &LimitPathLengthMessages::default())
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[mononoke::test]
     fn test_path_ok() {
         let path = NonRootMPath::new("flib/intern/__generated__/GraphQLFetchersMeerkatStep/ic/GQLG_File__EntIcxPositionSearchHitWorkdayPositionViewStateJunction__GraphQLFacebookInternalTypeSetFetcherWrapper.php").unwrap();
-        assert!(check_path(&path).unwrap().is_none());
+        assert!(
+            check_path(&path, &LimitPathLengthMessages::default())
+                .unwrap()
+                .is_none()
+        );
     }
 }

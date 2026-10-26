@@ -16,10 +16,22 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_mixed_users_changes` hook.
+    pub(crate) struct BlockMixedUsersChangesMessages for "block_mixed_users_changes" {
+        /// The commit changes files both inside and outside `users_prefix`.
+        mixed(
+            /// The `users_prefix`, for example `users/`.
+            users_prefix,
+        ) = "Your commit contains changes in ${users_prefix} and non-${users_prefix}, making this commit unrevertable by anyone but you. This adds friction to incident resolution, so we encourage you to split the ${users_prefix} changes into a separate diff.";
+    }
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct BlockMixedUsersChangesConfig {
@@ -34,15 +46,22 @@ fn default_users_prefix() -> String {
 #[derive(Clone, Debug)]
 pub struct BlockMixedUsersChangesHook {
     config: BlockMixedUsersChangesConfig,
+    messages: BlockMixedUsersChangesMessages,
 }
 
 impl BlockMixedUsersChangesHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: BlockMixedUsersChangesMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: BlockMixedUsersChangesConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: BlockMixedUsersChangesMessages::default(),
+        })
     }
 }
 
@@ -73,13 +92,11 @@ impl ChangesetHook for BlockMixedUsersChangesHook {
             }
 
             if has_users_changes && has_non_users_changes {
-                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Mixed users/ and non-users/ changes",
-                    format!(
-                        "Your commit contains changes in {0} and non-{0}, making this commit unrevertable by anyone but you. This adds friction to incident resolution, so we encourage you to split the {0} changes into a separate diff.",
-                        self.config.users_prefix,
-                    ),
-                )));
+                return Ok(HookExecution::rejected(
+                    self.messages
+                        .mixed(&self.config.users_prefix)
+                        .into_rejection("Mixed users/ and non-users/ changes"),
+                ));
             }
         }
 

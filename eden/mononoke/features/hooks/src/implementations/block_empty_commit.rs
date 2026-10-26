@@ -13,18 +13,32 @@ use mononoke_types::BonsaiChangeset;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_empty_commit` hook.
+    pub(crate) struct BlockEmptyCommitMessages for "block_empty_commit" {
+        /// The commit has no file changes.
+        empty() = "You must include file changes in your commit for it to land";
+    }
+}
 
 #[derive(Clone, Debug)]
-pub struct BlockEmptyCommit;
+pub struct BlockEmptyCommit {
+    messages: BlockEmptyCommitMessages,
+}
 
 impl BlockEmptyCommit {
-    pub fn new() -> Self {
-        Self
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: BlockEmptyCommitMessages::new(config),
+        }
     }
 }
 
@@ -44,10 +58,11 @@ impl ChangesetHook for BlockEmptyCommit {
             return Ok(HookExecution::accepted());
         }
         if changeset.file_changes_map().is_empty() {
-            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Empty commit is not allowed",
-                "You must include file changes in your commit for it to land".to_string(),
-            )))
+            Ok(HookExecution::rejected(
+                self.messages
+                    .empty()
+                    .into_rejection("Empty commit is not allowed"),
+            ))
         } else {
             Ok(HookExecution::accepted())
         }

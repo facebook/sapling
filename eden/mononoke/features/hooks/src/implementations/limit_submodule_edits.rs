@@ -34,10 +34,36 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_submodule_edits` hook.
+    pub(crate) struct LimitSubmoduleEditsMessages for "limit_submodule_edits" {
+        /// The commit creates submodules, and `disallow_new_submodules` is
+        /// set.
+        new_submodules(
+            /// The submodule paths, one per line, each as `    - <path>`.
+            paths,
+        ) = "Commit creates submodules at the following paths:\n${paths}\n  This is disallowed even with correct markers in this repository.";
+        /// The commit creates or edits submodules without the marker lines
+        /// that allow it.
+        needs_marker(
+            /// The submodule paths, one per line, each as `    - <path>`.
+            paths,
+            /// The marker lines to add, one per line, each as `  <marker>: <path>`.
+            marker_lines,
+        ) = "Commit creates or edits submodules at the following paths:\n${paths}\n  If you did mean to do this, add the following lines to your commit message:\n${marker_lines}";
+        /// The commit creates or edits submodules, and no marker allows it.
+        blocked(
+            /// The submodule paths, one per line, each as `    - <path>`.
+            paths,
+        ) = "Commit creates or edits submodules at the following paths:\n${paths}";
+    }
+}
 
 const NAMED_CAPTURE_NAME: &str = "marker_capture";
 const MAX_CONCURRENCY: usize = 5;
@@ -57,11 +83,15 @@ struct ChangesAllowedWithMarkerOptions {
 pub struct LimitSubmoduleEditsHook {
     changes_allowed_with_marker_options: Option<ChangesAllowedWithMarkerOptions>,
     disallow_new_submodules: bool,
+    messages: LimitSubmoduleEditsMessages,
 }
 
 impl LimitSubmoduleEditsHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: LimitSubmoduleEditsMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: LimitSubmoduleEditsConfig) -> Result<Self> {
@@ -81,6 +111,7 @@ impl LimitSubmoduleEditsHook {
         Ok(Self {
             changes_allowed_with_marker_options,
             disallow_new_submodules: config.disallow_new_submodules.unwrap_or(false),
+            messages: LimitSubmoduleEditsMessages::default(),
         })
     }
 }
@@ -195,26 +226,22 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
                             if new_submodule_mpaths.is_empty() {
                                 Ok(HookExecution::accepted())
                             } else {
-                                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                                    "New Git submodules are not allowed in this repository.",
-                                    format!(
-                                        "Commit creates submodules at the following paths:\n{}\n  This is disallowed even with correct markers in this repository.",
-                                        new_submodule_mpaths
-                                            .iter()
-                                            .map(|submodule_path| format!("    - {submodule_path}"))
-                                            .collect::<Vec<_>>()
-                                            .join("\n"),
-                                    ),
-                                )));
+                                return Ok(HookExecution::rejected(self.messages
+                                        .new_submodules(
+                                            new_submodule_mpaths
+                                                .iter()
+                                                .map(|submodule_path| format!("    - {submodule_path}"))
+                                                .collect::<Vec<_>>()
+                                                .join("\n"),
+                                        )
+                                        .into_rejection("New Git submodules are not allowed in this repository.")));
                             }
                         } else {
                             Ok(HookExecution::accepted())
                         }
                     } else {
-                        Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                            "Changes to git submodules are restricted in this repository.",
-                            format!(
-                                "Commit creates or edits submodules at the following paths:\n{}\n  If you did mean to do this, add the following lines to your commit message:\n{}",
+                        Ok(HookExecution::rejected(self.messages
+                            .needs_marker(
                                 blocked_submodule_paths
                                     .iter()
                                     .map(|submodule_path| format!("    - {submodule_path}"))
@@ -222,27 +249,24 @@ impl ChangesetHook for LimitSubmoduleEditsHook {
                                     .join("\n"),
                                 blocked_submodule_paths
                                     .iter()
-                                    .map(|submodule_path| format!(
-                                        "  {}: {}",
-                                        options.marker, submodule_path
-                                    ))
+                                    .map(|submodule_path| {
+                                        format!("  {}: {}", options.marker, submodule_path)
+                                    })
                                     .collect::<Vec<_>>()
                                     .join("\n"),
-                            ),
-                        )))
+                            )
+                            .into_rejection("Changes to git submodules are restricted in this repository.")))
                     }
                 }
-                None => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Git submodules or any changes to them are not allowed in this repository.",
-                    format!(
-                        "Commit creates or edits submodules at the following paths:\n{}",
+                None => Ok(HookExecution::rejected(self.messages
+                    .blocked(
                         submodule_paths
                             .iter()
                             .map(|submodule_path| format!("    - {submodule_path}"))
                             .collect::<Vec<_>>()
                             .join("\n"),
-                    ),
-                ))),
+                    )
+                    .into_rejection("Git submodules or any changes to them are not allowed in this repository."))),
             }
         }
     }

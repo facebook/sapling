@@ -14,20 +14,41 @@ use regex::Regex;
 
 use crate::CrossRepoPushSource;
 use crate::FileHook;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `no_insecure_filenames` hook.
+    pub(crate) struct NoInsecureFilenamesMessages for "no_insecure_filenames" {
+        /// A changed file is a `.hgtags`, `.hgsub` or `.hgsubstate` file.
+        illegal_filename(
+            /// Path of the file, quoted, with special characters escaped.
+            path,
+        ) = "ABORT: Illegal filename: ${path}";
+        /// A changed file's path could be used to attack a client, for
+        /// example a path into `.git` on a case-insensitive file system.
+        insecure_name(
+            /// Path of the file, quoted, with special characters escaped.
+            path,
+        ) = "ABORT: Illegal insecure name: ${path}";
+    }
+}
 
 pub struct NoInsecureFilenames {
     illegal_regex: Regex,
     insecure_lower_regex: Regex,
     insecure_regex: Vec<Regex>,
+    messages: NoInsecureFilenamesMessages,
 }
 
 impl NoInsecureFilenames {
-    pub fn new() -> Result<Self, Error> {
+    pub fn new(config: &HookConfig) -> Result<Self, Error> {
         Ok(Self {
+            messages: NoInsecureFilenamesMessages::new(config),
             // .hgtags files break remotefilelog and .hgsub/.hgsubstate break hg-git,
             illegal_regex: Regex::new(r"(^.hg(tags|sub|substate)$)")?,
             // Block commits that attempt to exploit CVE-2015-9390:
@@ -72,25 +93,28 @@ impl FileHook for NoInsecureFilenames {
         let path = path.to_string();
         let lower_path = path.to_lowercase();
         if self.illegal_regex.is_match(&lower_path) {
-            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Illegal filename",
-                format!("ABORT: Illegal filename: {path:?}"),
-            )));
+            return Ok(HookExecution::rejected(
+                self.messages
+                    .illegal_filename(format!("{path:?}"))
+                    .into_rejection("Illegal filename"),
+            ));
         }
 
         if self.insecure_lower_regex.is_match(&lower_path) {
-            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Illegal insecure name",
-                format!("ABORT: Illegal insecure name: {path:?}"),
-            )));
+            return Ok(HookExecution::rejected(
+                self.messages
+                    .insecure_name(format!("{path:?}"))
+                    .into_rejection("Illegal insecure name"),
+            ));
         }
 
         for insecure_regex in &self.insecure_regex {
             if insecure_regex.is_match(&path) {
-                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Illegal insecure name",
-                    format!("ABORT: Illegal insecure name: {path:?}"),
-                )));
+                return Ok(HookExecution::rejected(
+                    self.messages
+                        .insecure_name(format!("{path:?}"))
+                        .into_rejection("Illegal insecure name"),
+                ));
             }
         }
         Ok(HookExecution::accepted())

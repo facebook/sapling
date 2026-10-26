@@ -35,10 +35,25 @@ use serde::Deserialize;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_unclean_merge_commits` hook.
+    pub(crate) struct BlockUncleanMergeCommitsMessages for "block_unclean_merge_commits" {
+        /// A merge with resolved conflicts, pushed to a bookmark matching
+        /// `only_check_branches_matching_regex`.
+        unclean_merge_on_bookmark(
+            /// The `only_check_branches_matching_regex` regex.
+            regex,
+        ) = "The bookmark matching regex ${regex} can't have merge commits with conflicts, even if they have been resolved";
+        /// A merge with resolved conflicts.
+        unclean_merge() = "The repo can't have merge commits with conflicts, even if they have been resolved";
+    }
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockUncleanMergeCommitsConfig {
@@ -49,15 +64,22 @@ pub struct BlockUncleanMergeCommitsConfig {
 #[derive(Clone, Debug)]
 pub struct BlockUncleanMergeCommitsHook {
     config: BlockUncleanMergeCommitsConfig,
+    messages: BlockUncleanMergeCommitsMessages,
 }
 
 impl BlockUncleanMergeCommitsHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: BlockUncleanMergeCommitsMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: BlockUncleanMergeCommitsConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: BlockUncleanMergeCommitsMessages::default(),
+        })
     }
 }
 
@@ -81,17 +103,14 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
             return Ok(HookExecution::accepted());
         }
 
-        let fail_msg = if let Some(regex) = &self.config.only_check_branches_matching_regex {
+        let fail_message = if let Some(regex) = &self.config.only_check_branches_matching_regex {
             if !regex.is_match(bookmark.as_str()) {
                 return Ok(HookExecution::accepted());
             } else {
-                format!(
-                    "The bookmark matching regex {regex} can't have merge commits with conflicts, even if they have been resolved"
-                )
+                self.messages.unclean_merge_on_bookmark(regex)
             }
         } else {
-            "The repo can't have merge commits with conflicts, even if they have been resolved"
-                .to_string()
+            self.messages.unclean_merge()
         };
 
         let parent_root_manifests: HashMap<ChangesetId, ContentManifestId> =
@@ -121,10 +140,7 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
             )
             .await?
             {
-                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Merge commits with conflicts, even if resolved are not allowed. If you think this is a false-positive, please add '@allow-unclean-merges' as a standalone line to the commit message",
-                    fail_msg,
-                )));
+                return Ok(HookExecution::rejected(fail_message.into_rejection("Merge commits with conflicts, even if resolved are not allowed. If you think this is a false-positive, please add '@allow-unclean-merges' as a standalone line to the commit message")));
             }
         }
 

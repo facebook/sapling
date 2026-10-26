@@ -18,10 +18,30 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
 use crate::hook_options::parse_hook_options;
+
+hook_messages! {
+    /// Messages of the `no_questionable_filenames` hook.
+    pub(crate) struct NoQuestionableFilenamesMessages for "no_questionable_filenames" {
+        /// A changed file's path contains a brace and does not match
+        /// `allowlist_for_braces`.
+        braces(
+            /// Path of the file, quoted, with special characters escaped.
+            path,
+        ) = "ABORT: Illegal filename: ${path}. The file name cannot include brace(s).";
+        /// A changed file's path contains whitespace or an apostrophe, or has
+        /// a component starting with a hyphen, and does not match
+        /// `allowlist_for_cmd_line`.
+        cmd_line(
+            /// Path of the file.
+            path,
+        ) = "ABORT: Illegal filename: ${path}. The file name cannot include spaces, apostrophes or start with hyphens.";
+    }
+}
 
 /// Configuration for the `no_questionable_filenames` hook.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -49,15 +69,19 @@ pub struct NoQuestionableFilenames {
     braces: Regex,
     allowlist_for_cmd_line: Option<Regex>,
     cmd_line: Regex,
+    messages: NoQuestionableFilenamesMessages,
 }
 
 impl NoQuestionableFilenames {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(parse_hook_options(
-            config,
-            "no_questionable_filenames",
-            NoQuestionableFilenamesConfig::from_typed,
-        )?)
+        Ok(Self {
+            messages: NoQuestionableFilenamesMessages::new(config),
+            ..Self::with_config(parse_hook_options(
+                config,
+                "no_questionable_filenames",
+                NoQuestionableFilenamesConfig::from_typed,
+            )?)?
+        })
     }
 
     pub fn with_config(config: NoQuestionableFilenamesConfig) -> Result<Self> {
@@ -77,6 +101,7 @@ impl NoQuestionableFilenames {
                 .context("Failed to create allowlist regex for cmd_line")?,
             // Disallow spaces, apostrophes, and files that start with hyphens
             cmd_line: Regex::new(r"\s|'|(^|/)-")?,
+            messages: NoQuestionableFilenamesMessages::default(),
         })
     }
 }
@@ -109,12 +134,11 @@ impl FileHook for NoQuestionableFilenames {
             match self.allowlist_for_braces {
                 Some(ref allow) if allow.is_match(&path) => {}
                 _ => {
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "Illegal filename",
-                        format!(
-                            "ABORT: Illegal filename: {path:?}. The file name cannot include brace(s).",
-                        ),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .braces(format!("{path:?}"))
+                            .into_rejection("Illegal filename"),
+                    ));
                 }
             }
         }
@@ -123,12 +147,11 @@ impl FileHook for NoQuestionableFilenames {
             match self.allowlist_for_cmd_line {
                 Some(ref allow) if allow.is_match(&path) => {}
                 _ => {
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "Illegal filename",
-                        format!(
-                            "ABORT: Illegal filename: {path}. The file name cannot include spaces, apostrophes or start with hyphens."
-                        ),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .cmd_line(&path)
+                            .into_rejection("Illegal filename"),
+                    ));
                 }
             }
         }

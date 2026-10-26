@@ -24,9 +24,59 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_invalid_symlinks` hook.
+    pub(crate) struct BlockInvalidSymlinksMessages for "block_invalid_symlinks" {
+        /// A symlink's target is longer than `max_size`.
+        too_long(
+            /// Path of the symlink.
+            path,
+            /// Length of the target, in bytes.
+            size,
+            /// The limit, in bytes.
+            limit,
+        ) = "symlink '${path}' contents are too long (${size} > ${limit})";
+        /// A symlink has an empty target.
+        empty(
+            /// Path of the symlink.
+            path,
+        ) = "symlink '${path}' has no contents";
+        /// A symlink's target contains a newline.
+        contains_newline(
+            /// Path of the symlink.
+            path,
+        ) = "symlink '${path}' contents contain a newline character";
+        /// A symlink's target contains a null byte.
+        contains_null(
+            /// Path of the symlink.
+            path,
+        ) = "symlink '${path}' contents contain a null byte";
+        /// A symlink under `block_absolute_symlinks_path_regexes` has an
+        /// absolute target.
+        absolute(
+            /// Path of the symlink.
+            path,
+        ) = "symlink '${path}' points to an absolute path which will break builds. \
+             Use a relative path instead.";
+        /// A relative symlink under one of `block_escaping_relative_symlinks`
+        /// resolves outside it.
+        escapes_root(
+            /// Path of the symlink.
+            path,
+            /// The prefix the target must stay under.
+            root,
+            /// The symlink's target.
+            target,
+        ) = "symlink '${path}' resolves to a target outside '${root}' which will \
+             break builds on hosts that only check out '${root}'. \
+             Symlink target was '${target}'.";
+    }
+}
 
 const DEFAULT_MAX_SYMLINK_SIZE: u64 = 1024;
 
@@ -84,15 +134,22 @@ pub struct BlockInvalidSymlinksConfig {
 #[derive(Clone, Debug)]
 pub struct BlockInvalidSymlinksHook {
     config: BlockInvalidSymlinksConfig,
+    messages: BlockInvalidSymlinksMessages,
 }
 
 impl BlockInvalidSymlinksHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: BlockInvalidSymlinksMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: BlockInvalidSymlinksConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: BlockInvalidSymlinksMessages::default(),
+        })
     }
 }
 
@@ -176,35 +233,34 @@ impl FileHook for BlockInvalidSymlinksHook {
             Some(change) if change.file_type() == FileType::Symlink => {
                 let max_size = self.config.max_size.unwrap_or(DEFAULT_MAX_SYMLINK_SIZE);
                 if change.size() > max_size {
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "symlink too long",
-                        format!(
-                            "symlink '{}' contents are too long ({} > {})",
-                            path,
-                            change.size(),
-                            max_size
-                        ),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .too_long(&path, change.size(), max_size)
+                            .into_rejection("symlink too long"),
+                    ));
                 }
 
                 if !self.config.allow_empty && change.size() == 0 {
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "symlink is empty",
-                        format!("symlink '{path}' has no contents"),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .empty(&path)
+                            .into_rejection("symlink is empty"),
+                    ));
                 }
 
                 if let Some(text) = hook_repo.get_file_bytes(ctx, change.content_id()).await? {
                     if !self.config.allow_newlines && text.contains(&b'\n') {
-                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                            "symlink contains newline",
-                            format!("symlink '{path}' contents contain a newline character"),
-                        )));
+                        return Ok(HookExecution::rejected(
+                            self.messages
+                                .contains_newline(&path)
+                                .into_rejection("symlink contains newline"),
+                        ));
                     } else if !self.config.allow_nulls && text.contains(&b'\0') {
-                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                            "symlink contains null byte",
-                            format!("symlink '{path}' contents contain a null byte"),
-                        )));
+                        return Ok(HookExecution::rejected(
+                            self.messages
+                                .contains_null(&path)
+                                .into_rejection("symlink contains null byte"),
+                        ));
                     }
 
                     // Check if this path should be checked for absolute symlinks.
@@ -223,20 +279,15 @@ impl FileHook for BlockInvalidSymlinksHook {
                             // Dry run mode: log absolute symlinks to Scuba without blocking
                             ctx.scuba().clone().log_with_msg(
                                 "block_absolute_symlinks dry run: would reject",
-                                format!(
-                                    "symlink '{path}' points to an absolute path which will break builds. \
-                                     Use a relative path instead."
-                                ),
+                                self.messages.absolute(&path).text().to_owned(),
                             );
                         } else {
                             // Blocking mode: reject absolute symlinks
-                            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                                "symlink uses absolute path",
-                                format!(
-                                    "symlink '{path}' points to an absolute path which will break builds. \
-                                     Use a relative path instead."
-                                ),
-                            )));
+                            return Ok(HookExecution::rejected(
+                                self.messages
+                                    .absolute(&path)
+                                    .into_rejection("symlink uses absolute path"),
+                            ));
                         }
                     }
 
@@ -254,22 +305,15 @@ impl FileHook for BlockInvalidSymlinksHook {
                         if let Some(root) = escape_root {
                             if relative_target_escapes_root(&text, &path, root) {
                                 let target_str = String::from_utf8_lossy(&text);
-                                let message = format!(
-                                    "symlink '{path}' resolves to a target outside '{root}' which will \
-                                     break builds on hosts that only check out '{root}'. \
-                                     Symlink target was '{target_str}'.",
-                                );
+                                let message = self.messages.escapes_root(&path, root, target_str);
                                 if self.config.block_escaping_relative_symlinks_dry_run {
                                     ctx.scuba().clone().log_with_msg(
                                         "block_escaping_relative_symlinks dry run: would reject",
-                                        message,
+                                        message.text().to_owned(),
                                     );
                                 } else {
                                     return Ok(HookExecution::rejected(
-                                        HookRejectionInfo::new_long(
-                                            "symlink escapes containment root",
-                                            message,
-                                        ),
+                                        message.into_rejection("symlink escapes containment root"),
                                     ));
                                 }
                             }
@@ -294,6 +338,7 @@ mod tests {
     use tests_utils::drawdag::create_from_dag_with_changes;
 
     use super::*;
+    use crate::HookRejectionInfo;
     use crate::testlib::test_file_hook;
 
     #[mononoke::fbinit_test]

@@ -21,30 +21,56 @@ use mononoke_types::NonRootMPath;
 use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PathContent;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_dewey_lfs_url` and
+    /// `block_dewey_lfs_url_on_new_bookmark` hooks.
+    pub(crate) struct BlockDeweyLfsUrlMessages for "block_dewey_lfs_url" {
+        /// `.lfsconfig` sets `lfs.url` to the Dewey LFS server.
+        dewey_lfs_url(
+            /// The `lfs.url` value.
+            url,
+        ) = "The .lfsconfig file sets lfs.url to \"${url}\". \
+             The hardcoded dewey-lfs.vip.facebook.com URL must be removed as part of \
+             the Dewey LFS to Mononoke LFS migration tracked in S629462. \
+             Hardcoding an lfs.url for the internal LFS server is no longer required at Meta. \
+             Please remove the lfs.url setting from .lfsconfig.";
+    }
+}
 
 const BLOCKED_HOST: &str = "dewey-lfs.vip.facebook.com";
 
 #[derive(Clone, Debug)]
-pub struct BlockDeweyLfsUrlHook {}
+pub struct BlockDeweyLfsUrlHook {
+    messages: BlockDeweyLfsUrlMessages,
+}
 
 impl BlockDeweyLfsUrlHook {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: BlockDeweyLfsUrlMessages::new(config),
+        }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct BlockDeweyLfsUrlOnNewBookmarkHook {}
+pub struct BlockDeweyLfsUrlOnNewBookmarkHook {
+    messages: BlockDeweyLfsUrlMessages,
+}
 
 impl BlockDeweyLfsUrlOnNewBookmarkHook {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: BlockDeweyLfsUrlMessages::new(config),
+        }
     }
 }
 
@@ -60,6 +86,7 @@ async fn check_lfsconfig_for_dewey_url(
     ctx: &CoreContext,
     hook_repo: &HookRepo,
     cs_id: ChangesetId,
+    messages: &BlockDeweyLfsUrlMessages,
 ) -> Result<HookExecution, Error> {
     let path = lfsconfig_path()?;
 
@@ -90,16 +117,11 @@ async fn check_lfsconfig_for_dewey_url(
         let url_str = String::from_utf8_lossy(url.as_ref());
         let lower = url_str.to_ascii_lowercase();
         if lower.contains(BLOCKED_HOST) {
-            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "The .lfsconfig file must not set lfs.url to dewey-lfs.vip.facebook.com.",
-                format!(
-                    "The .lfsconfig file sets lfs.url to \"{url_str}\". \
-                     The hardcoded dewey-lfs.vip.facebook.com URL must be removed as part of \
-                     the Dewey LFS to Mononoke LFS migration tracked in S629462. \
-                     Hardcoding an lfs.url for the internal LFS server is no longer required at Meta. \
-                     Please remove the lfs.url setting from .lfsconfig.",
+            return Ok(HookExecution::rejected(
+                messages.dewey_lfs_url(url_str).into_rejection(
+                    "The .lfsconfig file must not set lfs.url to dewey-lfs.vip.facebook.com.",
                 ),
-            )));
+            ));
         }
     }
 
@@ -126,7 +148,8 @@ impl ChangesetHook for BlockDeweyLfsUrlHook {
             return Ok(HookExecution::accepted());
         }
 
-        check_lfsconfig_for_dewey_url(ctx, hook_repo, changeset.get_changeset_id()).await
+        check_lfsconfig_for_dewey_url(ctx, hook_repo, changeset.get_changeset_id(), &self.messages)
+            .await
     }
 }
 
@@ -147,7 +170,7 @@ impl BookmarkHook for BlockDeweyLfsUrlOnNewBookmarkHook {
             return Ok(HookExecution::accepted());
         }
 
-        check_lfsconfig_for_dewey_url(ctx, hook_repo, to.get_changeset_id()).await
+        check_lfsconfig_for_dewey_url(ctx, hook_repo, to.get_changeset_id(), &self.messages).await
     }
 }
 
@@ -184,7 +207,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         assert_eq!(
             test_changeset_hook(
                 &ctx,
@@ -221,7 +244,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         assert_eq!(
             test_changeset_hook(
                 &ctx,
@@ -258,7 +281,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         assert_eq!(
             test_changeset_hook(
                 &ctx,
@@ -298,7 +321,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         let result = test_changeset_hook(
             &ctx,
             &repo,
@@ -338,7 +361,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         let result = test_changeset_hook(
             &ctx,
             &repo,
@@ -376,7 +399,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         let result = test_changeset_hook(
             &ctx,
             &repo,
@@ -414,7 +437,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         let result = test_changeset_hook(
             &ctx,
             &repo,
@@ -452,7 +475,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         let result = test_changeset_hook(
             &ctx,
             &repo,
@@ -487,7 +510,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlHook::new();
+        let hook = BlockDeweyLfsUrlHook::new(&HookConfig::default());
         assert_eq!(
             test_changeset_hook(
                 &ctx,
@@ -527,7 +550,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new();
+        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new(&HookConfig::default());
         let result = test_bookmark_hook(
             &ctx,
             &repo,
@@ -564,7 +587,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new();
+        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new(&HookConfig::default());
         assert_eq!(
             test_bookmark_hook(
                 &ctx,
@@ -606,7 +629,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new();
+        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new(&HookConfig::default());
         assert_eq!(
             test_bookmark_hook(
                 &ctx,
@@ -648,7 +671,7 @@ mod tests {
             .create_publishing(changesets["Z"])
             .await?;
 
-        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new();
+        let hook = BlockDeweyLfsUrlOnNewBookmarkHook::new(&HookConfig::default());
         let result = test_bookmark_hook(
             &ctx,
             &repo,

@@ -19,10 +19,50 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
 use crate::hook_options::parse_hook_options;
+
+hook_messages! {
+    /// Messages of the `limit_filesize` hook.
+    pub(crate) struct LimitFilesizeMessages for "limit_filesize" {
+        /// A changed file is larger than the limit for its path.
+        too_large(
+            /// Path of the file.
+            path,
+            /// Size of the file, in bytes.
+            size,
+            /// The limit, in bytes.
+            limit,
+            /// Size of the file divided by the limit, to two decimal places.
+            ratio,
+            /// The `path_regex` of the limit.
+            regex,
+        ) = "File size limit is ${limit} bytes. You tried to push file ${path} that is over the limit \
+            (${size} bytes, ${ratio}x the limit). This limit is enforced for files matching the \
+            following regex: \"${regex}\".\n\
+            \n\
+            WHY THIS IS BLOCKED: Large files have ongoing infrastructure costs — they impact \
+            caching systems, Mononoke, biggrep indexing, and permanent backups used by \
+            30,000+ engineers.\n\
+            \n\
+            ALTERNATIVES TO CONSIDER:\n\
+            - Manifold: Store large binaries in blob storage\n\
+            - Dotslash: Distribute large tools without checking them in\n\
+            - Buckify: Package binaries as Buck-managed dependencies\n\
+            - LFS: Use Git LFS for large files that must be versioned\n\
+            - Split files: Break large files into smaller pieces\n\
+            \n\
+            IF ALTERNATIVES DO NOT WORK:\n\
+            1. Add @allow-large-files to your commit message \
+            (using `sl amend -e`).\n\
+            2. Request bypass approval at https://fburl.com/support/sourcecontrol.\n\
+            \n\
+            See https://fburl.com/landing_big_diffs for more details.";
+    }
+}
 
 /// Configuration for the `limit_filesize` hook.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -75,15 +115,19 @@ impl LimitFilesizeConfig {
 
 pub struct LimitFilesize {
     path_regexes_with_limits: Vec<(Regex, Option<u64>)>,
+    messages: LimitFilesizeMessages,
 }
 
 impl LimitFilesize {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(parse_hook_options(
-            config,
-            "limit_filesize",
-            LimitFilesizeConfig::from_typed,
-        )?)
+        Ok(Self {
+            messages: LimitFilesizeMessages::new(config),
+            ..Self::with_config(parse_hook_options(
+                config,
+                "limit_filesize",
+                LimitFilesizeConfig::from_typed,
+            )?)?
+        })
     }
 
     pub fn with_config(config: LimitFilesizeConfig) -> Result<Self> {
@@ -101,6 +145,7 @@ impl LimitFilesize {
             .collect::<Result<_>>()?;
         Ok(Self {
             path_regexes_with_limits,
+            messages: LimitFilesizeMessages::default(),
         })
     }
 }
@@ -149,32 +194,11 @@ impl FileHook for LimitFilesize {
                 Some(limit) if len <= *limit => return Ok(HookExecution::accepted()),
                 Some(limit) => {
                     let ratio = len as f64 / *limit as f64;
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "File too large",
-                        format!(
-                            "File size limit is {limit} bytes. You tried to push file {path} that is over the limit \
-                            ({len} bytes, {ratio:.2}x the limit). This limit is enforced for files matching the \
-                            following regex: \"{regex}\".\n\
-                            \n\
-                            WHY THIS IS BLOCKED: Large files have ongoing infrastructure costs — they impact \
-                            caching systems, Mononoke, biggrep indexing, and permanent backups used by \
-                            30,000+ engineers.\n\
-                            \n\
-                            ALTERNATIVES TO CONSIDER:\n\
-                            - Manifold: Store large binaries in blob storage\n\
-                            - Dotslash: Distribute large tools without checking them in\n\
-                            - Buckify: Package binaries as Buck-managed dependencies\n\
-                            - LFS: Use Git LFS for large files that must be versioned\n\
-                            - Split files: Break large files into smaller pieces\n\
-                            \n\
-                            IF ALTERNATIVES DO NOT WORK:\n\
-                            1. Add @allow-large-files to your commit message \
-                            (using `sl amend -e`).\n\
-                            2. Request bypass approval at https://fburl.com/support/sourcecontrol.\n\
-                            \n\
-                            See https://fburl.com/landing_big_diffs for more details."
-                        ),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .too_large(&path, len, limit, format!("{ratio:.2}"), regex)
+                            .into_rejection("File too large"),
+                    ));
                 }
             }
         }

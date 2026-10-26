@@ -33,10 +33,33 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_users_directory_size` hook.
+    pub(crate) struct LimitUsersDirectorySizeMessages for "limit_users_directory_size" {
+        /// A directory two levels below `path_prefix` is larger in total
+        /// than `directory_size_limit`.
+        too_large(
+            /// Path of the directory.
+            path,
+            /// Total size of its files, in bytes.
+            size,
+            /// Total size of its files, in whole megabytes.
+            size_mb,
+            /// The limit, in bytes.
+            limit,
+            /// The limit, in whole megabytes.
+            limit_mb,
+        ) = "Directory '${path}' is ${size} bytes (${size_mb} MB), which exceeds the \
+             size limit of ${limit} bytes (${limit_mb} MB). Please reduce the size \
+             of this directory before pushing.";
+    }
+}
 
 const MAX_CONCURRENCY: usize = 100;
 
@@ -64,15 +87,22 @@ pub struct LimitUsersDirectorySizeConfig {
 #[derive(Clone, Debug)]
 pub struct LimitUsersDirectorySizeHook {
     config: LimitUsersDirectorySizeConfig,
+    messages: LimitUsersDirectorySizeMessages,
 }
 
 impl LimitUsersDirectorySizeHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: LimitUsersDirectorySizeMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: LimitUsersDirectorySizeConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: LimitUsersDirectorySizeMessages::default(),
+        })
     }
 }
 
@@ -121,6 +151,7 @@ impl ChangesetHook for LimitUsersDirectorySizeHook {
             .map(|depth2_path| async move {
                 check_dir_size(
                     &self.config,
+                    &self.messages,
                     ctx,
                     hook_repo,
                     &root_manifest_id,
@@ -143,6 +174,7 @@ impl ChangesetHook for LimitUsersDirectorySizeHook {
 
 async fn check_dir_size(
     config: &LimitUsersDirectorySizeConfig,
+    messages: &LimitUsersDirectorySizeMessages,
     ctx: &CoreContext,
     hook_repo: &HookRepo,
     root_manifest_id: &ContentManifestId,
@@ -178,14 +210,11 @@ async fn check_dir_size(
             .join("/");
         let size_mb = size / (1024 * 1024);
         let limit_mb = limit / (1024 * 1024);
-        return Ok(Some(HookExecution::rejected(HookRejectionInfo::new_long(
-            "Directory too large",
-            format!(
-                "Directory '{path}' is {size} bytes ({size_mb} MB), which exceeds the \
-                 size limit of {limit} bytes ({limit_mb} MB). Please reduce the size \
-                 of this directory before pushing.",
-            ),
-        ))));
+        return Ok(Some(HookExecution::rejected(
+            messages
+                .too_large(path, size, size_mb, limit, limit_mb)
+                .into_rejection("Directory too large"),
+        )));
     }
 
     Ok(None)

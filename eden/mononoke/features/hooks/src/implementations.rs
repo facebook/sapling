@@ -55,17 +55,43 @@ use crate::hook_messages::MessagesRegistration;
 /// The messages of each implementation in this file.
 pub(crate) const MESSAGES: &[MessagesRegistration] = &[
     MessagesRegistration::of::<always_fail_changeset::AlwaysFailChangesetMessages>(),
+    MessagesRegistration::of::<
+        block_accidental_new_bookmark_creation::BlockAccidentalNewBookmarkCreationMessages,
+    >(),
     MessagesRegistration::of::<block_commit_message_pattern::BlockCommitMessagePatternMessages>(),
     MessagesRegistration::of::<block_content_pattern::BlockContentPatternMessages>(),
+    MessagesRegistration::of::<block_dewey_lfs_url::BlockDeweyLfsUrlMessages>(),
+    MessagesRegistration::alias::<block_dewey_lfs_url::BlockDeweyLfsUrlMessages>(
+        "block_dewey_lfs_url_on_new_bookmark",
+        &[],
+    ),
+    MessagesRegistration::of::<block_empty_commit::BlockEmptyCommitMessages>(),
+    MessagesRegistration::of::<block_files::BlockFilesMessages>(),
+    MessagesRegistration::of::<block_invalid_symlinks::BlockInvalidSymlinksMessages>(),
+    MessagesRegistration::of::<block_merge_commits::BlockMergeCommitsMessages>(),
+    MessagesRegistration::of::<block_mixed_users_changes::BlockMixedUsersChangesMessages>(),
     MessagesRegistration::of::<
         block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameMessages,
     >(),
+    MessagesRegistration::of::<block_noconflict_merge_commits::BlockNoconflictMergeCommitsMessages>(
+    ),
+    MessagesRegistration::of::<block_unannotated_tags::BlockUnannotatedTagsMessages>(),
+    MessagesRegistration::of::<block_unclean_merge_commits::BlockUncleanMergeCommitsMessages>(),
     MessagesRegistration::of::<deny_files::DenyFilesMessages>(),
+    MessagesRegistration::of::<limit_commit_message_length::LimitCommitMessageLengthMessages>(),
     MessagesRegistration::of::<limit_commit_size::LimitCommitSizeMessages>(),
     MessagesRegistration::of::<limit_directory_size::LimitDirectorySizeMessages>(),
+    MessagesRegistration::of::<limit_filesize::LimitFilesizeMessages>(),
+    MessagesRegistration::of::<limit_path_length::LimitPathLengthMessages>(),
+    MessagesRegistration::of::<limit_submodule_edits::LimitSubmoduleEditsMessages>(),
     MessagesRegistration::of::<limit_subtree_op_size::LimitSubtreeOpSizeMessages>(),
+    MessagesRegistration::of::<limit_tag_updates::LimitTagUpdatesMessages>(),
+    MessagesRegistration::of::<limit_users_directory_size::LimitUsersDirectorySizeMessages>(),
+    MessagesRegistration::of::<missing_lfsconfig::MissingLfsConfigMessages>(),
     MessagesRegistration::of::<no_bad_filenames::NoBadFilenamesMessages>(),
     MessagesRegistration::of::<no_executable_binaries::NoExecutableBinariesMessages>(),
+    MessagesRegistration::of::<no_insecure_filenames::NoInsecureFilenamesMessages>(),
+    MessagesRegistration::of::<no_questionable_filenames::NoQuestionableFilenamesMessages>(),
     MessagesRegistration::of::<no_windows_filenames::NoWindowsFilenamesMessages>(),
     MessagesRegistration::of::<require_commit_message_pattern::RequireCommitMessagePatternMessages>(
     ),
@@ -89,17 +115,19 @@ pub async fn make_bookmark_hook(
             )?,
         )),
         "block_dewey_lfs_url_on_new_bookmark" => Some(b(
-            block_dewey_lfs_url::BlockDeweyLfsUrlOnNewBookmarkHook::new(),
+            block_dewey_lfs_url::BlockDeweyLfsUrlOnNewBookmarkHook::new(&params.config),
         )),
         "block_new_bookmark_creations_by_name" => Some(b(
             block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameHook::new(
                 &params.config,
             )?,
         )),
-        "block_unannotated_tags" => {
-            Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new()))
-        }
-        "limit_tag_updates" => Some(b(limit_tag_updates::LimitTagUpdatesHook::new())),
+        "block_unannotated_tags" => Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new(
+            &params.config,
+        ))),
+        "limit_tag_updates" => Some(b(limit_tag_updates::LimitTagUpdatesHook::new(
+            &params.config,
+        ))),
         _ => None,
     })
 }
@@ -126,7 +154,7 @@ pub async fn make_changeset_hook(
             block_unclean_merge_commits::BlockUncleanMergeCommitsHook::new(&params.config)?,
         )),
         "block_noconflict_merge_commits" => Some(b(
-            block_noconflict_merge_commits::BlockNoconflictMergeCommitsHook::new(),
+            block_noconflict_merge_commits::BlockNoconflictMergeCommitsHook::new(&params.config),
         )),
         "limit_submodule_edits" => Some(b(limit_submodule_edits::LimitSubmoduleEditsHook::new(
             &params.config,
@@ -134,12 +162,16 @@ pub async fn make_changeset_hook(
         "limit_subtree_op_size" => Some(b(limit_subtree_op_size::LimitSubtreeOpSizeHook::new(
             &params.config,
         )?)),
-        "block_dewey_lfs_url" => Some(b(block_dewey_lfs_url::BlockDeweyLfsUrlHook::new())),
-        "missing_lfsconfig" => Some(b(missing_lfsconfig::MissingLFSConfigHook::new())),
+        "block_dewey_lfs_url" => Some(b(block_dewey_lfs_url::BlockDeweyLfsUrlHook::new(
+            &params.config,
+        ))),
+        "missing_lfsconfig" => Some(b(missing_lfsconfig::MissingLFSConfigHook::new(
+            &params.config,
+        ))),
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),
-        "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new())),
+        "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new(&params.config))),
         "block_mixed_users_changes" => Some(b(
             block_mixed_users_changes::BlockMixedUsersChangesHook::new(&params.config)?,
         )),
@@ -190,9 +222,9 @@ pub fn make_file_hook(
         "no_executable_binaries" => Some(Box::new(
             no_executable_binaries::NoExecutableBinariesHook::new(&params.config)?,
         )),
-        "no_insecure_filenames" => {
-            Some(Box::new(no_insecure_filenames::NoInsecureFilenames::new()?))
-        }
+        "no_insecure_filenames" => Some(Box::new(no_insecure_filenames::NoInsecureFilenames::new(
+            &params.config,
+        )?)),
         "no_questionable_filenames" => Some(Box::new(
             no_questionable_filenames::NoQuestionableFilenames::new(&params.config)?,
         )),

@@ -16,17 +16,34 @@ use mononoke_types::BonsaiChangeset;
 
 use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_unannotated_tags` hook.
+    pub(crate) struct BlockUnannotatedTagsMessages for "block_unannotated_tags" {
+        /// A push creates or moves a lightweight (unannotated) tag.
+        unannotated_tag(
+            /// Name of the tag.
+            tag,
+        ) = "The un-annotated tag \"${tag}\" is not allowed in this repository.\nUse 'git tag [ -a | -s ]' for tags you want to propagate.";
+    }
+}
 
 #[derive(Clone, Debug)]
-pub struct BlockUnannotatedTagsHook {}
+pub struct BlockUnannotatedTagsHook {
+    messages: BlockUnannotatedTagsMessages,
+}
 
 impl BlockUnannotatedTagsHook {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: BlockUnannotatedTagsMessages::new(config),
+        }
     }
 }
 
@@ -52,13 +69,11 @@ impl BookmarkHook for BlockUnannotatedTagsHook {
         }
 
         if let TagType::LightweightTag = hook_repo.get_tag_type(ctx, bookmark).await? {
-            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Git unannotated tags are not allowed in this repository.",
-                format!(
-                    "The un-annotated tag \"{}\" is not allowed in this repository.\nUse 'git tag [ -a | -s ]' for tags you want to propagate.",
-                    bookmark.as_str(),
-                ),
-            )));
+            return Ok(HookExecution::rejected(
+                self.messages
+                    .unannotated_tag(bookmark.as_str())
+                    .into_rejection("Git unannotated tags are not allowed in this repository."),
+            ));
         }
         Ok(HookExecution::accepted())
     }

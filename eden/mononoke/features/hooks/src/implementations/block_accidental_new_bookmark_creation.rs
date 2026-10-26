@@ -28,9 +28,25 @@ use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_accidental_new_bookmark_creation` hook.
+    pub(crate) struct BlockAccidentalNewBookmarkCreationMessages for "block_accidental_new_bookmark_creation" {
+        /// A push creates a bookmark without the marker that allows it.
+        needs_marker(
+            /// The `allow_creations_with_marker` marker.
+            marker,
+            /// Name of the bookmark, without the marker's `comparison_prefix`.
+            bookmark,
+        ) = "Add \"${marker}: ${bookmark}\" to the commit message to be able to create this branch.";
+        /// A push creates a bookmark, and no marker allows it.
+        blocked() = "New bookmark creation is not possible in this repository.";
+    }
+}
 
 const NAMED_CAPTURE_NAME: &str = "marker_capture";
 
@@ -58,11 +74,15 @@ struct CreationAllowedWithMarkerOptions {
 pub struct BlockAccidentalNewBookmarkCreationHook {
     creation_allowed_with_marker_options: Option<CreationAllowedWithMarkerOptions>,
     bypass_for_bookmarks_matching_regex: Option<Regex>,
+    messages: BlockAccidentalNewBookmarkCreationMessages,
 }
 
 impl BlockAccidentalNewBookmarkCreationHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: BlockAccidentalNewBookmarkCreationMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: BlockAccidentalNewBookmarkCreationConfig) -> Result<Self> {
@@ -86,6 +106,7 @@ impl BlockAccidentalNewBookmarkCreationHook {
         Ok(Self {
             creation_allowed_with_marker_options,
             bypass_for_bookmarks_matching_regex: config.bypass_for_bookmarks_matching_regex,
+            messages: BlockAccidentalNewBookmarkCreationMessages::default(),
         })
     }
 }
@@ -142,26 +163,27 @@ impl BookmarkHook for BlockAccidentalNewBookmarkCreationHook {
                 }
             }
 
-            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Bookmark creation is restricted in this repository.",
-                format!(
-                    "Add \"{}: {}\" to the commit message to be able to create this branch.",
-                    options.marker,
-                    bookmark_name
-                        .strip_prefix(
-                            options
-                                .comparison_prefix
-                                .as_ref()
-                                .map_or("", |x| x.as_str())
-                        )
-                        .unwrap_or(bookmark_name),
-                ),
-            )))
+            Ok(HookExecution::rejected(
+                self.messages
+                    .needs_marker(
+                        &options.marker,
+                        bookmark_name
+                            .strip_prefix(
+                                options
+                                    .comparison_prefix
+                                    .as_ref()
+                                    .map_or("", |x| x.as_str()),
+                            )
+                            .unwrap_or(bookmark_name),
+                    )
+                    .into_rejection("Bookmark creation is restricted in this repository."),
+            ))
         } else {
-            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Bookmark creation is restricted in this repository.",
-                "New bookmark creation is not possible in this repository.".to_string(),
-            )))
+            Ok(HookExecution::rejected(
+                self.messages
+                    .blocked()
+                    .into_rejection("Bookmark creation is restricted in this repository."),
+            ))
         }
     }
 }

@@ -17,9 +17,23 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_files` hook.
+    pub(crate) struct BlockFilesMessages for "block_files" {
+        /// The path of a changed file matches a block pattern.
+        blocked(
+            /// Path of the file.
+            path,
+            /// The block regex it matched.
+            pattern,
+        ) = "Blocked filename '${path}' matched block pattern '${pattern}'. This path is protected and your change must not modify it. To fix this, revert your changes to '${path}' so that it no longer appears in your diff, then re-submit.";
+    }
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct BlockFilesConfig {
@@ -34,15 +48,22 @@ pub struct BlockFilesConfig {
 
 pub struct BlockFilesHook {
     config: BlockFilesConfig,
+    messages: BlockFilesMessages,
 }
 
 impl BlockFilesHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: BlockFilesMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: BlockFilesConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: BlockFilesMessages::default(),
+        })
     }
 }
 
@@ -61,22 +82,28 @@ impl FileHook for BlockFilesHook {
             return Ok(HookExecution::accepted());
         }
 
-        block_unacceptable_patterns(&self.config, path, cross_repo_push_source, change)
+        block_unacceptable_patterns(
+            &self.config,
+            &self.messages,
+            path,
+            cross_repo_push_source,
+            change,
+        )
     }
 }
 
-fn rejection<'a, 'b>(path: &'a String, pattern: &'b Regex) -> HookExecution {
-    HookExecution::rejected(HookRejectionInfo::new_long(
-        "Blocked filename matched name pattern",
-        format!(
-            "Blocked filename '{path}' matched block pattern '{pattern}'. This path is protected and your change must not modify it. To fix this, revert your changes to '{path}' so that it no longer appears in your diff, then re-submit."
-        ),
-    ))
+fn rejection(path: &str, pattern: &Regex, messages: &BlockFilesMessages) -> HookExecution {
+    HookExecution::rejected(
+        messages
+            .blocked(path, pattern)
+            .into_rejection("Blocked filename matched name pattern"),
+    )
 }
 
 /// Easily-testable business logic of the `BlockFiles` hook
 fn block_unacceptable_patterns<'a, 'b>(
     config: &BlockFilesConfig,
+    messages: &BlockFilesMessages,
     path: &'a NonRootMPath,
     cross_repo_push_source: CrossRepoPushSource,
     change: Option<&'b BasicFileChange>,
@@ -85,7 +112,7 @@ fn block_unacceptable_patterns<'a, 'b>(
     if CrossRepoPushSource::NativeToThisRepo == cross_repo_push_source {
         for pattern in &config.native_push_only_block_patterns {
             if pattern.is_match(&path) {
-                return Ok(rejection(&path, pattern));
+                return Ok(rejection(&path, pattern, messages));
             }
         }
     }
@@ -96,7 +123,7 @@ fn block_unacceptable_patterns<'a, 'b>(
 
     for pattern in &config.block_patterns {
         if pattern.is_match(&path) {
-            return Ok(rejection(&path, pattern));
+            return Ok(rejection(&path, pattern, messages));
         }
     }
 
@@ -135,6 +162,7 @@ mod test {
         let mp = mpath("all/1");
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             Some(&basic_change()),
@@ -144,6 +172,7 @@ mod test {
 
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -158,6 +187,7 @@ mod test {
         let mp = mpath("native/1");
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             Some(&basic_change()),
@@ -167,6 +197,7 @@ mod test {
 
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -179,13 +210,19 @@ mod test {
     fn test_remove_denied_only_in_native_push() {
         let config = setup_config();
         let mp = mpath("native/1");
-        let r =
-            block_unacceptable_patterns(&config, &mp, CrossRepoPushSource::NativeToThisRepo, None)
-                .unwrap();
+        let r = block_unacceptable_patterns(
+            &config,
+            &BlockFilesMessages::default(),
+            &mp,
+            CrossRepoPushSource::NativeToThisRepo,
+            None,
+        )
+        .unwrap();
         assert!(r.is_rejected());
 
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),
@@ -200,6 +237,7 @@ mod test {
         let mp = mpath("ababagalamaga");
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::NativeToThisRepo,
             Some(&basic_change()),
@@ -209,6 +247,7 @@ mod test {
 
         let r = block_unacceptable_patterns(
             &config,
+            &BlockFilesMessages::default(),
             &mp,
             CrossRepoPushSource::PushRedirected,
             Some(&basic_change()),

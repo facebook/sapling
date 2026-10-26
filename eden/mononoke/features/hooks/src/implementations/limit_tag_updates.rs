@@ -15,17 +15,34 @@ use mononoke_types::BonsaiChangeset;
 
 use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_tag_updates` hook.
+    pub(crate) struct LimitTagUpdatesMessages for "limit_tag_updates" {
+        /// A push moves an existing tag.
+        tag_moved(
+            /// Name of the tag.
+            tag,
+        ) = "Commit edits a tag ${tag}";
+    }
+}
 
 #[derive(Clone, Debug)]
-pub struct LimitTagUpdatesHook {}
+pub struct LimitTagUpdatesHook {
+    messages: LimitTagUpdatesMessages,
+}
 
 impl LimitTagUpdatesHook {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: LimitTagUpdatesMessages::new(config),
+        }
     }
 }
 
@@ -49,9 +66,10 @@ impl BookmarkHook for LimitTagUpdatesHook {
         if bookmark_state.is_new() {
             return Ok(HookExecution::accepted());
         }
-        Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-            "Modification of already existing tags is not allowed in this repository.",
-            format!("Commit edits a tag {}", bookmark.as_str(),),
-        )))
+        Ok(HookExecution::rejected(
+            self.messages.tag_moved(bookmark.as_str()).into_rejection(
+                "Modification of already existing tags is not allowed in this repository.",
+            ),
+        ))
     }
 }

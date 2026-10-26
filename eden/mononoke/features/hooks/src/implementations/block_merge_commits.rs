@@ -17,10 +17,27 @@ use serde::Deserialize;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_merge_commits` hook.
+    pub(crate) struct BlockMergeCommitsMessages for "block_merge_commits" {
+        /// A merge commit has the bypass tag, but `disable_merge_bypass` is set.
+        merge_in_repository() = "This repository can't have merge commits";
+        /// A merge commit has the bypass tag, but the bookmark is in
+        /// `disable_merge_bypass_on_bookmarks`.
+        merge_on_bookmark(
+            /// Name of the bookmark.
+            bookmark,
+        ) = "This bookmark can't have merge commits";
+        /// A merge commit without the bypass tag.
+        merge() = "You must not commit merge commits";
+    }
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockMergeCommitsConfig {
@@ -34,15 +51,22 @@ pub struct BlockMergeCommitsConfig {
 #[derive(Clone, Debug)]
 pub struct BlockMergeCommitsHook {
     config: BlockMergeCommitsConfig,
+    messages: BlockMergeCommitsMessages,
 }
 
 impl BlockMergeCommitsHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self {
+            messages: BlockMergeCommitsMessages::new(config),
+            ..Self::with_config(config.parse_options()?)?
+        })
     }
 
     pub fn with_config(config: BlockMergeCommitsConfig) -> Result<Self> {
-        Ok(Self { config })
+        Ok(Self {
+            config,
+            messages: BlockMergeCommitsMessages::default(),
+        })
     }
 }
 
@@ -82,18 +106,9 @@ impl ChangesetHook for BlockMergeCommitsHook {
             is_nonbypassable_repository,
             is_nonbypassable_bookmark,
         ) {
-            (true, true, _) => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Merge commit is not allowed in this repository despite the bypass tag in commit message",
-                "This repository can't have merge commits".to_string(),
-            ))),
-            (true, false, true) => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Merge commit is not allowed on this bookmark despite the bypass tag in commit message",
-                "This bookmark can't have merge commits".to_string(),
-            ))),
-            (false, _, _) => Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Merge commit is not allowed",
-                "You must not commit merge commits".to_string(),
-            ))),
+            (true, true, _) => Ok(HookExecution::rejected(self.messages.merge_in_repository().into_rejection("Merge commit is not allowed in this repository despite the bypass tag in commit message"))),
+            (true, false, true) => Ok(HookExecution::rejected(self.messages.merge_on_bookmark(&bookmark).into_rejection("Merge commit is not allowed on this bookmark despite the bypass tag in commit message"))),
+            (false, _, _) => Ok(HookExecution::rejected(self.messages.merge().into_rejection("Merge commit is not allowed"))),
             (true, false, false) => Ok(HookExecution::accepted()),
         }
     }

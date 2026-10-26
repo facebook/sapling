@@ -13,11 +13,21 @@ use mononoke_types::BonsaiChangeset;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
+use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_noconflict_merge_commits` hook.
+    pub(crate) struct BlockNoconflictMergeCommitsMessages for "block_noconflict_merge_commits" {
+        /// The commit is a merge created by `sl merge --noconflict`.
+        noconflict_merge() = "This merge was created with 'sl merge --noconflict'. It only records that its parents can be merged automatically and must not be landed; land its parents and descendants instead.";
+    }
+}
 
 /// Mercurial extra that `sl merge --noconflict` sets on the merge commits it
 /// creates. Such a commit only records that its parents can be merged
@@ -26,11 +36,15 @@ use crate::Pushvars;
 const NOCONFLICT_MERGE_EXTRA: &str = "noconflict_merge";
 
 #[derive(Clone, Debug)]
-pub struct BlockNoconflictMergeCommitsHook;
+pub struct BlockNoconflictMergeCommitsHook {
+    messages: BlockNoconflictMergeCommitsMessages,
+}
 
 impl BlockNoconflictMergeCommitsHook {
-    pub fn new() -> Self {
-        Self
+    pub fn new(config: &HookConfig) -> Self {
+        Self {
+            messages: BlockNoconflictMergeCommitsMessages::new(config),
+        }
     }
 }
 
@@ -51,10 +65,11 @@ impl ChangesetHook for BlockNoconflictMergeCommitsHook {
                 .hg_extra()
                 .any(|(key, value)| key == NOCONFLICT_MERGE_EXTRA && value == b"1");
         if marked {
-            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Conflict-free merge commit is not allowed",
-                "This merge was created with 'sl merge --noconflict'. It only records that its parents can be merged automatically and must not be landed; land its parents and descendants instead.".to_string(),
-            )))
+            Ok(HookExecution::rejected(
+                self.messages
+                    .noconflict_merge()
+                    .into_rejection("Conflict-free merge commit is not allowed"),
+            ))
         } else {
             Ok(HookExecution::accepted())
         }
@@ -71,6 +86,7 @@ mod tests {
     use tests_utils::bookmark;
 
     use super::*;
+    use crate::HookRejectionInfo;
     use crate::testlib::test_changeset_hook;
 
     #[mononoke::fbinit_test]
@@ -106,7 +122,7 @@ mod tests {
             .create_publishing(root)
             .await?;
 
-        let hook = BlockNoconflictMergeCommitsHook::new();
+        let hook = BlockNoconflictMergeCommitsHook::new(&HookConfig::default());
         let run = |cs_id, push_authored_by| {
             test_changeset_hook(
                 &ctx,
