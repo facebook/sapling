@@ -46,9 +46,11 @@ class PrivHelperConn {
     REQ_TAKEOVER_STARTUP = 6,
     REQ_SET_LOG_FILE = 7,
     REQ_UNMOUNT_BIND = 8,
-    // Legacy macOS FUSE configuration requests. Older daemons can send these
-    // startup requests even when using NFS. Keep the request IDs as no-ops
-    // while old daemons may start against this helper.
+    // Legacy macOS FUSE configuration requests. Daemons built before
+    // D110407629 (July 2026) send REQ_SET_DAEMON_TIMEOUT at startup on every
+    // platform, and `eden start` runs whichever daemon binary it is given
+    // against the system privhelper, so both requests stay answered as no-ops
+    // until no such daemon can start against this helper.
     REQ_SET_DAEMON_TIMEOUT = 9,
     REQ_SET_USE_EDENFS = 10,
     REQ_MOUNT_NFS = 11,
