@@ -27,6 +27,7 @@ use permission_checker::MononokeIdentitySet;
 use super::AccessEnforcementOutcome;
 use super::AuthorizationCheckResult;
 use super::EnforcementDecision;
+use super::FactorResult;
 use super::ManifestRestrictionCheckResult;
 use super::PathRestrictionCheckResult;
 use super::SharedFetchHandle;
@@ -34,6 +35,187 @@ use super::SourceRestrictionSummary;
 use crate::DenyingRestriction;
 use crate::restriction_info::ManifestRestrictionInfo;
 use crate::restriction_info::PathRestrictionInfo;
+
+/// What it tests: tri-state factor observations preserve the distinction
+/// between an absent policy and a configured policy that denies the caller.
+/// Expected: only `Authorized` converts to the legacy `true` value, while the
+/// three states remain pairwise distinct.
+#[mononoke::test]
+fn test_factor_result_preserves_not_set() -> Result<()> {
+    let cases = [
+        (FactorResult::NotSet, false),
+        (FactorResult::Authorized, true),
+        (FactorResult::Unauthorized, false),
+    ];
+
+    for (result, expected_authorized) in cases {
+        assert_eq!(
+            result.is_authorized(),
+            expected_authorized,
+            "factor result {result:#?}",
+        );
+    }
+    assert_ne!(
+        FactorResult::NotSet,
+        FactorResult::Unauthorized,
+        "absent policy and configured denial must remain distinct",
+    );
+
+    let optional_cases = [
+        (false, false, FactorResult::NotSet),
+        (false, true, FactorResult::NotSet),
+        (true, false, FactorResult::Unauthorized),
+        (true, true, FactorResult::Authorized),
+    ];
+    for (configured, authorized, expected) in optional_cases {
+        assert_eq!(
+            FactorResult::from_optional_authorized(configured, authorized),
+            expected,
+            "configured={configured}, authorized={authorized}",
+        );
+    }
+    Ok(())
+}
+
+/// What it tests: the existing authorization formula derives its public
+/// booleans from tri-state factor observations.
+/// Expected: each authorized factor grants independently, while `NotSet` and
+/// `Unauthorized` do not grant.
+#[mononoke::test]
+fn test_authorization_check_result_tri_state_formula() -> Result<()> {
+    let cases = [
+        (FactorResult::NotSet, false),
+        (FactorResult::Authorized, true),
+        (FactorResult::Unauthorized, false),
+    ];
+    for (factor, expected) in cases {
+        let acl = AuthorizationCheckResult {
+            has_acl_access: factor,
+            is_allowlisted_tooling: FactorResult::NotSet,
+            is_rollout_allowlisted: FactorResult::NotSet,
+            is_admin_bypass: FactorResult::NotSet,
+        };
+        let tooling = AuthorizationCheckResult {
+            has_acl_access: FactorResult::NotSet,
+            is_allowlisted_tooling: factor,
+            is_rollout_allowlisted: FactorResult::NotSet,
+            is_admin_bypass: FactorResult::NotSet,
+        };
+        let rollout = AuthorizationCheckResult {
+            has_acl_access: FactorResult::NotSet,
+            is_allowlisted_tooling: FactorResult::NotSet,
+            is_rollout_allowlisted: factor,
+            is_admin_bypass: FactorResult::NotSet,
+        };
+        let admin = AuthorizationCheckResult {
+            has_acl_access: FactorResult::NotSet,
+            is_allowlisted_tooling: FactorResult::NotSet,
+            is_rollout_allowlisted: FactorResult::NotSet,
+            is_admin_bypass: factor,
+        };
+
+        assert_eq!(acl.has_acl_access(), expected, "ACL factor {factor:#?}");
+        assert_eq!(
+            tooling.is_allowlisted_tooling(),
+            expected,
+            "tooling factor {factor:#?}",
+        );
+        assert_eq!(
+            rollout.is_rollout_allowlisted(),
+            expected,
+            "rollout factor {factor:#?}",
+        );
+        assert_eq!(
+            admin.is_admin_bypass(),
+            expected,
+            "admin factor {factor:#?}",
+        );
+        assert_eq!(acl.has_authorization(), expected, "ACL factor {factor:#?}");
+        assert_eq!(
+            tooling.has_authorization(),
+            expected,
+            "tooling factor {factor:#?}",
+        );
+        assert_eq!(
+            rollout.has_authorization(),
+            expected,
+            "rollout factor {factor:#?}",
+        );
+        assert_eq!(
+            admin.has_authorization(),
+            expected,
+            "admin factor {factor:#?}",
+        );
+    }
+    Ok(())
+}
+
+/// What it tests: the authorization producer preserves absent optional policy
+/// separately from policy that is configured but denies the caller.
+/// Expected: absent tooling, rollout, and admin policies produce `NotSet`,
+/// while configured groups that exclude the caller produce `Unauthorized`.
+#[mononoke::fbinit_test]
+async fn test_authorization_producer_preserves_absent_and_denied_factors(
+    fb: FacebookInit,
+) -> Result<()> {
+    let acl_provider = rollout_allowlist_acl_provider()?;
+    let ctx = ctx_with_identities(fb, &["USER:bob"])?;
+    let acl = MononokeIdentity::from_str("REPO_REGION:repos/hg/fbsource/=tent_a")?;
+    let group = MononokeIdentity::from_str("GROUP:tent_a_rollout")?;
+
+    let absent =
+        super::check_authorization(&ctx, &acl_provider, &[(&acl, None)], None, None).await?;
+    assert_eq!(
+        absent.has_acl_access,
+        FactorResult::Unauthorized,
+        "configured ACL policy that excludes the caller",
+    );
+    assert_eq!(
+        absent.is_allowlisted_tooling,
+        FactorResult::NotSet,
+        "absent tooling policy",
+    );
+    assert_eq!(
+        absent.is_rollout_allowlisted,
+        FactorResult::NotSet,
+        "absent rollout policy",
+    );
+    assert_eq!(
+        absent.is_admin_bypass,
+        FactorResult::NotSet,
+        "absent admin policy",
+    );
+
+    let denied = super::check_authorization(
+        &ctx,
+        &acl_provider,
+        &[(&acl, Some(&group))],
+        Some("tent_a_rollout"),
+        Some(&group),
+    )
+    .await?;
+    assert_eq!(
+        denied.has_acl_access,
+        FactorResult::Unauthorized,
+        "configured ACL policy that excludes the caller",
+    );
+    assert_eq!(
+        denied.is_allowlisted_tooling,
+        FactorResult::Unauthorized,
+        "configured tooling policy that excludes the caller",
+    );
+    assert_eq!(
+        denied.is_rollout_allowlisted,
+        FactorResult::Unauthorized,
+        "configured rollout policy that excludes the caller",
+    );
+    assert_eq!(
+        denied.is_admin_bypass,
+        FactorResult::Unauthorized,
+        "configured admin policy that excludes the caller",
+    );
+    Ok(())
+}
 
 // What it tests: cloned source fetch handles share one spawned fetch result.
 // Expected: the underlying task runs once and all awaiters receive the shared
@@ -507,6 +689,11 @@ async fn test_absent_rollout_group_never_allowlists(fb: FacebookInit) -> Result<
     assert!(
         !authorization.is_rollout_allowlisted(),
         "a tent with no rollout group must never report the caller as allowlisted",
+    );
+    assert_eq!(
+        authorization.is_rollout_allowlisted,
+        FactorResult::NotSet,
+        "an absent rollout group is not a configured denial",
     );
     assert!(
         !authorization.has_authorization(),

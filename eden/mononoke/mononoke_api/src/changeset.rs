@@ -2621,6 +2621,8 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .await?;
 
         if check_permissions {
+            // TODO(T289977216): Route this through the Both-mode-aware checker
+            // so tri-state factors are reconciled before producing has_access.
             let restriction_checks =
                 check_path_restriction_infos(self.ctx(), &restricted_paths, restriction_infos)
                     .await?;

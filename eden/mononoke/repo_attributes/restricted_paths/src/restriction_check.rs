@@ -172,15 +172,49 @@ pub struct RestrictionCheckResult {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct AuthorizationCheckResult {
     /// Whether the caller has direct read access to every matching path ACL.
-    has_acl_access: bool,
+    has_acl_access: FactorResult,
     /// Whether the caller is in the tooling allowlist group.
-    is_allowlisted_tooling: bool,
+    is_allowlisted_tooling: FactorResult,
     /// Whether the caller is in the rollout allowlist group.
-    is_rollout_allowlisted: bool,
+    is_rollout_allowlisted: FactorResult,
     /// Whether the caller is in the admin bypass group. Tracked separately from
     /// `has_acl_access` so a bypass grant is distinguishable from genuine ACL
     /// read access in the access logs.
-    is_admin_bypass: bool,
+    is_admin_bypass: FactorResult,
+}
+
+/// Result of evaluating one authorization factor.
+///
+/// `NotSet` represents absent policy, while `Unauthorized` represents a
+/// configured policy that the caller did not satisfy. Fetch and evaluation
+/// failures remain errors and never become factor observations.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FactorResult {
+    NotSet,
+    Authorized,
+    Unauthorized,
+}
+
+impl FactorResult {
+    fn from_authorized(authorized: bool) -> Self {
+        if authorized {
+            Self::Authorized
+        } else {
+            Self::Unauthorized
+        }
+    }
+
+    fn is_authorized(self) -> bool {
+        self == Self::Authorized
+    }
+
+    fn from_optional_authorized(configured: bool, authorized: bool) -> Self {
+        if configured {
+            Self::from_authorized(authorized)
+        } else {
+            Self::NotSet
+        }
+    }
 }
 
 /// Repo-wide allowlist authorization, shared by every restriction in one source
@@ -188,15 +222,15 @@ pub(crate) struct AuthorizationCheckResult {
 /// tent, so it has to be evaluated per restriction rather than once per batch.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct AllowlistAuthorization {
-    is_allowlisted_tooling: bool,
-    is_admin_bypass: bool,
+    is_allowlisted_tooling: FactorResult,
+    is_admin_bypass: FactorResult,
 }
 
 impl AllowlistAuthorization {
     fn into_authorization_check_result(
         self,
-        has_acl_access: bool,
-        is_rollout_allowlisted: bool,
+        has_acl_access: FactorResult,
+        is_rollout_allowlisted: FactorResult,
     ) -> AuthorizationCheckResult {
         AuthorizationCheckResult {
             has_acl_access,
@@ -215,36 +249,36 @@ impl AuthorizationCheckResult {
         is_admin_bypass: bool,
     ) -> Self {
         Self {
-            has_acl_access,
-            is_allowlisted_tooling,
-            is_rollout_allowlisted,
-            is_admin_bypass,
+            has_acl_access: FactorResult::from_authorized(has_acl_access),
+            is_allowlisted_tooling: FactorResult::from_authorized(is_allowlisted_tooling),
+            is_rollout_allowlisted: FactorResult::from_authorized(is_rollout_allowlisted),
+            is_admin_bypass: FactorResult::from_authorized(is_admin_bypass),
         }
     }
 
     /// Whether the caller has read authorization through ACLs, allowlists, or
     /// the admin bypass group.
     pub(crate) fn has_authorization(&self) -> bool {
-        self.has_acl_access
-            || self.is_allowlisted_tooling
-            || self.is_rollout_allowlisted
-            || self.is_admin_bypass
+        self.has_acl_access.is_authorized()
+            || self.is_allowlisted_tooling.is_authorized()
+            || self.is_rollout_allowlisted.is_authorized()
+            || self.is_admin_bypass.is_authorized()
     }
 
     pub(crate) fn has_acl_access(&self) -> bool {
-        self.has_acl_access
+        self.has_acl_access.is_authorized()
     }
 
     pub(crate) fn is_allowlisted_tooling(&self) -> bool {
-        self.is_allowlisted_tooling
+        self.is_allowlisted_tooling.is_authorized()
     }
 
     pub(crate) fn is_rollout_allowlisted(&self) -> bool {
-        self.is_rollout_allowlisted
+        self.is_rollout_allowlisted.is_authorized()
     }
 
     pub(crate) fn is_admin_bypass(&self) -> bool {
-        self.is_admin_bypass
+        self.is_admin_bypass.is_authorized()
     }
 }
 
@@ -414,6 +448,8 @@ impl std::error::Error for SourceRestrictionError {
 /// authorization, ACL, and restriction-root fields without copying data into a
 /// flattened adapter struct.
 pub(crate) trait SourceRestrictionCheck: Clone {
+    // TODO(T289977216): Expose each factor result through this trait so
+    // Both-mode reconciliation can distinguish absent policy from denial.
     /// Caller authorization result for this source result.
     fn authorization(&self) -> &AuthorizationCheckResult;
     /// Permission request group to show users for this restriction.
@@ -498,6 +534,8 @@ fn all_rollout_allowlisted(flags: impl IntoIterator<Item = bool>) -> bool {
 
 impl SourceRestrictionSummary {
     pub(crate) fn from_checks(checks: &[impl SourceRestrictionCheck]) -> Self {
+        // TODO(T289977216): Isolate this legacy single-source boolean
+        // aggregation before Both mode starts reconciling factor results.
         let has_acl_access = checks
             .iter()
             .all(|check| check.authorization().has_acl_access());
@@ -829,6 +867,7 @@ pub(crate) async fn check_authorization(
     tooling_allowlist_group: Option<&str>,
     admin_bypass_group: Option<&MononokeIdentity>,
 ) -> Result<AuthorizationCheckResult> {
+    let has_rollout_allowlist = restrictions.iter().any(|(_, group)| group.is_some());
     let acls = restrictions.iter().map(|(acl, _)| *acl).collect::<Vec<_>>();
     let allowlist_authorization = check_allowlist_authorization(
         ctx,
@@ -845,8 +884,11 @@ pub(crate) async fn check_authorization(
             .try_collect::<Vec<_>>(),
     )?;
     Ok(allowlist_authorization.into_authorization_check_result(
-        has_acl_access,
-        all_rollout_allowlisted(rollout_allowlisted),
+        FactorResult::from_authorized(has_acl_access),
+        FactorResult::from_optional_authorized(
+            has_rollout_allowlist,
+            all_rollout_allowlisted(rollout_allowlisted),
+        ),
     ))
 }
 
@@ -875,7 +917,10 @@ async fn check_allowlist_authorization(
     )?;
     Ok(AllowlistAuthorization {
         is_allowlisted_tooling,
-        is_admin_bypass,
+        is_admin_bypass: FactorResult::from_optional_authorized(
+            admin_bypass_group.is_some(),
+            is_admin_bypass,
+        ),
     })
 }
 
@@ -883,10 +928,12 @@ async fn check_optional_allowlist_group(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     group_name: Option<&str>,
-) -> Result<bool> {
+) -> Result<FactorResult> {
     match group_name {
-        Some(group_name) => is_part_of_group(ctx, acl_provider, group_name).await,
-        None => Ok(false),
+        Some(group_name) => is_part_of_group(ctx, acl_provider, group_name)
+            .await
+            .map(FactorResult::from_authorized),
+        None => Ok(FactorResult::NotSet),
     }
 }
 
@@ -908,6 +955,8 @@ pub(crate) async fn get_path_restriction_root_check(
     cs_id: Option<ChangesetId>,
     paths: &[NonRootMPath],
 ) -> Result<Vec<PathRestrictionCheckResult>> {
+    // TODO(T289977216): In Both mode, fetch both sources and reconcile their
+    // tri-state factors instead of selecting one source's metadata.
     let restriction_info =
         restriction_info::get_path_restriction_root_info(restricted_paths, ctx, cs_id, paths)
             .await?;
@@ -921,6 +970,8 @@ pub(crate) async fn get_path_restriction_check(
     cs_id: Option<ChangesetId>,
     paths: &[NonRootMPath],
 ) -> Result<Vec<PathRestrictionCheckResult>> {
+    // TODO(T289977216): In Both mode, fetch both sources and reconcile their
+    // tri-state factors instead of selecting one source's metadata.
     let restriction_info =
         restriction_info::get_path_restriction_info(restricted_paths, ctx, cs_id, paths).await?;
     check_path_restriction_infos(ctx, restricted_paths, restriction_info).await
@@ -966,6 +1017,8 @@ pub(crate) async fn get_manifest_restriction_check_for_current_behavior(
     manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
 ) -> Result<Vec<ManifestRestrictionCheckResult>> {
+    // TODO(T289977216): In Both mode, fetch both sources and reconcile their
+    // tri-state factors instead of selecting one source's metadata.
     let restriction_info = restriction_info::get_manifest_restriction_info(
         restricted_paths,
         ctx,
@@ -1474,6 +1527,11 @@ async fn check_restriction_authorization_with_acl(
         has_read_access_to_repo_region(ctx, acl_provider, &acls),
         is_in_optional_group(ctx, acl_provider, rollout_allowlist_group),
     )?;
-    Ok(allowlist_authorization
-        .into_authorization_check_result(has_acl_access, is_rollout_allowlisted))
+    Ok(allowlist_authorization.into_authorization_check_result(
+        FactorResult::from_authorized(has_acl_access),
+        FactorResult::from_optional_authorized(
+            rollout_allowlist_group.is_some(),
+            is_rollout_allowlisted,
+        ),
+    ))
 }

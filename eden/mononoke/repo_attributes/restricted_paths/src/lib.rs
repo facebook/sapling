@@ -1233,6 +1233,8 @@ where
         }
     };
 
+    // TODO(T289977216): Reconcile successful sources' tri-state factors before
+    // reducing each source to an independent boolean enforcement outcome.
     let selected_sources = handles.selected_for(fetch_config, fetch_acl_manifest);
     let mut source_outcomes =
         futures::future::join_all(selected_sources.handles.into_iter().map(|handle| {

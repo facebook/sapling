@@ -272,6 +272,8 @@ fn restriction_check_result_for_source_results<T: SourceRestrictionCheck>(
     acl_manifest_result: Option<&SourceRestrictionResult<T>>,
 ) -> Result<RestrictionCheckResult> {
     let summary = if acl_manifest_mode == AclManifestMode::Both {
+        // TODO(T289977216): Reconcile tri-state factors by restriction instead
+        // of merging successful sources through legacy boolean aggregation.
         SourceRestrictionSummary::from_check_union(
             successful_source_checks(Some(config_result))
                 .chain(successful_source_checks(acl_manifest_result)),
@@ -519,6 +521,8 @@ fn aggregate_summary_for_source_results<T: SourceRestrictionCheck>(
 
     let any_source_succeeded = config_source.is_some() || acl_manifest_source.is_some();
     any_source_succeeded.then(|| {
+        // TODO(T289977216): Reconcile tri-state factors by restriction instead
+        // of merging successful sources through legacy boolean aggregation.
         SourceRestrictionSummary::from_check_union(
             successful_source_checks(Some(config_result))
                 .chain(successful_source_checks(acl_manifest_result)),
