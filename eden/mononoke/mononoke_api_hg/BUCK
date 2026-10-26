@@ -14,6 +14,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:counting_blob",
         "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/blobstore:samplingblob",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/permission_checker:permission_checker",

@@ -530,6 +530,7 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
         repo.repo_blobstore().clone(),
         repo.restricted_paths_arc().config_based().clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        false,
     );
 
     entries
@@ -559,6 +560,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
         repo.repo_blobstore().clone(),
         repo.restricted_paths_arc().config_based().clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        false,
     );
 
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");

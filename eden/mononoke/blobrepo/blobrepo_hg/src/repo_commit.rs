@@ -188,6 +188,8 @@ pub struct UploadEntries {
     inner: Arc<Mutex<UploadEntriesState>>,
     blobstore: RepoBlobstore,
     restricted_paths: ArcRestrictedPathsConfigBased,
+    /// See `hg_manifests_read_from_augmented`.
+    read_from_augmented: bool,
 }
 
 impl UploadEntries {
@@ -195,6 +197,7 @@ impl UploadEntries {
         blobstore: RepoBlobstore,
         restricted_paths: ArcRestrictedPathsConfigBased,
         scuba_logger: MononokeScubaSampleBuilder,
+        read_from_augmented: bool,
     ) -> Self {
         Self {
             scuba_logger,
@@ -204,6 +207,7 @@ impl UploadEntries {
             })),
             blobstore,
             restricted_paths,
+            read_from_augmented,
         }
     }
 
@@ -288,6 +292,7 @@ impl UploadEntries {
     async fn assert_in_blobstore(
         ctx: &CoreContext,
         blobstore: &RepoBlobstore,
+        read_from_augmented: bool,
         entry: Entry<HgManifestId, HgFileNodeId>,
     ) -> Result<(), Error> {
         match entry {
@@ -295,21 +300,25 @@ impl UploadEntries {
                 if mfid.into_nodehash() == NULL_HASH {
                     return Ok(());
                 }
-                // Check if manifest exists — either as an augmented manifest
-                // (reconstructible) or as a direct HgManifest blob.
-                let aug_id = HgAugmentedManifestId::new(mfid.into_nodehash());
-                let (aug_present, hg_present) = futures::future::join(
-                    blobstore.is_present(ctx, &aug_id.blobstore_key()),
-                    blobstore.is_present(ctx, &mfid.blobstore_key()),
-                )
-                .await;
-                let exists = aug_present?.assume_not_found_if_unsure()
-                    || hg_present?.assume_not_found_if_unsure();
+                let aug_key = HgAugmentedManifestId::new(mfid.into_nodehash()).blobstore_key();
+                let (exists, key) = if read_from_augmented {
+                    let aug_present = blobstore.is_present(ctx, &aug_key).await?;
+                    (aug_present.assume_not_found_if_unsure(), aug_key)
+                } else {
+                    // Check if manifest exists — either as an augmented manifest
+                    // (reconstructible) or as a direct HgManifest blob.
+                    let hg_key = mfid.blobstore_key();
+                    let (aug_present, hg_present) = futures::future::join(
+                        blobstore.is_present(ctx, &aug_key),
+                        blobstore.is_present(ctx, &hg_key),
+                    )
+                    .await;
+                    let exists = aug_present?.assume_not_found_if_unsure()
+                        || hg_present?.assume_not_found_if_unsure();
+                    (exists, hg_key)
+                };
                 if !exists {
-                    return Err(anyhow!(
-                        "Blob {key} not found in blobstore",
-                        key = mfid.blobstore_key()
-                    ));
+                    return Err(anyhow!("Blob {key} not found in blobstore"));
                 }
             }
             Entry::Leaf(fnid) => {
@@ -371,9 +380,14 @@ impl UploadEntries {
                                 Entry::Leaf(_) => None,
                             };
                             let entry = entry.map_leaf(|(_, fnid)| fnid);
-                            Self::assert_in_blobstore(ctx, &this.blobstore, entry)
-                                .await
-                                .with_context(|| format!("Error checking for path: {path:?}"))?;
+                            Self::assert_in_blobstore(
+                                ctx,
+                                &this.blobstore,
+                                this.read_from_augmented,
+                                entry,
+                            )
+                            .await
+                            .with_context(|| format!("Error checking for path: {path:?}"))?;
 
                             if !restricted_paths_enabled {
                                 return Ok(None);
@@ -417,11 +431,14 @@ impl UploadEntries {
                     .iter()
                     .copied()
                     .map(|entry| async move {
-                        Self::assert_in_blobstore(ctx, &this.blobstore, entry)
-                            .await
-                            .with_context(|| {
-                                format!("Error checking for a parent node: {entry:?}")
-                            })?;
+                        Self::assert_in_blobstore(
+                            ctx,
+                            &this.blobstore,
+                            this.read_from_augmented,
+                            entry,
+                        )
+                        .await
+                        .with_context(|| format!("Error checking for a parent node: {entry:?}"))?;
                         STATS::parents_checked.add_value(1);
                         Result::<_, Error>::Ok(())
                     })
@@ -648,4 +665,166 @@ pub fn make_new_changeset(
 ) -> Result<HgBlobChangeset> {
     let changeset = HgChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
     HgBlobChangeset::new(changeset)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
+    use blobstore::Blobstore;
+    use blobstore::BlobstoreBytes;
+    use blobstore::BlobstoreGetData;
+    use blobstore::BlobstoreIsPresent;
+    use fbinit::FacebookInit;
+    use memblob::Memblob;
+    use mononoke_macros::mononoke;
+    use mononoke_types::RepositoryId;
+    use samplingblob::SamplingBlobstore;
+    use samplingblob::SamplingHandler;
+
+    use super::*;
+
+    /// Counts and fails every read of an Hg manifest blob, standing in for a
+    /// store where they have been deleted. Counting catches a read whose
+    /// failure the caller ignores.
+    #[derive(Debug, Default)]
+    struct DenyHgManifestReads {
+        reads: AtomicUsize,
+    }
+
+    impl DenyHgManifestReads {
+        fn check(&self, key: &str) -> Result<()> {
+            if key.contains("hgmanifest.") {
+                self.reads.fetch_add(1, Ordering::Relaxed);
+                anyhow::bail!("unexpected read of Hg manifest {key}");
+            }
+            Ok(())
+        }
+    }
+
+    impl SamplingHandler for DenyHgManifestReads {
+        fn sample_get(
+            &self,
+            _ctx: &CoreContext,
+            key: &str,
+            _value: Option<&BlobstoreGetData>,
+        ) -> Result<()> {
+            self.check(key)
+        }
+
+        fn sample_is_present(
+            &self,
+            _ctx: &CoreContext,
+            key: &str,
+            _value: &BlobstoreIsPresent,
+        ) -> Result<()> {
+            self.check(key)
+        }
+    }
+
+    fn tree(byte: u8) -> Entry<HgManifestId, HgFileNodeId> {
+        Entry::Tree(HgManifestId::new(
+            HgNodeHash::from_bytes(&[byte; 20]).unwrap(),
+        ))
+    }
+
+    async fn store_augmented(
+        ctx: &CoreContext,
+        blobstore: &RepoBlobstore,
+        entry: Entry<HgManifestId, HgFileNodeId>,
+    ) -> Result<()> {
+        let Entry::Tree(mfid) = entry else {
+            unreachable!("only trees are stored here")
+        };
+        let key = HgAugmentedManifestId::new(mfid.into_nodehash()).blobstore_key();
+        blobstore
+            .put(ctx, key, BlobstoreBytes::from_bytes("augmented"))
+            .await
+    }
+
+    async fn store_hg(
+        ctx: &CoreContext,
+        blobstore: &RepoBlobstore,
+        entry: Entry<HgManifestId, HgFileNodeId>,
+    ) -> Result<()> {
+        let Entry::Tree(mfid) = entry else {
+            unreachable!("only trees are stored here")
+        };
+        blobstore
+            .put(ctx, mfid.blobstore_key(), BlobstoreBytes::from_bytes("hg"))
+            .await
+    }
+
+    fn repo_blobstore(inner: Arc<dyn Blobstore>) -> RepoBlobstore {
+        RepoBlobstore::new(
+            inner,
+            None,
+            RepositoryId::new(0),
+            MononokeScubaSampleBuilder::with_discard(),
+        )
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_assert_in_blobstore_reads_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let hg_reads = Arc::new(DenyHgManifestReads::default());
+        let blobstore = repo_blobstore(Arc::new(SamplingBlobstore::new(
+            Memblob::default(),
+            hg_reads.clone(),
+        )));
+        let (augmented, missing) = (tree(1), tree(2));
+        store_augmented(&ctx, &blobstore, augmented).await?;
+
+        UploadEntries::assert_in_blobstore(&ctx, &blobstore, true, augmented).await?;
+        assert_eq!(
+            hg_reads.reads.load(Ordering::Relaxed),
+            0,
+            "accepting a tree with only its augmented manifest reads no Hg manifest"
+        );
+        let err = UploadEntries::assert_in_blobstore(&ctx, &blobstore, true, missing)
+            .await
+            .expect_err("a tree without its augmented manifest is missing");
+        assert!(
+            format!("{err:#}").contains("not found in blobstore"),
+            "a missing tree is reported as not found, not as an Hg manifest read: {err:#}"
+        );
+        assert_eq!(
+            hg_reads.reads.load(Ordering::Relaxed),
+            0,
+            "rejecting a missing tree reads no Hg manifest"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_assert_in_blobstore_hg_manifest_not_read_from_augmented(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo_blobstore(Arc::new(Memblob::default()));
+        let hg_only = tree(1);
+        store_hg(&ctx, &blobstore, hg_only).await?;
+
+        UploadEntries::assert_in_blobstore(&ctx, &blobstore, true, hg_only)
+            .await
+            .expect_err("an Hg manifest alone is not enough once reads use augmented");
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_assert_in_blobstore_accepts_either_manifest(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo_blobstore(Arc::new(Memblob::default()));
+        let (augmented, hg_only, missing) = (tree(1), tree(2), tree(3));
+        store_augmented(&ctx, &blobstore, augmented).await?;
+        store_hg(&ctx, &blobstore, hg_only).await?;
+
+        UploadEntries::assert_in_blobstore(&ctx, &blobstore, false, augmented).await?;
+        UploadEntries::assert_in_blobstore(&ctx, &blobstore, false, hg_only).await?;
+        UploadEntries::assert_in_blobstore(&ctx, &blobstore, false, missing)
+            .await
+            .expect_err("a tree with neither manifest is missing");
+        Ok(())
+    }
 }

@@ -34,6 +34,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
 use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::hg_manifests_read_from_augmented;
 use mercurial_types::subtree::HgSubtreeChanges;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
@@ -43,6 +44,7 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_identity::RepoIdentityRef;
 use restricted_paths::AclFileChangeRejection;
 use restricted_paths::RestrictedPaths;
 use restricted_paths::RestrictedPathsError;
@@ -148,7 +150,14 @@ impl CreateChangeset {
     pub fn create(
         self,
         ctx: CoreContext,
-        repo: &(impl RepoBlobstoreArc + CommitGraphWriterArc + BonsaiHgMappingArc + Send + Sync),
+        repo: &(
+             impl RepoBlobstoreArc
+             + CommitGraphWriterArc
+             + BonsaiHgMappingArc
+             + RepoIdentityRef
+             + Send
+             + Sync
+         ),
         restricted_paths: ArcRestrictedPathsConfigBased,
         bonsai: Option<BonsaiChangeset>,
         mut scuba_logger: MononokeScubaSampleBuilder,
@@ -159,10 +168,12 @@ impl CreateChangeset {
         let uuid = Uuid::new_v4();
         scuba_logger.add("changeset_uuid", format!("{uuid}"));
 
+        let read_from_augmented = hg_manifests_read_from_augmented(repo.repo_identity().name());
         let entry_processor = UploadEntries::new(
             repo.repo_blobstore().clone(),
             restricted_paths,
             scuba_logger.clone(),
+            read_from_augmented,
         );
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         let signal_parent_ready = Arc::new(Mutex::new(Some(signal_parent_ready)));

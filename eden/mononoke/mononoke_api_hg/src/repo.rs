@@ -63,6 +63,7 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::blobs::hg_manifests_read_from_augmented;
 use mercurial_types::blobs::store_manifest_envelope;
 use metaconfig_types::RepoConfig;
 use mononoke_api::MononokeRepo;
@@ -352,10 +353,15 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .await
     }
 
-    /// Look up in blobstore by `HgManifestId`
+    /// Whether the tree is stored: its augmented manifest once client
+    /// operations read augmented manifests, its Hg manifest otherwise.
     pub async fn tree_exists(&self, manifest_id: HgManifestId) -> Result<bool, MononokeError> {
-        self.is_key_present_in_blobstore(&manifest_id.blobstore_key(), None)
-            .await
+        let key = if self.reads_augmented_manifests() {
+            HgAugmentedManifestId::new(manifest_id.into_nodehash()).blobstore_key()
+        } else {
+            manifest_id.blobstore_key()
+        };
+        self.is_key_present_in_blobstore(&key, None).await
     }
 
     /// Whether lookup should tell the client that a tree is already uploaded.
@@ -364,23 +370,29 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// manifest is missing is never resent and never gets one. With
     /// `scm/mononoke:require_augmented_manifest_for_tree_lookup` on, the tree
     /// counts only when both manifests are stored, so the client resends it
-    /// and tree upload stores the missing envelope.
+    /// and tree upload stores the missing envelope. Once client operations
+    /// read augmented manifests, the augmented manifest alone decides.
     pub async fn is_tree_uploaded(&self, manifest_id: HgManifestId) -> Result<bool, MononokeError> {
-        if !self.requires_augmented_manifest_for_tree_lookup() {
+        if self.reads_augmented_manifests() || !self.requires_augmented_manifest_for_tree_lookup() {
             return self.tree_exists(manifest_id).await;
         }
         let augmented_key = HgAugmentedManifestId::new(manifest_id.into_nodehash()).blobstore_key();
-        let (augmented_exists, tree_exists) = try_join!(
+        let hg_key = manifest_id.blobstore_key();
+        let (augmented_exists, hg_exists) = try_join!(
             self.is_key_present_in_blobstore(&augmented_key, None),
-            self.tree_exists(manifest_id),
+            self.is_key_present_in_blobstore(&hg_key, None),
         )?;
         // Only trees resent because of the augmented manifest, not new ones.
-        if tree_exists && !augmented_exists {
+        if hg_exists && !augmented_exists {
             self.ctx()
                 .perf_counters()
                 .increment_counter(PerfCounterType::TreeLookupAugmentedMissing);
         }
-        Ok(augmented_exists && tree_exists)
+        Ok(augmented_exists && hg_exists)
+    }
+
+    fn reads_augmented_manifests(&self) -> bool {
+        hg_manifests_read_from_augmented(self.repo().repo_identity().name())
     }
 
     fn requires_augmented_manifest_for_tree_lookup(&self) -> bool {
@@ -1192,17 +1204,23 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 mod tests {
     use std::sync::Arc;
 
+    use blobstore::BlobstoreGetData;
+    use blobstore::BlobstoreIsPresent;
     use fbinit::FacebookInit;
     use futures::FutureExt;
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use justknobs::test_helpers::with_just_knobs_async;
     use maplit::hashmap;
+    use memblob::Memblob;
     use mercurial_types::HgParents;
     use mercurial_types::calculate_hg_node_id;
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
     use mononoke_macros::mononoke;
+    use samplingblob::SamplingBlobstore;
+    use samplingblob::SamplingHandler;
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -1372,6 +1390,94 @@ mod tests {
                     REQUIRE_AUGMENTED_MANIFEST_FOR_TREE_LOOKUP.to_string() => KnobVal::Bool(required),
                 }),
                 assert_tree_uploaded(fb, required).boxed(),
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
+    /// Fails every read of an Hg manifest blob, standing in for a store where
+    /// they have been deleted.
+    #[derive(Debug)]
+    struct DenyHgManifestReads;
+
+    impl DenyHgManifestReads {
+        fn check(key: &str) -> anyhow::Result<()> {
+            anyhow::ensure!(
+                !key.contains("hgmanifest."),
+                "unexpected read of Hg manifest {key}"
+            );
+            Ok(())
+        }
+    }
+
+    impl SamplingHandler for DenyHgManifestReads {
+        fn sample_get(
+            &self,
+            _ctx: &CoreContext,
+            key: &str,
+            _value: Option<&BlobstoreGetData>,
+        ) -> anyhow::Result<()> {
+            Self::check(key)
+        }
+
+        fn sample_is_present(
+            &self,
+            _ctx: &CoreContext,
+            key: &str,
+            _value: &BlobstoreIsPresent,
+        ) -> anyhow::Result<()> {
+            Self::check(key)
+        }
+    }
+
+    async fn assert_tree_uploaded_read_from_augmented(fb: FacebookInit) -> anyhow::Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = TestRepoFactory::new(fb)?
+            .with_blobstore(Arc::new(SamplingBlobstore::new(
+                Memblob::default(),
+                Arc::new(DenyHgManifestReads),
+            )))
+            .build()
+            .await?;
+        let hg = RepoContext::new_test(ctx, Arc::new(repo)).await?.hg();
+
+        // `augmented` gets only its augmented manifest, `hg_only` only its hg
+        // manifest, and `missing` neither.
+        let augmented = verify_directory(&hg, String::new()).await?;
+        let hg_only = verify_directory(&hg, format!("a\0{}t\n", augmented.node_id())).await?;
+        let missing = verify_directory(&hg, format!("b\0{}t\n", augmented.node_id())).await?;
+        hg.build_and_store_augmented_manifests_for_uploaded_trees(vec![augmented.clone()])
+            .await?;
+        hg.store_verified_tree(hg_only.clone()).await?;
+
+        let uploaded = |tree: &HgManifestEnvelope| {
+            let manifest_id = HgManifestId::new(tree.node_id());
+            let hg = hg.clone();
+            async move { hg.is_tree_uploaded(manifest_id).await }
+        };
+        assert!(
+            uploaded(&augmented).await?,
+            "a tree with only its augmented manifest is uploaded"
+        );
+        assert!(
+            !uploaded(&hg_only).await?,
+            "a tree without its augmented manifest is not uploaded"
+        );
+        assert!(!uploaded(&missing).await?, "a missing tree is not uploaded");
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_tree_uploaded_read_from_augmented(fb: FacebookInit) -> anyhow::Result<()> {
+        for required in [true, false] {
+            with_just_knobs_async(
+                JustKnobsInMemory::new(hashmap! {
+                    STORE_AUGMENTED_MANIFESTS_AT_TREE_UPLOAD.to_string() => KnobVal::Bool(true),
+                    REQUIRE_AUGMENTED_MANIFEST_FOR_TREE_LOOKUP.to_string() => KnobVal::Bool(required),
+                    "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(true),
+                }),
+                assert_tree_uploaded_read_from_augmented(fb).boxed(),
             )
             .await?;
         }
