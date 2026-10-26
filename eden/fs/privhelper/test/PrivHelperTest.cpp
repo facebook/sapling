@@ -2349,12 +2349,6 @@ TEST(PrivHelperConnectionLossTest, sendFailureFailsRequestsWithoutDeadlock) {
   // Same failure family as above, but through the other entry point: the
   // send itself fails synchronously while the connection still looks open,
   // which invokes the error callbacks from inside send().
-#ifdef __APPLE__
-  // On macOS, shutting down the peer's receive side does not make sends
-  // fail with EPIPE (they are silently accepted until the socket is fully
-  // closed), so this test cannot trigger the send-failure path there.
-  GTEST_SKIP() << "shutdown(SHUT_RD) does not fail peer sends on macOS";
-#else
   EventBaseThread ioThread;
   File clientConn;
   File serverConn;
@@ -2363,10 +2357,10 @@ TEST(PrivHelperConnectionLossTest, sendFailureFailsRequestsWithoutDeadlock) {
   ioThread.getEventBase()->runInEventBaseThreadAndWait(
       [&] { client->attachEventBase(ioThread.getEventBase()); });
 
-  // Shut down only the server's receiving side: the client never sees EOF,
+  // Shut down only the client's sending side: the client never sees EOF,
   // but its next send fails with EPIPE.
   folly::checkUnixError(
-      ::shutdown(serverConn.fd(), SHUT_RD), "shutdown failed");
+      ::shutdown(client->getRawClientFd(), SHUT_WR), "shutdown failed");
 
   auto pending = client->fuseUnmount("/never/answered", {});
   EXPECT_THROW(std::move(pending).get(5s), std::runtime_error);
@@ -2376,7 +2370,6 @@ TEST(PrivHelperConnectionLossTest, sendFailureFailsRequestsWithoutDeadlock) {
   folly::Baton<> alive;
   ioThread.getEventBase()->runInEventBaseThread([&] { alive.post(); });
   EXPECT_TRUE(alive.try_wait_for(5s));
-#endif // !__APPLE__
 }
 
 TEST(PrivHelperConnectionLossTest, unexpectedExitLogsOneEvent) {
