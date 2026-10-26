@@ -7,26 +7,42 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
+use maplit::hashset;
 use memblob::KeyedMemblob;
 use mononoke_macros::mononoke;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ContentManifestId;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::content_manifest::ContentManifest;
+use mononoke_types::content_manifest::ContentManifestEntry;
+use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::path::MPath;
+use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::THREES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
+use mononoke_types_mocks::contentid::ONES_CTID;
+use mononoke_types_mocks::contentid::TWOS_CTID;
 use pretty_assertions::assert_eq;
 
 pub(crate) use crate::Diff;
@@ -1424,6 +1440,244 @@ async fn test_diff_intersection_parent_entries_and_pruning(fb: FacebookInit) -> 
     for path in ["added", "dir_to_file", "file_to_dir", "file_to_dir/child"] {
         assert!(entries[&MPath::new(path)?].1.is_empty());
     }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_bonsai_diff_sharded_matches_bonsai_diff(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    let base = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![],
+        btreemap! {
+            "dir/same" => Some("base"),
+            "dir/changed" => Some("base"),
+            "file_to_dir" => Some("base"),
+            "dir_to_file/child" => Some("base"),
+            "deleted/child" => Some("base"),
+        },
+    )
+    .await?
+    .unwrap();
+    let left = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![base],
+        btreemap! {
+            "dir/changed" => Some("left"),
+            "file_to_dir" => None,
+            "file_to_dir/child" => Some("left"),
+            "deleted/child" => None,
+            "added" => Some("left"),
+        },
+    )
+    .await?
+    .unwrap();
+    let right = derive_test_manifest(
+        &ctx,
+        &blobstore,
+        vec![base],
+        btreemap! {
+            "dir/changed" => Some("right"),
+            "dir_to_file/child" => None,
+            "dir_to_file" => Some("right"),
+        },
+    )
+    .await?
+    .unwrap();
+
+    for (node, parents) in [
+        (left, vec![base]),
+        (right, vec![base]),
+        (base, vec![left]),
+        (left, vec![base, right]),
+        (base, vec![left, right]),
+        (left, vec![left]),
+        (left, vec![]),
+    ] {
+        let diff = |sharded: bool| {
+            let parents = parents.iter().cloned().collect();
+            let changes = if sharded {
+                crate::bonsai_diff_sharded(ctx.clone(), blobstore.clone(), node, parents).boxed()
+            } else {
+                crate::bonsai_diff(ctx.clone(), blobstore.clone(), node, parents).boxed()
+            };
+            changes.try_collect::<std::collections::HashSet<_>>()
+        };
+        assert_eq!(
+            diff(true).await?,
+            diff(false).await?,
+            "the sharded diff of {node:?} against {parents:?} matches the full diff"
+        );
+    }
+    Ok(())
+}
+
+/// Records the key of every `get`, so a test can see which shards a diff loads.
+#[derive(Debug, Default)]
+struct RecordingBlobstore {
+    inner: KeyedMemblob,
+    gets: Mutex<Vec<String>>,
+}
+
+impl RecordingBlobstore {
+    /// The content manifest shards read since the last call.
+    fn take_shard_reads(&self) -> HashSet<String> {
+        self.gets
+            .lock()
+            .expect("lock poisoned")
+            .drain(..)
+            .filter(|key| key.starts_with("contentmf.map2node."))
+            .collect()
+    }
+}
+
+impl std::fmt::Display for RecordingBlobstore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RecordingBlobstore")
+    }
+}
+
+#[async_trait]
+impl KeyedBlobstore for RecordingBlobstore {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        self.gets
+            .lock()
+            .expect("lock poisoned")
+            .push(key.to_string());
+        self.inner.get(ctx, key).await
+    }
+
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        self.inner.put(ctx, key, value).await
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        self.inner.is_present(ctx, key).await
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        self.inner.copy(ctx, old_key, new_key).await
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.unlink(ctx, key).await
+    }
+}
+
+#[mononoke::fbinit_test]
+async fn test_bonsai_diff_sharded_skips_shards_shared_by_a_merge_and_both_parents(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobstore = Arc::new(RecordingBlobstore::default());
+    // Every file has a distinct size, so no two shards have the same content and
+    // a shard id stands for one position in the directory.
+    let file = |i: u64, content_id| ContentManifestFile {
+        content_id,
+        file_type: FileType::Regular,
+        size: i,
+    };
+    // A root directory of 5,000 files, stored as many shards.
+    let store_manifest = async |changed: &[u64]| {
+        let entries = (0..5_000).map(|i| {
+            let content_id = if changed.contains(&i) {
+                TWOS_CTID
+            } else {
+                ONES_CTID
+            };
+            (
+                format!("f{i:04}"),
+                ContentManifestEntry::File(file(i, content_id)),
+            )
+        });
+        let subentries = ShardedMapV2Node::from_entries(&ctx, &blobstore, entries).await?;
+        ContentManifest { subentries }
+            .into_blob()
+            .store(&ctx, &blobstore)
+            .await
+    };
+    // Each parent changes a file in a different shard, and the merge keeps both changes.
+    let left = store_manifest(&[1_999]).await?;
+    let right = store_manifest(&[4_999]).await?;
+    let merge = store_manifest(&[1_999, 4_999]).await?;
+
+    let list_shards = async |id: ContentManifestId| {
+        blobstore.take_shard_reads();
+        id.load(&ctx, &blobstore)
+            .await?
+            .into_subentries(&ctx, &blobstore)
+            .try_collect::<Vec<_>>()
+            .await?;
+        anyhow::Ok(blobstore.take_shard_reads())
+    };
+    let merge_shards = list_shards(merge).await?;
+    let left_shards = list_shards(left).await?;
+    let right_shards = list_shards(right).await?;
+    let all_shards: HashSet<String> = merge_shards
+        .iter()
+        .chain(&left_shards)
+        .chain(&right_shards)
+        .cloned()
+        .collect();
+    let shared_shards: HashSet<String> = merge_shards
+        .iter()
+        .filter(|key| left_shards.contains(*key) && right_shards.contains(*key))
+        .cloned()
+        .collect();
+    assert!(
+        !shared_shards.is_empty(),
+        "the merge and both parents should share shards"
+    );
+
+    let parents = hashset! {left, right};
+    blobstore.take_shard_reads();
+    let full: HashSet<_> =
+        crate::bonsai_diff(ctx.clone(), blobstore.clone(), merge, parents.clone())
+            .try_collect()
+            .await?;
+    let full_reads = blobstore.take_shard_reads();
+    let sharded: HashSet<_> =
+        crate::bonsai_diff_sharded(ctx.clone(), blobstore.clone(), merge, parents)
+            .try_collect()
+            .await?;
+    let sharded_reads = blobstore.take_shard_reads();
+
+    let expected = hashset! {
+        crate::BonsaiDiffFileChange::ChangedReusedId(NonRootMPath::new("f1999")?, file(1_999, TWOS_CTID)),
+        crate::BonsaiDiffFileChange::ChangedReusedId(NonRootMPath::new("f4999")?, file(4_999, TWOS_CTID)),
+    };
+    assert_eq!(full, expected);
+    assert_eq!(sharded, expected);
+    assert_eq!(
+        full_reads, all_shards,
+        "bonsai_diff reads every shard of the merge and both parents"
+    );
+    assert_eq!(
+        sharded_reads,
+        all_shards.difference(&shared_shards).cloned().collect(),
+        "bonsai_diff_sharded reads every shard that differs from either parent, and none the merge shares with both"
+    );
     Ok(())
 }
 

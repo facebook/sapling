@@ -19,6 +19,7 @@ use futures::Stream;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures::future;
+use futures::future::BoxFuture;
 use futures::future::try_join_all;
 use futures::try_join;
 use maplit::hashmap;
@@ -26,12 +27,16 @@ use maplit::hashset;
 use mononoke_macros::mononoke;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::prefix_tree::PrefixTree;
 
 use crate::Entry;
 use crate::Manifest;
+use crate::TrieMapOps;
+use crate::comparison::diff_trie_children;
 
 #[derive(Clone, Eq, Debug, Hash, PartialEq, PartialOrd, Ord)]
 pub enum BonsaiDiffFileChange<Leaf> {
@@ -238,6 +243,148 @@ where
     Ok(ret)
 }
 
+/// Like `recurse_trees`, but lists only the children that differ between
+/// `node` and at least one parent. Each parent is compared with
+/// `diff_trie_children`, which skips shards identical on both sides without
+/// loading them.
+async fn recurse_differing_trees<ManifestId, Store, Leaf, TrieMapType>(
+    ctx: &CoreContext,
+    store: &Store,
+    path: Option<&NonRootMPath>,
+    node: Option<ManifestId>,
+    parents: HashSet<ManifestId>,
+) -> Result<WorkEntrySet<ManifestId, Leaf>, Error>
+where
+    Store: Send + Sync + Clone + 'static,
+    ManifestId: Hash + Eq + Clone + StoreLoadable<Store> + Send + Sync + 'static,
+    <ManifestId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = ManifestId, Leaf = Leaf, TrieMapType = TrieMapType> + Send + Sync,
+    Leaf: ManifestLeaf + Hash + Eq + Clone + Send + Sync + 'static,
+    TrieMapType: TrieMapOps<Store, Entry<ManifestId, Leaf>> + Eq + Clone + Send + Sync + 'static,
+{
+    // If there is a single parent, and it's unchanged, then we don't need to recurse.
+    if parents.len() == 1 && node.as_ref() == parents.iter().next() {
+        return Ok(HashMap::new());
+    }
+
+    let load_trie = async |id: ManifestId| {
+        anyhow::Ok(id.load(ctx, store).await?.into_trie_map(ctx, store).await?)
+    };
+    let (node, parents) = try_join!(
+        async {
+            match node {
+                Some(node) => Ok(Some(load_trie(node).await?)),
+                None => Ok(None),
+            }
+        },
+        try_join_all(parents.into_iter().map(load_trie)),
+    )?;
+
+    // Without parents, every child of `node` is new.
+    let bases = if parents.is_empty() {
+        vec![None]
+    } else {
+        parents.into_iter().map(Some).collect::<Vec<_>>()
+    };
+    let base_count = bases.len();
+    let diffs = try_join_all(bases.into_iter().map(|base| {
+        diff_trie_children(ctx, store, node.clone(), store, base, PrefixTree::default())
+    }))
+    .await?;
+
+    let mut children: HashMap<MPathElement, (Option<Entry<ManifestId, Leaf>>, Vec<_>)> =
+        HashMap::new();
+    for (index, diff) in diffs.into_iter().enumerate() {
+        for (name, base_entry, entry) in diff {
+            // A parent whose diff doesn't list this child has the same entry as `node`.
+            let (_, base_entries) = children
+                .entry(name)
+                .or_insert_with(|| (entry.clone(), vec![entry; base_count]));
+            base_entries[index] = base_entry;
+        }
+    }
+
+    Ok(children
+        .into_iter()
+        .map(|(name, (entry, base_entries))| {
+            let mut work = WorkEntry::empty();
+            work.entry = entry;
+            for base_entry in base_entries.into_iter().flatten() {
+                work.parents.insert(base_entry);
+            }
+            (NonRootMPath::join_opt_element(path, &name), work)
+        })
+        .collect())
+}
+
+/// How `bonsai_diff` lists a directory and its parents to find the paths that
+/// may have changed.
+trait ListTrees<ManifestId, Store, Leaf>: Copy + Send + Sync + 'static
+where
+    ManifestId: Hash + Eq,
+    Leaf: Hash + Eq,
+{
+    fn recurse_trees<'a>(
+        self,
+        ctx: &'a CoreContext,
+        store: &'a Store,
+        path: Option<&'a NonRootMPath>,
+        node: Option<ManifestId>,
+        parents: HashSet<ManifestId>,
+    ) -> BoxFuture<'a, Result<WorkEntrySet<ManifestId, Leaf>, Error>>;
+}
+
+/// List every entry of the directory and its parents.
+#[derive(Clone, Copy)]
+struct ListAll;
+
+impl<ManifestId, Store, Leaf> ListTrees<ManifestId, Store, Leaf> for ListAll
+where
+    Store: Send + Sync + Clone + 'static,
+    ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
+    <ManifestId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
+    Leaf: ManifestLeaf + Hash + Eq + Send + Sync + 'static,
+{
+    fn recurse_trees<'a>(
+        self,
+        ctx: &'a CoreContext,
+        store: &'a Store,
+        path: Option<&'a NonRootMPath>,
+        node: Option<ManifestId>,
+        parents: HashSet<ManifestId>,
+    ) -> BoxFuture<'a, Result<WorkEntrySet<ManifestId, Leaf>, Error>> {
+        recurse_trees(ctx, store, path, node, parents).boxed()
+    }
+}
+
+/// List only the entries in shards that differ between the directory and its
+/// parents.
+#[derive(Clone, Copy)]
+struct ListDifferingShards;
+
+impl<ManifestId, Store, Leaf, TrieMapType> ListTrees<ManifestId, Store, Leaf>
+    for ListDifferingShards
+where
+    Store: Send + Sync + Clone + 'static,
+    ManifestId: Hash + Eq + Clone + StoreLoadable<Store> + Send + Sync + 'static,
+    <ManifestId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = ManifestId, Leaf = Leaf, TrieMapType = TrieMapType> + Send + Sync,
+    Leaf: ManifestLeaf + Hash + Eq + Clone + Send + Sync + 'static,
+    TrieMapType: TrieMapOps<Store, Entry<ManifestId, Leaf>> + Eq + Clone + Send + Sync + 'static,
+{
+    fn recurse_trees<'a>(
+        self,
+        ctx: &'a CoreContext,
+        store: &'a Store,
+        path: Option<&'a NonRootMPath>,
+        node: Option<ManifestId>,
+        parents: HashSet<ManifestId>,
+    ) -> BoxFuture<'a, Result<WorkEntrySet<ManifestId, Leaf>, Error>> {
+        recurse_differing_trees(ctx, store, path, node, parents).boxed()
+    }
+}
+
 fn resolve_file_over_files<Leaf>(
     path: NonRootMPath,
     node: Leaf,
@@ -273,6 +420,7 @@ async fn bonsai_diff_unfold<ManifestId, Store, Leaf>(
     store: &Store,
     path: NonRootMPath,
     work: WorkEntry<ManifestId, Leaf>,
+    lister: impl ListTrees<ManifestId, Store, Leaf>,
 ) -> Result<
     (
         Option<BonsaiDiffFileChange<Leaf>>,
@@ -293,14 +441,15 @@ where
 
             // We have a tree here, so we'll need to compare it to the matching manifests in the parent
             // manifests.
-            let recurse = recurse_trees(
-                ctx,
-                store,
-                Some(&path),
-                Some(node),
-                manifests.unwrap_or_default(),
-            )
-            .await?;
+            let recurse = lister
+                .recurse_trees(
+                    ctx,
+                    store,
+                    Some(&path),
+                    Some(node),
+                    manifests.unwrap_or_default(),
+                )
+                .await?;
 
             // If the parent manifests contained a file at the path where we have a tree, then we
             // must indicate that this path is being deleted, since otherwise we'd have an invalid
@@ -337,8 +486,9 @@ where
             // delete everything in this tree.
             let (manifests, files) = work.parents.into_parts();
 
-            let recurse =
-                recurse_trees(ctx, store, Some(&path), None, manifests.unwrap_or_default()).await?;
+            let recurse = lister
+                .recurse_trees(ctx, store, Some(&path), None, manifests.unwrap_or_default())
+                .await?;
 
             let change = if files.is_some() {
                 Some(BonsaiDiffFileChange::Deleted(path))
@@ -367,20 +517,61 @@ where
         Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
     Leaf: ManifestLeaf + Hash + Eq + Send + Sync + Clone + 'static,
 {
+    bonsai_diff_with(ctx, store, node, parents, ListAll)
+}
+
+/// Like `bonsai_diff`, but skips the shards of each directory that are
+/// identical in the manifest and every parent without loading them, rather
+/// than listing every entry of every directory that changed.
+pub fn bonsai_diff_sharded<ManifestId, Store, Leaf, TrieMapType>(
+    ctx: CoreContext,
+    store: Store,
+    node: ManifestId,
+    parents: HashSet<ManifestId>,
+) -> impl Stream<Item = Result<BonsaiDiffFileChange<Leaf>, Error>>
+where
+    ManifestId: Hash + Eq + Clone + StoreLoadable<Store> + Send + Sync + 'static,
+    Store: Send + Sync + Clone + 'static,
+    <ManifestId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = ManifestId, Leaf = Leaf, TrieMapType = TrieMapType> + Send + Sync,
+    Leaf: ManifestLeaf + Hash + Eq + Send + Sync + Clone + 'static,
+    TrieMapType: TrieMapOps<Store, Entry<ManifestId, Leaf>> + Eq + Clone + Send + Sync + 'static,
+{
+    bonsai_diff_with(ctx, store, node, parents, ListDifferingShards)
+}
+
+fn bonsai_diff_with<ManifestId, Store, Leaf>(
+    ctx: CoreContext,
+    store: Store,
+    node: ManifestId,
+    parents: HashSet<ManifestId>,
+    lister: impl ListTrees<ManifestId, Store, Leaf>,
+) -> impl Stream<Item = Result<BonsaiDiffFileChange<Leaf>, Error>>
+where
+    ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
+    Store: Send + Sync + Clone + 'static,
+    <ManifestId as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
+    Leaf: ManifestLeaf + Hash + Eq + Send + Sync + Clone + 'static,
+{
     // NOTE: `async move` blocks are used below to own CoreContext and Store for the (static)
     // lifetime of the stream we're returning here (recurse_trees and bonsai_diff_unfold don't
     // require those).
     {
         cloned!(ctx, store);
-        async move { recurse_trees(&ctx, &store, None, Some(node), parents).await }
+        async move {
+            lister
+                .recurse_trees(&ctx, &store, None, Some(node), parents)
+                .await
+        }
     }
-    .map_ok(|seed| {
+    .map_ok(move |seed| {
         bounded_traversal::bounded_traversal_stream(256, seed, move |(path, work)| {
             cloned!(ctx, store);
             async move {
-                mononoke::spawn_task(
-                    async move { bonsai_diff_unfold(&ctx, &store, path, work).await },
-                )
+                mononoke::spawn_task(async move {
+                    bonsai_diff_unfold(&ctx, &store, path, work, lister).await
+                })
                 .await?
             }
             .boxed()
@@ -475,7 +666,7 @@ mod test {
 
         // Start with no parent. The file should be added.
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::Changed(
@@ -490,7 +681,7 @@ mod test {
             .parents
             .insert(Entry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
@@ -499,7 +690,7 @@ mod test {
             .parents
             .insert(Entry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
@@ -509,7 +700,7 @@ mod test {
             .parents
             .insert(Entry::Leaf((FileType::Regular, leaf2_id)));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
@@ -539,7 +730,8 @@ mod test {
             .parents
             .insert(Entry::Leaf((FileType::Executable, leaf_id)));
 
-        let (change, work) = bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry).await?;
+        let (change, work) =
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry, ListAll).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
@@ -569,7 +761,7 @@ mod test {
         // Add a conflicting directory. We need to delete it.
         work_entry.parents.insert(Entry::Tree(tree_id));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::Changed(
@@ -584,7 +776,7 @@ mod test {
             .parents
             .insert(Entry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
@@ -600,7 +792,7 @@ mod test {
             .parents
             .insert(Entry::Leaf((FileType::Regular, leaf2_id)));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
@@ -638,7 +830,7 @@ mod test {
 
         // No parents. We need to recurse in this directory.
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
@@ -653,7 +845,7 @@ mod test {
         // Identical parent. We are done.
         work_entry.parents.insert(Entry::Tree(tree1_id));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
@@ -661,7 +853,7 @@ mod test {
         // contents listed in both parent manifests.
         work_entry.parents.insert(Entry::Tree(tree2_id));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
@@ -703,7 +895,7 @@ mod test {
             .insert(Entry::Leaf((FileType::Regular, leaf_id)));
 
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, Some(BonsaiDiffFileChange::Deleted(root)));
 
         assert_eq!(work, hashmap! {});
@@ -729,7 +921,7 @@ mod test {
             .insert(Entry::Leaf((FileType::Executable, leaf_id)));
 
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, Some(BonsaiDiffFileChange::Deleted(root)));
         assert_eq!(work, hashmap! {});
 
@@ -760,7 +952,7 @@ mod test {
         // Parent has a directory, recurse into it.
         work_entry.parents.insert(Entry::Tree(tree1_id));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
@@ -775,7 +967,7 @@ mod test {
         // Multiple parents have multiple directories. Recurse into all of them.
         work_entry.parents.insert(Entry::Tree(tree2_id));
         let (change, work) =
-            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone()).await?;
+            bonsai_diff_unfold(&ctx, &store, root.clone(), work_entry.clone(), ListAll).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
