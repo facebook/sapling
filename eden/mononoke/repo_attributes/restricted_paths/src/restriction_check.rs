@@ -1240,11 +1240,32 @@ where
     T: SourceRestrictionCheck + Send + Sync + 'static,
 {
     let result = handle.await_result().await?;
+    Ok(completed_source_enforcement_outcome(
+        result.as_ref(),
+        candidates,
+        pre_filter_variant,
+    ))
+}
+
+/// Calculate enforcement after one source fetch has completed successfully.
+///
+/// `Definite` always produces `Enforced`; `NeedsFetch` produces `Enforced` only
+/// when a restriction ACL matches an active condition, and otherwise produces
+/// `NotEnforced`. An enforced result carries a denial group only when at least
+/// one fetched restriction is unauthorized. Fetch errors must be handled by
+/// the caller before invoking this helper.
+fn completed_source_enforcement_outcome<T>(
+    result: &[T],
+    candidates: &[&EnforcementConditionSet],
+    pre_filter_variant: &PreFilterVariant,
+) -> AccessEnforcementOutcome
+where
+    T: SourceRestrictionCheck,
+{
     let any_match = match pre_filter_variant {
         PreFilterVariant::Definite => true,
         PreFilterVariant::NeedsFetch => {
             let restriction_acls = result
-                .as_ref()
                 .iter()
                 .map(SourceRestrictionCheck::repo_region_identity)
                 .collect::<Vec<_>>();
@@ -1253,11 +1274,10 @@ where
     };
 
     if !any_match {
-        return Ok(AccessEnforcementOutcome::NotEnforced);
+        return AccessEnforcementOutcome::NotEnforced;
     }
 
     let denial = result
-        .as_ref()
         .iter()
         .filter(|check| !check.authorization().has_authorization())
         // Multiple denied checks can be returned by one source. Pick a stable
@@ -1270,7 +1290,7 @@ where
             permission_request_group: check.permission_request_group().clone(),
         });
 
-    Ok(AccessEnforcementOutcome::Enforced { denial })
+    AccessEnforcementOutcome::Enforced { denial }
 }
 
 /// Combine authoritative source enforcement outcomes.
