@@ -593,7 +593,8 @@ fn clone_metadata(
 
     // Some config values are inherent to the repo and should be persisted if passed to clone.
     // This is analogous to persisting the --configfile args above.
-    for (section, name) in &[("remotenames", "selectivepulldefault")] {
+    {
+        let (section, name) = &("remotenames", "selectivepulldefault");
         if let Some(&ValueSource {
             ref source,
             value: Some(ref value),
