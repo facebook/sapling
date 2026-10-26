@@ -532,6 +532,29 @@ pub(crate) struct SourceRestrictionSummary {
     restriction_roots: Vec<NonRootMPath>,
 }
 
+/// Preserve the legacy single-source contract: ACL and rollout require every
+/// restriction, while repository-wide tooling and admin grants require any.
+fn aggregate_single_source_authorization(
+    checks: &[impl SourceRestrictionCheck],
+) -> AuthorizationCheckResult {
+    AuthorizationCheckResult::new(
+        checks
+            .iter()
+            .all(|check| check.authorization().acl_result().is_authorized()),
+        checks
+            .iter()
+            .any(|check| check.authorization().tooling_result().is_authorized()),
+        all_rollout_allowlisted(
+            checks
+                .iter()
+                .map(|check| check.authorization().rollout_result().is_authorized()),
+        ),
+        checks
+            .iter()
+            .any(|check| check.authorization().admin_result().is_authorized()),
+    )
+}
+
 /// Aggregate per-restriction rollout-allowlist flags for one request.
 ///
 /// Every restriction must allowlist the caller: being allowlisted for one tent
@@ -548,22 +571,7 @@ fn all_rollout_allowlisted(flags: impl IntoIterator<Item = bool>) -> bool {
 
 impl SourceRestrictionSummary {
     pub(crate) fn from_checks(checks: &[impl SourceRestrictionCheck]) -> Self {
-        // TODO(T289977216): Isolate this legacy single-source boolean
-        // aggregation before Both mode starts reconciling factor results.
-        let has_acl_access = checks
-            .iter()
-            .all(|check| check.authorization().acl_result().is_authorized());
-        let is_allowlisted_tooling = checks
-            .iter()
-            .any(|check| check.authorization().tooling_result().is_authorized());
-        let is_rollout_allowlisted = all_rollout_allowlisted(
-            checks
-                .iter()
-                .map(|check| check.authorization().rollout_result().is_authorized()),
-        );
-        let is_admin_bypass = checks
-            .iter()
-            .any(|check| check.authorization().admin_result().is_authorized());
+        let authorization = aggregate_single_source_authorization(checks);
         let repo_region_acls = checks
             .iter()
             .map(|check| check.repo_region_identity().to_string())
@@ -575,12 +583,7 @@ impl SourceRestrictionSummary {
             .collect();
 
         Self {
-            authorization: AuthorizationCheckResult::new(
-                has_acl_access,
-                is_allowlisted_tooling,
-                is_rollout_allowlisted,
-                is_admin_bypass,
-            ),
+            authorization,
             repo_region_acls,
             restriction_roots,
         }
