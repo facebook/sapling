@@ -909,10 +909,11 @@ python_unittest(
 
 http_artifacts = get_test_env_and_deps()
 
-python_integration_test(
+python_unittest(
     name = "http",
     srcs = ["http_test.py"],
     env = http_artifacts["env"],
+    network_access = network_access_utils.all(),
     supports_static_listing = False,
     deps = [
         "//eden/integration/lib:lib",
