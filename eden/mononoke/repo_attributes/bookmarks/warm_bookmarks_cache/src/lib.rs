@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
+#[path = "facebook/event_router_coordinator_stats.rs"]
+mod event_router_coordinator_stats;
 #[cfg(test)]
 mod scoped_bookmarks_tests;
 #[cfg(test)]
@@ -1850,11 +1853,11 @@ impl BookmarksCoordinator {
         let fut = async move {
             tracing::info!("Started EventRouter warm bookmark cache updater");
             let repo_name: String = self.repo.repo_identity().name().to_string();
-            STATS::event_router_coordinator_active.set_value(
-                ctx.fb,
-                1,
-                (repo_name.clone(),),
-            );
+            let _activity =
+                event_router_coordinator_stats::EventRouterCoordinatorActivity::new(
+                    ctx.fb,
+                    repo_name.clone(),
+                );
             let mut bookmark_event_notification_subscriber = None;
             let infinite_loop = async {
                 let mut sync_started = false;
@@ -2036,11 +2039,6 @@ impl BookmarksCoordinator {
             .boxed();
 
             let _ = select(infinite_loop, terminate).await;
-            STATS::event_router_coordinator_active.set_value(
-                ctx.fb,
-                0,
-                (repo_name.clone(),),
-            );
             STATS::max_staleness_secs.set_value(ctx.fb, 0, (repo_name.clone(),));
             tracing::info!("Stopped EventRouter warm bookmark cache updater");
         }

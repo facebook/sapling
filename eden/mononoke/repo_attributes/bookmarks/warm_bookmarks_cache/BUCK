@@ -83,6 +83,7 @@ rust_library(
             []
             if rust_oss.is_oss_build()
             else [
+                "//common/rust/shed/fbinit:fbinit",
                 "//eden/mononoke/facebook/ods3_schemas:MononokeWarmBookmarkCacheStats_ods3-rs_bindings",
             ]
         )
