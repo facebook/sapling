@@ -280,7 +280,10 @@ async fn derive_stage_batch_from_bonsai(
 
         let file_changes = bonsai
             .file_changes()
-            .filter(|(path, _)| stage_path.is_prefix_of(*path))
+            .filter(|(path, change)| {
+                stage_path.is_prefix_of(*path)
+                    || (change.is_changed() && path.is_prefix_of(stage_path))
+            })
             .map(|(path, file_change)| {
                 Ok((
                     path.clone(),

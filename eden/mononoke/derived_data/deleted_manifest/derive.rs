@@ -90,9 +90,8 @@ use crate::mapping::RootDeletedManifestIdCommon;
 ///    deleted manifest for. In this case the other parent is resurrecting that
 ///    entry and we have to accommodate for that.
 ///
-/// 2. When the the path is a directory in one of the parents but a file in
-///    unode for current commit. In this case we descend into all paths in replaced
-///    directory.
+/// 2. When the path is a directory in one of the parents but is absent or a file
+///    in the current commit. In this case we descend into the removed directory.
 pub(crate) struct DeletedManifestDeriver<Manifest: DeletedManifestCommon>(
     std::marker::PhantomData<Manifest>,
 );
@@ -439,21 +438,12 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             DeletedManifestChangeType::CreateDeleted
         };
 
-        // Special case of bonsais where a file is replacing a tree in the
-        // parent. We need to recurse into that parent tree to mark the whole
-        // thing as deleted even though newly deleted files weren't listed
-        // in bonsai's changes.
-        if let Some(UnodeEntry::File(_mf_unode)) = current_unode_id {
-            for (parent_unode_entry, _parent_cs_ids) in parents_unode_ids.iter() {
-                if let UnodeEntry::Directory(parent_unode) = parent_unode_entry {
-                    let entries: Vec<_> = parent_unode
-                        .list_all_entries(ctx.clone(), blobstore.clone())
-                        .try_collect()
-                        .await?;
-                    for (path, _) in entries {
-                        counters.file_dir.inc();
-                        changes.insert(path, ());
-                    }
+        // Directory replacement can delete descendants absent from Bonsai's changes.
+        if !matches!(current_unode_id, Some(UnodeEntry::Directory(_))) {
+            for (parent_unode, _) in &parent_tree_unodes {
+                for (name, _) in parent_unode.subentries() {
+                    counters.file_dir.inc();
+                    changes.insert(MPath::from(vec![name.clone()]), ());
                 }
             }
         }

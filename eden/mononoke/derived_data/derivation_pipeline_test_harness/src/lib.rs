@@ -418,6 +418,7 @@ async fn verify_pipeline_output<F: PipelineTestFixture>(
     all_commits: &[ChangesetId],
     plan: &PipelinePlan,
 ) -> Result<()> {
+    let mut mismatches = Vec::new();
     for &cs_id in all_commits {
         if !plan.pipeline_commits.contains(&cs_id) {
             continue;
@@ -433,10 +434,9 @@ async fn verify_pipeline_output<F: PipelineTestFixture>(
                 )
                 .await?;
                 if !matches {
-                    bail!(
-                        "pipeline output diverged from canonical: fixture={} cs_id={cs_id} type={derivable_type:?} stage={stage_path:?}",
-                        F::REPO_NAME,
-                    );
+                    mismatches.push(format!(
+                        "cs_id={cs_id} type={derivable_type:?} stage={stage_path:?}"
+                    ));
                 }
             }
         }
@@ -456,12 +456,18 @@ async fn verify_pipeline_output<F: PipelineTestFixture>(
             )
             .await?;
             if !matches {
-                bail!(
-                    "pipeline finalize output diverged from canonical: fixture={} cs_id={cs_id} type={derivable_type:?}",
-                    F::REPO_NAME,
-                );
+                mismatches.push(format!(
+                    "cs_id={cs_id} type={derivable_type:?} stage=Finalize"
+                ));
             }
         }
+    }
+    if !mismatches.is_empty() {
+        bail!(
+            "pipeline output diverged from canonical: fixture={}\n{}",
+            F::REPO_NAME,
+            mismatches.join("\n"),
+        );
     }
     Ok(())
 }
@@ -526,6 +532,7 @@ async fn run_pipeline_first_then_canonical<F: PipelineTestFixture + Send>(
 mod tests {
     use bonsai_hg_mapping::BonsaiHgMappingRef;
     use fixtures::AclNestedDirectories;
+    use fixtures::AncestorDirectoryReplacement;
     use fixtures::AugmentedManifestSuppliedRoot;
     use fixtures::AugmentedManifestSuppliedRootAcl;
     use fixtures::AugmentedManifestV2AbsentParentStageNoHgMapping;
@@ -624,6 +631,12 @@ mod tests {
         }
     }
 
+    impl PipelineTestFixture for AncestorDirectoryReplacement {
+        fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
+            vec![("", vec!["a"]), ("a", vec!["b"]), ("a/b", vec![])]
+        }
+    }
+
     impl PipelineTestFixture for AugmentedManifestV2AclNoHgMapping {
         fn pipeline_stages() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
@@ -689,6 +702,13 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_pipeline_matches_canonical_acl(fb: FacebookInit) -> Result<()> {
         verify_pipeline_matches_canonical::<AclNestedDirectories>(fb).await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_matches_canonical_ancestor_directory_replacement(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        verify_pipeline_matches_canonical::<AncestorDirectoryReplacement>(fb).await
     }
 
     async fn verify_augmented_manifest_pipeline_first_without_hg_mapping<

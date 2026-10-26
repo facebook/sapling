@@ -1886,6 +1886,66 @@ impl TestRepoFixture for AclNestedDirectories {
     }
 }
 
+/// Replace the populated directory `a` with a file, then recreate it with new contents.
+pub struct AncestorDirectoryReplacement;
+
+#[async_trait]
+impl TestRepoFixture for AncestorDirectoryReplacement {
+    const REPO_NAME: &'static str = "ancestor_directory_replacement";
+
+    async fn init_repo(
+        fb: FacebookInit,
+        repo: &impl Repo,
+    ) -> Result<(
+        BTreeMap<String, ChangesetId>,
+        BTreeMap<String, BTreeSet<String>>,
+    )> {
+        use tests_utils::CreateCommitContext;
+
+        let ctx = CoreContext::test_mock(fb);
+        let a = CreateCommitContext::new_root(&ctx, repo)
+            .set_message("A")
+            .add_file("a/b/.slacl", ACL_PROJECT1)
+            .add_file("a/b/x", "x\n")
+            .add_file("a/b/nested/deeper/x", "nested\n")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(&ctx, repo, vec![a])
+            .set_message("B")
+            .add_file("a", "now a file\n")
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(&ctx, repo, vec![b])
+            .set_message("C")
+            .delete_file("a")
+            .add_file("a/b/.slacl", ACL_PROJECT1)
+            .add_file("a/b/y", "y\n")
+            .commit()
+            .await?;
+
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        txn.force_set(
+            &BookmarkKey::new("master")?,
+            c,
+            BookmarkUpdateReason::TestMove,
+        )?;
+        txn.commit().await?;
+
+        Ok((
+            BTreeMap::from([
+                ("A".to_string(), a),
+                ("B".to_string(), b),
+                ("C".to_string(), c),
+            ]),
+            BTreeMap::from([
+                ("A".to_string(), BTreeSet::new()),
+                ("B".to_string(), BTreeSet::from(["A".to_string()])),
+                ("C".to_string(), BTreeSet::from(["B".to_string()])),
+            ]),
+        ))
+    }
+}
+
 pub fn json_config_minimal() -> String {
     r#"
     {

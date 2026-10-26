@@ -460,16 +460,24 @@ pub(crate) async fn get_acl_file_changes(
 
     // Implicit deletes: file additions (non-ACL) that replace directories
     // containing .slacl files in parent manifests. The parent manifests are
-    // rooted at `stage_path`, so prefixes are made relative to it (and only
-    // those under the stage are relevant); resolved leaves are re-prefixed back
-    // to absolute paths.
+    // rooted at `stage_path`; an addition above it replaces the entire stage.
+    // Resolved leaves are re-prefixed back to absolute paths.
     let stage_prefix = stage_path.clone();
     let addition_prefixes: Vec<PathOrPrefix> = bonsai
         .file_changes()
         .filter(|(path, change)| change.is_changed() && path.basename().as_ref() != acl_file_bytes)
         .map(|(path, _)| MPath::from(path.clone()))
-        .filter(|abs_path| stage_prefix.is_prefix_of(abs_path))
-        .map(|abs_path| PathOrPrefix::Prefix(abs_path.remove_prefix_component(stage_prefix.iter())))
+        .filter_map(|abs_path| {
+            if abs_path.is_prefix_of(&stage_prefix) {
+                Some(PathOrPrefix::Prefix(MPath::ROOT))
+            } else if stage_prefix.is_prefix_of(&abs_path) {
+                Some(PathOrPrefix::Prefix(
+                    abs_path.remove_prefix_component(&stage_prefix),
+                ))
+            } else {
+                None
+            }
+        })
         .collect();
 
     let implicit_deletes: Vec<(NonRootMPath, AclFileChange)> =

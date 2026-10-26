@@ -319,14 +319,13 @@ pub async fn get_manifest_entry_from_bonsai(
         (p1, p2)
     };
 
-    // Filter file changes to those at or under stage_path. `is_prefix_of`
-    // keeps both descendants and a change landing exactly at stage_path (e.g.
-    // replacing the stage-root directory with a file, or deleting it), which
-    // `remove_prefix_component` would drop since it only strips strict
-    // prefixes. At root this is a no-op (every NonRootMPath is under MPath::ROOT).
+    // Ancestor additions must reach derive_manifest to trigger implicit deletion.
     let file_changes = bcs
         .file_changes()
-        .filter(|(path, _)| stage_path.is_prefix_of(*path))
+        .filter(|(path, change)| {
+            stage_path.is_prefix_of(*path)
+                || (change.is_changed() && path.is_prefix_of(&stage_path))
+        })
         .map(|(path, fc)| {
             Ok((
                 path.clone(),

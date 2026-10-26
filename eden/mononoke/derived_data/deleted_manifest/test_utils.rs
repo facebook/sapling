@@ -530,6 +530,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
     let k = CreateCommitContext::new(&ctx, &repo, vec![j.clone()])
         .delete_file("dir_4/file_1")
         .add_file("dir_to_file/file", "will be replaced")
+        .add_file("dir_to_file/sub/deep/file", "will also be replaced")
         .commit()
         .await?;
 
@@ -586,6 +587,9 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
         (path("dir_5/file_2"), Status::Deleted(n)),
         (path("dir_to_file"), Status::Live),
         (path("dir_to_file/file"), Status::Deleted(n)),
+        (path("dir_to_file/sub"), Status::Deleted(n)),
+        (path("dir_to_file/sub/deep"), Status::Deleted(n)),
+        (path("dir_to_file/sub/deep/file"), Status::Deleted(n)),
         (path("file"), Status::Deleted(i)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
