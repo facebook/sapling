@@ -1017,6 +1017,10 @@ pub struct HookConfig {
     pub options: Option<String>,
     /// Whether this hook is log-only
     pub log_only: bool,
+    /// The hook's name, as configured.
+    pub name: String,
+    /// Replacement text for the hook's messages, keyed by message name
+    pub messages: HashMap<String, String>,
 
     // Deprecated config options
     /// Map of config to it's value. Values here are strings

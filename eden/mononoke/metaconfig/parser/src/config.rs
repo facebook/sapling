@@ -1270,6 +1270,7 @@ mod test {
             name="hook1"
             bypass_commit_string="@allow_hook1"
             config_json = "{\"test\": \"abcde\"}"
+            messages = { rejected = "Rejected ${path}" }
 
             [[hooks]]
             name="hook2a"
@@ -1612,6 +1613,10 @@ mod test {
                             bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
                             options: Some(r#"{"test": "abcde"}"#.to_string()),
                             log_only: false,
+                            name: "hook1".to_string(),
+                            messages: hashmap! {
+                                "rejected".into() => "Rejected ${path}".into(),
+                            },
                             strings: hashmap! {},
                             ints: hashmap! {},
                             ints_64: hashmap! {},
@@ -1627,6 +1632,8 @@ mod test {
                             bypass: None,
                             options: None,
                             log_only: true,
+                            name: "hook2a".to_string(),
+                            messages: hashmap! {},
                             strings: hashmap! {},
                             ints: hashmap! {
                                 "int1".into() => 44,
