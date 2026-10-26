@@ -15,13 +15,9 @@ oncall("sapling")
 MINCODE_PATH_GLOBS = ["**/eden/scm/lib/mincode/src/**"]
 
 # Lionhead matches each target_symbols entry as a regex against the function's
-# raw DWARF linkage name and demangles only C++ (`_Z`) names, so Rust names
-# reach it v0-mangled (T291781185). Each function gets two entries, the
-# demangled path and the v0 tokens, with `.?` standing in for the `>` of the
-# `<Type>::method` form. The manifest genrule passes these on a command line
-# that cmd.exe splits on unquoted `|` and `>`, so neither may appear.
-# Non-generic functions are anchored with `$`; a generic instantiation appends
-# its type arguments after the name, so those entries are left unanchored.
+# demangled name, with `.?` standing in for the `>` of the `<Type>::method`
+# form. The manifest genrule passes these on a command line that cmd.exe
+# splits on unquoted `|` and `>`, so neither may appear.
 
 # Smoke test these with: buck2 test :decode-smoke-test
 rust_lionhead_harness(
@@ -36,11 +32,8 @@ rust_lionhead_harness(
             include_path_globs = MINCODE_PATH_GLOBS,
             target_symbols = [
                 "mincode::deserialize",
-                "7mincode11deserialize",
                 "mincode::de::Deserializer.?::read_slice$",
-                "2de.*12Deserializer10read_slice$",
                 "mincode::de::Deserializer.?::read_str$",
-                "2de.*12Deserializer8read_str$",
             ],
         ),
     ],
@@ -69,11 +62,8 @@ rust_lionhead_harness(
             include_path_globs = MINCODE_PATH_GLOBS,
             target_symbols = [
                 "mincode::serialize",
-                "7mincode9serialize",
                 "mincode::deserialize",
-                "7mincode11deserialize",
                 "mincode::de::Deserializer.?::read_slice$",
-                "2de.*12Deserializer10read_slice$",
             ],
         ),
     ],
