@@ -6596,18 +6596,6 @@ void EdenServiceHandler::getAccessCounts(
   }
 }
 
-void EdenServiceHandler::clearAndCompactLocalStore() {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-}
-
-void EdenServiceHandler::debugClearLocalStoreCaches() {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-}
-
-void EdenServiceHandler::debugCompactLocalStorage() {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-}
-
 // TODO(T119221752): add more BackingStore subclasses to this command. We
 // currently only support SaplingBackingStores
 int64_t EdenServiceHandler::debugDropAllPendingRequests() {

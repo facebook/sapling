@@ -167,8 +167,6 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             for blob in response.blobs:
                 if blob.origin == DataFetchOrigin.MEMORY_CACHE:
                     blob.blob.error
-                elif blob.origin == DataFetchOrigin.DISK_CACHE:
-                    blob.blob.error
                 elif blob.origin == DataFetchOrigin.LOCAL_BACKING_STORE:
                     self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.blob)
                 elif blob.origin == DataFetchOrigin.REMOTE_BACKING_STORE:

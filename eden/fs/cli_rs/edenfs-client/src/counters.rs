@@ -830,7 +830,6 @@ impl EdenFsClient {
 
         let file_metadata_counters = [
             COUNTER_METADATA_MEMORY,
-            COUNTER_METADATA_LOCAL_STORE,
             COUNTER_METADATA_BACKING_STORE,
             COUNTER_METADATA_AUX_COMPUTED,
             COUNTER_METADATA_AUX_HITS,
@@ -845,7 +844,6 @@ impl EdenFsClient {
 
         let tree_metadata_counters = [
             COUNTER_TREE_METADATA_MEMORY,
-            COUNTER_TREE_METADATA_LOCAL_STORE,
             COUNTER_TREE_METADATA_BACKING_STORE,
         ];
 

@@ -86,20 +86,16 @@ under 100 MB and can hold the SHA-1s of all files in most large repositories.
 
 ## Local Store
 
-To avoid needing to fetch blobs and trees repeatedly from the network, Eden
-stores the objects in its own local store (currently RocksDB).
+Eden has no on-disk object store of its own. Blobs, trees and their aux data
+are cached by the backing store; for Sapling repositories that is the hgcache
+shared with the Sapling CLI.
 
 When a blob is fetched from the network, Eden assumes now is a good time to
 compute the content hash. If the upstream (e.g. Mononoke) already knows a blob's
 SHA-1 and size, Eden does not recompute it. Afterwards, the content hash and
-size are stored both in the in-memory cache and the local store.
-
-Local store eviction is an unsolved problem. The `eden gc` command flushes
-everything that is known to be recreatable, but otherwise the local store will
-grow without bounds.
+size are kept in the in-memory cache.
 
 ## Mercurial Caches
 
-Mercurial has its own blob and tree caches. Eden will import data from them when
-possible. It currently mirrors that data into its own local store but that's an
-easy opportunity to remove unnecessary disk consumption and IO.
+Mercurial has its own blob and tree caches. Eden imports data from them when
+possible.

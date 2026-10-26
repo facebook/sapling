@@ -86,7 +86,6 @@ from eden.fs.service.eden.thrift_types import (
     TreeInodeDebugInfo,
     UnderAclOrError,
 )
-from thrift.python.exceptions import ApplicationError, ApplicationErrorType
 from thrift.python.serializer import Protocol, serialize as thrift_serialize
 from thrift.python.types import Struct as ThriftStruct
 
@@ -422,13 +421,6 @@ def add_get_object_options(parser: argparse.ArgumentParser, objectType: str) -> 
         help=f"Only check the in memory object cache for the {objectType}",
     )
     group.add_argument(
-        "-l",
-        "--local-store-only",
-        action="store_true",
-        default=False,
-        help=f"Only check the EdenFS LocalStore for {objectType}. ",
-    )
-    group.add_argument(
         "-d",  # d for "disk cache"
         "--hgcache-only",
         action="store_true",
@@ -455,8 +447,6 @@ def get_origin_flags(args: argparse.Namespace) -> int:
     origin_flags = DataFetchOrigin.ANYWHERE
     if args.object_cache_only:
         origin_flags = DataFetchOrigin.MEMORY_CACHE
-    elif args.local_store_only:
-        origin_flags = DataFetchOrigin.DISK_CACHE
     elif args.hgcache_only:
         origin_flags = DataFetchOrigin.LOCAL_BACKING_STORE
     elif args.remote_only:
@@ -464,7 +454,6 @@ def get_origin_flags(args: argparse.Namespace) -> int:
     elif args.all:
         origin_flags = (
             DataFetchOrigin.MEMORY_CACHE
-            | DataFetchOrigin.DISK_CACHE
             | DataFetchOrigin.LOCAL_BACKING_STORE
             | DataFetchOrigin.REMOTE_BACKING_STORE
             | DataFetchOrigin.ANYWHERE
@@ -475,8 +464,6 @@ def get_origin_flags(args: argparse.Namespace) -> int:
 def origin_to_text(origin: DataFetchOrigin) -> str:
     if origin == DataFetchOrigin.MEMORY_CACHE:
         return "object cache"
-    elif origin == DataFetchOrigin.DISK_CACHE:
-        return "local store"
     elif origin == DataFetchOrigin.LOCAL_BACKING_STORE:
         return "hgcache"
     elif origin == DataFetchOrigin.REMOTE_BACKING_STORE:
@@ -662,69 +649,6 @@ class BlobMetaCmd(Subcmd):
         return 0
 
 
-class MismatchedBlobSize:
-    actual_blobsize: int
-    cached_blobsize: int
-
-    def __init__(self, actual_blobsize: int, cached_blobsize: int) -> None:
-        self.actual_blobsize = actual_blobsize
-        self.cached_blobsize = cached_blobsize
-
-
-def check_blob_and_size_match(
-    client: ModernEdenService.Sync, checkout: Path, identifying_hash: bytes
-) -> Optional[MismatchedBlobSize]:
-    try:
-        response = client.debugGetBlob(
-            DebugGetScmBlobRequest(
-                mountId=MountId(mountPoint=bytes(checkout)),
-                id=identifying_hash,
-                origins=DataFetchOrigin.LOCAL_BACKING_STORE,  # We don't want to cause any network fetches.
-            )
-        )
-        blob = None
-        for blobFromACertainPlace in response.blobs:
-            try:
-                blob = blobFromACertainPlace.blob.blob
-            except AssertionError:
-                # only care to check blobs that exist
-                pass
-
-        blobmeta = None
-        try:
-            blobmeta = (
-                client.debugGetBlobMetadata(
-                    DebugGetBlobMetadataRequest(
-                        mountId=MountId(mountPoint=bytes(checkout)),
-                        id=identifying_hash,
-                        origins=DataFetchOrigin.DISK_CACHE,
-                    )
-                )
-                .metadatas[0]
-                .metadata.metadata
-            )
-        except AssertionError:
-            # only care to check blobs that exist
-            pass
-
-        if blob is not None and blobmeta is not None and blobmeta.size != len(blob):
-            return MismatchedBlobSize(
-                actual_blobsize=len(blob), cached_blobsize=blobmeta.size
-            )
-    except EdenError:
-        # we don't care if debugGetScmBlobV2 returns an EdenError because
-        # we only care about data that has been read by the user and thus is
-        # present locally being incorrect.
-        # We don't care if debugGetScmBlobMetadata returns an EdenError because
-        # we only care about cached data being incorrect.
-        return None
-    except ApplicationError as ex:
-        # we don't care about older versions of eden being incompatible, we will
-        # just run the check when we can.
-        if ex.type == ApplicationErrorType.UNKNOWN_METHOD:
-            return None
-
-
 _FILE_TYPE_FLAGS: Dict[int, str] = {
     stat.S_IFREG: "f",
     stat.S_IFDIR: "d",
@@ -802,24 +726,6 @@ class GcProcessFetchCmd(Subcmd):
                 client.clearFetchCountsByMount(bytes(checkout.path))
             else:
                 client.clearFetchCounts()
-        return 0
-
-
-@debug_cmd("clear_local_caches", "Clears local caches of objects stored in RocksDB")
-class ClearLocalCachesCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
-            client.debugClearLocalStoreCaches()
-        return 0
-
-
-@debug_cmd("compact_local_storage", "Asks RocksDB to compact its storage")
-class CompactLocalStorageCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
-            client.debugCompactLocalStorage()
         return 0
 
 

@@ -405,18 +405,6 @@ mock! {
             &self,
         ) -> BoxFuture<'static, Result<GetFetchedFilesResult, StopRecordingBackingStoreFetchError>>;
 
-        fn clearAndCompactLocalStore(
-            &self,
-        ) -> BoxFuture<'static, Result<(), ClearAndCompactLocalStoreError>>;
-
-        fn debugClearLocalStoreCaches(
-            &self,
-        ) -> BoxFuture<'static, Result<(), DebugClearLocalStoreCachesError>>;
-
-        fn debugCompactLocalStorage(
-            &self,
-        ) -> BoxFuture<'static, Result<(), DebugCompactLocalStorageError>>;
-
         fn debugDropAllPendingRequests(
             &self,
         ) -> BoxFuture<'static, Result<i64, DebugDropAllPendingRequestsError>>;

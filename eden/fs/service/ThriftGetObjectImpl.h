@@ -45,8 +45,6 @@ struct DataFetchOriginFlags
 
 inline constexpr auto FROMWHERE_MEMORY_CACHE =
     DataFetchOriginFlags::raw(DataFetchOrigin::MEMORY_CACHE);
-inline constexpr auto FROMWHERE_DISK_CACHE =
-    DataFetchOriginFlags::raw(DataFetchOrigin::DISK_CACHE);
 inline constexpr auto FROMWHERE_LOCAL_BACKING_STORE =
     DataFetchOriginFlags::raw(DataFetchOrigin::LOCAL_BACKING_STORE);
 inline constexpr auto FROMWHERE_REMOTE_BACKING_STORE =

@@ -197,12 +197,6 @@ pub mod cas_local_cache {
         "scmstore.tree.prefetch.cas_direct.local_cache.lmdb.hits";
 }
 
-// RocksDB local store cache counters
-pub const COUNTER_LOCAL_STORE_BLOBS_HITS: &str = "local_store.get_blob_success.sum";
-pub const COUNTER_LOCAL_STORE_BLOBS_MISSES: &str = "local_store.get_blob_failure.sum";
-pub const COUNTER_LOCAL_STORE_TREES_HITS: &str = "local_store.get_tree_success.sum";
-pub const COUNTER_LOCAL_STORE_TREES_MISSES: &str = "local_store.get_tree_failure.sum";
-
 // In-memory cache counters
 pub const COUNTER_IN_MEMORY_BLOBS_HITS: &str = "blob_cache.get_hit.sum";
 pub const COUNTER_IN_MEMORY_BLOBS_MISSES: &str = "blob_cache.get_miss.sum";
@@ -211,7 +205,6 @@ pub const COUNTER_IN_MEMORY_TREES_MISSES: &str = "tree_cache.get_miss.sum";
 
 // File metadata counters
 pub const COUNTER_METADATA_MEMORY: &str = "object_store.get_blob_metadata.memory.count";
-pub const COUNTER_METADATA_LOCAL_STORE: &str = "object_store.get_blob_metadata.local_store.count";
 pub const COUNTER_METADATA_BACKING_STORE: &str =
     "object_store.get_blob_metadata.backing_store.count";
 
@@ -232,8 +225,6 @@ pub mod metadata_aux_cache {
 
 // Tree metadata counters
 pub const COUNTER_TREE_METADATA_MEMORY: &str = "object_store.get_tree_metadata.memory.count";
-pub const COUNTER_TREE_METADATA_LOCAL_STORE: &str =
-    "object_store.get_tree_metadata.local_store.count";
 pub const COUNTER_TREE_METADATA_BACKING_STORE: &str =
     "object_store.get_tree_metadata.backing_store.count";
 

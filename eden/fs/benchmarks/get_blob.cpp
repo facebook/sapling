@@ -28,7 +28,6 @@ DEFINE_bool(
     false,
     "Only fetch from local store (no network)");
 DEFINE_bool(memory_cache_only, false, "Only fetch from memory cache");
-DEFINE_bool(disk_cache_only, false, "Only fetch from disk cache");
 DEFINE_bool(remote_only, false, "Only fetch from remote backing store");
 
 namespace {
@@ -162,14 +161,12 @@ DataFetchOriginSet getOriginFlags() {
     origins = FROMWHERE_LOCAL_BACKING_STORE;
   } else if (FLAGS_memory_cache_only) {
     origins = FROMWHERE_MEMORY_CACHE;
-  } else if (FLAGS_disk_cache_only) {
-    origins = FROMWHERE_DISK_CACHE;
   } else if (FLAGS_remote_only) {
     origins = FROMWHERE_REMOTE_BACKING_STORE;
   } else {
     // Default: try all origins
     origins = FROMWHERE_LOCAL_BACKING_STORE | FROMWHERE_MEMORY_CACHE |
-        FROMWHERE_DISK_CACHE | FROMWHERE_REMOTE_BACKING_STORE;
+        FROMWHERE_REMOTE_BACKING_STORE;
   }
 
   return origins.asRaw();

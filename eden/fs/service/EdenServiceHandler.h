@@ -496,12 +496,6 @@ class EdenServiceHandler
   void getAccessCounts(GetAccessCountsResult& result, int64_t duration)
       override;
 
-  void clearAndCompactLocalStore() override;
-
-  void debugClearLocalStoreCaches() override;
-
-  void debugCompactLocalStorage() override;
-
   int64_t debugDropAllPendingRequests() override;
 
   int64_t unloadInodeForPath(
