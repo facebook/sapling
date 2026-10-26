@@ -347,22 +347,11 @@ class EdenServiceHandler
   folly::coro::now_task<std::unique_ptr<Glob>> co_globFilesImpl(
       std::unique_ptr<GlobParams> params);
 
-  folly::coro::Task<void> co_prefetchFiles(
-      std::unique_ptr<PrefetchParams> params) override;
-
   folly::coro::Task<std::unique_ptr<PrefetchResult>> co_prefetchFilesV2(
       std::unique_ptr<PrefetchParams> params) override;
 
   folly::coro::now_task<std::unique_ptr<PrefetchResult>> prefetchFilesV2Impl(
       std::unique_ptr<PrefetchParams> params);
-
-  folly::SemiFuture<std::unique_ptr<Glob>> semifuture_predictiveGlobFiles(
-      std::unique_ptr<GlobParams> params) override;
-
-  folly::SemiFuture<folly::Unit> semifuture_chown(
-      std::unique_ptr<std::string> mountPoint,
-      int32_t uid,
-      int32_t gid) override;
 
   folly::SemiFuture<std::unique_ptr<ChangeOwnershipResponse>>
   semifuture_changeOwnership(
@@ -415,12 +404,6 @@ class EdenServiceHandler
   folly::SemiFuture<std::unique_ptr<MatchFileSystemResponse>>
   semifuture_matchFilesystem(
       std::unique_ptr<MatchFileSystemRequest> params) override;
-
-  void debugGetScmTree(
-      std::vector<ScmTreeEntry>& entries,
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> id,
-      bool localStoreOnly) override;
 
   folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
   semifuture_debugGetBlob(

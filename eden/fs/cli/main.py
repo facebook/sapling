@@ -159,11 +159,7 @@ from eden.fs.cli.util import (
 from eden.fs.service.eden.thrift_types import EdenError
 from eden.thrift.client import EdenNotRunningError
 from fb303_core.thrift_types import fb303_status
-from thrift.python.exceptions import (
-    ApplicationError,
-    ApplicationErrorType,
-    TransportError,
-)
+from thrift.python.exceptions import TransportError
 
 from . import (
     config as config_mod,
@@ -1600,16 +1596,11 @@ class ChownCmd(Subcmd):
         instance, checkout, _rel_path = require_checkout(args, args.path)
         with instance.get_thrift_client() as client:
             print("Chowning EdenFS repository...", end="", flush=True)
-            try:
-                request = ChangeOwnershipRequest(
+            client.changeOwnership(
+                ChangeOwnershipRequest(
                     mountPoint=os.fsencode(args.path), uid=uid, gid=gid
                 )
-                client.changeOwnership(request)
-            except ApplicationError as exc:
-                if exc.type == ApplicationErrorType.UNKNOWN_METHOD:
-                    client.chown(args.path, uid, gid)
-                else:
-                    raise exc
+            )
             print("done")
 
         if not args.skip_redirection:

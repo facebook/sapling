@@ -18,7 +18,6 @@ pub enum EdenThriftMethod {
     GetSelectedCounters,
     GetCounters,
     GetCounter,
-    PrefetchFiles,
     PrefetchFilesV2,
     GlobFiles,
     ReadDir,

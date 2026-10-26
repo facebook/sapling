@@ -4954,14 +4954,6 @@ EdenServiceHandler::semifuture_ensureMaterialized(
 }
 
 folly::SemiFuture<std::unique_ptr<Glob>>
-EdenServiceHandler::semifuture_predictiveGlobFiles(
-    std::unique_ptr<GlobParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint());
-  XLOG(WARN, "predictiveGlobFiles is deprecated and no longer prefetches");
-  return folly::makeSemiFuture(std::make_unique<Glob>());
-}
-
-folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   auto isBackground = *params->background();
   // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
@@ -5030,94 +5022,6 @@ EdenServiceHandler::co_globFilesImpl(std::unique_ptr<GlobParams> params) {
       server_->getServerState(),
       std::move(*params->globs()),
       context.copy());
-}
-folly::coro::Task<void> EdenServiceHandler::co_prefetchFiles(
-    std::unique_ptr<PrefetchParams> params) {
-  auto isBackground = *params->background();
-
-  // Resolve mount and revisions before any detach so invalid ones surface as an
-  // EdenError to the caller rather than a lost failure in a detached task.
-  auto mountHandle = lookupMount(params->mountPoint());
-  if (!params->revisions().value().empty()) {
-    params->revisions() =
-        resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
-  }
-
-  auto serverState = server_->getServerState();
-  ThriftGlobImpl globber{*params};
-  auto requestContext = getRequestContext();
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
-      DBG2,
-      true,
-      requestContext,
-      *params->mountPoint(),
-      toLogArg(*params->globs()),
-      globber.logString());
-  if (isBackground) {
-    helper->markBackground();
-  }
-
-  // Capture everything the work needs as guards; the detached task must not
-  // touch the raw server_, which EdenServer can destroy during shutdown.
-  // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
-  auto task = folly::coro::co_invoke(
-      [mountHandle,
-       serverState,
-       globber = std::move(globber),
-       helper = std::move(helper)](std::unique_ptr<PrefetchParams> p) mutable
-          -> folly::coro::Task<void> {
-        TaskTraceBlock block{"EdenServiceHandler::prefetchFiles"};
-        auto& context = helper->getFetchContext();
-
-        co_await folly::coro::co_reschedule_on_current_executor;
-
-        maybeLogExpensiveGlob(
-            *p->globs(), *p->searchRoot(), globber, context, serverState);
-
-        co_await globber.glob(
-            mountHandle.getEdenMountPtr(),
-            serverState,
-            std::move(*p->globs()),
-            helper->getPrefetchFetchContext().copy());
-      },
-      std::move(params));
-
-  if (server_->usingPrefetchExecutor()) {
-    folly::Executor::KeepAlive<> exec =
-        folly::getKeepAliveToken(server_->getPrefetchFilesV2Executor().get());
-    auto pinned = folly::coro::co_withExecutor(exec, std::move(task));
-    if (isBackground) {
-      folly::futures::detachOn(exec, std::move(pinned).start());
-      co_return;
-    }
-    co_await std::move(pinned);
-    co_return;
-  }
-
-  // The glob code has a very large fan-out that can easily overload the
-  // Thrift CPU worker pool. To combat with that, we limit the execution to a
-  // single thread by using `folly::SerialExecutor` so the glob queries will
-  // not overload the executor.
-  if (server_->usingThriftSerialExecution()) {
-    if (isBackground) {
-      folly::futures::detachOn(
-          server_->getServerState()->getThreadPool().get(),
-          std::move(task).semi());
-      co_return;
-    }
-    co_await std::move(task);
-    co_return;
-  }
-
-  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
-      server_->getServer()->getThreadManager().get());
-  auto pinned = folly::coro::co_withExecutor(serial, std::move(task));
-  if (isBackground) {
-    folly::futures::detachOn(serial, std::move(pinned).start());
-    co_return;
-  }
-  co_await std::move(pinned);
-  co_return;
 }
 
 namespace {
@@ -5465,18 +5369,6 @@ EdenServiceHandler::co_prefetchFilesV2(std::unique_ptr<PrefetchParams> params) {
   co_return co_await std::move(pinned);
 }
 
-folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
-    [[maybe_unused]] std::unique_ptr<std::string> mountPoint,
-    [[maybe_unused]] int32_t uid,
-    [[maybe_unused]] int32_t gid) {
-#ifndef _WIN32
-  auto handle = lookupMount(mountPoint);
-  return handle.getEdenMount().chown(uid, gid).ensure([handle] {}).semi();
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
-}
-
 folly::SemiFuture<std::unique_ptr<ChangeOwnershipResponse>>
 EdenServiceHandler::semifuture_changeOwnership(
     unique_ptr<ChangeOwnershipRequest> request) {
@@ -5678,37 +5570,6 @@ EdenServiceHandler::semifuture_matchFilesystem(
       EdenErrorType::POSIX_ERROR,
       "matchFilesystemStat only supported for PrjFs repos which {} is not",
       *params->mountPoint());
-}
-
-void EdenServiceHandler::debugGetScmTree(
-    vector<ScmTreeEntry>& entries,
-    unique_ptr<string> mountPoint,
-    unique_ptr<string> idStr,
-    [[maybe_unused]] bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
-  auto mountHandle = lookupMount(mountPoint);
-  auto& store = mountHandle.getObjectStore();
-  auto id = store.parseObjectId(*idStr);
-
-  std::shared_ptr<const Tree> tree =
-      store.getTree(id, helper->getFetchContext()).get();
-
-  if (!tree) {
-    throw newEdenError(
-        ENOENT,
-        EdenErrorType::POSIX_ERROR,
-        "no tree found for id ",
-        store.renderObjectId(id));
-  }
-
-  for (const auto& entry : *tree) {
-    const auto& [name, treeEntry] = entry;
-    entries.emplace_back();
-    auto& out = entries.back();
-    out.name() = name.asString();
-    out.mode() = modeFromTreeEntryType(treeEntry.getType());
-    out.id() = store.renderObjectId(treeEntry.getObjectId());
-  }
 }
 
 folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
