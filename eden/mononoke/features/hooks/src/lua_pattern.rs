@@ -5,11 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
-
-use anyhow::Error;
-use fancy_regex::Regex;
-
 enum TranslationOutput {
     Literal(String),
     LuaSpecial(String),
@@ -144,65 +139,18 @@ fn pattern_to_regex(other: &str) -> String {
         .collect()
 }
 
-pub struct LuaPattern {
-    original: String,
-    regex: Regex,
-}
-
-impl LuaPattern {
-    pub fn is_match(&self, s: &str) -> bool {
-        self.regex.is_match(s).unwrap_or(false)
-    }
-
-    pub fn get_regex(&self) -> &Regex {
-        &self.regex
-    }
-}
-
-impl TryFrom<&str> for LuaPattern {
-    type Error = Error;
-    fn try_from(other: &str) -> Result<Self, Error> {
-        if let Some(other) = other.strip_prefix("re:") {
-            let regex = Regex::new(other)?;
-            return Ok(Self {
-                original: other.to_string(),
-                regex,
-            });
-        }
-        let regex = Regex::new(&pattern_to_regex(other))?;
-        Ok(Self {
-            original: other.to_string(),
-            regex,
-        })
-    }
-}
-
-impl TryFrom<String> for LuaPattern {
-    type Error = Error;
-    fn try_from(other: String) -> Result<Self, Error> {
-        if let Some(other) = other.strip_prefix("re:") {
-            let regex = Regex::new(other)?;
-            return Ok(Self {
-                original: other.to_string(),
-                regex,
-            });
-        }
-        let regex = Regex::new(&pattern_to_regex(&other))?;
-        Ok(Self {
-            original: other,
-            regex,
-        })
-    }
-}
-
-impl fmt::Display for LuaPattern {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        self.original.fmt(f)
+/// Translates a path pattern from the typed hook config into a regex. A pattern prefixed with
+/// `re:` is already a regex; any other pattern is a Lua pattern.
+pub(crate) fn lua_pattern_to_regex(pattern: &str) -> String {
+    match pattern.strip_prefix("re:") {
+        Some(regex) => regex.to_owned(),
+        None => pattern_to_regex(pattern),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use fancy_regex::Regex;
     use mononoke_macros::mononoke;
 
     // All tests represent something that went wrong in translation during manual testing
@@ -234,42 +182,36 @@ mod tests {
         assert_eq!("[ab\\]]", pattern_to_regex("[ab\\]]"));
     }
 
+    fn compile(pattern: &str) -> Regex {
+        Regex::new(&lua_pattern_to_regex(pattern)).expect("Could not map pattern to regex")
+    }
+
     #[mononoke::test]
     fn test_matching() {
-        let pattern: LuaPattern = r"^[.]git/"
-            .try_into()
-            .expect("Could not map pattern to regex");
-        assert!(pattern.is_match(".git/foo"));
-        assert!(!pattern.is_match("./git/foo"));
+        let pattern = compile(r"^[.]git/");
+        assert!(pattern.is_match(".git/foo").unwrap());
+        assert!(!pattern.is_match("./git/foo").unwrap());
 
-        let pattern: LuaPattern = r"^buck%-out/"
-            .try_into()
-            .expect("Could not map pattern to regex");
-        assert!(pattern.is_match("buck-out/file"));
-        assert!(!pattern.is_match("/buck-out/file"));
+        let pattern = compile(r"^buck%-out/");
+        assert!(pattern.is_match("buck-out/file").unwrap());
+        assert!(!pattern.is_match("/buck-out/file").unwrap());
     }
 
     #[mononoke::test]
     fn test_re_matching() {
-        let pattern: LuaPattern = r"re:^[.]git/"
-            .try_into()
-            .expect("Could not map pattern to regex");
-        assert!(pattern.is_match(".git/foo"));
-        assert!(!pattern.is_match("./git/foo"));
+        let pattern = compile(r"re:^[.]git/");
+        assert!(pattern.is_match(".git/foo").unwrap());
+        assert!(!pattern.is_match("./git/foo").unwrap());
 
-        let pattern: LuaPattern = r"re:^buck-out/"
-            .try_into()
-            .expect("Could not map pattern to regex");
-        assert!(pattern.is_match("buck-out/file"));
-        assert!(!pattern.is_match("/buck-out/file"));
+        let pattern = compile(r"re:^buck-out/");
+        assert!(pattern.is_match("buck-out/file").unwrap());
+        assert!(!pattern.is_match("/buck-out/file").unwrap());
     }
 
     #[mononoke::test]
     fn test_fancy_re_matching() {
-        let pattern: LuaPattern = r"re:^www/(?!html/(xplat-react|megarepo))"
-            .try_into()
-            .expect("Could not map pattern to regex");
-        assert!(pattern.is_match("www/html/foo"));
-        assert!(!pattern.is_match("www/html/xplat-react"));
+        let pattern = compile(r"re:^www/(?!html/(xplat-react|megarepo))");
+        assert!(pattern.is_match("www/html/foo").unwrap());
+        assert!(!pattern.is_match("www/html/xplat-react").unwrap());
     }
 }

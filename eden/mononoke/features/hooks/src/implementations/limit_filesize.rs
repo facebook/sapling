@@ -7,12 +7,13 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::bail;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::BasicFileChange;
 use mononoke_types::NonRootMPath;
 use regex::Regex;
+use serde::Deserialize;
 
 use crate::CrossRepoPushSource;
 use crate::FileHook;
@@ -21,56 +22,54 @@ use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_options::parse_hook_options;
 
-#[derive(Default)]
-pub struct LimitFilesizeBuilder {
-    path_regexes: Option<Vec<String>>,
-    limits: Option<Vec<i32>>,
+/// Configuration for the `limit_filesize` hook.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct LimitFilesizeConfig {
+    /// Size limits in order of precedence: a file is subject to the first limit whose
+    /// `path_regex` matches its path, and to no limit if none matches. Must not be empty.
+    pub limits: Vec<FilesizeLimit>,
 }
 
-impl LimitFilesizeBuilder {
-    pub fn set_from_config(mut self, config: &HookConfig) -> Self {
-        if let Some(v) = config.string_lists.get("filesize_limits_regexes") {
-            self = self.filesize_limits_regexes(v)
+/// The size limit for files whose paths match a regex.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct FilesizeLimit {
+    /// Regex matched against the path of the file.
+    pub path_regex: String,
+    /// Largest accepted file size in bytes, or `null` for no limit. The key is required, so that
+    /// a misspelt key is an error rather than a missing limit.
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub max_bytes: Option<u64>,
+}
+
+impl LimitFilesizeConfig {
+    /// Builds the config from the `filesize_limits_regexes` string list and the
+    /// `filesize_limits_values` int list, pairing them by position. A negative value means no
+    /// limit.
+    fn from_typed(config: &HookConfig) -> Result<Self> {
+        let (Some(regexes), Some(values)) = (
+            config.string_lists.get("filesize_limits_regexes"),
+            config.int_lists.get("filesize_limits_values"),
+        ) else {
+            bail!(
+                "Failed to initialize limit_filesize hook. Either 'filesize_limits_regexes' or 'filesize_limits_values' option is missing."
+            );
+        };
+        if regexes.is_empty() || values.is_empty() {
+            bail!(
+                "Failed to initialize limit_filesize hook. Either 'filesize_limits_regexes' or 'filesize_limits_values' list is empty."
+            );
         }
-
-        if let Some(v) = config.int_lists.get("filesize_limits_values") {
-            self.limits = Some(v.clone())
-        }
-
-        self
-    }
-
-    pub fn filesize_limits_regexes(
-        mut self,
-        strs: impl IntoIterator<Item = impl AsRef<str>>,
-    ) -> Self {
-        self.path_regexes = Some(strs.into_iter().map(|s| String::from(s.as_ref())).collect());
-        self
-    }
-
-    pub fn build(self) -> Result<LimitFilesize> {
-        if let (Some(regexes_str), Some(limits)) = (self.path_regexes, self.limits) {
-            if regexes_str.is_empty() || limits.is_empty() {
-                return Err(anyhow!(
-                    "Failed to initialize limit_filesize hook. Either 'filesize_limits_regexes' or 'filesize_limits_values' list is empty."
-                ));
-            }
-            let regexes = regexes_str
-                .into_iter()
-                .map(|s| Regex::new(&s))
-                .collect::<Result<Vec<_>, _>>()
-                .context("Failed to create regex for path_regexes")?;
-
-            let limits: Vec<Option<u64>> = limits.into_iter().map(|n| n.try_into().ok()).collect();
-
-            return Ok(LimitFilesize {
-                path_regexes_with_limits: regexes.into_iter().zip(limits).collect(),
-            });
-        }
-        Err(anyhow!(
-            "Failed to initialize limit_filesize hook. Either 'filesize_limits_regexes' or 'filesize_limits_values' option is missing."
-        ))
+        let limits = regexes
+            .iter()
+            .zip(values)
+            .map(|(path_regex, value)| FilesizeLimit {
+                path_regex: path_regex.clone(),
+                max_bytes: u64::try_from(*value).ok(),
+            })
+            .collect();
+        Ok(Self { limits })
     }
 }
 
@@ -79,8 +78,30 @@ pub struct LimitFilesize {
 }
 
 impl LimitFilesize {
-    pub fn builder() -> LimitFilesizeBuilder {
-        LimitFilesizeBuilder::default()
+    pub fn new(config: &HookConfig) -> Result<Self> {
+        Self::with_config(parse_hook_options(
+            config,
+            "limit_filesize",
+            LimitFilesizeConfig::from_typed,
+        )?)
+    }
+
+    pub fn with_config(config: LimitFilesizeConfig) -> Result<Self> {
+        if config.limits.is_empty() {
+            bail!("Failed to initialize limit_filesize hook. The list of limits is empty.");
+        }
+        let path_regexes_with_limits = config
+            .limits
+            .into_iter()
+            .map(|limit| {
+                let regex = Regex::new(&limit.path_regex)
+                    .with_context(|| format!("Invalid path_regex '{}'", limit.path_regex))?;
+                Ok((regex, limit.max_bytes))
+            })
+            .collect::<Result<_>>()?;
+        Ok(Self {
+            path_regexes_with_limits,
+        })
     }
 }
 
@@ -158,5 +179,70 @@ impl FileHook for LimitFilesize {
             }
         }
         Ok(HookExecution::accepted())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn parse(config: &HookConfig) -> Result<LimitFilesizeConfig> {
+        parse_hook_options(config, "limit_filesize", LimitFilesizeConfig::from_typed)
+    }
+
+    fn json_config(json: &str) -> HookConfig {
+        HookConfig {
+            options: Some(json.to_owned()),
+            ..Default::default()
+        }
+    }
+
+    #[mononoke::test]
+    fn test_typed_and_json_configs_match() -> Result<()> {
+        let typed = HookConfig {
+            string_lists: [(
+                "filesize_limits_regexes".to_owned(),
+                vec!["^exempt/".to_owned(), ".*".to_owned()],
+            )]
+            .into(),
+            int_lists: [("filesize_limits_values".to_owned(), vec![-1, 100])].into(),
+            ..Default::default()
+        };
+        let json = json_config(
+            r#"{"limits": [
+                {"path_regex": "^exempt/", "max_bytes": null},
+                {"path_regex": ".*", "max_bytes": 100}
+            ]}"#,
+        );
+        let expected = LimitFilesizeConfig {
+            limits: vec![
+                FilesizeLimit {
+                    path_regex: "^exempt/".to_owned(),
+                    max_bytes: None,
+                },
+                FilesizeLimit {
+                    path_regex: ".*".to_owned(),
+                    max_bytes: Some(100),
+                },
+            ],
+        };
+        assert_eq!(parse(&typed)?, expected);
+        assert_eq!(parse(&json)?, expected);
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_missing_max_bytes_is_an_error() {
+        assert!(parse(&json_config(r#"{"limits": [{"path_regex": ".*"}]}"#)).is_err());
+    }
+
+    #[mononoke::test]
+    fn test_no_limits_is_an_error() -> Result<()> {
+        assert!(parse(&HookConfig::default()).is_err());
+        assert!(parse(&json_config("{}")).is_err());
+        assert!(LimitFilesize::with_config(parse(&json_config(r#"{"limits": []}"#))?).is_err());
+        Ok(())
     }
 }

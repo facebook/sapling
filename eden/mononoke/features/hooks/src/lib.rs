@@ -11,6 +11,7 @@ pub mod errors;
 #[cfg(fbcode_build)]
 mod facebook;
 pub mod hook_loader;
+mod hook_options;
 mod implementations;
 mod lua_pattern;
 #[cfg(test)]
@@ -34,5 +35,4 @@ pub use hook_manager::PathContent;
 pub use hook_manager::PushAuthoredBy;
 pub use hook_manager::Pushvars;
 pub use implementations::deny_files::DenyFiles;
-pub use lua_pattern::LuaPattern;
 pub use metaconfig_types::HookConfig;

@@ -156,16 +156,10 @@ pub fn make_file_hook(
         "block_invalid_symlinks" => Some(Box::new(
             block_invalid_symlinks::BlockInvalidSymlinksHook::new(&params.config)?,
         )),
-        "deny_files" => Some(Box::new(
-            deny_files::DenyFiles::builder()
-                .set_from_config(&params.config)
-                .build()?,
-        )),
-        "limit_filesize" => Some(Box::new(
-            limit_filesize::LimitFilesize::builder()
-                .set_from_config(&params.config)
-                .build()?,
-        )),
+        "deny_files" => Some(Box::new(deny_files::DenyFiles::new(&params.config)?)),
+        "limit_filesize" => Some(Box::new(limit_filesize::LimitFilesize::new(
+            &params.config,
+        )?)),
         "limit_path_length" => {
             let hook = limit_path_length::LimitPathLengthHook::new(&params.config)?;
             Some(Box::new(hook))
@@ -180,9 +174,7 @@ pub fn make_file_hook(
             Some(Box::new(no_insecure_filenames::NoInsecureFilenames::new()?))
         }
         "no_questionable_filenames" => Some(Box::new(
-            no_questionable_filenames::NoQuestionableFilenames::builder()
-                .set_from_config(&params.config)
-                .build()?,
+            no_questionable_filenames::NoQuestionableFilenames::new(&params.config)?,
         )),
         "no_windows_filenames" => Some(Box::new(
             no_windows_filenames::NoWindowsFilenamesHook::new(&params.config)?,
