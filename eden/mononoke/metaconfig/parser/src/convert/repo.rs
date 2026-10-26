@@ -50,7 +50,8 @@ use metaconfig_types::GitDeltaManifestV2Config;
 use metaconfig_types::GitDeltaManifestV3Config;
 use metaconfig_types::GitDeltaManifestVersion;
 use metaconfig_types::GlobalrevConfig;
-use metaconfig_types::HookBypass;
+use metaconfig_types::HookBypassActor;
+use metaconfig_types::HookBypassCondition;
 use metaconfig_types::HookConfig;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::HookParams;
@@ -194,48 +195,66 @@ impl Convert for RawHookManagerParams {
     }
 }
 
+fn parse_pushvar(pushvar: String) -> Result<(String, String)> {
+    match pushvar.split('=').collect::<Vec<_>>().as_slice() {
+        [name, value] => Ok((name.to_string(), value.to_string())),
+        _ => Err(ConfigurationError::InvalidPushvar(pushvar).into()),
+    }
+}
+
+/// The bypass conditions equivalent to a hook's `bypass_*` fields: the pushvar
+/// and the commit message marker each bypass, and with
+/// `bypass_implicit_for_group` so does membership of the permission group
+/// alone. The permission group, when set, restricts every condition to its
+/// members and to humans unless `allow_agent_bypass` is set. Without a group
+/// anyone, including agents, may use the markers.
+fn legacy_bypass_conditions(
+    commit_message: Option<String>,
+    pushvar: Option<String>,
+    permission_group: Option<String>,
+    implicit_for_group: bool,
+    allow_agent: bool,
+) -> Result<Vec<HookBypassCondition>> {
+    let actor = if permission_group.is_none() || allow_agent {
+        HookBypassActor::Any
+    } else {
+        HookBypassActor::Human
+    };
+    let restrict = |condition: HookBypassCondition| HookBypassCondition {
+        permission_group: permission_group.clone(),
+        actor,
+        ..condition
+    };
+    let mut conditions = Vec::new();
+    if let Some(pushvar) = pushvar {
+        let (name, value) = parse_pushvar(pushvar)?;
+        conditions.push(restrict(HookBypassCondition::pushvar(name, value)));
+    }
+    if let Some(marker) = commit_message {
+        conditions.push(restrict(HookBypassCondition::commit_message(marker)));
+    }
+    // Without a group the flag is inert rather than a load error, so a config
+    // mistake cannot stop the repo from initialising.
+    if implicit_for_group && permission_group.is_some() {
+        conditions.push(restrict(HookBypassCondition::default()));
+    }
+    Ok(conditions)
+}
+
 impl Convert for RawHookConfig {
     type Output = HookParams;
 
     fn convert(self) -> Result<Self::Output> {
-        let bypass_commit_message = self.bypass_commit_string;
-
-        let bypass_pushvar = self
-            .bypass_pushvar
-            .map(|s| {
-                let parts: Vec<_> = s.split('=').collect();
-                match parts.as_slice() {
-                    [name, value] => Ok((name.to_string(), value.to_string())),
-                    _ => Err(ConfigurationError::InvalidPushvar(s)),
-                }
-            })
-            .transpose()?;
-
-        let permission_group = self.bypass_permission_group;
-        // Both flags only mean something for a group-gated bypass; without a
-        // group they are inert rather than a load error, so a config mistake
-        // cannot stop the repo from initialising.
-        let implicit_for_group =
-            self.bypass_implicit_for_group.unwrap_or_default() && permission_group.is_some();
-        let allow_agent = self.allow_agent_bypass.unwrap_or_default();
-
-        let bypass = match (bypass_commit_message, bypass_pushvar) {
-            (Some(msg), None) => Some(HookBypass::new_with_commit_msg(msg)),
-            (None, Some((name, value))) => Some(HookBypass::new_with_pushvar(name, value)),
-            (Some(msg), Some((name, value))) => Some(HookBypass::new_with_commit_msg_and_pushvar(
-                msg, name, value,
-            )),
-            (None, None) if implicit_for_group => Some(HookBypass::new_implicit()),
-            (None, None) => None,
-        };
-        let bypass = bypass.map(|b| {
-            b.with_permission_group(permission_group)
-                .with_implicit_for_group(implicit_for_group)
-                .with_allow_agent(allow_agent)
-        });
+        let bypasses = legacy_bypass_conditions(
+            self.bypass_commit_string,
+            self.bypass_pushvar,
+            self.bypass_permission_group,
+            self.bypass_implicit_for_group.unwrap_or_default(),
+            self.allow_agent_bypass.unwrap_or_default(),
+        )?;
 
         let config = HookConfig {
-            bypass,
+            bypasses,
             options: self.config_json,
             log_only: self.log_only.unwrap_or_default(),
             name: self.name.clone(),

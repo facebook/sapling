@@ -30,7 +30,7 @@ use futures::stream::TryStreamExt;
 use futures::stream::futures_unordered::FuturesUnordered;
 use futures::try_join;
 use metaconfig_types::BookmarkOrRegex;
-use metaconfig_types::HookBypass;
+use metaconfig_types::HookBypassCondition;
 use metaconfig_types::HookConfig;
 use metaconfig_types::HookManagerParams;
 use mononoke_types::BasicFileChange;
@@ -87,37 +87,18 @@ pub struct HookManager {
     employee_service: Option<Arc<dyn MononokeEmployeeService + Send + Sync>>,
 }
 
-/// Outcome of resolving a bypass against the hook's permission group.
-///
-/// Every variant that ran a membership check carries the `CheckedBypassIdentities`
-/// it ran against, so the decision can be logged and explained in terms of
-/// *whose* membership was tested — not just which group was required. `check`
-/// is `None` only when the hook has no bypass permission checker configured.
-enum BypassAuthorizationResult {
-    /// No bypass was attempted — run the hook normally.
-    NoBypass,
-    /// Bypass was attempted and authorized — skip the hook.
-    Bypassed {
-        reason: String,
-        check: Option<CheckedBypassIdentities>,
-    },
-    /// Bypass was attempted but the user is not in the required group.
-    /// Contains the bypass reason, the group name, and the identities checked,
-    /// for logging and the rejection message.
-    UnauthorizedUser {
-        reason: String,
-        group: String,
-        check: CheckedBypassIdentities,
-    },
-    /// Bypass was attempted and the pusher is in the required group, but the
-    /// pusher is an agent. Restricting a bypass to a permission group makes
-    /// using it a human judgement call, so the bypass is refused. Contains the
-    /// bypass reason and the group name for logging and the rejection message.
-    UnauthorizedAgent {
-        reason: String,
-        group: String,
-        check: Option<CheckedBypassIdentities>,
-    },
+/// Whether the pusher is a member of a bypass condition's permission group,
+/// with the identities the check ran against, so the decision can be logged and
+/// explained in terms of *whose* membership was tested.
+#[derive(Clone)]
+enum GroupMembership {
+    /// The hook has no membership checker for the group, so membership is not
+    /// enforced.
+    Unchecked,
+    /// The pusher is a member.
+    Member(CheckedBypassIdentities),
+    /// The pusher is not a member.
+    NotMember(CheckedBypassIdentities),
 }
 
 impl HookManager {
@@ -245,11 +226,11 @@ impl HookManager {
         hook_name: &str,
         hook: Box<dyn BookmarkHook>,
         config: HookConfig,
-        bypass_checker: Option<ArcMembershipChecker>,
+        bypass_checkers: BypassCheckers,
     ) {
         self.hooks.insert(
             hook_name.to_string(),
-            Hook::from_bookmark(hook, config, bypass_checker),
+            Hook::from_bookmark(hook, config, bypass_checkers),
         );
     }
 
@@ -258,11 +239,11 @@ impl HookManager {
         hook_name: &str,
         hook: Box<dyn ChangesetHook>,
         config: HookConfig,
-        bypass_checker: Option<ArcMembershipChecker>,
+        bypass_checkers: BypassCheckers,
     ) {
         self.hooks.insert(
             hook_name.to_string(),
-            Hook::from_changeset(hook, config, bypass_checker),
+            Hook::from_changeset(hook, config, bypass_checkers),
         );
     }
 
@@ -271,20 +252,25 @@ impl HookManager {
         hook_name: &str,
         hook: Box<dyn FileHook>,
         config: HookConfig,
-        bypass_checker: Option<ArcMembershipChecker>,
+        bypass_checkers: BypassCheckers,
     ) {
         self.hooks.insert(
             hook_name.to_string(),
-            Hook::from_file(hook, config, bypass_checker),
+            Hook::from_file(hook, config, bypass_checkers),
         );
     }
 
     /// Compute the bypass decision for a single surviving `(hook, changeset)`
     /// pair, eagerly (before the hook runs).
     ///
-    /// A group-less bypass is never seen here — those are skipped pre-run via
-    /// `unconditional_bypass_reason` — so this only runs when the hook has a
-    /// permission group.
+    /// The first condition that matches authorizes the bypass. When none does,
+    /// the decision describes the first condition whose markers are present (a
+    /// condition with no markers always counts), so the rejection can say why
+    /// the bypass was ignored. A condition's requirements are checked in order:
+    /// permission group, identities, then actor. The agent signal comes from the
+    /// pusher's own metadata: the identity a membership check runs against is
+    /// often the commit author's synthetic `USER:<unixname>`, which never carries
+    /// the credential attributes `likely_an_agent` looks for.
     async fn compute_bypass_decision(
         &self,
         hook: &Hook,
@@ -293,110 +279,99 @@ impl HookManager {
         cs_msg: Option<&str>,
         changeset_author: Option<&str>,
     ) -> Result<BypassDecision> {
-        let permission_group = hook.get_bypass_permission_group();
-        if permission_group.is_none() {
-            return Ok(BypassDecision::NoBypass);
-        }
-
-        // Cheap synchronous trigger check first: no trigger => no ACL call.
-        let bypass = hook.get_config().bypass.as_ref();
-        if bypass_trigger_reason(bypass, maybe_pushvars, cs_msg).is_none() {
-            return Ok(BypassDecision::NoBypass);
-        }
-
-        let decision = self
-            .check_bypass_authorization(hook, ctx, maybe_pushvars, cs_msg, changeset_author)
-            .await?;
-        Ok(match decision {
-            BypassAuthorizationResult::NoBypass => BypassDecision::NoBypass,
-            BypassAuthorizationResult::Bypassed { reason, check } => BypassDecision::Authorized {
-                reason,
-                permission_group: permission_group.map(|g| g.to_string()),
-                check,
-            },
-            BypassAuthorizationResult::UnauthorizedUser {
-                reason,
-                group,
-                check,
-            } => BypassDecision::UnauthorizedUser {
-                reason,
-                group,
-                check,
-            },
-            BypassAuthorizationResult::UnauthorizedAgent {
-                reason,
-                group,
-                check,
-            } => BypassDecision::UnauthorizedAgent {
-                reason,
-                group,
-                check,
-            },
-        })
-    }
-
-    /// Check if a bypass is authorized, then refuse it if the pusher is an agent.
-    ///
-    /// Restricting a bypass to a permission group makes using it a human
-    /// judgement call, so an authorized bypass is downgraded when the pusher is
-    /// an agent, unless the hook opts out with `allow_agent_bypass`. Two things
-    /// about where this sits matter:
-    ///
-    /// * It runs *after* the membership check, so an agent that is not in the
-    ///   group still gets the more specific "not a member" rejection — that is
-    ///   the reason it actually failed.
-    /// * It reads the agent signal from the pusher's own metadata. The identity
-    ///   set the membership check runs against is often the commit author's
-    ///   synthetic `USER:<unixname>` identity, which never carries the
-    ///   credential attributes `likely_an_agent` looks for.
-    async fn check_bypass_authorization(
-        &self,
-        hook: &Hook,
-        ctx: &CoreContext,
-        maybe_pushvars: Option<&HashMap<String, Bytes>>,
-        cs_msg: Option<&str>,
-        changeset_author: Option<&str>,
-    ) -> Result<BypassAuthorizationResult> {
-        let result = self
-            .resolve_bypass_authorization(hook, ctx, maybe_pushvars, cs_msg, changeset_author)
-            .await?;
-
-        Ok(match result {
-            BypassAuthorizationResult::Bypassed { reason, check }
-                if ctx.metadata().likely_an_agent() && !hook.allows_agent_bypass() =>
-            {
-                BypassAuthorizationResult::UnauthorizedAgent {
-                    reason,
-                    group: hook
-                        .get_bypass_permission_group()
-                        .unwrap_or("unknown")
-                        .to_string(),
-                    check,
+        let is_agent = ctx.metadata().likely_an_agent();
+        let mut memberships: HashMap<&str, GroupMembership> = HashMap::new();
+        let mut near_miss = None;
+        for (condition_index, condition) in hook.get_config().bypasses.iter().enumerate() {
+            // Cheap synchronous trigger check first: no trigger means no ACL call.
+            let Some(reason) = condition_trigger_reason(condition, maybe_pushvars, cs_msg) else {
+                continue;
+            };
+            let permission_group = condition.permission_group.clone();
+            let check = match condition.permission_group.as_deref() {
+                None => None,
+                Some(group) => {
+                    let membership = match memberships.get(group) {
+                        Some(membership) => membership.clone(),
+                        None => {
+                            let membership = self
+                                .check_bypass_group_membership(hook, group, ctx, changeset_author)
+                                .await?;
+                            memberships.insert(group, membership.clone());
+                            membership
+                        }
+                    };
+                    match membership {
+                        GroupMembership::Unchecked => None,
+                        GroupMembership::Member(check) => Some(check),
+                        GroupMembership::NotMember(check) => {
+                            near_miss.get_or_insert(BypassDecision::UnauthorizedUser {
+                                condition: condition_index,
+                                reason,
+                                group: group.to_string(),
+                                check,
+                            });
+                            continue;
+                        }
+                    }
                 }
+            };
+            if !has_bypass_identity(condition, ctx) {
+                near_miss.get_or_insert(BypassDecision::UnauthorizedIdentity {
+                    condition: condition_index,
+                    reason,
+                    permission_group,
+                    check,
+                });
+                continue;
             }
-            result => result,
-        })
+            if !condition.actor.allows(is_agent) {
+                near_miss.get_or_insert(if is_agent {
+                    BypassDecision::UnauthorizedAgent {
+                        condition: condition_index,
+                        reason,
+                        permission_group,
+                        check,
+                    }
+                } else {
+                    BypassDecision::UnauthorizedHuman {
+                        condition: condition_index,
+                        reason,
+                        permission_group,
+                        check,
+                    }
+                });
+                continue;
+            }
+            return Ok(BypassDecision::Authorized {
+                condition: condition_index,
+                reason,
+                permission_group,
+                check,
+            });
+        }
+        Ok(near_miss.unwrap_or_default())
     }
 
-    /// Resolve the bypass against the hook's permission group, ignoring whether
-    /// the pusher is an agent (see `check_bypass_authorization`, the only caller).
+    /// Check whether the pusher is a member of `group`, one of the hook's
+    /// bypass permission groups.
     ///
-    /// When `changeset_author` is provided (e.g., "Alice <alice@fb.com>"),
-    /// group membership is checked against the commit author's identity
-    /// rather than the pusher's TLS cert identities.
-    async fn resolve_bypass_authorization(
+    /// Membership is checked against the commit author's identity when
+    /// `changeset_author` is provided (e.g., "Alice <alice@fb.com>"), rather
+    /// than the pusher's TLS cert identities. On the client-identities path the
+    /// pusher's request identities are checked first, and a member wins
+    /// outright; otherwise the commit author is checked, including the
+    /// canonical unixname EmployeeService re-check. An empty identity set fails
+    /// closed.
+    async fn check_bypass_group_membership(
         &self,
         hook: &Hook,
+        group: &str,
         ctx: &CoreContext,
-        maybe_pushvars: Option<&HashMap<String, Bytes>>,
-        cs_msg: Option<&str>,
         changeset_author: Option<&str>,
-    ) -> Result<BypassAuthorizationResult> {
-        let bypass = hook.get_config().bypass.as_ref();
-
-        let bypass_reason = match bypass_trigger_reason(bypass, maybe_pushvars, cs_msg) {
-            Some(reason) => reason,
-            None => return Ok(BypassAuthorizationResult::NoBypass),
+    ) -> Result<GroupMembership> {
+        let Some(checker) = hook.get_bypass_permission_checker(group) else {
+            return Ok(GroupMembership::Unchecked);
         };
 
         let use_client_identities = justknobs::eval(
@@ -404,119 +379,59 @@ impl HookManager {
             None,
             Some(self.repo_name.as_str()),
         );
-
-        // On the client-identities path, check the pusher's request identities
-        // first; an authorized pusher wins outright. Otherwise (and always on the
-        // default path) fall through to the commit author, which includes the
-        // canonical unixname EmployeeService re-check. An empty identity set fails
-        // closed.
         if use_client_identities {
-            let result = self
-                .check_bypass_group_membership(
-                    hook,
-                    ctx.metadata().identities(),
-                    bypass_reason.clone(),
-                    BypassIdentitySource::ClientIdentities,
-                )
-                .await?;
-            if matches!(result, BypassAuthorizationResult::Bypassed { .. }) {
-                return Ok(result);
+            let membership = check_membership(
+                checker,
+                ctx.metadata().identities(),
+                BypassIdentitySource::ClientIdentities,
+            )
+            .await;
+            if matches!(membership, GroupMembership::Member(_)) {
+                return Ok(membership);
             }
         }
 
-        self.check_bypass_authorization_with_changeset_author(
-            hook,
-            ctx,
-            changeset_author,
-            bypass_reason,
-        )
-        .await
+        Ok(self
+            .check_changeset_author_membership(checker, ctx, changeset_author)
+            .await)
     }
 
-    /// Check whether `identity_set` is a member of the hook's bypass permission
-    /// group and map the result to a BypassAuthorizationResult.
-    ///
-    /// If the hook has no bypass permission checker configured, the bypass is
-    /// allowed unconditionally. An empty `identity_set` fails closed: a real
-    /// membership checker returns `false`, so the result is `Unauthorized` and
-    /// the hook runs normally.
-    async fn check_bypass_group_membership(
+    /// Check the commit author's identity against `checker`, falling back to
+    /// the pusher's client identities when the author is missing or
+    /// unparsable. When the author's `USER:<local-part>` identity is not a
+    /// member, resolve their canonical unixname via the EmployeeService
+    /// (JK-gated) and check that instead -- this handles authors whose email
+    /// local-part differs from their unixname. The re-check can only ever
+    /// upgrade `NotMember` -> `Member`; on any miss or error the original
+    /// decision stands.
+    async fn check_changeset_author_membership(
         &self,
-        hook: &Hook,
-        identity_set: &MononokeIdentitySet,
-        bypass_reason: String,
-        source: BypassIdentitySource,
-    ) -> Result<BypassAuthorizationResult> {
-        let checker = match hook.get_bypass_permission_checker() {
-            Some(checker) => checker,
-            None => {
-                return Ok(BypassAuthorizationResult::Bypassed {
-                    reason: bypass_reason,
-                    check: None,
-                });
-            }
-        };
-
-        let check = CheckedBypassIdentities::new(source, identity_set);
-        if checker.is_member(identity_set).await {
-            Ok(BypassAuthorizationResult::Bypassed {
-                reason: bypass_reason,
-                check: Some(check),
-            })
-        } else {
-            let group_name = hook.get_bypass_permission_group().unwrap_or("unknown");
-            Ok(BypassAuthorizationResult::UnauthorizedUser {
-                reason: bypass_reason,
-                group: group_name.to_string(),
-                check,
-            })
-        }
-    }
-
-    /// Check the permission group against the commit author's identity, falling
-    /// back to the pusher's client identities when the author is missing or
-    /// unparsable. When the author's `USER:<local-part>` identity is not in the
-    /// group, resolve their canonical unixname via the EmployeeService (JK-gated)
-    /// and check that instead -- this handles authors whose email local-part
-    /// differs from their unixname. The re-check can only ever upgrade
-    /// `Unauthorized` -> `Bypassed`; on any miss or error the original decision
-    /// stands.
-    async fn check_bypass_authorization_with_changeset_author(
-        &self,
-        hook: &Hook,
+        checker: &ArcMembershipChecker,
         ctx: &CoreContext,
         changeset_author: Option<&str>,
-        bypass_reason: String,
-    ) -> Result<BypassAuthorizationResult> {
-        let author_identity = match changeset_author.and_then(extract_identity_from_author) {
-            Some(author_identity) => author_identity,
-            None => {
-                // The identities checked here belong to the pusher, not the
-                // author -- for a bot-authored commit pushed by a service they
-                // are unrelated. `CommitAuthorFallbackToClient` is what makes
-                // that visible instead of looking like a plain author check.
-                return self
-                    .check_bypass_group_membership(
-                        hook,
-                        ctx.metadata().identities(),
-                        bypass_reason,
-                        BypassIdentitySource::CommitAuthorFallbackToClient,
-                    )
-                    .await;
-            }
+    ) -> GroupMembership {
+        let Some(author_identity) = changeset_author.and_then(extract_identity_from_author) else {
+            // The identities checked here belong to the pusher, not the
+            // author -- for a bot-authored commit pushed by a service they are
+            // unrelated. `CommitAuthorFallbackToClient` is what makes that
+            // visible instead of looking like a plain author check.
+            return check_membership(
+                checker,
+                ctx.metadata().identities(),
+                BypassIdentitySource::CommitAuthorFallbackToClient,
+            )
+            .await;
         };
 
         let is_user = author_identity.id_type() == "USER";
-        let result = self
-            .check_bypass_group_membership(
-                hook,
-                &std::iter::once(author_identity).collect(),
-                bypass_reason.clone(),
-                BypassIdentitySource::CommitAuthor,
-            )
-            .await?;
+        let membership = check_membership(
+            checker,
+            &std::iter::once(author_identity).collect(),
+            BypassIdentitySource::CommitAuthor,
+        )
+        .await;
 
-        if matches!(result, BypassAuthorizationResult::UnauthorizedUser { .. })
+        if matches!(membership, GroupMembership::NotMember(_))
             && is_user
             && justknobs::eval(
                 "scm/mononoke:resolve_unixname_from_employee_service_for_hook_bypass",
@@ -526,17 +441,15 @@ impl HookManager {
         {
             if let Some(unixname) = self.resolve_author_unixname(changeset_author).await {
                 let identity = MononokeIdentity::from_legacy_type_data("USER", &unixname);
-                return self
-                    .check_bypass_group_membership(
-                        hook,
-                        &std::iter::once(identity).collect(),
-                        bypass_reason,
-                        BypassIdentitySource::CommitAuthorResolvedUnixname,
-                    )
-                    .await;
+                return check_membership(
+                    checker,
+                    &std::iter::once(identity).collect(),
+                    BypassIdentitySource::CommitAuthorResolvedUnixname,
+                )
+                .await;
             }
         }
-        Ok(result)
+        membership
     }
 
     /// Resolve the commit author's canonical unixname from their email via the
@@ -692,17 +605,18 @@ impl HookManager {
             scuba.add("hook", hook_name.to_string());
             scuba.add("to", to.get_changeset_id().to_string());
 
-            // A bypass with no permission group is honored without running the hook
-            // (bookmark hooks honor the pushvar bypass only), skipped pre-run.
-            if let Some(bypass_reason) = unconditional_bypass_reason(hook, maybe_pushvars, None) {
+            // A condition with no permission group is honored without running the
+            // hook, skipped pre-run. Bookmark hooks have no commit message, so
+            // conditions that require one never match them.
+            if let Some((condition, reason)) = unconditional_bypass(hook, ctx, maybe_pushvars, None)
+            {
                 scuba.add("type", "bookmark");
-                log_skipped_hook(&scuba, to, &bypass_reason);
+                log_skipped_hook(&scuba, to, condition, &reason);
                 continue;
             }
 
-            // For a surviving hook, decide any group-gated bypass eagerly so the
-            // hook's row is logged once with its final outcome. Bookmark hooks
-            // honor the pushvar bypass only, so `cs_msg` is `None`.
+            // For a surviving hook, decide the bypass eagerly so the hook's row is
+            // logged once with its final outcome.
             let bypass = self
                 .compute_bypass_decision(hook, ctx, maybe_pushvars, None, Some(to.author()))
                 .await?;
@@ -788,22 +702,20 @@ impl HookManager {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        // Drop each (hook, changeset) that is unconditionally bypassed (a
-        // pushvar/commit-message bypass with no permission group), logging it as
-        // skipped.
+        // Drop each (hook, changeset) that a condition with no permission group
+        // bypasses, logging it as skipped.
         let surviving: Vec<(&str, &Hook, Vec<&BonsaiChangeset>)> = resolved_hooks
             .into_iter()
             .map(|(hook_name, hook)| {
                 let css = changesets
                     .iter()
                     .filter(|cs| {
-                        match unconditional_bypass_reason(hook, maybe_pushvars, Some(cs.message()))
-                        {
-                            Some(reason) => {
+                        match unconditional_bypass(hook, ctx, maybe_pushvars, Some(cs.message())) {
+                            Some((condition, reason)) => {
                                 let mut scuba = scuba.clone();
                                 scuba.add("hook", hook_name.to_string());
                                 scuba.add("type", hook.scuba_type());
-                                log_skipped_hook(&scuba, cs, &reason);
+                                log_skipped_hook(&scuba, cs, condition, &reason);
                                 false
                             }
                             None => true,
@@ -814,9 +726,9 @@ impl HookManager {
             })
             .collect();
 
-        // Resolve each survivor's group-gated bypass decision eagerly, with bounded
+        // Resolve each survivor's bypass decision eagerly, with bounded
         // concurrency: most pairs are cheap (no bypass token means no ACL call), but
-        // a fired token costs one membership RPC we don't want to serialize on the
+        // a fired token costs a membership RPC we don't want to serialize on the
         // push critical path.
         const BYPASS_DECISION_CONCURRENCY: usize = 10;
         let decision_futs: Vec<BoxFuture<Result<(usize, ChangesetId, BypassDecision)>>> = surviving
@@ -930,21 +842,48 @@ pub(crate) fn annotate_unauthorized_rejection(
 }
 
 /// Append a note to a rejection telling the pusher their bypass was ignored
-/// because an agent cannot use a bypass that is restricted to a permission
-/// group. The hook's own reason is kept.
+/// because it is restricted to humans and the pusher is an agent. The hook's
+/// own reason is kept.
 pub(crate) fn annotate_agent_bypass_rejection(
     outcome: HookOutcome,
-    group_name: &str,
+    group_name: Option<&str>,
 ) -> HookOutcome {
+    let restriction = match group_name {
+        Some(group_name) => format!(
+            "bypassing this hook is restricted to members of group '{group_name}', and \
+             that call cannot be made by an agent"
+        ),
+        None => "this bypass cannot be used by an agent".to_string(),
+    };
     annotate_rejection(
         outcome,
         &format!(
-            "Note: your hook bypass was ignored because bypassing this hook is restricted \
-             to members of group '{group_name}', and that call cannot be made by an agent. \
-             A human needs to review these changes and, if the bypass is warranted, push \
-             them themselves."
+            "Note: your hook bypass was ignored because {restriction}. A human needs to \
+             review these changes and, if the bypass is warranted, push them themselves."
         ),
         "Agent bypass rejected",
+    )
+}
+
+/// Append a note to a rejection telling the pusher their bypass was ignored
+/// because it is restricted to agents. The hook's own reason is kept.
+pub(crate) fn annotate_human_bypass_rejection(outcome: HookOutcome) -> HookOutcome {
+    annotate_rejection(
+        outcome,
+        "Note: your hook bypass was ignored because it can only be used by an agent.",
+        "Human bypass rejected",
+    )
+}
+
+/// Append a note to a rejection telling the pusher their bypass was ignored
+/// because none of their identities may use it. The hook's own reason is kept,
+/// and the allowed identities are not named.
+pub(crate) fn annotate_identity_bypass_rejection(outcome: HookOutcome) -> HookOutcome {
+    annotate_rejection(
+        outcome,
+        "Note: your hook bypass was ignored because you are not one of the identities \
+         allowed to use it.",
+        "Bypass identity not allowed",
     )
 }
 
@@ -1009,92 +948,104 @@ fn extract_identity_from_author(author: &str) -> Option<MononokeIdentity> {
 /// (permission-group-less) pushvar/commit-message bypass. The caller adds the
 /// `hook` and `type` columns; this records the changeset, author, the bypass
 /// reason, and `outcome=skipped` so the skip is a self-describing per-hook row.
-fn log_skipped_hook(scuba: &MononokeScubaSampleBuilder, cs: &BonsaiChangeset, bypass_reason: &str) {
+fn log_skipped_hook(
+    scuba: &MononokeScubaSampleBuilder,
+    cs: &BonsaiChangeset,
+    condition: usize,
+    bypass_reason: &str,
+) {
     cloned!(mut scuba);
     scuba.add("changeset_id", cs.get_changeset_id().to_string());
     scuba.add("hash", cs.get_changeset_id().to_string());
     scuba.add("author", cs.author().to_string());
+    scuba.add("bypass_condition", condition as i64);
     scuba.add("bypass_reason", bypass_reason.to_string());
     scuba.add("outcome", "skipped");
     scuba.log();
 }
 
-/// Reason a hook is bypassed unconditionally (pushvar or commit-message bypass with
-/// no permission group), so it can be skipped before it runs. Group-gated bypasses
-/// return `None` here -- they are decided eagerly by `compute_bypass_decision` and
-/// carried into the hook-run path. Skipping pre-run is also what keeps a group-less
-/// bypass able to rescue a hook that would otherwise error (its `Err` would abort
-/// the push before its outcome is logged).
-fn unconditional_bypass_reason(
+/// The first bypass condition that needs no membership check (it has no
+/// permission group) and matches, with its index and the reason, so the hook
+/// can be skipped before it runs. Conditions with a group are decided eagerly
+/// by `compute_bypass_decision` and carried into the hook-run path. Skipping
+/// pre-run is also what keeps a group-less bypass able to rescue a hook that
+/// would otherwise error (its `Err` would abort the push before its outcome is
+/// logged).
+fn unconditional_bypass(
     hook: &Hook,
+    ctx: &CoreContext,
+    maybe_pushvars: Option<&HashMap<String, Bytes>>,
+    cs_msg: Option<&str>,
+) -> Option<(usize, String)> {
+    let is_agent = ctx.metadata().likely_an_agent();
+    hook.get_config()
+        .bypasses
+        .iter()
+        .enumerate()
+        .filter(|(_, condition)| {
+            condition.permission_group.is_none()
+                && condition.actor.allows(is_agent)
+                && has_bypass_identity(condition, ctx)
+        })
+        .find_map(|(index, condition)| {
+            condition_trigger_reason(condition, maybe_pushvars, cs_msg)
+                .map(|reason| (index, reason))
+        })
+}
+
+/// Why a bypass condition's markers are present in the push: its pushvar and
+/// its commit message marker, or, for a condition with neither, its permission
+/// group or identities alone. `None` when a marker it requires is missing.
+fn condition_trigger_reason(
+    condition: &HookBypassCondition,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     cs_msg: Option<&str>,
 ) -> Option<String> {
-    if hook.get_bypass_permission_group().is_some() {
-        return None;
-    }
-    let bypass = hook.get_config().bypass.as_ref();
-    get_bypassed_by_pushvar_reason(bypass, maybe_pushvars)
-        .or_else(|| cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)))
-}
-
-/// Why a group-gated bypass is being attempted: the pushvar, the commit-message
-/// marker, or -- for a hook with `bypass_implicit_for_group` -- membership alone.
-/// `None` means the hook runs normally.
-fn bypass_trigger_reason(
-    bypass: Option<&HookBypass>,
-    maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    cs_msg: Option<&str>,
-) -> Option<String> {
-    if let Some(reason) = get_bypassed_by_pushvar_reason(bypass, maybe_pushvars) {
-        return Some(reason);
-    }
-    if let Some(reason) = cs_msg.and_then(|msg| get_bypassed_by_commit_msg_reason(bypass, msg)) {
-        return Some(reason);
-    }
-    if let Some(b) = bypass
-        && b.implicit_for_group()
-    {
-        return Some(format!(
-            "implicit: member of {}",
-            b.permission_group().unwrap_or("unknown"),
-        ));
-    }
-    None
-}
-
-fn get_bypassed_by_pushvar_reason(
-    bypass: Option<&HookBypass>,
-    maybe_pushvars: Option<&HashMap<String, Bytes>>,
-) -> Option<String> {
-    let bypass = bypass?;
-    if let Some((name, value)) = bypass.pushvar_bypass() {
-        if let Some(pushvars) = maybe_pushvars {
-            let pushvar_val = pushvars
-                .get(name)
-                .map(|bytes| String::from_utf8(bytes.to_vec()));
-
-            if let Some(Ok(pushvar_val)) = pushvar_val {
-                if pushvar_val == *value {
-                    return Some(format!("bypass pushvar: {name}={value}"));
-                }
-            }
+    let mut reasons = Vec::new();
+    if let Some((name, value)) = &condition.pushvar {
+        let pushvar_value = maybe_pushvars?.get(name)?;
+        if pushvar_value.as_ref() != value.as_bytes() {
+            return None;
         }
+        reasons.push(format!("bypass pushvar: {name}={value}"));
     }
-
-    None
+    if let Some(marker) = &condition.commit_message {
+        if !cs_msg?.contains(marker.as_str()) {
+            return None;
+        }
+        reasons.push(format!("bypass string: {marker}"));
+    }
+    if reasons.is_empty() {
+        reasons.push(match &condition.permission_group {
+            Some(group) => format!("implicit: member of {group}"),
+            None => "implicit: allowed identity".to_string(),
+        });
+    }
+    Some(reasons.join(", "))
 }
 
-fn get_bypassed_by_commit_msg_reason(bypass: Option<&HookBypass>, cs_msg: &str) -> Option<String> {
-    let bypass = bypass?;
+/// Whether the pusher's own identities include one the condition allows, or the
+/// condition does not restrict identities.
+fn has_bypass_identity(condition: &HookBypassCondition, ctx: &CoreContext) -> bool {
+    condition.identities.is_empty()
+        || condition
+            .identities
+            .iter()
+            .any(|identity| ctx.metadata().identities().contains(identity))
+}
 
-    if let Some(bypass_string) = bypass.commit_message_bypass() {
-        if cs_msg.contains(bypass_string) {
-            return Some(format!("bypass string: {bypass_string}"));
-        }
+/// Check `identities` against a bypass permission group's `checker`.
+async fn check_membership(
+    checker: &ArcMembershipChecker,
+    identities: &MononokeIdentitySet,
+    source: BypassIdentitySource,
+) -> GroupMembership {
+    let check = CheckedBypassIdentities::new(source, identities);
+    if checker.is_member(identities).await {
+        GroupMembership::Member(check)
+    } else {
+        GroupMembership::NotMember(check)
     }
-
-    None
 }
 
 pub enum HooksOutcome<'a> {
@@ -1117,18 +1068,13 @@ impl<'a> HooksOutcome<'a> {
     }
 }
 
+/// Membership checkers for a hook's bypass permission groups, by group name.
+pub type BypassCheckers = HashMap<String, ArcMembershipChecker>;
+
 enum Hook {
-    Bookmark(
-        Box<dyn BookmarkHook>,
-        HookConfig,
-        Option<ArcMembershipChecker>,
-    ),
-    Changeset(
-        Box<dyn ChangesetHook>,
-        HookConfig,
-        Option<ArcMembershipChecker>,
-    ),
-    File(Box<dyn FileHook>, HookConfig, Option<ArcMembershipChecker>),
+    Bookmark(Box<dyn BookmarkHook>, HookConfig, BypassCheckers),
+    Changeset(Box<dyn ChangesetHook>, HookConfig, BypassCheckers),
+    File(Box<dyn FileHook>, HookConfig, BypassCheckers),
 }
 
 pub(crate) enum HookInstance<'a> {
@@ -1248,25 +1194,25 @@ impl Hook {
     pub fn from_bookmark(
         hook: Box<dyn BookmarkHook>,
         config: HookConfig,
-        bypass_checker: Option<ArcMembershipChecker>,
+        bypass_checkers: BypassCheckers,
     ) -> Self {
-        Self::Bookmark(hook, config, bypass_checker)
+        Self::Bookmark(hook, config, bypass_checkers)
     }
 
     pub fn from_changeset(
         hook: Box<dyn ChangesetHook>,
         config: HookConfig,
-        bypass_checker: Option<ArcMembershipChecker>,
+        bypass_checkers: BypassCheckers,
     ) -> Self {
-        Self::Changeset(hook, config, bypass_checker)
+        Self::Changeset(hook, config, bypass_checkers)
     }
 
     pub fn from_file(
         hook: Box<dyn FileHook>,
         config: HookConfig,
-        bypass_checker: Option<ArcMembershipChecker>,
+        bypass_checkers: BypassCheckers,
     ) -> Self {
-        Self::File(hook, config, bypass_checker)
+        Self::File(hook, config, bypass_checkers)
     }
 
     pub fn get_config(&self) -> &HookConfig {
@@ -1277,11 +1223,12 @@ impl Hook {
         }
     }
 
-    pub fn get_bypass_permission_checker(&self) -> Option<&ArcMembershipChecker> {
+    /// The membership checker for one of the hook's bypass permission groups.
+    pub fn get_bypass_permission_checker(&self, group: &str) -> Option<&ArcMembershipChecker> {
         match self {
-            Self::Bookmark(_, _, checker)
-            | Self::Changeset(_, _, checker)
-            | Self::File(_, _, checker) => checker.as_ref(),
+            Self::Bookmark(_, _, checkers)
+            | Self::Changeset(_, _, checkers)
+            | Self::File(_, _, checkers) => checkers.get(group),
         }
     }
 
@@ -1293,24 +1240,6 @@ impl Hook {
             Self::Changeset(..) => "changeset",
             Self::File(..) => "file",
         }
-    }
-
-    /// The permission group that restricts who is allowed to bypass this hook,
-    /// if one is configured. Logged whenever a bypass succeeds so we can tell
-    /// when a bypass was performed by a member of the restricting group.
-    pub(crate) fn get_bypass_permission_group(&self) -> Option<&str> {
-        self.get_config()
-            .bypass
-            .as_ref()
-            .and_then(|bypass| bypass.permission_group())
-    }
-
-    /// Whether this hook's group-gated bypass may also be used by an agent.
-    pub(crate) fn allows_agent_bypass(&self) -> bool {
-        self.get_config()
-            .bypass
-            .as_ref()
-            .is_some_and(|bypass| bypass.allow_agent())
     }
 
     pub fn get_futures_for_bookmark_hooks<'a: 'cs, 'cs>(
@@ -1436,13 +1365,54 @@ mod test {
 
     #[mononoke::test]
     fn test_commit_message_bypass() {
-        let bypass = HookBypass::new_with_commit_msg("@mybypass".into());
+        let condition = HookBypassCondition::commit_message("@mybypass");
 
-        let r = get_bypassed_by_commit_msg_reason(Some(&bypass), "@notbypass");
+        let r = condition_trigger_reason(&condition, None, Some("@notbypass"));
         assert!(r.is_none());
 
-        let r = get_bypassed_by_commit_msg_reason(Some(&bypass), "foo @mybypass bar");
-        assert!(r.is_some());
+        let r = condition_trigger_reason(&condition, None, Some("foo @mybypass bar"));
+        assert_eq!(r.as_deref(), Some("bypass string: @mybypass"));
+
+        // Bookmark hooks have no commit message.
+        let r = condition_trigger_reason(&condition, None, None);
+        assert!(r.is_none());
+    }
+
+    /// A condition with several markers needs all of them.
+    #[mononoke::test]
+    fn test_all_markers_required() {
+        let condition = HookBypassCondition {
+            commit_message: Some("@mybypass".into()),
+            ..HookBypassCondition::pushvar("myvar", "myvalue")
+        };
+        let mut pushvars = HashMap::new();
+
+        let r = condition_trigger_reason(&condition, Some(&pushvars), Some("@mybypass"));
+        assert!(r.is_none());
+
+        pushvars.insert("myvar".into(), "myvalue".as_bytes().into());
+        let r = condition_trigger_reason(&condition, Some(&pushvars), Some("no marker"));
+        assert!(r.is_none());
+
+        let r = condition_trigger_reason(&condition, Some(&pushvars), Some("@mybypass"));
+        assert_eq!(
+            r.as_deref(),
+            Some("bypass pushvar: myvar=myvalue, bypass string: @mybypass")
+        );
+    }
+
+    /// A condition with no markers is always triggered; its other requirements
+    /// decide whether it matches.
+    #[mononoke::test]
+    fn test_condition_without_markers() {
+        let condition = HookBypassCondition::permission_group("group");
+        let r = condition_trigger_reason(&condition, None, None);
+        assert_eq!(r.as_deref(), Some("implicit: member of group"));
+
+        let condition =
+            HookBypassCondition::identities([MononokeIdentity::from_legacy_type_data("USER", "a")]);
+        let r = condition_trigger_reason(&condition, None, None);
+        assert_eq!(r.as_deref(), Some("implicit: allowed identity"));
     }
 
     #[mononoke::test]
@@ -1493,26 +1463,26 @@ mod test {
 
     #[mononoke::test]
     fn test_pushvar_bypass() {
-        let bypass = HookBypass::new_with_pushvar("myvar".into(), "myvalue".into());
+        let condition = HookBypassCondition::pushvar("myvar", "myvalue");
 
         let mut m = HashMap::new();
-        let r = get_bypassed_by_pushvar_reason(Some(&bypass), Some(&m));
+        let r = condition_trigger_reason(&condition, Some(&m), None);
         assert!(r.is_none()); // No var
 
         m.insert("somevar".into(), "somevalue".as_bytes().into());
-        let r = get_bypassed_by_pushvar_reason(Some(&bypass), Some(&m));
+        let r = condition_trigger_reason(&condition, Some(&m), None);
         assert!(r.is_none()); // wrong var
 
         m.insert("myvar".into(), "somevalue".as_bytes().into());
-        let r = get_bypassed_by_pushvar_reason(Some(&bypass), Some(&m));
+        let r = condition_trigger_reason(&condition, Some(&m), None);
         assert!(r.is_none()); // wrong value
 
         m.insert("myvar".into(), "myvalue foo".as_bytes().into());
-        let r = get_bypassed_by_pushvar_reason(Some(&bypass), Some(&m));
+        let r = condition_trigger_reason(&condition, Some(&m), None);
         assert!(r.is_none()); // wrong value
 
         m.insert("myvar".into(), "myvalue".as_bytes().into());
-        let r = get_bypassed_by_pushvar_reason(Some(&bypass), Some(&m));
-        assert!(r.is_some());
+        let r = condition_trigger_reason(&condition, Some(&m), None);
+        assert_eq!(r.as_deref(), Some("bypass pushvar: myvar=myvalue"));
     }
 }

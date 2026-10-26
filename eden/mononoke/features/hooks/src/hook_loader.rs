@@ -15,6 +15,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use fbinit::FacebookInit;
+use hook_manager::BypassCheckers;
 use metaconfig_types::RepoConfig;
 use permission_checker::AclProvider;
 
@@ -92,39 +93,40 @@ pub async fn load_hooks(
             }
         };
 
-        let bypass_checker = match hook
+        let mut bypass_checkers = BypassCheckers::new();
+        for group_name in hook
             .config
-            .bypass
-            .as_ref()
-            .and_then(|b| b.permission_group().map(|s| s.to_string()))
+            .bypasses
+            .iter()
+            .filter_map(|condition| condition.permission_group.as_ref())
         {
-            Some(group_name) => {
-                let checker = acl_provider.group(&group_name).await.with_context(|| {
-                    format!(
-                        "Failed to load bypass permission group '{}' for hook '{}'",
-                        group_name, hook.name,
-                    )
-                })?;
-                Some(checker.into())
+            if bypass_checkers.contains_key(group_name) {
+                continue;
             }
-            None => None,
-        };
+            let checker = acl_provider.group(group_name).await.with_context(|| {
+                format!(
+                    "Failed to load bypass permission group '{}' for hook '{}'",
+                    group_name, hook.name,
+                )
+            })?;
+            bypass_checkers.insert(group_name.clone(), checker.into());
+        }
 
         match rust_hook {
             BookmarkHook(rust_hook) => hook_manager.register_bookmark_hook(
                 &hook.name,
                 rust_hook,
                 hook.config,
-                bypass_checker,
+                bypass_checkers,
             ),
             FileHook(rust_hook) => {
-                hook_manager.register_file_hook(&hook.name, rust_hook, hook.config, bypass_checker)
+                hook_manager.register_file_hook(&hook.name, rust_hook, hook.config, bypass_checkers)
             }
             ChangesetHook(rust_hook) => hook_manager.register_changeset_hook(
                 &hook.name,
                 rust_hook,
                 hook.config,
-                bypass_checker,
+                bypass_checkers,
             ),
         }
 

@@ -897,122 +897,112 @@ impl FromStr for HookType {
     }
 }
 
-/// Hook bypass
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct HookBypass {
-    /// Bypass that checks that a string is in the commit message
-    commit_message_bypass: Option<String>,
-    /// Bypass that checks that a string is in the commit message
-    pushvar_name_and_value: Option<(String, String)>,
-    /// AMP group restricting who can use bypass. When set, only group members
-    /// can bypass this hook.
-    permission_group: Option<String>,
-    /// Group members bypass without the commit message or pushvar marker.
-    implicit_for_group: bool,
-    /// A group member's bypass is honored even when the pusher is an agent.
-    allow_agent: bool,
+/// Who may use a hook bypass condition.
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
+pub enum HookBypassActor {
+    /// Pushes that are not made by an agent.
+    #[default]
+    Human,
+    /// Pushes made by an agent.
+    Agent,
+    /// Any push.
+    Any,
 }
 
-impl HookBypass {
-    /// Create commit-message-only bypass
-    pub fn new_with_commit_msg(msg: String) -> Self {
+impl HookBypassActor {
+    /// Whether a push, made by an agent or not, may use the condition.
+    pub fn allows(self, is_agent: bool) -> bool {
+        match self {
+            Self::Human => !is_agent,
+            Self::Agent => is_agent,
+            Self::Any => true,
+        }
+    }
+}
+
+/// One way to bypass a hook. The condition matches a push when every
+/// requirement it sets is met, and sets at least one of `commit_message`,
+/// `pushvar`, `permission_group` and `identities`.
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct HookBypassCondition {
+    /// String that must appear in the commit message.
+    pub commit_message: Option<String>,
+    /// Pushvar name and value that the push must set.
+    pub pushvar: Option<(String, String)>,
+    /// AMP group whose members may use the condition. Membership is checked
+    /// for the commit's author, or for the pusher when the author has no
+    /// usable identity; with
+    /// `scm/mononoke:check_hook_bypass_permission_group_with_client_identities`
+    /// the pusher's membership is accepted too.
+    pub permission_group: Option<String>,
+    /// Identities, one of which the pusher's own identities must include.
+    /// Unlike `permission_group`, this never considers the commit's author.
+    /// Empty means no requirement.
+    pub identities: Vec<MononokeIdentity>,
+    /// Whether humans, agents or both may use the condition.
+    pub actor: HookBypassActor,
+}
+
+impl HookBypassCondition {
+    /// A condition that requires `marker` in the commit message.
+    pub fn commit_message(marker: impl Into<String>) -> Self {
         Self {
-            commit_message_bypass: Some(msg),
-            pushvar_name_and_value: None,
-            permission_group: None,
-            implicit_for_group: false,
-            allow_agent: false,
+            commit_message: Some(marker.into()),
+            ..Default::default()
         }
     }
 
-    /// Create pushvar-only bypass
-    pub fn new_with_pushvar(name: String, value: String) -> Self {
+    /// A condition that requires the pushvar `name` set to `value`.
+    pub fn pushvar(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
-            commit_message_bypass: None,
-            pushvar_name_and_value: Some((name, value)),
-            permission_group: None,
-            implicit_for_group: false,
-            allow_agent: false,
+            pushvar: Some((name.into(), value.into())),
+            ..Default::default()
         }
     }
 
-    /// Create a bypass with both a commit message and a pushvar
-    pub fn new_with_commit_msg_and_pushvar(
-        msg: String,
-        pushvar_name: String,
-        pushvar_value: String,
-    ) -> Self {
+    /// A condition that requires membership of `group`.
+    pub fn permission_group(group: impl Into<String>) -> Self {
         Self {
-            commit_message_bypass: Some(msg),
-            pushvar_name_and_value: Some((pushvar_name, pushvar_value)),
-            permission_group: None,
-            implicit_for_group: false,
-            allow_agent: false,
+            permission_group: Some(group.into()),
+            ..Default::default()
         }
     }
 
-    /// Bypass with no marker: only meaningful with a permission group.
-    pub fn new_implicit() -> Self {
+    /// A condition that requires one of `identities`.
+    pub fn identities(identities: impl IntoIterator<Item = MononokeIdentity>) -> Self {
         Self {
-            commit_message_bypass: None,
-            pushvar_name_and_value: None,
-            permission_group: None,
-            implicit_for_group: true,
-            allow_agent: false,
+            identities: identities.into_iter().collect(),
+            ..Default::default()
         }
     }
 
-    /// Get commit message bypass params
-    pub fn commit_message_bypass(&self) -> Option<&String> {
-        self.commit_message_bypass.as_ref()
-    }
-
-    /// Get pushvar bypass params
-    pub fn pushvar_bypass(&self) -> Option<(&String, &String)> {
-        self.pushvar_name_and_value
-            .as_ref()
-            .map(|name_and_value| (&name_and_value.0, &name_and_value.1))
-    }
-
-    /// Set the permission group (builder pattern)
-    pub fn with_permission_group(mut self, group: Option<String>) -> Self {
-        self.permission_group = group;
+    /// Also require membership of `group`.
+    pub fn with_permission_group(mut self, group: impl Into<String>) -> Self {
+        self.permission_group = Some(group.into());
         self
     }
 
-    /// Get the permission group
-    pub fn permission_group(&self) -> Option<&str> {
-        self.permission_group.as_deref()
-    }
-
-    /// Set whether group members bypass without a marker (builder pattern)
-    pub fn with_implicit_for_group(mut self, implicit: bool) -> Self {
-        self.implicit_for_group = implicit;
+    /// Restrict the condition to `actor`.
+    pub fn with_actor(mut self, actor: HookBypassActor) -> Self {
+        self.actor = actor;
         self
     }
 
-    /// Whether group members bypass without a marker
-    pub fn implicit_for_group(&self) -> bool {
-        self.implicit_for_group
-    }
-
-    /// Set whether agents may use a group member's bypass (builder pattern)
-    pub fn with_allow_agent(mut self, allow: bool) -> Self {
-        self.allow_agent = allow;
-        self
-    }
-
-    /// Whether agents may use a group member's bypass
-    pub fn allow_agent(&self) -> bool {
-        self.allow_agent
+    /// Whether the condition sets none of the requirements that identify who
+    /// may bypass. Such a condition is invalid.
+    pub fn is_empty(&self) -> bool {
+        self.commit_message.is_none()
+            && self.pushvar.is_none()
+            && self.permission_group.is_none()
+            && self.identities.is_empty()
     }
 }
 
 /// Configs that are being passed to the hook during runtime
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct HookConfig {
-    /// An optional way to bypass a hook
-    pub bypass: Option<HookBypass>,
+    /// Ways to bypass the hook. The hook is bypassed when any of them matches.
+    pub bypasses: Vec<HookBypassCondition>,
     /// Configuration options (in JSON format)
     pub options: Option<String>,
     /// Whether this hook is log-only

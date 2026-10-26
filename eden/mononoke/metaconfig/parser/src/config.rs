@@ -847,7 +847,8 @@ mod test {
     use metaconfig_types::FilestoreParams;
     use metaconfig_types::GitConcurrencyParams;
     use metaconfig_types::GitConfigs;
-    use metaconfig_types::HookBypass;
+    use metaconfig_types::HookBypassActor;
+    use metaconfig_types::HookBypassCondition;
     use metaconfig_types::HookConfig;
     use metaconfig_types::HookManagerParams;
     use metaconfig_types::HookParams;
@@ -1610,7 +1611,10 @@ mod test {
                         name: "hook1".to_string(),
                         implementation: "hook1".to_string(),
                         config: HookConfig {
-                            bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
+                            bypasses: vec![
+                                HookBypassCondition::commit_message("@allow_hook1")
+                                    .with_actor(HookBypassActor::Any),
+                            ],
                             options: Some(r#"{"test": "abcde"}"#.to_string()),
                             log_only: false,
                             name: "hook1".to_string(),
@@ -1629,7 +1633,7 @@ mod test {
                         name: "hook2a".to_string(),
                         implementation: "hook2".to_string(),
                         config: HookConfig {
-                            bypass: None,
+                            bypasses: vec![],
                             options: None,
                             log_only: true,
                             name: "hook2a".to_string(),
@@ -2109,13 +2113,40 @@ mod test {
         .expect("config should parse");
 
         assert_eq!(
-            configs.repos["fbsource"].hooks[0].config.bypass,
-            Some(
-                HookBypass::new_implicit()
-                    .with_permission_group(Some("group1".into()))
-                    .with_implicit_for_group(true)
-                    .with_allow_agent(true)
-            )
+            configs.repos["fbsource"].hooks[0].config.bypasses,
+            vec![HookBypassCondition::permission_group("group1").with_actor(HookBypassActor::Any)],
+        );
+    }
+
+    /// Each legacy marker becomes its own condition, restricted to the
+    /// permission group and, without `allow_agent_bypass`, to humans.
+    #[mononoke::test]
+    fn test_legacy_hook_bypass_fields_become_conditions() {
+        let configs = load_configs_with_hook1(
+            r#"
+            bypass_commit_string="@allow"
+            bypass_pushvar="ALLOW=true"
+            bypass_permission_group="group1"
+            bypass_implicit_for_group=true
+            "#,
+        )
+        .expect("config should parse");
+
+        assert_eq!(
+            configs.repos["fbsource"].hooks[0].config.bypasses,
+            vec![
+                HookBypassCondition::pushvar("ALLOW", "true").with_permission_group("group1"),
+                HookBypassCondition::commit_message("@allow").with_permission_group("group1"),
+                HookBypassCondition::permission_group("group1"),
+            ],
+        );
+
+        // Without a group, anyone may use the markers, agents included.
+        let configs = load_configs_with_hook1(r#"bypass_commit_string="@allow""#)
+            .expect("config should parse");
+        assert_eq!(
+            configs.repos["fbsource"].hooks[0].config.bypasses,
+            vec![HookBypassCondition::commit_message("@allow").with_actor(HookBypassActor::Any)],
         );
     }
 
@@ -2132,7 +2163,7 @@ mod test {
         )
         .expect("config should parse");
 
-        assert_eq!(configs.repos["fbsource"].hooks[0].config.bypass, None);
+        assert_eq!(configs.repos["fbsource"].hooks[0].config.bypasses, vec![]);
     }
 
     #[mononoke::test]

@@ -46,9 +46,12 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use strum::IntoStaticStr;
 
 pub use crate::errors::HookManagerError;
+pub use crate::manager::BypassCheckers;
 pub use crate::manager::HookManager;
 use crate::manager::HooksOutcome;
 use crate::manager::annotate_agent_bypass_rejection;
+use crate::manager::annotate_human_bypass_rejection;
+use crate::manager::annotate_identity_bypass_rejection;
 use crate::manager::annotate_unauthorized_rejection;
 pub use crate::repo::HookRepo;
 
@@ -233,9 +236,11 @@ impl CheckedBypassIdentities {
 /// A bypass decision computed eagerly (before the hook runs) for a single
 /// `(hook, changeset)` pair, and carried into the hook-run path.
 ///
-/// The reason a bypass fired and the hook's permission-group name are bundled
-/// here because the trait side (`run_hook`) cannot see the `Hook` enum that
-/// holds the config.
+/// Every variant other than `NoBypass` names a bypass condition by its index
+/// in the hook's config, the reason it fired and its permission group, because
+/// the trait side (`run_hook`) cannot see the `Hook` enum that holds the
+/// config. The variants other than `Authorized` describe the first condition
+/// whose markers were present, and the requirement it failed.
 #[derive(Clone, Debug, Default, IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
 pub enum BypassDecision {
@@ -243,28 +248,45 @@ pub enum BypassDecision {
     #[default]
     #[strum(serialize = "none")]
     NoBypass,
-    /// A bypass fired and the pusher is authorized — the rejection is folded
-    /// into a single `accepted_via_bypass` row. Carries the bypass reason and
-    /// the restricting permission group (if any).
+    /// A bypass condition matched — the rejection is folded into a single
+    /// `accepted_via_bypass` row.
     Authorized {
+        condition: usize,
         reason: String,
         permission_group: Option<String>,
         check: Option<CheckedBypassIdentities>,
     },
-    /// A bypass fired but the pusher is not in the required group — the
-    /// rejection stands, annotated with a "not a member" note.
+    /// The pusher is not in the condition's permission group — the rejection
+    /// stands, annotated with a "not a member" note.
     UnauthorizedUser {
+        condition: usize,
         reason: String,
         group: String,
         check: CheckedBypassIdentities,
     },
-    /// A bypass fired and the pusher is in the required group, but the pusher
-    /// is an agent — the rejection stands, annotated with a note handing the
-    /// decision back to a human. Carries the bypass reason and the restricting
-    /// permission group.
-    UnauthorizedAgent {
+    /// None of the pusher's identities is one the condition allows — the
+    /// rejection stands, annotated with a note saying so.
+    UnauthorizedIdentity {
+        condition: usize,
         reason: String,
-        group: String,
+        permission_group: Option<String>,
+        check: Option<CheckedBypassIdentities>,
+    },
+    /// The condition is restricted to humans and the pusher is an agent — the
+    /// rejection stands, annotated with a note handing the decision back to a
+    /// human.
+    UnauthorizedAgent {
+        condition: usize,
+        reason: String,
+        permission_group: Option<String>,
+        check: Option<CheckedBypassIdentities>,
+    },
+    /// The condition is restricted to agents and the pusher is not an agent —
+    /// the rejection stands, annotated with a note saying so.
+    UnauthorizedHuman {
+        condition: usize,
+        reason: String,
+        permission_group: Option<String>,
         check: Option<CheckedBypassIdentities>,
     },
 }
@@ -309,52 +331,83 @@ fn log_execution_stats(
 ///
 /// Denials record the columns too, so a denied bypass is distinguishable from a
 /// rejection where none was attempted: `bypass_reason IS NOT NULL` selects
-/// exactly the attempts. `bypass_blocked_for_agent` is what separates the agent
-/// case from a plain "not a member" denial.
+/// exactly the attempts. `bypass_condition` is the index of the condition in the
+/// hook's config. `bypass_blocked_for_agent`, `bypass_blocked_for_human` and
+/// `bypass_identity_not_allowed` separate those denials from a plain "not a
+/// member" one.
 fn add_bypass_decision_columns(scuba: &mut MononokeScubaSampleBuilder, bypass: &BypassDecision) {
-    match bypass {
-        BypassDecision::NoBypass => {}
+    let (condition, reason, permission_group, check) = match bypass {
+        BypassDecision::NoBypass => return,
         BypassDecision::Authorized {
+            condition,
+            reason,
+            permission_group,
+            check,
+        } => (
+            condition,
+            reason,
+            permission_group.as_deref(),
+            check.as_ref(),
+        ),
+        BypassDecision::UnauthorizedUser {
+            condition,
+            reason,
+            group,
+            check,
+        } => (condition, reason, Some(group.as_str()), Some(check)),
+        BypassDecision::UnauthorizedIdentity {
+            condition,
             reason,
             permission_group,
             check,
         } => {
-            scuba.add("bypass_reason", reason.clone());
-            if let Some(group) = permission_group {
-                scuba.add("bypass_permission_group", group.clone());
-            }
-            if let Some(check) = check {
-                scuba
-                    .add("bypass_identity_source", check.source.as_str())
-                    .add("bypass_identities_checked", check.identities.clone());
-            }
-        }
-        BypassDecision::UnauthorizedUser {
-            reason,
-            group,
-            check,
-        } => {
-            scuba
-                .add("bypass_reason", reason.clone())
-                .add("bypass_permission_group", group.clone())
-                .add("bypass_identity_source", check.source.as_str())
-                .add("bypass_identities_checked", check.identities.clone());
+            scuba.add("bypass_identity_not_allowed", true);
+            (
+                condition,
+                reason,
+                permission_group.as_deref(),
+                check.as_ref(),
+            )
         }
         BypassDecision::UnauthorizedAgent {
+            condition,
             reason,
-            group,
+            permission_group,
             check,
         } => {
-            scuba
-                .add("bypass_reason", reason.clone())
-                .add("bypass_permission_group", group.clone())
-                .add("bypass_blocked_for_agent", true);
-            if let Some(check) = check {
-                scuba
-                    .add("bypass_identity_source", check.source.as_str())
-                    .add("bypass_identities_checked", check.identities.clone());
-            }
+            scuba.add("bypass_blocked_for_agent", true);
+            (
+                condition,
+                reason,
+                permission_group.as_deref(),
+                check.as_ref(),
+            )
         }
+        BypassDecision::UnauthorizedHuman {
+            condition,
+            reason,
+            permission_group,
+            check,
+        } => {
+            scuba.add("bypass_blocked_for_human", true);
+            (
+                condition,
+                reason,
+                permission_group.as_deref(),
+                check.as_ref(),
+            )
+        }
+    };
+    scuba
+        .add("bypass_condition", *condition as i64)
+        .add("bypass_reason", reason.clone());
+    if let Some(group) = permission_group {
+        scuba.add("bypass_permission_group", group);
+    }
+    if let Some(check) = check {
+        scuba
+            .add("bypass_identity_source", check.source.as_str())
+            .add("bypass_identities_checked", check.identities.clone());
     }
 }
 
@@ -426,44 +479,35 @@ fn record_outcome_and_apply_bypass(
     }
 
     add_bypass_decision_columns(scuba, bypass);
-    match bypass {
+    if let BypassDecision::Authorized { .. } = bypass {
         // An authorized bypass folds the rejection into a single
         // `accepted_via_bypass` row: it did not block the push, so it is not
         // counted as a failure.
-        BypassDecision::Authorized { .. } => {
-            scuba
-                .add("errorcode", 0)
-                .add("failed_hooks", 0)
-                .add("outcome", "accepted_via_bypass");
-            let extra_logs = outcome.get_execution().extra_logs.clone();
-            outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
-            Ok(outcome)
-        }
-        BypassDecision::NoBypass => {
-            scuba
-                .add("stderr", long_description)
-                .add("errorcode", 1)
-                .add("failed_hooks", 1)
-                .add("outcome", "rejected");
-            Ok(outcome)
-        }
-        BypassDecision::UnauthorizedUser { group, .. } => {
-            scuba
-                .add("stderr", long_description)
-                .add("errorcode", 1)
-                .add("failed_hooks", 1)
-                .add("outcome", "rejected");
-            Ok(annotate_unauthorized_rejection(outcome, group))
-        }
-        BypassDecision::UnauthorizedAgent { group, .. } => {
-            scuba
-                .add("stderr", long_description)
-                .add("errorcode", 1)
-                .add("failed_hooks", 1)
-                .add("outcome", "rejected");
-            Ok(annotate_agent_bypass_rejection(outcome, group))
-        }
+        scuba
+            .add("errorcode", 0)
+            .add("failed_hooks", 0)
+            .add("outcome", "accepted_via_bypass");
+        let extra_logs = outcome.get_execution().extra_logs.clone();
+        outcome.set_execution(HookExecution::accepted_with_logs(extra_logs));
+        return Ok(outcome);
     }
+
+    scuba
+        .add("stderr", long_description)
+        .add("errorcode", 1)
+        .add("failed_hooks", 1)
+        .add("outcome", "rejected");
+    Ok(match bypass {
+        BypassDecision::NoBypass | BypassDecision::Authorized { .. } => outcome,
+        BypassDecision::UnauthorizedUser { group, .. } => {
+            annotate_unauthorized_rejection(outcome, group)
+        }
+        BypassDecision::UnauthorizedIdentity { .. } => annotate_identity_bypass_rejection(outcome),
+        BypassDecision::UnauthorizedAgent {
+            permission_group, ..
+        } => annotate_agent_bypass_rejection(outcome, permission_group.as_deref()),
+        BypassDecision::UnauthorizedHuman { .. } => annotate_human_bypass_rejection(outcome),
+    })
 }
 
 /// Trait to be implemented by bookmarks hooks.
