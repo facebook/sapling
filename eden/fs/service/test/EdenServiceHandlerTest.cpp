@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+#include <cerrno>
 #include <limits>
 #include <memory>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -26,6 +28,21 @@ int64_t toThriftByteCount(uint64_t value);
 int64_t toThriftByteLimit(uint64_t value);
 std::shared_ptr<SaplingBackingStore> tryCastToSaplingBackingStore(
     std::shared_ptr<BackingStore>& backingStore);
+void validateInjectFaultDefinition(const FaultDefinition& fault);
+
+void expectInjectFaultArgumentError(const FaultDefinition& fault) {
+  try {
+    validateInjectFaultDefinition(fault);
+    FAIL() << "expected inject fault validation to fail";
+  } catch (const EdenError& error) {
+    EXPECT_EQ(EINVAL, error.errorCode().value());
+    EXPECT_EQ(EdenErrorType::ARGUMENT_ERROR, error.errorType().value());
+    EXPECT_NE(
+        std::string::npos,
+        error.message()->find(
+            "unblockKeyClass and unblockKeyValueRegex must be set together"));
+  }
+}
 
 TEST(EdenServiceHandlerTest, toThriftCacheUsageStateMapsAllStates) {
   EXPECT_EQ(
@@ -81,6 +98,23 @@ TEST(EdenServiceHandlerTest, toThriftByteLimitClampsValuesBeyondInt64Max) {
   uint64_t tooLarge =
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;
   EXPECT_EQ(std::numeric_limits<int64_t>::max(), toThriftByteLimit(tooLarge));
+}
+
+TEST(
+    EdenServiceHandlerTest,
+    validateInjectFaultDefinitionRequiresCompleteUnblockTarget) {
+  FaultDefinition onlyClass;
+  onlyClass.unblockKeyClass() = "blocked";
+  expectInjectFaultArgumentError(onlyClass);
+
+  FaultDefinition onlyRegex;
+  onlyRegex.unblockKeyValueRegex() = ".*";
+  expectInjectFaultArgumentError(onlyRegex);
+
+  FaultDefinition bothFields;
+  bothFields.unblockKeyClass() = "blocked";
+  bothFields.unblockKeyValueRegex() = ".*";
+  EXPECT_NO_THROW(validateInjectFaultDefinition(bothFields));
 }
 
 TEST(

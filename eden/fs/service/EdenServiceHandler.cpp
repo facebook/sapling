@@ -5217,7 +5217,7 @@ PrefetchStats populatePrefetchStats(
 
 } // namespace
 
-// The following three functions are deliberately given external linkage
+// The following functions are deliberately given external linkage
 // (not left in the anonymous namespace above) so they can be exercised
 // directly from EdenServiceHandlerTest.cpp - visible for testing.
 
@@ -5268,6 +5268,16 @@ int64_t toThriftByteLimit(uint64_t value) {
     return -1;
   }
   return toThriftByteCount(value);
+}
+
+void validateInjectFaultDefinition(const FaultDefinition& fault) {
+  if (fault.unblockKeyClass().has_value() !=
+      fault.unblockKeyValueRegex().has_value()) {
+    throw newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "unblockKeyClass and unblockKeyValueRegex must be set together");
+  }
 }
 
 namespace {
@@ -7250,6 +7260,7 @@ std::optional<folly::exception_wrapper> getFaultError(
 
 void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+  validateInjectFaultDefinition(*fault);
   auto& injector = server_->getServerState()->getFaultInjector();
   if (*fault->block()) {
     injector.injectBlock(
@@ -7273,6 +7284,16 @@ void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
   if (*fault->kill()) {
     injector.injectKill(
         *fault->keyClass(), *fault->keyValueRegex(), *fault->count());
+    return;
+  }
+  if (fault->unblockKeyClass().has_value() &&
+      fault->unblockKeyValueRegex().has_value()) {
+    injector.injectUnblock(
+        *fault->keyClass(),
+        *fault->keyValueRegex(),
+        *fault->unblockKeyClass(),
+        *fault->unblockKeyValueRegex(),
+        *fault->count());
     return;
   }
 
