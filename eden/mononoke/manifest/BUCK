@@ -26,6 +26,7 @@ rust_library(
         "fbsource//third-party/rust:serde_derive",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-util",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/bounded_traversal:bounded_traversal",
         "//common/rust/shed/cloned:cloned",

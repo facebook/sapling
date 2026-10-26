@@ -25,6 +25,7 @@ use futures::stream::Stream;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::path::MPath;
+use tokio_util::task::AbortOnDropHandle;
 
 use crate::Entry;
 use crate::Manifest;
@@ -96,7 +97,7 @@ where
                         if !filter(&path, manifest_id.clone()) {
                             return Ok((Vec::new(), Vec::new()));
                         }
-                        mononoke::spawn_task(async move {
+                        AbortOnDropHandle::new(mononoke::spawn_task(async move {
                             let manifest = manifest_id.load(&ctx, &store).await?;
                             let mut output = Vec::new();
                             let mut recurse = Vec::new();
@@ -136,7 +137,7 @@ where
                             }
 
                             Ok::<_, Error>((output, recurse))
-                        }).await?
+                        })).await?
                     }.boxed()
                 },
             )
