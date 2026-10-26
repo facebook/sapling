@@ -79,6 +79,7 @@ rust_unittest(
         "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/blobstore:delayblob",
         "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/blobstore:samplingblob",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/permission_checker:permission_checker",

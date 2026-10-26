@@ -249,6 +249,7 @@ impl CreateChangeset {
                             bonsai_parents,
                             subtree_changes,
                             &blobstore,
+                            read_from_augmented,
                         )
                         .await?;
                         (

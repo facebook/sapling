@@ -70,6 +70,7 @@ rand_xorshift = "0.5"
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 restricted_paths = { version = "0.1.0", path = "../../repo_attributes/restricted_paths" }
+samplingblob = { version = "0.1.0", path = "../../blobstore/samplingblob" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

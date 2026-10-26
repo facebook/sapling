@@ -8,6 +8,7 @@
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 mod augmented_manifest_tests;
+mod commit_upload_augmented_tests;
 mod file_history_test;
 mod slacl_files_test;
 mod tracing_blobstore;

@@ -53,6 +53,7 @@ use mercurial_types::subtree::HgSubtreeChanges;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use restricted_paths_common::ArcRestrictedPathsConfigBased;
@@ -248,16 +249,24 @@ impl UploadEntries {
             Entry::Tree(manifest_id) => {
                 STATS::process_tree_entry.add_value(1);
 
-                // NOTE: Just fetch the envelope here, because we don't actually need the
-                // deserialized manifest: just the parents will do.
-                let envelope = fetch_manifest_envelope(ctx, &self.blobstore, manifest_id)
-                    .await
-                    .with_context(|| {
-                        format!("Error processing manifest with id {manifest_id} and path {path}")
-                    })?;
+                let parents = if self.read_from_augmented {
+                    HgAugmentedManifestId::from(manifest_id)
+                        .load(ctx, &self.blobstore)
+                        .await
+                        .map(|envelope| envelope.augmented_manifest.hg_parents())
+                        .map_err(Error::from)
+                } else {
+                    // NOTE: Just fetch the envelope here, because we don't actually need the
+                    // deserialized manifest: just the parents will do.
+                    fetch_manifest_envelope(ctx, &self.blobstore, manifest_id)
+                        .await
+                        .map(|envelope| envelope.get_parents())
+                }
+                .with_context(|| {
+                    format!("Error processing manifest with id {manifest_id} and path {path}")
+                })?;
 
-                envelope
-                    .get_parents()
+                parents
                     .into_iter()
                     .map(|p| Entry::Tree(HgManifestId::new(p)))
                     .collect::<Vec<_>>()
@@ -338,6 +347,38 @@ impl UploadEntries {
         Ok(())
     }
 
+    /// Entries of `mf_id` that differ from every parent manifest.
+    fn find_new_entries(
+        &self,
+        ctx: &CoreContext,
+        mf_id: HgManifestId,
+        parent_manifest_ids: Vec<HgManifestId>,
+    ) -> BoxStream<'static, Result<(MPath, Entry<HgManifestId, HgFileNodeId>)>> {
+        let blobstore = self.blobstore.clone().boxed();
+        if !self.read_from_augmented {
+            return find_intersection_of_diffs(ctx.clone(), blobstore, mf_id, parent_manifest_ids)
+                .map_ok(|(path, entry)| (path, entry.map_leaf(|(_, fnid)| fnid)))
+                .boxed();
+        }
+        // The null manifest is empty and has no augmented manifest.
+        if mf_id.into_nodehash() == NULL_HASH {
+            return stream::empty().boxed();
+        }
+        let parents = parent_manifest_ids
+            .into_iter()
+            .filter(|id| id.into_nodehash() != NULL_HASH)
+            .map(HgAugmentedManifestId::from)
+            .collect();
+        find_intersection_of_diffs(ctx.clone(), blobstore, mf_id.into(), parents)
+            .map_ok(|(path, entry)| {
+                let entry = entry
+                    .map_tree(|id: HgAugmentedManifestId| HgManifestId::new(id.into_nodehash()))
+                    .map_leaf(|leaf| HgFileNodeId::new(leaf.filenode));
+                (path, entry)
+            })
+            .boxed()
+    }
+
     pub async fn finalize(
         self,
         ctx: &CoreContext,
@@ -366,57 +407,52 @@ impl UploadEntries {
                 Some("hg_changeset_upload"),
             );
             async move {
-                let entries = find_intersection_of_diffs(
-                    ctx.clone(),
-                    this.blobstore.clone().boxed(),
-                    mf_id,
-                    parent_manifest_ids,
-                )
-                .map_ok({
-                    move |(path, entry)| {
-                        async move {
-                            let manifest_id = match &entry {
-                                Entry::Tree(manifest_id) => Some(*manifest_id),
-                                Entry::Leaf(_) => None,
-                            };
-                            let entry = entry.map_leaf(|(_, fnid)| fnid);
-                            Self::assert_in_blobstore(
-                                ctx,
-                                &this.blobstore,
-                                this.read_from_augmented,
-                                entry,
-                            )
-                            .await
-                            .with_context(|| format!("Error checking for path: {path:?}"))?;
+                let entries = this
+                    .find_new_entries(ctx, mf_id, parent_manifest_ids)
+                    .map_ok({
+                        move |(path, entry)| {
+                            async move {
+                                let manifest_id = match &entry {
+                                    Entry::Tree(manifest_id) => Some(*manifest_id),
+                                    Entry::Leaf(_) => None,
+                                };
+                                Self::assert_in_blobstore(
+                                    ctx,
+                                    &this.blobstore,
+                                    this.read_from_augmented,
+                                    entry,
+                                )
+                                .await
+                                .with_context(|| format!("Error checking for path: {path:?}"))?;
 
-                            if !restricted_paths_enabled {
-                                return Ok(None);
-                            }
-                            let Some(manifest_id) = manifest_id else {
-                                return Ok(None);
-                            };
-                            let Some(path) = Option::<NonRootMPath>::from(path) else {
-                                return Ok(None);
-                            };
-                            if !this.restricted_paths.should_record_manifest_id_entry(&path) {
-                                return Ok(None);
-                            }
+                                if !restricted_paths_enabled {
+                                    return Ok(None);
+                                }
+                                let Some(manifest_id) = manifest_id else {
+                                    return Ok(None);
+                                };
+                                let Some(path) = Option::<NonRootMPath>::from(path) else {
+                                    return Ok(None);
+                                };
+                                if !this.restricted_paths.should_record_manifest_id_entry(&path) {
+                                    return Ok(None);
+                                }
 
-                            Ok(Some(RestrictedPathManifestIdEntry::new(
-                                ManifestType::Hg,
-                                manifest_id.to_string().into(),
-                                RepoPath::DirectoryPath(path),
-                            )?))
+                                Ok(Some(RestrictedPathManifestIdEntry::new(
+                                    ManifestType::Hg,
+                                    manifest_id.to_string().into(),
+                                    RepoPath::DirectoryPath(path),
+                                )?))
+                            }
+                            .boxed()
                         }
-                        .boxed()
-                    }
-                })
-                .try_buffer_unordered(100)
-                .try_filter_map(|entry| async move { Ok(entry) })
-                .try_collect::<Vec<_>>()
-                .try_timed()
-                .await?
-                .log_future_stats(required_checks_scuba, "Required checks", None);
+                    })
+                    .try_buffer_unordered(100)
+                    .try_filter_map(|entry| async move { Ok(entry) })
+                    .try_collect::<Vec<_>>()
+                    .try_timed()
+                    .await?
+                    .log_future_stats(required_checks_scuba, "Required checks", None);
 
                 Ok::<_, Error>(entries)
             }
