@@ -20,6 +20,7 @@
 #include <fmt/format.h>
 #include <folly/Conv.h>
 #include <folly/MapUtil.h>
+#include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
 #include <folly/logging/LogConfigParser.h>
@@ -81,6 +82,11 @@
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(edenLogLevel, "DBG2", "Logging level to use at startup");
+DEFINE_bool(
+    fatal_eden_bug,
+    folly::kIsDebug,
+    "Abort the daemon when an EDEN_BUG report fires instead of throwing. "
+    "Defaults to the build mode and is intended for correctness testing.");
 
 THRIFT_FLAG_DECLARE_bool(server_header_reject_framed);
 
@@ -480,6 +486,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
   // Make sure to run this before any flag values are read.
   main.init(&argc, &argv);
+
+  setEdenBugFatal(FLAGS_fatal_eden_bug);
 
   if (argc != 1) {
     fprintf(stderr, "error: unexpected trailing command line arguments\n");

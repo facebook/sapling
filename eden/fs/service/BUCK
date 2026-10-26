@@ -20,6 +20,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         "fbsource//xplat/folly:conv",
         "fbsource//xplat/folly:map_util",
+        "fbsource//xplat/folly:portability",
         "fbsource//xplat/folly:stop_watch",
         "fbsource//xplat/folly:string",
         "fbsource//xplat/folly/init:init",

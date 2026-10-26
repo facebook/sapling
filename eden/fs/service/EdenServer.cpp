@@ -76,6 +76,7 @@
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLoggerFactory.h"
+#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FileUtils.h"
@@ -726,6 +727,7 @@ static constexpr folly::StringPiece kNfsReadDirPlusCount60{
     "nfs.readdirplus_us.count.60"};
 
 static constexpr folly::StringPiece kFsChannelTaskCount{"fs.task.count"};
+static constexpr folly::StringPiece kEdenBugCount{"bug.count"};
 static constexpr folly::StringPiece kMemoryVmRssBytes{"memory_vm_rss_bytes"};
 #ifdef __APPLE__
 static constexpr folly::StringPiece kMemoryCompressedBytes{
@@ -897,6 +899,9 @@ EdenServer::EdenServer(
     return this->getServerState()->getFsChannelThreadPool()->getTaskQueueSize();
   });
 
+  counters->registerCallback(
+      kEdenBugCount, [] { return static_cast<size_t>(getEdenBugCount()); });
+
   counters->registerCallback(kMemoryVmRssBytes, [] {
     auto memoryStats = facebook::eden::proc_util::readMemoryStats();
     if (memoryStats) {
@@ -1030,6 +1035,7 @@ EdenServer::~EdenServer() {
     }
   }
   counters->unregisterCallback(kFsChannelTaskCount);
+  counters->unregisterCallback(kEdenBugCount);
 #ifdef __APPLE__
   counters->unregisterCallback(kMemoryCompressedBytes);
   counters->unregisterCallback(kMemoryFootprintBytes);
