@@ -50,7 +50,7 @@ async fn unmount_impl(
 ) -> Result<()> {
     instance
         .daemon()
-        .unmount_with_fallback(path, !no_force)
+        .unmount_v2(path, !no_force)
         .await
         .with_context(|| format!("Failed to unmount {}", path.display()))?;
     if mark_intentional_unmount {

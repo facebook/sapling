@@ -150,9 +150,6 @@ pub enum EdenFsError {
     #[error("EdenFS did not respond within set timeout: {0}")]
     RequestTimeout(Elapsed),
 
-    #[error("The running version of the EdenFS daemon doesn't know that method.")]
-    UnknownMethod(String),
-
     #[error("The Eden Thrift server responded with an EdenError. {0:?}")]
     ThriftRequestError(ThriftRequestError),
 

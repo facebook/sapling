@@ -107,15 +107,7 @@ impl StatusCmd {
     async fn get_status(&self, instance: &EdenFsInstance) -> edenfs_error::Result<DaemonInfo> {
         #[cfg(fbcode_build)]
         if self.wait {
-            let waited_status = self.get_status_blocking_on_startup(instance).await;
-            if let Err(edenfs_error::EdenFsError::UnknownMethod(_)) = waited_status {
-                println!(
-                    "The version of EdenFS you are running does not yet support streaming status. Falling back to regular status ..."
-                );
-                return self.get_status_simple(instance).await;
-            } else {
-                return waited_status;
-            }
+            return self.get_status_blocking_on_startup(instance).await;
         }
         self.get_status_simple(instance).await
     }

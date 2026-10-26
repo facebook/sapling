@@ -63,15 +63,7 @@ impl EdenFsClient {
             .map_err(EdenFsError::from)?;
 
         let stream = stream
-            .map(|item| match item {
-                Err(thrift_streaming_clients::errors::StreamStartStatusStreamError::ApplicationException(e))
-                    if e.type_ == thrift_types::fbthrift::ApplicationExceptionErrorCode::UnknownMethod =>
-                {
-                    Err(EdenFsError::UnknownMethod(e.message))
-                }
-                Err(e) => Err(EdenFsError::Other(e.into())),
-                Ok(r) => Ok(r),
-            })
+            .map(|item| item.map_err(|e| EdenFsError::Other(e.into())))
             .boxed();
 
         Ok((daemon_info, stream))

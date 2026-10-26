@@ -54,11 +54,7 @@ from eden.fs.service.eden.thrift_types import (
 from eden.thrift import client
 from eden.thrift.client import EdenNotRunningError
 from filelock import BaseFileLock, FileLock
-from thrift.python.exceptions import (
-    ApplicationError,
-    ApplicationErrorType,
-    TransportError,
-)
+from thrift.python.exceptions import TransportError
 
 from . import configinterpolator, configutil, telemetry, util, version
 
@@ -1007,16 +1003,7 @@ Do you want to run `eden mount %s` instead?"""
         )
 
         with self.get_thrift_client(timeout=UNMOUNT_TIMEOUT_SECONDS) as client:
-            try:
-                client.unmountV2(unmount_arg)
-            except ApplicationError as e:
-                # Fallback to old unmount in the case that this is running
-                # against an older version of EdenFS in which unmountV2 is
-                # not known
-                if e.type == ApplicationErrorType.UNKNOWN_METHOD:
-                    client.unmount(mount_point)
-                else:
-                    raise e
+            client.unmountV2(unmount_arg)
 
         if not unintentional_unmount:
             # If the unmount succeeded, create a file in the client directory

@@ -22,8 +22,6 @@ use edenfs_error::ConnectAndRequestError;
 use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::MountInfo;
 use thrift_types::edenfs::UnmountArgument;
-use thrift_types::edenfs_clients::errors::UnmountV2Error;
-use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
@@ -98,32 +96,15 @@ impl EdenFsDaemon for EdenFsClient {
             useForce: use_force,
             ..Default::default()
         };
-        match self
-            .with_thrift(|thrift| {
-                (
-                    thrift.unmountV2(&unmount_argument),
-                    EdenThriftMethod::UnmountV2,
-                )
-            })
-            .await
-        {
-            Ok(_) => Ok(()),
-            Err(ConnectAndRequestError::RequestError(UnmountV2Error::ApplicationException(
-                ref e,
-            ))) if e.type_ == ApplicationExceptionErrorCode::UnknownMethod => {
-                Err(DaemonError::UnknownMethod {
-                    method: "unmountV2",
-                })
-            }
-            Err(error) => Err(classify("unmountV2", error)),
-        }
-    }
-
-    async fn unmount_legacy(&self, mount_point: &Path) -> DaemonResult<()> {
-        let encoded_path = encode_path("unmount", mount_point)?;
-        self.with_thrift(|thrift| (thrift.unmount(&encoded_path), EdenThriftMethod::Unmount))
-            .await
-            .map_err(|error| classify("unmount", error))
+        self.with_thrift(|thrift| {
+            (
+                thrift.unmountV2(&unmount_argument),
+                EdenThriftMethod::UnmountV2,
+            )
+        })
+        .await
+        .map(|_| ())
+        .map_err(|error| classify("unmountV2", error))
     }
 
     #[cfg(target_os = "linux")]

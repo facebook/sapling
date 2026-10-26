@@ -26,8 +26,6 @@ use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::MountInfo;
 use thrift_types::edenfs::UnmountArgument;
 use thrift_types::edenfs_clients::EdenService;
-use thrift_types::edenfs_clients::errors::UnmountV2Error;
-use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
@@ -35,18 +33,12 @@ use tokio::io::ReadBuf;
 use tokio::sync::oneshot;
 use tokio_uds_compat::UnixStream;
 use tracing::error;
-use tracing::warn;
 
 const DEFAULT_CONNECTION_TIMEOUT: Duration = Duration::from_mins(2);
 const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_mins(5);
 
 #[derive(Debug, Error)]
 pub enum DaemonError {
-    /// The daemon predates the requested thrift method
-    /// (`ApplicationExceptionErrorCode::UnknownMethod`).
-    #[error("EdenFS daemon does not implement {method}")]
-    UnknownMethod { method: &'static str },
-
     #[error("failed to connect to the EdenFS daemon: {0:#}")]
     Connect(#[source] anyhow::Error),
 
@@ -111,9 +103,6 @@ pub trait EdenFsDaemon: Send + Sync {
     /// Thrift `unmountV2`.
     async fn unmount_v2(&self, mount_point: &Path, use_force: bool) -> DaemonResult<()>;
 
-    /// Legacy thrift `unmount`, for daemons that predate `unmountV2`.
-    async fn unmount_legacy(&self, mount_point: &Path) -> DaemonResult<()>;
-
     /// Thrift `addBindMount` (Linux bind-mount redirections).
     #[cfg(target_os = "linux")]
     async fn add_bind_mount(
@@ -126,19 +115,6 @@ pub trait EdenFsDaemon: Send + Sync {
     /// Thrift `removeBindMount` (Linux bind-mount redirections).
     #[cfg(target_os = "linux")]
     async fn remove_bind_mount(&self, mount_point: &Path, repo_path: &Path) -> DaemonResult<()>;
-
-    /// `unmountV2`, falling back to the legacy `unmount` endpoint when the
-    /// daemon predates it. The fallback decision lives here so every
-    /// implementation shares it.
-    async fn unmount_with_fallback(&self, mount_point: &Path, use_force: bool) -> DaemonResult<()> {
-        match self.unmount_v2(mount_point, use_force).await {
-            Err(error @ DaemonError::UnknownMethod { .. }) => {
-                warn!(%error, "falling back to legacy unmount for {}", mount_point.display());
-                self.unmount_legacy(mount_point).await
-            }
-            result => result,
-        }
-    }
 }
 
 #[derive(Debug, Error)]
@@ -273,25 +249,9 @@ impl EdenFsDaemon for SocketDaemon {
             ..Default::default()
         };
         let (client, _cancellation) = self.connect(None).await?;
-        match with_request_timeout("unmountV2", client.unmountV2(&unmount_argument)).await? {
-            Ok(()) => Ok(()),
-            Err(UnmountV2Error::ApplicationException(ref e))
-                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
-            {
-                Err(DaemonError::UnknownMethod {
-                    method: "unmountV2",
-                })
-            }
-            Err(error) => Err(request_error("unmountV2", error)),
-        }
-    }
-
-    async fn unmount_legacy(&self, mount_point: &Path) -> DaemonResult<()> {
-        let encoded_path = encode_path("unmount", mount_point)?;
-        let (client, _cancellation) = self.connect(None).await?;
-        with_request_timeout("unmount", client.unmount(&encoded_path))
+        with_request_timeout("unmountV2", client.unmountV2(&unmount_argument))
             .await?
-            .map_err(|error| request_error("unmount", error))
+            .map_err(|error| request_error("unmountV2", error))
     }
 
     #[cfg(target_os = "linux")]
@@ -348,10 +308,6 @@ impl EdenFsDaemon for DisconnectedDaemon {
         Err(self.error())
     }
 
-    async fn unmount_legacy(&self, _mount_point: &Path) -> DaemonResult<()> {
-        Err(self.error())
-    }
-
     #[cfg(target_os = "linux")]
     async fn add_bind_mount(
         &self,
@@ -365,130 +321,5 @@ impl EdenFsDaemon for DisconnectedDaemon {
     #[cfg(target_os = "linux")]
     async fn remove_bind_mount(&self, _mount_point: &Path, _repo_path: &Path) -> DaemonResult<()> {
         Err(self.error())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
-
-    use super::*;
-
-    enum UnmountV2Behavior {
-        Ok,
-        UnknownMethod,
-        RequestError,
-    }
-
-    struct FakeDaemon {
-        unmount_v2_behavior: UnmountV2Behavior,
-        unmount_v2_calls: AtomicUsize,
-        unmount_legacy_calls: AtomicUsize,
-    }
-
-    impl FakeDaemon {
-        fn new(unmount_v2_behavior: UnmountV2Behavior) -> Self {
-            Self {
-                unmount_v2_behavior,
-                unmount_v2_calls: AtomicUsize::new(0),
-                unmount_legacy_calls: AtomicUsize::new(0),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl EdenFsDaemon for FakeDaemon {
-        async fn list_mounts(
-            &self,
-            _conn_timeout: Option<Duration>,
-        ) -> DaemonResult<Vec<MountInfo>> {
-            Ok(Vec::new())
-        }
-
-        async fn unmount_v2(&self, _mount_point: &Path, _use_force: bool) -> DaemonResult<()> {
-            self.unmount_v2_calls.fetch_add(1, Ordering::SeqCst);
-            match self.unmount_v2_behavior {
-                UnmountV2Behavior::Ok => Ok(()),
-                UnmountV2Behavior::UnknownMethod => Err(DaemonError::UnknownMethod {
-                    method: "unmountV2",
-                }),
-                UnmountV2Behavior::RequestError => Err(request_error(
-                    "unmountV2",
-                    anyhow!("injected request error"),
-                )),
-            }
-        }
-
-        async fn unmount_legacy(&self, _mount_point: &Path) -> DaemonResult<()> {
-            self.unmount_legacy_calls.fetch_add(1, Ordering::SeqCst);
-            Ok(())
-        }
-
-        #[cfg(target_os = "linux")]
-        async fn add_bind_mount(
-            &self,
-            _mount_point: &Path,
-            _repo_path: &Path,
-            _target_path: &Path,
-        ) -> DaemonResult<()> {
-            Ok(())
-        }
-
-        #[cfg(target_os = "linux")]
-        async fn remove_bind_mount(
-            &self,
-            _mount_point: &Path,
-            _repo_path: &Path,
-        ) -> DaemonResult<()> {
-            Ok(())
-        }
-    }
-
-    #[tokio::test]
-    async fn unmount_succeeds_without_fallback() {
-        let daemon = FakeDaemon::new(UnmountV2Behavior::Ok);
-
-        daemon
-            .unmount_with_fallback(Path::new("/checkout"), true)
-            .await
-            .expect("unmountV2 success should not need the fallback");
-
-        assert_eq!(daemon.unmount_v2_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(
-            daemon.unmount_legacy_calls.load(Ordering::SeqCst),
-            0,
-            "legacy unmount must not run when unmountV2 succeeds"
-        );
-    }
-
-    #[tokio::test]
-    async fn unknown_method_falls_back_to_legacy_unmount() {
-        let daemon = FakeDaemon::new(UnmountV2Behavior::UnknownMethod);
-
-        daemon
-            .unmount_with_fallback(Path::new("/checkout"), true)
-            .await
-            .expect("fallback to the legacy endpoint should succeed");
-
-        assert_eq!(daemon.unmount_v2_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(daemon.unmount_legacy_calls.load(Ordering::SeqCst), 1);
-    }
-
-    #[tokio::test]
-    async fn request_error_does_not_fall_back() {
-        let daemon = FakeDaemon::new(UnmountV2Behavior::RequestError);
-
-        let error = daemon
-            .unmount_with_fallback(Path::new("/checkout"), true)
-            .await
-            .expect_err("request errors other than UnknownMethod must propagate");
-
-        assert!(matches!(error, DaemonError::Request { .. }));
-        assert_eq!(
-            daemon.unmount_legacy_calls.load(Ordering::SeqCst),
-            0,
-            "legacy unmount must not run for non-UnknownMethod errors"
-        );
     }
 }

@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Set
 
-from thrift.python.exceptions import ApplicationError, ApplicationErrorType
+from thrift.python.exceptions import ApplicationError
 
 from . import configutil, mtab, tabulate
 from .config import EdenCheckout, EdenInstance, load_toml_config
@@ -35,7 +35,6 @@ log: logging.Logger = logging.getLogger(__name__)
 
 USER_REDIRECTION_SOURCE = ".eden/client/config.toml:redirections"
 REPO_SOURCE = ".eden-redirections"
-PLEASE_RESTART = "Please run `eden restart` to pick up the new redirections feature set"
 APFS_HELPER = "/usr/local/libexec/eden/eden_apfs_mount_helper"
 
 
@@ -423,9 +422,7 @@ class Redirection:
                     client.removeBindMount(
                         os.fsencode(checkout_path), os.fsencode(self.repo_path)
                     )
-                except ApplicationError as exc:
-                    if exc.type == ApplicationErrorType.UNKNOWN_METHOD:
-                        print(PLEASE_RESTART, file=sys.stderr)
+                except ApplicationError:
                     log.debug("removeBindMount failed; ignoring error", exc_info=True)
 
             # Ensure that the client directory exists before we try
@@ -433,27 +430,17 @@ class Redirection:
             abs_mount_path_in_repo.mkdir(exist_ok=True, parents=True)
             target.mkdir(exist_ok=True, parents=True)
 
-            try:
-                client.addBindMount(
-                    os.fsencode(checkout_path),
-                    os.fsencode(self.repo_path),
-                    os.fsencode(target),
-                )
-            except ApplicationError as exc:
-                if exc.type == ApplicationErrorType.UNKNOWN_METHOD:
-                    raise Exception(PLEASE_RESTART)
-                raise
+            client.addBindMount(
+                os.fsencode(checkout_path),
+                os.fsencode(self.repo_path),
+                os.fsencode(target),
+            )
 
     def _bind_unmount_linux(self, checkout: EdenCheckout) -> None:
         with checkout.instance.get_thrift_client() as client:
-            try:
-                client.removeBindMount(
-                    os.fsencode(checkout.path), os.fsencode(self.repo_path)
-                )
-            except ApplicationError as exc:
-                if exc.type == ApplicationErrorType.UNKNOWN_METHOD:
-                    raise Exception(PLEASE_RESTART)
-                raise
+            client.removeBindMount(
+                os.fsencode(checkout.path), os.fsencode(self.repo_path)
+            )
 
     def _bind_mount_windows(
         self, instance: EdenInstance, checkout_path: Path, target: Path
