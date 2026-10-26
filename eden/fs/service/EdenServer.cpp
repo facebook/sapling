@@ -717,12 +717,6 @@ class EdenServer::ThriftServerEventHandler
   bool stoppingFromSignal_;
 };
 
-static constexpr folly::StringPiece kNfsReadCount60{"nfs.read_us.count.60"};
-static constexpr folly::StringPiece kNfsReadDirCount60{
-    "nfs.readdir_us.count.60"};
-static constexpr folly::StringPiece kNfsReadDirPlusCount60{
-    "nfs.readdirplus_us.count.60"};
-
 static constexpr folly::StringPiece kFsChannelTaskCount{"fs.task.count"};
 static constexpr folly::StringPiece kEdenBugCount{"bug.count"};
 static constexpr folly::StringPiece kMemoryVmRssBytes{"memory_vm_rss_bytes"};
@@ -1479,19 +1473,6 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
     }
   } else {
     gcTask_.updateInterval(0s);
-  }
-
-  if (config.enableNfsServer.getValue() &&
-      config.enableNfsCrawlDetection.getValue()) {
-    auto interval = config.nfsCrawlInterval.getValue();
-    XLOGF(
-        DBG4,
-        "NFS crawl detection enabled. Using interval = {}ns",
-        interval.count());
-    detectNfsCrawlTask_.updateInterval(
-        std::chrono::duration_cast<std::chrono::milliseconds>(interval));
-  } else {
-    detectNfsCrawlTask_.updateInterval(0s);
   }
 
 #ifdef __linux__
@@ -4672,136 +4653,6 @@ void EdenServer::refreshRestrictedRoots() {
             ex.what());
       }
     });
-  }
-}
-
-void EdenServer::detectNfsCrawl() {
-  auto edenConfig = config_->getEdenConfig();
-  auto readThreshold = edenConfig->nfsCrawlReadThreshold.getValue();
-  auto readDirThreshold = edenConfig->nfsCrawlReadDirThreshold.getValue();
-  auto readCount = fb303::ServiceData::get()
-                       ->getCounterIfExists(kNfsReadCount60)
-                       .value_or(0);
-  // At runtime, use-readdirplus can change, but this does not change the state
-  // of the current mounts. Therefore, sum readdir and readdirplus counters and
-  // compare that to the readdir threshold.
-  auto readDirCount = fb303::ServiceData::get()
-                          ->getCounterIfExists(kNfsReadDirCount60)
-                          .value_or(0) +
-      fb303::ServiceData::get()
-          ->getCounterIfExists(kNfsReadDirPlusCount60)
-          .value_or(0);
-  if (readCount > readThreshold || readDirCount > readDirThreshold) {
-    XLOGF(
-        DBG2,
-        "NFS crawl detected, initiating process discovery and attribution: "
-        "[nfs.read_us.count.60 = {} > {} or nfs.readdir[plus]_us.count.60 = {} > {}]",
-        readCount,
-        readThreshold,
-        readDirCount,
-        readDirThreshold);
-
-    // Get list of excluded process names
-    auto exclusions = edenConfig->nfsCrawlExcludedProcessNames.getValue();
-
-    // Iterate over each mount
-    auto mountPoints = getMountPoints();
-    for (auto& mountPointHandle : mountPoints) {
-      if (mountPointHandle.getEdenMount().isNfsdChannel()) {
-        folly::via(
-            getServerState()->getThreadPool().get(),
-            [mountPointHandle,
-             exclusions,
-             serverState = serverState_,
-             readCount,
-             readThreshold,
-             readDirCount,
-             readDirThreshold]() {
-              const auto& mount = mountPointHandle.getEdenMount();
-
-              // Information about the processes we've observed accessing the
-              // mount and their parents. This represents a subtree of the
-              // processes running at the time of crawl detection with edges
-              // indicated by the ppid field. The init process (PID 1) is the
-              // implicit root of the tree.
-              std::unordered_map<pid_t, ProcessInfo> processRecords;
-
-              // We'll keep track of PIDs known not to be leaves in our tree to
-              // simplify traversal below.
-              std::unordered_set<pid_t> nonLeafPids;
-
-              // Get list of pids that have open files/paths on the mount
-              auto mountPids =
-                  proc_util::readProcessIdsForPath(mount.getPath());
-
-              for (pid_t pid : mountPids) {
-                // Walk up the process hierarchy from the PID seen accessing the
-                // mount until we hit either init or a process we've already
-                // recorded.
-                while (pid > 1 &&
-                       processRecords.find(pid) == processRecords.end()) {
-                  auto processInfo =
-                      serverState->getProcessInfoCache()->lookup(pid).get();
-                  auto ppid = processInfo.ppid;
-                  nonLeafPids.insert(ppid);
-                  processRecords.insert({pid, std::move(processInfo)});
-                  pid = ppid;
-                }
-              }
-
-              // Iterate over leaf PIDs and walk up their process hierarchies
-              // for logging.
-              for (const auto& pair : processRecords) {
-                auto pid = pair.first;
-                auto record = pair.second;
-                if (nonLeafPids.find(pid) != nonLeafPids.end() ||
-                    exclusions.find(record.simpleName) != exclusions.end()) {
-                  continue;
-                }
-
-                // Gather hierarchy into a stack so we can log in the order of
-                // "parent -> child -> grandchild".
-                std::vector<std::pair<pid_t, ProcessInfo>> hierarchy;
-                decltype(processRecords)::iterator itr;
-                while (pid > 1 &&
-                       (itr = processRecords.find(pid)) !=
-                           processRecords.end()) {
-                  pid = itr->second.ppid;
-                  hierarchy.emplace_back(pid, std::move(itr->second));
-                }
-
-                // Log process hierarchies
-                auto [p, pi] = std::move(hierarchy.back());
-                hierarchy.pop_back();
-                std::string output =
-                    fmt::format("[{}({}): {}]", pi.simpleName, p, pi.name);
-                while (!hierarchy.empty()) {
-                  fmt::format_to(std::back_inserter(output), " -> ");
-                  auto [child_p, child_pi] = std::move(hierarchy.back());
-                  hierarchy.pop_back();
-                  fmt::format_to(
-                      std::back_inserter(output),
-                      "[{}({}): {}]",
-                      child_pi.simpleName,
-                      child_p,
-                      child_pi.name);
-                }
-                XLOGF(
-                    DBG2,
-                    "NFS crawl detection found process with open files in mount point: {}\n  {}",
-                    mount.getPath(),
-                    output);
-                serverState->getEdenFsEventsLogger()->logEvent(
-                    NfsCrawlDetected{
-                        readCount,
-                        readThreshold,
-                        readDirCount,
-                        readDirThreshold,
-                        output});
-              }
-            });
-      }
-    }
   }
 }
 

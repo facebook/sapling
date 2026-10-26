@@ -789,9 +789,6 @@ class EdenServer : private TakeoverHandler {
       const AbsolutePath& mountPath,
       std::string repoSource);
 
-  // Detects when NFS backed repos are being crawled.
-  void detectNfsCrawl();
-
   // Rechecks restricted roots that omitted mode hides from their parent's
   // listing, so that a re-grant becomes visible without an explicit access.
   void refreshRestrictedRoots();
@@ -1127,9 +1124,6 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::garbageCollectAllMounts> gcTask_{
       this,
       "inode_gc"};
-  PeriodicFnTask<&EdenServer::detectNfsCrawl> detectNfsCrawlTask_{
-      this,
-      "detect_nfs_crawl"};
 #ifdef __linux__
   PeriodicFnTask<&EdenServer::scheduleCgroupFileCacheReclaim>
       cgroupFileCacheReclaimTask_{this, "cgroup_file_cache_reclaim"};

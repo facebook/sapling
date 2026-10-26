@@ -2024,58 +2024,6 @@ class EdenConfig : private ConfigSettingManager {
   // [experimental]
 
   /**
-   * Controls whether EdenFS detects processes that crawl an NFS checkout. Only
-   * affects EdenFS if experimental:enable-nfs-server is also true. When NFS
-   * crawl detection is enabled, EdenFS will perioically check
-   * (experimental:nfs-crawl-interval) whether NFS read or readdir counters
-   * exceed the configured thresholds (experimental:nfs-crawl-read-threshold and
-   * experimental:nfs-crawl-readdir-threshold, respectively). If they do exceed,
-   * EdenFS will determine which processes appear to be performing the crawl and
-   * record their information to the log file and structured logging. Currently,
-   * this information is expected to be useful in diagnosing slowness when using
-   * NFS. Future, work in this area may provided more immediate feedback to
-   * users initiating these processes.
-   */
-  ConfigSetting<bool> enableNfsCrawlDetection{
-      "experimental:enable-nfs-crawl-detection",
-      false,
-      this};
-
-  /**
-   * Sets the interval at which EdenFS detects NFS crawling.
-   */
-  ConfigSetting<std::chrono::nanoseconds> nfsCrawlInterval{
-      "experimental:nfs-crawl-interval",
-      std::chrono::minutes(1),
-      this};
-
-  /**
-   * Sets the read threshold at which EdenFS determines NFS crawling is
-   * occurring.
-   */
-  ConfigSetting<uint32_t> nfsCrawlReadThreshold{
-      "experimental:nfs-crawl-read-threshold",
-      1000,
-      this};
-
-  /**
-   * Sets the readdir threshold at which EdenFS determines NFS crawling is
-   * occurring.
-   */
-  ConfigSetting<uint32_t> nfsCrawlReadDirThreshold{
-      "experimental:nfs-crawl-readdir-threshold",
-      250,
-      this};
-
-  /**
-   * Sets the process name exclusions NFS crawling to ignore.
-   */
-  ConfigSetting<std::unordered_set<std::string>> nfsCrawlExcludedProcessNames{
-      "experimental:nfs-crawl-excluded-process-names",
-      {},
-      this};
-
-  /**
    * Controls whether EdenFS exports itself as an NFS server.
    *
    * A graceful restart hands NFS mounts over whatever this setting says in

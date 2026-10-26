@@ -557,7 +557,7 @@ struct NfsParsingError : public EdenFSEvent {
   std::string reason;
 
   NfsParsingError(std::string proc, std::string reason)
-      : proc(proc), reason(reason) {}
+      : proc(std::move(proc)), reason(std::move(reason)) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("interface", proc);
@@ -832,7 +832,7 @@ struct SilentDaemonExit : public EdenFSEvent {
         daemon_exit_signal(daemon_exit_signal),
         system_boot_timestamp(system_boot_timestamp),
         is_memory_pressure_kill(is_memory_pressure_kill),
-        system_log_check_error_str(system_log_check_error_str),
+        system_log_check_error_str(std::move(system_log_check_error_str)),
         daemon_downtime_s(daemon_downtime_s) {}
 
   void populate(DynamicEvent& event) const override {
@@ -942,40 +942,6 @@ struct EdenMountHealthIssue : public EdenFSEvent {
 
   const char* getType() const override {
     return "eden_mount_health_issue";
-  }
-};
-
-struct NfsCrawlDetected : public EdenFSEvent {
-  int64_t readCount = 0;
-  int64_t readThreshold = 0;
-  int64_t readDirCount = 0;
-  int64_t readDirThreshold = 0;
-  // root->leaf formatted as:
-  //   "[simple_name (pid): full_name] -> [simple_name (pid): full_name] -> ..."
-  std::string processHierarchy;
-
-  NfsCrawlDetected(
-      int64_t readCount,
-      int64_t readThreshold,
-      int64_t readDirCount,
-      int64_t readDirThreshold,
-      std::string processHierarchy)
-      : readCount(readCount),
-        readThreshold(readThreshold),
-        readDirCount(readDirCount),
-        readDirThreshold(readDirThreshold),
-        processHierarchy(std::move(processHierarchy)) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addInt("read_count", readCount);
-    event.addInt("read_threshold", readThreshold);
-    event.addInt("readdir_count", readDirCount);
-    event.addInt("readdir_threshold", readDirThreshold);
-    event.addString("process_hierarchy", processHierarchy);
-  }
-
-  const char* getType() const override {
-    return "nfs_crawl_detected";
   }
 };
 
