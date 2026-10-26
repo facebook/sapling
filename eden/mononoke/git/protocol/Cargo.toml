@@ -51,5 +51,12 @@ sha1 = "0.10.7"
 tempfile = "3.27.0"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.19", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.19", features = ["full"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 weight_observer = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+
+[dev-dependencies]
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

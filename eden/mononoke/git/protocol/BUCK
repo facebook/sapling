@@ -5,6 +5,12 @@ oncall("scm_server_infra")
 rust_library(
     name = "protocol",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+    ],
     unittests = True,
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -23,6 +29,7 @@ rust_library(
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tokio-util",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/buffered_weighted:buffered_weighted",
         "//common/rust/shed/cloned:cloned",

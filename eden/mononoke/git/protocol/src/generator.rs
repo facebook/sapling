@@ -41,6 +41,8 @@ use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
+use tokio_util::task::AbortOnDrop;
+use tokio_util::task::AbortOnDropHandle;
 use weight_observer::WeightedItem;
 
 use crate::OptionalWeightObserver;
@@ -80,6 +82,9 @@ use crate::utils::entry_weight;
 use crate::utils::filter_object;
 use crate::utils::tag_entries_to_hashes;
 use crate::utils::to_git_object_stream;
+
+#[cfg(test)]
+mod tests;
 
 /// Fetch and collect the tree and blob objects that are expressed as full objects
 /// for the boundary commits of a shallow fetch
@@ -398,7 +403,7 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
     let (packfile_item_sender, packfile_item_receiver) =
         mpsc::channel::<Result<WeightedItem<PackfileItem>>>(2 * concurrency.trees_and_blobs);
 
-    mononoke::spawn_task(async move {
+    let gdm_task = AbortOnDropHandle::new(mononoke::spawn_task(async move {
         let mut stream = stream::iter(changesets_or_groups)
             .map(Ok)
             .map_ok({
@@ -418,14 +423,14 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
         while let Some(item) = stream.next().await {
             match item {
                 Err(entry_err) => {
-                    if let Err(send_err) = gdm_sender.send(Err(entry_err)).await {
-                        tracing::warn!("Error sending GDM entry error: {send_err:?}");
+                    if gdm_sender.send(Err(entry_err)).await.is_err() {
+                        return anyhow::Ok(());
                     }
                 }
                 Ok(entries) => {
                     for entry in entries {
-                        if let Err(send_err) = gdm_sender.send(Ok(entry)).await {
-                            tracing::warn!("Error sending GDM entry: {send_err:?}");
+                        if gdm_sender.send(Ok(entry)).await.is_err() {
+                            return anyhow::Ok(());
                         }
                     }
                 }
@@ -433,9 +438,11 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
         }
 
         anyhow::Ok(())
-    });
+    }));
 
-    mononoke::spawn_task(async move {
+    let cancel_gdm_on_pack_exit = AbortOnDrop::new(gdm_task.abort_handle());
+    let packfile_task = AbortOnDropHandle::new(mononoke::spawn_task(async move {
+        let _cancel_gdm_on_pack_exit = cancel_gdm_on_pack_exit;
         let max_buffer =
             justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None);
 
@@ -490,15 +497,25 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
             .boxed();
 
         while let Some(item) = stream.next().await {
-            if let Err(err) = packfile_item_sender.send(item).await {
-                tracing::warn!("Error sending packfile item: {err:?}");
+            if packfile_item_sender.send(item).await.is_err() {
+                return anyhow::Ok(());
             }
         }
 
         anyhow::Ok(())
-    });
+    }));
 
-    tokio_stream::wrappers::ReceiverStream::new(packfile_item_receiver).boxed()
+    let mut receiver = packfile_item_receiver;
+    let mut tasks = Some((gdm_task, packfile_task));
+    stream::poll_fn(move |cx| {
+        receiver.poll_recv(cx).map(|item| {
+            if item.is_none() {
+                drop(tasks.take());
+            }
+            item
+        })
+    })
+    .boxed()
 }
 
 /// Create a stream of packfile items containing blob and tree objects that need to be included in the packfile/bundle.
