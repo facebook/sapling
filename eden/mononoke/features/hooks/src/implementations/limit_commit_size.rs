@@ -17,10 +17,31 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_commit_size` hook.
+    pub(crate) struct LimitCommitSizeMessages for "limit_commit_size" {
+        /// The commit changes more files than `changed_files_limit`.
+        too_many_files(
+            /// Number of changed files, excluding ignored paths.
+            count,
+            /// The limit on the number of changed files.
+            limit,
+        ) = "Commit changed ${count} files but at most ${limit} are allowed.";
+        /// The added or modified files are larger in total than the size limit.
+        too_large(
+            /// Total size of the added or modified files, in bytes.
+            size,
+            /// The size limit, in bytes, after path overrides.
+            limit,
+        ) = "Commit size is ${size} bytes but at most ${limit} bytes are allowed.";
+    }
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct LimitCommitSizeConfig {
@@ -42,17 +63,15 @@ pub struct LimitCommitSizeConfig {
     #[serde(default)]
     path_overrides: Vec<LimitCommitSizeOverride>,
 
-    /// Message to include in the hook rejection if the changed files limit is
-    /// exceeded, with the following replacements:
-    ///    ${limit} => the limit used
-    ///    ${count} => the number of changed files
-    too_many_files_message: String,
+    /// Replaces the `too_many_files` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    too_many_files_message: Option<String>,
 
-    /// Message to include in the hook rejection if the commit size limit is
-    /// exceeded, with the following replacements:
-    ///    ${limit} => the limit used in bytes
-    ///    ${size} => the size of the commit in bytes
-    too_large_message: String,
+    /// Replaces the `too_large` message. Use the hook config's `messages`
+    /// instead.
+    #[serde(default)]
+    too_large_message: Option<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -72,15 +91,28 @@ pub struct LimitCommitSizeOverride {
 #[derive(Clone, Debug)]
 pub struct LimitCommitSizeHook {
     config: LimitCommitSizeConfig,
+    messages: LimitCommitSizeMessages,
 }
 
 impl LimitCommitSizeHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self::with_options(config.parse_options()?, config))
     }
 
-    pub fn with_config(config: LimitCommitSizeConfig) -> Result<Self> {
-        Ok(Self { config })
+    fn with_options(options: LimitCommitSizeConfig, config: &HookConfig) -> Self {
+        let messages = LimitCommitSizeMessages::builder()
+            .legacy("too_many_files", options.too_many_files_message.as_deref())
+            .legacy("too_large", options.too_large_message.as_deref())
+            .build(config);
+        Self {
+            config: options,
+            messages,
+        }
+    }
+
+    #[cfg(test)]
+    fn with_config(options: LimitCommitSizeConfig) -> Result<Self> {
+        Ok(Self::with_options(options, &HookConfig::default()))
     }
 }
 
@@ -144,25 +176,21 @@ impl ChangesetHook for LimitCommitSizeHook {
 
         if let Some(changed_files_limit) = self.config.changed_files_limit {
             if changed_files > changed_files_limit {
-                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Commit too large",
-                    self.config
-                        .too_many_files_message
-                        .replace("${count}", &changed_files.to_string())
-                        .replace("${limit}", &changed_files_limit.to_string()),
-                )));
+                return Ok(HookExecution::rejected(
+                    self.messages
+                        .too_many_files(changed_files, changed_files_limit)
+                        .into_rejection("Commit too large"),
+                ));
             }
         }
 
         if let Some(commit_size_limit) = commit_size_limit {
             if commit_size > commit_size_limit {
-                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Commit too large",
-                    self.config
-                        .too_large_message
-                        .replace("${size}", &commit_size.to_string())
-                        .replace("${limit}", &commit_size_limit.to_string()),
-                )));
+                return Ok(HookExecution::rejected(
+                    self.messages
+                        .too_large(commit_size, commit_size_limit)
+                        .into_rejection("Commit too large"),
+                ));
             }
         }
 
@@ -192,8 +220,8 @@ mod test {
             changed_files_limit: None,
             ignore_path_regexes: Vec::new(),
             path_overrides: Vec::new(),
-            too_many_files_message: String::from("Too many files: ${count} > ${limit}."),
-            too_large_message: String::from("Commit too large: ${size} > ${limit}."),
+            too_many_files_message: Some(String::from("Too many files: ${count} > ${limit}.")),
+            too_large_message: Some(String::from("Commit too large: ${size} > ${limit}.")),
         }
     }
 

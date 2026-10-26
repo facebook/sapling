@@ -17,30 +17,38 @@ use serde::Deserialize;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `always_fail_changeset` hook.
+    pub(crate) struct AlwaysFailChangesetMessages for "always_fail_changeset" {
+        /// Shown for every commit: this hook rejects them all.
+        failed() = "This hook always fails";
+    }
+}
 
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct AlwaysFailChangesetConfig {
-    /// Optional message to display when the hook fails.
+    /// Replaces the `failed` message. Use the hook config's `messages` instead.
     message: Option<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct AlwaysFailChangeset {
-    config: AlwaysFailChangesetConfig,
+    messages: AlwaysFailChangesetMessages,
 }
 
 impl AlwaysFailChangeset {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        let config = config.parse_options().unwrap_or_default();
-        Ok(Self::with_config(config))
-    }
-
-    pub fn with_config(config: AlwaysFailChangesetConfig) -> Self {
-        Self { config }
+        let options: AlwaysFailChangesetConfig = config.parse_options().unwrap_or_default();
+        let messages = AlwaysFailChangesetMessages::builder()
+            .legacy("failed", options.message.as_deref())
+            .build(config);
+        Ok(Self { messages })
     }
 }
 
@@ -56,14 +64,8 @@ impl ChangesetHook for AlwaysFailChangeset {
         _push_authored_by: PushAuthoredBy,
         _maybe_pushvars: Option<&'cs Pushvars>,
     ) -> Result<HookExecution, Error> {
-        let msg = self
-            .config
-            .message
-            .clone()
-            .unwrap_or("This hook always fails".to_string());
-        Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-            "Always fail hook",
-            msg,
-        )))
+        Ok(HookExecution::rejected(
+            self.messages.failed().into_rejection("Always fail hook"),
+        ))
     }
 }

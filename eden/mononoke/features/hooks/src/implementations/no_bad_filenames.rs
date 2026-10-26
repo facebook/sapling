@@ -18,9 +18,23 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `no_bad_filenames` hook.
+    pub(crate) struct NoBadFilenamesMessages for "no_bad_filenames" {
+        /// A file's path matches `illegal_regex` and not `allowlist_regex`.
+        illegal_filename(
+            /// Path of the file.
+            filename,
+            /// The `illegal_regex` it matched.
+            illegal_pattern,
+        ) = "Illegal filename '${filename}' matched pattern '${illegal_pattern}'.";
+    }
+}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct NoBadFilenamesConfig {
@@ -30,24 +44,19 @@ pub struct NoBadFilenamesConfig {
     /// Regex representing the filename patterns that are illegal
     #[serde(with = "serde_regex")]
     illegal_regex: Regex,
-    /// Message to include in the hook rejection if the filename matches the illegal pattern,
-    /// with the following replacements
-    /// ${filename} => The path of the file along with the filename
-    /// ${illegal_pattern} => The illegal regex pattern that was matched
-    illegal_filename_message: String,
+    /// Replaces the `illegal_filename` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    illegal_filename_message: Option<String>,
 }
 
 #[cfg(fbcode_build)]
 impl NoBadFilenamesConfig {
-    pub fn new(
-        allowlist_regex: Option<&str>,
-        illegal_regex: &str,
-        illegal_filename_message: &str,
-    ) -> Result<Self> {
+    pub fn new(allowlist_regex: Option<&str>, illegal_regex: &str) -> Result<Self> {
         Ok(Self {
             allowlist_regex: allowlist_regex.map(Regex::new).transpose()?,
             illegal_regex: Regex::new(illegal_regex)?,
-            illegal_filename_message: illegal_filename_message.to_string(),
+            illegal_filename_message: None,
         })
     }
 }
@@ -56,18 +65,34 @@ impl NoBadFilenamesConfig {
 #[derive(Clone, Debug)]
 pub struct NoBadFilenamesHook {
     config: NoBadFilenamesConfig,
+    messages: NoBadFilenamesMessages,
 }
 
 impl NoBadFilenamesHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        let config = config
+        let options: NoBadFilenamesConfig = config
             .parse_options()
             .context("Missing or invalid JSON hook configuration for no-bad-filenames hook")?;
-        Ok(Self::with_config(config))
+        Ok(Self::with_options(options, config))
     }
 
-    pub fn with_config(config: NoBadFilenamesConfig) -> Self {
-        Self { config }
+    fn with_options(options: NoBadFilenamesConfig, config: &HookConfig) -> Self {
+        let messages = NoBadFilenamesMessages::builder()
+            .legacy(
+                "illegal_filename",
+                options.illegal_filename_message.as_deref(),
+            )
+            .build(config);
+        Self::with_messages(options, messages)
+    }
+
+    pub fn with_messages(config: NoBadFilenamesConfig, messages: NoBadFilenamesMessages) -> Self {
+        Self { config, messages }
+    }
+
+    #[cfg(test)]
+    fn with_config(options: NoBadFilenamesConfig) -> Self {
+        Self::with_options(options, &HookConfig::default())
     }
 }
 
@@ -95,13 +120,11 @@ impl FileHook for NoBadFilenamesHook {
             {
                 Ok(HookExecution::accepted())
             } else {
-                Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Illegal filename",
-                    self.config
-                        .illegal_filename_message
-                        .replace("${filename}", &path)
-                        .replace("${illegal_pattern}", &self.config.illegal_regex.to_string()),
-                )))
+                Ok(HookExecution::rejected(
+                    self.messages
+                        .illegal_filename(&path, &self.config.illegal_regex)
+                        .into_rejection("Illegal filename"),
+                ))
             }
         } else {
             Ok(HookExecution::accepted())
@@ -137,8 +160,9 @@ mod test {
         NoBadFilenamesConfig {
             allowlist_regex: None,
             illegal_regex: Regex::new(".*").unwrap(),
-            illegal_filename_message: "Filename: '${filename}' and Pattern '${illegal_pattern}'."
-                .to_string(),
+            illegal_filename_message: Some(
+                "Filename: '${filename}' and Pattern '${illegal_pattern}'.".to_string(),
+            ),
         }
     }
 

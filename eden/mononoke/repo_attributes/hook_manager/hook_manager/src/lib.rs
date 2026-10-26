@@ -16,6 +16,7 @@ pub mod repo;
 mod tests;
 
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
@@ -400,11 +401,13 @@ fn record_outcome_and_apply_bypass(
         return Ok(outcome);
     }
 
-    let long_description = outcome
-        .get_execution()
-        .rejection_info()
+    let rejection_info = outcome.get_execution().rejection_info();
+    let long_description = rejection_info
         .map(|info| info.long_description.clone())
         .unwrap_or_default();
+    if let Some(message) = rejection_info.and_then(|info| info.message.as_ref()) {
+        scuba.add("rejection_message", message.name.as_str());
+    }
 
     if log_only {
         // Only logging: preserve any `extra_logs` but turn the rejection into an
@@ -1000,6 +1003,19 @@ pub struct HookRejectionInfo {
     /// A full explanation of what went wrong, suitable for presenting to the
     /// user (should include guidance for fixing this failure, where possible)
     pub long_description: String,
+    /// The declared hook message that `long_description` was rendered from,
+    /// if the hook declares its messages.
+    pub message: Option<HookRejectionMessage>,
+}
+
+/// Identifies the declared hook message behind a rejection, so consumers can
+/// tell rejections apart without parsing their text, which repos can change.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HookRejectionMessage {
+    /// Name of the message, unique within the hook implementation.
+    pub name: String,
+    /// Parameter values the message was rendered with, by parameter name.
+    pub params: BTreeMap<String, String>,
 }
 
 impl HookRejectionInfo {
@@ -1022,6 +1038,20 @@ impl HookRejectionInfo {
         Self {
             description: Cow::Borrowed(description),
             long_description,
+            message: None,
+        }
+    }
+
+    /// A rejection whose explanation was rendered from a declared hook message.
+    pub fn with_message(
+        description: &'static str,
+        long_description: String,
+        message: HookRejectionMessage,
+    ) -> Self {
+        Self {
+            description: Cow::Borrowed(description),
+            long_description,
+            message: Some(message),
         }
     }
 }

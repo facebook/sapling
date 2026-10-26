@@ -20,15 +20,28 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `no_executable_binaries` hook.
+    pub(crate) struct NoExecutableBinariesMessages for "no_executable_binaries" {
+        /// A commit adds or changes an executable binary file (or, with
+        /// `block_all_executables`, any executable file) that is not allow-listed.
+        illegal_executable(
+            /// Path of the file.
+            filename,
+        ) = "Executable file '${filename}' can't be committed.";
+    }
+}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct NoExecutableBinariesConfig {
-    /// Message to include in the hook rejection if an executable binary file is
-    /// is committed.
-    /// ${filename} => The path of the file along with the filename
-    illegal_executable_binary_message: String,
+    /// Replaces the `illegal_executable` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    illegal_executable_binary_message: Option<String>,
     /// Allow-list all files under any of these paths
     allow_list_paths: Option<Vec<String>>,
     /// Allow-list specific files that might be present in multiple paths
@@ -43,18 +56,33 @@ pub struct NoExecutableBinariesConfig {
 #[derive(Clone, Debug)]
 pub struct NoExecutableBinariesHook {
     config: NoExecutableBinariesConfig,
+    messages: NoExecutableBinariesMessages,
 }
 
 impl NoExecutableBinariesHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        let config = config
+        let options: NoExecutableBinariesConfig = config
             .parse_options()
             .context("Missing or invalid JSON hook configuration for no-executable-files hook")?;
-        Ok(Self::with_config(config))
+        Ok(Self::with_options(options, config))
     }
 
-    pub fn with_config(config: NoExecutableBinariesConfig) -> Self {
-        Self { config }
+    fn with_options(options: NoExecutableBinariesConfig, config: &HookConfig) -> Self {
+        let messages = NoExecutableBinariesMessages::builder()
+            .legacy(
+                "illegal_executable",
+                options.illegal_executable_binary_message.as_deref(),
+            )
+            .build(config);
+        Self {
+            config: options,
+            messages,
+        }
+    }
+
+    #[cfg(test)]
+    fn with_config(options: NoExecutableBinariesConfig) -> Self {
+        Self::with_options(options, &HookConfig::default())
     }
 }
 
@@ -108,12 +136,11 @@ impl FileHook for NoExecutableBinariesHook {
         }
 
         if content_metadata.is_binary || self.config.block_all_executables.unwrap_or(false) {
-            return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Illegal executable file",
-                self.config
-                    .illegal_executable_binary_message
-                    .replace("${filename}", &path.to_string()),
-            )));
+            return Ok(HookExecution::rejected(
+                self.messages
+                    .illegal_executable(path)
+                    .into_rejection("Illegal executable file"),
+            ));
         }
         Ok(HookExecution::accepted())
     }
@@ -142,8 +169,7 @@ mod test {
     /// Create default test config that each test can customize.
     fn make_test_config() -> NoExecutableBinariesConfig {
         NoExecutableBinariesConfig {
-            illegal_executable_binary_message: "Executable file '${filename}' can't be committed."
-                .to_string(),
+            illegal_executable_binary_message: None,
             allow_list_paths: Some(vec!["some_dir/".to_string()]),
             allow_list_files: Some(vec![(
                 "560a153deec1d4cda8481e96756e53c466f3c8eb2dabaf93f9e167c986bb77c4".to_string(),
@@ -411,8 +437,7 @@ mod test {
 
         // Create config with block_all_executables enabled
         let config = NoExecutableBinariesConfig {
-            illegal_executable_binary_message: "Executable file '${filename}' can't be committed."
-                .to_string(),
+            illegal_executable_binary_message: None,
             allow_list_paths: None,
             allow_list_files: None,
             block_all_executables: Some(true),

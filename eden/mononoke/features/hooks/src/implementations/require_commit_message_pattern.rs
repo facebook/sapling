@@ -18,10 +18,23 @@ use serde::Deserialize;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `require_commit_message_pattern` hook.
+    pub(crate) struct RequireCommitMessagePatternMessages for "require_commit_message_pattern" {
+        /// The commit changes a file matching `path_regexes`, but its message
+        /// does not match `pattern`.
+        missing(
+            /// The `pattern` regex the commit message must match.
+            pattern,
+        ) = "Commits that change these files must have a commit message matching '${pattern}'.";
+    }
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct RequireCommitMessagePatternConfig {
@@ -36,22 +49,31 @@ pub struct RequireCommitMessagePatternConfig {
     #[serde(with = "serde_regex")]
     pub(crate) pattern: Regex,
 
-    /// Message to include in the hook rejection.
-    pub(crate) message: String,
+    /// Replaces the `missing` message. Use the hook config's `messages` instead.
+    #[serde(default)]
+    pub(crate) message: Option<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct RequireCommitMessagePatternHook {
     config: RequireCommitMessagePatternConfig,
+    messages: RequireCommitMessagePatternMessages,
 }
 
 impl RequireCommitMessagePatternHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        let options: RequireCommitMessagePatternConfig = config.parse_options()?;
+        let messages = RequireCommitMessagePatternMessages::builder()
+            .legacy("missing", options.message.as_deref())
+            .build(config);
+        Ok(Self::with_messages(options, messages))
     }
 
-    pub fn with_config(config: RequireCommitMessagePatternConfig) -> Result<Self> {
-        Ok(Self { config })
+    pub fn with_messages(
+        config: RequireCommitMessagePatternConfig,
+        messages: RequireCommitMessagePatternMessages,
+    ) -> Self {
+        Self { config, messages }
     }
 }
 
@@ -80,10 +102,11 @@ impl ChangesetHook for RequireCommitMessagePatternHook {
                 .iter()
                 .any(|re| re.is_match(&path.to_string()))
         }) {
-            Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                "Commit message is missing information",
-                self.config.message.clone(),
-            )))
+            Ok(HookExecution::rejected(
+                self.messages
+                    .missing(self.config.pattern.as_str())
+                    .into_rejection("Commit message is missing information"),
+            ))
         } else {
             Ok(HookExecution::accepted())
         }

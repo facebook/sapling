@@ -50,6 +50,26 @@ use permission_checker::ArcMembershipChecker;
 use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::FileHook;
+use crate::hook_messages::MessagesRegistration;
+
+/// The messages of each implementation in this file.
+pub(crate) const MESSAGES: &[MessagesRegistration] = &[
+    MessagesRegistration::of::<always_fail_changeset::AlwaysFailChangesetMessages>(),
+    MessagesRegistration::of::<block_commit_message_pattern::BlockCommitMessagePatternMessages>(),
+    MessagesRegistration::of::<block_content_pattern::BlockContentPatternMessages>(),
+    MessagesRegistration::of::<
+        block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameMessages,
+    >(),
+    MessagesRegistration::of::<deny_files::DenyFilesMessages>(),
+    MessagesRegistration::of::<limit_commit_size::LimitCommitSizeMessages>(),
+    MessagesRegistration::of::<limit_directory_size::LimitDirectorySizeMessages>(),
+    MessagesRegistration::of::<limit_subtree_op_size::LimitSubtreeOpSizeMessages>(),
+    MessagesRegistration::of::<no_bad_filenames::NoBadFilenamesMessages>(),
+    MessagesRegistration::of::<no_executable_binaries::NoExecutableBinariesMessages>(),
+    MessagesRegistration::of::<no_windows_filenames::NoWindowsFilenamesMessages>(),
+    MessagesRegistration::of::<require_commit_message_pattern::RequireCommitMessagePatternMessages>(
+    ),
+];
 
 pub async fn make_bookmark_hook(
     _fb: FacebookInit,

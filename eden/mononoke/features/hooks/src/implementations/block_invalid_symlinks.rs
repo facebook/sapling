@@ -387,6 +387,7 @@ mod tests {
                 HookExecution::rejected(HookRejectionInfo {
                     description: "symlink is empty".into(),
                     long_description: "symlink 'B' has no contents".into(),
+                    message: None,
                 }),
             )]
         );
@@ -419,6 +420,7 @@ mod tests {
                 HookExecution::rejected(HookRejectionInfo {
                     description: "symlink too long".into(),
                     long_description: "symlink 'C' contents are too long (1025 > 1024)".into(),
+                    message: None,
                 }),
             )]
         );
@@ -463,6 +465,7 @@ mod tests {
                 HookExecution::rejected(HookRejectionInfo {
                     description: "symlink contains newline".into(),
                     long_description: "symlink 'D' contents contain a newline character".into(),
+                    message: None,
                 }),
             )]
         );
@@ -495,6 +498,7 @@ mod tests {
                 HookExecution::rejected(HookRejectionInfo {
                     description: "symlink contains null byte".into(),
                     long_description: "symlink 'E' contents contain a null byte".into(),
+                    message: None,
                 }),
             )]
         );
@@ -577,6 +581,7 @@ mod tests {
                         "symlink 'www/foo/link' points to an absolute path which will break builds. \
                          Use a relative path instead."
                             .into(),
+                    message: None,
                 }),
             )),
             "absolute symlink should be rejected, got: {results:?}"
@@ -631,6 +636,7 @@ mod tests {
                         "symlink 'www/win/link' points to an absolute path which will break builds. \
                          Use a relative path instead."
                             .into(),
+                    message: None,
                 }),
             )),
             "Windows drive letter absolute symlink should be rejected, got: {results:?}"
@@ -655,6 +661,7 @@ mod tests {
                         "symlink 'www/unc/link' points to an absolute path which will break builds. \
                          Use a relative path instead."
                             .into(),
+                    message: None,
                 }),
             )),
             "Windows UNC absolute symlink should be rejected, got: {results:?}"
@@ -679,6 +686,7 @@ mod tests {
                         "symlink 'www/foo/link' points to an absolute path which will break builds. \
                          Use a relative path instead."
                             .into(),
+                    message: None,
                 }),
             )),
             "absolute symlink in www/ should be rejected with path regex, got: {results:?}"

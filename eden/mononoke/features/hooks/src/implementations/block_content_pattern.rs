@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::Write;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -19,9 +17,23 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `block_content_pattern` hook.
+    pub(crate) struct BlockContentPatternMessages for "block_content_pattern" {
+        /// The content of a changed text file matches `pattern`.
+        blocked(
+            /// The `pattern` regex.
+            pattern,
+            /// Path of the file.
+            path,
+        ) with captures = "File contains blocked pattern '${pattern}': ${path}";
+    }
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct BlockContentPatternConfig {
@@ -35,10 +47,10 @@ pub struct BlockContentPatternConfig {
     #[serde(default, with = "serde_regex")]
     ignore_path_regexes: Vec<Regex>,
 
-    /// Message to include in the hook rejection.  The string is expanded with
-    /// the capture groups from the pattern, i.e. `${1}` is replaced with the
-    /// first capture group, etc.
-    message: String,
+    /// Replaces the `blocked` message, followed by `: ` and the path of the
+    /// file. Use the hook config's `messages` instead.
+    #[serde(default)]
+    message: Option<String>,
 }
 
 /// Hook to block commits based on matching a pattern in modified file
@@ -48,15 +60,28 @@ pub struct BlockContentPatternConfig {
 #[derive(Clone, Debug)]
 pub struct BlockContentPatternHook {
     config: BlockContentPatternConfig,
+    messages: BlockContentPatternMessages,
 }
 
 impl BlockContentPatternHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Self::with_options(config.parse_options()?, config)
     }
 
-    pub fn with_config(config: BlockContentPatternConfig) -> Result<Self> {
-        Ok(Self { config })
+    fn with_options(options: BlockContentPatternConfig, config: &HookConfig) -> Result<Self> {
+        let messages = BlockContentPatternMessages::builder()
+            .captures(&options.pattern)?
+            .legacy_with_suffix("blocked", options.message.as_deref(), ": ${path}")
+            .build(config);
+        Ok(Self {
+            config: options,
+            messages,
+        })
+    }
+
+    #[cfg(test)]
+    fn with_config(options: BlockContentPatternConfig) -> Self {
+        Self::with_options(options, &HookConfig::default()).expect("valid config")
     }
 }
 
@@ -89,14 +114,12 @@ impl FileHook for BlockContentPatternHook {
             if let Some(text) = hook_repo.get_file_text(ctx, change.content_id()).await? {
                 // Ignore non-UTF8 or binary files
                 if let Ok(text) = std::str::from_utf8(&text) {
-                    if let Some(caps) = self.config.pattern.captures(text) {
-                        let mut message = String::new();
-                        caps.expand(&self.config.message, &mut message);
-                        write!(message, ": {path}")?;
-                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                            "File contains blocked pattern",
-                            message,
-                        )));
+                    if let Some(captures) = self.config.pattern.captures(text) {
+                        return Ok(HookExecution::rejected(
+                            self.messages
+                                .blocked(&self.config.pattern, &path, &captures)
+                                .into_rejection("File contains blocked pattern"),
+                        ));
                     }
                 }
             }
@@ -115,6 +138,7 @@ mod tests {
     use tests_utils::drawdag::create_from_dag_with_changes;
 
     use super::*;
+    use crate::HookRejectionInfo;
     use crate::testlib::test_file_hook;
 
     #[mononoke::fbinit_test]
@@ -143,8 +167,8 @@ mod tests {
         let hook = BlockContentPatternHook::with_config(BlockContentPatternConfig {
             pattern: Regex::new(r"(?i)((%(block_commit|prevent_commit)%)|\r\n)")?,
             ignore_path_regexes: vec![Regex::new(r"^allowed.*")?],
-            message: String::from("disallowed marker: $1"),
-        })?;
+            message: Some(String::from("disallowed marker: $1")),
+        });
 
         // Normal files are fine.
         assert_eq!(
@@ -176,6 +200,7 @@ mod tests {
                     HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "disallowed marker: %block_commit%: file".into(),
+                        message: None,
                     })
                 )
             ],
@@ -197,6 +222,7 @@ mod tests {
                     HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "disallowed marker: %PREVENT_COMMIT%: file".into(),
+                        message: None,
                     })
                 )
             ],
@@ -219,6 +245,7 @@ mod tests {
                     HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "disallowed marker: \r\n: file".into(),
+                        message: None,
                     })
                 )
             ],
@@ -284,8 +311,8 @@ mod tests {
         let hook = BlockContentPatternHook::with_config(BlockContentPatternConfig {
             pattern: Regex::new(r"(?m)^(<<<<<<< |>>>>>>> )")?,
             ignore_path_regexes: vec![Regex::new(r"\.md$")?],
-            message: String::from("Conflict marker found: {$1}"),
-        })?;
+            message: Some(String::from("Conflict marker found: {${1}}")),
+        });
 
         // Normal files are fine.
         assert_eq!(
@@ -317,6 +344,7 @@ mod tests {
                     HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "Conflict marker found: {<<<<<<< }: file".into(),
+                        message: None,
                     })
                 )
             ],
@@ -338,6 +366,7 @@ mod tests {
                     HookExecution::rejected(HookRejectionInfo {
                         description: "File contains blocked pattern".into(),
                         long_description: "Conflict marker found: {>>>>>>> }: file".into(),
+                        message: None,
                     })
                 )
             ],

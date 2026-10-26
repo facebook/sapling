@@ -19,23 +19,36 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
 
 const BAD_WINDOWS_PATH_ELEMENT_REGEX: &str =
     r#"(^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$"#;
+
+hook_messages! {
+    /// Messages of the `no_windows_filenames` hook.
+    pub(crate) struct NoWindowsFilenamesMessages for "no_windows_filenames" {
+        /// A path component is not a valid Windows file name.
+        illegal_filename(
+            /// Path of the file.
+            filename,
+            /// The regex for invalid Windows path components that it matched.
+            illegal_pattern,
+        ) = "Illegal Windows filename '${filename}' matched pattern '${illegal_pattern}'.";
+    }
+}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct NoWindowsFilenamesConfig {
     /// Paths on which bad Windows filenames are not disallowed.
     #[serde(default, with = "serde_regex")]
     allowed_paths: Option<Regex>,
-    /// Message to include in the hook rejection if the file path matches the illegal pattern,
-    /// with the following replacements
-    /// ${filename} => The path of the file along with the filename
-    /// ${illegal_pattern} => The illegal regex pattern that was matched
-    illegal_filename_message: String,
+    /// Replaces the `illegal_filename` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    illegal_filename_message: Option<String>,
 }
 
 /// Hook to disallow bad Windows filenames from being pushed.
@@ -53,15 +66,31 @@ pub struct NoWindowsFilenamesConfig {
 #[derive(Clone, Debug)]
 pub struct NoWindowsFilenamesHook {
     config: NoWindowsFilenamesConfig,
+    messages: NoWindowsFilenamesMessages,
 }
 
 impl NoWindowsFilenamesHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        config.parse_options().map(Self::with_config)
+        let options = config.parse_options()?;
+        Ok(Self::with_options(options, config))
     }
 
-    pub fn with_config(config: NoWindowsFilenamesConfig) -> Self {
-        Self { config }
+    fn with_options(options: NoWindowsFilenamesConfig, config: &HookConfig) -> Self {
+        let messages = NoWindowsFilenamesMessages::builder()
+            .legacy(
+                "illegal_filename",
+                options.illegal_filename_message.as_deref(),
+            )
+            .build(config);
+        Self {
+            config: options,
+            messages,
+        }
+    }
+
+    #[cfg(test)]
+    fn with_config(options: NoWindowsFilenamesConfig) -> Self {
+        Self::with_options(options, &HookConfig::default())
     }
 
     fn check_path_for_bad_elements(&self, path: &NonRootMPath) -> Result<HookExecution, Error> {
@@ -69,13 +98,11 @@ impl NoWindowsFilenamesHook {
             .context("Error while creating bad windows path element regex")?;
         for element in path {
             if bad_windows_path_element.is_match(element.as_ref()) {
-                return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                    "Illegal windows filename",
-                    self.config
-                        .illegal_filename_message
-                        .replace("${filename}", &path.to_string())
-                        .replace("${illegal_pattern}", &bad_windows_path_element.to_string()),
-                )));
+                return Ok(HookExecution::rejected(
+                    self.messages
+                        .illegal_filename(path, &bad_windows_path_element)
+                        .into_rejection("Illegal windows filename"),
+                ));
             }
         }
         Ok(HookExecution::accepted())
@@ -128,7 +155,7 @@ mod test {
     fn check_path(path: &str) -> bool {
         let hook = NoWindowsFilenamesHook::with_config(NoWindowsFilenamesConfig {
             allowed_paths: None,
-            illegal_filename_message: "hook failed".to_string(),
+            illegal_filename_message: Some("hook failed".to_string()),
         });
         match hook
             .check_path_for_bad_elements(&NonRootMPath::new(path).unwrap())

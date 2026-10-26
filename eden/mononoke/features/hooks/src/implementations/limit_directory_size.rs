@@ -22,10 +22,46 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_directory_size` hook.
+    pub(crate) struct LimitDirectorySizeMessages for "limit_directory_size" {
+        /// A directory grew to more entries than its limit.
+        too_large_directory(
+            /// Path of the directory.
+            path,
+            /// Number of entries before the commit.
+            old_size,
+            /// Number of entries after the commit.
+            new_size,
+            /// Number of entries the commit added.
+            enlargement,
+            /// The limit on the number of entries, after path overrides.
+            limit,
+        ) = "Directory ${path} has ${new_size} entries but at most ${limit} are allowed.";
+        /// A directory that was already well over its limit grew past the
+        /// next multiple of `oversize_directory_growth_limit`.
+        increase_oversize_directory(
+            /// Path of the directory.
+            path,
+            /// Number of entries before the commit.
+            old_size,
+            /// Number of entries after the commit.
+            new_size,
+            /// Number of entries the commit added.
+            enlargement,
+            /// The normal limit on the number of entries, after path overrides.
+            limit,
+            /// The growth threshold the directory now exceeds.
+            growth_limit,
+        ) = "Directory ${path} already had ${old_size} entries, more than the limit of ${limit}, and now has ${new_size}, more than ${growth_limit}.";
+    }
+}
 
 /// Limit the size of directories to prevent very large directories from being
 /// created.  In this context, the "size" of a directory is the number of
@@ -82,28 +118,15 @@ pub struct LimitDirectorySizeConfig {
     #[serde(default)]
     path_overrides: Vec<LimitDirectorySizeOverride>,
 
-    /// Message to include in the hook rejection if the directory now exceeds
-    /// the limit.
-    ///
-    /// The following variables used in the message will be expanded:
-    ///    ${limit} => the limit used
-    ///    ${old_size} => the old size of the directory
-    ///    ${enlargement} => the number of added entries
-    ///    ${new_size} => the new size of the directory
-    ///    ${path} => the path of the directory
-    too_large_directory_message: String,
+    /// Replaces the `too_large_directory` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    too_large_directory_message: Option<String>,
 
-    /// Message to include in the hook rejection if an oversize directory
-    /// exceeds the next threshold
-    ///
-    /// The following variables used in the message will be expanded:
-    ///    ${limit} => the normal limit of a directory
-    ///    ${growth_limit} => the threshold this oversized directory now exceeds
-    ///    ${old_size} => the old size of the directory
-    ///    ${enlargement} => the number of added entries
-    ///    ${new_size} => the new size of the directory
-    ///    ${path} => the path of the directory
-    increase_oversize_directory_message: String,
+    /// Replaces the `increase_oversize_directory` message. Use the hook
+    /// config's `messages` instead.
+    #[serde(default)]
+    increase_oversize_directory_message: Option<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -122,15 +145,34 @@ pub struct LimitDirectorySizeOverride {
 #[derive(Clone, Debug)]
 pub struct LimitDirectorySizeHook {
     config: LimitDirectorySizeConfig,
+    messages: LimitDirectorySizeMessages,
 }
 
 impl LimitDirectorySizeHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
+        Ok(Self::with_options(config.parse_options()?, config))
     }
 
-    pub fn with_config(config: LimitDirectorySizeConfig) -> Result<Self> {
-        Ok(Self { config })
+    fn with_options(options: LimitDirectorySizeConfig, config: &HookConfig) -> Self {
+        let messages = LimitDirectorySizeMessages::builder()
+            .legacy(
+                "too_large_directory",
+                options.too_large_directory_message.as_deref(),
+            )
+            .legacy(
+                "increase_oversize_directory",
+                options.increase_oversize_directory_message.as_deref(),
+            )
+            .build(config);
+        Self {
+            config: options,
+            messages,
+        }
+    }
+
+    #[cfg(test)]
+    fn with_config(options: LimitDirectorySizeConfig) -> Result<Self> {
+        Ok(Self::with_options(options, &HookConfig::default()))
     }
 }
 
@@ -246,23 +288,16 @@ impl ChangesetHook for LimitDirectorySizeHook {
                                     parent_size.div_ceil(growth_limit) * growth_limit;
                                 if source_size > next_growth_limit {
                                     return Ok(HookExecution::rejected(
-                                        HookRejectionInfo::new_long(
-                                            "Directory too large",
-                                            self.config
-                                                .increase_oversize_directory_message
-                                                .replace("${old_size}", &parent_size.to_string())
-                                                .replace("${limit}", &limit.to_string())
-                                                .replace(
-                                                    "${growth_limit}",
-                                                    &next_growth_limit.to_string(),
-                                                )
-                                                .replace(
-                                                    "${enlargement}",
-                                                    &(source_size - parent_size).to_string(),
-                                                )
-                                                .replace("${new_size}", &source_size.to_string())
-                                                .replace("${path}", &path),
-                                        ),
+                                        self.messages
+                                            .increase_oversize_directory(
+                                                &path,
+                                                parent_size,
+                                                source_size,
+                                                source_size - parent_size,
+                                                limit,
+                                                next_growth_limit,
+                                            )
+                                            .into_rejection("Directory too large"),
                                     ));
                                 }
                             }
@@ -270,16 +305,17 @@ impl ChangesetHook for LimitDirectorySizeHook {
                             continue;
                         }
                     }
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "Directory too large",
-                        self.config
-                            .too_large_directory_message
-                            .replace("${old_size}", &parent_size.to_string())
-                            .replace("${limit}", &limit.to_string())
-                            .replace("${enlargement}", &(source_size - parent_size).to_string())
-                            .replace("${new_size}", &source_size.to_string())
-                            .replace("${path}", &path),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .too_large_directory(
+                                &path,
+                                parent_size,
+                                source_size,
+                                source_size - parent_size,
+                                limit,
+                            )
+                            .into_rejection("Directory too large"),
+                    ));
                 }
             }
         }
@@ -309,12 +345,12 @@ mod test {
             oversize_directory_growth_limit: None,
             ignore_path_regexes: Vec::new(),
             path_overrides: Vec::new(),
-            too_large_directory_message: String::from(
+            too_large_directory_message: Some(String::from(
                 "Directory too large: ${new_size} > ${limit}.",
-            ),
-            increase_oversize_directory_message: String::from(
+            )),
+            increase_oversize_directory_message: Some(String::from(
                 "Large directory grown too much: ${new_size} > ${growth_limit} > ${limit}.",
-            ),
+            )),
         }
     }
 

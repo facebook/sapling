@@ -12,7 +12,6 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use hook_manager::ChangesetHook;
-use hook_manager::HookRejectionInfo;
 use manifest::ManifestOps;
 use mononoke_types::BonsaiChangeset;
 use repo_blobstore::RepoBlobstoreRef;
@@ -26,6 +25,36 @@ use crate::HookExecution;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
 use crate::Pushvars;
+use crate::hook_messages::HookMessages;
+use crate::hook_messages::hook_messages;
+
+hook_messages! {
+    /// Messages of the `limit_subtree_op_size` hook.
+    pub(crate) struct LimitSubtreeOpSizeMessages for "limit_subtree_op_size" {
+        /// The source of a subtree copy or merge has more files than
+        /// `source_file_count_limit`.
+        too_many_files(
+            /// Path of the destination.
+            dest_path,
+            /// The changeset the source comes from.
+            source,
+            /// Path of the source.
+            source_path,
+            /// Number of files in the source.
+            count,
+            /// The limit on the number of files in the source.
+            limit,
+        ) = "Subtree source ${source_path} in ${source} has ${count} files but at most ${limit} are allowed (destination ${dest_path}).";
+        /// The destination of a subtree operation is shallower than
+        /// `dest_min_path_depth`.
+        dest_too_shallow(
+            /// Path of the destination.
+            dest_path,
+            /// The minimum number of path components of the destination.
+            dest_min_path_depth,
+        ) = "Subtree destination ${dest_path} must have at least ${dest_min_path_depth} path components.";
+    }
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct LimitSubtreeOpSizeConfig {
@@ -35,36 +64,40 @@ pub struct LimitSubtreeOpSizeConfig {
     #[serde(default)]
     dest_min_path_depth: Option<usize>,
 
-    /// Message to use when rejecting a commit because the source directory is too large.
-    ///
-    /// The following variables are available:
-    /// - ${dest_path}: The path of the destination.
-    /// - ${source}: The changeset id of the source.
-    /// - ${source_path}: The path of the source.
-    /// - ${count}: The number of files in the source.
-    /// - ${limit}: The limit on the number of files in the source.
-    too_many_files_rejection_message: String,
+    /// Replaces the `too_many_files` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    too_many_files_rejection_message: Option<String>,
 
-    /// Message to use when rejecting a commit because the destination path is too shallow.
-    ///
-    /// The following variables are available:
-    /// - ${dest_path}: The path of the destination.
-    /// - ${dest_min_path_depth}: The minimum depth of the destination path.
-    dest_too_shallow_rejection_message: String,
+    /// Replaces the `dest_too_shallow` message. Use the hook config's
+    /// `messages` instead.
+    #[serde(default)]
+    dest_too_shallow_rejection_message: Option<String>,
 }
 
 /// Hook to limit the size of subtree operations.
 pub struct LimitSubtreeOpSizeHook {
     config: LimitSubtreeOpSizeConfig,
+    messages: LimitSubtreeOpSizeMessages,
 }
 
 impl LimitSubtreeOpSizeHook {
     pub fn new(config: &HookConfig) -> Result<Self> {
-        Self::with_config(config.parse_options()?)
-    }
-
-    pub fn with_config(config: LimitSubtreeOpSizeConfig) -> Result<Self> {
-        Ok(Self { config })
+        let options: LimitSubtreeOpSizeConfig = config.parse_options()?;
+        let messages = LimitSubtreeOpSizeMessages::builder()
+            .legacy(
+                "too_many_files",
+                options.too_many_files_rejection_message.as_deref(),
+            )
+            .legacy(
+                "dest_too_shallow",
+                options.dest_too_shallow_rejection_message.as_deref(),
+            )
+            .build(config);
+        Ok(Self {
+            config: options,
+            messages,
+        })
     }
 }
 
@@ -118,29 +151,28 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
                     };
 
                     if source_count > source_file_count_limit {
-                        return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                            "Subtree source is too large",
-                            self.config
-                                .too_many_files_rejection_message
-                                .replace("${dest_path}", &path.to_string())
-                                .replace("${source}", &source.to_string())
-                                .replace("${source_path}", &source_path.to_string())
-                                .replace("${count}", &source_count.to_string())
-                                .replace("${limit}", &source_file_count_limit.to_string()),
-                        )));
+                        return Ok(HookExecution::rejected(
+                            self.messages
+                                .too_many_files(
+                                    path,
+                                    source,
+                                    source_path,
+                                    source_count,
+                                    source_file_count_limit,
+                                )
+                                .into_rejection("Subtree source is too large"),
+                        ));
                     }
                 }
             }
 
             if let Some(dest_min_path_depth) = self.config.dest_min_path_depth {
                 if path.num_components() < dest_min_path_depth {
-                    return Ok(HookExecution::rejected(HookRejectionInfo::new_long(
-                        "Subtree destination is too shallow",
-                        self.config
-                            .dest_too_shallow_rejection_message
-                            .replace("${dest_path}", &path.to_string())
-                            .replace("${dest_min_path_depth}", &dest_min_path_depth.to_string()),
-                    )));
+                    return Ok(HookExecution::rejected(
+                        self.messages
+                            .dest_too_shallow(path, dest_min_path_depth)
+                            .into_rejection("Subtree destination is too shallow"),
+                    ));
                 }
             }
         }
