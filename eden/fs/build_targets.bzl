@@ -21,7 +21,6 @@ EDENFS_TARGETS = {
     "//eden/fs/facebook:eden-fb303-collector": "/usr/local/libexec/eden/eden-fb303-collector",
     "//eden/fs/facebook:edenfs_restarter": "/usr/local/libexec/eden/edenfs_restarter",
     "//eden/fs/inodes/fscatalog:eden_fsck": "/usr/local/libexec/eden/eden_fsck",
-    "//eden/fs/monitor:edenfs_monitor": "/usr/local/libexec/eden/edenfs_monitor",
     "//eden/fs/service:edenfs": "/usr/local/libexec/eden/edenfs",
     "//eden/fs/service:edenfs_privhelper": "/usr/local/libexec/eden/edenfs_privhelper",
 }
