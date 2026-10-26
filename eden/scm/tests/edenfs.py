@@ -143,10 +143,16 @@ darwin-redirection-type = "symlink"
 """
                             )
                     elif sys.platform == "win32":
+                        # Every folly EventBase uses loopback TCP socketpairs on
+                        # Windows, so many parallel test daemons with pools
+                        # sized to the host's cores can run out of ports.
                         eden_rc.write(
                             """
 [notifications]
 enable-eden-menu = "false"
+
+[daemon]
+environment = ["FOLLY_AVAILABLE_CONCURRENCY_MAX=4"]
 """
                         )
 
