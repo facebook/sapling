@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use async_requests::AsyncMethodRequestQueue;
+use async_requests::QueueRepoFilter;
 use async_requests::types::RequestStatus;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
@@ -37,11 +38,8 @@ define_stats! {
     queue_age_by_repo_and_status: dynamic_singleton_counter("queue.{}.age_s.{}", (repo_id: String, status: String)),
 }
 
-pub(crate) async fn stats_loop(
-    ctx: &CoreContext,
-    repo_ids: Vec<RepositoryId>,
-    queue: &AsyncMethodRequestQueue,
-) {
+pub(crate) async fn stats_loop(ctx: &CoreContext, queue: &AsyncMethodRequestQueue) {
+    let per_repo_ids = per_repo_stats_repos(queue.repo_filter());
     loop {
         let res = queue.get_queue_stats(ctx, true).await;
         let now = Timestamp::now();
@@ -49,8 +47,10 @@ pub(crate) async fn stats_loop(
             Ok(res) => {
                 process_queue_length_by_status(ctx, &res);
                 process_queue_age_by_status(ctx, now, &res);
-                process_queue_length_by_repo_and_status(ctx, &repo_ids, &res);
-                process_queue_age_by_repo_and_status(ctx, &repo_ids, now, &res);
+                if let Some(repo_ids) = per_repo_ids {
+                    process_queue_length_by_repo_and_status(ctx, repo_ids, &res);
+                    process_queue_age_by_repo_and_status(ctx, repo_ids, now, &res);
+                }
             }
             Err(err) => {
                 STATS::stats_error.add_value(1);
@@ -62,13 +62,27 @@ pub(crate) async fn stats_loop(
     }
 }
 
+/// The repos whose per-repo queue stats this queue reports, or `None` if it
+/// reports none.
+///
+/// Only a queue scoped to specific repos reports per-repo stats. A queue that
+/// spans all repos (the catch-all executor and the backfill worker) would
+/// otherwise export counters for every repo that ever had a request, which
+/// overflows the fb303 collector.
+fn per_repo_stats_repos(repo_filter: &QueueRepoFilter) -> Option<&[RepositoryId]> {
+    match repo_filter {
+        QueueRepoFilter::Only(repo_ids) => Some(repo_ids),
+        QueueRepoFilter::Except(_) => None,
+    }
+}
+
 // Keep track of the stats we have already logged. Any missing ones, we will log a 0.
 struct Seen {
     inner: HashMap<QueueStatsEntry, bool>,
 }
 
 impl Seen {
-    fn new(repo_ids: &Vec<RepositoryId>) -> Self {
+    fn new(repo_ids: &[RepositoryId]) -> Self {
         let mut seen = HashMap::new();
         for status in STATUSES {
             for repo_id in repo_ids {
@@ -98,7 +112,7 @@ impl Seen {
 }
 
 fn process_queue_length_by_status(ctx: &CoreContext, res: &requests_table::QueueStats) {
-    let mut seen = Seen::new(&vec![]);
+    let mut seen = Seen::new(&[]);
     let stats = &res.queue_length_by_status;
     for (status, count) in stats {
         seen.mark(None, *status);
@@ -115,7 +129,7 @@ fn process_queue_age_by_status(
     now: Timestamp,
     res: &requests_table::QueueStats,
 ) {
-    let mut seen = Seen::new(&vec![]);
+    let mut seen = Seen::new(&[]);
     let stats = &res.queue_age_by_status;
     for (status, ts) in stats {
         seen.mark(None, *status);
@@ -130,7 +144,7 @@ fn process_queue_age_by_status(
 
 fn process_queue_length_by_repo_and_status(
     ctx: &CoreContext,
-    repo_ids: &Vec<RepositoryId>,
+    repo_ids: &[RepositoryId],
     res: &requests_table::QueueStats,
 ) {
     let mut seen = Seen::new(repo_ids);
@@ -161,7 +175,7 @@ fn process_queue_length_by_repo_and_status(
 
 fn process_queue_age_by_repo_and_status(
     ctx: &CoreContext,
-    repo_ids: &Vec<RepositoryId>,
+    repo_ids: &[RepositoryId],
     now: Timestamp,
     res: &requests_table::QueueStats,
 ) {
@@ -188,6 +202,33 @@ fn process_queue_age_by_repo_and_status(
                 entry.repo_id.unwrap_or(RepositoryId::new(0)).to_string(),
                 entry.status.to_string(),
             ),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_per_repo_stats_repos() {
+        let repo_ids = vec![RepositoryId::new(1), RepositoryId::new(2)];
+        assert_eq!(
+            per_repo_stats_repos(&QueueRepoFilter::Only(repo_ids.clone())),
+            Some(repo_ids.as_slice()),
+            "a queue scoped to specific repos reports stats for exactly those repos",
+        );
+        assert_eq!(
+            per_repo_stats_repos(&QueueRepoFilter::Except(vec![])),
+            None,
+            "a queue spanning all repos reports no per-repo stats",
+        );
+        assert_eq!(
+            per_repo_stats_repos(&QueueRepoFilter::Except(repo_ids)),
+            None,
+            "a catch-all queue reports no per-repo stats",
         );
     }
 }

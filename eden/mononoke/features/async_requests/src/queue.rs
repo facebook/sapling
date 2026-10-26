@@ -203,6 +203,10 @@ impl AsyncMethodRequestQueue {
         })
     }
 
+    pub fn repo_filter(&self) -> &QueueRepoFilter {
+        &self.repo_filter
+    }
+
     /// Check if we're under the concurrency limit for the given request type.
     /// Types in a concurrency group share a limit; ungrouped types have
     /// their own.
