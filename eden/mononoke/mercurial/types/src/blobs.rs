@@ -23,6 +23,7 @@ pub use self::manifest::ManifestContent;
 pub use self::manifest::fetch_manifest_envelope;
 pub use self::manifest::fetch_manifest_envelope_opt;
 pub use self::manifest::fetch_raw_manifest_bytes;
+pub use self::manifest::hg_manifests_read_from_augmented;
 
 mod changeset;
 pub use changeset::ChangesetMetadata;

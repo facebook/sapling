@@ -30,6 +30,7 @@ use futures_ext::FbStreamExt;
 use futures_watchdog::WatchdogExt;
 use manifest::Entry;
 use manifest::Manifest;
+use manifest::ManifestLeaf;
 use manifest::TrieMapOps;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
@@ -68,6 +69,14 @@ pub struct HgAugmentedFileLeafNode {
     pub content_sha1: Sha1,
     pub total_size: u64,
     pub file_header_metadata: Option<Bytes>,
+}
+
+/// Like the Hg manifest leaf `(FileType, HgFileNodeId)`, a file reuses a
+/// parent's leaf when it has the same filenode.
+impl ManifestLeaf for HgAugmentedFileLeafNode {
+    fn reuses(&self, other: &Self) -> bool {
+        self.filenode == other.filenode
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -824,6 +833,7 @@ impl<Store: KeyedBlobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
 /// Newtype wrapper around `LoadableShardedMapV2Node<HgAugmentedManifestEntry>`
 /// to satisfy orphan rules when implementing `TrieMapOps` (a trait from the
 /// `manifest` crate) for a type parameterized with types from `mercurial_types`.
+#[derive(Clone, PartialEq, Eq)]
 pub struct HgAugmentedManifestTrieMapNode(LoadableShardedMapV2Node<HgAugmentedManifestEntry>);
 
 #[async_trait]

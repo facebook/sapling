@@ -15,6 +15,8 @@ rust_library(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/blobstore:samplingblob",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/manifest:manifest",

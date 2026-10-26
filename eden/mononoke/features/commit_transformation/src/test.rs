@@ -9,12 +9,17 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use blobstore::BlobstoreGetData;
 use blobstore::Loadable;
+use blobstore::LoadableError;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkUpdateLog;
@@ -23,12 +28,23 @@ use changesets_creation::save_changesets;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
+use futures::TryStreamExt;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::override_just_knobs;
+use manifest::Manifest;
+use manifest::ManifestOps;
 use maplit::btreemap;
 use maplit::hashmap;
 use maplit::hashset;
 use megarepo_configs::SourceMappingRules;
+use memblob::Memblob;
+use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::RootHgAugmentedManifestId;
+use mercurial_types::HgAugmentedManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -41,7 +57,10 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
+use samplingblob::SamplingBlobstore;
+use samplingblob::SamplingHandler;
 use sorted_vector_map::SortedVectorMap;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
@@ -1002,6 +1021,305 @@ async fn test_rewrite_lfs_file(fb: FacebookInit) -> Result<(), Error> {
             ("small/foo.php".to_string(), GitLfs::full_content()),
             ("small/large.avi".to_string(), GitLfs::full_content())
         ],
+    );
+    Ok(())
+}
+
+/// Counts, and once `deny` is set fails, every read of an Hg manifest blob,
+/// standing in for a store where they have been deleted.
+#[derive(Debug, Default)]
+struct HgManifestReads {
+    deny: AtomicBool,
+    reads: AtomicUsize,
+    denied: AtomicUsize,
+    augmented_shard_reads: AtomicUsize,
+}
+
+impl SamplingHandler for HgManifestReads {
+    fn sample_get(
+        &self,
+        _ctx: &CoreContext,
+        key: &str,
+        _value: Option<&BlobstoreGetData>,
+    ) -> Result<()> {
+        if key.contains("hgaugmentedmanifest.map2node.") {
+            self.augmented_shard_reads.fetch_add(1, Ordering::Relaxed);
+        }
+        if !key.contains("hgmanifest.sha1.") {
+            return Ok(());
+        }
+        self.reads.fetch_add(1, Ordering::Relaxed);
+        if self.deny.load(Ordering::Relaxed) {
+            self.denied.fetch_add(1, Ordering::Relaxed);
+            bail!("Hg manifest read denied: {key}");
+        }
+        Ok(())
+    }
+}
+
+fn init_just_knobs_for_squash_test(read_from_augmented: bool) {
+    override_just_knobs(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(read_from_augmented),
+        // Tests choose which commits have augmented manifests.
+        "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+    }));
+}
+
+struct SquashSource {
+    repo: Repo,
+    hg_reads: Arc<HgManifestReads>,
+    parent: ChangesetId,
+    head: ChangesetId,
+}
+
+/// Two source commits on top of `parent` that change, delete and re-type
+/// files, replace a file with a directory and a directory with a file, and
+/// add and remove directories. Both ends have Hg manifests, and
+/// augmented manifests unless `augmented_for_head` is false, which leaves
+/// `head` without one.
+async fn squash_source(ctx: &CoreContext, augmented_for_head: bool) -> Result<SquashSource> {
+    let hg_reads = Arc::new(HgManifestReads::default());
+    let repo: Repo = TestRepoFactory::new(ctx.fb)?
+        .with_blobstore(Arc::new(SamplingBlobstore::new(
+            Memblob::default(),
+            hg_reads.clone(),
+        )))
+        .build()
+        .await?;
+
+    let parent = CreateCommitContext::new_root(ctx, &repo)
+        .add_file("a", "a")
+        .add_file("b", "b")
+        .add_file("d", "d")
+        .add_file("dir/c", "c")
+        .add_file("x", "x")
+        .add_file("gone/g1", "g1")
+        .add_file("gone/sub/g2", "g2")
+        .add_file("to_file/t", "t")
+        .commit()
+        .await?;
+    let side = CreateCommitContext::new(ctx, &repo, vec![parent])
+        .add_file("a", "a2")
+        .delete_file("b")
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(ctx, &repo, vec![side])
+        .delete_file("d")
+        .add_file("d/f", "f")
+        .add_file("dir/e", "e")
+        .add_file_with_type("x", "x", FileType::Executable)
+        .delete_file("gone/g1")
+        .delete_file("gone/sub/g2")
+        .add_file("to_file", "now a file")
+        .add_file("new/sub/n", "n")
+        .commit()
+        .await?;
+
+    let with_augmented = if augmented_for_head {
+        vec![parent, head]
+    } else {
+        vec![parent]
+    };
+    for cs_id in [parent, head] {
+        repo.derive_hg_changeset(ctx, cs_id).await?;
+    }
+    for cs_id in with_augmented {
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+    }
+
+    Ok(SquashSource {
+        repo,
+        hg_reads,
+        parent,
+        head,
+    })
+}
+
+async fn squash(
+    ctx: &CoreContext,
+    source: &SquashSource,
+    deny_hg_reads: bool,
+) -> Result<SortedVectorMap<NonRootMPath, FileChange>> {
+    source.hg_reads.deny.store(deny_hg_reads, Ordering::Relaxed);
+    let mover = create_source_to_target_multi_mover(SourceMappingRules {
+        default_prefix: "".to_string(),
+        ..Default::default()
+    })?;
+    let cs = source
+        .head
+        .load(ctx, source.repo.repo_blobstore())
+        .await?
+        .into_mut();
+    let squashed = rewrite_as_squashed_commit(
+        ctx,
+        &source.repo,
+        source.head,
+        (source.parent, source.parent),
+        cs,
+        mover,
+        vec!["side".to_string()],
+    )
+    .await?
+    .ok_or_else(|| anyhow!("squash should produce a commit"))?;
+    Ok(squashed.file_changes)
+}
+
+#[mononoke::fbinit_test]
+async fn test_rewrite_as_squashed_commit_reads_augmented_manifests(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_squash_test(false);
+    let from_hg = squash_source(&ctx, true).await?;
+    let from_augmented = squash_source(&ctx, true).await?;
+    from_hg.hg_reads.reads.store(0, Ordering::Relaxed);
+    let expected = squash(&ctx, &from_hg, false).await?;
+
+    init_just_knobs_for_squash_test(true);
+    let squashed = squash(&ctx, &from_augmented, true).await?;
+
+    assert_eq!(squashed, expected);
+    let paths: Vec<_> = squashed
+        .iter()
+        .map(|(path, change)| (path.to_string(), change.is_removed()))
+        .collect();
+    assert_eq!(
+        paths,
+        vec![
+            ("a".to_string(), false),
+            ("b".to_string(), true),
+            ("d".to_string(), true),
+            ("d/f".to_string(), false),
+            ("dir/e".to_string(), false),
+            ("gone/g1".to_string(), true),
+            ("gone/sub/g2".to_string(), true),
+            ("new/sub/n".to_string(), false),
+            ("to_file".to_string(), false),
+            ("x".to_string(), false),
+        ],
+        "a directory replaced by a file deletes its files implicitly"
+    );
+    assert!(
+        from_hg.hg_reads.reads.load(Ordering::Relaxed) > 0,
+        "with the knob off, squashing should read Hg manifests"
+    );
+    assert_eq!(from_augmented.hg_reads.denied.load(Ordering::Relaxed), 0);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_rewrite_as_squashed_commit_reports_missing_augmented_manifest(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_squash_test(true);
+    let source = squash_source(&ctx, false).await?;
+    let head_root = source
+        .repo
+        .derive_hg_changeset(&ctx, source.head)
+        .await?
+        .load(&ctx, source.repo.repo_blobstore())
+        .await?
+        .manifestid();
+
+    let err = squash(&ctx, &source, true)
+        .await
+        .expect_err("squashing should fail without the head's augmented manifest");
+
+    let missing_key = HgAugmentedManifestId::new(head_root.into_nodehash()).blobstore_key();
+    assert!(
+        err.chain().any(|cause| matches!(
+            cause.downcast_ref::<LoadableError>(),
+            Some(LoadableError::Missing(key)) if key == &missing_key
+        )),
+        "expected the head's augmented manifest to be reported missing, got {err:?}"
+    );
+    assert_eq!(source.hg_reads.denied.load(Ordering::Relaxed), 0);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_rewrite_as_squashed_commit_reads_only_changed_augmented_shards(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_squash_test(true);
+    let hg_reads = Arc::new(HgManifestReads::default());
+    let repo: Repo = TestRepoFactory::new(fb)?
+        .with_blobstore(Arc::new(SamplingBlobstore::new(
+            Memblob::default(),
+            hg_reads.clone(),
+        )))
+        .build()
+        .await?;
+    let parent = CreateCommitContext::new_root(&ctx, &repo)
+        .add_files(
+            (0..10_000)
+                .map(|i| Ok((NonRootMPath::new(format!("big/{i:05}"))?, format!("{i}"))))
+                .collect::<Result<Vec<_>>>()?,
+        )
+        .commit()
+        .await?;
+    let head = CreateCommitContext::new(&ctx, &repo, vec![parent])
+        .add_file("big/04321", "changed")
+        .commit()
+        .await?;
+    for cs_id in [parent, head] {
+        repo.derive_hg_changeset(&ctx, cs_id).await?;
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+    }
+    let source = SquashSource {
+        repo,
+        hg_reads,
+        parent,
+        head,
+    };
+    let big_dir = source
+        .repo
+        .derive_hg_changeset(&ctx, head)
+        .await?
+        .load(&ctx, source.repo.repo_blobstore())
+        .await?
+        .manifestid()
+        .find_entry(
+            ctx.clone(),
+            source.repo.repo_blobstore().clone(),
+            MPath::new("big")?,
+        )
+        .await?
+        .and_then(|entry| entry.into_tree())
+        .ok_or_else(|| anyhow!("big should be a directory"))?;
+
+    source
+        .hg_reads
+        .augmented_shard_reads
+        .store(0, Ordering::Relaxed);
+    let listed = HgAugmentedManifestId::new(big_dir.into_nodehash())
+        .load(&ctx, source.repo.repo_blobstore())
+        .await?
+        .list(&ctx, source.repo.repo_blobstore())
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+    let shards_in_big_dir = source
+        .hg_reads
+        .augmented_shard_reads
+        .swap(0, Ordering::Relaxed);
+    let squashed = squash(&ctx, &source, true).await?;
+    let shards_read_by_squash = source
+        .hg_reads
+        .augmented_shard_reads
+        .load(Ordering::Relaxed);
+
+    assert_eq!(listed.len(), 10_000);
+    let paths: Vec<_> = squashed.keys().map(|path| path.to_string()).collect();
+    assert_eq!(paths, vec!["big/04321"]);
+    assert_eq!(
+        (shards_in_big_dir, shards_read_by_squash),
+        (9, 2),
+        "squashing should read only the shard holding the changed file, on each side"
     );
     Ok(())
 }

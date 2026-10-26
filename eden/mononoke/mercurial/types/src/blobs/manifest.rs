@@ -132,6 +132,16 @@ pub async fn fetch_manifest_envelope<B: KeyedBlobstore>(
     })?)
 }
 
+/// Whether readers migrated off Hg manifests in `repo_name` read the augmented
+/// manifest stored under the Hg manifest's id instead of the Hg manifest itself.
+pub fn hg_manifests_read_from_augmented(repo_name: &str) -> bool {
+    justknobs::eval(
+        "scm/mononoke:hgmanifest_read_from_augmented",
+        None,
+        Some(repo_name),
+    )
+}
+
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
 pub async fn fetch_manifest_envelope_opt<B: KeyedBlobstore>(
     ctx: &CoreContext,

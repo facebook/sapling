@@ -7,13 +7,18 @@
 
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::format_err;
 use async_trait::async_trait;
 use blobrepo_hg::BlobRepoHg;
+use blobstore::BlobstoreGetData;
 use blobstore::Loadable;
+use blobstore::LoadableError;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkTransactionError;
@@ -39,6 +44,8 @@ use manifest::ManifestOps;
 use maplit::btreemap;
 use maplit::hashmap;
 use maplit::hashset;
+use memblob::Memblob;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::FileType;
@@ -56,6 +63,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use samplingblob::SamplingBlobstore;
+use samplingblob::SamplingHandler;
 use sql_ext::Transaction;
 use sql_ext::TransactionResult;
 use test_repo_factory::TestRepoFactory;
@@ -3981,6 +3990,257 @@ async fn pushrebase_of_branch_merge_with_rename(fb: FacebookInit) -> Result<(), 
     )
     .await?;
 
+    Ok(())
+}
+
+/// Counts, and once `deny` is set fails, every read of an Hg manifest blob,
+/// standing in for a store where they have been deleted.
+#[derive(Debug, Default)]
+struct HgManifestReads {
+    deny: AtomicBool,
+    denied: AtomicUsize,
+}
+
+impl SamplingHandler for HgManifestReads {
+    fn sample_get(
+        &self,
+        _ctx: &CoreContext,
+        key: &str,
+        _value: Option<&BlobstoreGetData>,
+    ) -> Result<(), Error> {
+        if self.deny.load(Ordering::Relaxed) && key.contains("hgmanifest.sha1.") {
+            self.denied.fetch_add(1, Ordering::Relaxed);
+            return Err(format_err!("Hg manifest read denied: {key}"));
+        }
+        Ok(())
+    }
+}
+
+fn init_just_knobs_for_augmented_read_test(read_from_augmented: bool) {
+    init_just_knobs_for_test();
+    override_just_knobs(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(read_from_augmented),
+        // The range diff of the pushed merge reads the same manifests as the merge fix-up.
+        "scm/mononoke:pushrebase_range_diff_use_content_manifests".to_string() => KnobVal::Bool(false),
+        // Tests choose which commits have augmented manifests.
+        "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+    }));
+}
+
+struct BranchMerge {
+    repo: PushrebaseTestRepo,
+    hg_reads: Arc<HgManifestReads>,
+    merge: BonsaiChangeset,
+    onto: ChangesetId,
+}
+
+/// A merge of `p1` and `p2` pushed onto a master that changed `base` after
+/// `p1`: landing it must carry master's `base` into the merge, because `p2`
+/// still has the old one. `p1`, `p2`, the merge (as uploaded) and master have
+/// Hg manifests, and augmented manifests unless `augmented_for_onto` is false,
+/// which leaves master without one.
+async fn branch_merge(ctx: &CoreContext, augmented_for_onto: bool) -> Result<BranchMerge, Error> {
+    let hg_reads = Arc::new(HgManifestReads::default());
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(ctx.fb)?
+        .with_blobstore(Arc::new(SamplingBlobstore::new(
+            Memblob::default(),
+            hg_reads.clone(),
+        )))
+        .build()
+        .await?;
+
+    let base = CreateCommitContext::new_root(ctx, &repo)
+        .add_file("base", "base")
+        .add_file("dir/kept", "kept")
+        .commit()
+        .await?;
+    let p1 = CreateCommitContext::new(ctx, &repo, vec![base])
+        .add_file("p1", "p1")
+        .commit()
+        .await?;
+    let p2 = CreateCommitContext::new(ctx, &repo, vec![base])
+        .add_file("p2", "p2")
+        .commit()
+        .await?;
+    let merge = CreateCommitContext::new(ctx, &repo, vec![p1, p2])
+        .add_file("merge", "merge")
+        .commit()
+        .await?;
+    let onto = CreateCommitContext::new(ctx, &repo, vec![p1])
+        .add_file("base", "base2")
+        .add_file("dir/new", "new")
+        .commit()
+        .await?;
+    bookmark(ctx, &repo, "master").set_to(onto).await?;
+
+    let with_augmented = if augmented_for_onto {
+        vec![p1, p2, merge, onto]
+    } else {
+        vec![p1, p2, merge]
+    };
+    for cs_id in [p1, p2, merge, onto] {
+        repo.derive_hg_changeset(ctx, cs_id).await?;
+    }
+    for cs_id in with_augmented {
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+    }
+
+    let merge = merge.load(ctx, repo.repo_blobstore()).await?;
+    Ok(BranchMerge {
+        repo,
+        hg_reads,
+        merge,
+        onto,
+    })
+}
+
+async fn pushrebase_branch_merge(
+    ctx: &CoreContext,
+    branch_merge: &BranchMerge,
+    deny_hg_reads: bool,
+) -> Result<PushrebaseOutcome, PushrebaseError> {
+    branch_merge
+        .hg_reads
+        .deny
+        .store(deny_hg_reads, Ordering::Relaxed);
+    do_pushrebase_bonsai(
+        ctx,
+        &branch_merge.repo,
+        &PushrebaseFlags::default(),
+        &master_bookmark(),
+        &hashset![branch_merge.merge.clone()],
+        &[],
+    )
+    .await
+}
+
+async fn landed_file_changes(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    outcome: &PushrebaseOutcome,
+) -> Result<Vec<(NonRootMPath, FileChange)>, Error> {
+    let landed = outcome.head.load(ctx, repo.repo_blobstore()).await?;
+    Ok(landed
+        .file_changes()
+        .map(|(path, change)| (path.clone(), change.clone()))
+        .collect())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_of_branch_merge_reads_augmented_manifests(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_augmented_read_test(false);
+
+    // Given: the same merge in two repos.
+    let from_hg = branch_merge(&ctx, true).await?;
+    let from_augmented = branch_merge(&ctx, true).await?;
+
+    // When: one lands it reading Hg manifests (Hg reads allowed), the other
+    // reading augmented manifests with every Hg manifest read failing.
+    let from_hg_outcome = pushrebase_branch_merge(&ctx, &from_hg, false)
+        .map_err(|err| format_err!("{err:?}"))
+        .await?;
+    init_just_knobs_for_augmented_read_test(true);
+    let from_augmented_outcome = pushrebase_branch_merge(&ctx, &from_augmented, true)
+        .map_err(|err| format_err!("{err:?}"))
+        .await?;
+
+    // Then: both land the same merge, which carries master's `base`, and the
+    // augmented landing read no Hg manifest.
+    let expected = landed_file_changes(&ctx, &from_hg.repo, &from_hg_outcome).await?;
+    let landed = landed_file_changes(&ctx, &from_augmented.repo, &from_augmented_outcome).await?;
+    assert_eq!(landed, expected);
+    let landed_paths: Vec<_> = landed.iter().map(|(path, _)| path.to_string()).collect();
+    assert_eq!(
+        landed_paths,
+        vec!["base", "merge"],
+        "the merge should carry master's `base` because `p2` has the old one"
+    );
+    assert_eq!(from_augmented.hg_reads.denied.load(Ordering::Relaxed), 0);
+
+    from_augmented.hg_reads.deny.store(false, Ordering::Relaxed);
+    let master_hg = from_augmented
+        .repo
+        .derive_hg_changeset(&ctx, from_augmented_outcome.head)
+        .await?;
+    ensure_content(
+        &ctx,
+        master_hg,
+        &from_augmented.repo,
+        btreemap! {
+            "base".to_string() => "base2".to_string(),
+            "dir/kept".to_string() => "kept".to_string(),
+            "dir/new".to_string() => "new".to_string(),
+            "merge".to_string() => "merge".to_string(),
+            "p1".to_string() => "p1".to_string(),
+            "p2".to_string() => "p2".to_string(),
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_of_branch_merge_reads_hg_manifests_with_knob_off(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_augmented_read_test(false);
+    let branch_merge = branch_merge(&ctx, true).await?;
+
+    let result = pushrebase_branch_merge(&ctx, &branch_merge, true).await;
+
+    assert!(
+        result.is_err(),
+        "with the knob off, landing should read Hg manifests and fail when they are gone"
+    );
+    assert!(branch_merge.hg_reads.denied.load(Ordering::Relaxed) > 0);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_of_branch_merge_reports_missing_augmented_manifest(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_augmented_read_test(true);
+    let branch_merge = branch_merge(&ctx, false).await?;
+    let onto_root = branch_merge
+        .repo
+        .derive_hg_changeset(&ctx, branch_merge.onto)
+        .await?
+        .load(&ctx, branch_merge.repo.repo_blobstore())
+        .await?
+        .manifestid();
+
+    let err = match pushrebase_branch_merge(&ctx, &branch_merge, true).await {
+        Err(PushrebaseError::Error(err)) => err,
+        other => {
+            return Err(format_err!(
+                "expected a missing manifest error, got {other:?}"
+            ));
+        }
+    };
+
+    let missing_key = HgAugmentedManifestId::new(onto_root.into_nodehash()).blobstore_key();
+    assert!(
+        err.chain().any(|cause| matches!(
+            cause.downcast_ref::<LoadableError>(),
+            Some(LoadableError::Missing(key)) if key == &missing_key
+        )),
+        "expected master's augmented manifest to be reported missing, got {err:?}"
+    );
+    assert_eq!(branch_merge.hg_reads.denied.load(Ordering::Relaxed), 0);
+    assert_eq!(
+        get_bookmark_value(&ctx, &branch_merge.repo, &master_bookmark()).await?,
+        Some(branch_merge.onto),
+        "master should not move"
+    );
     Ok(())
 }
 

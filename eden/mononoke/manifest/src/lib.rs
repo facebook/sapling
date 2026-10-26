@@ -8,6 +8,7 @@
 pub use blobstore::StoreLoadable;
 
 pub use crate::bonsai::BonsaiDiffFileChange;
+pub use crate::bonsai::ManifestLeaf;
 pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::bonsai_diff_sharded;
 pub use crate::combined::Combined;
