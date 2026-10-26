@@ -8,6 +8,7 @@
 use std::pin::Pin;
 
 use bytes::Bytes;
+use fbinit::FacebookInit;
 use futures::FutureExt;
 use futures_stats::futures03::TimedFutureExt;
 use gotham::handler::HandlerFuture;
@@ -42,7 +43,6 @@ use crate::service::slapi_compat::GitHandlers;
 use crate::write;
 
 define_stats! {
-    prefix = "mononoke.git.server";
     container_memory: dynamic_singleton_counter("{}", (counter_name: String)),
 }
 
@@ -106,6 +106,16 @@ fn clone_bundle_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     .boxed()
 }
 
+fn add_healthcheck_load_header(fb: FacebookInit, headers: &mut HeaderMap, avg_window: i64) {
+    if avg_window <= 0 {
+        return;
+    }
+    let counter = format!("container_memory_usage_percent.avg.{avg_window}");
+    if let Some(load) = STATS::container_memory.get_value(fb, (counter,)) {
+        headers.insert("X-FB-Load", load.into());
+    }
+}
+
 fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let headers = HeaderMap::borrow_from(&state);
@@ -127,12 +137,7 @@ fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
         let fb = GitServerContext::borrow_from(&state).fb();
         let avg_window =
             justknobs::get_as::<i64>("scm/mononoke:git_server_healthcheck_load_avg_secs", None);
-        if avg_window > 0 {
-            let counter = format!("container_memory_usage_percent.avg.{avg_window}");
-            if let Some(load) = STATS::container_memory.get_value(fb, (counter,)) {
-                res.headers_mut().insert("X-FB-Load", load.into());
-            }
-        }
+        add_healthcheck_load_header(fb, res.headers_mut(), avg_window);
 
         Ok((state, res))
     }
@@ -222,4 +227,46 @@ pub fn build_router(context: GitServerContext) -> Router {
         );
         GitHandlers::setup::<slapi_service::handlers::lookup::LookupHandler>(route);
     })
+}
+
+#[cfg(all(test, fbcode_build))]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::fbinit_test]
+    fn healthcheck_load_reads_unprefixed_counter(fb: FacebookInit) {
+        let avg_window = 123_001;
+        let counter = stats::create_singleton_counter(format!(
+            "container_memory_usage_percent.avg.{avg_window}"
+        ));
+        counter.set_value(fb, 37);
+
+        let mut headers = HeaderMap::new();
+        add_healthcheck_load_header(fb, &mut headers, avg_window);
+        assert_eq!(headers.get("X-FB-Load").expect("load header"), "37");
+
+        counter.set_value(fb, 0);
+        add_healthcheck_load_header(fb, &mut headers, avg_window);
+        assert_eq!(headers.get("X-FB-Load").expect("zero load header"), "0");
+    }
+
+    #[mononoke::fbinit_test]
+    fn healthcheck_load_disabled_omits_header(fb: FacebookInit) {
+        stats::create_singleton_counter("container_memory_usage_percent.avg.0".to_owned())
+            .set_value(fb, 73);
+        for avg_window in [0, -1] {
+            let mut headers = HeaderMap::new();
+            add_healthcheck_load_header(fb, &mut headers, avg_window);
+            assert!(!headers.contains_key("X-FB-Load"));
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    fn healthcheck_load_missing_counter_omits_header(fb: FacebookInit) {
+        let mut headers = HeaderMap::new();
+        add_healthcheck_load_header(fb, &mut headers, 123_002);
+        assert!(!headers.contains_key("X-FB-Load"));
+    }
 }
