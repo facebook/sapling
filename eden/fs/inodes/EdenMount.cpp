@@ -27,7 +27,6 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/ErrnoUtils.h"
 #include "eden/common/utils/FaultInjector.h"
-#include "eden/common/utils/Future.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/SpawnedProcess.h"
@@ -71,7 +70,10 @@
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/NfsSocket.h"
+
+#ifdef _WIN32
 #include "eden/fs/utils/NotImplemented.h"
+#endif
 
 #include <chrono>
 #include <memory>
@@ -451,8 +453,8 @@ TreeInodePtr EdenMount::createRootInode(std::shared_ptr<const Tree> tree) {
 namespace {
 ImmediateFuture<Unit> ensureDotEdenSymlink(
     TreeInodePtr directory,
-    PathComponent symlinkName,
-    AbsolutePath symlinkTarget) {
+    const PathComponent& symlinkName,
+    const AbsolutePath& symlinkTarget) {
   enum class Action {
     Nothing,
     CreateSymlink,
@@ -649,7 +651,7 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
             "`: exited with status ",
             returnCode.str());
       })
-      .deferError([mountPath](folly::exception_wrapper err) {
+      .deferError([mountPath](const folly::exception_wrapper& err) {
         throw_<std::runtime_error>(
             "Failed to run `",
             FLAGS_edenfsctlPath,
@@ -888,7 +890,8 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         collectAllSafe(getTargetTreeInodeFuture, getRootTreeFuture)
             .thenValue(
                 [ctx, setPathObjectIdTime, stopWatch](
-                    std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
+                    const std::tuple<TreeInodePtr, shared_ptr<const Tree>>&
+                        results) {
                   setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
                       stopWatch.elapsed();
                   auto [targetTreeInode, incomingTree] = results;
@@ -2437,7 +2440,7 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
 
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
-    folly::CancellationToken cancellation,
+    const folly::CancellationToken& cancellation,
     const ObjectFetchContextPtr& fetchContext,
     bool listIgnored) const {
   return make_unique<DiffContext>(
@@ -2508,8 +2511,8 @@ folly::coro::now_task<std::unique_ptr<ScmStatus>> EdenMount::co_diff(
   }
 
   // Step 3: Create DiffContext
-  auto context = createDiffContext(
-      callbackPtr, std::move(cancellation), fetchContext, listIgnored);
+  auto context =
+      createDiffContext(callbackPtr, cancellation, fetchContext, listIgnored);
   DiffContext* ctxPtr = context.get();
 
   // Helper lambda to perform the inner diff as a coroutine
@@ -2733,7 +2736,7 @@ EdenMount::getFsChannelCompletionFuture() {
   return fsChannelCompletionPromise_.getFuture();
 }
 
-#ifdef __linux__
+#ifndef _WIN32
 namespace {
 std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
     EdenMount* mount,
@@ -2964,15 +2967,6 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
         // that mimics privhelper mount failing
         serverState_->getFaultInjector().check(
             "failMountInitialization", mountPath.view());
-#ifdef __APPLE__
-        (void)readOnly;
-        auto error = folly::make_exception_wrapper<std::system_error>(
-            ENOTSUP,
-            std::generic_category(),
-            "FUSE mounts are not supported on macOS");
-        mountPromise->setException(error);
-        return folly::makeFuture<folly::Unit>(std::move(error));
-#else
         return serverState_->getPrivHelper()
             ->fuseMount(
                 mountPath.view(), readOnly, edenConfig->fuseVfsType.getValue())
@@ -3013,7 +3007,6 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                       makeFuseChannel(this, std::move(fuseDevice).value()));
                   return folly::makeFuture(folly::unit);
                 });
-#endif
 #endif
       });
 }
@@ -3130,13 +3123,6 @@ void EdenMount::fsChannelInitSuccessful(
 folly::Future<folly::Unit> EdenMount::takeoverFuse(
     FuseChannelData takeoverData) {
 #ifndef _WIN32
-#ifdef __APPLE__
-  (void)takeoverData;
-  return folly::makeFuture<folly::Unit>(std::system_error(
-      ENOTSUP,
-      std::generic_category(),
-      "FUSE mounts are not supported on macOS"));
-#else
   transitionState(State::INITIALIZED, State::STARTING);
 
   try {
@@ -3163,7 +3149,6 @@ folly::Future<folly::Unit> EdenMount::takeoverFuse(
     return folly::makeFuture<folly::Unit>(
         folly::exception_wrapper(std::current_exception()));
   }
-#endif
 #else
   (void)takeoverData;
   return folly::makeFuture<folly::Unit>(

@@ -154,7 +154,6 @@ std::string rename(FuseArg arg) {
   return fmt::format("old={}, newdir={}, new={}", oldName, in.newdir, newName);
 }
 
-#ifdef __linux__
 std::string rename2(FuseArg arg) {
   auto& in = arg.read<fuse_rename2_in>();
   auto oldName = arg.readz();
@@ -166,7 +165,6 @@ std::string rename2(FuseArg arg) {
       newName,
       in.flags);
 }
-#endif
 
 std::string link(FuseArg arg) {
   auto& in = arg.read<fuse_link_in>();
@@ -191,14 +189,9 @@ constexpr RenderFn release = default_render;
 constexpr RenderFn fsync = default_render;
 
 std::string setxattr(FuseArg arg) {
-#ifdef __linux__
   // Skip the compat-sized setxattr_in (8 bytes) because EdenFS does not
   // negotiate FUSE_SETXATTR_EXT, so the kernel sends the old 2-field layout.
   arg.skip(FUSE_COMPAT_SETXATTR_IN_SIZE);
-#else
-  auto& in = arg.read<fuse_setxattr_in>();
-  (void)in;
-#endif
   auto name = arg.readz();
   return fmt::format("name={}", name);
 }
@@ -624,7 +617,6 @@ constexpr auto kFuseHandlers = [] {
       &FuseStats::fallocateSuccessful,
       &FuseStats::fallocateFailure,
       Write};
-#ifdef __linux__
   handlers[FUSE_READDIRPLUS] = {"FUSE_READDIRPLUS", Read};
   handlers[FUSE_RENAME2] = {
       "FUSE_RENAME2",
@@ -639,14 +631,14 @@ constexpr auto kFuseHandlers = [] {
   handlers[FUSE_COPY_FILE_RANGE] = {"FUSE_COPY_FILE_RANGE", Write};
   handlers[FUSE_SETUPMAPPING] = {"FUSE_SETUPMAPPING", Read};
   handlers[FUSE_REMOVEMAPPING] = {"FUSE_REMOVEMAPPING", Read};
-#endif
   return handlers;
 }();
 
 // Separate to avoid bloating the FUSE opcode table; CUSE_INIT is 4096.
 constexpr HandlerEntry kCuseInitHandler{"CUSE_INIT"};
 
-constexpr const HandlerEntry* lookupFuseHandlerEntry(uint32_t opcode) {
+constexpr const HandlerEntry* FOLLY_NULLABLE
+lookupFuseHandlerEntry(uint32_t opcode) {
   if (CUSE_INIT == opcode) {
     return &kCuseInitHandler;
   }
@@ -665,7 +657,6 @@ constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
     {FUSE_BIG_WRITES, "BIG_WRITES"},
     {FUSE_DONT_MASK, "DONT_MASK"},
     {FUSE_FLOCK_LOCKS, "FLOCK_LOCKS"},
-#ifdef __linux__
     {FUSE_SPLICE_WRITE, "SPLICE_WRITE"},
     {FUSE_SPLICE_MOVE, "SPLICE_MOVE"},
     {FUSE_SPLICE_READ, "SPLICE_READ"},
@@ -685,7 +676,6 @@ constexpr std::pair<uint64_t, const char*> kCapsLabels[] = {
     {FUSE_MAX_PAGES, "MAX_PAGES"},
     {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
     {FUSE_EXPLICIT_INVAL_DATA, "EXPLICIT_INVAL_DATA"},
-#endif
 #ifdef FUSE_NO_OPEN_SUPPORT
     {FUSE_NO_OPEN_SUPPORT, "NO_OPEN_SUPPORT"},
 #endif
@@ -787,7 +777,7 @@ void installSignalHandler() {
   action.sa_handler = sigusr2Handler;
   sigemptyset(&action.sa_mask);
   action.sa_flags = 0; // We intentionally turn off SA_RESTART
-  struct sigaction oldAction;
+  struct sigaction oldAction{};
   folly::checkUnixError(
       sigaction(SIGUSR2, &action, &oldAction), "failed to set SIGUSR2 handler");
 }
@@ -928,7 +918,7 @@ void FuseChannel::sendReply(
     const FuseTransport& source,
     const fuse_in_header& request,
     folly::fbvector<iovec>&& vec) const {
-  fuse_out_header out;
+  fuse_out_header out{};
   out.unique = request.unique;
   out.error = 0;
 
@@ -941,7 +931,7 @@ void FuseChannel::sendReply(
     const FuseTransport& source,
     const fuse_in_header& request,
     const folly::IOBuf& buf) const {
-  fuse_out_header out;
+  fuse_out_header out{};
   out.unique = request.unique;
   out.error = 0;
 
@@ -957,11 +947,11 @@ void FuseChannel::sendReply(
     const FuseTransport& source,
     const fuse_in_header& request,
     folly::ByteRange bytes) const {
-  fuse_out_header out;
+  fuse_out_header out{};
   out.unique = request.unique;
   out.error = 0;
 
-  std::array<iovec, 2> iov;
+  std::array<iovec, 2> iov{};
   iov[0].iov_base = &out;
   iov[0].iov_len = sizeof(out);
   iov[1].iov_base = const_cast<uint8_t*>(bytes.data());
@@ -1457,16 +1447,16 @@ void FuseChannel::sendInvalidateInode(
     int64_t off,
     int64_t len) {
   XLOGF(DBG3, "sendInvalidateInode(ino={}, off={}, len={})", ino, off, len);
-  fuse_notify_inval_inode_out notify;
+  fuse_notify_inval_inode_out notify{};
   notify.ino = ino.get();
   notify.off = off;
   notify.len = len;
 
-  fuse_out_header out;
+  fuse_out_header out{};
   out.unique = 0;
   out.error = FUSE_NOTIFY_INVAL_INODE;
 
-  std::array<iovec, 2> iov;
+  std::array<iovec, 2> iov{};
 
   iov[0].iov_base = &out;
   iov[0].iov_len = sizeof(out);
@@ -1521,11 +1511,11 @@ void FuseChannel::sendInvalidateEntry(
   notify.parent = parent.get();
   notify.namelen = namePiece.size();
 
-  fuse_out_header out;
+  fuse_out_header out{};
   out.unique = 0;
   out.error = FUSE_NOTIFY_INVAL_ENTRY;
 
-  std::array<iovec, 4> iov;
+  std::array<iovec, 4> iov{};
 
   iov[0].iov_base = &out;
   iov[0].iov_len = sizeof(out);
@@ -1949,7 +1939,6 @@ void FuseChannel::readInitPacket() {
   // We handle writes of any size.
   want |= FUSE_BIG_WRITES;
 
-#ifdef __linux__
   // We don't support setuid and setgid mode bits anyway.
   want |= FUSE_HANDLE_KILLPRIV;
 #ifdef FUSE_HANDLE_KILLPRIV_V2
@@ -1970,7 +1959,6 @@ void FuseChannel::readInitPacket() {
   want |= FUSE_CACHE_SYMLINKS;
   // We can handle almost any request in parallel.
   want |= FUSE_PARALLEL_DIROPS;
-#endif
 
 #ifdef FUSE_MAX_PAGES
   if (fuseMaxPages_ > 0) {
@@ -2293,7 +2281,6 @@ void FuseChannel::dispatchRequest(
       replyError(source, header, ENOSYS);
       break;
 
-#ifdef __linux__
     case FUSE_LSEEK:
       // We only support stateless file handles, so lseek() is meaningless
       // for us.  Returning ENOSYS causes the kernel to implement it for us,
@@ -2301,7 +2288,6 @@ void FuseChannel::dispatchRequest(
       XLOG(DBG7, "FUSE_LSEEK");
       replyError(source, header, ENOSYS);
       break;
-#endif
 
     case FUSE_POLL:
       // We do not currently implement FUSE_POLL.
@@ -2793,7 +2779,6 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-#ifdef __linux__
 ImmediateFuture<folly::Unit> FuseChannel::fuseRename2(
     FuseRequestContext& request,
     const fuse_in_header& header,
@@ -2821,7 +2806,6 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename2(
           request.getObjectFetchContext())
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
-#endif
 
 ImmediateFuture<folly::Unit> FuseChannel::fuseLink(
     FuseRequestContext& request,
@@ -2901,17 +2885,12 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSetXAttr(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto setxattr = reinterpret_cast<const fuse_setxattr_in*>(arg.data());
-#ifdef __linux__
   // Use the compat size (8 bytes) because EdenFS does not negotiate
   // FUSE_SETXATTR_EXT, so the kernel sends the old 2-field struct.
   // sizeof(fuse_setxattr_in) is 16 bytes in FUSE 7.33+, which would
   // overshoot the name offset.
   const auto nameStr =
       reinterpret_cast<const char*>(arg.data()) + FUSE_COMPAT_SETXATTR_IN_SIZE;
-#else
-  // On macOS, fuse_setxattr_in is the original struct.
-  const auto nameStr = reinterpret_cast<const char*>(setxattr + 1);
-#endif
   const StringPiece attrName{nameStr};
   const auto bufPtr = nameStr + attrName.size() + 1;
   const StringPiece value(bufPtr, setxattr->size);
@@ -2954,7 +2933,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseListXAttr(
   XLOG(DBG7, "FUSE_LISTXATTR");
   InodeNumber ino{header.nodeid};
   return dispatcher_->listxattr(ino).thenValue(
-      [&request, size = listattr->size](std::vector<std::string> attrs) {
+      [&request, size = listattr->size](const std::vector<std::string>& attrs) {
         // Initialize count to include the \0 for each
         // entry.
         size_t count = attrs.size();
@@ -3132,7 +3111,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseBmap(
   return dispatcher_
       ->bmap(InodeNumber{header.nodeid}, bmap->blocksize, bmap->block)
       .thenValue([&request](uint64_t resultIdx) {
-        fuse_bmap_out out;
+        fuse_bmap_out out{};
         out.block = resultIdx;
         request.sendReply(out);
       });

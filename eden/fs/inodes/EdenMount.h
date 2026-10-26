@@ -160,7 +160,7 @@ struct InodeTraceEvent : TraceEventBase {
   InodeType inodeType;
   InodeEventType eventType;
   InodeEventProgress progress;
-  std::chrono::microseconds duration;
+  std::chrono::microseconds duration{};
   // Always null-terminated, and saves space in the trace event structure.
   std::shared_ptr<char[]> path;
 
@@ -1307,7 +1307,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   std::unique_ptr<DiffContext> createDiffContext(
       DiffCallback* callback,
-      folly::CancellationToken cancellation,
+      const folly::CancellationToken& cancellation,
       const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false) const;
 

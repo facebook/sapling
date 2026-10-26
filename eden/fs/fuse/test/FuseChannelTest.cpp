@@ -59,7 +59,7 @@ constexpr auto kTimeout = 1s;
 constexpr size_t kTraceBusCapacity = 25000;
 
 fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
-  fuse_entry_out response;
+  fuse_entry_out response{};
   response.nodeid = nodeid;
   response.generation = Random::rand64();
   response.entry_valid = Random::rand64();
@@ -297,7 +297,7 @@ class FuseChannelTest : public ::testing::Test {
       std::make_shared<ReloadableConfig>(edenConfig_);
   ErrorLogger capturingErrorLogger_{reloadableConfig_, &xplatLogger_};
   ErrorLogger* errorLoggerOverride_ = nullptr;
-  ForgetRecordingDispatcher* dispatcher_;
+  ForgetRecordingDispatcher* dispatcher_{};
   AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
 };
 
@@ -1181,7 +1181,7 @@ TEST_F(FuseChannelTest, interruptLookups) {
   for (int i = 0; i < 5000; ++i) {
     auto requestId = fuse_.sendLookup(FUSE_ROOT_ID, "foo");
 
-    fuse_interrupt_in interruptData;
+    fuse_interrupt_in interruptData{};
     interruptData.unique = requestId;
 
     (void)fuse_.sendRequest(FUSE_INTERRUPT, FUSE_ROOT_ID, interruptData);
@@ -1348,12 +1348,10 @@ TEST_F(FuseChannelTest, testAllowIdmapNegotiation) {
   EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
   EXPECT_TRUE(fuseStopData->fuseDevice);
 
-#ifdef __linux__
   EXPECT_TRUE(
       fuseStopData->fuseSettings.flags2 &
       static_cast<uint32_t>(FUSE_ALLOW_IDMAP >> 32))
       << "FUSE_ALLOW_IDMAP should be set when kernel advertises it";
-#endif
 }
 
 TEST_F(FuseChannelTest, testAllowIdmapNotSetWhenKernelLacksSupport) {
@@ -1369,16 +1367,14 @@ TEST_F(FuseChannelTest, testAllowIdmapNotSetWhenKernelLacksSupport) {
   EXPECT_EQ(fuseStopData->reason, FuseChannel::StopReason::TAKEOVER);
   EXPECT_TRUE(fuseStopData->fuseDevice);
 
-#ifdef __linux__
   EXPECT_FALSE(
       fuseStopData->fuseSettings.flags2 &
       static_cast<uint32_t>(FUSE_ALLOW_IDMAP >> 32))
       << "FUSE_ALLOW_IDMAP should not be set when kernel doesn't support it";
-#endif
 }
 #endif
 
-#if defined(__linux__) && defined(FUSE_HANDLE_KILLPRIV_V2)
+#ifdef FUSE_HANDLE_KILLPRIV_V2
 TEST_F(FuseChannelTest, testHandleKillPrivV2Negotiation) {
   auto channel = createChannel();
 
