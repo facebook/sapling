@@ -136,6 +136,7 @@ cpp_unittest(
         "fbsource//third-party/googletest:gtest",
         "fbsource//xplat/folly/test:test_utils",
         "fbsource//xplat/folly/testing:test_util",
+        "//eden/common/utils:fault_injector",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",

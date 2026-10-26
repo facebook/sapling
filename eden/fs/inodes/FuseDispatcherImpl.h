@@ -172,6 +172,15 @@ class FuseDispatcherImpl : public FuseDispatcher {
    */
   fuse_entry_out negativeLookupEntry() const;
 
+  /**
+   * The reply for every lookup that resolves to a missing name. Runs the
+   * FuseDispatcherImpl::negativeLookup fault checkpoint, keyed by `name`,
+   * after ENOENT is decided and before the kernel caches the negative entry,
+   * then returns negativeLookupEntry().
+   */
+  ImmediateFuture<fuse_entry_out> negativeLookupReply(
+      PathComponentPiece name) const;
+
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
 

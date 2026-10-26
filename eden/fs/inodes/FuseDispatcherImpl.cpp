@@ -11,6 +11,7 @@
 #include <folly/logging/xlog.h>
 #include <exception>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -18,6 +19,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -126,10 +128,21 @@ fuse_entry_out FuseDispatcherImpl::negativeLookupEntry() const {
   return entry;
 }
 
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::negativeLookupReply(
+    PathComponentPiece name) const {
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("FuseDispatcherImpl::negativeLookup", name)
+      .thenValue([this](auto&&) { return negativeLookupEntry(); });
+}
+
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
     const ObjectFetchContextPtr& context) {
-  return inodeMap_->lookupInode(ino)
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("FuseDispatcherImpl::getattr", ino)
+      .thenValue([this, ino](auto&&) { return inodeMap_->lookupInode(ino); })
       .thenValue([context = context.copy()](const InodePtr& inode) {
         inode->markGcRef();
         return inode->stat(context);
@@ -165,16 +178,57 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
     InodeNumber parent,
     PathComponentPiece namepiece,
     const ObjectFetchContextPtr& context) {
-  return inodeMap_->lookupTreeInode(parent)
-      .thenValue([name = PathComponent(namepiece),
-                  context = context.copy()](const TreeInodePtr& tree) {
-        return tree->getOrLoadChildIfExists(name, context);
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("FuseDispatcherImpl::lookup", namepiece)
+      .thenValue(
+          [this, parent](auto&&) { return inodeMap_->lookupTreeInode(parent); })
+      .thenTry([name = PathComponent{namepiece}, context = context.copy()](
+                   folly::Try<TreeInodePtr> tree) mutable {
+        // The name is built once and moved along with the child lookup result.
+        auto child = makeImmediateFutureWith([&] {
+          return tree.value()->getOrLoadChildIfExists(name, context);
+        });
+        return std::move(child).thenTry(
+            [name = std::move(name)](folly::Try<InodePtr> inode) mutable {
+              return std::make_pair(std::move(inode), std::move(name));
+            });
       })
       .thenValue(
           [this, context = context.copy()](
-              const InodePtr& inode) -> ImmediateFuture<fuse_entry_out> {
+              std::pair<folly::Try<InodePtr>, PathComponent> child)
+              -> ImmediateFuture<fuse_entry_out> {
+            auto& maybeInode = child.first;
+            const auto& name = child.second;
+            if (auto* err =
+                    maybeInode.tryGetExceptionObject<std::system_error>()) {
+              if (isEnoent(*err)) {
+                // A missing name is normally answered above without an error;
+                // this covers the paths that still report ENOENT, such as a
+                // restricted directory or the .eden entry.
+                //
+                // Note: if this negative dcache entry becomes incorrect for a
+                // name that is still returned by readdir, the kernel will stop
+                // asking EdenFS for that name and return ENOENT directly to
+                // user-space `stat`; `ls -l` will then show "?????????" because
+                // the name is visible but its metadata cannot be refreshed.
+                //
+                // This has happened in production, may be caused by a race, and
+                // is tricky to reproduce. A shorter TTL mitigates the issue by
+                // reducing how long a negative dcache entry can remain
+                // incorrect.
+                //
+                // Example report: https://fburl.com/workplace/329ni6ek
+                return negativeLookupReply(name);
+              }
+            }
+            if (maybeInode.hasException()) {
+              return ImmediateFuture<fuse_entry_out>{folly::Try<fuse_entry_out>{
+                  std::move(maybeInode).exception()}};
+            }
+            const InodePtr& inode = maybeInode.value();
             if (!inode) {
-              return negativeLookupEntry();
+              return negativeLookupReply(name);
             }
             inode->markGcRef();
             return makeImmediateFutureWith(
@@ -211,30 +265,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
                         attrForInodeWithCorruptOverlay(inode->getNodeId()));
                   }
                 });
-          })
-      .thenTry([this](folly::Try<fuse_entry_out> try_) {
-        if (auto* err = try_.tryGetExceptionObject<std::system_error>()) {
-          if (isEnoent(*err)) {
-            // A missing name is normally answered above without an error;
-            // this covers the paths that still report ENOENT, such as a
-            // restricted directory or the .eden entry.
-            //
-            // Note: if this negative dcache entry becomes incorrect for a
-            // name that is still returned by readdir, the kernel will stop
-            // asking EdenFS for that name and return ENOENT directly to
-            // user-space `stat`; `ls -l` will then show "?????????" because
-            // the name is visible but its metadata cannot be refreshed.
-            //
-            // This has happened in production, may be caused by a race, and is
-            // tricky to reproduce. A shorter TTL mitigates the issue by
-            // reducing how long a negative dcache entry can remain incorrect.
-            //
-            // Example report: https://fburl.com/workplace/329ni6ek
-            return folly::Try<fuse_entry_out>{negativeLookupEntry()};
-          }
-        }
-        return try_;
-      });
+          });
 }
 
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
@@ -355,8 +386,12 @@ ImmediateFuture<BufVec> FuseDispatcherImpl::read(
     size_t size,
     off_t off,
     const ObjectFetchContextPtr& context) {
-  return inodeMap_->lookupFileInode(ino).thenValue(
-      [context = context.copy(), size, off](FileInodePtr&& inode) {
+  return mount_->getServerState()
+      ->getFaultInjector()
+      .checkAsync("FuseDispatcherImpl::read", ino)
+      .thenValue(
+          [this, ino](auto&&) { return inodeMap_->lookupFileInode(ino); })
+      .thenValue([context = context.copy(), size, off](FileInodePtr&& inode) {
         inode->markGcRef();
         return inode->read(size, off, context)
             .thenValue([](std::tuple<BufVec, bool>&& readRes) {
@@ -370,21 +405,43 @@ ImmediateFuture<size_t> FuseDispatcherImpl::write(
     folly::StringPiece data,
     off_t off,
     const ObjectFetchContextPtr& context) {
-  auto inodeFuture = inodeMap_->lookupFileInode(ino);
-  if (inodeFuture.isReady() &&
-      mount_->getEdenConfig()->experimentalFuseAvoidWriteCopy.getValue()) {
-    return std::move(inodeFuture)
-        .thenValue([data, off, context = context.copy()](FileInodePtr&& inode) {
-          // FileInode copies data if it has to materialize asynchronously.
-          return inode->write(data, off, context);
+  auto checkpoint = mount_->getServerState()->getFaultInjector().checkAsync(
+      "FuseDispatcherImpl::write", ino);
+  if (!checkpoint.isReady()) {
+    // `data` points into the kernel request buffer, which is only valid while
+    // this call runs synchronously, so a parked request must copy it now.
+    return std::move(checkpoint)
+        .thenValue(
+            [this, ino](auto&&) { return inodeMap_->lookupFileInode(ino); })
+        .thenValue([copy = data.str(), off, context = context.copy()](
+                       FileInodePtr&& inode) {
+          return inode->write(copy, off, context);
         });
   }
 
-  return std::move(inodeFuture)
-      .thenValue([copy = data.str(), off, context = context.copy()](
-                     FileInodePtr&& inode) {
-        return inode->write(copy, off, context);
-      });
+  return std::move(checkpoint)
+      .thenValue(
+          [this, ino, data, off, context = context.copy()](
+              auto&&) -> ImmediateFuture<size_t> {
+            auto inodeFuture = inodeMap_->lookupFileInode(ino);
+            if (inodeFuture.isReady() &&
+                mount_->getEdenConfig()
+                    ->experimentalFuseAvoidWriteCopy.getValue()) {
+              return std::move(inodeFuture)
+                  .thenValue([data, off, context = context.copy()](
+                                 FileInodePtr&& inode) {
+                    // FileInode copies data if it has to materialize
+                    // asynchronously.
+                    return inode->write(data, off, context);
+                  });
+            }
+
+            return std::move(inodeFuture)
+                .thenValue([copy = data.str(), off, context = context.copy()](
+                               FileInodePtr&& inode) {
+                  return inode->write(copy, off, context);
+                });
+          });
 }
 
 ImmediateFuture<Unit> FuseDispatcherImpl::flush(

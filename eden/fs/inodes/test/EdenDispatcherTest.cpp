@@ -10,18 +10,25 @@
 #include "eden/fs/fuse/FuseDispatcher.h"
 
 #include <fmt/format.h>
+#include <array>
 #include <atomic>
 #include <limits>
+#include <optional>
+#include <stdexcept>
+#include <string_view>
 #include <thread>
 
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
 #include <gtest/gtest.h>
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
@@ -57,6 +64,43 @@ uint64_t expectedNegativeTtl(uint64_t configured) {
   }
 #endif
   return configured;
+}
+
+constexpr std::array<std::string_view, 5> kFuseDispatcherFaultPoints{
+    "FuseDispatcherImpl::lookup",
+    "FuseDispatcherImpl::negativeLookup",
+    "FuseDispatcherImpl::getattr",
+    "FuseDispatcherImpl::read",
+    "FuseDispatcherImpl::write",
+};
+
+template <typename Trigger>
+void expectFaultPointReachable(
+    TestMount& mount,
+    std::string_view faultPoint,
+    Trigger&& trigger) {
+  auto& injector = mount.getServerState()->getFaultInjector();
+  injector.injectBlock(faultPoint, ".*", 1);
+
+  std::optional<std::string> error;
+  std::thread request([future = trigger(), &error]() mutable {
+    try {
+      std::move(future).get();
+    } catch (const std::exception& ex) {
+      error = ex.what();
+    }
+  });
+
+  const auto reached = injector.waitUntilBlocked(faultPoint, 5s);
+  injector.removeFault(faultPoint, ".*");
+  const auto unblocked = injector.unblockWithError(
+      faultPoint, ".*", std::runtime_error("checkpoint reached"));
+  request.join();
+
+  ASSERT_TRUE(reached) << faultPoint;
+  EXPECT_EQ(1, unblocked);
+  ASSERT_TRUE(error.has_value());
+  EXPECT_EQ("checkpoint reached", *error);
 }
 } // namespace
 
@@ -188,6 +232,62 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_good_file) {
   EXPECT_NE(0u, entry.nodeid);
   EXPECT_NE(0, entry.attr.ino);
   EXPECT_EQ(entry.nodeid, entry.attr.ino);
+}
+
+TEST(RawEdenDispatcherTest, fuseDispatcherFaultPointsAreReachable) {
+  FakeTreeBuilder builder;
+  builder.setFile("file", "contents");
+  TestMount mount{builder};
+  auto* dispatcher = mount.getDispatcher();
+  const auto entry =
+      dispatcher
+          ->lookup(
+              0, kRootNodeId, "file"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  const auto ino = InodeNumber{entry.nodeid};
+
+  expectFaultPointReachable(mount, kFuseDispatcherFaultPoints[0], [&] {
+    return dispatcher->lookup(
+        0, kRootNodeId, "file"_pc, ObjectFetchContext::getNullContext());
+  });
+  expectFaultPointReachable(mount, kFuseDispatcherFaultPoints[1], [&] {
+    return dispatcher->lookup(
+        0, kRootNodeId, "missing"_pc, ObjectFetchContext::getNullContext());
+  });
+  expectFaultPointReachable(mount, kFuseDispatcherFaultPoints[2], [&] {
+    return dispatcher->getattr(ino, ObjectFetchContext::getNullContext());
+  });
+  expectFaultPointReachable(mount, kFuseDispatcherFaultPoints[3], [&] {
+    return dispatcher->read(ino, 1, 0, ObjectFetchContext::getNullContext());
+  });
+  expectFaultPointReachable(mount, kFuseDispatcherFaultPoints[4], [&] {
+    return dispatcher->write(ino, "x", 0, ObjectFetchContext::getNullContext());
+  });
+}
+
+TEST(RawEdenDispatcherTest, negativeLookupFaultPointIsReachableOnEnoentPath) {
+  FakeTreeBuilder builder;
+  builder.setFile("restricted/file", "contents");
+  builder.setDirIsRestricted("restricted");
+  TestMount mount{builder};
+  auto restricted = mount.getTreeInode("restricted"_relpath);
+  ASSERT_TRUE(restricted->isRestricted());
+
+  // getOrLoadChildIfExists() hands restricted directories to getOrLoadChild().
+  // Once the permission recheck grants access, that path reports the missing
+  // name as ENOENT instead of returning a null inode.
+  auto restrictedTreeId =
+      builder.getRoot()->get().find("restricted"_pc)->second.getObjectId();
+  mount.getBackingStore()->setCheckPermissionResult(restrictedTreeId, true);
+
+  expectFaultPointReachable(mount, kFuseDispatcherFaultPoints[1], [&] {
+    return mount.getDispatcher()->lookup(
+        0,
+        restricted->getNodeId(),
+        "missing"_pc,
+        ObjectFetchContext::getNullContext());
+  });
+  EXPECT_FALSE(restricted->isRestricted());
 }
 
 TEST(RawEdenDispatcherTest, lookup_updates_last_used_time) {
