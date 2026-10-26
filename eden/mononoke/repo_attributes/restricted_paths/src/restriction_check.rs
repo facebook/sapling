@@ -280,6 +280,22 @@ impl AuthorizationCheckResult {
     pub(crate) fn is_admin_bypass(&self) -> bool {
         self.is_admin_bypass.is_authorized()
     }
+
+    fn acl_result(&self) -> FactorResult {
+        self.has_acl_access
+    }
+
+    fn rollout_result(&self) -> FactorResult {
+        self.is_rollout_allowlisted
+    }
+
+    fn tooling_result(&self) -> FactorResult {
+        self.is_allowlisted_tooling
+    }
+
+    fn admin_result(&self) -> FactorResult {
+        self.is_admin_bypass
+    }
 }
 
 /// Path restriction information paired with the caller's authorization result.
@@ -448,8 +464,6 @@ impl std::error::Error for SourceRestrictionError {
 /// authorization, ACL, and restriction-root fields without copying data into a
 /// flattened adapter struct.
 pub(crate) trait SourceRestrictionCheck: Clone {
-    // TODO(T289977216): Expose each factor result through this trait so
-    // Both-mode reconciliation can distinguish absent policy from denial.
     /// Caller authorization result for this source result.
     fn authorization(&self) -> &AuthorizationCheckResult;
     /// Permission request group to show users for this restriction.
@@ -538,18 +552,18 @@ impl SourceRestrictionSummary {
         // aggregation before Both mode starts reconciling factor results.
         let has_acl_access = checks
             .iter()
-            .all(|check| check.authorization().has_acl_access());
+            .all(|check| check.authorization().acl_result().is_authorized());
         let is_allowlisted_tooling = checks
             .iter()
-            .any(|check| check.authorization().is_allowlisted_tooling());
+            .any(|check| check.authorization().tooling_result().is_authorized());
         let is_rollout_allowlisted = all_rollout_allowlisted(
             checks
                 .iter()
-                .map(|check| check.authorization().is_rollout_allowlisted()),
+                .map(|check| check.authorization().rollout_result().is_authorized()),
         );
         let is_admin_bypass = checks
             .iter()
-            .any(|check| check.authorization().is_admin_bypass());
+            .any(|check| check.authorization().admin_result().is_authorized());
         let repo_region_acls = checks
             .iter()
             .map(|check| check.repo_region_identity().to_string())

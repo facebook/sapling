@@ -31,6 +31,7 @@ use super::FactorResult;
 use super::ManifestRestrictionCheckResult;
 use super::PathRestrictionCheckResult;
 use super::SharedFetchHandle;
+use super::SourceRestrictionCheck;
 use super::SourceRestrictionSummary;
 use crate::DenyingRestriction;
 use crate::restriction_info::ManifestRestrictionInfo;
@@ -214,6 +215,73 @@ async fn test_authorization_producer_preserves_absent_and_denied_factors(
         FactorResult::Unauthorized,
         "configured admin policy that excludes the caller",
     );
+    Ok(())
+}
+
+/// What it tests: path and manifest checks expose the same factor facts through
+/// the common aggregation interface, while manifest roots remain optional.
+/// Expected: both checks expose identical ACL and rollout observations; the
+/// path has a root and the rootless manifest does not.
+#[mononoke::test]
+fn test_source_restriction_check_exposes_common_facts() -> Result<()> {
+    let acl = MononokeIdentity::from_str("REPO_REGION:test_acl")?;
+    let permission_group = MononokeIdentity::from_str("GROUP:request_access")?;
+    let rollout_group = MononokeIdentity::from_str("GROUP:rollout")?;
+    let authorization = AuthorizationCheckResult {
+        has_acl_access: FactorResult::Authorized,
+        is_allowlisted_tooling: FactorResult::NotSet,
+        is_rollout_allowlisted: FactorResult::Unauthorized,
+        is_admin_bypass: FactorResult::Authorized,
+    };
+    let path = PathRestrictionCheckResult::new(
+        PathRestrictionInfo {
+            restriction_root: NonRootMPath::new("restricted")?,
+            repo_region_acl: acl.to_string(),
+            permission_request_group: permission_group.clone(),
+            rollout_allowlist_group: Some(rollout_group.clone()),
+        },
+        authorization,
+        acl.clone(),
+    );
+    let manifest = super::ManifestRestrictionCheckResult::new(
+        ManifestRestrictionInfo {
+            restriction_root: None,
+            repo_region_acl: acl.to_string(),
+            permission_request_group: permission_group,
+            rollout_allowlist_group: Some(rollout_group),
+        },
+        authorization,
+        acl,
+    );
+
+    assert_eq!(path.authorization().acl_result(), FactorResult::Authorized);
+    assert_eq!(path.authorization().tooling_result(), FactorResult::NotSet);
+    assert_eq!(
+        path.authorization().rollout_result(),
+        FactorResult::Unauthorized,
+    );
+    assert_eq!(
+        path.authorization().admin_result(),
+        FactorResult::Authorized
+    );
+    assert_eq!(
+        manifest.authorization().acl_result(),
+        FactorResult::Authorized
+    );
+    assert_eq!(
+        manifest.authorization().tooling_result(),
+        FactorResult::NotSet,
+    );
+    assert_eq!(
+        manifest.authorization().rollout_result(),
+        FactorResult::Unauthorized,
+    );
+    assert_eq!(
+        manifest.authorization().admin_result(),
+        FactorResult::Authorized,
+    );
+    assert!(path.restriction_root().is_some());
+    assert!(manifest.restriction_root().is_none());
     Ok(())
 }
 
