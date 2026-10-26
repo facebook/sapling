@@ -57,6 +57,7 @@ ods_counters = { version = "0.1.0", path = "../../../common/ods_counters" }
 packetline = { version = "0.1.0", path = "../../../git/packetline" }
 packfile = { version = "0.1.0", path = "../../../git/packfile" }
 permission_checker = { version = "0.1.0", path = "../../../common/permission_checker" }
+pin-project = "1.1.13"
 protocol = { version = "0.1.0", path = "../../../git/protocol" }
 rate_limiting = { version = "0.1.0", path = "../../../common/rate_limiting" }
 repo_authorization = { version = "0.1.0", path = "../../../repo_authorization" }
@@ -81,6 +82,7 @@ strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.21"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.19", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.19", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 weight_observer = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

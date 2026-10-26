@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::Context as TaskContext;
+use std::task::Poll;
+use std::task::ready;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -15,6 +19,8 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bytes::Bytes;
 use either::Either;
+use futures::Future;
+use futures::Stream;
 use futures::StreamExt;
 use futures::future::try_join4;
 use git_env::GitHost;
@@ -43,6 +49,7 @@ use packetline::encode::write_text_packetline;
 use packfile::owned_async_writer::WrapperSender;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
+use pin_project::pin_project;
 use protocol::generator::fetch_response;
 use protocol::generator::ls_refs_response;
 use protocol::generator::shallow_info as fetch_shallow_info;
@@ -57,6 +64,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_observability::WeightTracker;
 use stats::prelude::*;
 use tokio::sync::mpsc;
+use tokio_util::task::AbortOnDropHandle;
 use weight_observer::WeightObserver;
 
 use crate::command::Command;
@@ -549,7 +557,7 @@ pub async fn fetch(
     // Some repos might be configured to display a message to users when they
     // run `git pull`.
     let mb_fetch_msg = git_fetch_message(request_context).await?;
-    let bytes_stream = ResponseStream::new(try_stream! {
+    let bytes_stream = try_stream! {
         let mut container = Vec::with_capacity(max_buffer);
         for header in fetch_response_headers {
             yield header;
@@ -589,9 +597,8 @@ pub async fn fetch(
         flush_to_write(&mut buf).await?;
         yield Bytes::from(buf);
         return;
-    })
-    .end_on_err::<anyhow::Error>();
-    mononoke::spawn_task({
+    };
+    let generator = {
         let request_context = request_context.clone();
         async move {
             // Track this request for memory-based scaling
@@ -671,11 +678,49 @@ pub async fn fetch(
                 }
             }
         }
-    });
+    };
 
+    let bytes_stream = ResponseStream::new(with_packfile_generator(bytes_stream, generator))
+        .end_on_err::<anyhow::Error>();
     let body = StreamBody::new(bytes_stream, mime::APPLICATION_OCTET_STREAM);
     Ok(body)
 }
+
+fn with_packfile_generator(
+    stream: impl Stream<Item = Result<Bytes>> + Send + 'static,
+    generator: impl Future<Output = Result<()>> + Send + 'static,
+) -> impl Stream<Item = Result<Bytes>> {
+    PackfileResponseStream {
+        stream,
+        producer: Some(AbortOnDropHandle::new(mononoke::spawn_task(generator))),
+    }
+}
+
+#[pin_project]
+struct PackfileResponseStream<S> {
+    #[pin]
+    stream: S,
+    producer: Option<AbortOnDropHandle<Result<()>>>,
+}
+
+impl<S: Stream<Item = Result<Bytes>>> Stream for PackfileResponseStream<S> {
+    type Item = Result<Bytes>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+        if this.producer.is_none() {
+            return Poll::Ready(None);
+        }
+        let item = ready!(this.stream.poll_next(cx));
+        if !matches!(&item, Some(Ok(_))) {
+            drop(this.producer.take());
+        }
+        Poll::Ready(item)
+    }
+}
+
+#[cfg(test)]
+mod cancellation_tests;
 
 /// Checks if there are any messages that should be displayed to the user when
 /// running `git pull` on this repo.
