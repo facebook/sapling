@@ -1574,6 +1574,10 @@ impl SourceControlServiceImpl {
                     let rejection = thrift::HookOutcomeRejected {
                         description: rej.description.to_string(),
                         long_description: rej.long_description,
+                        message_name: rej.message.as_ref().map(|message| message.name.clone()),
+                        message_params: rej
+                            .message
+                            .map(|message| message.params.into_iter().collect()),
                         ..Default::default()
                     };
 

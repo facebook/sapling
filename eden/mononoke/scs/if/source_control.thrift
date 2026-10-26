@@ -2705,6 +2705,14 @@ struct HookOutcomeRejected {
   1: string description;
   /// A full explanation of what went wrong, suitable for presenting to the user (should include guidance for fixing this failure, where possible)
   2: string long_description;
+  /// Name of the declared hook message that `long_description` was rendered
+  /// from, unique within the hook's implementation. Unset if the hook does
+  /// not declare its messages. Repos can replace a message's text, so use the
+  /// name, not the text, to tell rejections apart.
+  3: optional string message_name;
+  /// Parameter values `long_description` was rendered with, by parameter
+  /// name. Unset when `message_name` is.
+  4: optional map<string, string> message_params;
 }
 
 @hack.MigrationBlockingLegacyJSONSerialization
