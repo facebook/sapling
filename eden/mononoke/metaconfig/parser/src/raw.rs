@@ -11,7 +11,6 @@ use std::path::Path;
 
 use anyhow::Result;
 use anyhow::anyhow;
-use cached_config::ConfigStore;
 use repos::RawAclRegionConfig;
 use repos::RawCommitSyncConfig;
 use repos::RawCommonConfig;
@@ -24,22 +23,8 @@ use repourl::decode_repo_name;
 
 use crate::errors::ConfigurationError;
 
-pub(crate) const CONFIGERATOR_PREFIX: &str = "configerator://";
-
-pub(crate) fn read_raw_configs(
-    config_path: &Path,
-    config_store: &ConfigStore,
-) -> Result<RawRepoConfigs> {
-    if config_path.starts_with(CONFIGERATOR_PREFIX) {
-        let cfg_path = config_path
-            .strip_prefix(CONFIGERATOR_PREFIX)?
-            .to_string_lossy()
-            .into_owned();
-        let arc_conf = config_store
-            .get_config_handle::<RawRepoConfigs>(cfg_path)?
-            .get();
-        Ok((*arc_conf).clone())
-    } else if config_path.is_dir() {
+pub(crate) fn read_raw_configs(config_path: &Path) -> Result<RawRepoConfigs> {
+    if config_path.is_dir() {
         read_raw_configs_toml(config_path)
     } else if config_path.is_file() {
         let repo_configs = std::fs::read(config_path)?;

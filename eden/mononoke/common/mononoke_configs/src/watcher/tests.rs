@@ -568,7 +568,6 @@ use repos::RawCommonConfig;
 use crate::tests::TEST_STORAGE;
 use crate::tests::test_raw_common_config;
 use crate::tests::test_storage_map;
-use crate::tests::valid_blob_json;
 use crate::tests::valid_repo_spec_json;
 
 const MANIFEST_PATH: &str = "test/manifest";
@@ -706,7 +705,7 @@ impl ReloadFixture {
     }
 
     async fn run(&mut self) {
-        let source = ConfigSource::Manifest {
+        let source = ConfigSource {
             handle: self.manifest_handle.clone(),
             tier: "test_tier".to_string(),
         };
@@ -842,46 +841,6 @@ async fn test_manifest_reload_preserves_concurrently_loaded_repo() {
     assert!(
         !served.repos.contains_key("gone/repo"),
         "a repo absent from the manifest must be dropped by the bulk commit"
-    );
-}
-
-// Blob-backed pass: the blob is the sole source.
-#[mononoke::test]
-async fn test_blob_reload_serves_blob() {
-    // The fixture's manifest is irrelevant to a Blob source; only its state
-    // slots and receivers are used.
-    let v0 = good_manifest("manifest_tier", vec![]);
-    let mut fx = ReloadFixture::new(&v0, &[]);
-    let blob_handle: ConfigHandle<RawRepoConfigs> =
-        ConfigHandle::from_json(&valid_blob_json("blob_tier")).expect("blob fixture deserializes");
-    let source = ConfigSource::Blob(blob_handle);
-
-    run_reload_pass(
-        &source,
-        &fx.repo_handles,
-        &fx.store,
-        &fx.repo_configs,
-        &fx.storage_configs,
-        &fx.receivers,
-        &mut fx.state,
-        &mut fx.prev_specs,
-        &mut fx.futs,
-    )
-    .await;
-
-    assert_eq!(
-        fx.served_trusted_tier(),
-        Some("blob_tier".to_string()),
-        "the blob must be authoritative for a Blob source"
-    );
-    assert!(
-        fx.storage_configs.load().storage.contains_key(TEST_STORAGE),
-        "storage must come from the blob"
-    );
-    assert_eq!(
-        fx.receiver.commons.lock().await.len(),
-        1,
-        "exactly one bulk update must reach receivers"
     );
 }
 

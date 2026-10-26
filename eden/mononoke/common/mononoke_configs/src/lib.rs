@@ -12,7 +12,7 @@
 //! - [`ConfigUpdateReceiver`][receiver::ConfigUpdateReceiver] trait is in
 //!   [`receiver`]
 //! - The unified watcher task (single tokio task that owns the config source —
-//!   tier manifest or legacy blob — plus the per-repo control channel and
+//!   the tier manifest — plus the per-repo control channel and
 //!   per-repo wait fan-in) is in [`watcher`]
 //!
 //! `MononokeConfigs` itself owns the `ArcSwap` state and the task handles.
@@ -35,7 +35,6 @@ use cached_config::ConfigStore;
 use cloned::cloned;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
-use metaconfig_parser::config::configerator_config_handle;
 use metaconfig_parser::configerator_manifest_handle;
 use metaconfig_parser::configerator_repo_spec_handle;
 use metaconfig_parser::parse_manifest_common_and_storage;
@@ -57,7 +56,21 @@ use crate::watcher::RepoHandleEvent;
 use crate::watcher::liveness_updater;
 use crate::watcher::unified_config_watcher;
 
-const CONFIGERATOR_TIER_PREFIX: &str = "configerator://scm/mononoke/repos/tiers/";
+/// Where `MononokeConfigs` reads its configuration from.
+#[derive(Clone, Copy, Debug)]
+pub enum ConfigLocation<'a> {
+    /// A configerator tier: `scm/mononoke/repos/tiers/<tier>_manifest` plus
+    /// the per-repo `RepoSpec` each manifest entry names. Hot-reloaded.
+    Tier(&'a str),
+    /// A local `RawRepoConfigs`: a TOML directory or a JSON file. Loaded once,
+    /// never reloaded.
+    Path(&'a Path),
+}
+
+/// The configerator path of a tier's manifest.
+pub fn tier_manifest_path(tier: &str) -> String {
+    format!("scm/mononoke/repos/tiers/{tier}_manifest")
+}
 
 /// Shorthand for a value swapped atomically via `arc_swap`. Used for the
 /// stateful slots inside `MononokeConfigs` that receivers read.
@@ -116,57 +129,40 @@ pub struct MononokeConfigs {
 }
 
 impl MononokeConfigs {
-    /// Create a new instance of MononokeConfigs with configurations backed via ConfigStore.
-    /// If the config path points to a dynamic config source (e.g. configerator), this enables
-    /// auto-refresh of those configurations.
+    /// Create a new instance of MononokeConfigs reading from `location` through
+    /// `config_store`. A tier is watched for changes; a local path is static.
     pub fn new(
-        config_path: impl AsRef<Path>,
+        location: ConfigLocation<'_>,
         config_store: &ConfigStore,
-        manifest_path: Option<&str>,
         runtime_handle: Handle,
     ) -> Result<Self> {
-        // Derive tier name from the configerator config path.
-        // Configerator paths follow the pattern:
-        //   configerator://scm/mononoke/repos/tiers/{tier_name}
-        let tier_name = config_path
-            .as_ref()
-            .to_str()
-            .and_then(|p| p.strip_prefix(CONFIGERATOR_TIER_PREFIX))
-            .filter(|t| !t.is_empty())
-            .map(|t| t.to_owned());
         let update_receivers = Arc::new(ArcSwap::from_pointee(vec![]));
-        let maybe_manifest_handle = manifest_path
-            .map(|path| configerator_manifest_handle(path, config_store))
-            .transpose()?;
 
-        // Validate: split-loading (manifest) requires a tier name for resolving
-        // tier_overrides in RepoSpec configs.
-        if maybe_manifest_handle.is_some() && tier_name.is_none() {
-            anyhow::bail!(
-                "tier_name is required when split-loading is enabled (manifest_path is set)"
-            );
-        }
-
-        // Manifest-backed processes never touch the legacy blob; blob-backed is unchanged.
-        let (maybe_config_handle, resolved_repo_configs, storage) = if let Some(manifest_handle) =
-            maybe_manifest_handle.as_ref()
-        {
-            // The manifest is the sole source of common/storage; fail closed at startup.
-            let manifest = manifest_handle.get();
-            let (common, storage) = parse_manifest_common_and_storage(&manifest).context(
-                "common/storage could not be parsed from the tier manifest; \
-                         refusing to start",
-            )?;
-            STATS::tier_blob_skipped.add_value(1);
-            // Repos load on demand.
-            (None, RepoConfigs::new(HashMap::new(), common), storage)
-        } else {
-            let blob_storage = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
-            let blob_repo_configs =
-                metaconfig_parser::load_repo_configs(&config_path, config_store)?;
-            let maybe_config_handle =
-                configerator_config_handle(config_path.as_ref(), config_store)?;
-            (maybe_config_handle, blob_repo_configs, blob_storage)
+        let (tier_name, maybe_manifest_handle, resolved_repo_configs, storage) = match location {
+            ConfigLocation::Tier(tier) => {
+                let manifest_handle =
+                    configerator_manifest_handle(&tier_manifest_path(tier), config_store)?;
+                // The manifest is the sole source of common/storage; fail closed at startup.
+                let manifest = manifest_handle.get();
+                let (common, storage) = parse_manifest_common_and_storage(&manifest).context(
+                    "common/storage could not be parsed from the tier manifest; \
+                     refusing to start",
+                )?;
+                STATS::tier_blob_skipped.add_value(1);
+                // Repos load on demand.
+                (
+                    Some(tier.to_owned()),
+                    Some(manifest_handle),
+                    RepoConfigs::new(HashMap::new(), common),
+                    storage,
+                )
+            }
+            ConfigLocation::Path(path) => (
+                None,
+                None,
+                metaconfig_parser::load_repo_configs(path)?,
+                metaconfig_parser::load_storage_configs(path)?,
+            ),
         };
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage));
         let repo_configs = Arc::new(ArcSwap::from_pointee(resolved_repo_configs));
@@ -184,15 +180,13 @@ impl MononokeConfigs {
             (None, None)
         };
 
-        // Manifest ⇒ manifest-sourced watcher; else follow the blob handle (static configs: none).
-        let maybe_config_source = match maybe_manifest_handle.clone() {
-            Some(handle) => Some(ConfigSource::Manifest {
-                handle,
-                tier: tier_name
-                    .clone()
-                    .expect("validated above: manifest_path requires tier_name"),
+        // Only a tier has anything to watch; a local path is static.
+        let maybe_config_source = match (&maybe_manifest_handle, &tier_name) {
+            (Some(handle), Some(tier)) => Some(ConfigSource {
+                handle: handle.clone(),
+                tier: tier.clone(),
             }),
-            None => maybe_config_handle.map(ConfigSource::Blob),
+            _ => None,
         };
 
         let maybe_liveness_updater = if maybe_config_source.is_some() {

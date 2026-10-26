@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,13 +15,15 @@ use cached_config::ConfigStore;
 use clap::ArgGroup;
 use clap::Args;
 use fbinit::FacebookInit;
+use mononoke_configs::ConfigLocation;
 use mononoke_configs::MononokeConfigs;
+use mononoke_configs::tier_manifest_path;
 use tokio::runtime::Handle;
 
 #[derive(Args, Debug)]
 #[clap(group(ArgGroup::new("config").args(&["config_path", "config_tier", "prod", "git_config"]).required(true)))]
 pub struct ConfigArgs {
-    /// Path to Mononoke config
+    /// Local Mononoke config: a TOML directory or a JSON file
     #[clap(long, alias = "mononoke-config-path")]
     pub config_path: Option<String>,
 
@@ -41,16 +44,9 @@ pub struct ConfigArgs {
     pub local_configerator_path: Option<PathBuf>,
 }
 
-const PRODUCTION_PREFIX: &str = "configerator://scm/mononoke/repos/tiers/";
-
-fn configerator_config_path(tier: &str) -> String {
-    format!("{PRODUCTION_PREFIX}{tier}")
-}
-
 impl ConfigArgs {
-    /// Returns the tier name for configerator-backed configs, or `None` for
-    /// local-path configs.
-    fn tier_name(&self) -> Option<&str> {
+    /// The configerator tier, or `None` for a local `--config-path`.
+    pub fn tier_name(&self) -> Option<&str> {
         if self.prod {
             Some("prod")
         } else if self.git_config {
@@ -60,29 +56,22 @@ impl ConfigArgs {
         }
     }
 
+    /// Where the configs come from, for display: the tier manifest's
+    /// configerator path, or the local path.
     pub fn config_path(&self) -> String {
-        if let Some(config_path) = &self.config_path {
-            config_path.clone()
-        } else if let Some(tier) = self.tier_name() {
-            configerator_config_path(tier)
-        } else {
-            String::new()
+        match (self.tier_name(), &self.config_path) {
+            (Some(tier), _) => tier_manifest_path(tier),
+            (None, Some(path)) => path.clone(),
+            (None, None) => String::new(),
         }
     }
 
     pub fn mode(&self) -> ConfigMode {
-        if let Some(config_path) = &self.config_path {
-            // Any configuration that matches the production prefix is prod.
-            if config_path.starts_with(PRODUCTION_PREFIX) {
-                return ConfigMode::Production;
-            }
+        if self.tier_name().is_some() {
+            ConfigMode::Production
         } else {
-            // Otherwise, we are prod if a prod tier is requested.
-            if self.prod || self.git_config || self.config_tier.is_some() {
-                return ConfigMode::Production;
-            }
+            ConfigMode::Development
         }
-        ConfigMode::Development
     }
 
     pub fn create_config_store(&self, fb: FacebookInit) -> Result<ConfigStore> {
@@ -106,31 +95,18 @@ impl ConfigArgs {
         handle: Handle,
         config_store: &ConfigStore,
     ) -> Result<Arc<MononokeConfigs>> {
-        let config_path = self.config_path();
-        let manifest_path = self.manifest_path()?;
+        let location = match (self.tier_name(), &self.config_path) {
+            (Some(tier), _) => ConfigLocation::Tier(tier),
+            (None, Some(path)) => ConfigLocation::Path(Path::new(path)),
+            (None, None) => anyhow::bail!(
+                "one of --config-path, --config-tier, --prod or --git-config is required"
+            ),
+        };
         Ok(Arc::new(MononokeConfigs::new(
-            config_path,
+            location,
             config_store,
-            manifest_path.as_deref(),
             handle,
         )?))
-    }
-
-    /// Derives the per-repo manifest path. Returns `None` when no tier can be
-    /// derived (non-configerator config, e.g. a local path used by integration
-    /// tests). Split-loading is always on now that the per-repo migration is
-    /// complete, so there is no JustKnob gate.
-    fn manifest_path(&self) -> Result<Option<String>> {
-        // Try --config_tier / --prod / --git_config first, then fall back to
-        // extracting the tier name from --mononoke-config-path if it matches
-        // the configerator prefix (e.g. "configerator://scm/mononoke/repos/tiers/scs" -> "scs").
-        let tier = self.tier_name().or_else(|| {
-            self.config_path
-                .as_deref()
-                .and_then(|p| p.strip_prefix(PRODUCTION_PREFIX))
-                .filter(|t| !t.is_empty())
-        });
-        Ok(tier.map(|t| format!("scm/mononoke/repos/tiers/{t}_manifest")))
     }
 }
 

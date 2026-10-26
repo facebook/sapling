@@ -61,24 +61,6 @@ pub struct RepoConfigs {
     pub common: CommonConfig,
 }
 
-/// Provides an instance of ConfigHandle to the underlying
-/// raw configuration if the config is backed by Configerator.
-pub fn configerator_config_handle(
-    config_path: &Path,
-    config_store: &ConfigStore,
-) -> Result<Option<ConfigHandle<RawRepoConfigs>>> {
-    if config_path.starts_with(crate::raw::CONFIGERATOR_PREFIX) {
-        let cfg_path = config_path
-            .strip_prefix(crate::raw::CONFIGERATOR_PREFIX)?
-            .to_string_lossy()
-            .into_owned();
-        let handle = config_store.get_config_handle::<RawRepoConfigs>(cfg_path)?;
-        Ok(Some(handle))
-    } else {
-        Ok(None)
-    }
-}
-
 /// Creates a ConfigHandle for a TierManifest from a Configerator path.
 ///
 /// Used in the per-repo config split-loading path where the manifest lists
@@ -102,11 +84,8 @@ pub fn configerator_repo_config_handle(
 }
 
 /// Load configuration for repositories and storage.
-pub fn load_repo_configs(
-    config_path: impl AsRef<Path>,
-    config_store: &ConfigStore,
-) -> Result<RepoConfigs> {
-    let raw_config = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+pub fn load_repo_configs(config_path: impl AsRef<Path>) -> Result<RepoConfigs> {
+    let raw_config = crate::raw::read_raw_configs(config_path.as_ref())?;
     load_configs_from_raw(raw_config).map(|(repo_configs, _)| repo_configs)
 }
 
@@ -116,7 +95,7 @@ pub fn load_repo_configs(
 /// This is the split-loading counterpart of [`load_repo_configs`] for callers
 /// whose `config_store` points at a manifest + per-repo `RepoSpec` layout (for
 /// example a file-backed store over a local `materialized_configs/` tree) rather
-/// than the legacy monolithic `RawRepoConfigs` blob. The manifest is read from
+/// than a local `RawRepoConfigs` directory or file. The manifest is read from
 /// `scm/mononoke/repos/tiers/{tier}_manifest`; each entry's `config_path` is
 /// loaded as a `RepoSpec` and parsed for `tier`, with `common` and `storage`
 /// taken from the manifest itself.
@@ -646,11 +625,8 @@ pub struct StorageConfigs {
 }
 
 /// Load configuration for storage.
-pub fn load_storage_configs(
-    config_path: impl AsRef<Path>,
-    config_store: &ConfigStore,
-) -> Result<StorageConfigs> {
-    let raw_config = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+pub fn load_storage_configs(config_path: impl AsRef<Path>) -> Result<StorageConfigs> {
+    let raw_config = crate::raw::read_raw_configs(config_path.as_ref())?;
     load_configs_from_raw(raw_config).map(|(_, storage_configs)| storage_configs)
 }
 
@@ -1064,10 +1040,9 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let raw_config = crate::raw::read_raw_configs(tmp_dir.path(), &config_store)
-            .expect("expect to read configs");
+        let raw_config =
+            crate::raw::read_raw_configs(tmp_dir.path()).expect("expect to read configs");
         let commit_sync = parse_commit_sync_config(raw_config.commit_sync)
             .expect("expected to get a commit sync config");
 
@@ -1122,9 +1097,8 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path(), &config_store).unwrap();
+            crate::raw::read_raw_configs(tmp_dir.path()).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
             let msg = format!("{res:#?}");
@@ -1159,9 +1133,8 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path(), &config_store).unwrap();
+            crate::raw::read_raw_configs(tmp_dir.path()).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
             let msg = format!("{res:#?}");
@@ -1215,9 +1188,8 @@ mod test {
             "repo_definitions/www2/server.toml" => www2_repo_def,
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
+        let res = load_repo_configs(tmp_dir.path());
         let msg = format!("{res:#?}");
         println!("res = {msg}");
         assert!(res.is_err());
@@ -1473,10 +1445,8 @@ mod test {
             "my_path/my_files" => "",
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let repoconfig =
-            load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
+        let repoconfig = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
 
         let multiplex = BlobConfig::MultiplexedWal {
             multiplex_id: MultiplexId::new(1),
@@ -2040,9 +2010,8 @@ mod test {
             "repo_definitions/fbsource/server.toml" => content_def,
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
+        let res = load_repo_configs(tmp_dir.path());
         let msg = format!("{res:#?}");
         println!("res = {msg}");
         assert!(res.is_err());
@@ -2097,9 +2066,8 @@ mod test {
             "repo_definitions/fbsource/server.toml" => content_def,
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        load_repo_configs(tmp_dir.path(), &config_store)
+        load_repo_configs(tmp_dir.path())
     }
 
     #[mononoke::test]
@@ -2267,9 +2235,8 @@ mod test {
                 "repo_definitions/fbsource/server.toml" => content_def,
             };
 
-            let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
             let tmp_dir = write_files(&paths);
-            let res = load_repo_configs(tmp_dir.path(), &config_store);
+            let res = load_repo_configs(tmp_dir.path());
             println!("res = {res:?}");
             let msg = format!("{res:?}");
             assert!(res.is_err(), "unexpected success for {common}");
@@ -2365,9 +2332,8 @@ mod test {
             "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
+        let res = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -2563,9 +2529,8 @@ mod test {
             "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
+        let res = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -2666,9 +2631,8 @@ mod test {
             "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
+        let res = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
 
         if let BlobConfig::MultiplexedWal { blobstores, .. } =
             &res.repos["test"].storage_config.blobstore
