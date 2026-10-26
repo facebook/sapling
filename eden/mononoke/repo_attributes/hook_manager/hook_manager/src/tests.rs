@@ -1780,10 +1780,11 @@ async fn test_authorized_bypass_records_identity_check(fb: FacebookInit) {
     }
 }
 
-/// With no permission checker configured no membership check runs, so there is
-/// no provenance to record and the Scuba columns stay unset.
+/// With no membership checker registered for the group, nobody's membership
+/// can be checked, so the bypass is refused and the identity source records
+/// why.
 #[mononoke::fbinit_test]
-async fn test_bypass_without_checker_has_no_identity_check(fb: FacebookInit) {
+async fn test_bypass_without_checker_is_refused(fb: FacebookInit) {
     let decision = bypass_decision(
         fb,
         user_identities(&["alice"]),
@@ -1794,10 +1795,11 @@ async fn test_bypass_without_checker_has_no_identity_check(fb: FacebookInit) {
     .await;
 
     match decision {
-        BypassDecision::Authorized { check, .. } => {
-            assert!(check.is_none(), "no membership check ran, got {check:?}");
+        BypassDecision::UnauthorizedUser { check, .. } => {
+            assert_eq!(check.source, BypassIdentitySource::NoChecker);
+            assert!(check.identities.is_empty());
         }
-        other => panic!("expected Authorized, got {other:?}"),
+        other => panic!("expected UnauthorizedUser, got {other:?}"),
     }
 }
 

@@ -199,6 +199,9 @@ pub enum BypassIdentitySource {
     /// The author's canonical unixname, resolved via the EmployeeService after
     /// the author's own identity missed.
     CommitAuthorResolvedUnixname,
+    /// The hook has no membership checker for the group, so nobody's
+    /// membership was checked and the bypass was refused.
+    NoChecker,
 }
 
 impl BypassIdentitySource {
@@ -208,6 +211,7 @@ impl BypassIdentitySource {
             Self::CommitAuthor => "commit_author",
             Self::CommitAuthorFallbackToClient => "commit_author_fallback_to_client",
             Self::CommitAuthorResolvedUnixname => "commit_author_resolved_unixname",
+            Self::NoChecker => "no_checker",
         }
     }
 }

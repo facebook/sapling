@@ -92,9 +92,6 @@ pub struct HookManager {
 /// explained in terms of *whose* membership was tested.
 #[derive(Clone)]
 enum GroupMembership {
-    /// The hook has no membership checker for the group, so membership is not
-    /// enforced.
-    Unchecked,
     /// The pusher is a member.
     Member(CheckedBypassIdentities),
     /// The pusher is not a member.
@@ -302,7 +299,6 @@ impl HookManager {
                         }
                     };
                     match membership {
-                        GroupMembership::Unchecked => None,
                         GroupMembership::Member(check) => Some(check),
                         GroupMembership::NotMember(check) => {
                             near_miss.get_or_insert(BypassDecision::UnauthorizedUser {
@@ -362,7 +358,7 @@ impl HookManager {
     /// pusher's request identities are checked first, and a member wins
     /// outright; otherwise the commit author is checked, including the
     /// canonical unixname EmployeeService re-check. An empty identity set fails
-    /// closed.
+    /// closed, and so does a group the hook has no membership checker for.
     async fn check_bypass_group_membership(
         &self,
         hook: &Hook,
@@ -371,7 +367,14 @@ impl HookManager {
         changeset_author: Option<&str>,
     ) -> Result<GroupMembership> {
         let Some(checker) = hook.get_bypass_permission_checker(group) else {
-            return Ok(GroupMembership::Unchecked);
+            tracing::error!(
+                group,
+                "No membership checker for hook bypass permission group; refusing the bypass"
+            );
+            return Ok(GroupMembership::NotMember(CheckedBypassIdentities {
+                source: BypassIdentitySource::NoChecker,
+                identities: Vec::new(),
+            }));
         };
 
         let use_client_identities = justknobs::eval(
