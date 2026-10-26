@@ -117,7 +117,13 @@ registerDisposable(
   availableCwds,
   serverAPI.onMessageOfType('platform/availableCwds', event =>
     writeAtom(availableCwds, last => {
-      const reused = reuseEqualObjects(last, event.options, opt => opt.cwd);
+      // Folders opened through symlinks canonicalize to the same cwd as
+      // their targets (see Repository.getCwdInfo). Drop duplicates so the
+      // same repo doesn't appear twice in the cwd dropdown.
+      const deduped = event.options.filter(
+        (opt, index) => event.options.findIndex(other => other.cwd === opt.cwd) === index,
+      );
+      const reused = reuseEqualObjects(last, deduped, opt => opt.cwd);
       return arraysEqual(last, reused) ? last : reused;
     }),
   ),

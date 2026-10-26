@@ -106,6 +106,44 @@ describe('cwd', () => {
     expect(within(dropdown).getByText('repo2/some/subdir')).toBeInTheDocument();
   });
 
+  it('dedupes cwd options that canonicalize to the same path', () => {
+    const cwdDropdown = screen.getByTestId('cwd-dropdown-button');
+    act(() => {
+      fireEvent.click(cwdDropdown);
+    });
+    expectMessageSentToServer({
+      type: 'platform/subscribeToAvailableCwds',
+    });
+    act(() => {
+      simulateMessageFromServer({
+        type: 'platform/availableCwds',
+        options: [
+          {
+            cwd: '/data/sandcastle/boxes/fbsource',
+            repoRoot: '/data/sandcastle/boxes/fbsource',
+            repoRelativeCwdLabel: 'fbsource',
+          },
+          {
+            // Same repo opened through a symlink; getCwdInfo
+            // canonicalizes it to the same cwd.
+            cwd: '/data/sandcastle/boxes/fbsource',
+            repoRoot: '/data/sandcastle/boxes/fbsource',
+            repoRelativeCwdLabel: 'fbsource',
+          },
+          {
+            cwd: '/data/sandcastle/boxes/configerator',
+            repoRoot: '/data/sandcastle/boxes/configerator',
+            repoRelativeCwdLabel: 'configerator',
+          },
+        ],
+      });
+    });
+
+    const dropdown = screen.getByTestId('cwd-details-dropdown');
+    expect(within(dropdown).getAllByText('fbsource')).toHaveLength(1);
+    expect(within(dropdown).getByText('configerator')).toBeInTheDocument();
+  });
+
   it('requests new data for subscriptions after changing cwd', () => {
     openCwdDropdown();
 

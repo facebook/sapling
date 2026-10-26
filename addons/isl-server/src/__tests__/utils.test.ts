@@ -5,12 +5,35 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import fs from 'node:fs';
 import {sleep} from 'shared/utils';
-import {serializeAsyncCall} from '../utils';
+import {canonicalizePath, serializeAsyncCall} from '../utils';
 
 function flushPromises() {
   return new Promise(res => jest.requireActual('timers').setTimeout(res, 0));
 }
+
+describe('canonicalizePath', () => {
+  function mockRealpath(impl: (p: string) => string) {
+    return jest
+      .spyOn(fs, 'realpath')
+      .mockImplementation(((p: string, cb: (err: null, resolved: string) => void) =>
+        cb(null, impl(p))) as unknown as typeof fs.realpath);
+  }
+
+  it('resolves symlinks via realpath', async () => {
+    mockRealpath(p => p.replace(/^\/home\/name\//, '/data/users/name/'));
+    await expect(canonicalizePath('/home/name/myRepo')).resolves.toBe('/data/users/name/myRepo');
+  });
+
+  it('falls back to the input path when realpath fails', async () => {
+    jest
+      .spyOn(fs, 'realpath')
+      .mockImplementation(((_p: string, cb: (err: Error) => void) =>
+        cb(new Error('ENOENT'))) as unknown as typeof fs.realpath);
+    await expect(canonicalizePath('/nonexistent/path')).resolves.toBe('/nonexistent/path');
+  });
+});
 
 describe('serializeAsyncCall', () => {
   it('only runs one at a time', async () => {

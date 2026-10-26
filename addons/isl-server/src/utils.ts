@@ -8,8 +8,19 @@
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
 import type {EjecaChildProcess, EjecaError, EjecaReturn} from 'shared/ejeca';
 
+import fs from 'node:fs';
 import os from 'node:os';
+import {promisify} from 'node:util';
 import {truncate} from 'shared/utils';
+
+/**
+ * Resolve symlinks in `p`, falling back to `p` if that fails. Uses the JS `fs.realpath`, not the
+ * native `fs.promises.realpath`, which uppercases Windows drive letters and so no longer matches
+ * VS Code's `Uri.fsPath` (`c:\`).
+ */
+export function canonicalizePath(p: string): Promise<string> {
+  return promisify(fs.realpath)(p).catch(() => p);
+}
 
 export function firstOfIterable<T>(iterable: IterableIterator<T>): T | undefined {
   return iterable.next().value;

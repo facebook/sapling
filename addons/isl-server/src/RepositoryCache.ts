@@ -8,11 +8,10 @@
 import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 import type {RepositoryContext} from './serverTypes';
 
-import fs from 'node:fs';
-import {promisify} from 'node:util';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {ensureTrailingPathSep} from 'shared/pathUtils';
 import {Repository} from './Repository';
+import {canonicalizePath} from './utils';
 
 /**
  * Reference-counting access to a {@link Repository}, via a Promise.
@@ -162,11 +161,8 @@ class RepositoryCache {
     let ref: RepositoryReferenceImpl;
     const lookupRepoInfoAndReuseIfPossible = async (): Promise<Repository | RepositoryError> => {
       // Resolve symlinks so cwd shares a namespace with the canonical repoRoot from `sl root`.
-      // Falls back to the raw path if realpath fails. Uses the JS `fs.realpath`, not the native
-      // `fs.promises.realpath`, which uppercases Windows drive letters and so no longer matches
-      // VS Code's `Uri.fsPath` (`c:\`).
       const rawCwd = ctx.cwd;
-      ctx.cwd = await promisify(fs.realpath)(rawCwd).catch(() => rawCwd);
+      ctx.cwd = await canonicalizePath(rawCwd);
       if (ctx.cwd !== rawCwd) {
         // cwd was a symlink; cache it so future calls hit the fast path above.
         this.canonicalCwds.set(rawCwd, ctx.cwd as AbsolutePath);

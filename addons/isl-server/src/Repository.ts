@@ -100,6 +100,7 @@ import {
   parseShelvedCommitsOutput,
 } from './templates';
 import {
+  canonicalizePath,
   findPublicAncestor,
   handleAbortSignalOnProcess,
   isEjecaError,
@@ -644,14 +645,14 @@ export class Repository {
     }
 
     const [realCwd, realRoot] = await Promise.all([
-      fs.promises.realpath(ctx.cwd),
-      fs.promises.realpath(root),
+      canonicalizePath(ctx.cwd),
+      canonicalizePath(root),
     ]);
     // Since we found `root` for this particular `cwd`, we expect realpath(root) is a prefix of realpath(cwd).
     // That is, the relative path does not contain any ".." components.
     const repoRelativeCwd = path.relative(realRoot, realCwd);
     return {
-      cwd: ctx.cwd,
+      cwd: realCwd,
       repoRoot: realRoot,
       repoRelativeCwdLabel: path.normalize(path.join(path.basename(realRoot), repoRelativeCwd)),
     };
