@@ -163,18 +163,10 @@ class TakeoverServer::ConnHandler {
     State(folly::EventBase* evb, folly::File socket)
         : socket{evb, std::move(socket)} {}
 
-    // TakeoverCapabilities::PING is set if the server should send a
-    // "ready" ping to the client.
-    bool shouldPing = false;
-
-    // TakeoverCapabilities::CHUNKED_MESSAGE is set if the server supports
-    // chunked messages.
-    bool shouldChunk = false;
-
     // FutureUnixSocket must always be accessed on the EventBase.
     FutureUnixSocket socket;
-    int32_t protocolVersion =
-        TakeoverData::kTakeoverProtocolVersionNeverSupported;
+    // Zero until the version query has been matched. serializeError() relies
+    // on that to report a mismatch in a header any peer can decode.
     uint64_t protocolCapabilities = 0;
   };
 
@@ -253,31 +245,16 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
         }
 
         auto& currentState = state_.get();
-
-        // Initiate the takeover shutdown.
-        currentState.protocolVersion = supported.value();
-        auto protocolCapabilities =
-            TakeoverData::versionToCapabilities(currentState.protocolVersion);
-        if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
-          currentState.protocolCapabilities =
-              TakeoverData::computeCompatibleCapabilities(
-                  *query.capabilities(), supportedCapabilities_);
-        } else {
-          currentState.protocolCapabilities = protocolCapabilities;
-        }
-
+        currentState.protocolCapabilities =
+            TakeoverData::computeCompatibleCapabilities(
+                *query.capabilities(), supportedCapabilities_);
         XLOGF(
             DBG7,
             "Protocol version: {}; Protocol Capabilities: {}",
-            currentState.protocolVersion,
+            supported.value(),
             currentState.protocolCapabilities);
 
-        currentState.shouldPing =
-            (currentState.protocolCapabilities & TakeoverCapabilities::PING);
-        currentState.shouldChunk =
-            (currentState.protocolCapabilities &
-             TakeoverCapabilities::CHUNKED_MESSAGE);
-
+        // Initiate the takeover shutdown.
         return takeoverHandler_->startTakeoverShutdown(
             query.force().value_or(false), query.onlyIfIdle().value_or(false));
       })
@@ -286,13 +263,8 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
         if (!data.hasValue()) {
           return sendError(data.exception());
         }
-        if (state_.get().shouldPing) {
-          XLOGF(DBG7, "sending ready ping to takeover client");
-          return pingThenSendTakeoverData(std::move(data.value()));
-        } else {
-          XLOGF(DBG7, "not sending ready ping to takeover client");
-          return sendTakeoverData(std::move(data.value()));
-        }
+        XLOGF(DBG7, "sending ready ping to takeover client");
+        return pingThenSendTakeoverData(std::move(data.value()));
       });
 }
 
@@ -421,34 +393,30 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
 Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
     State& state,
     UnixSocket::Message&& msg) {
-  if (state.shouldChunk) {
-    UnixSocket::Message firstChunkFlagMsg;
-    firstChunkFlagMsg.data = TakeoverData::serializeFirstChunk();
+  UnixSocket::Message firstChunkFlagMsg;
+  firstChunkFlagMsg.data = TakeoverData::serializeFirstChunk();
 
-    return state.socket.send(std::move(firstChunkFlagMsg))
-        .thenValue([this, msg = std::move(msg), &state](auto&&) mutable {
-          XLOGF(DBG7, "first chunk FLAG msg sent");
+  return state.socket.send(std::move(firstChunkFlagMsg))
+      .thenValue([this, msg = std::move(msg), &state](auto&&) mutable {
+        XLOGF(DBG7, "first chunk FLAG msg sent");
 
-          // Create a new message with the first chunk
-          // Only the first chunk of message has msg.files
-          // The rest of the chunks will have empty msg.files
-          UnixSocket::Message firstChunkMsgWithFiles{
-              msg.data.cloneOneAsValue(), std::move(msg.files)};
+        // Create a new message with the first chunk
+        // Only the first chunk of message has msg.files
+        // The rest of the chunks will have empty msg.files
+        UnixSocket::Message firstChunkMsgWithFiles{
+            msg.data.cloneOneAsValue(), std::move(msg.files)};
 
-          return state.socket.send(std::move(firstChunkMsgWithFiles))
-              .thenValue([this, msg = std::move(msg), &state](auto&&) mutable {
-                return sendTakeoverDataMessageInChunks(
-                    state, std::make_unique<folly::IOBuf>(msg.data));
-              });
-        })
-        .thenValue([&state](auto&&) mutable {
-          UnixSocket::Message lastChunkMsg;
-          lastChunkMsg.data = TakeoverData::serializeLastChunk();
-          return state.socket.send(std::move(lastChunkMsg));
-        });
-  } else {
-    return state.socket.send(std::move(msg));
-  }
+        return state.socket.send(std::move(firstChunkMsgWithFiles))
+            .thenValue([this, msg = std::move(msg), &state](auto&&) mutable {
+              return sendTakeoverDataMessageInChunks(
+                  state, std::make_unique<folly::IOBuf>(msg.data));
+            });
+      })
+      .thenValue([&state](auto&&) mutable {
+        UnixSocket::Message lastChunkMsg;
+        lastChunkMsg.data = TakeoverData::serializeLastChunk();
+        return state.socket.send(std::move(lastChunkMsg));
+      });
 }
 
 Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessageInChunks(

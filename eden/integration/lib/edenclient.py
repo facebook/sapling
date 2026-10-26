@@ -848,21 +848,6 @@ class EdenFS:
         cmd: List[str] = [FindExe.TAKEOVER_TOOL, "--edenDir", str(self._eden_dir)]
         self.run_takeover_tool(cmd)
 
-    def fake_takeover_with_version(self, version: int) -> None:
-        """
-        Execute a fake takeover to explicitly test downgrades and make sure
-        output is as expected. Right now, this is used as a sanity check to
-        make sure we don't crash.
-        """
-        cmd: List[str] = [
-            FindExe.TAKEOVER_TOOL,
-            "--edenDir",
-            str(self._eden_dir),
-            "--takeoverVersion",
-            str(version),
-        ]
-        self.run_takeover_tool(cmd)
-
     def takeover_without_ping_response(self) -> None:
         """
         Execute a fake takeover to explicitly test a failed takeover. The

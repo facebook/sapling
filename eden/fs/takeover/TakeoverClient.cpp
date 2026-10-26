@@ -130,8 +130,8 @@ TakeoverData takeoverMounts(
                         "ping received but should not respond")));
           }
         } else {
-          // Older versions of EdenFS will not send a "ready" ping and
-          // could simply send the takeover data.
+          // An error the server hit before or during negotiation is sent
+          // without a ping.
           return folly::makeFuture<UnixSocket::Message>(std::move(msg));
         }
       })
@@ -149,7 +149,7 @@ TakeoverData takeoverMounts(
                     socket, std::move(msg), takeoverReceiveTimeout);
               });
         } else {
-          // Older versions of EdenFS will not send data in chunks
+          // Error responses are not chunked.
           return folly::makeFuture<UnixSocket::Message>(std::move(msg));
         }
       })

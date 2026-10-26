@@ -204,8 +204,8 @@ folly::Try<TakeoverData> runTakeover(
 }
 
 void checkExpectedFile(int fd, AbsolutePathPiece path) {
-  struct stat fdStat;
-  struct stat pathStat;
+  struct stat fdStat{};
+  struct stat pathStat{};
   auto rc = fstat(fd, &fdStat);
   folly::checkUnixError(rc, "fstat failed");
   rc = stat(path.asString().c_str(), &pathStat);
@@ -216,29 +216,15 @@ void checkExpectedFile(int fd, AbsolutePathPiece path) {
 }
 } // namespace
 
-TEST(Takeover, roundTripVersionCapabilities) {
-  for (auto& version : kSupportedTakeoverVersions) {
-    EXPECT_EQ(
-        TakeoverData::capabilitiesToVersion(
-            TakeoverData::versionToCapabilities(version)),
-        version);
-  }
-}
-
-TEST(Takeover, unsupportedVersionCapabilities) {
+TEST(Takeover, requiredCapabilities) {
   EXPECT_EQ(
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionNeverSupported),
-      0);
-
-  EXPECT_EQ(
-      TakeoverData::capabilitiesToVersion(0),
-      TakeoverData::kTakeoverProtocolVersionNeverSupported);
-}
-
-TEST(Takeover, invalidComboCapabilities) {
+      TakeoverData::computeCompatibleCapabilities(
+          kSupportedCapabilities, kSupportedCapabilities),
+      kSupportedCapabilities);
   EXPECT_THROW(
-      TakeoverData::capabilitiesToVersion(TakeoverCapabilities::FUSE),
+      TakeoverData::computeCompatibleCapabilities(
+          kSupportedCapabilities & ~TakeoverCapabilities::NFS,
+          kSupportedCapabilities),
       std::runtime_error);
 }
 
@@ -271,52 +257,7 @@ TEST(Takeover, rejectsLegacyFuseConnectionInfoSize) {
       "invalid FUSE connection info size");
 }
 
-TEST(Takeover, matchCapabilities) {
-  auto threeCapabilities = TakeoverData::versionToCapabilities(
-      TakeoverData::kTakeoverProtocolVersionThree);
-  auto fourCapabilities = TakeoverData::versionToCapabilities(
-      TakeoverData::kTakeoverProtocolVersionFour);
-  auto fiveCapabilities = TakeoverData::versionToCapabilities(
-      TakeoverData::kTakeoverProtocolVersionFive);
-  auto sixCapabilities = TakeoverData::versionToCapabilities(
-      TakeoverData::kTakeoverProtocolVersionSix);
-  auto sevenCapabilities = TakeoverData::versionToCapabilities(
-      TakeoverData::kTakeoverProtocolVersionSeven);
-
-  EXPECT_EQ(
-      TakeoverData::computeCompatibleCapabilities(
-          threeCapabilities, fourCapabilities),
-      threeCapabilities);
-  EXPECT_EQ(
-      TakeoverData::computeCompatibleCapabilities(
-          fiveCapabilities, sevenCapabilities),
-      fiveCapabilities);
-  EXPECT_EQ(
-      TakeoverData::computeCompatibleCapabilities(
-          sixCapabilities, sevenCapabilities),
-      sixCapabilities);
-  EXPECT_EQ(
-      TakeoverData::computeCompatibleCapabilities(
-          sevenCapabilities, sevenCapabilities),
-      sevenCapabilities);
-}
-
-/**
- * In older versions of the protocol, we did not know how to pass the mountd
- * socket, so there is no need to check that we correctly passed the mountd
- * socket in simpleTestImpl. This enum is used in simpleTestImpl to decide
- * wather we should check the mountd socket.
- */
-enum class CheckMountdSocket { YES = 0, NO = 1 };
-
-void simpleTestImpl(
-    CheckMountdSocket checkMountdSocket = CheckMountdSocket::NO,
-    const std::set<int32_t>& clientSupportedVersions =
-        kSupportedTakeoverVersions,
-    const std::set<int32_t>& serverSupportedVersions =
-        kSupportedTakeoverVersions,
-    uint64_t clientCapabilities = kSupportedCapabilities,
-    uint64_t serverCapabilities = kSupportedCapabilities) {
+TEST(Takeover, simple) {
   TemporaryDirectory tmpDir("eden_takeover_test");
   AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
@@ -359,13 +300,7 @@ void simpleTestImpl(
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
   TestHandler handler{std::move(serverData)};
-  auto result = runTakeover(
-      tmpDir,
-      &handler,
-      clientSupportedVersions,
-      serverSupportedVersions,
-      clientCapabilities,
-      serverCapabilities);
+  auto result = runTakeover(tmpDir, &handler);
   ASSERT_TRUE(serverSendFuture.hasValue());
   EXPECT_TRUE(result.hasValue());
   const auto& clientData = result.value();
@@ -374,9 +309,7 @@ void simpleTestImpl(
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   // And the thrift socket FD
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
-  if (checkMountdSocket == CheckMountdSocket::YES) {
-    checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
-  }
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
@@ -391,135 +324,6 @@ void simpleTestImpl(
   auto& fuseChannelData1 =
       std::get<FuseChannelData>(clientData.mountPoints.at(1).channelInfo);
   checkExpectedFile(fuseChannelData1.fd.fd(), mount2FusePath);
-}
-
-TEST(Takeover, simple) {
-  simpleTestImpl(CheckMountdSocket::YES);
-}
-
-TEST(Takeover, fourToSeven) {
-  // in both these tests we will settle on version 4 of the protocol
-  // which does not know how to transfer the mountd socket, so no need
-  // to check the mountd socket.
-  simpleTestImpl(
-      CheckMountdSocket::NO,
-      {TakeoverData::kTakeoverProtocolVersionFour},
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix,
-       TakeoverData::kTakeoverProtocolVersionSeven},
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionFour),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven));
-
-  simpleTestImpl(
-      CheckMountdSocket::NO,
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix,
-       TakeoverData::kTakeoverProtocolVersionSeven},
-      {TakeoverData::kTakeoverProtocolVersionFour},
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionFour));
-}
-
-TEST(Takeover, fiveToSeven) {
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive},
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix,
-       TakeoverData::kTakeoverProtocolVersionSeven},
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionFive),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven));
-
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix,
-       TakeoverData::kTakeoverProtocolVersionSeven},
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive},
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionFive));
-}
-
-TEST(Takeover, sixToSeven) {
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix},
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix,
-       TakeoverData::kTakeoverProtocolVersionSeven},
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSix),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven));
-
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix,
-       TakeoverData::kTakeoverProtocolVersionSeven},
-      {TakeoverData::kTakeoverProtocolVersionFour,
-       TakeoverData::kTakeoverProtocolVersionFive,
-       TakeoverData::kTakeoverProtocolVersionSix},
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSix));
-}
-
-TEST(Takeover, atypicalVersionCapability) {
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      kSupportedTakeoverVersions,
-      kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSix),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven));
-
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      kSupportedTakeoverVersions,
-      kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSix));
-
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      kSupportedTakeoverVersions,
-      kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionFive),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven));
-
-  simpleTestImpl(
-      CheckMountdSocket::YES,
-      kSupportedTakeoverVersions,
-      kSupportedTakeoverVersions,
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionSeven),
-      TakeoverData::versionToCapabilities(
-          TakeoverData::kTakeoverProtocolVersionFive));
 }
 
 TEST(Takeover, noMounts) {

@@ -36,20 +36,19 @@ The thrift file defines the message types exchanged over the takeover socket:
 - `struct TakeoverVersionQuery` - Sent from the client to the server to inform
   the server what features of the takeover protocol the client supports. This
   struct contains two fields:
-  - `versions` - A legacy field containing a set of supported protocol version
-    numbers. Modern clients send the singleton set containing version 7. After
-    version 7, we use capabilities for new features. This field can be removed
-    in favor of capabilities.
+  - `versions` - A set of supported protocol version numbers. Only version 7
+    is accepted; the field is kept so that a peer that predates capability
+    matching reports the mismatch instead of misparsing the data.
   - `capabilities` - A 64-bit bitmask indicating which features the client
-    supports. This is the preferred method for protocol negotiation as it allows
-    for more granular feature matching.
+    supports. Every capability of version 7 is required of both peers;
+    capabilities added later may be optional.
 
 #### Message Types
 
-- **Empty "ready" ping** - In version 4, a ping message introduced that sent by
-  the server to ensure the client is still alive and ready to receive takeover
-  data before actually sending it. This prevents the server from attempting to
-  transfer mounts to a disconnected client.
+- **Empty "ready" ping** - A ping message sent by the server to ensure the
+  client is still alive and ready to receive takeover data before actually
+  sending it. This prevents the server from attempting to transfer mounts to a
+  disconnected client.
 
 - **Chunked message markers** - For large takeover data (e.g., 3+ million
   inodes), the data is split into chunks:
@@ -97,12 +96,9 @@ The thrift file defines the message types exchanged over the takeover socket:
   - `MOUNTD_SOCKET` - The NFS mountd socket (optional, only for NFS mounts)
 
 - `enum TakeoverMountProtocol` - Mount protocol types:
-  - `UNKNOWN` - Unknown/unspecified (legacy)
+  - `UNKNOWN` - Unknown/unspecified (rejected)
   - `FUSE` - FUSE mount
   - `NFS` - NFS mount
-
-- `union SerializedTakeoverData` - **Deprecated.** Legacy format used by older
-  versions. Modern versions use `SerializedTakeoverResult` instead.
 
 ### Client (`TakeoverClient.cpp`)
 
@@ -128,8 +124,8 @@ mount points from an existing edenfs process. On success, it returns a
      it's still alive, then waits for the actual takeover data
    - A **FIRST_CHUNK marker** - Indicates the server is sending chunked data;
      the client recursively receives chunks until receiving LAST_CHUNK
-   - **Takeover data directly** - Older servers (eden versions older than
-     June 2025) may send data without ping/chunking
+   - **An error** - A failure before or during negotiation is sent directly,
+     without ping or chunking
 4. Deserialize the received message into `TakeoverData`
 5. Validate the received data (correct number of file descriptors, etc.)
 6. Extract the lock file, thrift socket, mountd socket (if present), and mount
@@ -157,18 +153,18 @@ When a client connects, the server:
 2. **Receives version query** - Waits up to 5 seconds for the client to send its
    supported versions and capabilities
 
-3. **Negotiates protocol** - Computes the compatible version and capabilities
-   between client and server. Capabilities are computed as the intersection of
-   what both sides support.
+3. **Negotiates protocol** - Checks that the client accepts version 7 and
+   computes the capabilities as the intersection of what both sides support,
+   which must include every capability of version 7.
 
 4. **Initiates shutdown** - Calls `handler->startTakeoverShutdown()` to begin
    the graceful shutdown process. This returns a Future that completes with
    `TakeoverData` when the server is ready to transfer.
 
-5. **Pings the client** (if PING capability is supported) - Sends a ping message
-   to verify the client is still connected. Waits up to 5 seconds (configurable
-   via `pingReceiveTimeout` flag) for a response. If the ping fails, the server
-   recovers and resumes normal operation.
+5. **Pings the client** - Sends a ping message to verify the client is still
+   connected. Waits up to 5 seconds (configurable via `pingReceiveTimeout`
+   flag) for a response. If the ping fails, the server recovers and resumes
+   normal operation.
 
 6. **Closes storage** - Calls `handler->closeStorage()` to release locks on
    local and backing stores so the new process can acquire them.
@@ -196,7 +192,6 @@ The `TakeoverData` class contains all information needed for takeover:
 
 | Flag                        | Value   | Description                                       |
 | --------------------------- | ------- | ------------------------------------------------- |
-| `CUSTOM_SERIALIZATION`      | 1 << 0  | Deprecated custom format, no longer supported     |
 | `FUSE`                      | 1 << 1  | Supports FUSE mount serialization                 |
 | `THRIFT_SERIALIZATION`      | 1 << 2  | Uses Thrift for serialization (required)          |
 | `PING`                      | 1 << 3  | Server pings client before sending data           |
@@ -217,21 +212,20 @@ RESULT_TYPE_SERIALIZATION | ORDERED_FDS | OPTIONAL_MOUNTD |
 CAPABILITY_MATCHING | INCLUDE_HEADER_SIZE | CHUNKED_MESSAGE
 ```
 
+These are the capabilities of protocol version 7 and both peers must have all
+of them. Bit 0 was `CUSTOM_SERIALIZATION`, the pre-Thrift format, and is not
+reused.
+
 **Protocol Versions:**
 
-| Version | Description                                                 |
-| ------- | ----------------------------------------------------------- |
-| 0       | Never supported (used for testing)                          |
-| 1       | Deprecated: original protocol                               |
-| 3       | Introduced Thrift serialization                             |
-| 4       | Added ping handshake                                        |
-| 5       | Added NFS mount support                                     |
-| 6       | Added generic serialization and optional file descriptors   |
-| 7       | Capability-based negotiation, header size, chunked messages |
+| Version | Description                                                      |
+| ------- | ---------------------------------------------------------------- |
+| 0       | Never accepted; header of an error sent before negotiation ended |
+| 7       | The only accepted version; new features are capabilities         |
 
-Note: Version numbers are being phased out in favor of capability-based
-negotiation. Version 7 should be the last numbered version. After this version,
-server and client negotiate and choose the capabilities that both support.
+Versions 1 through 6 predate capability matching and are no longer accepted. A
+peer that offers only those versions gets a version mismatch error and the CLI
+falls back to a full restart.
 
 **Data Members:**
 
@@ -258,7 +252,8 @@ The serialized message format is:
 <32-bit version><32-bit header size><64-bit capabilities><thrift-serialized data>
 ```
 
-- **version** - Protocol version for legacy compatibility
+- **version** - Always 7; an error sent before negotiation ended carries only a
+  version of 0
 - **header size** - Size of the header (excluding version and size fields)
 - **capabilities** - The agreed-upon capabilities bitmask
 - **data** - Thrift-serialized `SerializedTakeoverResult`
@@ -275,9 +270,7 @@ For chunked transfers, data is split into chunks of up to 512 MB (configurable).
 - `serializeLastChunk()` / `isLastChunk(buf)` - Create/detect chunk markers
 - `computeCompatibleVersion(versions, supported)` - Find best compatible version
 - `computeCompatibleCapabilities(capabilities, supported)` - Compute shared
-  capabilities
-- `versionToCapabilities(version)` - Convert version number to capability set
-- `capabilitiesToVersion(capabilities)` - Convert capabilities to version number
+  capabilities and check that the required ones are present
 
 ### Handler (`TakeoverHandler.h`)
 

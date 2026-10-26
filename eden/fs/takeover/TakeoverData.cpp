@@ -87,13 +87,11 @@ MountProtocol TakeoverData::MountInfo::getMountProtocol() const {
 #ifndef _WIN32
 
 const std::set<int32_t> kSupportedTakeoverVersions{
-    TakeoverData::kTakeoverProtocolVersionThree,
-    TakeoverData::kTakeoverProtocolVersionFour,
-    TakeoverData::kTakeoverProtocolVersionFive,
-    TakeoverData::kTakeoverProtocolVersionSix,
     TakeoverData::kTakeoverProtocolVersionSeven};
 
-const uint64_t kSupportedCapabilities = TakeoverCapabilities::FUSE |
+namespace {
+// The capabilities of protocol version 7. Both peers must have all of them.
+constexpr uint64_t kRequiredCapabilities = TakeoverCapabilities::FUSE |
     TakeoverCapabilities::MOUNT_TYPES | TakeoverCapabilities::PING |
     TakeoverCapabilities::THRIFT_SERIALIZATION | TakeoverCapabilities::NFS |
     TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
@@ -101,6 +99,9 @@ const uint64_t kSupportedCapabilities = TakeoverCapabilities::FUSE |
     TakeoverCapabilities::CAPABILITY_MATCHING |
     TakeoverCapabilities::INCLUDE_HEADER_SIZE |
     TakeoverCapabilities::CHUNKED_MESSAGE;
+} // namespace
+
+const uint64_t kSupportedCapabilities = kRequiredCapabilities;
 
 std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,
@@ -126,136 +127,22 @@ uint64_t TakeoverData::computeCompatibleCapabilities(
     const uint64_t capabilities,
     const uint64_t supported) {
   auto compatible = supported & capabilities;
-  // assert that the server and client are in some way compatible.
-  // The basics are that they share some serialization method so that they can
-  // converse. These days we only support thrift serialization.
-  if ((compatible & TakeoverCapabilities::THRIFT_SERIALIZATION) == 0) {
+  if ((compatible & kRequiredCapabilities) != kRequiredCapabilities) {
     throw std::runtime_error{
         "The client and the server do not share a common takeover protocol "
         "implementation."};
   }
-  if ((compatible & TakeoverCapabilities::OPTIONAL_MOUNTD) &&
-      ((compatible & TakeoverCapabilities::ORDERED_FDS) == 0)) {
-    throw std::runtime_error{
-        "Optional mountd can not be used without ordered file descriptors"};
-  }
-
   return compatible;
 }
 
-uint64_t TakeoverData::versionToCapabilities(int32_t version) {
-  switch (version) {
-    case kTakeoverProtocolVersionNeverSupported:
-      return 0;
-    case kTakeoverProtocolVersionOne:
-      return TakeoverCapabilities::CUSTOM_SERIALIZATION |
-          TakeoverCapabilities::FUSE;
-    case kTakeoverProtocolVersionThree:
-      return TakeoverCapabilities::FUSE |
-          TakeoverCapabilities::THRIFT_SERIALIZATION;
-    case kTakeoverProtocolVersionFour:
-      return TakeoverCapabilities::FUSE |
-          TakeoverCapabilities::THRIFT_SERIALIZATION |
-          TakeoverCapabilities::PING;
-    case kTakeoverProtocolVersionFive:
-      return TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
-          TakeoverCapabilities::PING |
-          TakeoverCapabilities::THRIFT_SERIALIZATION |
-          TakeoverCapabilities::NFS;
-    case kTakeoverProtocolVersionSix:
-      return TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
-          TakeoverCapabilities::PING |
-          TakeoverCapabilities::THRIFT_SERIALIZATION |
-          TakeoverCapabilities::NFS |
-          TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
-          TakeoverCapabilities::ORDERED_FDS |
-          TakeoverCapabilities::OPTIONAL_MOUNTD;
-    case kTakeoverProtocolVersionSeven:
-      return TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
-          TakeoverCapabilities::PING |
-          TakeoverCapabilities::THRIFT_SERIALIZATION |
-          TakeoverCapabilities::NFS |
-          TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
-          TakeoverCapabilities::ORDERED_FDS |
-          TakeoverCapabilities::OPTIONAL_MOUNTD |
-          TakeoverCapabilities::CAPABILITY_MATCHING |
-          TakeoverCapabilities::INCLUDE_HEADER_SIZE |
-          TakeoverCapabilities::CHUNKED_MESSAGE;
-  }
-  throwf<std::runtime_error>("Unsupported version: {}", version);
-}
-
-int32_t TakeoverData::capabilitiesToVersion(uint64_t capabilities) {
-  if (capabilities == 0) {
-    return kTakeoverProtocolVersionNeverSupported;
-  }
-  if (capabilities ==
-      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
-       TakeoverCapabilities::FUSE)) {
-    return kTakeoverProtocolVersionOne;
-  }
-  if (capabilities ==
-      (TakeoverCapabilities::FUSE |
-       TakeoverCapabilities::THRIFT_SERIALIZATION)) {
-    return kTakeoverProtocolVersionThree;
-  }
-  if (capabilities ==
-      (TakeoverCapabilities::FUSE | TakeoverCapabilities::THRIFT_SERIALIZATION |
-       TakeoverCapabilities::PING)) {
-    return kTakeoverProtocolVersionFour;
-  }
-
-  if (capabilities ==
-      (TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
-       TakeoverCapabilities::PING | TakeoverCapabilities::THRIFT_SERIALIZATION |
-       TakeoverCapabilities::NFS)) {
-    return kTakeoverProtocolVersionFive;
-  }
-
-  if (capabilities ==
-      (TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
-       TakeoverCapabilities::PING | TakeoverCapabilities::THRIFT_SERIALIZATION |
-       TakeoverCapabilities::NFS |
-       TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
-       TakeoverCapabilities::ORDERED_FDS |
-       TakeoverCapabilities::OPTIONAL_MOUNTD)) {
-    return kTakeoverProtocolVersionSix;
-  }
-
-  if (capabilities ==
-      (TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
-       TakeoverCapabilities::PING | TakeoverCapabilities::THRIFT_SERIALIZATION |
-       TakeoverCapabilities::NFS |
-       TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
-       TakeoverCapabilities::ORDERED_FDS |
-       TakeoverCapabilities::OPTIONAL_MOUNTD |
-       TakeoverCapabilities::CAPABILITY_MATCHING |
-       TakeoverCapabilities::INCLUDE_HEADER_SIZE |
-       TakeoverCapabilities::CHUNKED_MESSAGE)) {
-    return kTakeoverProtocolVersionSeven;
-  }
-
-  throwf<std::runtime_error>(
-      "Unsupported combination of capabilities: {}", capabilities);
-}
-
-bool TakeoverData::shouldSerdeNFSInfo(uint32_t protocolCapabilities) {
-  // 4 and below know nothing of NFS mounts. we introduce NFS support in version
-  // 5 and expect to continue to support NFS mounts beyond version 5.
-  return protocolCapabilities & TakeoverCapabilities::NFS;
-}
-
-std::vector<FileDescriptorType> TakeoverData::generateGeneralFdOrder(
-    uint32_t protocolCapabilities) {
+std::vector<FileDescriptorType> TakeoverData::generateGeneralFdOrder() {
   if (UNLIKELY(injectedFdOrderForTesting.has_value())) {
     return injectedFdOrderForTesting.value();
   }
 
   std::vector<FileDescriptorType> fileDescriptorOrder{
       FileDescriptorType::LOCK_FILE, FileDescriptorType::THRIFT_SOCKET};
-  if (shouldSerdeNFSInfo(protocolCapabilities) &&
-      (!(protocolCapabilities & TakeoverCapabilities::OPTIONAL_MOUNTD) ||
-       mountdServerSocket != std::nullopt)) {
+  if (mountdServerSocket != std::nullopt) {
     fileDescriptorOrder.push_back(FileDescriptorType::MOUNTD_SOCKET);
   }
   return fileDescriptorOrder;
@@ -313,24 +200,11 @@ void TakeoverData::deserializeFd(FileDescriptorType type, folly::File& file) {
 void TakeoverData::serialize(
     uint64_t protocolCapabilities,
     UnixSocket::Message& msg) {
-  if (protocolCapabilities & TakeoverCapabilities::ORDERED_FDS) {
-    // note this needs to happen before serialization of the msg because we
-    // serialize the order into the message.
-    generalFDOrder = generateGeneralFdOrder(protocolCapabilities);
-  }
+  // The order is serialized into the message, so it must be computed first.
+  generalFDOrder = generateGeneralFdOrder();
   msg.data = serialize(protocolCapabilities);
-  if (protocolCapabilities & TakeoverCapabilities::ORDERED_FDS) {
-    for (auto& fdType : generalFDOrder) {
-      serializeFd(fdType, msg.files);
-    }
-  } else {
-    msg.files.push_back(std::move(lockFile));
-    msg.files.push_back(std::move(thriftSocket));
-
-    if (shouldSerdeNFSInfo(protocolCapabilities)) {
-      XLOGF(DBG7, "serializing mountd socket: {}", mountdServerSocket->fd());
-      msg.files.push_back(std::move(mountdServerSocket.value()));
-    }
+  for (auto& fdType : generalFDOrder) {
+    serializeFd(fdType, msg.files);
   }
 
   for (auto& mount : mountPoints) {
@@ -345,28 +219,12 @@ void TakeoverData::serialize(
 }
 
 IOBuf TakeoverData::serialize(uint64_t protocolCapabilities) {
-  XCHECK(protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION)
-      << fmt::format(
-             "Asked to serialize takeover data in unsupported format. "
-             "Capabilities: {}",
-             protocolCapabilities);
   return serializeThrift(protocolCapabilities);
 }
 
 folly::IOBuf TakeoverData::serializeError(
     uint64_t protocolCapabilities,
     const folly::exception_wrapper& ew) {
-  XCHECK(
-      protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION ||
-      protocolCapabilities == 0)
-      << fmt::format(
-             "Asked to serialize takeover data in unsupported format. "
-             "Capabilities: {}",
-             protocolCapabilities);
-  // We allow NeverSupported in the error case so that we don't
-  // end up erroring out in the version mismatch error
-  // reporting case.
-
   return serializeErrorThrift(protocolCapabilities, ew);
 }
 
@@ -422,18 +280,13 @@ folly::IOBuf TakeoverData::serializeLastChunk() {
 }
 
 TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
-  auto capabilities = TakeoverData::getProtocolCapabilities(&msg.data);
+  // Consumes the header; the payload format does not depend on the
+  // capabilities it carries.
+  TakeoverData::getProtocolCapabilities(&msg.data);
 
-  auto data = TakeoverData::deserialize(capabilities, &msg.data);
-  // when we serialize the mountd socket we have three general files instead
-  // of two
-  const auto mountPointFilesOffset =
-      capabilities & TakeoverCapabilities::ORDERED_FDS
-      ? data.generalFDOrder.size()
-      : shouldSerdeNFSInfo(capabilities) ? 3
-                                         : 2;
+  auto data = TakeoverData::deserializeThrift(&msg.data);
+  const auto mountPointFilesOffset = data.generalFDOrder.size();
 
-  // Add 2 here for the lock file and the thrift socket
   if (data.mountPoints.size() + mountPointFilesOffset != msg.files.size()) {
     throw_<std::runtime_error>(
         "received ",
@@ -442,20 +295,10 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
         msg.files.size(),
         " FDs (including the lock file FD)");
   }
-  if (capabilities & TakeoverCapabilities::ORDERED_FDS) {
-    uint32_t filesIndex = 0;
-    for (auto fileType : data.generalFDOrder) {
-      data.deserializeFd(fileType, msg.files.at(filesIndex));
-      ++filesIndex;
-    }
-  } else {
-    data.lockFile = std::move(msg.files[0]);
-    data.thriftSocket = std::move(msg.files[1]);
-    if (shouldSerdeNFSInfo(capabilities)) {
-      data.mountdServerSocket = std::move(msg.files[2]);
-      XLOGF(
-          DBG1, "Deserialized mountd Socket {}", data.mountdServerSocket->fd());
-    }
+  uint32_t filesIndex = 0;
+  for (auto fileType : data.generalFDOrder) {
+    data.deserializeFd(fileType, msg.files.at(filesIndex));
+    ++filesIndex;
   }
   for (size_t n = 0; n < data.mountPoints.size(); ++n) {
     auto& mountInfo = data.mountPoints[n];
@@ -494,31 +337,10 @@ TakeoverData::getProtocolCapabilitiesWithoutTrim(IOBuf* buf) {
 
   switch (version) {
     case kTakeoverProtocolVersionNeverSupported:
-      // we put this here so that we can test incompatible versions and the
-      // error can be deserialized
-    case kTakeoverProtocolVersionThree:
-    case kTakeoverProtocolVersionFour:
-    case kTakeoverProtocolVersionFive:
-    case kTakeoverProtocolVersionSix:
+      // An error reported before capabilities were negotiated.
       trimSize = sizeof(uint32_t);
-      return {versionToCapabilities(version), trimSize};
+      return {0, trimSize};
     case kTakeoverProtocolVersionSeven: {
-      // version 7 and above should support INCLUDE_HEADER_SIZE and
-      // CAPABILITY_MATCHING but we check those assumptions to make this more
-      // clear.
-      auto versionBasedCapabilities = versionToCapabilities(version);
-      auto expected_capabilities = TakeoverCapabilities::INCLUDE_HEADER_SIZE |
-          TakeoverCapabilities::CAPABILITY_MATCHING;
-      if ((versionBasedCapabilities & expected_capabilities) !=
-          expected_capabilities) {
-        throw std::runtime_error(
-            fmt::format(
-                "Expected version {:x} to support capability matching and "
-                "including header size, but it doesn't: {:x}",
-                version,
-                versionBasedCapabilities));
-      }
-
       // for now the size of the header should just be 8 because it only
       // includes the size of the capabilities.
       std::uint32_t header_size = cursor.readBE<uint32_t>();
@@ -549,68 +371,21 @@ TakeoverData::getProtocolCapabilitiesWithoutTrim(IOBuf* buf) {
   }
 }
 
-TakeoverData TakeoverData::deserialize(
-    uint64_t protocolCapabilities,
-    IOBuf* buf) {
-  XCHECK(
-      protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION ||
-      protocolCapabilities == 0)
-      << fmt::format(
-             "Asked to serialize takeover data in unsupported format. "
-             "Capabilities: {}",
-             protocolCapabilities);
-
-  return deserializeThrift(protocolCapabilities, buf);
-}
-
-bool canSerDeMountType(
-    uint64_t protocolCapabilities,
-    TakeoverMountProtocol mountProtocol) {
-  switch (mountProtocol) {
-    case TakeoverMountProtocol::FUSE:
-      return protocolCapabilities & TakeoverCapabilities::FUSE;
-    case TakeoverMountProtocol::NFS:
-      return protocolCapabilities & TakeoverCapabilities::NFS;
-    case TakeoverMountProtocol::UNKNOWN:
-      return false;
-  }
-  return false;
-}
-
-void checkCanSerDeMountType(
-    uint64_t protocolCapabilities,
-    TakeoverMountProtocol mountProtocol,
-    folly::StringPiece mountPath) {
-  if (!canSerDeMountType(protocolCapabilities, mountProtocol)) {
-    throwf<std::runtime_error>(
-        "protocol does not support serializing/deserializing this type of "
-        "mounts. protocol capabilities: {}. problem mount: {}. mount protocol:"
-        " {}",
-        protocolCapabilities,
-        mountPath,
-        fmt::underlying(mountProtocol));
-  }
-}
-
 void TakeoverData::serializeHeader(
     uint64_t protocolCapabilities,
     folly::IOBufQueue& buf) {
   folly::io::QueueAppender appender(&buf, 0);
-  int32_t versionToAdvertize = capabilitiesToVersion(protocolCapabilities);
-  // first word is the protocol version. previous versions of EdenFS do not
-  // know how to deserialize version 4 because they assume that protocol 4
-  // uses protocol 3 serialization. We need to do this funkiness for rollback
-  // safety.
-  if (versionToAdvertize == kTakeoverProtocolVersionFour) {
-    versionToAdvertize = kTakeoverProtocolVersionThree;
+  if (protocolCapabilities == 0) {
+    // An error reported before capabilities were negotiated carries only the
+    // version word, so that any peer can decode it.
+    appender.writeBE<uint32_t>(
+        static_cast<uint32_t>(kTakeoverProtocolVersionNeverSupported));
+    return;
   }
-  appender.writeBE<uint32_t>(static_cast<uint32_t>(versionToAdvertize));
-  if (protocolCapabilities & TakeoverCapabilities::INCLUDE_HEADER_SIZE) {
-    appender.writeBE<uint32_t>(static_cast<uint32_t>(sizeof(uint64_t)));
-  }
-  if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
-    appender.writeBE<uint64_t>(protocolCapabilities);
-  }
+  appender.writeBE<uint32_t>(
+      static_cast<uint32_t>(kTakeoverProtocolVersionSeven));
+  appender.writeBE<uint32_t>(static_cast<uint32_t>(sizeof(uint64_t)));
+  appender.writeBE<uint64_t>(protocolCapabilities);
 }
 
 IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
@@ -621,11 +396,6 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
   std::vector<SerializedMountInfo> serializedMounts;
   serializedMounts.reserve(mountPoints.size());
   for (const auto& mount : mountPoints) {
-    auto mountProtocol = getTakeoverMountProtocol(mount);
-
-    checkCanSerDeMountType(
-        protocolCapabilities, mountProtocol, mount.mountPath.view());
-
     SerializedMountInfo serializedMount;
 
     serializedMount.mountPath() = mount.mountPath.asString();
@@ -645,58 +415,42 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
 
     serializedMount.inodeMap() = mount.inodeMap;
 
-    serializedMount.mountProtocol() = mountProtocol;
+    serializedMount.mountProtocol() = getTakeoverMountProtocol(mount);
 
     serializedMounts.emplace_back(std::move(serializedMount));
   }
 
-  if (protocolCapabilities & TakeoverCapabilities::RESULT_TYPE_SERIALIZATION) {
-    // depending on if RESULT_TYPE_SERIALIZATION is set we might use either of
-    // these types to serialize.
+  SerializedTakeoverInfo serialized;
+  serialized.mounts() = std::move(serializedMounts);
+  serialized.fileDescriptors() = generalFDOrder;
+  SerializedTakeoverResult result;
+  result.takeoverData() = serialized;
 
-    SerializedTakeoverInfo serialized;
-    serialized.mounts() = std::move(serializedMounts);
-    if (protocolCapabilities & TakeoverCapabilities::ORDERED_FDS) {
-      serialized.fileDescriptors() = generalFDOrder;
-    }
-    SerializedTakeoverResult result;
-    result.takeoverData() = serialized;
+  CompactSerializer::serialize(result, &bufQ);
 
-    CompactSerializer::serialize(result, &bufQ);
-  } else {
-    SerializedTakeoverData serialized;
-    serialized.mounts() = std::move(serializedMounts);
+  // At this point, bufQ can be a chain of multiple IOBufs because of how
+  // serializeHeader and the mounts' serialization are implemented.
+  // To efficiently split it into chunks later, we need to coalesce all the
+  // chains into one. This simplifies the process of splitting the data into
+  // chunks of a maximum size (FLAGS_maximumChunkSize).
 
-    CompactSerializer::serialize(serialized, &bufQ);
+  // Move the buffer queue to an IOBuf, and leaving buffer queue empty.
+  auto tempBuf = bufQ.move();
+  // Coalesce the chains within the IOBuf into a single chain.
+  tempBuf->coalesce();
+  // Append the now single-chain IOBuf back to the buffer queue.
+  bufQ.append(std::move(tempBuf));
+
+  auto chunk = bufQ.splitAtMost(FLAGS_maximumChunkSize);
+  while (bufQ.chainLength() > 0) {
+    chunk->appendToChain(bufQ.splitAtMost(FLAGS_maximumChunkSize));
   }
-
-  if (protocolCapabilities & TakeoverCapabilities::CHUNKED_MESSAGE) {
-    // At this point, bufQ can be a chain of multiple IOBufs because of how
-    // serializeHeader and the mounts' serialization are implemented.
-    // To efficiently split it into chunks later, we need to coalesce all the
-    // chains into one. This simplifies the process of splitting the data into
-    // chunks of a maximum size (FLAGS_maximumChunkSize).
-
-    // Move the buffer queue to an IOBuf, and leaving buffer queue empty.
-    auto tempBuf = bufQ.move();
-    // Coalesce the chains within the IOBuf into a single chain.
-    tempBuf->coalesce();
-    // Append the now single-chain IOBuf back to the buffer queue.
-    bufQ.append(std::move(tempBuf));
-
-    auto chunk = bufQ.splitAtMost(FLAGS_maximumChunkSize);
-    while (bufQ.chainLength() > 0) {
-      chunk->appendToChain(bufQ.splitAtMost(FLAGS_maximumChunkSize));
-    }
-    XLOGF(
-        INFO,
-        "Serialized {} bytes TakeoverData in {} chunks",
-        chunk->computeChainDataLength(),
-        chunk->countChainElements());
-    return std::move(*chunk);
-  } else {
-    return std::move(*bufQ.move());
-  }
+  XLOGF(
+      INFO,
+      "Serialized {} bytes TakeoverData in {} chunks",
+      chunk->computeChainDataLength(),
+      chunk->countChainElements());
+  return std::move(*chunk);
 }
 
 folly::IOBuf TakeoverData::serializeErrorThrift(
@@ -709,91 +463,47 @@ folly::IOBuf TakeoverData::serializeErrorThrift(
   auto exceptionClassName = ew.class_name();
   folly::StringPiece what = ew ? ew.get_exception()->what() : "";
 
-  if (protocolCapabilities & TakeoverCapabilities::RESULT_TYPE_SERIALIZATION) {
-    // depending on if RESULT_TYPE_SERIALIZATION is set we might use either of
-    // these types to serialize.
+  SerializedTakeoverResult serialized;
+  serialized.errorReason() =
+      folly::to<std::string>(exceptionClassName, ": ", what);
 
-    SerializedTakeoverResult serialized;
-    serialized.errorReason() =
-        folly::to<std::string>(exceptionClassName, ": ", what);
-
-    CompactSerializer::serialize(serialized, &bufQ);
-  } else {
-    SerializedTakeoverData serialized;
-    serialized.errorReason() =
-        folly::to<std::string>(exceptionClassName, ": ", what);
-
-    CompactSerializer::serialize(serialized, &bufQ);
-  }
+  CompactSerializer::serialize(serialized, &bufQ);
 
   return std::move(*bufQ.move());
 }
 
-TakeoverData TakeoverData::deserializeThrift(
-    uint32_t protocolCapabilities,
-    IOBuf* buf) {
-  if (protocolCapabilities & TakeoverCapabilities::RESULT_TYPE_SERIALIZATION) {
-    auto serialized =
-        CompactSerializer::deserialize<SerializedTakeoverResult>(buf);
-    switch (serialized.getType()) {
-      case SerializedTakeoverResult::Type::errorReason:
-        throw std::runtime_error(serialized.get_errorReason());
+TakeoverData TakeoverData::deserializeThrift(IOBuf* buf) {
+  auto serialized =
+      CompactSerializer::deserialize<SerializedTakeoverResult>(buf);
+  switch (serialized.getType()) {
+    case SerializedTakeoverResult::Type::errorReason:
+      throw std::runtime_error(serialized.get_errorReason());
 
-      case SerializedTakeoverResult::Type::takeoverData: {
-        auto takeoverData = deserializeThriftMounts(
-            protocolCapabilities, *(serialized.takeoverData()->mounts()));
-        if (protocolCapabilities & TakeoverCapabilities::ORDERED_FDS) {
-          takeoverData.generalFDOrder =
-              *(serialized.takeoverData()->fileDescriptors());
-        }
-        return takeoverData;
-      }
-      case SerializedTakeoverResult::Type::__EMPTY__:
-        // This case triggers when there are no mounts to pass between
-        // the processes; we allow for it here and return an empty
-        // TakeoverData instance.
-        return TakeoverData{};
+    case SerializedTakeoverResult::Type::takeoverData: {
+      auto takeoverData =
+          deserializeThriftMounts(*(serialized.takeoverData()->mounts()));
+      takeoverData.generalFDOrder =
+          *(serialized.takeoverData()->fileDescriptors());
+      return takeoverData;
     }
-  } else {
-    auto serialized =
-        CompactSerializer::deserialize<SerializedTakeoverData>(buf);
-    switch (serialized.getType()) {
-      case SerializedTakeoverData::Type::errorReason:
-        throw std::runtime_error(serialized.get_errorReason());
-
-      case SerializedTakeoverData::Type::mounts:
-        return deserializeThriftMounts(
-            protocolCapabilities, serialized.mutable_mounts());
-      case SerializedTakeoverData::Type::__EMPTY__:
-        // This case triggers when there are no mounts to pass between
-        // the processes; we allow for it here and return an empty
-        // TakeoverData instance.
-        return TakeoverData{};
-    }
+    case SerializedTakeoverResult::Type::__EMPTY__:
+      // This case triggers when there are no mounts to pass between
+      // the processes; we allow for it here and return an empty
+      // TakeoverData instance.
+      return TakeoverData{};
   }
   throw std::runtime_error(
-      "impossible enum variant for SerializedTakeoverData");
+      "impossible enum variant for SerializedTakeoverResult");
 }
 
 TakeoverData TakeoverData::deserializeThriftMounts(
-    uint32_t protocolCapabilities,
     std::vector<SerializedMountInfo>& serializedMounts) {
   TakeoverData data;
   for (auto& serializedMount : serializedMounts) {
     switch (*serializedMount.mountProtocol()) {
       case TakeoverMountProtocol::UNKNOWN:
-        if (protocolCapabilities & TakeoverCapabilities::MOUNT_TYPES) {
-          throw std::runtime_error("Unknown Mount Protocol");
-        }
-        // versions <5 all assumed FUSE mounts, but we don't want to make
-        // the default mount protocol fuse. We can fall through to parsing a
-        // fuse mount in this case.
-        [[fallthrough]];
+        throw std::runtime_error("Unknown Mount Protocol");
       case TakeoverMountProtocol::FUSE: {
-        checkCanSerDeMountType(
-            protocolCapabilities,
-            TakeoverMountProtocol::FUSE,
-            *serializedMount.mountPath());
         if (serializedMount.connInfo()->size() != sizeof(fuse_init_out)) {
           throwf<std::runtime_error>(
               "invalid FUSE connection info size {} for mount {}, expected {}",
@@ -812,10 +522,6 @@ TakeoverData TakeoverData::deserializeThriftMounts(
         break;
       }
       case TakeoverMountProtocol::NFS:
-        checkCanSerDeMountType(
-            protocolCapabilities,
-            TakeoverMountProtocol::NFS,
-            *serializedMount.mountPath());
         data.mountPoints.emplace_back(
             canonicalPath(*serializedMount.mountPath()),
             canonicalPath(*serializedMount.stateDirectory()),

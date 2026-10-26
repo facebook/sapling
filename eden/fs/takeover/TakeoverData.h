@@ -29,23 +29,13 @@ class exception_wrapper;
 
 namespace facebook::eden {
 
-// Holds the versions supported by this build.
-// TODO(T104382350): The code is being migrated to use capability bits instead
-// of version numbers as the former makes it less error prone to check for
-// supported features by both the client and server. Currently, the protocol
-// works by agreeing on a mutually supported version and then
-// agreeing on a shared set of capabilities. We agree on a version first so
-// that we can gracefully transition to a protocol that supports capability
-// matching.
-
-// Eventually we want to completely migrate to capability matching and stop
-// checking the versions. But first, we need to capability matching to make it
-// into a stable EdenFS build. Note "stable build" means we should never need to
-// rollback before the change, so the capability matching build should be out
-// for at least a month before we delete all the version code. If you are
-// reading this comment after Sept 2022, this has reached stable.
+// The protocol versions this build accepts. Only version 7 remains; features
+// added since then are negotiated as capabilities, so the version exchange only
+// serves to reject a peer that predates capability matching.
 extern const std::set<int32_t> kSupportedTakeoverVersions;
 
+// Every capability of version 7. Both peers must support all of them; a
+// capability added later may be optional.
 extern const uint64_t kSupportedCapabilities;
 
 // TODO (T104724681): use a nicer representation for a bit set to combine these
@@ -57,10 +47,7 @@ extern const uint64_t kSupportedCapabilities;
 class TakeoverCapabilities {
  public:
   enum : uint64_t {
-    // DEPRECATED This indicates we use our own invented format for sending
-    // takeover data between the client and server. This was used in early
-    // versions of the protocol. No longer Supported in any version of EdenFS
-    CUSTOM_SERIALIZATION = 1 << 0,
+    // Bit 0 was CUSTOM_SERIALIZATION, the pre-thrift format.
 
     // Indicates this version of the protocol is able to serialize FUSE mount
     // points.
@@ -86,9 +73,8 @@ class TakeoverCapabilities {
     // points
     NFS = 1 << 5,
 
-    // Indicates that we use SerializedTakeoverResult instead of
-    // SerializedTakeoverData to serialize and deserialize the data. This allows
-    // us to pass non mount specific information in the takeover message.
+    // Indicates that the data is serialized as a SerializedTakeoverResult,
+    // which can carry information that is not specific to a mount.
     RESULT_TYPE_SERIALIZATION = 1 << 6,
 
     // Indicates that we will specify which fds we transfer during takeover and
@@ -124,77 +110,15 @@ class TakeoverCapabilities {
 class TakeoverData {
  public:
   enum : int32_t {
-    // The list of possible versions supported by the client
-    // and server in this build of the code.  If/when we
-    // bump the version we will retain support for the prior
-    // version in both the client and server in order to
-    // allow rolling back a new build.
-
-    // This is a protocol version that we will never support.
-    // It is included in this enum to reserve it and so that
-    // we can use it in tests
+    // Never accepted. It is the version written in the header of an error
+    // reported before capabilities were negotiated, and tests use it as an
+    // incompatible peer.
     kTakeoverProtocolVersionNeverSupported = 0,
 
-    // DEPRECATED: This is the protocol version supported by eden just prior
-    // to this protocol versioning code being written
-    kTakeoverProtocolVersionOne = 1,
-
-    // TODO: deprecate versions 3-5 after capability matching is stable
-    // roughly Feb 2022 T104382350.
-
-    // This version introduced thrift encoding of the takeover structures.
-    // It is nominally version 2 but named 3 here because VersionOne
-    // responses don't include a version header, but do always respond
-    // with either a word set to either 1 or 2.  To disambiguate things
-    // we want to use word value 3 to indicate this new protocol, but
-    // naming the symbol Version3 and assigning it the value 3 seemed
-    // like too much of a headache, so we simply skip over using
-    // version 2 to describe this next one.
-    kTakeoverProtocolVersionThree = 3,
-
-    // This version introduced an additional handshake before taking over
-    // that is sent after the TakeoverData is ready but before actually
-    // sending it. This is in order to make sure we only send the data if
-    // the new process is healthy and able to receive, because otherwise
-    // we would want to recover ourselves. While this does not change
-    // the actual data format of the TakeoverData, it does change the
-    // number of sends/receives, and this additional handshake would
-    // break a server with this extra handshake talking to a client
-    // without it
-    kTakeoverProtocolVersionFour = 4,
-
-    // This version introduced the ability to takeover NFS mounts.
-    // This includes serializing the mountd socket as well as the
-    // connected socket to the kernel for each of the mount points.
-    kTakeoverProtocolVersionFive = 5,
-
-    // This version introduced a more generic thrift struct for serialization
-    // and allows us to only pass some of the file descriptors.
-    kTakeoverProtocolVersionSix = 6,
-
-    // This should be the last version. This version matches capabilities with
-    // the takeover server and client. This ends needing to create any more
-    // versions because you can just introduce new capabilities.
+    // Versions 1 through 6 predate capability matching and are no longer
+    // accepted. Version 7 is the last version: new features are capabilities.
     kTakeoverProtocolVersionSeven = 7
-    // there should be no more versions after this.
   };
-
-  /**
-   * Converts a supported version to the capabilities that version of the
-   * protocol supports. This is used as a bridge between the version based
-   * protocol we use now and the capability based protocol we would like to use
-   * in future versions. See T104382350.
-   */
-  static uint64_t versionToCapabilities(int32_t version);
-
-  /**
-   * Converts a valid set of capabilities into the takeover version that
-   * supports exactly those capabilities. This is used to "serialize" the
-   * capabilities. Older versions of the protocol were version based instead of
-   * capability based. So we "serialize" the capabilities as a version number.
-   * Eventually we will migrate off versions, then we can get rid of this.
-   */
-  static int32_t capabilitiesToVersion(uint64_t capabilities);
 
   /**
    * Given a set of versions provided by a client, find the largest
@@ -207,9 +131,8 @@ class TakeoverData {
 
   /**
    * Finds the set of capabilities supported by both the server and client.
-   * also checks that that set of capabilities is a valid combination (some
-   * capabilities are required these days and some capabilities have
-   * dependencies between them.)
+   * Throws if the intersection lacks any capability of version 7, which every
+   * peer that gets this far must have.
    */
   static uint64_t computeCompatibleCapabilities(
       uint64_t capabilities,
@@ -270,13 +193,12 @@ class TakeoverData {
   /**
    * Serialize the TakeoverData into a unix socket message.
    *
-   * The current serialization format is a follows:
+   * The serialization format is a follows:
    * <32 bit version><32 bit header size><64 bit capabilities>
    * <variable length serialized state that we need to send for takeover>
    * The version, header size, and capabilities are considered the "header".
-   * - the version at this point is included for legacy reasons. We use to
-   * version our protocol every time we made a change. but that led to a bunch
-   * of confusing version checks in the code. So we moved to capabilities.
+   * - the version is always 7. It is kept so that a peer that only speaks an
+   * older version recognizes the mismatch.
    * - the size of the header is the size of the header in bytes excluding the
    * version and the size value itself. For now the capabilities are the only
    * object included here, but having a size in the header makes it more safe to
@@ -286,6 +208,9 @@ class TakeoverData {
    * capabilities.
    * - the state we serialize is serialied in thrift structs as defined in
    * takeover.thrift.
+   *
+   * An error reported before capabilities were negotiated carries only a
+   * version word of 0, followed by the serialized error.
    *
    * Note that we keep the capabilities outside of the serialized thrift data on
    * purpose. This allows us to migrate to a different serialization method as
@@ -347,13 +272,6 @@ class TakeoverData {
   static bool isLastChunk(const folly::IOBuf* buf);
 
   /**
-   * Determines if we should serialized NFS data given the protocol version
-   * we are serializing with. i.e. should we send takeover data for NFS mount
-   * points and should we send the mountd socket.
-   */
-  static bool shouldSerdeNFSInfo(uint32_t protocolVersionCapabilities);
-
-  /**
    * The main eden lock file that prevents two edenfs processes from running at
    * the same time.
    */
@@ -413,14 +331,13 @@ class TakeoverData {
       folly::IOBufQueue& buf);
 
   /**
-   * Serialize data for any version that uses thrift serialization. This is
-   * versions 3+.
+   * Serialize the header and the thrift encoded mounts, split into chunks of
+   * at most FLAGS_maximumChunkSize bytes.
    */
   folly::IOBuf serializeThrift(uint64_t protocolCapabilities);
 
   /**
-   * Serialize an exception for any version that uses thrift serialization. This
-   * is versions 3+.
+   * Serialize the header and a thrift encoded exception.
    */
   static folly::IOBuf serializeErrorThrift(
       uint64_t protocolCapabilities,
@@ -433,20 +350,9 @@ class TakeoverData {
   void serializeFd(FileDescriptorType type, std::vector<folly::File>& files);
 
   /**
-   * Deserialize the TakeoverData from a buffer. We assume that we are only sent
-   * mounts with mount protocols that we are able to parse.
+   * Deserialize the thrift encoded TakeoverData that follows the header.
    */
-  static TakeoverData deserialize(
-      uint64_t protocolCapabilities,
-      folly::IOBuf* buf);
-
-  /**
-   * Deserialize the TakeoverData from a buffer for any version of the protocol
-   * that uses thrift serialization. This is any version 3+.
-   */
-  static TakeoverData deserializeThrift(
-      uint32_t protocolCapabilities,
-      folly::IOBuf* buf);
+  static TakeoverData deserializeThrift(folly::IOBuf* buf);
 
   /**
    * Deserialize the file descriptor for file `type` from the
@@ -460,7 +366,6 @@ class TakeoverData {
    * the file descriptors or generic data filled in yet.
    */
   static TakeoverData deserializeThriftMounts(
-      uint32_t protocolCapabilities,
       std::vector<SerializedMountInfo>& serializedMounts);
 
   /**
@@ -475,14 +380,11 @@ class TakeoverData {
   /**
    * Generates an order for the general file descriptors to be sent in
    * sendmsg. "general file descriptors" does not include file descriptors
-   * for mount points. This order may vary in length depending on which file
-   * descriptors need to be sent in the given protocol capabilities.
-   * This method is virtual to allow mocking it in tests.
+   * for mount points. The mountd socket is only included when present.
    *
    * To manipulate this return type for testing set injectedFdOrderForTesting.
    */
-  std::vector<FileDescriptorType> generateGeneralFdOrder(
-      uint32_t protocolCapabilities);
+  std::vector<FileDescriptorType> generateGeneralFdOrder();
 
   /**
    * Message type values.

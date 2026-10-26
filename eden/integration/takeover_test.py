@@ -341,16 +341,6 @@ class TakeoverTest(TakeoverTestBase):
             sorted(os.listdir(os.path.join(self.mount, "src", "test"))),
         )
 
-    def test_takeover_doesnt_send_ping(self) -> None:
-        """
-        tests that if we try a takeover with a version that doesn't know
-        how to accept a ping, we don't send one. This test should not fail
-        in either case since it is running against a client that knows how
-        to listen for a ping. It just is used to look at logs to make sure
-        the correct code path is entered.
-        """
-        self.eden.fake_takeover_with_version(3)
-
     def test_takeover_failure(self) -> None:
         print("=== beginning restart ===", file=sys.stderr)
         self.eden.takeover_without_ping_response()
