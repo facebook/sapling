@@ -27,7 +27,6 @@ use rate_limiting_config::RimMetadataField;
 use rate_limiting_config::RimWorkloadConfig;
 use rim_if::ReturnCode;
 use rim_ligen::RimThinClient;
-use rim_ligen_ext::RimThinClient as RimThinClientExt;
 use sha2::Digest;
 use sha2::Sha256;
 use stats::prelude::*;
@@ -192,8 +191,8 @@ pub(crate) async fn check_rate_limit(
     };
 
     let result = match timeout(RIM_ACQUIRE_TIMEOUT, async {
-        let options = rim_ligen_ext::create_acquire_options(selection_key.is_none())?;
-        RimThinClientExt::acquire_v2(
+        let options = rim_ligen::create_acquire_options(selection_key.is_none())?;
+        RimThinClient::acquire_v2(
             rim_backend,
             tenancy_path.to_vec(),
             requirements.clone(),
@@ -272,7 +271,7 @@ fn report_admission(
     } else {
         ReturnCode::SUCCESS
     };
-    let status = RimThinClientExt::track_resource_request_explicitly(
+    let status = RimThinClient::track_resource_request_explicitly(
         backend,
         path.to_vec(),
         requirements
