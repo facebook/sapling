@@ -892,6 +892,7 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use nonzero_ext::nonzero;
+    use permission_checker::MononokeIdentity;
     use pretty_assertions::assert_eq;
     use repos::RawCommitSyncConfig;
     use tempfile::TempDir;
@@ -2148,6 +2149,77 @@ mod test {
             configs.repos["fbsource"].hooks[0].config.bypasses,
             vec![HookBypassCondition::commit_message("@allow").with_actor(HookBypassActor::Any)],
         );
+    }
+
+    #[mononoke::test]
+    fn test_hook_bypasses_parse() {
+        let configs = load_configs_with_hook1(
+            r#"
+            [[hooks.bypasses]]
+            pushvar="ALLOW=true"
+            permission_group="group1"
+
+            [[hooks.bypasses]]
+            commit_message="@allow"
+            identities=["SERVICE_IDENTITY:bot"]
+            actor=1  # AGENT
+            "#,
+        )
+        .expect("config should parse");
+
+        assert_eq!(
+            configs.repos["fbsource"].hooks[0].config.bypasses,
+            vec![
+                HookBypassCondition::pushvar("ALLOW", "true").with_permission_group("group1"),
+                HookBypassCondition {
+                    commit_message: Some("@allow".into()),
+                    ..HookBypassCondition::identities([MononokeIdentity::from_legacy_type_data(
+                        "SERVICE_IDENTITY",
+                        "bot",
+                    )])
+                }
+                .with_actor(HookBypassActor::Agent),
+            ],
+        );
+    }
+
+    #[mononoke::test]
+    fn test_invalid_hook_bypasses() {
+        for (fields, expected) in [
+            (
+                r#"
+                [[hooks.bypasses]]
+                actor=2  # ANY
+                "#,
+                "must set at least one of",
+            ),
+            (
+                r#"
+                bypass_commit_string="@allow"
+                [[hooks.bypasses]]
+                commit_message="@allow"
+                "#,
+                "must not set bypass_commit_string",
+            ),
+            (
+                r#"
+                [[hooks.bypasses]]
+                pushvar="ALLOW"
+                "#,
+                "InvalidPushvar",
+            ),
+            (
+                r#"
+                [[hooks.bypasses]]
+                identities=["bot"]
+                "#,
+                "expected TYPE:data",
+            ),
+        ] {
+            let res = load_configs_with_hook1(fields);
+            let msg = format!("{res:#?}");
+            assert!(msg.contains(expected), "expected {expected:?} in {msg}");
+        }
     }
 
     /// Without a permission group the flags are inert: the config still loads

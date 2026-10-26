@@ -127,6 +127,8 @@ use repos::RawGitConcurrencyParams;
 use repos::RawGitConfigs;
 use repos::RawGitDeltaManifestV2Config;
 use repos::RawGitDeltaManifestV3Config;
+use repos::RawHookBypassActor;
+use repos::RawHookBypassCondition;
 use repos::RawHookConfig;
 use repos::RawHookManagerParams;
 use repos::RawInferredCopyFromConfig;
@@ -241,17 +243,72 @@ fn legacy_bypass_conditions(
     Ok(conditions)
 }
 
+impl Convert for RawHookBypassCondition {
+    type Output = HookBypassCondition;
+
+    fn convert(self) -> Result<Self::Output> {
+        let actor = match self.actor {
+            None | Some(RawHookBypassActor::HUMAN) => HookBypassActor::Human,
+            Some(RawHookBypassActor::AGENT) => HookBypassActor::Agent,
+            Some(RawHookBypassActor::ANY) => HookBypassActor::Any,
+            Some(v) => return Err(anyhow!("Invalid value {v} for enum HookBypassActor")),
+        };
+        let condition = HookBypassCondition {
+            commit_message: self.commit_message,
+            pushvar: self.pushvar.map(parse_pushvar).transpose()?,
+            permission_group: self.permission_group,
+            identities: self
+                .identities
+                .unwrap_or_default()
+                .iter()
+                .map(|identity| MononokeIdentity::from_str(identity))
+                .collect::<Result<_>>()?,
+            actor,
+        };
+        ensure!(
+            !condition.is_empty(),
+            "A bypass condition must set at least one of commit_message, pushvar, \
+             permission_group and identities"
+        );
+        Ok(condition)
+    }
+}
+
 impl Convert for RawHookConfig {
     type Output = HookParams;
 
     fn convert(self) -> Result<Self::Output> {
-        let bypasses = legacy_bypass_conditions(
-            self.bypass_commit_string,
-            self.bypass_pushvar,
-            self.bypass_permission_group,
-            self.bypass_implicit_for_group.unwrap_or_default(),
-            self.allow_agent_bypass.unwrap_or_default(),
-        )?;
+        let bypasses = match self.bypasses {
+            Some(conditions) => {
+                ensure!(
+                    self.bypass_commit_string.is_none()
+                        && self.bypass_pushvar.is_none()
+                        && self.bypass_permission_group.is_none()
+                        && self.bypass_implicit_for_group.is_none()
+                        && self.allow_agent_bypass.is_none(),
+                    "Hook {} sets bypasses, so it must not set bypass_commit_string, \
+                     bypass_pushvar, bypass_permission_group, bypass_implicit_for_group or \
+                     allow_agent_bypass",
+                    self.name,
+                );
+                conditions
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, condition)| {
+                        condition.convert().with_context(|| {
+                            format!("Invalid bypass condition {index} for hook {}", self.name)
+                        })
+                    })
+                    .collect::<Result<_>>()?
+            }
+            None => legacy_bypass_conditions(
+                self.bypass_commit_string,
+                self.bypass_pushvar,
+                self.bypass_permission_group,
+                self.bypass_implicit_for_group.unwrap_or_default(),
+                self.allow_agent_bypass.unwrap_or_default(),
+            )?,
+        };
 
         let config = HookConfig {
             bypasses,
