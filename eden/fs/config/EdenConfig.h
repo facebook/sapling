@@ -20,8 +20,6 @@
 
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 
-#include "common/rust/shed/hostcaps/hostcaps.h"
-
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/ConfigSource.h"
@@ -224,25 +222,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * If EdenFS should auto migrate FUSE repos to NFS on Ventura.
-   * only used in the CLI, including here to get rid of warnings.
-   */
-  ConfigSetting<bool> migrateToNFSVentura{
-      "core:migrate_existing_to_nfs",
-      true,
-      this};
-
-  /**
-   * If EdenFS should force a non-graceful restart, if necessary, to auto
-   * migrate FUSE repos to NFS on all versions of macOS.  Only used in the CLI
-   * and edenfs_restarter, including here to get rid of warnings.
-   */
-  ConfigSetting<bool> migrateToNFSAllMacOS{
-      "core:migrate_existing_to_nfs_all_macos",
-      true,
-      this};
-
-  /**
    * How many threads to use for the misc EdenCPUThreadPool.
    */
   ConfigSetting<uint8_t> edenCpuPoolNumThreads{
@@ -311,15 +290,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<std::chrono::nanoseconds> takeoverRecentActivityWindow{
       "core:takeover-recent-activity-window",
       std::chrono::minutes(10),
-      this};
-
-  /**
-   * If EdenFS should auto migrate non inmemory inode catalogs to inmemory on
-   * Windows.
-   */
-  ConfigSetting<bool> migrateToInMemoryCatalog{
-      "core:migrate_existing_to_in_memory_catalog",
-      true,
       this};
 
   /**
@@ -503,11 +473,6 @@ class EdenConfig : private ConfigSettingManager {
 
   // [thrift]
 
-  ConfigSetting<bool> allowUnixGroupRequests{
-      "thrift:allow-unix-group-requests",
-      false,
-      this};
-
   /**
    * Whether Eden should implement its own unix domain socket permission checks
    * or rely on filesystem permissions.
@@ -683,8 +648,6 @@ class EdenConfig : private ConfigSettingManager {
       "ssl:client-certificate-locations",
       std::vector<std::string>{},
       this};
-
-  ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
 
   // [mount]
 
@@ -1717,19 +1680,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * In general, hg does not guarantee that blob IDs and contents are 1:1 [1].
-   * EdenFS can be slightly faster if they are, so this switch exists for the
-   * future possibility that they are, or if someone wants to live dangerously
-   * for the sake of performance.
-   *
-   * [1] hg blob IDs sometimes include file history.
-   */
-  ConfigSetting<bool> hgBijectiveBlobIds{
-      "hg:has-bijective-blob-ids",
-      false,
-      this};
-
-  /**
    * Controls the number of blob or prefetch import requests we batch in
    * SaplingBackingStore
    */
@@ -2212,17 +2162,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> windowsSymlinksEnabled{
       "experimental:windows-symlinks",
       folly::kIsWindows,
-      this};
-
-  /**
-   * When true, EdenFS will convert the backing store to a FilteredBackingStore
-   * with the "null" filter when it restarts. The real filter info will be
-   * written to a special file under .hg folder and will be applied next time
-   * when we checkout the repo.
-   */
-  ConfigSetting<bool> attemptEdensparseMigration{
-      "experimental:attempt-edensparse-migration",
-      false,
       this};
 
   /**
@@ -3090,24 +3029,6 @@ class EdenConfig : private ConfigSettingManager {
       "acl:restricted-content-mode",
       RestrictedContentMode::Restricted,
       this};
-
-// [facebook]
-// Facebook internal
-
-/**
- * (Facebook Internal) Determines if EdenFS should use ServiceRouter.
- */
-#ifdef EDEN_HAVE_SERVICEROUTER
-  ConfigSetting<bool> enableServiceRouter{
-      "facebook:enable-service-router",
-      fb_has_servicerouter(),
-      this};
-#else
-  ConfigSetting<bool> enableServiceRouter{
-      "facebook:enable-service-router",
-      false,
-      this};
-#endif
 };
 
 } // namespace facebook::eden

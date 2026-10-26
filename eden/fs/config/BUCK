@@ -54,7 +54,6 @@ cpp_library(
         "fbsource//xplat/folly/portability:sys_types",
         "fbsource//xplat/folly/system:hardware_concurrency",
         ":config_thrift-cpp2-types",
-        "//common/rust/shed/hostcaps:hostcaps_ffi",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:path",
         "//eden/common/utils:throw",

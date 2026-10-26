@@ -21,6 +21,8 @@ namespace facebook::eden {
  * once no config source sets the key anymore.
  */
 inline constexpr std::string_view kDeadConfigKeys[] = {
+    "core:migrate_existing_to_nfs",
+    "core:migrate_existing_to_nfs_all_macos",
     "coroutines:enable-phase1",
     "coroutines:enable-phase2",
     "coroutines:enable-phase3",

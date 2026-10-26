@@ -1048,12 +1048,6 @@ ObjectComparison SaplingBackingStore::compareObjectsById(
     return ObjectComparison::Identical;
   }
 
-  if (config_->getEdenConfig()->hgBijectiveBlobIds.getValue()) {
-    // If one and two differ, and hg bijective blob IDs is enabled, then we know
-    // the blob contents differ.
-    return ObjectComparison::Different;
-  }
-
   // Now parse the object IDs and read their rev hashes.
   auto oneProxy = SlOid{one};
   auto twoProxy = SlOid{two};

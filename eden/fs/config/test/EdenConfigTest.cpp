@@ -46,7 +46,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultSystemIgnoreFilePath_;
   AbsolutePath defaultEdenDirPath_;
   RelativePath clientCertificatePath_{"home/bob/client.pem"};
-  bool defaultUseMononoke_ = false;
+  bool defaultUseCustomPermissionChecking_ = true;
   size_t defaultTreeCacheMinimumItems_ = 16;
 
   // Map of test names to system, dynamic, user path
@@ -100,12 +100,11 @@ class EdenConfigTest : public ::testing::Test {
         "cgroup-file-cache-target-bytes=\"123456\"\n"
         "cgroup-file-cache-max-reclaim-bytes=\"654321\"\n"
         "cgroup-file-cache-reclaim-interval=\"3s\"\n"
-        "[mononoke]\n"
-        "use-mononoke=\"false\"\n"
         "[daemon]\n"
         "environment=[\"TEST_NAME=test_value\"]\n"
         "[thrift]\n"
-        "prefetch-blob-batch-size=\"123\""};
+        "prefetch-blob-batch-size=\"123\"\n"
+        "use-custom-permission-checking=\"false\""};
     writeFile(userConfigPath, userConfigFileData).value();
 
     auto systemConfigDir = testCaseDir + "etc-eden"_pc;
@@ -123,8 +122,8 @@ class EdenConfigTest : public ::testing::Test {
         "[core]\n"
         "ignoreFile='{}'\n"
         "systemIgnoreFile='{}'\n"
-        "[mononoke]\n"
-        "use-mononoke=true\n"
+        "[thrift]\n"
+        "use-custom-permission-checking=true\n"
         "[ssl]\n"
         "client-certificate-locations=['{}']\n",
         folly::kIsWindows ? "\\\\?\\should_be_over_ridden"
@@ -168,7 +167,9 @@ TEST_F(EdenConfigTest, defaultTest) {
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(edenConfig->useMononoke.getValue(), defaultUseMononoke_);
+  EXPECT_EQ(
+      edenConfig->thriftUseCustomPermissionChecking.getValue(),
+      defaultUseCustomPermissionChecking_);
   EXPECT_EQ(
       edenConfig->inMemoryTreeCacheMinimumItems.getValue(),
       defaultTreeCacheMinimumItems_);
@@ -215,7 +216,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath systemIgnoreFile = canonicalPath("/etc/eden/fix/systemIgnore");
   AbsolutePath edenDir = canonicalPath("/home/bob/alt/.eden");
   AbsolutePath clientCertificate = rootTestDir_ + clientCertificatePath_;
-  bool useMononoke = true;
+  bool useCustomPermissionChecking = false;
   size_t treeCacheMinimumItems = 36;
 
   // Configuration
@@ -226,7 +227,8 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
   edenConfig->clientCertificateLocations.setValue(
       {clientCertificate.asString()}, ConfigSourceType::CommandLine);
-  edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::CommandLine);
+  edenConfig->thriftUseCustomPermissionChecking.setValue(
+      useCustomPermissionChecking, ConfigSourceType::CommandLine);
   edenConfig->inMemoryTreeCacheMinimumItems.setValue(
       treeCacheMinimumItems, ConfigSourceType::CommandLine);
 
@@ -237,7 +239,9 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   EXPECT_EQ(
       edenConfig->getClientCertificate(),
       normalizeBestEffort(clientCertificate.asString()));
-  EXPECT_EQ(edenConfig->useMononoke.getValue(), useMononoke);
+  EXPECT_EQ(
+      edenConfig->thriftUseCustomPermissionChecking.getValue(),
+      useCustomPermissionChecking);
   EXPECT_EQ(
       edenConfig->inMemoryTreeCacheMinimumItems.getValue(),
       treeCacheMinimumItems);
@@ -251,7 +255,7 @@ TEST_F(EdenConfigTest, cloneTest) {
   AbsolutePath clientCertificate =
       rootTestDir_ + PathComponent{"NON_DEFAULT_CLIENT_CERTIFICATE"};
   writeFile(clientCertificate, folly::StringPiece{"test"}).value();
-  bool useMononoke = true;
+  bool useCustomPermissionChecking = false;
   size_t treeCacheMinimumItems = 36;
 
   ConfigVariables substitutions;
@@ -279,7 +283,8 @@ TEST_F(EdenConfigTest, cloneTest) {
     edenConfig->edenDir.setValue(edenDir, ConfigSourceType::UserConfig);
     edenConfig->clientCertificateLocations.setValue(
         {clientCertificate.asString()}, ConfigSourceType::UserConfig);
-    edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::UserConfig);
+    edenConfig->thriftUseCustomPermissionChecking.setValue(
+        useCustomPermissionChecking, ConfigSourceType::UserConfig);
     edenConfig->inMemoryTreeCacheMinimumItems.setValue(
         treeCacheMinimumItems, ConfigSourceType::CommandLine);
 
@@ -289,7 +294,9 @@ TEST_F(EdenConfigTest, cloneTest) {
     EXPECT_EQ(
         edenConfig->getClientCertificate(),
         normalizeBestEffort(clientCertificate.asString()));
-    EXPECT_EQ(edenConfig->useMononoke.getValue(), useMononoke);
+    EXPECT_EQ(
+        edenConfig->thriftUseCustomPermissionChecking.getValue(),
+        useCustomPermissionChecking);
     EXPECT_EQ(
         edenConfig->inMemoryTreeCacheMinimumItems.getValue(),
         treeCacheMinimumItems);
@@ -303,7 +310,9 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(
       configCopy->getClientCertificate(),
       normalizeBestEffort(clientCertificate.asString()));
-  EXPECT_EQ(configCopy->useMononoke.getValue(), useMononoke);
+  EXPECT_EQ(
+      configCopy->thriftUseCustomPermissionChecking.getValue(),
+      useCustomPermissionChecking);
   EXPECT_EQ(
       configCopy->inMemoryTreeCacheMinimumItems.getValue(),
       treeCacheMinimumItems);
@@ -317,7 +326,9 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(
       configCopy->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(configCopy->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(configCopy->useMononoke.getValue(), defaultUseMononoke_);
+  EXPECT_EQ(
+      configCopy->thriftUseCustomPermissionChecking.getValue(),
+      defaultUseCustomPermissionChecking_);
   EXPECT_EQ(
       configCopy->inMemoryTreeCacheMinimumItems.getValue(),
       defaultTreeCacheMinimumItems_);
@@ -445,7 +456,7 @@ TEST_F(EdenConfigTest, loadSystemDynamicUserConfigTest) {
   EXPECT_EQ(
       edenConfig->getClientCertificate(),
       normalizeBestEffort(clientConfigPath.view()));
-  EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
+  EXPECT_FALSE(edenConfig->thriftUseCustomPermissionChecking.getValue());
   EXPECT_EQ(edenConfig->inMemoryTreeCacheMinimumItems.getValue(), 32);
   EXPECT_EQ(
       edenConfig->daemonEnvironment.getValue(),
@@ -481,7 +492,9 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(edenConfig->useMononoke.getValue(), defaultUseMononoke_);
+  EXPECT_EQ(
+      edenConfig->thriftUseCustomPermissionChecking.getValue(),
+      defaultUseCustomPermissionChecking_);
   EXPECT_EQ(
       edenConfig->inMemoryTreeCacheMinimumItems.getValue(),
       defaultTreeCacheMinimumItems_);
@@ -756,13 +769,20 @@ TEST_F(EdenConfigTest, getValueByFullKey) {
           std::make_shared<TomlFileConfigSource>(
               defaultUserConfigPath_, ConfigSourceType::UserConfig)});
 
-  EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "false");
-  edenConfig->useMononoke.setValue(true, ConfigSourceType::CommandLine);
-  EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "true");
+  EXPECT_EQ(
+      edenConfig->getValueByFullKey("thrift:use-custom-permission-checking"),
+      "true");
+  edenConfig->thriftUseCustomPermissionChecking.setValue(
+      false, ConfigSourceType::CommandLine);
+  EXPECT_EQ(
+      edenConfig->getValueByFullKey("thrift:use-custom-permission-checking"),
+      "false");
 
   EXPECT_EQ(
-      edenConfig->getValueByFullKey("bad-section:use-mononoke"), std::nullopt);
-  EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:bad-entry"), std::nullopt);
+      edenConfig->getValueByFullKey(
+          "bad-section:use-custom-permission-checking"),
+      std::nullopt);
+  EXPECT_EQ(edenConfig->getValueByFullKey("thrift:bad-entry"), std::nullopt);
 
   EdenBugDisabler noCrash;
   EXPECT_THROW_RE(
