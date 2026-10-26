@@ -54,6 +54,7 @@ mononoke_app::subcommands! {
     mod git_cgdm_updater;
     mod git_symref;
     mod git_tag_mapping;
+    mod hook_messages;
     mod list_repos;
     mod locking;
     mod megarepo;

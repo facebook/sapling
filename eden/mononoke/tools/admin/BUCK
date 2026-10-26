@@ -135,6 +135,7 @@ rust_binary(
         "//eden/mononoke/features/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/features/commit_transformation:commit_transformation",
         "//eden/mononoke/features/cross_repo_sync:cross_repo_sync",
+        "//eden/mononoke/features/hooks:hooks",
         "//eden/mononoke/features/pushrebase:pushrebase",
         "//eden/mononoke/features/pushrebase:pushrebase_client",
         "//eden/mononoke/features/pushrebase:pushrebase_hooks",
