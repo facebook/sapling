@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Self-describing stage payload embedded in queued dag items so workers
-//! never have to consult the live `DerivationPipelineConfig`.
+//! Stage identities and payloads for pipeline derivation requests.
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -17,20 +16,14 @@ use mononoke_types::ThriftConvert;
 use serde::Deserialize;
 use serde::Serialize;
 
-/// Logical, path-based identity of a pipeline stage, used by the derivation
-/// methods. The `Finalize` variant is reserved for a future finalize step and
-/// is never constructed yet.
+/// Path-based identity of a pipeline stage.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StageId {
     Manifest(MPath),
     Finalize,
 }
 
-/// Identity, hash-based key of a pipeline stage, used as the derivation-queue
-/// key. Hashing the path is one-way, so there is deliberately no
-/// `StageKey -> StageId` conversion; the path is recovered from the payload.
-/// The `Finalize` variant is reserved for a future finalize step and is never
-/// constructed yet.
+/// Hash-based identity of a pipeline stage.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StageKey {
     Manifest(MPathHash),
@@ -46,8 +39,7 @@ impl StageId {
     }
 }
 
-/// Self-describing stage payload embedded in a queued dag item. The `Finalize`
-/// variant is reserved for a future finalize step and is never constructed yet.
+/// Stage payload sent by the pipeline tailer to its workers.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DerivationStagePayload {
     Manifest(ManifestStagePayload),

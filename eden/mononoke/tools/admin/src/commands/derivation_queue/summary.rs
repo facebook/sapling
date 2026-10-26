@@ -132,13 +132,6 @@ async fn print_table(
                 Some(ts) => format!("{}s{}ms", ts.since_seconds(), ts.since_millis() % 1000),
                 None => "-".to_string(),
             };
-            let type_cell = match item.stage_payload() {
-                Some(payload) => match payload.path() {
-                    Some(path) => format!("{dd_type} (stage: {path})"),
-                    None => format!("{dd_type} (stage: finalize)"),
-                },
-                None => format!("{dd_type}"),
-            };
             let mut row = row![
                 format!(
                     "{}s{}ms",
@@ -148,7 +141,7 @@ async fn print_table(
                 time_ready_str,
                 time_deriving_str,
                 item.retry_count(),
-                type_cell,
+                dd_type.to_string(),
                 priority_str,
                 format!("{:?}", item.bubble_id()),
                 item.head_cs_id(),

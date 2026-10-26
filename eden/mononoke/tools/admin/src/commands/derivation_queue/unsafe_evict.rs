@@ -13,10 +13,8 @@ use futures::StreamExt;
 use futures::stream;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::DerivedDataArgs;
-use mononoke_types::MPath;
 use repo_derivation_queues::DagItemId;
 use repo_derivation_queues::RepoDerivationQueuesRef;
-use repo_derivation_queues::StageKey;
 use repo_identity::RepoIdentityRef;
 use tracing::info;
 
@@ -29,11 +27,6 @@ pub struct UnsafeEvictArgs {
 
     #[clap(flatten)]
     derived_data_args: DerivedDataArgs,
-
-    /// Absolute path of the pipeline stage (e.g. `""` for root, `"fbcode"`).
-    /// Omit for non-pipeline items.
-    #[clap(long, value_parser = |s: &str| MPath::new(s.as_bytes()))]
-    stage_path: Option<MPath>,
 
     /// Number of concurrent evictions
     #[clap(long, default_value_t = 100)]
@@ -53,10 +46,6 @@ pub async fn unsafe_evict(
 
     let derived_data_type = args.derived_data_args.resolve_type()?;
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
-    let stage_key = args
-        .stage_path
-        .as_ref()
-        .map(|p| StageKey::Manifest(p.get_path_hash()));
 
     info!(
         "Evicting {} items with concurrency {}",
@@ -71,7 +60,6 @@ pub async fn unsafe_evict(
                 config_name.to_string(),
                 derived_data_type,
                 cs_id,
-                stage_key,
             );
             derivation_queue
                 .unsafe_evict(ctx, item_id)

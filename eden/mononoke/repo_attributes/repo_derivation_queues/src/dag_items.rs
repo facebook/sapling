@@ -13,62 +13,13 @@ use anyhow::anyhow;
 use bytes::Bytes;
 use clientinfo::ClientInfo;
 use derived_data_manager::DerivableType;
-use derived_data_manager::DerivationStagePayload;
-use derived_data_manager::StageKey;
 use ephemeral_blobstore::BubbleId;
 use fbthrift::compact_protocol;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
-use mononoke_types::MPathHash;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use serde::Deserialize;
 use serde::Serialize;
-
-/// Reserved suffix/serde token for the `StageKey::Finalize` variant. `finalize`
-/// cannot collide with a hex-encoded `MPathHash`.
-const FINALIZE_TOKEN: &str = "finalize";
-
-/// Serde helper for `Option<StageKey>` — round-trips through a string so the
-/// derived `Serialize`/`Deserialize` on `DagItemId` keeps working without
-/// touching `StageKey` itself. The `Manifest` case is byte-identical to the
-/// previous `Option<MPathHash>` encoding (hex string) so existing serialized
-/// data is unaffected.
-mod stage_id_serde {
-    use std::str::FromStr;
-
-    use derived_data_manager::StageKey;
-    use mononoke_types::MPathHash;
-    use serde::Deserialize;
-    use serde::Deserializer;
-    use serde::Serialize;
-    use serde::Serializer;
-
-    use super::FINALIZE_TOKEN;
-
-    pub fn serialize<S: Serializer>(val: &Option<StageKey>, ser: S) -> Result<S::Ok, S::Error> {
-        val.as_ref()
-            .map(|v| match v {
-                StageKey::Manifest(hash) => hash.to_hex().to_string(),
-                StageKey::Finalize => FINALIZE_TOKEN.to_string(),
-            })
-            .serialize(ser)
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<Option<StageKey>, D::Error> {
-        let s: Option<String> = Option::deserialize(de)?;
-        s.map(|s| {
-            if s == FINALIZE_TOKEN {
-                Ok(StageKey::Finalize)
-            } else {
-                MPathHash::from_str(&s)
-                    .map(StageKey::Manifest)
-                    .map_err(serde::de::Error::custom)
-            }
-        })
-        .transpose()
-    }
-}
 
 use crate::InternalError;
 
@@ -83,12 +34,6 @@ pub struct DerivationDagItem {
 pub struct DagItemDep {
     pub dag_item_id: DagItemId,
     pub head_cs_id: ChangesetId,
-    /// Absolute path of the dep's stage, for pipeline items. Carried alongside
-    /// the dep so consumers (e.g. the queue's `check_derived`) don't need to
-    /// translate `dag_item_id.stage_id` (a hash) back through the live config
-    /// to recover the path. `None` for non-pipeline deps.
-    #[serde(default)]
-    pub stage_path: Option<MPath>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -97,11 +42,6 @@ pub struct DagItemId {
     pub config_name: String,
     pub derived_data_type: DerivableType,
     pub root_cs_id: ChangesetId,
-    /// Identity of the stage (hash of its absolute path), or `None` for
-    /// non-pipeline items. Carried as a hash (not a name) so the queue identity
-    /// survives stage renames in the live config — only the path matters.
-    #[serde(default, with = "stage_id_serde")]
-    pub stage_id: Option<StageKey>,
 }
 
 impl DagItemId {
@@ -110,31 +50,17 @@ impl DagItemId {
         config_name: String,
         derived_data_type: DerivableType,
         root_cs_id: ChangesetId,
-        stage_id: Option<StageKey>,
     ) -> Self {
         Self {
             repo_id,
             config_name,
             derived_data_type,
             root_cs_id,
-            stage_id,
         }
     }
 
     pub fn suffix(&self) -> String {
-        match &self.stage_id {
-            Some(StageKey::Manifest(stage_hash)) => format!(
-                "{}_{}:{}",
-                self.derived_data_type,
-                self.root_cs_id,
-                stage_hash.to_hex(),
-            ),
-            Some(StageKey::Finalize) => format!(
-                "{}_{}:{}",
-                self.derived_data_type, self.root_cs_id, FINALIZE_TOKEN,
-            ),
-            None => format!("{}_{}", self.derived_data_type, self.root_cs_id),
-        }
+        format!("{}_{}", self.derived_data_type, self.root_cs_id)
     }
 
     pub fn config_name(&self) -> &str {
@@ -150,24 +76,7 @@ impl DagItemId {
     }
 
     pub fn from_suffix(suffix: &str, repo_id: RepositoryId, config_name: String) -> Result<Self> {
-        // Suffix format is either:
-        //   <derived_data_type>_<cs_id>                  (no stage)
-        //   <derived_data_type>_<cs_id>:<stage_path_hex> (manifest pipeline item)
-        //   <derived_data_type>_<cs_id>:finalize         (finalize pipeline item)
-        let (base_suffix, stage_id) = match suffix.split_once(':') {
-            Some((base, FINALIZE_TOKEN)) => (base, Some(StageKey::Finalize)),
-            Some((base, stage_hex)) => (
-                base,
-                Some(StageKey::Manifest(
-                    MPathHash::from_str(stage_hex).with_context(|| {
-                        format!("While parsing stage hash from suffix {suffix}")
-                    })?,
-                )),
-            ),
-            None => (suffix, None),
-        };
-
-        let (data_type_str, cs_id_str) = base_suffix
+        let (data_type_str, cs_id_str) = suffix
             .rsplit_once('_')
             .ok_or_else(|| anyhow!("Invalid DagItemId suffix format: {suffix}"))?;
 
@@ -182,7 +91,6 @@ impl DagItemId {
             config_name,
             derived_data_type,
             root_cs_id,
-            stage_id,
         })
     }
 }
@@ -211,8 +119,6 @@ pub struct DagItemInfo {
     retry_count: u64,
     #[serde(default = "default_derivation_priority")]
     priority: derivation_queue_thrift::DerivationPriority,
-    #[serde(default)]
-    stage_payload: Option<DerivationStagePayload>,
 }
 
 impl DagItemInfo {
@@ -221,7 +127,6 @@ impl DagItemInfo {
         bubble_id: Option<BubbleId>,
         client_info: Option<&ClientInfo>,
         priority: derivation_queue_thrift::DerivationPriority,
-        stage_payload: Option<DerivationStagePayload>,
     ) -> Self {
         let enqueue_timestamp = Some(Timestamp::now());
         Self {
@@ -231,16 +136,11 @@ impl DagItemInfo {
             client_info: client_info.cloned(),
             retry_count: 0,
             priority,
-            stage_payload,
         }
     }
 
     pub fn priority(&self) -> derivation_queue_thrift::DerivationPriority {
         self.priority
-    }
-
-    pub fn stage_payload(&self) -> Option<&DerivationStagePayload> {
-        self.stage_payload.as_ref()
     }
 
     fn to_thrift(&self) -> derivation_queue_thrift::DagItemInfo {
@@ -254,7 +154,6 @@ impl DagItemInfo {
                 .and_then(|info| info.to_json().ok()),
             retry_count: Some(self.retry_count as i64),
             priority: self.priority,
-            stage_payload: self.stage_payload.as_ref().map(|p| p.to_thrift()),
         }
     }
 
@@ -275,10 +174,6 @@ impl DagItemInfo {
                 .and_then(|info| ClientInfo::from_json(info).ok()),
             retry_count: dag_item_info.retry_count.unwrap_or(0) as u64,
             priority: dag_item_info.priority,
-            stage_payload: dag_item_info
-                .stage_payload
-                .map(DerivationStagePayload::from_thrift)
-                .transpose()?,
         })
     }
 
@@ -330,23 +225,14 @@ impl DerivationDagItem {
         deps: Vec<DagItemDep>,
         client_info: Option<&ClientInfo>,
         priority: derivation_queue_thrift::DerivationPriority,
-        stage_id: Option<StageKey>,
-        stage_payload: Option<DerivationStagePayload>,
     ) -> Result<DerivationDagItem, InternalError> {
-        debug_assert_eq!(
-            stage_id.is_some(),
-            stage_payload.is_some(),
-            "stage_id and stage_payload must travel together: both Some (pipeline item) or both None (non-pipeline item)",
-        );
         let dag_item_id = DagItemId {
             repo_id,
             config_name,
             derived_data_type,
             root_cs_id,
-            stage_id,
         };
-        let dag_item_info =
-            DagItemInfo::new(head_cs_id, bubble_id, client_info, priority, stage_payload);
+        let dag_item_info = DagItemInfo::new(head_cs_id, bubble_id, client_info, priority);
         if deps.iter().any(|d| d.dag_item_id == dag_item_id) {
             return Err(InternalError::CircularDependency(dag_item_id));
         }
@@ -381,10 +267,6 @@ impl DerivationDagItem {
         self.dag_item_id.root_cs_id
     }
 
-    pub fn stage_id(&self) -> Option<&StageKey> {
-        self.dag_item_id.stage_id.as_ref()
-    }
-
     pub fn head_cs_id(&self) -> ChangesetId {
         self.dag_item_info.head_cs_id
     }
@@ -407,19 +289,6 @@ impl DerivationDagItem {
 
     pub fn priority(&self) -> derivation_queue_thrift::DerivationPriority {
         self.dag_item_info.priority
-    }
-
-    pub fn stage_payload(&self) -> Option<&DerivationStagePayload> {
-        self.dag_item_info.stage_payload.as_ref()
-    }
-
-    /// The coupled `(stage_hash, payload)` pair for a pipeline item, or
-    /// `None` for a non-pipeline item. Returns `None` if exactly one of the
-    /// two fields is `Some` — that's a producer bug. Pairing the two into a
-    /// single `Option` at the boundary keeps consumers from forgetting that
-    /// they must always travel together.
-    pub fn pipeline_stage(&self) -> Option<(&StageKey, &DerivationStagePayload)> {
-        self.dag_item_id.stage_id.as_ref().zip(self.stage_payload())
     }
 
     pub fn deps(&self) -> &Vec<DagItemDep> {

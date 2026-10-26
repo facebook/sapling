@@ -389,8 +389,6 @@ async fn build_underived_batched_graph_impl<'a>(
                     deps.unique().collect(),
                     ctx.metadata().client_info(),
                     priority,
-                    None,
-                    None,
                 )?;
 
                 let max_failed_attempts = justknobs::get_as::<u64>(
@@ -401,7 +399,6 @@ async fn build_underived_batched_graph_impl<'a>(
                 let mut upstream_dep = DagItemDep {
                     dag_item_id: item.id().clone(),
                     head_cs_id: item.head_cs_id(),
-                    stage_path: None,
                 };
                 let mut cur_item = Some(item);
                 let mut failed_attempt = 0;
@@ -437,9 +434,6 @@ async fn build_underived_batched_graph_impl<'a>(
                                     let existing_dep = DagItemDep {
                                         dag_item_id: existing.id().clone(),
                                         head_cs_id: existing.head_cs_id(),
-                                        stage_path: existing
-                                            .stage_payload()
-                                            .and_then(|p| p.path().cloned()),
                                     };
                                     let existing_commit_graph = match existing.bubble_id() {
                                         Some(bubble_id) => {
@@ -543,8 +537,6 @@ async fn build_underived_batched_graph_impl<'a>(
                                         vec![],
                                         item.client_info(),
                                         priority,
-                                        None,
-                                        None,
                                     )?),
                                 }
                             }
@@ -554,7 +546,6 @@ async fn build_underived_batched_graph_impl<'a>(
                         upstream_dep = DagItemDep {
                             dag_item_id: item.id().clone(),
                             head_cs_id: item.head_cs_id(),
-                            stage_path: None,
                         };
                     });
                 }
@@ -628,12 +619,9 @@ async fn deduplicate(
             vec![DagItemDep {
                 dag_item_id: existing.id().clone(),
                 head_cs_id: existing.head_cs_id(),
-                stage_path: existing.stage_payload().and_then(|p| p.path().cloned()),
             }],
             ctx.metadata().client_info(),
             rejected.info().priority(),
-            None,
-            None, // stage_payload
         )?;
         return Ok(Some(item));
     }

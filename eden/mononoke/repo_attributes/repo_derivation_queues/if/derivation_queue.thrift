@@ -20,30 +20,19 @@ enum DerivationPriority {
   HIGH = 1,
 }
 
-/// Self-describing stage payload embedded in a queued dag item. The payload is
-/// computed from `DerivationPipelineConfig` at enqueue time, so workers do not
-/// have to re-read the live config to translate `stage_id` into paths.
+/// Stage payload sent by the pipeline tailer to its workers.
 union DerivationStagePayload {
   1: ManifestStagePayload manifest;
   2: FinalizeStagePayload finalize;
 }
 
-/// Payload for a manifest-style derivation stage. `path` is the absolute path
-/// prefix this stage is responsible for; `deps` is the absolute path of each
-/// dependency stage. The validator enforces that every dep is exactly one
-/// `MPathElement` deeper than the stage path, and that the terminal stage
-/// (the one whose output covers the whole repo) is always at `MPath::ROOT` —
-/// so workers reconstruct "is terminal" as `path.is_root()` and use
-/// `MPath::ROOT` for any cross-stage terminal lookup.
+/// Derive `path` using the outputs of its child stages in `deps`.
 @rust.Exhaustive
 struct ManifestStagePayload {
   1: path.MPath path;
   2: list<path.MPathElement> deps;
 }
 
-/// Payload for the finalize derivation stage. Empty for now so fields can be
-/// added in a later behavior diff without changing the union arm type. Never
-/// constructed yet.
 @rust.Exhaustive
 struct FinalizeStagePayload {}
 
@@ -55,5 +44,5 @@ struct DagItemInfo {
   4: optional i64 bubble_id;
   5: optional i64 retry_count;
   6: DerivationPriority priority;
-  7: optional DerivationStagePayload stage_payload;
+  // Field 7 (stage_payload) is retired.
 }
