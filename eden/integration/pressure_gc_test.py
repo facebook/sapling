@@ -415,8 +415,8 @@ class ActiveFuseInvalidationTest(testcase.EdenRepoTest):
         """With pin information available, GC invalidates directory entries
         outside the pinned chain, so unpinned directories are forgotten by the
         kernel and unloaded while the pinned cwd keeps working."""
-        if sys.platform != "linux":
-            self.skipTest("active FUSE invalidation is Linux-only")
+        if sys.platform not in ("linux", "darwin"):
+            self.skipTest("active invalidation needs FUSE or NFS")
         if not privhelper_supports_scan_pins():
             self.skipTest("privhelper does not support --scan-pins")
 
