@@ -969,6 +969,21 @@ python_unittest(
 )
 
 python_unittest(
+    name = "generate_compose_test",
+    srcs = ["test/generate_compose_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":generate",
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
     name = "edenfs_differential_property_test",
     srcs = ["edenfs/test/differential_property_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -1143,6 +1158,58 @@ python_unittest(
 )
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
+
+python_library(
+    name = "generate",
+    srcs = ["core/generate.py"],
+    deps = [
+        ":sites",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "generate_test",
+    srcs = ["test/generate_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":fake_target",
+        ":generate",
+        ":generation_fixtures",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "sites_engage_test",
+    srcs = ["edenfs/test/sites_engage_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_encoding",
+        ":edenfs_target",
+        ":generate",
+        ":target",
+        "//eden/integration/correctness:repo",
+    ],
+)
+
+python_library(
+    name = "generation_fixtures",
+    srcs = ["test/generation_fixtures.py"],
+    deps = [
+        ":edenfs_fixture",
+        ":edenfs_target",
+        ":fake_target",
+        ":generate",
+        ":target",
+    ],
+)
 
 python_library(
     name = "corpus",
