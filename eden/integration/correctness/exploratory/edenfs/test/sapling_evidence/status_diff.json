@@ -1,0 +1,92 @@
+{
+  "description": "sl status and sl diff --stat outputs recorded by the live backend (EDENFS_TARGET, one-register fixture at the tip) after one mutation each. The status semantics in edenfs/properties/status.py rest on them: `sl mv` lists only the destination in diff, a FUSE unlink is `!` and not in diff, `sl rm` is `R` and in diff, and `sl status --rev 0` at a clean tip lists manifest differences with an empty diff.",
+  "not_measured": {
+    "sl-rm-recreate": "the probe's mkdir step failed with ENOENT, so a path removed with sl rm and then re-created was never observed; the status rows allow `R` or `?` for it."
+  },
+  "recorded": "2026-10-20 23:59 PDT, buck2 test of a throwaway live probe (testrun 31525197438520472); results copied verbatim from its output.",
+  "shapes": {
+    "sl-mv": {
+      "diff_paths": [
+        "tree/registers/moved.reg"
+      ],
+      "mutation": {
+        "destination": "tree/registers/moved.reg",
+        "kind": "sl_mv",
+        "source": "tree/registers/r0.reg"
+      },
+      "status": [
+        {
+          "code": "A",
+          "path": "tree/registers/moved.reg"
+        },
+        {
+          "code": "R",
+          "path": "tree/registers/r0.reg"
+        }
+      ]
+    },
+    "sl-rm": {
+      "diff_paths": [
+        "tree/registers/r0.reg"
+      ],
+      "mutation": {
+        "kind": "sl_rm",
+        "path": "tree/registers/r0.reg"
+      },
+      "status": [
+        {
+          "code": "R",
+          "path": "tree/registers/r0.reg"
+        }
+      ]
+    },
+    "rev0": {
+      "diff_paths": [],
+      "mutation": null,
+      "status": [
+        {
+          "code": "R",
+          "path": "tree/a0/000/00000.dat"
+        },
+        {
+          "code": "R",
+          "path": "tree/a0/000/00002.dat"
+        },
+        {
+          "code": "A",
+          "path": "tree/a0/r1/00000.dat"
+        },
+        {
+          "code": "A",
+          "path": "tree/a0/r3/00002.dat"
+        },
+        {
+          "code": "R",
+          "path": "tree/a1/000/00001.dat"
+        },
+        {
+          "code": "A",
+          "path": "tree/a1/r2/00001.dat"
+        },
+        {
+          "code": "M",
+          "path": "tree/registers/r0.reg"
+        }
+      ],
+      "status_revision": 0
+    },
+    "unlink": {
+      "diff_paths": [],
+      "mutation": {
+        "kind": "unlink",
+        "path": "tree/registers/r0.reg"
+      },
+      "status": [
+        {
+          "code": "!",
+          "path": "tree/registers/r0.reg"
+        }
+      ]
+    }
+  }
+}

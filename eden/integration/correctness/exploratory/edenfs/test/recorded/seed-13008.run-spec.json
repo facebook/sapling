@@ -1,0 +1,212 @@
+{
+  "actions": {
+    "b0": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status"
+    },
+    "d0": {
+      "deadline": "operation",
+      "kind": "readdir_stream",
+      "path": "tree/wide",
+      "pause_after": 1000
+    },
+    "d1": {
+      "deadline": "operation",
+      "kind": "readdir_resume",
+      "stream": "d0"
+    },
+    "i0": {
+      "deadline": "run",
+      "kind": "checkout",
+      "mode": "normal",
+      "requires": [
+        [
+          "n0",
+          "finished"
+        ],
+        [
+          "d0",
+          "finished"
+        ]
+      ],
+      "revision": 0,
+      "via": "thrift"
+    },
+    "i1": {
+      "deadline": "operation",
+      "kind": "getattr",
+      "path": "tree/registers/r0.reg",
+      "requires": [
+        [
+          "n2",
+          "finished"
+        ]
+      ]
+    },
+    "i2": {
+      "deadline": "operation",
+      "kind": "checkout",
+      "mode": "normal",
+      "requires": [
+        [
+          "n2",
+          "finished"
+        ]
+      ],
+      "revision": 3,
+      "via": "thrift"
+    },
+    "k0": {
+      "after_ms": 0,
+      "deadline": "operation",
+      "kind": "kill_process",
+      "requires": [
+        [
+          "p0",
+          "started"
+        ]
+      ],
+      "target_action": "p0"
+    },
+    "l0": {
+      "deadline": "operation",
+      "kind": "background_read",
+      "requires": [
+        [
+          "n1",
+          "finished"
+        ]
+      ],
+      "root": "tree",
+      "seconds": 2.0
+    },
+    "n0": {
+      "behavior": "block",
+      "deadline": "operation",
+      "fault_id": "F",
+      "key": "tree/a1",
+      "kind": "fault_install",
+      "ordinal": 1,
+      "requires": [
+        [
+          "b0",
+          "finished"
+        ]
+      ],
+      "site": "tree-checkout",
+      "target_action": "i0"
+    },
+    "n1": {
+      "deadline": "operation",
+      "fault_id": "F",
+      "kind": "fault_await",
+      "requires": [
+        [
+          "i0",
+          "started"
+        ]
+      ]
+    },
+    "n2": {
+      "deadline": "operation",
+      "fault_id": "F",
+      "kind": "fault_remove",
+      "requires": [
+        [
+          "n1",
+          "finished"
+        ]
+      ]
+    },
+    "o0": {
+      "deadline": "operation",
+      "from_revision": 0,
+      "kind": "manifest_presence",
+      "requires": [
+        [
+          "n2",
+          "finished"
+        ]
+      ],
+      "to_revision": 3
+    },
+    "p0": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status",
+      "requires": [
+        [
+          "n2",
+          "finished"
+        ]
+      ]
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "b0",
+        "n0",
+        "n1",
+        "l0",
+        "n2",
+        "k0"
+      ],
+      "id": "a0"
+    },
+    {
+      "actions": [
+        "d0",
+        "i0",
+        "d1",
+        "i1"
+      ],
+      "id": "a1"
+    },
+    {
+      "actions": [
+        "i2",
+        "o0",
+        "p0"
+      ],
+      "id": "a2"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 30,
+    "operation_deadline_seconds": 120,
+    "runner_deadline_seconds": 600
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 4,
+        "file_count": 256,
+        "registers": [
+          "tree/registers/r0.reg",
+          "tree/registers/r1.reg"
+        ]
+      },
+      "setup_profile": {
+        "aged_overlay": 0,
+        "materialize": true,
+        "memory_max_mb": 1536,
+        "scatter_dirty": 0,
+        "warm_readdir": true,
+        "wide_dir": {
+          "churn_all": true,
+          "entries": 2000,
+          "name": "tree/wide"
+        }
+      }
+    }
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 13008,
+  "target": "edenfs"
+}

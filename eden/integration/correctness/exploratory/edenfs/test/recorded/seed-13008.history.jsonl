@@ -1,0 +1,23 @@
+{"action": "b0", "actor": "a0", "time": 103048.554779703, "type": "invoke"}
+{"action": "d0", "actor": "a1", "time": 103048.556022937, "type": "invoke"}
+{"action": "d0", "actor": "a1", "paused_at": 1000, "pgid": 4133483, "pos_at_pause": 1438, "time": 103048.586701658, "type": "ok"}
+{"action": "b0", "actor": "a0", "diff_paths": [], "parent": "6df9620238544f7cb563d03c00c236238135a376", "status": [], "time": 103049.087612845, "type": "ok"}
+{"action": "n0", "actor": "a0", "time": 103049.087724482, "type": "invoke"}
+{"action": "n0", "actor": "a0", "fault_id": "F", "ordinal": 1, "selector": "tree/a1(/.*)?, .*", "time": 103049.09098351, "type": "ok"}
+{"action": "i0", "actor": "a1", "time": 103049.09108982, "type": "invoke"}
+{"action": "n1", "actor": "a0", "time": 103049.09129033, "type": "invoke"}
+{"action": "n1", "actor": "a0", "fault_id": "F", "hit": true, "time": 103049.104591449, "type": "ok", "witness": "tree/a1, false"}
+{"action": "l0", "actor": "a0", "time": 103049.104653722, "type": "invoke"}
+{"action": "l0", "actor": "a0", "pgid": 4133723, "returncode": 0, "stderr": "", "stdout": "sweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\nsweep\n", "sweeps": 177, "time": 103051.138384092, "type": "ok"}
+{"action": "n2", "actor": "a0", "time": 103051.138538373, "type": "invoke"}
+{"action": "n2", "actor": "a0", "fault_id": "F", "removed": 0, "time": 103051.141652233, "type": "ok"}
+{"action": "i2", "actor": "a2", "time": 103051.141775408, "type": "invoke"}
+{"action": "i2", "actor": "a2", "reason": "invalid-backend-response", "time": 103051.14343036, "type": "info"}
+{"action": "i0", "actor": "a1", "conflicts": 0, "node": "740bc07b47482705f3c9fe8cec18990ad99e61c1", "revision": 0, "time": 103051.17310842, "type": "ok", "via": "thrift"}
+{"action": "d1", "actor": "a1", "time": 103051.173216693, "type": "skipped"}
+{"action": "i1", "actor": "a1", "time": 103051.173256923, "type": "skipped"}
+{"action": "k0", "actor": "a0", "time": 103051.173272396, "type": "skipped"}
+{"action": "o0", "actor": "a2", "time": 103051.17328844, "type": "skipped"}
+{"action": "p0", "actor": "a2", "time": 103051.173302401, "type": "skipped"}
+{"consumed": null, "fault_id": "F", "hit": true, "leak": false, "miss": false, "removed": 0, "target_completed": false, "time": 103051.175179296, "type": "cleanup-removed"}
+{"close_error": null, "time": 103051.84973622, "type": "cleanup", "unwind": {"leaks": 0, "misses": 0, "setup": {"aged_overlay_round_trips": 0, "fatal_eden_bug": false, "materialize_ms": 147, "memory": {"current_bytes": 302084096, "events": {"high": 0, "low": 0, "max": 0, "oom": 0, "oom_group_kill": 0, "oom_kill": 0, "sock_throttled": 0}, "max_bytes": 1610612736, "peak_bytes": 308101120}, "run_dir": "/tmp/eden_exploratory.3hfir3k9/run.embgozwi", "warm_readdir_ms": 20}, "unwound": 1}}

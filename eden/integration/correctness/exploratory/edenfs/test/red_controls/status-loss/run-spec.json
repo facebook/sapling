@@ -1,0 +1,57 @@
+{
+  "actions": {
+    "o": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status",
+      "requires": [
+        [
+          "w",
+          "finished"
+        ]
+      ]
+    },
+    "w": {
+      "deadline": "operation",
+      "kind": "write",
+      "path": "tree/registers/r0.reg",
+      "value_id": "red-w"
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "w",
+        "o"
+      ],
+      "id": "a"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 60.0,
+    "operation_deadline_seconds": 120.0,
+    "runner_deadline_seconds": 540.0
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 4,
+        "file_count": 32,
+        "registers": [
+          "tree/registers/r0.reg"
+        ]
+      },
+      "setup_profile": {
+        "materialize": false,
+        "scatter_dirty": 0
+      }
+    }
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 11,
+  "target": "edenfs"
+}
