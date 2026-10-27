@@ -705,6 +705,14 @@ class EdenServiceHandler
   void cancelAllActiveRequests(std::string_view reason);
 
   /**
+   * Log every Thrift request that is still in flight, with its method, age,
+   * client and whether it can be cancelled. Called when the daemon stops, so
+   * a drain that later times out can be read back to the request it waited
+   * on.
+   */
+  void logOutstandingThriftRequests(std::string_view reason);
+
+  /**
    * Cancel every request that is still active once the delay has passed,
    * unless disarmDelayedCancellation() has run by then. The timer does not
    * depend on the main event base, which is blocked while the Thrift server

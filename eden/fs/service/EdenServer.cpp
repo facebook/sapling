@@ -3297,6 +3297,7 @@ void EdenServer::stop() {
     markShuttingDownLocked(*state, "stop");
   }
 
+  handler_->logOutstandingThriftRequests("EdenServer::stop() called");
   handler_->cancelAllActiveRequests("EdenServer::stop() called");
   clearStartupStatusPublishers();
   shutdownSubscribers();

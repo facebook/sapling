@@ -22,6 +22,7 @@
 #include <fb303/ServiceData.h>
 #include <fb303/ThreadCachedServiceData.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <folly/Conv.h>
 #include <folly/Exception.h>
 #include <folly/File.h>
@@ -52,6 +53,7 @@
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/StatTimes.h"
 #include "eden/common/utils/String.h"
+#include "eden/common/utils/TimeUtil.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
@@ -7667,6 +7669,47 @@ void EdenServiceHandler::cancelAllActiveRequests(std::string_view reason) {
       "Requested cancellation for {} of {} active Thrift requests",
       cancelledCount,
       requestCount);
+}
+
+void EdenServiceHandler::logOutstandingThriftRequests(std::string_view reason) {
+  // Nothing new is accepted after a stop, so a request that later holds up
+  // the Thrift server's drain is one of these. Name them now while the
+  // daemon can still write a log.
+  constexpr size_t kMaxLogged = 50;
+  const auto now = std::chrono::steady_clock::now();
+  std::vector<std::string> lines;
+  size_t total = 0;
+  {
+    const auto requests = outstandingThriftRequests_.rlock();
+    total = requests->size();
+    const auto cancellable = requestCancellationStore_.rlock();
+    for (const auto& [requestId, event] : *requests) {
+      if (lines.size() >= kMaxLogged) {
+        break;
+      }
+      lines.push_back(
+          fmt::format(
+              "{}: {} ({}, {}cancellable){}",
+              requestId,
+              event.method,
+              durationStr(now - event.monotonicTime),
+              cancellable->contains(requestId) ? "" : "not ",
+              event.clientPid
+                  ? fmt::format(" from pid {}", event.clientPid.value().get())
+                  : ""));
+    }
+  }
+  if (total == 0) {
+    XLOGF(INFO, "{}: no Thrift requests in flight", reason);
+    return;
+  }
+  XLOGF(
+      INFO,
+      "{}: {} Thrift request(s) in flight{}:\n  {}",
+      reason,
+      total,
+      total > lines.size() ? fmt::format(" (first {})", lines.size()) : "",
+      fmt::join(lines, "\n  "));
 }
 
 } // namespace facebook::eden
