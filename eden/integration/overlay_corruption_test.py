@@ -244,12 +244,10 @@ CASES: List[Case] = [
     Case(
         "base_big_inode",
         lambda c: c.write_dir(_encode_dir(c.entries(b=("b", _REG, c.big)))),
-        isolate=True,
     ),
     Case(
         "base_root_inode",
         lambda c: c.write_dir(_encode_dir(c.entries(b=("b", _DIR, _ROOT_INODE)))),
-        isolate=True,
     ),
     Case(
         "base_zero_inode",
@@ -266,12 +264,10 @@ CASES: List[Case] = [
     Case(
         "base_dup_inode",
         lambda c: c.write_dir(_encode_dir(c.entries(b=("b", _REG, c.ino["a"])))),
-        isolate=True,
     ),
     Case(
         "base_self_ref",
         lambda c: c.write_dir(_encode_dir(c.entries(b=("b", _DIR, c.ino["."])))),
-        isolate=True,
     ),
     Case(
         "base_unknown_field",
@@ -283,8 +279,6 @@ CASES: List[Case] = [
     Case(
         "base_negative_inode",
         lambda c: c.write_dir(_encode_dir(c.entries(b=("b", _REG, -5)))),
-        # fsck treats it as a huge inode and raises the mount-wide next inode.
-        isolate=True,
     ),
     Case("base_no_stop", lambda c: c.write_dir(_encode_dir(c.entries())[:-1])),
     # Map header (3 bytes) and all of `a`, then `b`'s name and first field
@@ -301,7 +295,6 @@ CASES: List[Case] = [
         lambda c: c.write_dir(
             _encode_dir([("f", _REG, c.ino["s/f"]), ("p", _DIR, c.ino["."])]), "s"
         ),
-        isolate=True,
     ),
     # `g` in `s` binds file `a` as a directory.
     Case(
@@ -309,7 +302,6 @@ CASES: List[Case] = [
         lambda c: c.write_dir(
             _encode_dir([("f", _REG, c.ino["s/f"]), ("g", _DIR, c.ino["a"])]), "s"
         ),
-        isolate=True,
     ),
     # WAL appended to a base holding the whole directory.
     Case("wal_bad_mode", lambda c: c.append_wal(_wal_add("b", _BAD_MODE, c.ino["b"]))),
@@ -325,7 +317,6 @@ CASES: List[Case] = [
     Case(
         "wal_root_inode",
         lambda c: c.append_wal(_wal_add("b", _DIR, _ROOT_INODE)),
-        isolate=True,
     ),
     Case("wal_zero_inode", lambda c: c.append_wal(_wal_add("b", _REG, 0))),
     Case("wal_negative_inode", lambda c: c.append_wal(_wal_add("b", _REG, -5))),
@@ -337,23 +328,19 @@ CASES: List[Case] = [
     Case(
         "wal_rename_crash",
         lambda c: c.append_wal(_wal_add("c", _REG, c.ino["a"])),
-        isolate=True,
     ),
     # Same, with the destination name sorting before the source.
     Case(
         "wal_rename_crash_rev",
         lambda c: c.append_wal(_wal_add("0", _REG, c.ino["a"])),
-        isolate=True,
     ),
     Case(
         "wal_rename_crash_x",
         lambda c: c.append_wal(_wal_add("g", _REG, c.ino["a"]), "s"),
-        isolate=True,
     ),
     Case(
         "wal_self_ref",
         lambda c: c.append_wal(_wal_add("b", _DIR, c.ino["."])),
-        isolate=True,
     ),
     # A complete frame followed by a torn one.
     Case(
