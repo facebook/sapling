@@ -2212,7 +2212,10 @@ void SaplingBackingStore::logBackingStoreFetch(
     folly::Range<SlOidView*> slOids,
 
     ObjectFetchContext::ObjectType type) {
-  const auto& logFetchPathRegex =
+  // Copy the value out of the snapshot: a reference into it would dangle as
+  // soon as the temporary snapshot is destroyed, and a config reload frees
+  // the RE2 it points at.
+  const auto logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
 
   if (logFetchPathRegex) {

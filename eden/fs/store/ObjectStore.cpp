@@ -781,9 +781,10 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
 Hash32 ObjectStore::computeBlake3(const Blob& blob) const {
   const auto content = blob.getContents();
   // This should maybe be read at startup and saved in a member variable, but in
-  // practice this key should never change.
-  const auto& maybeBlakeKey =
-      edenConfig_->getEdenConfig()->blake3Key.getValue();
+  // practice this key should never change. Hold the snapshot while hashing: a
+  // reference into a temporary snapshot dangles once a reload drops it.
+  const auto edenConfig = edenConfig_->getEdenConfig();
+  const auto& maybeBlakeKey = edenConfig->blake3Key.getValue();
   return maybeBlakeKey ? Hash32::keyedBlake3(
                              folly::ByteRange{folly::StringPiece{
                                  maybeBlakeKey->data(), maybeBlakeKey->size()}},
