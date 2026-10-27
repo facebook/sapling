@@ -27,6 +27,7 @@ py_exception!(error, PathMatcherError);
 py_exception!(error, WorkingCopyError);
 py_exception!(error, RepoInitError);
 py_exception!(error, PermissionDeniedError);
+py_exception!(error, RepoAccessDeniedError);
 py_exception!(error, UncategorizedNativeError);
 py_exception!(error, TlsError);
 
@@ -73,6 +74,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "ConfigError", py.get_type::<ConfigError>())?;
     m.add(py, "NonUTF8Path", py.get_type::<NonUTF8Path>())?;
     m.add(py, "TlsError", py.get_type::<TlsError>())?;
+    m.add(
+        py,
+        "RepoAccessDeniedError",
+        py.get_type::<RepoAccessDeniedError>(),
+    )?;
 
     register_error_handlers();
 
@@ -209,6 +215,9 @@ fn register_error_handlers() {
         } else if e.is::<types::path::ParseError>() {
             Some(PyErr::new::<InvalidRepoPath, _>(py, format!("{e}")))
         } else if let Some(e) = e.downcast_ref::<edenapi::SaplingRemoteApiError>() {
+            if let Some(reason) = e.access_denied_reason() {
+                return Some(PyErr::new::<RepoAccessDeniedError, _>(py, reason));
+            }
             match e {
                 edenapi::SaplingRemoteApiError::Http(http_client::HttpClientError::Tls(
                     http_client::TlsError { source: e, .. },

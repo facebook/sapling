@@ -251,6 +251,9 @@ def callcatch(ui, req, func):
         ui.warn("%s\n" % msg, error=_("abort"))
         if req:
             req._permission_denied_handled = True
+    except error.RepoAccessDeniedError as inst:
+        ui.warn(_("permission denied: %s\n") % inst, error=_("abort"))
+        ui.warn(_("(%s)\n") % repoaccesshint(ui), label="ui.hint")
     except error.CensoredNodeError as inst:
         ui.warn(_("file censored %s!\n") % inst, error=_("abort"))
     except error.CommitLookupError as inst:
@@ -392,6 +395,13 @@ def callcatch(ui, req, func):
             raise
 
     return -1
+
+
+def repoaccesshint(ui) -> str:
+    """Hint for a user whose access to the repo was denied by the server."""
+    return ui.config("help", "repo-access-help") or _(
+        "check that you have access to this repository"
+    )
 
 
 def _uploadtraceback(ui, message, trace):

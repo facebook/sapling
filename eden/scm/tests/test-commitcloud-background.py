@@ -57,6 +57,17 @@ class BackgroundBackupTest(unittest.TestCase):
             self.assertIn("user/test/raw", warn.call_args.args[0])
             self.assertIn("offline", warn.call_args.args[0])
 
+    @patch.object(background.workspace, "currentworkspace", return_value=None)
+    @patch.object(background.service, "get")
+    def test_access_denied_falls_back_to_upload(self, service, currentworkspace):
+        service.return_value.getworkspace.side_effect = (
+            background.error.RepoAccessDeniedError("denied")
+        )
+        with patch.object(self.ui, "warn") as warn:
+            self.assertEqual(self.backgroundcommand(), ["cloud", "upload"])
+            self.assertIn("user/test/raw", warn.call_args.args[0])
+            self.assertIn("denied", warn.call_args.args[0])
+
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)

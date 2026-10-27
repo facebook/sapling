@@ -36,6 +36,7 @@ PathMatcherError = bindings.error.PathMatcherError
 WorkingCopyError = bindings.error.WorkingCopyError
 RepoInitError = bindings.error.RepoInitError
 PermissionDeniedError = bindings.error.PermissionDeniedError
+RepoAccessDeniedError = bindings.error.RepoAccessDeniedError
 UncategorizedNativeError = bindings.error.UncategorizedNativeError
 TlsError = bindings.error.TlsError
 

@@ -2614,7 +2614,11 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, SaplingRe
     let url = res.url().to_string();
     let (head, body) = res.into_parts();
     let body = body.decoded().try_concat().await?;
-    let mut message = String::from_utf8_lossy(&body).into_owned();
+    // For a denied request (403), keep only the server's explanation.
+    let mut message = (status.as_u16() == 403)
+        .then(|| json_error_message(&body))
+        .flatten()
+        .unwrap_or_else(|| String::from_utf8_lossy(&body).into_owned());
 
     if message.len() >= 9 && &*message[..9].to_lowercase() == "<!doctype" {
         message = "HTML content omitted (this error may have come from a proxy server)".into();
@@ -2630,6 +2634,17 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, SaplingRe
         headers: Box::new(headers),
         url,
     })
+}
+
+/// The `message` field of a JSON error body (`{"message": ...}`), if `body` is one.
+fn json_error_message(body: &[u8]) -> Option<String> {
+    #[derive(serde::Deserialize)]
+    struct ErrorBody {
+        message: String,
+    }
+    serde_json::from_slice::<ErrorBody>(body)
+        .ok()
+        .map(|body| body.message)
 }
 
 async fn with_retry<'t, T>(
@@ -2666,6 +2681,7 @@ mod tests {
     use anyhow::Result;
 
     use crate::builder::HttpClientBuilder;
+    use crate::client::json_error_message;
     use crate::client::split_into_batches;
     use crate::client::tree_attributes_with_config;
     use crate::types::TreeAttributes;
@@ -2784,6 +2800,15 @@ mod tests {
                 "{name}",
             );
         }
+    }
+
+    #[test]
+    fn test_json_error_message() {
+        assert_eq!(
+            json_error_message(br#"{"message":"denied","request_id":"abc"}"#).as_deref(),
+            Some("denied"),
+        );
+        assert_eq!(json_error_message(b"<!DOCTYPE html>"), None);
     }
 
     #[test]

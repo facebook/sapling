@@ -152,7 +152,7 @@ def backgroundbackup(repo, reason=None):
                         "--raw-workspace",
                         maybeworkspacename,
                     ]
-            except error.HttpError as e:
+            except (error.HttpError, error.RepoAccessDeniedError) as e:
                 ui.warn(
                     _(
                         "failed to join workspace '%s' due to error %s. Attempting cloud upload.\n"

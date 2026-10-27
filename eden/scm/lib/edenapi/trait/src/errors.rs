@@ -161,6 +161,16 @@ impl SaplingRemoteApiError {
         }
     }
 
+    /// The server's explanation, if it denied the request (HTTP 403).
+    pub fn access_denied_reason(&self) -> Option<&str> {
+        match self {
+            Self::HttpError {
+                status, message, ..
+            } if *status == StatusCode::FORBIDDEN => Some(message),
+            _ => None,
+        }
+    }
+
     pub fn tag_network(self) -> anyhow::Error {
         if self.maybe_network_error() {
             NetworkError::wrap(self)
