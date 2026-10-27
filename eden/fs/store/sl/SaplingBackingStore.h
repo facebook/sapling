@@ -380,6 +380,9 @@ class SaplingBackingStore final
       coGetTreeEnqueueCoroutineKeepsObjectAlive);
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
+      blobFetchCheckpointsAreReachable);
+  FRIEND_TEST(
+      SaplingBackingStoreWithFaultInjectorTest,
       coGetRootTreeFaultInjection);
   friend class EdenServiceHandler;
 

@@ -1545,58 +1545,77 @@ SaplingBackingStore::getBlobEnqueue(
     const ObjectFetchContextPtr& context,
     const SaplingImportRequest::FetchType fetch_type) {
   auto self = shared_from_this();
-  auto getBlobFuture = makeImmediateFutureWith([&] {
-    XLOGF(DBG4, "making blob import request for {}", slOid);
-    auto requestContext = context.copy();
-    auto request =
-        SaplingImportRequest::makeBlobImportRequest(slOid, requestContext);
-    request->setFetchType(fetch_type);
-    auto unique = request->getUnique();
-    std::unique_ptr<RequestMetricsScope> importTracker;
-    switch (fetch_type) {
-      case SaplingImportRequest::FetchType::Fetch:
-        importTracker = std::make_unique<RequestMetricsScope>(
-            &self->pendingImportBlobWatches_);
-        break;
-      case SaplingImportRequest::FetchType::Prefetch:
-        importTracker = std::make_unique<RequestMetricsScope>(
-            &self->pendingImportPrefetchWatches_);
-        break;
-    }
-    self->traceBus_->publish(
-        HgImportTraceEvent::queue(
-            unique,
-            HgImportTraceEvent::BLOB,
-            slOid,
-            context->getPriority().getClass(),
-            context->getCause(),
-            context->getClientPid()));
+  auto enqueue = [](const std::shared_ptr<SaplingBackingStore>& self,
+                    const SlOid& slOid,
+                    const ObjectFetchContextPtr& context,
+                    SaplingImportRequest::FetchType fetch_type) {
+    auto getBlobFuture = makeImmediateFutureWith([&] {
+      XLOGF(DBG4, "making blob import request for {}", slOid);
+      auto requestContext = context.copy();
+      auto request =
+          SaplingImportRequest::makeBlobImportRequest(slOid, requestContext);
+      request->setFetchType(fetch_type);
+      auto unique = request->getUnique();
+      std::unique_ptr<RequestMetricsScope> importTracker;
+      switch (fetch_type) {
+        case SaplingImportRequest::FetchType::Fetch:
+          importTracker = std::make_unique<RequestMetricsScope>(
+              &self->pendingImportBlobWatches_);
+          break;
+        case SaplingImportRequest::FetchType::Prefetch:
+          importTracker = std::make_unique<RequestMetricsScope>(
+              &self->pendingImportPrefetchWatches_);
+          break;
+      }
+      self->traceBus_->publish(
+          HgImportTraceEvent::queue(
+              unique,
+              HgImportTraceEvent::BLOB,
+              slOid,
+              context->getPriority().getClass(),
+              context->getCause(),
+              context->getClientPid()));
 
-    return self->queue_.enqueueBlob(std::move(request))
-        .ensure([self,
-                 unique,
-                 slOid,
-                 context = context.copy(),
-                 importTracker = std::move(importTracker)]() {
-          self->traceBus_->publish(
-              HgImportTraceEvent::finish(
-                  unique,
-                  HgImportTraceEvent::BLOB,
-                  slOid,
-                  context->getPriority().getClass(),
-                  context->getCause(),
-                  context->getClientPid(),
-                  context->getFetchedSource()));
+      return self->queue_.enqueueBlob(std::move(request))
+          .ensure([self,
+                   unique,
+                   slOid,
+                   context = context.copy(),
+                   importTracker = std::move(importTracker)]() {
+            self->traceBus_->publish(
+                HgImportTraceEvent::finish(
+                    unique,
+                    HgImportTraceEvent::BLOB,
+                    slOid,
+                    context->getPriority().getClass(),
+                    context->getCause(),
+                    context->getClientPid(),
+                    context->getFetchedSource()));
+          });
+    });
+
+    return std::move(getBlobFuture)
+        .thenTry([self, slOid](folly::Try<BlobPtr>&& result) {
+          self->queue_.markImportAsFinished<BlobPtr::element_type>(
+              slOid, result);
+          auto blob = std::move(result).value();
+          return GetBlobResult{
+              std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
         });
-  });
+  };
 
-  return std::move(getBlobFuture)
-      .thenTry([self, slOid](folly::Try<BlobPtr>&& result) {
-        self->queue_.markImportAsFinished<BlobPtr::element_type>(slOid, result);
-        auto blob = std::move(result).value();
-        return GetBlobResult{
-            std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
-      });
+  // Enqueue eagerly unless fault injection is enabled. Under
+  // kImmediateFutureAlwaysDefer (debug/sanitized builds) even a disabled
+  // checkAsync() is not ready, so chaining on it would defer the enqueue until
+  // the caller consumes the future.
+  if (LIKELY(!faultInjector_.isEnabled())) {
+    return enqueue(self, slOid, context, fetch_type);
+  }
+  return faultInjector_
+      .checkAsync("SaplingBackingStore::getBlobEnqueue", slOid.node())
+      .thenValue(
+          [enqueue, self, slOid = slOid, context = context.copy(), fetch_type](
+              auto&&) { return enqueue(self, slOid, context, fetch_type); });
 }
 
 folly::coro::now_task<BackingStore::GetBlobResult>
@@ -1605,6 +1624,10 @@ SaplingBackingStore::co_getBlobEnqueue(
     const ObjectFetchContextPtr& context,
     const SaplingImportRequest::FetchType fetch_type) {
   auto self = shared_from_this();
+  if (UNLIKELY(self->faultInjector_.isEnabled())) {
+    co_await self->faultInjector_.co_checkAsync(
+        "SaplingBackingStore::co_getBlobEnqueue", slOid.node());
+  }
   XLOGF(DBG4, "making blob import request for {}", slOid);
   auto requestContext = context.copy();
   auto request =

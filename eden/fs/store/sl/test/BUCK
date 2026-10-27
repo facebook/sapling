@@ -60,6 +60,7 @@ cpp_unittest(
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_config_source",
         "//eden/scm/lib/backingstore:sapling_backingstore_error",
+        "//folly/executors:inline_executor",
     ],
 )
 

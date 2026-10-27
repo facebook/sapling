@@ -12,13 +12,17 @@
 #include <folly/coro/Task.h>
 #include <folly/coro/Timeout.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/InlineExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/testing/TestUtil.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <optional>
+#include <string_view>
+#include <utility>
 
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -42,6 +46,21 @@ using namespace std::chrono_literals;
 namespace facebook::eden {
 namespace {
 const auto kTestTimeout = 10s;
+
+constexpr std::array<std::string_view, 2> kBlobFetchFaultPoints{
+    "SaplingBackingStore::getBlobEnqueue",
+    "SaplingBackingStore::co_getBlobEnqueue",
+};
+
+template <typename Future>
+void expectRuntimeError(Future&& future, std::string_view message) {
+  try {
+    std::forward<Future>(future).get(kTestTimeout);
+    FAIL() << "expected std::runtime_error";
+  } catch (const std::runtime_error& ex) {
+    EXPECT_EQ(message, ex.what());
+  }
+}
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_queued_hg_backing_store_test"};
@@ -380,6 +399,76 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getBlob) {
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");
     }
   }
+}
+
+TEST_F(
+    SaplingBackingStoreWithFaultInjectorTest,
+    blobFetchCheckpointsAreReachable) {
+  const auto rootTree = folly::coro::blockingWait(
+      folly::coro::timeout(
+          queuedBackingStore->co_getRootTree(
+              commit1, ObjectFetchContext::getNullContext()),
+          kTestTimeout));
+
+  std::optional<SlOid> blobOid;
+  for (const auto& [name, entry] : *rootTree.tree) {
+    if (name == "foo.txt" && !entry.isTree()) {
+      blobOid.emplace(entry.getObjectId());
+      break;
+    }
+  }
+  ASSERT_TRUE(blobOid.has_value());
+  const auto key = blobOid->node().toString();
+
+  faultInjector.injectBlock(kBlobFetchFaultPoints[0], key, 1);
+  auto future = queuedBackingStore->getBlobEnqueue(
+      *blobOid,
+      ObjectFetchContext::getNullContext(),
+      SaplingImportRequest::FetchType::Fetch);
+  ASSERT_TRUE(
+      faultInjector.waitUntilBlocked(kBlobFetchFaultPoints[0], kTestTimeout));
+  EXPECT_EQ(
+      1,
+      faultInjector.unblockWithError(
+          kBlobFetchFaultPoints[0],
+          key,
+          std::runtime_error("future blob checkpoint reached")));
+  expectRuntimeError(std::move(future), "future blob checkpoint reached");
+
+  faultInjector.injectBlock(kBlobFetchFaultPoints[1], key, 1);
+  folly::CPUThreadPoolExecutor pool{1};
+  auto coroFuture =
+      folly::coro::co_withExecutor(
+          &pool,
+          folly::coro::co_invoke(
+              [&]() -> folly::coro::Task<BackingStore::GetBlobResult> {
+                co_return co_await queuedBackingStore->co_getBlobEnqueue(
+                    *blobOid,
+                    ObjectFetchContext::getNullContext(),
+                    SaplingImportRequest::FetchType::Fetch);
+              }))
+          .start();
+  auto cleanup = folly::makeGuard([&] {
+    faultInjector.removeFault(kBlobFetchFaultPoints[1], key);
+    faultInjector.unblockWithError(
+        kBlobFetchFaultPoints[1],
+        key,
+        folly::make_exception_wrapper<std::runtime_error>("test cleanup"));
+    EXPECT_TRUE(std::move(coroFuture).wait(kTestTimeout))
+        << "co_getBlobEnqueue did not finish after cleanup";
+  });
+
+  ASSERT_TRUE(
+      faultInjector.waitUntilBlocked(kBlobFetchFaultPoints[1], kTestTimeout));
+  EXPECT_EQ(
+      1,
+      faultInjector.unblockWithError(
+          kBlobFetchFaultPoints[1],
+          key,
+          std::runtime_error("coroutine blob checkpoint reached")));
+  expectRuntimeError(
+      std::move(coroFuture), "coroutine blob checkpoint reached");
+  cleanup.dismiss();
 }
 
 // Duplicate requests with same nodeID in one request batch will crash Eden with
@@ -794,10 +883,8 @@ TEST_F(
         "SaplingBackingStore::co_getTreeEnqueue",
         ".*",
         folly::make_exception_wrapper<std::runtime_error>("test cleanup"));
-    try {
-      std::move(future).get(kTestTimeout);
-    } catch (...) {
-    }
+    EXPECT_TRUE(std::move(future).wait(kTestTimeout))
+        << "co_getTreeEnqueue did not finish after cleanup";
   };
 
   ASSERT_TRUE(faultInjector.waitUntilBlocked(
