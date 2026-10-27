@@ -126,3 +126,60 @@ async fn test_versions(fb: FacebookInit) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// FIXME: BUG! This did return no workspace for the prefix `user/test_user` on sqlite although
+/// `user/test_user/default` exists (`prepare_prefix` escapes `_` as `\_`, but the
+/// `GetVersionByPrefix` LIKE has no ESCAPE clause, so sqlite looks for a literal backslash) but
+/// should have returned exactly the workspaces whose name starts with the prefix.
+#[mononoke::fbinit_test]
+async fn version_prefix_with_underscore_matches_literally(fb: FacebookInit) -> anyhow::Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
+    let reponame = "test_repo".to_owned();
+    let workspace = "user/test_user/default".to_owned();
+    let args = WorkspaceVersion {
+        workspace: workspace.clone(),
+        reponame: reponame.clone(),
+        version: 1,
+        timestamp: Timestamp::now_as_secs(),
+        archived: false,
+    };
+    let txn = sql
+        .connections
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
+    let txn = sql
+        .insert(txn, reponame.clone(), workspace.clone(), args.clone())
+        .await?;
+    txn.commit().await?;
+
+    let plain = get_version_by_prefix(
+        &ctx,
+        &sql.connections,
+        reponame.clone(),
+        "user/test".to_string(),
+    )
+    .await?;
+    assert_eq!(plain, vec![args.clone()]);
+
+    let wildcard = get_version_by_prefix(
+        &ctx,
+        &sql.connections,
+        reponame.clone(),
+        "user/tes_".to_string(),
+    )
+    .await?;
+    assert_eq!(wildcard, vec![]);
+
+    let underscore = get_version_by_prefix(
+        &ctx,
+        &sql.connections,
+        reponame,
+        "user/test_user".to_string(),
+    )
+    .await?;
+    // FIXME: BUG! The escaped underscore is not honoured by the sqlite LIKE, so nothing matches.
+    assert_eq!(underscore, vec![]);
+    Ok(())
+}
