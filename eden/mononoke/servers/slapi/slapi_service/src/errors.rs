@@ -8,7 +8,9 @@
 use std::fmt::Display;
 
 use anyhow::Error;
+use edenapi_types::CODE_PERMISSION_DENIED;
 use edenapi_types::CommitId;
+use edenapi_types::ServerError;
 use gotham_ext::error::HttpError;
 use mononoke_api::ChangesetId;
 use mononoke_api::MononokeError;
@@ -121,5 +123,91 @@ impl MononokeErrorExt for MononokeError {
             // 5xx.
             BookmarkMoveAlreadyProcessed => HttpError::e400,
         })(Error::from(self).context(context))
+    }
+}
+
+/// The in-band error reported for a failed bookmark write or land.
+///
+/// Access control denials carry `CODE_PERMISSION_DENIED`, so that the client
+/// can report them as such, wherever the denial sits in the error's chain of
+/// causes. The message is the same either way.
+pub fn write_server_error(e: &Error) -> ServerError {
+    let message = format!("{e:?}");
+    let denied = e.chain().any(|cause| {
+        matches!(
+            cause.downcast_ref::<MononokeError>(),
+            Some(
+                MononokeError::AuthorizationError(_)
+                    | MononokeError::ServicePermissionDenied { .. }
+            )
+        )
+    });
+    if denied {
+        ServerError::new(message, CODE_PERMISSION_DENIED)
+    } else {
+        ServerError::generic(message)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[derive(Debug, Error)]
+    #[error("land failed")]
+    struct LandFailed(#[source] MononokeError);
+
+    fn denial() -> Error {
+        Error::from(MononokeError::AuthorizationError(
+            "repo:test denied".to_string(),
+        ))
+    }
+
+    #[mononoke::test]
+    fn denial_has_permission_denied_code() {
+        assert_eq!(write_server_error(&denial()).code, CODE_PERMISSION_DENIED);
+    }
+
+    #[mononoke::test]
+    fn denial_under_context_has_permission_denied_code() {
+        let e = denial()
+            .context("Failed to move bookmark")
+            .context("set_bookmark failed");
+        let server_error = write_server_error(&e);
+        assert_eq!(server_error.code, CODE_PERMISSION_DENIED);
+        assert!(
+            server_error.message.contains("repo:test denied"),
+            "message should keep the denial: {}",
+            server_error.message
+        );
+    }
+
+    #[mononoke::test]
+    fn denial_as_source_has_permission_denied_code() {
+        let e = Error::from(LandFailed(MononokeError::AuthorizationError(
+            "repo:test denied".to_string(),
+        )));
+        assert_eq!(write_server_error(&e).code, CODE_PERMISSION_DENIED);
+    }
+
+    #[mononoke::test]
+    fn service_denial_under_context_has_permission_denied_code() {
+        let e = Error::from(MononokeError::ServicePermissionDenied {
+            identities: "USER:test".to_string(),
+            reponame: "repo".to_string(),
+            service_identity: "svc".to_string(),
+        })
+        .context("land_stack failed");
+        assert_eq!(write_server_error(&e).code, CODE_PERMISSION_DENIED);
+    }
+
+    #[mononoke::test]
+    fn other_errors_are_generic() {
+        let e = Error::from(MononokeError::InvalidRequest("bad".to_string()))
+            .context("set_bookmark failed");
+        assert_eq!(write_server_error(&e).code, 0);
+        assert_eq!(write_server_error(&anyhow::anyhow!("boom")).code, 0);
     }
 }

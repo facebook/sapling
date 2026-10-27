@@ -35,6 +35,9 @@ use thiserror::Error;
 ///    A modern_sync mirror bookmark move to a `*_shadow` replica was already
 ///    applied (a lost-ack replay). The replica is in the wanted state, so the
 ///    client advances its checkpoint instead of retrying the move.
+/// 4: PermissionDenied
+///    The repo's access control denied the request. The `message` explains the
+///    denial and is meant to be shown to the user as is.
 pub struct ServerError {
     pub message: String,
     pub code: u64,
@@ -43,6 +46,10 @@ pub struct ServerError {
 /// Error code for a modern_sync mirror bookmark move that the replica already
 /// applied. See the `ServerError` error code list.
 pub const CODE_BOOKMARK_MOVE_ALREADY_PROCESSED: u64 = 3;
+
+/// Error code for a request that the repo's access control denied. See the
+/// `ServerError` error code list.
+pub const CODE_PERMISSION_DENIED: u64 = 4;
 
 impl ServerError {
     pub fn new<M: Into<String>>(m: M, code: u64) -> Self {

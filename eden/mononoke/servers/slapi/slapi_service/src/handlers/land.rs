@@ -17,7 +17,6 @@ use edenapi_types::HgId;
 use edenapi_types::LandStackData;
 use edenapi_types::LandStackRequest;
 use edenapi_types::LandStackResponse;
-use edenapi_types::ServerError;
 use futures::StreamExt;
 use futures::stream;
 use hooks::PushAuthoredBy;
@@ -33,6 +32,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::errors::SaplingRemoteApiServiceError;
+use crate::errors::write_server_error;
 
 /// Rebase a stack of commits onto a bookmark, and update the bookmark to the top of the newly-rebased stack.
 pub struct LandStackHandler;
@@ -83,7 +83,7 @@ async fn land_stack_response<R: MononokeRepo>(
     Ok(LandStackResponse {
         data: land_stack(repo, bookmark, head_hgid, base_hgid, pushvars)
             .await
-            .map_err(|e| ServerError::generic(format!("{e:?}"))),
+            .map_err(|e| write_server_error(&e)),
     })
 }
 

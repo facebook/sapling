@@ -167,6 +167,7 @@ pub use crate::commitid::CommitId;
 pub use crate::commitid::CommitIdScheme;
 pub use crate::commitid::GitSha1;
 pub use crate::errors::CODE_BOOKMARK_MOVE_ALREADY_PROCESSED;
+pub use crate::errors::CODE_PERMISSION_DENIED;
 pub use crate::errors::ServerError;
 pub use crate::file::FileAttributes;
 pub use crate::file::FileAuxData;

@@ -107,6 +107,17 @@ bookmark:
     remote server error: permission denied: Repo write access for CreateBookmark(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
   [255]
 
+The server marks a write that access control denied with error code 4
+(`PermissionDenied`), for both a bookmark move and a land:
+  $ HEAD=$(hg log -r . -T '{node}')
+  $ BASE=$(hg log -r master_bookmark -T '{node}')
+  $ hg debugapi $READ_ONLY -e setbookmark -i "'master_bookmark'" -i "'$HEAD'" -i "'$BASE'"
+  {"data": {"Err": {"code": 4,
+                    "message": "permission denied: Repo write access for UpdateBookmark(Publishing) in repo 'repo' is not permitted with Identity for *"}}} (glob)
+  $ hg debugapi $READ_ONLY -e landstack -i "'master_bookmark'" -i "'$HEAD'" -i "'$BASE'"
+  {"data": {"Err": {"code": 4,
+                    "message": "permission denied: Repo write access for LandStack(Publishing) in repo 'repo' is not permitted with Identity for *"}}} (glob)
+
 Commit cloud reports a denial in the same form. Without local backup state, a
 backup first asks the server which commits it already has:
   $ setconfig extensions.commitcloud= commitcloud.hostname=testhost commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP

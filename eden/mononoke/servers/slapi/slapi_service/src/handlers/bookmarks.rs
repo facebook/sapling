@@ -43,6 +43,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::errors::SaplingRemoteApiServiceError;
+use crate::errors::write_server_error;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
@@ -128,7 +129,7 @@ async fn set_bookmark_response<R: MononokeRepo>(
     Ok(SetBookmarkResponse {
         data: set_bookmark(repo, bookmark, to, from, pushvars)
             .await
-            .map_err(|e| ServerError::generic(format!("{e:?}"))),
+            .map_err(|e| write_server_error(&e)),
     })
 }
 
