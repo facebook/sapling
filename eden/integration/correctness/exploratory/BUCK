@@ -743,6 +743,84 @@ python_unittest(
 )
 
 python_library(
+    name = "edenfs_results",
+    srcs = ["edenfs/file_results.py"],
+    deps = [
+        ":core_checker",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "edenfs_reference",
+    srcs = [
+        "edenfs/executor.py",
+        "edenfs/reference.py",
+        "edenfs/sapling_processes.py",
+    ],
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_encoding",
+        ":edenfs_results",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "environment",
+    srcs = ["edenfs/environment.py"],
+    deps = [
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":edenfs_reference",
+        ":target",
+        "//eden/fs/cli:lib",
+        # Only eden.integration.correctness.repo is imported from here.
+        "//eden/integration/correctness:repo",
+        "//eden/integration/lib:lib",
+        "//eden/test_support:py",
+    ],
+)
+
+python_library(
+    name = "edenfs_backends",
+    srcs = [
+        "edenfs/backend_processes.py",
+        "edenfs/backend_scm.py",
+        "edenfs/backends.py",
+        "edenfs/faults.py",
+    ],
+    deps = [
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_encoding",
+        ":edenfs_reference",
+        ":edenfs_results",
+        ":environment",
+        ":scheduler",
+        ":target",
+        "//eden/fs/py/eden/thrift:client",
+        "//eden/fs/service:thrift-python-types",
+        "//eden/integration/lib:lib",
+        "//thrift/lib/python:types",
+    ],
+)
+
+python_library(
+    name = "edenfs_differential_backend",
+    srcs = ["edenfs/differential_backend.py"],
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_reference",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_library(
     name = "edenfs_properties",
     srcs = [
         "edenfs/properties/attributes.py",

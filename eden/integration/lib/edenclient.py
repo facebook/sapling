@@ -31,6 +31,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     TextIO,
     Tuple,
     Union,
@@ -131,6 +132,7 @@ class EdenFS:
         extra_args: Optional[List[str]] = None,
         storage_engine: str = "memory",
         expected_fuse_transport: Optional[str] = None,
+        command_prefix: Sequence[str] = (),
     ) -> None:
         """
         Construct a new EdenFS object.
@@ -173,6 +175,7 @@ class EdenFS:
         self._logging_settings = logging_settings
         self._extra_args = extra_args
         self.expected_fuse_transport = expected_fuse_transport
+        self._command_prefix = command_prefix
 
         self._process: Optional[subprocess.Popen] = None
 
@@ -614,7 +617,7 @@ class EdenFS:
         if "EDEN_DAEMON_ARGS" in os.environ:
             args.extend(shlex.split(os.environ["EDEN_DAEMON_ARGS"]))
 
-        full_args = args + ["--"] + extra_daemon_args
+        full_args = list(self._command_prefix) + args + ["--"] + extra_daemon_args
         logging.info(
             "Invoking eden daemon: %s", " ".join(shlex.quote(arg) for arg in full_args)
         )

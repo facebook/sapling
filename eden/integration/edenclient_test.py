@@ -452,3 +452,19 @@ class EdenClientTest(testcase.EdenRepoTest):
             self.eden.client_dir_for_mount(clone_path),
             pathlib.Path(self.eden_dir, "clients", "test_checkout"),
         )
+
+    def test_command_prefix_precedes_daemon_command(self) -> None:
+        with (
+            mock.patch.object(edenclient.subprocess, "Popen") as popen,
+            mock.patch.object(edenclient.threading, "Thread"),
+        ):
+            daemon = edenclient.EdenFS(
+                base_dir=pathlib.Path(self.tmp_dir),
+                command_prefix=("prefix", "--flag"),
+            )
+            daemon.spawn_nowait()
+
+        self.assertEqual(
+            popen.call_args.args[0][:3],
+            ["prefix", "--flag", edenclient.FindExe.get_edenfsctl_env()[0]],
+        )
