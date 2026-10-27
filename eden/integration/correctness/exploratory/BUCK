@@ -1895,6 +1895,20 @@ python_library(
 )
 
 python_unittest(
+    name = "golden_test",
+    srcs = ["test/golden_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = glob(["testdata/golden/*"]),
+    deps = [
+        ":campaign_fixtures",
+        ":corpus_author",
+        ":target",
+        ":tasking",
+    ],
+)
+
+python_unittest(
     name = "schemas_test",
     srcs = ["test/schemas_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -2084,7 +2098,68 @@ python_unittest(
     ],
 )
 
+python_library(
+    name = "known_reproducers",
+    srcs = ["test/known_reproducers.py"],
+    resources = glob(["test/corpus/known/**/*"]),
+    deps = [
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "decks_test",
+    srcs = ["test/decks_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    resources = glob([
+        "decks/*.json",
+        "test/deck_histories/*.history.jsonl",
+    ])
+    + ["ci/release-decks.json"],
+    deps = [
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":known_reproducers",
+        ":target",
+        ":tasking",
+        ":tasking_fixtures",
+        ":waiting",
+    ],
+)
+
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
+# runner deadline and the harness cleanup before tpx stops the test.
+python_integration_test(
+    name = "decks_live_test",
+    srcs = ["test/decks_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    labels = [tpx_labels.long_running],
+    network_access = network_access_utils.all(),
+    resources = glob(["decks/*.json"]),
+    # Methods are generated from deck metadata.
+    supports_static_listing = False,
+    deps = [
+        ":backends_fixtures",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":generate",
+        ":sites",
+        ":target",
+        ":tasking",
+        ":waiting",
+    ],
+)
 
 python_library(
     name = "legal_simulator",
