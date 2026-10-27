@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import string
 from typing import Optional
 
 import bindings
@@ -191,25 +192,26 @@ class eagerpeer(repository.peer):
                 node = bin(key)
             except Exception:
                 pass
-        if len(key) == 20:
+        if isinstance(key, bytes) and len(key) == 20:
             # binary node?
             node = key
         if node is not None:
             if self.known([node]) == [True]:
                 return node
 
-        prefix_resp = self.edenapi.hashlookup([key])
-        hgids = prefix_resp[0]["hgids"]
-        if len(hgids) == 1:
-            return hgids[0]
+        if _ishexprefix(key):
+            prefix_resp = self.edenapi.hashlookup([key])
+            hgids = prefix_resp[0]["hgids"]
+            if len(hgids) == 1:
+                return hgids[0]
 
         # bookmark?
         m = self.listkeyspatterns("bookmarks", [key])
-        node = m.get(key, None)
-        tracing.debug("lookup %s = %s" % (key, node and hex(node)))
-        if node is None:
+        hexnode = m.get(key, None)
+        tracing.debug("lookup %s = %s" % (key, hexnode))
+        if hexnode is None:
             raise error.RepoLookupError(_("unknown revision %r") % (key,))
-        return node
+        return bin(hexnode)
 
     def pushkey(self, namespace, key, old, new):
         changed = False
@@ -233,6 +235,15 @@ class eagerpeer(repository.peer):
 
     def iterbatch(self):
         return peer.localiterbatcher(self)
+
+
+def _ishexprefix(key):
+    """Whether key can be sent to the server's hash prefix lookup."""
+    return (
+        isinstance(key, str)
+        and 0 < len(key) <= 40
+        and all(c in string.hexdigits for c in key)
+    )
 
 
 def unwrap(result, node=None):
