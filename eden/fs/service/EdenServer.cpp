@@ -2716,18 +2716,13 @@ void EdenServer::mountFinished(
   stopAllGarbageCollections(
       /*maxRetries=*/3, /*retryInterval=*/std::chrono::seconds(1));
 
-  // Save the unmount and takeover Promises
-  folly::SharedPromise<Unit> unmountPromise;
-  std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   auto shutdownFuture = folly::SemiFuture<SerializedInodeMap>::makeEmpty();
   {
     const auto mountPoints = mountPoints_->wlock();
     const auto it = mountPoints->find(mountPath);
     XCHECK(it != mountPoints->end());
-    unmountPromise = std::move(it->second.unmountPromise);
-    takeoverPromise = std::move(it->second.takeoverPromise);
 
-    const bool doTakeover = takeoverPromise.has_value();
+    const bool doTakeover = it->second.takeoverPromise.has_value();
     // Shutdown the EdenMount, while holding the mountPoints_ lock. This is
     // done to avoid a race between checking isSafeForInodeAccess and the
     // InodeMap being destroyed. In that race, the rootInode may be a nullptr
@@ -2744,8 +2739,6 @@ void EdenServer::mountFinished(
       })
       .thenTry([this,
                 mountPath = mountPath,
-                unmountPromise = std::move(unmountPromise),
-                takeoverPromise = std::move(takeoverPromise),
                 takeoverData = std::move(takeover)](
                    folly::Try<SerializedInodeMap>&& result) mutable {
         // Erase the EdenMount from mountPoints_ before fulfilling the
@@ -2755,12 +2748,22 @@ void EdenServer::mountFinished(
         // `eden rm` relies on that to delete the checkout's configuration
         // without leaving the daemon serving a mount that no on-disk
         // configuration describes.
+        //
+        // The promises leave the entry only now. While the mount shuts
+        // down, unmount() and unmountAll() still find the entry and take
+        // futures from its unmountPromise; a SharedPromise moved out
+        // earlier leaves an empty one behind, and the futures taken from
+        // that one break when the entry is erased.
         std::shared_ptr<EdenMount> removedMount;
+        folly::SharedPromise<Unit> unmountPromise;
+        std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
         {
           const auto mountPoints = mountPoints_->wlock();
           const auto it = mountPoints->find(mountPath);
           if (it != mountPoints->end()) {
             removedMount = std::move(it->second.edenMount);
+            unmountPromise = std::move(it->second.unmountPromise);
+            takeoverPromise = std::move(it->second.takeoverPromise);
             mountPoints->erase(it);
           }
         }

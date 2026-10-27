@@ -1086,12 +1086,9 @@ TEST_F(EdenServerMountTest, StopWhileAMountIsShuttingDown) {
   faultInjector.removeFault("mountShutdown", ".*");
   faultInjector.unblock("mountShutdown", ".*");
 
-  // FIXME: the stop must wait for the shutdown and exit cleanly. Instead
-  // unmountAll() takes a future from a SharedPromise that mountFinished()
-  // moved out of the entry when the shutdown began, and that future breaks
-  // when the entry is erased. In the daemon nothing catches the exception
-  // performCleanup() rethrows, and the process aborts in std::terminate.
-  EXPECT_THROW(server.performCleanup(), folly::BrokenPromise);
+  // unmountAll() waits on the same promise the shutdown's continuation
+  // fulfills, so the stop waits for the shutdown and exits cleanly.
+  EXPECT_TRUE(server.performCleanup());
   EXPECT_NO_THROW(std::move(unmountFuture).get(1s));
 }
 #endif
