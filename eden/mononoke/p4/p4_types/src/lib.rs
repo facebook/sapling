@@ -84,6 +84,41 @@ pub enum Action {
 }
 
 impl Action {
+    const ALL: [Action; 10] = [
+        Action::Add,
+        Action::Edit,
+        Action::Delete,
+        Action::Branch,
+        Action::Integrate,
+        Action::MoveAdd,
+        Action::MoveDelete,
+        Action::Import,
+        Action::Purge,
+        Action::Archive,
+    ];
+
+    pub fn from_p4(action: &[u8]) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|known| known.as_p4().as_bytes() == action)
+    }
+
+    /// As p4 writes it.
+    pub fn as_p4(self) -> &'static str {
+        match self {
+            Action::Add => "add",
+            Action::Edit => "edit",
+            Action::Delete => "delete",
+            Action::Branch => "branch",
+            Action::Integrate => "integrate",
+            Action::MoveAdd => "move/add",
+            Action::MoveDelete => "move/delete",
+            Action::Import => "import",
+            Action::Purge => "purge",
+            Action::Archive => "archive",
+        }
+    }
+
     /// Purged and archived revisions keep their size and digest, but p4 prints nothing.
     pub fn has_content(self) -> bool {
         match self {
