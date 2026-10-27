@@ -886,7 +886,7 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
                         &restricted_paths,
                         manifest_id,
                         manifest_type,
-                        restriction_check::ManifestRestrictionSource::Config,
+                        restriction_check::RestrictionSource::Config,
                     )
                     .await
                 })
@@ -900,7 +900,7 @@ pub async fn spawn_enforce_restricted_manifest_access<'a>(
                             restricted_paths.clone(),
                             manifest_id_for_fetches.clone(),
                             manifest_type_for_fetches.clone(),
-                            restriction_check::ManifestRestrictionSource::AclManifest,
+                            restriction_check::RestrictionSource::AclManifest,
                         )
                     })
                 })

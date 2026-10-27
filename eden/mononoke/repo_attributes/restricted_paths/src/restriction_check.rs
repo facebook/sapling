@@ -148,12 +148,13 @@ pub(crate) enum PathRestrictionSource {
     AclManifest(ChangesetId),
 }
 
-/// Source to use for manifest-side restriction checks.
+/// Where a restriction is declared.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum ManifestRestrictionSource {
-    /// Config-backed manifest-id store.
+pub(crate) enum RestrictionSource {
+    /// The repo config: `path_restriction_metadata`, plus the manifest-id
+    /// store for manifest accesses.
     Config,
-    /// AclManifest pointer attached to the manifest.
+    /// `.slacl` files, read through the AclManifest derived data.
     AclManifest,
 }
 
@@ -963,20 +964,18 @@ pub(crate) async fn get_manifest_restriction_check(
     ctx: &CoreContext,
     manifest_id: &RestrictedManifestId,
     manifest_type: &ManifestType,
-    source: ManifestRestrictionSource,
+    source: RestrictionSource,
 ) -> Result<Vec<ManifestRestrictionCheckResult>> {
     let restriction_info = match source {
-        ManifestRestrictionSource::Config => {
-            restriction_info::get_manifest_restriction_info_from_config(
-                restricted_paths,
-                ctx,
-                manifest_id,
-                manifest_type,
-            )
-            .await
-            .context("find config restrictions for manifest-side check")?
-        }
-        ManifestRestrictionSource::AclManifest => {
+        RestrictionSource::Config => restriction_info::get_manifest_restriction_info_from_config(
+            restricted_paths,
+            ctx,
+            manifest_id,
+            manifest_type,
+        )
+        .await
+        .context("find config restrictions for manifest-side check")?,
+        RestrictionSource::AclManifest => {
             restriction_info::get_manifest_restriction_info_from_acl_manifest(
                 restricted_paths,
                 ctx,
@@ -1308,7 +1307,7 @@ pub(crate) async fn check_manifest_restriction_from_source(
     restricted_paths: &RestrictedPaths,
     manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
-    source: ManifestRestrictionSource,
+    source: RestrictionSource,
 ) -> Result<Vec<ManifestRestrictionCheckResult>> {
     get_manifest_restriction_check(restricted_paths, ctx, &manifest_id, &manifest_type, source)
         .await
@@ -1319,7 +1318,7 @@ pub(crate) fn spawn_manifest_restriction_check(
     restricted_paths: Arc<RestrictedPaths>,
     manifest_id: RestrictedManifestId,
     manifest_type: ManifestType,
-    source: ManifestRestrictionSource,
+    source: RestrictionSource,
 ) -> SharedFetchHandle<ManifestRestrictionCheckResult> {
     let ctx = ctx.clone();
     let handle = mononoke::spawn_task(async move {

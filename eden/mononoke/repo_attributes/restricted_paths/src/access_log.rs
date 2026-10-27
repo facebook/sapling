@@ -30,9 +30,9 @@ use crate::RestrictedManifestId;
 use crate::RestrictedPaths;
 use crate::restriction_check;
 use crate::restriction_check::EnforcementDecision;
-use crate::restriction_check::ManifestRestrictionSource;
 use crate::restriction_check::PathRestrictionSource;
 use crate::restriction_check::RestrictionCheckResult;
+use crate::restriction_check::RestrictionSource;
 use crate::restriction_check::SharedFetchHandle;
 use crate::restriction_check::SourceRestrictionCheck;
 use crate::restriction_check::SourceRestrictionChecks;
@@ -175,7 +175,7 @@ pub(crate) async fn log_source_comparison_access_by_manifest_if_restricted(
         restricted_paths,
         manifest_id.clone(),
         manifest_type.clone(),
-        ManifestRestrictionSource::Config,
+        RestrictionSource::Config,
     )
     .await
     .map(SourceRestrictionChecks::new)
@@ -188,7 +188,7 @@ pub(crate) async fn log_source_comparison_access_by_manifest_if_restricted(
                 restricted_paths,
                 manifest_id.clone(),
                 manifest_type.clone(),
-                ManifestRestrictionSource::AclManifest,
+                RestrictionSource::AclManifest,
             )
             .await
             .map(SourceRestrictionChecks::new)
