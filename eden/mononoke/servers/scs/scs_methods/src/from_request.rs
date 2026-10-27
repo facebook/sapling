@@ -550,4 +550,39 @@ mod tests {
             assert!(ContentManifestId::from_request(&specifier).is_err());
         }
     }
+
+    /// FIXME: BUG! This did panic (`Option::unwrap()` on `None`) when a client-supplied
+    /// `thrift::DateTime` had a `tz` outside the range chrono accepts or an out-of-range
+    /// `timestamp`, but it should have returned an `invalid_request` error like every other
+    /// `FromRequest` impl. The SCS server runs with `panichandler::Fate::Abort`, so the panic
+    /// takes the whole process down. This test pins the current behaviour; the next diff
+    /// fixes it.
+    #[mononoke::test]
+    fn datetime_from_request_rejects_out_of_range_tz_and_timestamp() {
+        let valid = thrift::DateTime {
+            timestamp: 1_700_000_000,
+            tz: 3_600,
+            ..Default::default()
+        };
+        let date = <DateTime<FixedOffset>>::from_request(&valid).unwrap();
+        assert_eq!(date.timestamp(), 1_700_000_000);
+        assert_eq!(date.offset().local_minus_utc(), 3_600);
+
+        let out_of_range_tz = thrift::DateTime {
+            timestamp: 0,
+            tz: 86_400,
+            ..Default::default()
+        };
+        let out_of_range_timestamp = thrift::DateTime {
+            timestamp: i64::MAX,
+            tz: 0,
+            ..Default::default()
+        };
+        for invalid in [out_of_range_tz, out_of_range_timestamp] {
+            let result =
+                std::panic::catch_unwind(|| <DateTime<FixedOffset>>::from_request(&invalid));
+            // FIXME: BUG! The conversion panics instead of returning an invalid request error.
+            assert!(result.is_err());
+        }
+    }
 }
