@@ -48,12 +48,16 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        let prefixes = request.prefixes.map(|prefixes| {
-            prefixes
-                .into_iter()
-                .map(|prefix| MPath::try_from(&prefix).unwrap())
-                .collect()
-        });
+        let prefixes = request
+            .prefixes
+            .map(|prefixes| {
+                prefixes
+                    .into_iter()
+                    .map(MPath::new)
+                    .collect::<anyhow::Result<Vec<_>>>()
+            })
+            .transpose()
+            .map_err(HttpError::e400)?;
         let suffixes = Vec1::try_from_vec(request.basename_suffixes)
             .with_context(|| anyhow!("No suffixes provided"))
             .map_err(HttpError::e400)?;
@@ -98,7 +102,6 @@ mod tests {
     use context::CoreContext;
     use edenapi_types::CommitId;
     use fbinit::FacebookInit;
-    use futures::FutureExt;
     use gotham::extractor::NoopQueryStringExtractor;
     use gotham_ext::handler::SlapiCommitIdentityScheme;
     use gotham_ext::middleware::request_context::RequestContext;
@@ -138,12 +141,8 @@ mod tests {
         ))
     }
 
-    /// FIXME: BUG! This did panic inside `SuffixQueryHandler::handler` when a client-supplied
-    /// `prefixes` entry was not a valid `MPath` (here `..`; also `.`, a component with a NUL
-    /// byte or a component longer than 255 bytes) but should have rejected the request with
-    /// HTTP 400 like every other handler that takes paths. The panic is not caught by
-    /// gotham_ext, so it tears down the whole HTTP connection with every stream multiplexed
-    /// on it. This test pins the current behaviour; the next diff fixes it.
+    /// A client-supplied `prefixes` entry that is not a valid `MPath` is rejected with HTTP 400
+    /// instead of panicking inside the handler.
     #[mononoke::fbinit_test]
     async fn test_suffix_query_invalid_prefix(fb: FacebookInit) -> anyhow::Result<()> {
         let ectx = suffix_query_context(fb).await?;
@@ -153,12 +152,12 @@ mod tests {
             prefixes: Some(vec!["..".to_string()]),
         };
 
-        let outcome = std::panic::AssertUnwindSafe(SuffixQueryHandler::handler(ectx, request))
-            .catch_unwind()
-            .await;
+        let error: HttpError = match SuffixQueryHandler::handler(ectx, request).await {
+            Ok(_) => panic!("an invalid prefix must be rejected"),
+            Err(error) => error.into(),
+        };
 
-        // FIXME: BUG! The handler panics on client input instead of returning a 400 error.
-        assert!(outcome.is_err());
+        assert_eq!(error.status_code, http::StatusCode::BAD_REQUEST);
         Ok(())
     }
 }

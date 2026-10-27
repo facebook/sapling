@@ -7,10 +7,6 @@
 An invalid prefix in a suffix query ('..' is not a valid repo path) is a
 client error: the server answers 400 Bad Request instead of panicking.
 
-FIXME: BUG! Today the handler unwraps MPath::try_from on each client prefix,
-so the request panics inside the server and the connection is torn down. This
-test pins the current behaviour; the next diff fixes it.
-
   $ . "${TEST_FIXTURES}/library.sh"
   $ setup_common_config
 
@@ -30,16 +26,19 @@ A valid query works:
   $ hg debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None
   [{"file_path": "foo.txt"}]
 
-FIXME: BUG! An invalid prefix should be rejected with 400 Bad Request; today
-the handler panics, the client sees a transport error and the server process
-dies.
+An invalid prefix is rejected with 400:
   $ hg debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i "['..']"
-  * error: * (glob)
-  
-  (is your client certificate valid?)
+  abort: server responded 400 Bad Request for https://localhost:*/edenapi/repo/suffix_query: {"message":"*","request_id":"*"}. Headers: { (glob)
+      "x-request-id": "*", (glob)
+      "content-type": "application/json",
+      "x-load": "1",
+      "server": "edenapi_server",
+      "x-mononoke-host": * (glob)
+      "date": * (glob)
+      "content-length": "*", (glob)
+  }
   [255]
 
-FIXME: BUG! The server should still be healthy afterwards; today it is gone.
+The server is still healthy afterwards:
   $ hg debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None
-  abort: [7] Couldn't connect to server * (glob)
-  [255]
+  [{"file_path": "foo.txt"}]
