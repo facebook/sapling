@@ -258,6 +258,28 @@ pub enum ParentView {
     Other(String),
 }
 
+/// A user as `p4 users -a` lists it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct User {
+    pub user: String,
+    pub email: String,
+    pub full_name: String,
+    pub user_type: UserType,
+    /// Seconds since the epoch at which the user's spec was last changed.
+    pub update: u64,
+    /// Seconds since the epoch at which the user last ran a command.
+    pub access: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UserType {
+    Standard,
+    Service,
+    Operator,
+    /// One added by a newer server.
+    Other(String),
+}
+
 /// What `p4 info` reports about the server, enough to tell one server from another.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServerInfo {
