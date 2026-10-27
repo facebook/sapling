@@ -233,7 +233,7 @@ Try pull an uploaded commit from another client
   pulling '65289540f44d' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
   sending hello command
-  sending batch command
+  sending lookup command
   pull failed: 65289540f44d not found
   abort: unknown revision '65289540f44d'!
   [255]

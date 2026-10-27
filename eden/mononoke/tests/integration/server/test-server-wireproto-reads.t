@@ -57,6 +57,8 @@ list remote bookmarks
      remote/other_bookmark            19599c85a6f2ea3ba4b6e96a92c3fd69762390a2
   $ wire hg bookmarks --remote
   sending hello command
+  $ wire hg bookmarks --remote --config experimental.slapi-listkeys-bookmarks=false
+  sending hello command
   sending listkeys command
 
 identify remote revisions by bookmark, full hash and hash prefix
@@ -65,19 +67,16 @@ identify remote revisions by bookmark, full hash and hash prefix
   $ wire hg id -r master_bookmark mono:repo
   sending hello command
   sending lookup command
-  sending listkeys command
   $ hg id -r $A mono:repo
   9c7bec57ce44
   $ wire hg id -r $A mono:repo
   sending hello command
   sending lookup command
-  sending listkeys command
   $ hg id -r ${A:0:8} mono:repo
   9c7bec57ce44
   $ wire hg id -r ${A:0:8} mono:repo
   sending hello command
   sending lookup command
-  sending listkeys command
   $ hg id -r unknown_bookmark mono:repo
   abort: unknown_bookmark not found!
   [255]

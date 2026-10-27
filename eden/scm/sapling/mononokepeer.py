@@ -41,7 +41,19 @@ from typing import Optional
 
 from bindings import cats, clientinfo, zstd
 
-from . import edenapi, error, httpconnection, progress, sslutil, stdiopeer, url, util
+from . import (
+    bookmarks,
+    edenapi,
+    error,
+    httpconnection,
+    peer,
+    progress,
+    sslutil,
+    stdiopeer,
+    url,
+    util,
+    wireproto,
+)
 from .i18n import _
 from .thirdparty.pysocks import socks
 
@@ -217,6 +229,17 @@ def maybestripsquarebrackets(hostname: str):
     return hostname
 
 
+def _listbookmarks(api, patterns, kinds):
+    """List bookmarks matching patterns over SLAPI, passing `kinds` through.
+
+    Returns a sortdict of {name: hexnode} ordered by name.
+    """
+    result = api.listbookmarkpatterns(patterns, kinds=kinds)
+    return util.sortdict(
+        sorted((name, node) for name, node in result.items() if node is not None)
+    )
+
+
 class mononokepeer(stdiopeer.stdiopeer):
     def __init__(self, ui, path, create=False, initial_config: Optional[str] = None):
         super(mononokepeer, self).__init__(
@@ -370,6 +393,44 @@ class mononokepeer(stdiopeer.stdiopeer):
         except Exception as e:
             self._ui.debug("failed to build SLAPI client for %s: %s\n" % (self._url, e))
             return None
+
+    def _slapibookmarks(self):
+        """SLAPI client that serves bookmark reads, or None to use wireproto."""
+        if self.ui.configbool("experimental", "slapi-listkeys-bookmarks", True):
+            return self.nullableedenapi
+        return None
+
+    def iterbatch(self):
+        if self._slapibookmarks() is not None:
+            return peer.localiterbatcher(self)
+        return super().iterbatch()
+
+    def listkeys(self, namespace):
+        """As Mononoke does, returns no keys for a namespace other than
+        `bookmarks`."""
+        api = self._slapibookmarks()
+        if api is None:
+            return super().listkeys(namespace)
+        if namespace != "bookmarks":
+            return util.sortdict()
+        # Without kinds, SLAPI lists every non-scratch bookmark.
+        return _listbookmarks(api, ["*"], [])
+
+    def listkeyspatterns(self, namespace, patterns):
+        """As Mononoke does, rejects a namespace other than `bookmarks`."""
+        api = self._slapibookmarks()
+        if api is None:
+            return super().listkeyspatterns(namespace, patterns)
+        if namespace != "bookmarks":
+            raise error.Abort(
+                _("unsupported listkeyspatterns namespace: %s") % namespace
+            )
+        return _listbookmarks(api, list(patterns), bookmarks.ALL_BOOKMARK_KINDS)
+
+    # A wire batch (only used when SLAPI is off) encodes these calls as their
+    # wireproto commands.
+    listkeys.batchable = wireproto.wirepeer.listkeys.batchable
+    listkeyspatterns.batchable = wireproto.wirepeer.listkeyspatterns.batchable
 
     def _validaterepo(self):
         # cleanup up previous run
