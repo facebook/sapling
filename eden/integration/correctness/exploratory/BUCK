@@ -1616,6 +1616,53 @@ python_library(
     ],
 )
 
+python_unittest(
+    name = "generate_overlap_test",
+    srcs = ["test/generate_overlap_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign_fixtures",
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":generate",
+        ":generation_fixtures",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "generate_rates_test",
+    srcs = ["test/generate_rates_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign_fixtures",
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":fake_target",
+        ":generate",
+        ":generation_fixtures",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "generate_summary_test",
+    srcs = ["test/generate_summary_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign_fixtures",
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":generate",
+        ":generation_fixtures",
+        ":target",
+        ":testing",
+    ],
+)
+
 python_library(
     name = "corpus",
     srcs = [
