@@ -37,6 +37,10 @@ pub struct FileRevision {
 pub struct Md5Digest([u8; 16]);
 
 impl Md5Digest {
+    pub fn new(digest: [u8; 16]) -> Self {
+        Self(digest)
+    }
+
     /// 32 hex digits in either case.
     pub fn from_hex(hex: &[u8]) -> Option<Self> {
         if hex.len() != 32 {
@@ -77,6 +81,21 @@ pub enum Action {
     Import,
     Purge,
     Archive,
+}
+
+impl Action {
+    /// Purged and archived revisions keep their size and digest, but p4 prints nothing.
+    pub fn has_content(self) -> bool {
+        match self {
+            Action::Add
+            | Action::Edit
+            | Action::Branch
+            | Action::Integrate
+            | Action::MoveAdd
+            | Action::Import => true,
+            Action::Delete | Action::MoveDelete | Action::Purge | Action::Archive => false,
+        }
+    }
 }
 
 /// What `p4 info` reports about the server, enough to tell one server from another.

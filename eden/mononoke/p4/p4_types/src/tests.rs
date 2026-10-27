@@ -34,3 +34,25 @@ fn test_md5_digest_rejects_anything_but_32_hex_digits() {
         assert_eq!(None, Md5Digest::from_hex(hex), "{hex:?}");
     }
 }
+
+#[mononoke::test]
+fn test_only_revisions_p4_prints_have_content() {
+    for action in [
+        Action::Add,
+        Action::Edit,
+        Action::Branch,
+        Action::Integrate,
+        Action::MoveAdd,
+        Action::Import,
+    ] {
+        assert!(action.has_content(), "{action:?}");
+    }
+    for action in [
+        Action::Delete,
+        Action::MoveDelete,
+        Action::Purge,
+        Action::Archive,
+    ] {
+        assert!(!action.has_content(), "{action:?}");
+    }
+}
