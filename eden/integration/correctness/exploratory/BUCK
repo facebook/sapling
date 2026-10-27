@@ -517,6 +517,18 @@ python_library(
     ],
 )
 
+python_library(
+    name = "edenfs_judging",
+    srcs = ["edenfs/test/judging.py"],
+    deps = [
+        ":core_checker",
+        ":edenfs_contracts",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":target",
+    ],
+)
+
 python_unittest(
     name = "edenfs_encoding_test",
     srcs = ["edenfs/test/encoding_test.py"],
@@ -825,14 +837,19 @@ python_library(
     srcs = [
         "edenfs/properties/attributes.py",
         "edenfs/properties/bytes.py",
+        "edenfs/properties/checkout.py",
         "edenfs/properties/common.py",
         "edenfs/properties/cross_channel.py",
+        "edenfs/properties/differential.py",
         "edenfs/properties/existence.py",
         "edenfs/properties/fd.py",
+        "edenfs/properties/journal.py",
         "edenfs/properties/listing.py",
         "edenfs/properties/manifest.py",
         "edenfs/properties/namespace.py",
         "edenfs/properties/readdir.py",
+        "edenfs/properties/result_shape.py",
+        "edenfs/properties/status.py",
     ],
     deps = [
         ":core_checker",
@@ -841,6 +858,33 @@ python_library(
         ":edenfs_encoding",
         ":edenfs_fixture",
         ":target",
+    ],
+)
+
+python_library(
+    name = "edenfs_target",
+    srcs = ["edenfs/target.py"],
+    deps = [
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_backends",
+        ":edenfs_contracts",
+        ":edenfs_differential_backend",
+        ":edenfs_properties",
+        ":edenfs_reference",
+        ":environment",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_actions_target_test",
+    srcs = ["edenfs/test/actions_target_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_target",
     ],
 )
 
