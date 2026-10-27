@@ -27,6 +27,7 @@ import os
 import re
 import shutil
 import typing
+from dataclasses import dataclass
 
 from sapling import (
     bookmarks,
@@ -922,15 +923,11 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     edenapi = pushmod.get_edenapi_for_dest(repo, dest)
 
-    is_scratch = False
-    if extensions.isenabled(ui, "commitcloud") and ccutil.is_supported(repo):
-        bookname = opargs["to"] or opargs["delete"]
-        scratchmatcher = ccutil.scratchbranchmatcher(ui)
-        # infinitepush "scratch" branches don't work over the regular
-        # wire protocol, so require edenapi for them.
-        if bookname is not None and scratchmatcher.match(bookname):
-            is_scratch = True
-            edenapi = repo.edenapi
+    # infinitepush "scratch" branches don't work over the regular
+    # wire protocol, so require edenapi for them.
+    is_scratch = _is_scratch_bookmark(ui, repo, opargs["to"] or opargs["delete"])
+    if is_scratch:
+        edenapi = repo.edenapi
 
     if opargs["delete"]:
         flag = None
@@ -974,16 +971,63 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             break
 
     if not opargs["to"]:
-        if ui.configbool("remotenames", "forceto"):
-            msg = _("must specify --to when pushing")
-            hint = _("see configuration option %s") % "remotenames.forceto"
-            raise error.Abort(msg, hint=hint)
+        return _push_without_to(orig, ui, repo, dest, opts, opargs)
 
-        if not revs:
-            opts["rev"] = _pushrevs(repo, ui, None)
+    target = _resolve_to_target(ui, repo, dest, opts, opargs, plain=is_scratch)
+    return _push_to_target(
+        ui,
+        repo,
+        target,
+        edenapi,
+        fallback=lambda: _wireproto_push_to(ui, repo, target, opts, opargs),
+    )
 
-        return orig(ui, repo, dest, opargs=opargs, **opts)
 
+def _is_scratch_bookmark(ui, repo, bookmark):
+    """Whether `bookmark` names a commit cloud scratch bookmark."""
+    return (
+        bookmark is not None
+        and extensions.isenabled(ui, "commitcloud")
+        and ccutil.is_supported(repo)
+        and ccutil.scratchbranchmatcher(ui).match(bookmark)
+    )
+
+
+def _push_without_to(orig, ui, repo, dest, opts, opargs):
+    """Push without a destination bookmark, through the wrapped push command."""
+    if ui.configbool("remotenames", "forceto"):
+        msg = _("must specify --to when pushing")
+        hint = _("see configuration option %s") % "remotenames.forceto"
+        raise error.Abort(msg, hint=hint)
+
+    if not opts.get("rev"):
+        opts["rev"] = _pushrevs(repo, ui, None)
+
+    return orig(ui, repo, dest, opargs=opargs, **opts)
+
+
+@dataclass
+class _PushTarget:
+    """A push of one commit to one remote bookmark.
+
+    `dest` is the expanded destination URL. `plain` moves the bookmark to
+    exactly `node` instead of rebasing `node` onto the bookmark on the server.
+    """
+
+    dest: str
+    node: bytes
+    bookmark: str
+    create: bool
+    force: bool
+    plain: bool
+    pushvars: list[str]
+
+
+def _resolve_to_target(ui, repo, dest, opts, opargs, plain):
+    """Resolve and validate the `--to` push described by `opts` and `opargs`.
+
+    Adds the keys the wireproto push needs to `opargs`.
+    """
     if opts.get("bookmark"):
         msg = _("do not specify --to/-t and --bookmark/-B at the same time")
         raise error.Abort(msg)
@@ -997,6 +1041,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if pushvars:
         opargs["pushvars"] = pushvars
 
+    revs = opts.get("rev")
     if revs:
         revs = [repo.lookup(r) for r in repo.anyrevs(revs, user=True)]
     else:
@@ -1011,17 +1056,9 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     dest = ui.expandpath(dest or "default-push", dest or "default")
     dest = hg.parseurl(dest)
 
-    # all checks pass, go for it!
     node = repo.lookup(rev)
-    force = opts.get("force")
     bookmark = opargs["to"]
-    pattern = ui.config("remotenames", "disallowedto")
-    if pattern and re.match(pattern, bookmark):
-        msg = _("this remote bookmark name is not allowed")
-        hint = ui.config("remotenames", "disallowedhint") or _(
-            "use another bookmark name"
-        )
-        raise error.Abort(msg, hint=hint)
+    _check_push_bookmark_allowed(ui, bookmark)
 
     # Force "rev % onto" drafts to be missing for pushrebase use-case.
     onto = ui.config("experimental", "server-rebase-onto")
@@ -1031,22 +1068,56 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             repo.nodes("draft() & only(%n, %s)", node, fullonto)
         )
 
-    if edenapi:
-        try:
-            return pushmod.push(
-                repo,
-                dest,
-                node,
-                remote_bookmark=opargs["to"],
-                force=force,
-                opargs=opargs,
-                edenapi=edenapi,
-                force_plain=is_scratch,
-            )
-        except error.UnsupportedEdenApiPush as e:
-            ui.status_err(_("fallback reason: %s\n") % e)
-            # fallback to old push
+    return _PushTarget(
+        dest=dest,
+        node=node,
+        bookmark=bookmark,
+        create=bool(opargs["create"]),
+        force=bool(opts.get("force")),
+        plain=plain,
+        pushvars=pushvars or [],
+    )
 
+
+def _check_push_bookmark_allowed(ui, bookmark):
+    """Abort if `remotenames.disallowedto` forbids pushing to `bookmark`."""
+    pattern = ui.config("remotenames", "disallowedto")
+    if pattern and re.match(pattern, bookmark):
+        msg = _("this remote bookmark name is not allowed")
+        hint = ui.config("remotenames", "disallowedhint") or _(
+            "use another bookmark name"
+        )
+        raise error.Abort(msg, hint=hint)
+
+
+def _push_to_target(ui, repo, target, edenapi, fallback):
+    """Push `target` through SLAPI.
+
+    Returns `fallback()` instead when `edenapi` is None or SLAPI cannot
+    express the push (for example, merge commits).
+    """
+    if edenapi is None:
+        return fallback()
+    try:
+        return pushmod.push(
+            repo,
+            target.dest,
+            target.node,
+            remote_bookmark=target.bookmark,
+            force=target.force,
+            opargs={"create": target.create, "pushvars": target.pushvars},
+            edenapi=edenapi,
+            force_plain=target.plain,
+        )
+    except error.UnsupportedEdenApiPush as e:
+        ui.status_err(_("fallback reason: %s\n") % e)
+    return fallback()
+
+
+def _wireproto_push_to(ui, repo, target, opts, opargs):
+    """Push `target` over the wire protocol."""
+    dest = target.dest
+    node = target.node
     try:
         other = hg.peer(repo, opts, dest)
     except error.RepoError:
@@ -1058,12 +1129,17 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     ui.status_err(
         _("pushing rev %s to destination %s bookmark %s\n")
-        % (short(node), dest, opargs["to"])
+        % (short(node), dest, target.bookmark)
     )
 
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
     pushop = exchange.push(
-        repo, other, force, revs=[node], bookmarks=(opargs["to"],), opargs=opargs
+        repo,
+        other,
+        target.force,
+        revs=[node],
+        bookmarks=(target.bookmark,),
+        opargs=opargs,
     )
 
     result = int(not pushop.cgresult)
