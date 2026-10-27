@@ -1214,6 +1214,20 @@ python_library(
     ],
 )
 
+python_unittest(
+    name = "faults_test",
+    srcs = ["edenfs/test/faults_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_backends",
+        ":scheduler",
+        ":target",
+        "//eden/fs/py/eden/thrift:client",
+        "//thrift/lib/python:types",
+    ],
+)
+
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
 python_library(
