@@ -1228,6 +1228,62 @@ python_unittest(
     ],
 )
 
+python_library(
+    name = "backends_fixtures",
+    srcs = ["edenfs/test/backends_fixtures.py"],
+    deps = [
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_encoding",
+        ":edenfs_target",
+        ":target",
+        "//eden/test_support:py",
+    ],
+)
+
+python_integration_test(
+    name = "backends_process_test",
+    srcs = ["edenfs/test/backends_process_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_containment",
+        ":edenfs_backends",
+        ":edenfs_target",
+        ":environment",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "backends_scm_test",
+    srcs = ["edenfs/test/backends_scm_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_backends",
+        ":edenfs_reference",
+        ":edenfs_results",
+        ":edenfs_target",
+        ":environment",
+        ":scheduler",
+        ":target",
+        "//eden/fs/py/eden/thrift:client",
+        "//eden/fs/service:thrift-python-types",
+        "//eden/test_support:py",
+        "//thrift/lib/python:types",
+    ],
+)
+
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
 python_library(
