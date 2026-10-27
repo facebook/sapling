@@ -107,6 +107,26 @@ python_library(
     ],
 )
 
+python_library(
+    name = "scheduler",
+    srcs = ["core/scheduler.py"],
+    deps = [
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "scheduler_test",
+    srcs = ["test/scheduler_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":scheduler",
+        ":target",
+    ],
+)
+
 python_unittest(
     name = "core_differential_test",
     srcs = ["core/test/differential_test.py"],
