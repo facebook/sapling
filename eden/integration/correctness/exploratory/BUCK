@@ -95,9 +95,25 @@ python_library(
     deps = [":target"],
 )
 
+python_library(
+    name = "core_checker",
+    srcs = [
+        "core/sources.py",
+    ],
+    deps = [":target"],
+)
+
 # Continuous CI only: `ci.remove(ci.diff, ci.land)` drops the inherited diff-
 # and land-time CI labels and keeps the continuous ones (Citadel CI Label API
 # Reference, "Removing Values"). `long_running` (100-minute tpx timeout tier): the
+
+python_unittest(
+    name = "core_sources_test",
+    srcs = ["core/test/sources_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [":core_checker"],
+)
 
 python_library(
     name = "testing",
