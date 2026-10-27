@@ -26,9 +26,9 @@ mononoke_queries! {
         sqlite("SELECT `workspace`, `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
 
-    read GetVersionByPrefix(reponame: String, prefix: String) -> (String,  u64, bool, Option<i64>){
-        mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
-        sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
+    read GetVersionByPrefix(reponame: String, prefix: String, escape_character: &str) -> (String,  u64, bool, Option<i64>){
+        mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix} ESCAPE {escape_character}")
+        sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix} ESCAPE {escape_character}")
     }
 
     read GetOtherRepoWorkspaces(workspace:String) -> (String, String,  u64, bool, Option<i64>){
@@ -173,6 +173,7 @@ pub async fn get_version_by_prefix(
         ctx.sql_query_telemetry(),
         &reponame.clone(),
         &prepare_prefix(&prefix),
+        &"\\",
     )
     .await?;
     rows.into_iter()
