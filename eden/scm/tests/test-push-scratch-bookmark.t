@@ -81,3 +81,18 @@ dc0947a82db8 should not be visible anymore:
 
   $ sl push --delete scratch/test
   deleting remote bookmark scratch/test
+
+-B pushes a scratch bookmark as it pushes any other bookmark. With
+experimental.slapi-bookmark-push and SLAPI push, that is a plain SLAPI push to
+the remote bookmark of the same name:
+  $ sl book -r $B scratch/fromb
+  $ sl push -B scratch/fromb --config experimental.slapi-bookmark-push=true --config push.edenapi=true
+  pushing rev 112478962961 to destination eager:$TESTTMP/repo1_server bookmark scratch/fromb
+  creating remote bookmark scratch/fromb
+
+Without SLAPI push, it is the wireproto -B push:
+  $ sl book -r $A scratch/froma
+  $ sl push -B scratch/froma --config experimental.slapi-bookmark-push=true
+  pushing to test:repo1_server
+  searching for changes
+  exporting bookmark scratch/froma

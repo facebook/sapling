@@ -912,6 +912,14 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if not typing.TYPE_CHECKING:
         revrenames = dict((v, k) for k, v in _getrenames(ui).items())
 
+    # Push `-B BOOKMARK` as `-r BOOKMARK --to BOOKMARK --create --no-rebase`
+    # when SLAPI bookmark push is enabled and SLAPI serves pushes to `dest`.
+    bookmark_alias = (
+        bool(opts.get("bookmark"))
+        and ui.configbool("experimental", "slapi-bookmark-push")
+        and pushmod.get_edenapi_for_dest(repo, dest) is not None
+    )
+
     origdest = dest
     defaultpush = ui.paths.get("default-push") or ui.paths.get("default")
     if defaultpush:
@@ -921,6 +929,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         and not opargs["to"]
         and not opargs["delete"]
         and not revs
+        and not bookmark_alias
         and _tracking(ui)
     ):
         current = repo._activebookmark
@@ -989,6 +998,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         rebase_flag = _rebase_flag(opts)
         if rebase_flag:
             raise error.Abort(_("--%s requires --to") % rebase_flag)
+        if bookmark_alias:
+            target = _resolve_bookmark_target(ui, repo, dest, opts)
+            return _push_to_target(
+                ui,
+                repo,
+                target,
+                edenapi,
+                fallback=lambda: _push_without_to(orig, ui, repo, dest, opts, opargs),
+            )
         return _push_without_to(orig, ui, repo, dest, opts, opargs)
 
     no_rebase = opts.get("rebase") is False
@@ -1109,6 +1127,39 @@ def _resolve_to_target(ui, repo, dest, opts, opargs, plain):
         force=bool(opts.get("force")),
         plain=plain,
         pushvars=pushvars or [],
+    )
+
+
+def _resolve_bookmark_target(ui, repo, dest, opts):
+    """Resolve `-B BOOKMARK` to a `--no-rebase` push of the local bookmark to
+    the remote bookmark of the same name, created if it does not exist.
+    """
+    bookmarks = opts["bookmark"]
+    if len(bookmarks) > 1:
+        raise error.Abort(_("only one --bookmark/-B can be pushed at a time"))
+    if opts.get("rev"):
+        msg = _("do not specify --rev/-r and --bookmark/-B at the same time")
+        raise error.Abort(msg)
+
+    bookmark = repo._bookmarks.expandname(bookmarks[0])
+    node = repo._bookmarks.get(bookmark)
+    if node is None:
+        raise error.Abort(
+            _("local bookmark '%s' does not exist") % bookmark,
+            hint=_("use '@prog@ push --delete %s' to delete the remote bookmark")
+            % bookmark,
+        )
+    _check_push_bookmark_allowed(ui, bookmark)
+
+    dest = ui.expandpath(dest or "default-push", dest or "default")
+    return _PushTarget(
+        dest=hg.parseurl(dest),
+        node=node,
+        bookmark=bookmark,
+        create=True,
+        force=bool(opts.get("force")),
+        plain=True,
+        pushvars=opts.get("pushvars") or [],
     )
 
 
