@@ -37,8 +37,10 @@ from eden.integration.correctness.exploratory.core.history import (
     Event,
     event_to_json,
     INVOKE,
+    RUN_CLOSED,
 )
 from eden.integration.correctness.exploratory.core.runspec import (
+    Budgets,
     from_json as _from_json,
     RunSpec,
     to_json,
@@ -115,6 +117,14 @@ def _fake_write_read_spec() -> RunSpec:
         ),
         FAKE,
     )
+
+
+# Budgets only a hang could exhaust.
+_LONG_BUDGETS = Budgets(
+    operation_deadline_seconds=HANG_GUARD,
+    cleanup_deadline_seconds=HANG_GUARD,
+    runner_deadline_seconds=4 * HANG_GUARD,
+)
 
 
 def _read_json(path: str) -> Any:
@@ -202,7 +212,9 @@ signal.pause()
             )
         ((entered, env, process),) = spawns
         passed = env[containment.RUNNER_DEADLINE_ENV]
-        self.assertEqual([passed], [event.data["deadline"] for event in events])
+        self.assertEqual(
+            [passed, None], [event.data.get("deadline") for event in events]
+        )
         self.assertEqual([float(passed)], supervised)
         # Fixed before the spawn began, so the held spawn counts against it.
         self.assertLessEqual(float(passed), entered + runner_deadline)
@@ -222,7 +234,6 @@ signal.pause()
                     "unwound": 0,
                     "setup": {"neutral_ms": 17},
                 },
-                "close_error": None,
             },
         )
         line = json.dumps(event_to_json(cleanup), sort_keys=True)
@@ -312,7 +323,7 @@ signal.pause()
             self.assertEqual(result.execution.status, containment.CONTAINMENT_TIMEOUT)
             self.assertEqual(-signal.SIGKILL, result.execution.returncode)
             events = containment.load_history(os.path.join(tmp, "history.jsonl"))
-            self.assertEqual(len(events), 3)
+            self.assertEqual([INVOKE] * 3 + [RUN_CLOSED], [e.type for e in events])
             replay_spec, replay_events = containment.load_replay(
                 os.path.join(tmp, "replay.json"), EDENFS_TARGET
             )
@@ -461,18 +472,86 @@ signal.pause()
         self.assertFalse(os.path.exists(run_dir))
         self.assertEqual("supervisor: unmounted 0, removed", execution["cleanup"])
 
-    def test_runner_exit_75_is_degraded_only_with_a_typed_cleanup_reason(
-        self,
-    ) -> None:
-        exit_75 = containment.ENVIRONMENT_DEGRADED_EXIT
-        degraded = [Event(CLEANUP, 1.0, {"environment_degraded": "mount failed"})]
+    def test_degradation_comes_only_from_the_final_record(self) -> None:
+        degraded = Event(CLEANUP, 1.0, {"environment_degraded": "mount failed"})
         self.assertEqual(
             (containment.ENVIRONMENT_DEGRADED, "mount failed"),
-            containment._runner_exit_status(degraded, exit_75),
+            containment._final_status(degraded),
         )
-        status, reason = containment._runner_exit_status([], exit_75)
+        status, reason = containment._runner_exit_status(
+            [], containment.ENVIRONMENT_DEGRADED_EXIT
+        )
         self.assertEqual(containment.HARNESS_FAILURE, status)
         self.assertIn("runner exited 75", reason)
+
+    def test_final_record_ends_supervision_and_decides_status(self) -> None:
+        """The runner's final record ends supervision before EOF and decides the status.
+
+        Each runner writes its final record and one more line, then holds its
+        stdout open until killed, as a runner thread blocked in a call would.
+        The supervisor kills it at the final record (returncode None), never
+        records the later line, closes the run dir, and appends `run-closed`.
+        """
+        completed = {"status": "completed", "reason": None}
+        cases = (
+            ({"scheduler": completed, "unwind": {"leaks": 0}}, "completed", "ok"),
+            (
+                {
+                    "scheduler": {
+                        "status": "harness-failure",
+                        "reason": "operation-timeout",
+                    }
+                },
+                "harness-failure",
+                "operation-timeout",
+            ),
+            (
+                {"scheduler": completed, "unwind": {"leaks": 2}},
+                "harness-failure",
+                "cleanup-failed: unwind reported 2 leak(s)",
+            ),
+            (
+                {"unwind": {"setup": {}}, "environment_degraded": "oom"},
+                "environment-degraded",
+                "oom",
+            ),
+        )
+        for data, status, reason in cases:
+            final = json.dumps(event_to_json(Event(CLEANUP, 1.0, data)))
+            later = json.dumps({"type": "info", "time": 2.0, "reason": "late"})
+            script = (
+                f"import signal, sys; sys.stdout.write({final!r} + chr(10) + "
+                f"{later!r} + chr(10)); sys.stdout.flush(); signal.pause()"
+            )
+            with self.subTest(reason=reason), tempfile.TemporaryDirectory() as tmp:
+                started = time.monotonic()
+                with _captured_spawns() as spawns:
+                    result = containment.run_exploration(
+                        replace(_fake_observation_spec(), budgets=_LONG_BUDGETS),
+                        tmp,
+                        target=FAKE,
+                        runner_argv=[sys.executable, "-c", script],
+                    )
+                self.assertLess(time.monotonic() - started, HANG_GUARD)
+                self.assertEqual(
+                    (status, reason, None),
+                    (
+                        result.execution.status,
+                        result.execution.reason,
+                        result.execution.returncode,
+                    ),
+                )
+                ((_entered, _env, runner),) = spawns
+                self.assertEqual(-signal.SIGKILL, runner.wait(timeout=HANG_GUARD))
+                events = containment.load_history(os.path.join(tmp, "history.jsonl"))
+                self.assertEqual([CLEANUP, RUN_CLOSED], [e.type for e in events])
+                self.assertEqual(2, result.execution.events)
+                self.assertEqual(
+                    "supervisor: unmounted 0, removed", result.execution.cleanup
+                )
+                self.assertFalse(
+                    os.path.exists((result.execution.setup or {})["run_dir"])
+                )
 
     def test_close_run_dir_kills_only_processes_carrying_the_run_dir_env(self) -> None:
         """A process carrying the run's RUN_DIR_ENV dies; one that only names the dir lives."""
@@ -491,7 +570,10 @@ signal.pause()
                 cleanup = containment.close_run_dir(run_dir)
         self.assertEqual(-signal.SIGKILL, owned.wait(timeout=HANG_GUARD))
         self.assertIsNone(inspector.poll())
-        self.assertEqual("supervisor: unmounted 0, removed", cleanup)
+        self.assertEqual(
+            containment.RunDirClose("supervisor: unmounted 0, removed", True, False),
+            cleanup,
+        )
 
     def test_leaked_run_dir_reported_even_without_cleanup_event(self) -> None:
         """A run dir the supervisor cannot remove stays recorded as setup.run_dir."""
@@ -506,12 +588,37 @@ signal.pause()
             "supervisor: unmounted 0, remove failed: busy", execution["cleanup"]
         )
 
-    def test_runner_close_that_removed_the_run_dir_is_final(self) -> None:
-        """When the runner's own close removed the run dir and left no process, the
-        supervisor's kill scan still runs and it records "runner"."""
-        cleanup = Event(
-            type=CLEANUP, time=2.0, data={"unwind": {}, "close_error": None}
+    def test_a_run_dir_close_leak_fails_a_completed_run(self) -> None:
+        """A completed run whose run dir outlives the close is a cleanup failure."""
+        final = Event(CLEANUP, 1.0, {"scheduler": {"status": "completed"}})
+        line = json.dumps(event_to_json(final))
+        script = f"import sys; sys.stdout.write({line!r} + chr(10))"
+        busy = mock.Mock(rmtree=mock.Mock(side_effect=OSError("busy")))
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(containment, "shutil", busy):
+                result = containment.run_exploration(
+                    _fake_observation_spec(),
+                    tmp,
+                    target=FAKE,
+                    runner_argv=[sys.executable, "-c", script],
+                )
+            events = containment.load_history(os.path.join(tmp, "history.jsonl"))
+        run_dir = (result.execution.setup or {})["run_dir"]
+        self.addCleanup(shutil.rmtree, run_dir)
+        self.assertEqual(
+            (
+                containment.HARNESS_FAILURE,
+                "cleanup-failed: supervisor: unmounted 0, remove failed: busy",
+            ),
+            (result.execution.status, result.execution.reason),
         )
+        # Every process died, so the run's effects are resolved.
+        self.assertEqual([CLEANUP, RUN_CLOSED], [e.type for e in events])
+
+    def test_a_run_dir_already_gone_still_gets_the_kill_scan(self) -> None:
+        """When the run dir is already gone and no process is left, the
+        supervisor's kill scan still runs and it records "runner"."""
+        cleanup = Event(type=CLEANUP, time=2.0, data={"unwind": {}})
         line = json.dumps(event_to_json(cleanup), sort_keys=True)
         script = (
             f"import os, shutil, sys; shutil.rmtree(os.environ[{RUN_DIR_ENV!r}]); "
@@ -586,8 +693,10 @@ raise SystemExit(runner_main({spec_path!r}, target))
         self.assertIn("Current thread", stderr)
         self.assertIn("make_backend", stderr)
 
-    def test_runner_keeps_stdout_pure_and_closes_after_backend_failure(self) -> None:
-        """make_environment's stdout goes to stderr.log; a failed make_backend closes the environment."""
+    def test_runner_keeps_stdout_pure_and_never_closes_after_backend_failure(
+        self,
+    ) -> None:
+        """make_environment's stdout goes to stderr.log; a failed make_backend leaves the environment to the supervisor."""
         script_template = """
 import sys
 from dataclasses import replace
@@ -629,7 +738,7 @@ raise SystemExit(runner_main({spec_path!r}, target))
         self.assertEqual(1, result.execution.returncode)
         self.assertIn("environment noise", stderr)
         self.assertIn("runner: backend-failed: RuntimeError: backend offline", stderr)
-        self.assertIn("environment closed", stderr)
+        self.assertNotIn("environment closed", stderr)
 
     def test_backend_exception_text_reaches_the_execution_manifest(self) -> None:
         """An unexpected backend exception leaves its bounded `Type: message` in execution.json."""

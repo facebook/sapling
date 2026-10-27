@@ -144,21 +144,17 @@ def _judge(spec: RunSpec, events: list[Event]) -> Verdict:
 
 
 class _ExplodingEnvironment:
-    """Fake Environment whose setup fails after hypothetically starting."""
+    """Fake Environment whose setup fails after hypothetically starting; it has no close."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.closed = False
+        pass
 
     def setup(self) -> None:
         raise RuntimeError("daemon started but clone failed")
 
-    def close(self) -> str | None:
-        self.closed = True
-        return None
-
 
 class LiveRunnerSetupFailureTest(unittest.TestCase):
-    def test_setup_failure_closes_environment(self) -> None:
+    def test_setup_failure_leaves_the_environment_to_the_supervisor(self) -> None:
         envs: list[_ExplodingEnvironment] = []
         real_environment = environment_module.Environment
 
@@ -181,8 +177,7 @@ class LiveRunnerSetupFailureTest(unittest.TestCase):
                 code = live_runner_main(spec_path, None)
             self.assertEqual(code, 1)
             self.assertIn("setup-failed", err.getvalue())
-            # The started-but-uncloned daemon is closed, not leaked.
-            self.assertEqual([env.closed for env in envs], [True])
+            self.assertEqual(1, len(envs))
             self.assertIs(environment_module.Environment, real_environment)
 
 
@@ -619,13 +614,11 @@ class LiveBackendTest(_LiveRunCase):
             ):
                 self.assertTrue(os.path.isfile(os.path.join(tmp, name)), name)
             events = load_history(os.path.join(tmp, "history.jsonl"))
-            # One invoke plus one completion per action, the target-setup and
-            # target-closed events, and the cleanup event.
+            # One invoke plus one completion per action, the target-setup
+            # event, the final cleanup record, and the supervisor's run-closed.
             self.assertEqual(len(events), 2 * len(spec.actions) + 3)
-            target_events = [
-                e.type for e in events if e.type in ("target-setup", "target-closed")
-            ]
-            self.assertEqual(["target-setup", "target-closed"], target_events)
+            self.assertEqual("target-setup", events[0].type)
+            self.assertEqual(["cleanup", "run-closed"], [e.type for e in events[-2:]])
             replay_spec, replay_events = load_replay(
                 os.path.join(tmp, "replay.json"), EDENFS_TARGET
             )

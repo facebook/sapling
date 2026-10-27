@@ -154,7 +154,7 @@ def journal_gap_runs() -> list[Run]:
         "indeterminate-write-omitted",
         "A write to r0 times out (info) before a complete window that omits r0, and "
         "a later read shows the write happened. An unacknowledged write's effects "
-        "stay possible until target-closed, so no window began after them and the "
+        "stay possible until run-closed, so no window began after them and the "
         "write owes the journal nothing. The ACKED "
         "filter itself (an indeterminate write whose window a daemon exit closes) "
         "is exercised by agreement_test.",

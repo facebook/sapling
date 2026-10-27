@@ -277,25 +277,24 @@ class EnvironmentUnitTest(unittest.TestCase):
         env._launcher = launcher
         env._daemon_pid = launcher.pid
         env._run_dir = None
-        env._cleanup_seconds = 0.2
         return env
 
-    def test_close_spends_at_most_the_cleanup_budget_on_the_normal_stop(self) -> None:
-        """A normal shutdown past the cleanup budget is a close error, then SIGKILL.
+    def test_close_sigkills_the_launcher_only_after_a_failed_normal_stop(self) -> None:
+        """A failed normal shutdown is a close error, then SIGKILL.
 
-        Twin: a shutdown that stops the launcher within the budget sends no SIGKILL.
+        Twin: a shutdown that stops the launcher sends no SIGKILL.
         """
         launcher = subprocess.Popen(
             [sys.executable, "-c", "import signal; signal.pause()"], text=True
         )
         self.addCleanup(launcher.kill)
-        release = threading.Event()
-        self.addCleanup(release.set)
-        env = self._stopping_env(lambda retry: release.wait(HANG_GUARD), launcher)
-        started = time.monotonic()
+
+        def refuse(retry: bool) -> None:
+            raise RuntimeError("edenfsctl stop failed")
+
+        env = self._stopping_env(refuse, launcher)
         with self.assertRaisesRegex(RuntimeError, "normal EdenFS shutdown failed"):
             env._stop_eden()
-        self.assertLess(time.monotonic() - started, HANG_GUARD / 2)
         self.assertEqual(-signal.SIGKILL, launcher.returncode)
 
         stopped = subprocess.Popen([sys.executable, "-c", ""], text=True)
@@ -569,10 +568,6 @@ class EnvironmentUnitTest(unittest.TestCase):
         """A typed setup OOM preserves facts and never starts actions."""
 
         class SetupDegradedEnvironment:
-            def __init__(self) -> None:
-                self.closed = False
-                self._processes = target_module.ProcessRegistry()
-
             def setup(self) -> None:
                 raise target_module.EnvironmentDegraded(
                     "daemon-oom-killed",
@@ -585,14 +580,6 @@ class EnvironmentUnitTest(unittest.TestCase):
                         }
                     },
                 )
-
-            def close(self) -> str | None:
-                self.closed = True
-                return None
-
-            @property
-            def processes(self) -> target_module.ProcessRegistry:
-                return self._processes
 
         spec = single_action_spec(getattr_action(), environment_target())
         environment = SetupDegradedEnvironment()
@@ -619,9 +606,11 @@ class EnvironmentUnitTest(unittest.TestCase):
         events = [
             event_from_json(json.loads(line)) for line in stdout.getvalue().splitlines()
         ]
-        status, _reason = containment._runner_exit_status(events, returncode)
-        self.assertEqual(containment.ENVIRONMENT_DEGRADED, status)
-        self.assertTrue(environment.closed)
+        self.assertEqual(containment.ENVIRONMENT_DEGRADED_EXIT, returncode)
+        self.assertEqual(
+            (containment.ENVIRONMENT_DEGRADED, "daemon-oom-killed"),
+            containment._final_status(events[-1]),
+        )
         self.assertFalse(backend_created)
         self.assertEqual(
             1, events[-1].data["unwind"]["setup"]["memory"]["events"]["oom_kill"]

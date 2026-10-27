@@ -330,8 +330,7 @@ class DifferentialBackend:
         """Unwind the primary's faults and add the reference runtime to its setup facts.
 
         Workers may still be running here; ``close_resources`` refreshes the
-        same runtime record after they join. The environment's close event
-        carries the final record even when this unwind fails.
+        same runtime record after they join.
         """
         primary = cast(Any, self._primary)
         unwind = getattr(primary, "unwind_faults", None) or primary.unwind

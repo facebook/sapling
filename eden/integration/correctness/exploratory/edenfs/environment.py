@@ -14,9 +14,9 @@ given, inside a fresh ``eden_exploratory.*`` temp dir). Exposes
 With ``reference_clone`` it also owns the differential reference checkout,
 prepared after every other setup step so it starts in the mount's modeled
 state. Setup ends by emitting a ``target-setup`` event carrying the setup
-facts, so they are durable before any action runs;
-close ends with a ``target-closed`` event sampled after every resource is
-released.
+facts, so they are durable before any action runs. A contained run never
+closes the environment: the supervisor kills and removes everything under
+``run_dir``; ``close`` serves in-process callers.
 """
 
 from __future__ import annotations
@@ -45,7 +45,6 @@ from eden.integration.correctness.exploratory.core.history import (
     INFO,
 )
 from eden.integration.correctness.exploratory.core.processes import alive, poll_until
-from eden.integration.correctness.exploratory.core.runspec import DEFAULT_BUDGETS
 from eden.integration.correctness.exploratory.core.target import (
     EnvironmentDegraded,
     ProcessRegistry,
@@ -104,9 +103,7 @@ def _memory_cgroup_for_pid(pid: int) -> Path:
 
 
 TARGET_SETUP = "target-setup"
-TARGET_CLOSED = "target-closed"
 _KILL_WAIT_SECONDS = 5.0
-_REFERENCE_CLOSE_SECONDS = 5.0
 _FORCED_TERMINATION_SIGNAL = signal.SIGKILL
 _CRASH_SIGNATURE = re.compile(
     r"EDEN_BUG|Check failed|terminate called|Segmentation|\*\*\* Signal \d+"
@@ -142,11 +139,9 @@ class Environment:
         blob_size: int | None = None,
         reference_clone: bool = False,
         run_dir: Path | None = None,
-        cleanup_seconds: float = DEFAULT_BUDGETS.cleanup_deadline_seconds,
         sink: HistorySink,
     ) -> None:
         self._sink = sink
-        self._cleanup_seconds = cleanup_seconds
         self._reference_clone = reference_clone
         self._reference: ReferenceCheckout | None = None
         self._reference_runtime: ReferenceRuntime | None = None
@@ -581,12 +576,7 @@ class Environment:
                 raise RuntimeError(f"short scatter write {written}/{len(payload)}")
 
     def close(self, failed: bool = False) -> str | None:
-        """Release all owned resources, returning cleanup errors as text.
-
-        A ``target-closed`` event then records what only exists after
-        release: the host OOM-kill counter and the reference runtime's final
-        paired count and typed failures.
-        """
+        """Release all owned resources, returning cleanup errors as text."""
         errors: list[str] = []
         for name, cleanup in (
             ("reference", self._close_reference),
@@ -599,17 +589,6 @@ class Environment:
             except Exception as error:
                 logger.exception("failed to clean up %s", name)
                 errors.append(f"{name}: {error}")
-        runtime = self._reference_runtime
-        self._sink.emit(
-            Event(
-                type=TARGET_CLOSED,
-                time=time.monotonic(),
-                data={
-                    "reference": None if runtime is None else runtime.snapshot(),
-                    "close_errors": errors,
-                },
-            )
-        )
         return "; ".join(errors) or None
 
     def _close_reference(self) -> None:
@@ -617,7 +596,7 @@ class Environment:
         reference, self._reference = self._reference, None
         if reference is None:
             return
-        leaks = reference.close_resources(time.monotonic() + _REFERENCE_CLOSE_SECONDS)
+        leaks = reference.close_resources()
         if leaks:
             raise RuntimeError(f"{leaks} reference process group(s) survived SIGKILL")
 
@@ -627,7 +606,7 @@ class Environment:
         _sigkill_owned_processes(self._daemon_pid, self._launcher)
 
     def _stop_eden(self) -> None:
-        """Attempt normal shutdown within the cleanup budget, then SIGKILL only cached owned processes."""
+        """Attempt normal shutdown, then SIGKILL only cached owned processes."""
         eden = self._eden
         launcher = self._launcher
         daemon_pid = self._daemon_pid
@@ -643,7 +622,10 @@ class Environment:
 
         shutdown_error: Exception | None = None
         if eden is not None:
-            shutdown_error = _graceful_stop(eden, self._cleanup_seconds)
+            try:
+                eden.kill(retry=True)
+            except Exception as error:  # noqa: BLE001 - raised below
+                shutdown_error = error
 
         if shutdown_error is not None or (
             launcher is not None and launcher.poll() is None
@@ -762,29 +744,6 @@ def _owned_mount_points(
         for mount in mounts
         if mount.mount_point == prefix or mount.mount_point.startswith(prefix + b"/")
     )
-
-
-def _graceful_stop(eden: edenclient.EdenFS, seconds: float) -> Exception | None:
-    """Run the normal EdenFS shutdown for at most ``seconds``; return its error, if any.
-
-    A shutdown still running at ``seconds`` is left on its daemon thread and
-    returned as an error, so the caller SIGKILLs the owned processes, whose
-    death ends it.
-    """
-    errors: list[Exception] = []
-
-    def stop() -> None:
-        try:
-            eden.kill(retry=True)
-        except Exception as error:  # noqa: BLE001 - returned to close
-            errors.append(error)
-
-    worker = threading.Thread(target=stop, daemon=True, name="edenfs-stop")
-    worker.start()
-    worker.join(seconds)
-    if worker.is_alive():
-        return TimeoutError(f"normal EdenFS shutdown ran past {seconds:g}s")
-    return errors[0] if errors else None
 
 
 def _scope_result(cgroup: Path | None) -> str | None:

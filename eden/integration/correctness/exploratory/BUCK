@@ -1498,7 +1498,6 @@ python_integration_test(
         ":backends_fixtures",
         ":core_containment",
         ":edenfs_backends",
-        ":edenfs_target",
         ":environment",
         ":scheduler",
         ":target",

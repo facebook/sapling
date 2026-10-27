@@ -159,8 +159,12 @@ class CampaignRunTest(unittest.TestCase):
                     if degraded:
                         self.assertIn("older than 7 days", execution["reason"])
                         self.assertIsNone(execution["returncode"])
+                # A spawned runner's history holds only the supervisor's run-closed.
                 for replay in captured["replays"]:
-                    self.assertEqual([], replay["history"])
+                    self.assertEqual(
+                        [] if degraded else ["run-closed"],
+                        [event["type"] for event in replay["history"]],
+                    )
 
     def test_campaign_report_lists_every_supplied_binary_with_its_sha256(
         self,

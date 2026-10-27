@@ -622,7 +622,6 @@ class LiveFaultTest(unittest.TestCase):
                 0,
                 result.execution,
             )
-            self.assertIsNone(cleanups[0].data.get("close_error"), result.execution)
             names = (
                 "run-spec.json",
                 "history.jsonl",
@@ -727,7 +726,6 @@ class BackgroundReadLiveTest(unittest.TestCase):
             self.assertEqual(0, ends["x1"].data["removed"])
             cleanup = next(e for e in events if e.type == CLEANUP)
             self.assertEqual(0, cleanup.data["unwind"]["leaks"])
-            self.assertIsNone(cleanup.data["close_error"])
             self.assertEqual(OK, ends["c0"].type)
             print(
                 f"background-read pgid={pgid} sweeps={ends['l1'].data['sweeps']} artifacts={artifacts}"

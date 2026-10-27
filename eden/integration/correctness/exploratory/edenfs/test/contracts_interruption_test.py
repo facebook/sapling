@@ -250,7 +250,7 @@ class InterruptedCheckoutTest(unittest.TestCase):
             ev("invoke", "d", 0.5),
             *self._interrupted(),
             ev("ok", "d", 3.0, revision=2, node="n", via="goto"),
-            Event("target-closed", 9.0, {}),
+            Event("run-closed", 9.0, {}),
         ]
 
         def parent(oid: str, key: str, atom: Any, lo: float) -> Observation:
@@ -289,7 +289,7 @@ class InterruptedCheckoutTest(unittest.TestCase):
             ev("ok", "m", 4.0, path=R0, mode=0o755),
             ev("invoke", "d", 5.0),
             ev("fail", "d", 6.0, **sl_abort_facts(1, R0)),
-            Event("target-closed", 9.0, {}),
+            Event("run-closed", 9.0, {}),
         ]
         moved = read_obs("p", R0, committed_value(R0, TIP), 7, 8)
         self.assertTrue(is_explained(spec, events, (moved,)))
@@ -341,7 +341,7 @@ class InterruptedCheckoutTest(unittest.TestCase):
                     *written,
                     ev("invoke", "d", 5.0),
                     ev("fail", "d", 6.0, **sl_abort_facts(1, *listed)),
-                    Event("target-closed", 9.0, {}),
+                    Event("run-closed", 9.0, {}),
                 ]
                 self.assertEqual(legal, is_explained(spec, events))
 
@@ -373,7 +373,7 @@ class InterruptedCheckoutTest(unittest.TestCase):
         cont = [
             ev("invoke", "k", 3.0),
             ev("ok", "k", 4.0, revision=1, node="n", via="goto"),
-            Event("target-closed", 9.0, {}),
+            Event("run-closed", 9.0, {}),
         ]
         sink = contract_sink(spec, [*refused, *cont])
         groups = [

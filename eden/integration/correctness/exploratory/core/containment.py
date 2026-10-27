@@ -4,11 +4,14 @@
 # GNU General Public License version 2.
 
 """Subprocess containment for exploratory runs: the supervisor owns the artifact
-dir, writes run-spec.json before spawn, streams stdout JSONL to a
-flushed history.jsonl, SIGKILLs past the runner deadline, and always
-writes execution.json and replay.json, then verdict.json (the canonical
-verdict document for the durable prefix, bound to the final execution
-record). Stdlib only otherwise: no EdenFS/namespaces/Scuba.
+dir, writes run-spec.json before spawn, and streams stdout JSONL to a
+flushed history.jsonl until the runner's final record or the runner
+deadline. It then SIGKILLs the runner and everything the run started,
+unmounts and removes the run dir, appends a `run-closed` record once no
+process of the run is left, and always writes execution.json and
+replay.json, then verdict.json (the canonical verdict document for the
+durable prefix, bound to the final execution record). Stdlib only
+otherwise: no EdenFS/namespaces/Scuba.
 """
 
 from __future__ import annotations
@@ -30,7 +33,7 @@ import threading
 import time
 import traceback
 from collections import deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from contextlib import redirect_stdout
 from dataclasses import asdict, dataclass, replace
 from typing import Any, TextIO
@@ -50,8 +53,10 @@ from eden.integration.correctness.exploratory.core.history import (
     event_from_json,
     event_line,
     event_to_json,
+    FINAL_CLEANUP_KEYS,
     INFO,
     MAX_EVENT_BYTES,
+    RUN_CLOSED,
 )
 from eden.integration.correctness.exploratory.core.processes import (
     kill_group,
@@ -98,6 +103,8 @@ SETUP_ERROR_TAIL_LINES = 40
 SETUP_ERROR_MESSAGE_CHARS = 4000
 # Cleanup text begins with this when the run's own FUSE connection had to be aborted.
 MOUNT_WEDGED_PREFIX = "supervisor: mount-wedged: "
+# Reason prefix of a run whose unwind or run-dir close left something behind.
+CLEANUP_FAILED = "cleanup-failed: "
 # prctl(2) option that delivers a signal to the caller when its parent thread exits.
 _PR_SET_PDEATHSIG = 1
 _MOUNTINFO = "/proc/self/mountinfo"
@@ -106,6 +113,8 @@ _PROC = "/proc"
 # SIGKILL cannot be caught, so the runner's exit always follows the kill; this
 # bound only stops a supervisor waiting on a runner wedged in the kernel.
 _REAP_GUARD_SECONDS = 60.0
+# How long the supervisor reads what a runner without a final record already wrote.
+_DRAIN_SECONDS = 0.1
 
 
 @dataclass(frozen=True)
@@ -122,6 +131,19 @@ class Execution:
     daemon_exit: dict[str, Any] | None = None
     setup_error: dict[str, Any] | None = None
     backend_error: str | None = None
+
+
+@dataclass(frozen=True)
+class RunDirClose:
+    """What `close_run_dir` did.
+
+    `killed`: the kill scan left no process of the run alive. `leaked`: a
+    process, a mount, or the dir itself outlived the close.
+    """
+
+    text: str
+    killed: bool
+    leaked: bool
 
 
 @dataclass(frozen=True)
@@ -148,41 +170,38 @@ class _StdoutSink:
 
 
 def _setup_environment(environment: Any, sink: _StdoutSink) -> int | None:
-    """Set up one target or emit its typed degradation and stop."""
+    """Set up one target, or emit its typed degradation as the final record and stop.
+
+    What setup started is left to the supervisor's run-dir close.
+    """
     try:
         environment.setup()
     except EnvironmentDegraded as error:
-        close_error = environment.close()
         sink.emit(
             Event(
                 type=CLEANUP,
                 time=time.monotonic(),
                 data={
                     "unwind": {"setup": error.facts},
-                    "close_error": close_error,
                     "environment_degraded": error.reason,
                 },
             )
         )
         print(
-            f"runner: environment-degraded: {error.reason} close_error={close_error}",
+            f"runner: environment-degraded: {error.reason}",
             file=sys.stderr,
             flush=True,
         )
         return ENVIRONMENT_DEGRADED_EXIT
     except Exception as error:  # noqa: BLE001 - recorded in stderr.log
-        trace = traceback.format_exc()
-        close_error = environment.close()
-        print(trace, end="", file=sys.stderr)
+        print(traceback.format_exc(), end="", file=sys.stderr)
         print(
-            f"runner: setup-failed: {type(error).__name__}: {error} "
-            f"close_error={close_error}",
+            f"runner: setup-failed: {type(error).__name__}: {error}",
             file=sys.stderr,
         )
         record = {
             "type": type(error).__name__,
             "message": str(error)[:SETUP_ERROR_MESSAGE_CHARS],
-            "close_error": close_error,
         }
         print(
             SETUP_ERROR_PREFIX + json.dumps(record, sort_keys=True),
@@ -305,17 +324,51 @@ def _pids_owning(run_dir: str) -> list[int]:
     return pids
 
 
-def _killed_all(run_dir: str, refused: set[int]) -> bool:
-    """SIGKILL the run's processes; True when none was left. Adds refusals to `refused`."""
+def _start_time(pid: int) -> str | None:
+    """Return a live process's start time, or None once each of its threads is a zombie or gone.
+
+    A killed process's leader can be a zombie while another of its threads
+    still waits in the kernel, holding its files.
+    """
+    try:
+        with open(f"{_PROC}/{pid}/stat") as handle:
+            fields = handle.read().rpartition(")")[2].split()
+        tids = os.listdir(f"{_PROC}/{pid}/task")
+    except OSError:
+        return None
+    for tid in tids:
+        try:
+            with open(f"{_PROC}/{pid}/task/{tid}/stat") as handle:
+                state = handle.read().rpartition(")")[2].split()[:1]
+        except OSError:
+            continue
+        if state not in (["Z"], ["X"]) and len(fields) > 19:
+            return fields[19]
+    return None
+
+
+def _killed_all(run_dir: str, refused: set[int], signaled: dict[int, str]) -> bool:
+    """SIGKILL the run's processes; True when none is left. Adds refusals to `refused`.
+
+    A signaled process counts until it is a zombie or gone: an exiting
+    process loses its environment, so `_pids_owning` stops finding it,
+    before it releases its files and the mounts they hold. `signaled`
+    maps each signaled pid to its start time, so a reused pid never counts.
+    """
     pids = [pid for pid in _pids_owning(run_dir) if pid not in refused]
     for pid in pids:
+        started = _start_time(pid)
         try:
             os.kill(pid, signal.SIGKILL)
         except ProcessLookupError:
-            pass
+            continue
         except PermissionError:
             refused.add(pid)
-    return not pids
+            continue
+        if started is not None:
+            signaled[pid] = started
+    exiting = [pid for pid, started in signaled.items() if _start_time(pid) == started]
+    return not pids and not exiting
 
 
 def _unescape_mount_field(field: str) -> str:
@@ -367,13 +420,13 @@ def _blocked_threads(pids: list[int]) -> list[str]:
     return blocked
 
 
-def _abort_own_connections(run_dir: str) -> str | None:
+def _abort_own_connections(run_dir: str, signaled: Iterable[int]) -> str | None:
     """Abort the FUSE connection of each mount under run_dir; describe what was stuck.
 
     Only connections whose mount point lies under run_dir are aborted,
     never another mount's. Returns None when no such connection exists;
-    otherwise each connection's ``waiting`` request count and the run's
-    D-state threads, read before the abort.
+    otherwise each connection's ``waiting`` request count and the D-state
+    threads of the run and of the `signaled` pids, read before the abort.
     """
     try:
         connections = _fuse_connections_under(run_dir)
@@ -381,7 +434,8 @@ def _abort_own_connections(run_dir: str) -> str | None:
         return None
     if not connections:
         return None
-    stuck = [f"blocked threads {_blocked_threads(_pids_owning(run_dir))}"]
+    pids = sorted(set(signaled).union(_pids_owning(run_dir)))
+    stuck = [f"blocked threads {_blocked_threads(pids)}"]
     for point, connection in connections:
         directory = os.path.join(_FUSE_CONNECTIONS, connection)
         try:
@@ -396,15 +450,13 @@ def _abort_own_connections(run_dir: str) -> str | None:
     return "; ".join(stuck)
 
 
-def close_run_dir(run_dir: str) -> str:  # noqa: C901
+def close_run_dir(run_dir: str) -> RunDirClose:  # noqa: C901
     """SIGKILL, unmount, and remove what the runner left under run_dir.
 
-    Returns the cleanup text and never raises. The kill scan always runs,
-    because the runner's close can remove run_dir while the run's processes
-    live on. "runner" means no process was left and the runner's close
-    removed the dir. A process that refuses SIGKILL or outlives the scan
+    Never raises. The kill scan always runs, even when run_dir is already
+    gone ("runner"). A process that refuses SIGKILL or outlives the scan
     keeps the dir and its mounts ("kept"). EDEN_TEST_CLEANUP=no keeps the
-    dir, its mounts, and its daemon for inspection.
+    dir, its mounts, and its processes for inspection, so nothing is killed.
 
     A process blocked on the run's own FUSE mount survives SIGKILL and a
     busy mount refuses unmount; either way the run's own FUSE connection
@@ -413,44 +465,53 @@ def close_run_dir(run_dir: str) -> str:  # noqa: C901
     """
     cleanup_mode = os.environ.get("EDEN_TEST_CLEANUP", "always").lower()
     if cleanup_mode in ("0", "no", "false"):
-        return f"supervisor: kept (EDEN_TEST_CLEANUP={cleanup_mode})"
+        return RunDirClose(
+            f"supervisor: kept (EDEN_TEST_CLEANUP={cleanup_mode})", False, False
+        )
     refused: set[int] = set()
+    signaled: dict[int, str] = {}
     wedged: str | None = None
 
     def killed_all() -> bool:
         # A dying daemon still holds its mount busy, so wait until none is left.
         return poll_until(
-            lambda: _killed_all(run_dir, refused), time.monotonic() + 10.0, 0.1
+            lambda: _killed_all(run_dir, refused, signaled),
+            time.monotonic() + 10.0,
+            0.1,
         )
 
     killed = killed_all()
     if not killed and not refused:
-        wedged = _abort_own_connections(run_dir)
+        wedged = _abort_own_connections(run_dir, signaled)
         killed = wedged is not None and killed_all()
     prefix = "supervisor: " if wedged is None else f"{MOUNT_WEDGED_PREFIX}{wedged}; "
     if refused or not killed:
         left = sorted(refused.union(_pids_owning(run_dir)))
-        return f"{prefix}cannot kill {left}; kept"
+        return RunDirClose(f"{prefix}cannot kill {left}; kept", False, True)
     if not os.path.lexists(run_dir):
-        return "runner" if wedged is None else f"{prefix}runner"
+        return RunDirClose(
+            "runner" if wedged is None else f"{prefix}runner", True, False
+        )
     try:
         mounts = _mounts_under(run_dir)
         for mount in mounts:
             result = _fusermount(mount)
             if result.returncode != 0 and wedged is None:
-                wedged = _abort_own_connections(run_dir)
+                wedged = _abort_own_connections(run_dir, signaled)
                 if wedged is not None:
                     prefix = f"{MOUNT_WEDGED_PREFIX}{wedged}; "
                     result = _fusermount(mount)
             if result.returncode != 0 and mount in _mounts_under(run_dir):
-                return f"{prefix}fusermount -u {mount} failed: {result.stderr.strip()}"
+                text = f"{prefix}fusermount -u {mount} failed: {result.stderr.strip()}"
+                return RunDirClose(text, True, True)
     except OSError as error:
-        return f"{prefix}unmount failed: {error}"
+        return RunDirClose(f"{prefix}unmount failed: {error}", True, True)
     try:
         shutil.rmtree(run_dir)
     except OSError as error:
-        return f"{prefix}unmounted {len(mounts)}, remove failed: {error}"
-    return f"{prefix}unmounted {len(mounts)}, removed"
+        text = f"{prefix}unmounted {len(mounts)}, remove failed: {error}"
+        return RunDirClose(text, True, True)
+    return RunDirClose(f"{prefix}unmounted {len(mounts)}, removed", True, False)
 
 
 def hold_run_lock(run_dir: str) -> int:
@@ -495,7 +556,7 @@ def sweep_orphaned_run_dirs() -> dict[str, str]:
             os.close(fd)
             continue
         try:
-            swept[run_dir] = close_run_dir(run_dir)
+            swept[run_dir] = close_run_dir(run_dir).text
         finally:
             os.close(fd)
     return swept
@@ -505,52 +566,11 @@ def _fusermount(mount: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["fusermount", "-u", mount], capture_output=True, text=True)
 
 
-def _contain_workers(environment: Any, action_ids: list[str]) -> None:
-    """Kill the process group each of `action_ids` still owns.
-
-    The runner passes every spec action, not only the calls still running
-    after cleanup's join: a retired group is no longer looked up, and any
-    group still found belongs to a call that never retired.
-    """
-    for action_id in action_ids:
-        pgid = environment.processes.lookup(action_id)
-        if pgid is not None:
-            kill_group(pgid)
-
-
-def _resource_deadline(runner_deadline: float, cleanup_seconds: float) -> float:
-    """Return when backend resource joins must stop inside the final cleanup slice.
-
-    The scheduler reserves the last half of the cleanup budget for
-    containment and environment close; resources may use half of that
-    reservation, bounded by the runner deadline, so close always keeps the
-    final quarter.
-    """
-    return min(
-        runner_deadline - cleanup_seconds / 4, time.monotonic() + cleanup_seconds / 4
-    )
-
-
-def _close_backend_resources(
-    backend: Any, outcome: dict[str, object], deadline: float
-) -> None:
-    """Close optional backend resources after workers join and groups are killed.
-
-    The leak count is its own outcome, so it survives an unwind that raised
-    or timed out before recording one.
-    """
-    close_resources = getattr(backend, "close_resources", None)
-    if close_resources is None:
-        return
-    outcome["resource_leaks"] = close_resources(deadline)
-
-
-def _leaks(outcome: Mapping[str, object]) -> int:
-    """Return every leak the unwind and resource close reported."""
-    unwind = outcome.get("unwind")
-    unwound = unwind.get("leaks", 0) if isinstance(unwind, dict) else 0
-    resources = outcome.get("resource_leaks", 0)
-    return unwound + (resources if type(resources) is int else 1)
+def _leaks(record: Mapping[str, object]) -> int:
+    """Return the leak count of the final record's unwind summary; a malformed count is one leak."""
+    unwind = record.get("unwind")
+    leaks = unwind.get("leaks", 0) if isinstance(unwind, dict) else 0
+    return leaks if type(leaks) is int else 1
 
 
 def _private_transport() -> TextIO:
@@ -577,7 +597,13 @@ def _private_transport() -> TextIO:
 def runner_main(  # noqa: C901
     spec_path: str, target: Target, red_control: str | None = None
 ) -> int:
-    """Run one target environment and backend; stdout stays pure JSONL."""
+    """Run one target environment and backend; stdout stays pure JSONL.
+
+    The runner never closes what it started. Its final cleanup record (the
+    scheduler status and unwind summary, or the setup degradation) ends
+    the run: the supervisor stops reading there and closes the run dir, so
+    nothing the runner writes later is recorded.
+    """
     # The loader read LD_LIBRARY_PATH (`_runner_env`'s runtime lib dir) at
     # startup; the runner's children must not load their libraries from it.
     os.environ.pop("LD_LIBRARY_PATH", None)
@@ -636,8 +662,7 @@ def runner_main(  # noqa: C901
         except Exception as error:  # noqa: BLE001 - recorded in stderr.log
             print(traceback.format_exc(), end="", file=sys.stderr)
             print(
-                f"runner: backend-failed: {type(error).__name__}: {error} "
-                f"close_error={environment.close()}",
+                f"runner: backend-failed: {type(error).__name__}: {error}",
                 file=sys.stderr,
                 flush=True,
             )
@@ -648,51 +673,22 @@ def runner_main(  # noqa: C901
             unwind = getattr(backend, "unwind_faults", None) or backend.unwind
             outcome["unwind"] = unwind(sink, time.monotonic)
 
-        def _contain(active: list[str]) -> None:
-            outcome["active_at_teardown"] = active
-            _contain_workers(environment, [a.id for a in spec.actions])
-            if active:
-                sink.emit(
-                    Event(
-                        type=CLEANUP,
-                        time=time.monotonic(),
-                        data={"active_at_teardown": active},
-                    )
-                )
-
-        def _cleanup() -> None:
-            try:
-                _close_backend_resources(
-                    backend,
-                    outcome,
-                    _resource_deadline(deadline, spec.budgets.cleanup_deadline_seconds),
-                )
-            finally:
-                outcome["close_error"] = environment.close()
-
         _mark_runner_phase("actions-begin")
         status = run_actions(
             spec,
             backend,
             sink,
             time.monotonic,
-            cleanup=_cleanup,
             unwind=_unwind,
-            contain=_contain,
             runner_deadline=deadline,
         )
-        # A timed-out unwind worker may still write `outcome`: the durable
-        # record and the exit status read one snapshot.
-        final = dict(outcome)
         sink.emit(
             Event(
                 type=CLEANUP,
                 time=time.monotonic(),
-                data={**final, "scheduler": asdict(status)},
+                data={**outcome, "scheduler": asdict(status)},
             )
         )
-    unwind = final.get("unwind")
-    leaks = _leaks(final)
     if status.status != COMPLETED:
         print(
             f"runner: harness-failure: {status.reason or 'unknown'}",
@@ -700,11 +696,9 @@ def runner_main(  # noqa: C901
             flush=True,
         )
         return 1
-    if final.get("close_error") is not None or leaks > 0:
+    if _leaks(outcome) > 0:
         print(
-            f"runner: cleanup-failed: unwind={unwind} "
-            f"resource_leaks={final.get('resource_leaks')} "
-            f"close_error={final.get('close_error')}",
+            f"runner: cleanup-failed: unwind={outcome.get('unwind')}",
             file=sys.stderr,
             flush=True,
         )
@@ -779,6 +773,20 @@ def _ingest(history_file: TextIO, durable: list[Event], line: str) -> bool:
     return True
 
 
+def _append_run_closed(history_path: str) -> Event:
+    """Durably append the supervisor's `run-closed` record to history.jsonl and return it.
+
+    Its CLOCK_MONOTONIC time is read after every process of the run died,
+    so it is no earlier than any runner event on this host.
+    """
+    event = Event(type=RUN_CLOSED, time=time.monotonic())
+    with open(history_path, "ab") as handle:
+        handle.write(event_line(event))
+        handle.flush()
+        os.fsync(handle.fileno())
+    return event
+
+
 def _setup_facts(events: list[Event]) -> dict[str, Any] | None:
     """Return optional target setup facts from the durable cleanup event."""
     for event in reversed(events):
@@ -814,35 +822,41 @@ def _backend_error(events: list[Event]) -> str | None:
     return None
 
 
-def _runner_failure_reason(events: list[Event], returncode: int | None) -> str:
-    """Return the runner exit reason enriched by durable harness facts."""
-    for event in reversed(events):
-        scheduler = event.data.get("scheduler") if event.type == CLEANUP else None
-        if isinstance(scheduler, dict) and scheduler.get("status") == HARNESS_FAILURE:
-            reason = scheduler.get("reason")
-            if isinstance(reason, str) and reason in HARNESS_REASONS:
-                return reason
+def _is_final(event: Event) -> bool:
+    """Return whether `event` is the runner's final cleanup record."""
+    return event.type == CLEANUP and not FINAL_CLEANUP_KEYS.isdisjoint(event.data)
+
+
+def _final_status(record: Event) -> tuple[str, str]:
+    """Classify a run from the runner's final cleanup record."""
+    degraded = record.data.get("environment_degraded")
+    if type(degraded) is str:
+        return ENVIRONMENT_DEGRADED, degraded
+    scheduler = record.data.get("scheduler")
+    if not isinstance(scheduler, dict):
+        return HARNESS_FAILURE, "runner-failed: final record has no scheduler status"
+    if scheduler.get("status") == COMPLETED:
+        leaks = _leaks(record.data)
+        if leaks > 0:
+            return HARNESS_FAILURE, f"{CLEANUP_FAILED}unwind reported {leaks} leak(s)"
+        return COMPLETED, "ok"
+    reason = scheduler.get("reason")
+    if type(reason) is str and reason in HARNESS_REASONS:
+        return HARNESS_FAILURE, reason
+    return HARNESS_FAILURE, f"runner-failed: scheduler reported {scheduler!r}"
+
+
+def _runner_exit_status(events: list[Event], returncode: int | None) -> tuple[str, str]:
+    """Classify a runner that exited before writing its final record."""
+    if returncode == 0:
+        return COMPLETED, "ok"
     runner_reasons = {
         event.data["reason"]
         for event in events
         if event.type == INFO and type(event.data.get("reason")) is str
     }
     detail = f": {'; '.join(sorted(runner_reasons))}" if runner_reasons else ""
-    return f"runner-failed: runner exited {returncode}{detail}"
-
-
-def _runner_exit_status(events: list[Event], returncode: int | None) -> tuple[str, str]:
-    """Classify a runner exit, preserving typed setup degradation."""
-    if returncode == 0:
-        return COMPLETED, "ok"
-    if returncode == ENVIRONMENT_DEGRADED_EXIT:
-        for event in reversed(events):
-            if event.type == CLEANUP:
-                reason = event.data.get("environment_degraded")
-                if type(reason) is str:
-                    return ENVIRONMENT_DEGRADED, reason
-                break
-    return HARNESS_FAILURE, _runner_failure_reason(events, returncode)
+    return HARNESS_FAILURE, f"runner-failed: runner exited {returncode}{detail}"
 
 
 def _last_runner_phase(stderr_path: str) -> str | None:
@@ -883,14 +897,32 @@ def _setup_error(stderr_path: str) -> dict[str, Any] | None:
     return {**record, "log_tail": list(tail)}
 
 
+@dataclass(frozen=True)
+class _Stream:
+    """What supervision read: the durable prefix, the final record, and the stream's status.
+
+    `intact`: history.jsonl holds exactly the durable prefix.
+    """
+
+    durable: list[Event]
+    final: Event | None
+    status: str
+    reason: str
+    intact: bool
+
+
 def _supervise(  # noqa: C901 - stream and containment share one durable prefix
     spec: RunSpec,
     proc: subprocess.Popen[bytes],
     history_file: TextIO,
-    stderr_path: str,
     runner_deadline: float,
-) -> tuple[Execution, list[Event]]:
-    """Stream stdout to history.jsonl; enforce the runner deadline by SIGKILL."""
+) -> _Stream:
+    """Stream stdout to history.jsonl until the final record, EOF, or the deadline.
+
+    Nothing after the runner's final record is read, since a runner thread
+    blocked in a call can hold the transport open. The runner is killed
+    and reaped after supervision, by `close_run_dir` with the rest of the run.
+    """
     deadline = spec.budgets.runner_deadline_seconds
     assert proc.stdout is not None
     stdout = proc.stdout
@@ -899,6 +931,7 @@ def _supervise(  # noqa: C901 - stream and containment share one durable prefix
     transport_broken = False
     buffered = b""
     durable: list[Event] = []
+    final: Event | None = None
     status, reason = COMPLETED, "ok"
 
     def preserve_untrusted() -> None:
@@ -908,7 +941,7 @@ def _supervise(  # noqa: C901 - stream and containment share one durable prefix
         buffered = b""
 
     def consume(data: bytes) -> bool:
-        nonlocal buffered, status, reason, transport_broken
+        nonlocal buffered, final, status, reason, transport_broken
         buffered += data
         if transport_broken:
             preserve_untrusted()
@@ -925,6 +958,9 @@ def _supervise(  # noqa: C901 - stream and containment share one durable prefix
                 problem = f"invalid UTF-8: {line!r}"
             else:
                 if _ingest(history_file, durable, text):
+                    if _is_final(durable[-1]):
+                        final, buffered = durable[-1], b""
+                        return False
                     continue
                 problem = repr(text.strip())
             transport_broken = True
@@ -954,11 +990,8 @@ def _supervise(  # noqa: C901 - stream and containment share one durable prefix
             if not data or not consume(data):
                 break
     finally:
-        kill_group(proc.pid)
-        drain_deadline = time.monotonic() + min(
-            0.1, spec.budgets.cleanup_deadline_seconds / 2
-        )
-        while time.monotonic() < drain_deadline:
+        drain_deadline = time.monotonic() + _DRAIN_SECONDS
+        while final is None and time.monotonic() < drain_deadline:
             try:
                 data = os.read(fd, 65536)
             except BlockingIOError:
@@ -972,16 +1005,30 @@ def _supervise(  # noqa: C901 - stream and containment share one durable prefix
         history_file.flush()
         os.fsync(history_file.fileno())
         history_file.close()
-        try:
-            proc.wait(
-                timeout=max(_REAP_GUARD_SECONDS, spec.budgets.cleanup_deadline_seconds)
-            )
-        except subprocess.TimeoutExpired:
-            pass
-    returncode = proc.returncode
-    if status == COMPLETED and returncode != 0:
+    return _Stream(durable, final, status, reason, not transport_broken)
+
+
+def _reap(proc: subprocess.Popen[bytes]) -> int | None:
+    """Wait for the killed runner; None only if it outlived the reap guard."""
+    try:
+        return proc.wait(timeout=_REAP_GUARD_SECONDS)
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def _execution(stream: _Stream, returncode: int | None, stderr_path: str) -> Execution:
+    """Classify a supervised run: by its final record, else by the runner's exit.
+
+    A runner killed after its final record has returncode None.
+    """
+    durable, status, reason = stream.durable, stream.status, stream.reason
+    if stream.final is not None:
+        returncode = None
+        if status == COMPLETED:
+            status, reason = _final_status(stream.final)
+    elif status == COMPLETED and returncode != 0:
         status, reason = _runner_exit_status(durable, returncode)
-    execution = Execution(
+    return Execution(
         status,
         reason,
         len(durable),
@@ -992,7 +1039,6 @@ def _supervise(  # noqa: C901 - stream and containment share one durable prefix
         setup_error=_setup_error(stderr_path) if returncode != 0 else None,
         backend_error=_backend_error(durable),
     )
-    return execution, durable
 
 
 def judge(
@@ -1070,6 +1116,30 @@ def _manifest_only(
     """Write manifests for an empty history (pre-launch failure path)."""
     verdict = _write_manifests(artifact_dir, execution, spec, [], target)
     return ExplorationResult(execution, verdict, artifact_dir)
+
+
+def _record_close(
+    execution: Execution, stream: _Stream, closed: RunDirClose, history_path: str
+) -> Execution:
+    """Record the run-dir close in the execution and the durable history.
+
+    `run-closed` is appended only to an intact history once no process of
+    the run is left; a completed run whose close leaked fails as
+    `CLEANUP_FAILED`.
+    """
+    durable = stream.durable
+    if stream.intact and closed.killed:
+        durable.append(_append_run_closed(history_path))
+    status, reason = execution.status, execution.reason
+    if closed.leaked and status == COMPLETED:
+        status, reason = HARNESS_FAILURE, CLEANUP_FAILED + closed.text
+    return replace(
+        execution,
+        status=status,
+        reason=reason,
+        events=len(durable),
+        cleanup=closed.text,
+    )
 
 
 def run_exploration(
@@ -1157,31 +1227,32 @@ def run_exploration(
     except (OSError, ValueError) as error:
         stderr_file.close()
         history_file.close()
-        cleanup = close_run_dir(run_dir)
+        closed = close_run_dir(run_dir)
         os.close(lock_fd)
         return _manifest_only(
             artifact_dir,
             spec,
             Execution(
-                HARNESS_FAILURE, f"spawn-failed: {error}", 0, None, cleanup=cleanup
+                HARNESS_FAILURE, f"spawn-failed: {error}", 0, None, cleanup=closed.text
             ),
             target,
         )
     try:
-        execution, durable = _supervise(
-            spec,
-            proc,
-            history_file,
-            os.path.join(artifact_dir, STDERR_NAME),
-            runner_deadline,
-        )
+        stream = _supervise(spec, proc, history_file, runner_deadline)
     finally:
         stderr_file.close()
-        cleanup = close_run_dir(run_dir)
+        # The runner carries RUN_DIR_ENV, so the close's kill scan kills it
+        # and waits until it exits, as for every other process of the run;
+        # its group is killed after for EDEN_TEST_CLEANUP=no.
+        closed = close_run_dir(run_dir)
+        kill_group(proc.pid)
         os.close(lock_fd)
+        returncode = _reap(proc)
+    execution = _execution(stream, returncode, os.path.join(artifact_dir, STDERR_NAME))
+    execution = _record_close(execution, stream, closed, history_path)
     facts = {**(execution.setup or {}), "run_dir": run_dir}
     if swept:
         facts["swept"] = swept
-    execution = replace(execution, cleanup=cleanup, setup=facts)
-    verdict = _write_manifests(artifact_dir, execution, spec, durable, target)
+    execution = replace(execution, setup=facts)
+    verdict = _write_manifests(artifact_dir, execution, spec, stream.durable, target)
     return ExplorationResult(execution, verdict, artifact_dir)

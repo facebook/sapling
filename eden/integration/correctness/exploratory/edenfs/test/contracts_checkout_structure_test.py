@@ -431,7 +431,7 @@ class CheckoutTest(unittest.TestCase):
                     stdout="",
                     stderr=stderr,
                 ),
-                Event("target-closed", 5.0, {}),
+                Event("run-closed", 5.0, {}),
             ],
         )
         self.assertTrue(
@@ -632,7 +632,7 @@ class CheckoutTest(unittest.TestCase):
                     ev("invoke", "w", 1.5),
                     ev("ok", "w", 1.6, **result),
                     ev("ok", "c", 2.0, revision=1, node="n", via="thrift", conflicts=0),
-                    Event("target-closed", 9.0, {}),
+                    Event("run-closed", 9.0, {}),
                 ]
                 swapped = read_obs("e", R0, destination, 1.1, 1.2)
                 lost, kept = (
@@ -773,7 +773,7 @@ class SameRevisionCheckoutTest(unittest.TestCase):
             ev("ok", "w", 2.0, bytes_written=64),
             ev("invoke", "c", 3.0),
             done,
-            Event("target-closed", 9.0, {}),
+            Event("run-closed", 9.0, {}),
         ]
         return spec, events
 

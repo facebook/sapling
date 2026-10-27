@@ -93,7 +93,7 @@ class Shape:
 
 
 def shape_of(run: Run) -> Shape:
-    """Close a written run (`target-closed`, scheduler cleanup) and return its shape."""
+    """Close a written run (scheduler cleanup, `run-closed`) and return its shape."""
     run.finish()
     return Shape(run.spec_text(), tuple(run.events))
 

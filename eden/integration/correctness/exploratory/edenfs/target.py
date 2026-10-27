@@ -174,7 +174,6 @@ def _make_environment(spec: RunSpec, sink: HistorySink) -> Environment:
         blob_size=repo.get("blob_size"),
         reference_clone=reference_clone(spec),
         run_dir=Path(os.environ[RUN_DIR_ENV]),
-        cleanup_seconds=spec.budgets.cleanup_deadline_seconds,
         sink=sink,
     )
 

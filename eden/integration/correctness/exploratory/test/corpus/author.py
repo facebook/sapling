@@ -306,13 +306,8 @@ class Run:
         )
 
     def finish(self) -> None:
-        self.run_event(
-            "target-closed",
-            host_oom_after_close={},
-            reference=None,
-            close_errors=[],
-        )
         self.run_event("cleanup", scheduler={"status": "completed", "reason": None})
+        self.run_event("run-closed")
 
     # Expectations.
     def spec(self) -> Any:

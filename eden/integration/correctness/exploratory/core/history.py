@@ -6,7 +6,8 @@
 """Durable history events and sinks for the exploratory harness.
 
 The runner writes these events as JSONL; the supervisor appends them verbatim to
-history.jsonl. Every event carries a monotonic timestamp. invoke publishes
+history.jsonl until the runner's final cleanup record, then adds its own
+``run-closed`` record. Every event carries a monotonic timestamp. invoke publishes
 ``started``; ok/fail/info publishes ``finished`` for the scheduler.
 ``started`` records scheduler admission: the action's backend call is about
 to begin. It is not evidence that the backend engaged the daemon or that a
@@ -32,6 +33,10 @@ SKIPPED = "skipped"
 CLEANUP = "cleanup"
 CLEANUP_REMOVED = "cleanup-removed"
 DAEMON_EXIT = "daemon-exit"
+# The supervisor's record that every process of the run is dead; always last.
+RUN_CLOSED = "run-closed"
+# A cleanup record carrying one of these keys is the runner's final record.
+FINAL_CLEANUP_KEYS = frozenset({"scheduler", "environment_degraded"})
 
 COMPLETIONS = frozenset({OK, FAIL, INFO})
 TERMINALS = COMPLETIONS | {SKIPPED}
@@ -406,6 +411,21 @@ def _scheduler_problems(
     return problems
 
 
+def _run_closed_problems(events: Sequence[Event]) -> list[str]:
+    """Check that a `run-closed` record is the only one, the last event, and not earlier than any event."""
+    closed = [index for index, event in enumerate(events) if event.type == RUN_CLOSED]
+    if not closed:
+        return []
+    if closed != [len(events) - 1]:
+        return [f"run-closed records at {closed} of {len(events)} events"]
+    end = events[-1].time
+    return [
+        f"event {index}: time {time_label(event.time)} after run-closed"
+        for index, event in enumerate(events[:-1])
+        if is_event_time(event.time) and is_event_time(end) and event.time > end
+    ]
+
+
 def _indices(
     events: Sequence[Event],
 ) -> tuple[dict[str, int], dict[str, int], set[str]]:
@@ -492,7 +512,9 @@ def history_problems(
     scheduler cleanup record, from an execution that did not complete, may
     leave actions unresolved, so a killed or failed run stays judgeable.
     At most one scheduler record exists; every action has a terminal
-    before it and no action event follows it. ``execution_status`` is the
+    before it and no action event follows it. A ``run-closed`` record is
+    the only one, the last event, and no earlier event has a later
+    time. ``execution_status`` is the
     containment status, when known: a completed execution requires a
     completed scheduler record. Every record is an `Event` with a text
     type and dict data without the reserved keys. Every event time satisfies
@@ -510,6 +532,7 @@ def history_problems(
         problems.extend(_sequence_problems(action.id, sequences[action.id]))
     problems.extend(_order_problems(spec, events))
     problems.extend(_scheduler_problems(spec, events, sequences, execution_status))
+    problems.extend(_run_closed_problems(events))
     return tuple(problems)
 
 

@@ -146,7 +146,7 @@ class CheckoutSemanticsTest(unittest.TestCase):
             done,
             ev("invoke", "q", 7.0),
             ev("ok", "q", 8.0, **digest_facts(b"x")),
-            Event("target-closed", 9.0, {}),
+            Event("run-closed", 9.0, {}),
         ]
 
     def test_an_overlapping_write_may_be_kept_or_superseded(self) -> None:
@@ -329,7 +329,7 @@ class CheckoutSemanticsTest(unittest.TestCase):
             ev("ok", "r", 4.0, **digest_facts(encode_committed(SEED, R0, 1))),
             ev("invoke", "d", 5.0),
             ev("ok", "d", 6.0, revision=2, **THRIFT_OK),
-            Event("target-closed", 9.0, {}),
+            Event("run-closed", 9.0, {}),
         ]
         self.assertTrue(
             is_explained(

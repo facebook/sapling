@@ -48,10 +48,7 @@ from eden.integration.correctness.exploratory.edenfs.encoding import (
     encode_value,
     initial_content,
 )
-from eden.integration.correctness.exploratory.edenfs.environment import (
-    Environment,
-    TARGET_CLOSED,
-)
+from eden.integration.correctness.exploratory.edenfs.environment import Environment
 from eden.integration.correctness.exploratory.edenfs.executor import (
     serves,
     SharedExecutor,
@@ -757,39 +754,23 @@ class EnvironmentInitialStateTest(unittest.TestCase):
         )
 
 
-class EnvironmentCloseEventTest(unittest.TestCase):
+class EnvironmentCloseTest(unittest.TestCase):
     def _environment(
         self, cls: type[Environment] = Environment
-    ) -> tuple[Environment, InMemorySink, ReferenceCheckout]:
-        sink = InMemorySink()
-        env = cls(seed=3, file_count=4, commit_count=2, registers=REGISTERS, sink=sink)
+    ) -> tuple[Environment, ReferenceCheckout]:
+        env = cls(
+            seed=3,
+            file_count=4,
+            commit_count=2,
+            registers=REGISTERS,
+            sink=InMemorySink(),
+        )
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         checkout = ReferenceCheckout(Path(tmp.name), "/bin/false", {}, ())
         env._reference = checkout
         env._reference_runtime = checkout.runtime
-        return env, sink, checkout
-
-    def test_close_event_carries_final_failures(
-        self,
-    ) -> None:
-        env, sink, checkout = self._environment()
-        checkout.runtime.paired()
-        checkout.runtime.failed("q", LEFT_RUNNING, "straggler")
-        self.assertIsNone(env.close())
-        (closed,) = sink.of_type(TARGET_CLOSED)
-        self.assertEqual(
-            {
-                "paired": 1,
-                "failures": [
-                    {"action": "q", "kind": LEFT_RUNNING, "detail": "straggler"}
-                ],
-            },
-            closed.data["reference"],
-        )
-        self.assertEqual([], closed.data["close_errors"])
-        with self.assertRaises(ReferenceFailure):
-            checkout.run("after/close", ["log"], _FAST)
+        return env, checkout
 
     def test_lifecycle_style_stop_override_still_closes_the_reference(self) -> None:
         """Restack note: lifecycle's `_stop_eden` clears the old `_reference_repo` field.
@@ -802,9 +783,8 @@ class EnvironmentCloseEventTest(unittest.TestCase):
             def _stop_eden(self) -> None:
                 self._reference_repo = None
 
-        env, sink, checkout = self._environment(_LifecycleStyle)
+        env, checkout = self._environment(_LifecycleStyle)
         self.assertIsNone(env.close())
-        self.assertEqual(1, len(sink.of_type(TARGET_CLOSED)))
         with self.assertRaises(ReferenceFailure) as caught:
             checkout.run("after/close", ["log"], _FAST)
         self.assertEqual(CLOSED, caught.exception.kind)

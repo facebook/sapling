@@ -33,7 +33,13 @@ from eden.integration.correctness.exploratory.core.containment import (
     load_history,
 )
 from eden.integration.correctness.exploratory.core.differential import REFERENCE_RESULT
-from eden.integration.correctness.exploratory.core.history import FAIL, INFO, INVOKE, OK
+from eden.integration.correctness.exploratory.core.history import (
+    FAIL,
+    INFO,
+    INVOKE,
+    OK,
+    RUN_CLOSED,
+)
 from eden.integration.correctness.exploratory.core.property import ObligationStatus
 from eden.integration.correctness.exploratory.core.runspec import (
     Action,
@@ -54,10 +60,7 @@ from eden.integration.correctness.exploratory.edenfs.encoding import (
     content_token,
     encode_committed,
 )
-from eden.integration.correctness.exploratory.edenfs.environment import (
-    TARGET_CLOSED,
-    TARGET_SETUP,
-)
+from eden.integration.correctness.exploratory.edenfs.environment import TARGET_SETUP
 from eden.integration.correctness.exploratory.edenfs.fixture import layout_for
 from eden.integration.correctness.exploratory.edenfs.target import (
     EDENFS_TARGET,
@@ -246,10 +249,6 @@ class ReferenceLiveTest(unittest.TestCase):
             reference["initial_state"],
             early.data["setup"]["reference"]["initial_state"],
         )
-        (closed,) = [e for e in events if e.type == TARGET_CLOSED]
-        self.assertEqual(
-            {"paired": len(shared), "failures": []}, closed.data["reference"]
-        )
         self.assertEqual(2, reference["dirty_paths"])
         self.assertTrue(reference["initial_state"].startswith("sha256:"))
         self.assertEqual({"paired": len(shared), "failures": []}, reference["runtime"])
@@ -315,9 +314,7 @@ class ReferenceLiveTest(unittest.TestCase):
             self.assertEqual(primary["returncode"], reference["returncode"])
         _assert_judged(self, spec, events, execution)
 
-    def test_setup_is_durable_before_actions_and_closed_facts_follow_close(
-        self,
-    ) -> None:
+    def test_setup_is_durable_before_actions_and_run_closed_is_last(self) -> None:
         spec = _with_profile(
             _spec(
                 _REGISTER,
@@ -330,9 +327,8 @@ class ReferenceLiveTest(unittest.TestCase):
         self.assertEqual(_EXECUTION_FIELDS, set(execution))
         types = [event.type for event in events]
         self.assertLess(types.index(TARGET_SETUP), types.index(INVOKE))
-        (closed,) = [e for e in events if e.type == TARGET_CLOSED]
-        self.assertGreater(closed.time, max(e.time for e in events if e.type == OK))
-        self.assertIsNone(closed.data["reference"])
+        self.assertEqual(RUN_CLOSED, types[-1])
+        self.assertGreater(events[-1].time, max(e.time for e in events[:-1]))
         self.assertNotIn("reference", execution["setup"])
         self.assertTrue(all(REFERENCE_RESULT not in e.data for e in events))
         _assert_judged(self, spec, events, execution)

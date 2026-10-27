@@ -24,10 +24,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest import mock
 
-from eden.integration.correctness.exploratory.core.containment import (
-    _runner_env,
-    runner_main,
-)
+from eden.integration.correctness.exploratory.core.containment import _runner_env
 from eden.integration.correctness.exploratory.core.history import FAIL, InMemorySink, OK
 from eden.integration.correctness.exploratory.core.runspec import (
     Action,
@@ -51,7 +48,6 @@ from eden.integration.correctness.exploratory.edenfs.backend_processes import (
 )
 from eden.integration.correctness.exploratory.edenfs.backends import LiveBackend
 from eden.integration.correctness.exploratory.edenfs.environment import Environment
-from eden.integration.correctness.exploratory.edenfs.target import RECORDING_TARGET
 from eden.integration.correctness.exploratory.edenfs.test.backends_fixtures import (
     _BlockingProcess,
     _CannedSl,
@@ -162,75 +158,6 @@ class NativeProcessBackendTest(unittest.TestCase):
             process.wait.assert_not_called()
         self.assertTrue(backend._readers_closed)
 
-    def test_contained_fault_call_returns_before_resource_teardown(self) -> None:
-        """The live backend retains held descriptors until a released call returns."""
-        env, _spec_value, _backend = self._reader()
-        action = Action(
-            "w", "write", "operation", payload={"path": REGISTERS[0], "value_id": "w"}
-        )
-        spec = replace(
-            _spec(REGISTERS[0], [action], [("a", ["w"])]),
-            # The C/2 join bound is a hang guard for the released call.
-            budgets=Budgets(0.05, 2 * _HANG_GUARD, 4 * _HANG_GUARD),
-        )
-        backend = LiveBackend(env, spec)
-        read_fd, write_fd = os.pipe()
-        self.addCleanup(os.close, write_fd)
-        self.addCleanup(lambda: os.close(read_fd) if backend._executor.fds else None)
-        backend._executor.fds["held"] = read_fd
-        release = threading.Event()
-        returned = threading.Event()
-        order: list[str] = []
-
-        def parked(_action: Action) -> BackendResult:
-            release.wait(_HANG_GUARD)
-            os.fstat(read_fd)
-            order.append("returned")
-            returned.set()
-            return BackendResult(OK)
-
-        def unwind(_sink: Any, _clock: Any) -> dict[str, Any]:
-            order.append("unwind")
-            return {"leaks": 0}
-
-        def close() -> None:
-            order.append("close")
-            self.assertTrue(returned.is_set())
-            self.assertEqual(backend._executor.fds, {})
-
-        unwind_name = "unwind_faults" if hasattr(backend, "unwind_faults") else "unwind"
-        original_unwind = getattr(backend, unwind_name)
-
-        def release_after_unwind(sink: Any, clock: Any) -> dict[str, Any]:
-            try:
-                return original_unwind(sink, clock)
-            finally:
-                release.set()
-
-        env.setup = lambda: None
-        env.close = close
-        target = replace(
-            RECORDING_TARGET,
-            make_environment=lambda *_: env,
-            make_backend=lambda *_: backend,
-        )
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
-                path = Path(tmp) / "run-spec.json"
-                path.write_text(to_json(spec))
-                with (
-                    mock.patch.object(backend._executor, "_write", side_effect=parked),
-                    mock.patch.object(backend._faults, "unwind", side_effect=unwind),
-                    mock.patch.object(
-                        backend, unwind_name, side_effect=release_after_unwind
-                    ),
-                    mock.patch("sys.stdout", io.StringIO()),
-                ):
-                    self.assertEqual(runner_main(str(path), target), 1)
-        finally:
-            release.set()
-        self.assertEqual(order, ["unwind", "returned", "close"])
-
     def test_background_read_finishes_real_sweep(self) -> None:
         env, spec, backend = self._reader()
         started = time.monotonic()
@@ -278,7 +205,7 @@ class NativeProcessBackendTest(unittest.TestCase):
                                 ),
                             )
 
-                            def cleanup(backend: LiveBackend = backend) -> None:
+                            def unwind(backend: LiveBackend = backend) -> None:
                                 backend.unwind(InMemorySink(), time.monotonic)
 
                             run_actions(
@@ -286,7 +213,7 @@ class NativeProcessBackendTest(unittest.TestCase):
                                 backend,
                                 InMemorySink(),
                                 time.monotonic,
-                                cleanup=cleanup,
+                                unwind=unwind,
                             )
                         else:
                             backend.unwind(InMemorySink(), time.monotonic)

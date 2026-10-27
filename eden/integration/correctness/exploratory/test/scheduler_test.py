@@ -525,11 +525,8 @@ class SchedulerTest(unittest.TestCase):
 
         spec = _spec([("a", ["x1", "x2"])], [_op("x1"), _op("x2")])
         sink = InMemorySink()
-        cleaned: list[str] = []
         with redirect_stderr(io.StringIO()) as stderr:
-            status = run_actions(
-                spec, execute, sink, _clock(), cleanup=lambda: cleaned.append("ran")
-            )
+            status = run_actions(spec, execute, sink, _clock())
         self.assertEqual(
             (status.status, status.reason, status.error),
             (
@@ -546,7 +543,6 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual(completions[0].data["reason"], INVALID_BACKEND_RESPONSE)
         skipped = sink.of_type(SKIPPED)
         self.assertEqual([e.data["action"] for e in skipped], ["x2"])
-        self.assertEqual(cleaned, ["ran"])
 
     def test_backend_error_text_is_bounded(self) -> None:
         def execute(action: Action) -> BackendResult:
@@ -562,13 +558,13 @@ class SchedulerTest(unittest.TestCase):
             len(error.encode()), scheduler_module.MAX_BACKEND_ERROR_BYTES
         )
 
-    def test_sweep_completes_every_action_before_cleanup_when_a_start_fails(
+    def test_sweep_completes_every_action_before_unwind_when_a_start_fails(
         self,
     ) -> None:
-        """An actor thread that cannot start still leaves every action completed before cleanup."""
+        """An actor thread that cannot start still leaves every action completed before unwind."""
         spec = _spec([("a", ["x1"]), ("b", ["y1"])], [_op("x1"), _op("y1")])
         sink = InMemorySink()
-        completed_at_cleanup: list[set[str]] = []
+        completed_at_unwind: list[set[str]] = []
         real_start = threading.Thread.start
 
         def start(thread: threading.Thread) -> None:
@@ -576,8 +572,8 @@ class SchedulerTest(unittest.TestCase):
                 raise RuntimeError("can't start new thread")
             real_start(thread)
 
-        def cleanup() -> None:
-            completed_at_cleanup.append(
+        def unwind() -> None:
+            completed_at_unwind.append(
                 {
                     e.data["action"]
                     for e in sink.events
@@ -592,9 +588,9 @@ class SchedulerTest(unittest.TestCase):
                     lambda action: BackendResult(OK, {}),
                     sink,
                     _clock(),
-                    cleanup=cleanup,
+                    unwind=unwind,
                 )
-        self.assertEqual([{"x1", "y1"}], completed_at_cleanup)
+        self.assertEqual([{"x1", "y1"}], completed_at_unwind)
 
     def test_non_result_response_rejected(self) -> None:
         spec = _spec([("a", ["q1"])], [_op("q1")])
@@ -721,7 +717,7 @@ class SchedulerTest(unittest.TestCase):
         """
         clock = _VirtualTime()
         release = threading.Event()
-        cleaned: list[tuple[float, bool]] = []
+        unwound: list[tuple[float, bool]] = []
         action = Action(id="c0", kind="checkout", deadline="run")
         spec = _spec(
             [("a", ["c0", "last"])],
@@ -736,25 +732,27 @@ class SchedulerTest(unittest.TestCase):
                 clock.park(release)
             return BackendResult(OK)
 
-        def cleanup() -> None:
-            cleaned.append((clock.now, release.is_set()))
+        def unwind() -> None:
+            unwound.append((clock.now, release.is_set()))
             release.set()
 
         try:
             with clock.installed():
-                status = run_actions(spec, backend, sink, _clock(), cleanup=cleanup)
+                status = run_actions(spec, backend, sink, _clock(), unwind=unwind)
         finally:
             release.set()
         self.assertEqual(
             (status.status, status.reason), (HARNESS_FAILURE, "runner-deadline")
         )
         self.assertEqual([e.data["action"] for e in sink.of_type(SKIPPED)], ["last"])
-        # Cleanup starts at the join bound D - C/2 while c0 is still parked.
-        ((cleaned_at, released),) = cleaned
-        self.assertAlmostEqual(0.5 - 0.2 / 2, cleaned_at)
+        # Unwind starts at the actor deadline D - C while c0 is still parked.
+        ((unwound_at, released),) = unwound
+        self.assertAlmostEqual(0.5 - 0.2, unwound_at)
         self.assertFalse(released, "run-deadline action blocked actor join")
 
-    def test_hung_run_deadline_op_past_join_bound_is_harness_failure(self) -> None:
+    def test_hung_run_deadline_op_past_actor_deadline_is_operation_timeout(
+        self,
+    ) -> None:
         """A hung checkout is harness-red at the reserved runner deadline.
 
         test_deadline_run_action_is_not_watched is the returning accept twin.
@@ -776,20 +774,19 @@ class SchedulerTest(unittest.TestCase):
             [("a", ["c0"])], [action], cleanup_deadline=0.2, runner_deadline=0.8
         )
         sink = InMemorySink()
-        cleaned: list[float] = []
+        unwound: list[float] = []
 
-        def cleanup() -> None:
-            cleaned.append(clock.now)
+        def unwind() -> None:
+            unwound.append(clock.now)
             release.set()
 
         try:
             with clock.installed():
-                status = run_actions(spec, hung, sink, _clock(), cleanup=cleanup)
+                status = run_actions(spec, hung, sink, _clock(), unwind=unwind)
         finally:
             release.set()
-        # Actors stop at D - C; the hung worker's join ends at D - C/2.
-        self.assertEqual(1, len(cleaned))
-        self.assertAlmostEqual(0.8 - 0.2 / 2, cleaned[0])
+        # Actors stop at D - C; nothing joins the hung worker.
+        self.assertEqual([0.8 - 0.2], unwound)
         self.assertEqual(
             (status.status, status.reason), (HARNESS_FAILURE, OPERATION_TIMEOUT)
         )
@@ -809,8 +806,8 @@ class SchedulerTest(unittest.TestCase):
     ) -> None:
         """An operation-deadline op still inside its own budget is not a timeout.
 
-        test_hung_run_deadline_op_past_join_bound_is_harness_failure is the
-        run-deadline twin, which has no watchdog and stays a timeout.
+        test_hung_run_deadline_op_past_actor_deadline_is_operation_timeout is
+        the run-deadline twin, which has no watchdog and stays a timeout.
         """
         clock = _VirtualTime()
         release = threading.Event()
@@ -829,7 +826,7 @@ class SchedulerTest(unittest.TestCase):
         sink = InMemorySink()
         try:
             with clock.installed():
-                status = run_actions(spec, slow, sink, _clock(), cleanup=release.set)
+                status = run_actions(spec, slow, sink, _clock(), unwind=release.set)
         finally:
             release.set()
         self.assertEqual(
@@ -868,7 +865,7 @@ class SchedulerTest(unittest.TestCase):
                 self.assertTrue(set(skipped).isdisjoint(invoked))
                 self.assertEqual(skipped, sorted(skipped))
 
-    def test_cleanup_runs_on_every_exit_path(self) -> None:
+    def test_unwind_runs_on_every_exit_path(self) -> None:
         def _boom(action: Action) -> BackendResult:
             raise RuntimeError("boom")
 
@@ -888,19 +885,22 @@ class SchedulerTest(unittest.TestCase):
                 }[mode]
                 deadline = 0.1 if mode == "timeout" else 30.0
                 spec = _spec([("a", ["m1"])], [_op("m1")], operation_deadline=deadline)
-                cleaned: list[str] = []
+                unwound: list[str] = []
+
+                def unwind(
+                    gate: threading.Event = release, seen: list[str] = unwound
+                ) -> None:
+                    seen.append("ran")
+                    gate.set()
+
                 try:
-                    status = run_actions(
-                        spec,
-                        backend,
-                        InMemorySink(),
-                        _clock(),
-                        unwind=release.set,
-                        cleanup=lambda c=cleaned: c.append("ran"),
-                    )
+                    with redirect_stderr(io.StringIO()):
+                        status = run_actions(
+                            spec, backend, InMemorySink(), _clock(), unwind=unwind
+                        )
                 finally:
                     release.set()
-                self.assertEqual(cleaned, ["ran"])
+                self.assertEqual(unwound, ["ran"])
                 self.assertEqual(
                     {
                         "ok": (COMPLETED, None),
@@ -911,48 +911,8 @@ class SchedulerTest(unittest.TestCase):
                     (status.status, status.reason),
                 )
 
-    def test_timed_out_worker_is_joined_before_cleanup(self) -> None:
-        """A worker that returns after its watchdog fired is joined before cleanup."""
-        release = threading.Event()
-        returned = threading.Event()
-
-        def outlives_watchdog(action: Action) -> BackendResult:
-            release.wait(_HANG_GUARD)
-            returned.set()
-            return BackendResult(OK)
-
-        class Sink(InMemorySink):
-            def emit(self, event: Any) -> None:
-                """Let the worker return once its watchdog has recorded the timeout."""
-                super().emit(event)
-                if event.type == INFO:
-                    release.set()
-
-        # The join bound C/2 is a hang guard for the released worker.
-        spec = _spec(
-            [("a", ["m1"])],
-            [_op("m1")],
-            operation_deadline=0.1,
-            cleanup_deadline=2 * _HANG_GUARD,
-            runner_deadline=4 * _HANG_GUARD,
-        )
-        seen_at_cleanup: list[bool] = []
-        try:
-            status = run_actions(
-                spec,
-                outlives_watchdog,
-                Sink(),
-                _clock(),
-                cleanup=lambda: seen_at_cleanup.append(returned.is_set()),
-            )
-        finally:
-            release.set()
-        self.assertEqual(
-            (status.status, status.reason), (HARNESS_FAILURE, OPERATION_TIMEOUT)
-        )
-        self.assertEqual(seen_at_cleanup, [True])
-
-    def test_timed_out_worker_join_is_bounded(self) -> None:
+    def test_unwind_does_not_wait_for_a_timed_out_worker(self) -> None:
+        """Unwind runs at the watchdog's timeout while the timed-out call is still parked."""
         clock = _VirtualTime()
         release = threading.Event()
 
@@ -962,33 +922,31 @@ class SchedulerTest(unittest.TestCase):
 
         deadline = 0.1
         spec = _spec([("a", ["m1"])], [_op("m1")], operation_deadline=deadline)
-        seen_at_cleanup: list[tuple[float, bool]] = []
+        seen_at_unwind: list[tuple[float, bool]] = []
+        sink = InMemorySink()
         try:
             with clock.installed():
                 status = run_actions(
                     spec,
                     hung,
-                    InMemorySink(),
+                    sink,
                     _clock(),
-                    cleanup=lambda: seen_at_cleanup.append(
-                        (clock.now, release.is_set())
-                    ),
+                    unwind=lambda: seen_at_unwind.append((clock.now, release.is_set())),
                 )
         finally:
             release.set()
         self.assertEqual(
             (status.status, status.reason), (HARNESS_FAILURE, OPERATION_TIMEOUT)
         )
-        # The watchdog fires at `deadline`; the hung worker is joined for
-        # exactly C/2 more, then cleanup runs with the worker still parked.
-        ((cleaned_at, released),) = seen_at_cleanup
-        self.assertFalse(released)
-        self.assertAlmostEqual(
-            deadline + spec.budgets.cleanup_deadline_seconds / 2, cleaned_at
+        self.assertEqual([(deadline, False)], seen_at_unwind)
+        (timed_out,) = sink.of_type(INFO)
+        self.assertEqual(
+            ("m1", OPERATION_TIMEOUT),
+            (timed_out.data["action"], timed_out.data["reason"]),
         )
 
-    def test_join_bound_is_one_deadline_for_all_actors(self) -> None:
-        """Hung actors share one join deadline instead of one bound each."""
+    def test_hung_actors_share_one_actor_deadline(self) -> None:
+        """Hung actors share the actor deadline D - C instead of one bound each."""
         clock = _VirtualTime()
         release = threading.Event()
 
@@ -1020,10 +978,10 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual(
             (status.status, status.reason), (HARNESS_FAILURE, OPERATION_TIMEOUT)
         )
-        # Three hung actors and three hung workers all stop at D - C/2.
-        self.assertAlmostEqual(1.2 - 0.2 / 2, returned_at)
+        # Three hung actors stop at D - C; nothing joins their hung workers.
+        self.assertAlmostEqual(1.2 - 0.2, returned_at)
 
-    def test_actors_working_past_the_join_deadline_complete(self) -> None:
+    def test_actors_working_past_the_cleanup_budget_complete(self) -> None:
         """Actors may work past the cleanup budget within the runner budget."""
 
         clock = _VirtualTime()
@@ -1033,19 +991,19 @@ class SchedulerTest(unittest.TestCase):
             return BackendResult(OK)
 
         actors = [(f"a{i}", [f"a{i}s{j}" for j in range(4)]) for i in range(3)]
-        spec = _spec(actors, [_op(i) for _, ids in actors for i in ids])
+        spec = _spec(
+            actors, [_op(i) for _, ids in actors for i in ids], cleanup_deadline=1.0
+        )
         sink = InMemorySink()
         with clock.installed():
-            status = run_actions(
-                spec, slow, sink, _clock(), cleanup_deadline_seconds=1.0
-            )
+            status = run_actions(spec, slow, sink, _clock())
         self.assertEqual((status.status, status.reason), (COMPLETED, None))
         self.assertEqual(len(sink.of_type(OK)), 12)
 
     def test_hung_actors_after_admission_stops_share_one_deadline(self) -> None:
         """Working then hung actors share the deadline measured from run start.
 
-        test_actors_working_past_the_join_deadline_complete is the accept twin.
+        test_actors_working_past_the_cleanup_budget_complete is the accept twin.
         """
         clock = _VirtualTime()
         release = threading.Event()
@@ -1087,12 +1045,12 @@ class SchedulerTest(unittest.TestCase):
             {e.data["action"] for e in sink.of_type(INFO)}, {"c0", "c1", "c2"}
         )
         # The work spans [0, work]; the shared deadline measured from run start,
-        # not from when admission stopped, ends the joins at D - C/2.
-        self.assertAlmostEqual(work + bound + 0.2 - 0.2 / 2, returned_at)
+        # not from when admission stopped, ends the actors at D - C.
+        self.assertAlmostEqual(work + bound, returned_at)
 
-    def test_nothing_is_invoked_after_cleanup_starts(self) -> None:
+    def test_nothing_is_invoked_after_the_sweep_starts(self) -> None:
         """A swept action is never invoked, and a run whose action ran after
-        cleanup started never reports completed.
+        the sweep started never reports completed.
 
         ``t`` times out and stops admission. ``x`` hangs past the runner
         deadline minus the cleanup reservation. The sweep reaches ``x2`` first and
@@ -1150,7 +1108,7 @@ class SchedulerTest(unittest.TestCase):
 
         try:
             with virtual.installed():
-                status = run_actions(spec, backend, sink, clock, cleanup=join_actor)
+                status = run_actions(spec, backend, sink, clock, unwind=join_actor)
         finally:
             release.set()
         types = [(e.type, e.data["action"]) for e in sink.events]
@@ -1161,7 +1119,7 @@ class SchedulerTest(unittest.TestCase):
         )
 
 
-class CleanupReservationTest(unittest.TestCase):
+class ActorDeadlineTest(unittest.TestCase):
     def test_deadline_skip_precedes_sweep_timeout(self) -> None:
         """Deadline skips win over timeouts created by sweeping.
 
@@ -1217,91 +1175,6 @@ class CleanupReservationTest(unittest.TestCase):
                 else:
                     self.assertEqual(status.status, COMPLETED)
 
-    def test_wedged_worker_preserves_containment_slice(self) -> None:
-        """Worker joins cannot consume containment's half.
-
-        test_fault_unwind_precedes_join_and_close is the returning accept twin.
-        """
-        clock = _VirtualTime()
-        release = threading.Event()
-        closed: list[float] = []
-        contained: list[tuple[list[str], float]] = []
-        cleanup_deadline = 0.4
-        spec = _spec(
-            [("a", ["x"])],
-            [_op("x")],
-            operation_deadline=0.05,
-            cleanup_deadline=cleanup_deadline,
-            runner_deadline=1.0,
-        )
-        deadline = 0.5
-
-        def backend(_action: Action) -> BackendResult:
-            clock.park(release)
-            return BackendResult(OK)
-
-        try:
-            with clock.installed():
-                status = run_actions(
-                    spec,
-                    backend,
-                    InMemorySink(),
-                    _clock(),
-                    runner_deadline=deadline,
-                    contain=lambda active: contained.append(
-                        (active, deadline - clock.now)
-                    ),
-                    cleanup=lambda: closed.append(deadline - clock.now),
-                )
-        finally:
-            release.set()
-        self.assertEqual(status.reason, OPERATION_TIMEOUT)
-        self.assertEqual(contained[0][0], ["x"])
-        # The timeout at 0.05 starts a C/2 join, which leaves D - 0.25 behind.
-        self.assertAlmostEqual(deadline - 0.05 - cleanup_deadline / 2, contained[0][1])
-        self.assertGreaterEqual(contained[0][1], cleanup_deadline / 2)
-        self.assertGreaterEqual(closed[0], cleanup_deadline / 2)
-
-    def test_wedged_unwind_preserves_containment_slice(self) -> None:
-        """An unwind callback cannot spend containment's half.
-
-        test_fault_unwind_precedes_join_and_close is the returning accept twin.
-        """
-        clock = _VirtualTime()
-        release = threading.Event()
-        closed: list[float] = []
-        cleanup_deadline = 0.4
-        spec = _spec(
-            [("a", ["x"])],
-            [_op("x")],
-            cleanup_deadline=cleanup_deadline,
-            runner_deadline=1.0,
-        )
-        deadline = 0.5
-
-        def unwind() -> None:
-            clock.park(release)
-
-        try:
-            with clock.installed():
-                status = run_actions(
-                    spec,
-                    lambda _action: BackendResult(OK),
-                    InMemorySink(),
-                    _clock(),
-                    runner_deadline=deadline,
-                    unwind=unwind,
-                    cleanup=lambda: closed.append(deadline - clock.now),
-                )
-        finally:
-            release.set()
-        self.assertEqual(
-            (status.status, status.reason), (HARNESS_FAILURE, "runner-deadline")
-        )
-        # The wedged unwind is abandoned after C/2, leaving the rest for close.
-        self.assertAlmostEqual(deadline - cleanup_deadline / 2, closed[0])
-        self.assertGreaterEqual(closed[0], cleanup_deadline / 2)
-
     def test_action_admission_obeys_actor_deadline(self) -> None:
         """A started actor cannot admit work after its budget.
 
@@ -1335,7 +1208,7 @@ class CleanupReservationTest(unittest.TestCase):
         self.assertEqual([e.data["action"] for e in sink.of_type(INVOKE)], ["first"])
 
     def test_setup_uses_the_supervisor_absolute_deadline(self) -> None:
-        """Setup cannot reset the actor deadline or spend cleanup's reservation."""
+        """Setup cannot reset the actor deadline: actors get nothing past D - C."""
         clock = _VirtualTime()
         cleanup_deadline = 0.2
         spec = _spec(
@@ -1346,7 +1219,7 @@ class CleanupReservationTest(unittest.TestCase):
         )
         sink = InMemorySink()
         invoked: list[str] = []
-        cleaned: list[float] = []
+        unwound: list[float] = []
         # Setup already spent all but C of the supervisor's runner budget.
         deadline = clock.now + cleanup_deadline
         with clock.installed():
@@ -1356,130 +1229,15 @@ class CleanupReservationTest(unittest.TestCase):
                 sink,
                 _clock(),
                 runner_deadline=deadline,
-                cleanup=lambda: cleaned.append(deadline - clock.now),
+                unwind=lambda: unwound.append(deadline - clock.now),
             )
         self.assertEqual(invoked, [])
         self.assertEqual([e.data["action"] for e in sink.of_type(SKIPPED)], ["x"])
         self.assertEqual(
             (status.status, status.reason), (HARNESS_FAILURE, "runner-deadline")
         )
-        # Nothing waited: cleanup keeps the whole reservation.
-        self.assertEqual([cleanup_deadline], cleaned)
-
-    def test_a_run_past_its_cleanup_reservation_keeps_containment_half(self) -> None:
-        """Unwind and joins stop at D - C/2 even when the run reaches cleanup late.
-
-        Setup left only C/4 of the runner budget, so D - C/2 is already past:
-        a wedged unwind is abandoned at once and close keeps the remaining C/4
-        instead of waiting a further C/2 past the deadline.
-        """
-        clock = _VirtualTime()
-        release = threading.Event()
-        cleanup_deadline = 0.4
-        spec = _spec(
-            [("a", ["x"])],
-            [_op("x")],
-            cleanup_deadline=cleanup_deadline,
-            runner_deadline=1.0,
-        )
-        deadline = clock.now + cleanup_deadline / 4
-        closed: list[float] = []
-        try:
-            with clock.installed():
-                status = run_actions(
-                    spec,
-                    lambda _action: BackendResult(OK),
-                    InMemorySink(),
-                    _clock(),
-                    runner_deadline=deadline,
-                    unwind=lambda: clock.park(release),
-                    cleanup=lambda: closed.append(deadline - clock.now),
-                )
-        finally:
-            release.set()
-        self.assertEqual(
-            (status.status, status.reason), (HARNESS_FAILURE, "runner-deadline")
-        )
-        self.assertEqual([cleanup_deadline / 4], closed)
-
-    def test_fault_unwind_precedes_join_and_close(self) -> None:
-        """Parked calls return after unwind and before environment teardown."""
-        release = threading.Event()
-        returned = threading.Event()
-        order: list[str] = []
-        # The C/2 join bound is a hang guard for the released call.
-        spec = _spec(
-            [("a", ["x"])],
-            [_op("x")],
-            operation_deadline=0.05,
-            cleanup_deadline=2 * _HANG_GUARD,
-            runner_deadline=4 * _HANG_GUARD,
-        )
-
-        def backend(_action: Action) -> BackendResult:
-            release.wait(_HANG_GUARD)
-            order.append("returned")
-            returned.set()
-            return BackendResult(OK)
-
-        def unwind() -> None:
-            order.append("unwind")
-            release.set()
-
-        def cleanup() -> None:
-            order.append("close")
-            self.assertTrue(returned.is_set())
-
-        try:
-            status = run_actions(
-                spec, backend, InMemorySink(), _clock(), unwind=unwind, cleanup=cleanup
-            )
-        finally:
-            release.set()
-        self.assertEqual(status.reason, OPERATION_TIMEOUT)
-        self.assertEqual(order, ["unwind", "returned", "close"])
-
-    def test_worker_join_uses_remaining_cleanup_budget(self) -> None:
-        """A wedged call spends cleanup's shared budget, without an extra join."""
-        clock = _VirtualTime()
-        release = threading.Event()
-        operation_deadline = 0.05
-        cleanup_deadline = 0.1
-        spec = _spec(
-            [("a", ["x"])],
-            [_op("x")],
-            operation_deadline=operation_deadline,
-            cleanup_deadline=cleanup_deadline,
-            runner_deadline=0.8,
-        )
-
-        def backend(_action: Action) -> BackendResult:
-            clock.park(release)
-            return BackendResult(OK)
-
-        cleaned: list[float] = []
-
-        def cleanup() -> None:
-            cleaned.append(clock.now)
-            release.set()
-
-        try:
-            with clock.installed():
-                status = run_actions(
-                    spec,
-                    backend,
-                    InMemorySink(),
-                    _clock(),
-                    runner_deadline=clock.now + 0.8,
-                    unwind=lambda: None,
-                    cleanup=cleanup,
-                )
-        finally:
-            release.set()
-        self.assertEqual(status.reason, OPERATION_TIMEOUT)
-        # The timeout plus one C/2 join: the unwind adds no join of its own.
-        self.assertEqual(1, len(cleaned))
-        self.assertAlmostEqual(operation_deadline + cleanup_deadline / 2, cleaned[0])
+        # Nothing waited: unwind starts at once.
+        self.assertEqual([cleanup_deadline], unwound)
 
 
 class _BreakingSink(InMemorySink):
@@ -1516,11 +1274,10 @@ class SchedulerFailureContainmentTest(unittest.TestCase):
                 sink,
                 _clock(),
                 unwind=recording_unwind,
-                cleanup=lambda: calls.append("cleanup"),
             )
         return status, calls
 
-    def test_broken_sink_stops_the_run_and_still_tears_down(self) -> None:
+    def test_broken_sink_stops_the_run_and_still_unwinds(self) -> None:
         status, calls = self._teardown_calls(
             lambda _action: BackendResult(OK), _BreakingSink(good=1)
         )
@@ -1528,7 +1285,7 @@ class SchedulerFailureContainmentTest(unittest.TestCase):
             (HARNESS_FAILURE, scheduler_module.BROKEN_HISTORY_TRANSPORT),
             (status.status, status.reason),
         )
-        self.assertEqual(["unwind", "cleanup"], calls)
+        self.assertEqual(["unwind"], calls)
 
     def test_facts_cannot_forge_scheduler_keys_or_break_the_sink(self) -> None:
         for facts in ({"action": "x2"}, {"actor": "b"}, {"unencodable": object()}):
@@ -1545,7 +1302,7 @@ class SchedulerFailureContainmentTest(unittest.TestCase):
                     [(INVOKE, "x1"), (INFO, "x1"), (SKIPPED, "x2")],
                     [(e.type, e.data["action"]) for e in sink.events],
                 )
-                self.assertEqual(["unwind", "cleanup"], calls)
+                self.assertEqual(["unwind"], calls)
 
     def test_raising_unwind_is_a_harness_failure_not_an_exception(self) -> None:
         def unwind() -> None:
@@ -1562,4 +1319,4 @@ class SchedulerFailureContainmentTest(unittest.TestCase):
             ),
             (status.status, status.reason, status.error),
         )
-        self.assertEqual(["unwind", "cleanup"], calls)
+        self.assertEqual(["unwind"], calls)

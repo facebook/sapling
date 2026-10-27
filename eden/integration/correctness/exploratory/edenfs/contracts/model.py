@@ -78,7 +78,7 @@ from eden.integration.correctness.exploratory.core.facts import (
     HistoryFacts,
     Outcome,
 )
-from eden.integration.correctness.exploratory.core.history import INFO
+from eden.integration.correctness.exploratory.core.history import INFO, RUN_CLOSED
 from eden.integration.correctness.exploratory.core.runspec import Action, RunSpec
 from eden.integration.correctness.exploratory.core.sites import POST_EFFECT
 from eden.integration.correctness.exploratory.core.target import (
@@ -175,9 +175,6 @@ GETATTR_ABSENCE_RULE = "existence.missing-after-create"
 # Starting dirt over more generated paths than this is not enumerated for
 # the conflict count's closed-domain test.
 MAX_DIRT_SCAN = 256
-
-
-TARGET_CLOSED = "target-closed"
 
 
 DAEMON_EXIT = "daemon-exit"
@@ -438,10 +435,10 @@ def _post_effect_fault(facts: ActionFacts, history: HistoryFacts | None) -> bool
 def resolution_boundary(facts: HistoryFacts) -> float:
     """Return when every indeterminate effect has resolved.
 
-    That is the `target-closed` event (the daemon is stopped and owned
-    processes reaped), else an unowned daemon exit, else never.
+    That is the supervisor's `run-closed` record (every process of the run
+    is dead), else an unowned daemon exit, else never.
     """
-    closed = [event.time for event in facts.run_events if event.type == TARGET_CLOSED]
+    closed = [event.time for event in facts.run_events if event.type == RUN_CLOSED]
     if closed:
         return min(closed)
     exits = [

@@ -17,16 +17,13 @@ import threading
 import time
 import unittest
 from collections.abc import Callable
+from contextlib import redirect_stderr
 from dataclasses import replace
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 from unittest import mock
 
-from eden.integration.correctness.exploratory.core import (
-    containment,
-    scheduler as scheduler_module,
-)
+from eden.integration.correctness.exploratory.core import containment
 from eden.integration.correctness.exploratory.core.checker import (
     ACCEPT,
     BLOCKED,
@@ -79,7 +76,6 @@ from eden.integration.correctness.exploratory.core.runspec import (
     Action,
     from_json,
     SpecError,
-    to_json,
 )
 from eden.integration.correctness.exploratory.core.scheduler import (
     BackendResult,
@@ -224,6 +220,43 @@ def _deadline_runner_main(spec_path: str, mode: str) -> int:
         def unwind(self, sink: HistorySink, clock: Clock) -> dict[str, Any]:
             """Hold no faults."""
             return {}
+
+    target = replace(
+        FAKE, make_environment=lambda *_: Env(), make_backend=lambda *_: Backend()
+    )
+    return runner_main(spec_path, target)
+
+
+def _hung_runner_main(spec_path: str, mode: str, pid_file: str) -> int:
+    """Run the real runner with a call or setup that blocks until the supervisor kills it.
+
+    The blocked code waits on a child it starts (inheriting the run's
+    RUN_DIR_ENV) through a non-daemon thread, which also keeps the runner
+    process from exiting; the child's pid goes to ``pid_file``.
+    """
+
+    def block() -> None:
+        child = subprocess.Popen(["sleep", "600"])
+        Path(pid_file).write_text(str(child.pid))
+        waiter = threading.Thread(target=child.wait, name="blocked-call")
+        waiter.start()
+        waiter.join()
+
+    class Env(FakeEnvironment):
+        def setup(self) -> None:
+            """Block in setup only for the setup case."""
+            if mode == "setup":
+                block()
+
+    class Backend:
+        def __call__(self, action: Action) -> BackendResult:
+            """Block every call."""
+            block()
+            return BackendResult("ok")
+
+        def unwind(self, sink: HistorySink, clock: Clock) -> dict[str, Any]:
+            """Hold no faults."""
+            return {"leaks": 0}
 
     target = replace(
         FAKE, make_environment=lambda *_: Env(), make_backend=lambda *_: Backend()
@@ -496,7 +529,7 @@ class FakeSetupErrorTest(unittest.TestCase):
             with open(os.path.join(tmp, EXECUTION_NAME)) as handle:
                 execution = json.load(handle)
         self.assertEqual(HARNESS_FAILURE, result.execution.status)
-        self.assertEqual(0, execution["events"])
+        self.assertEqual(1, execution["events"])
         self.assertEqual("setup-begin", execution["runner_phase"])
         record = execution["setup_error"]
         self.assertEqual("RuntimeError", record["type"])
@@ -660,11 +693,6 @@ class FakeContainedVerdictTest(unittest.TestCase):
                 with self.subTest(pgid=pgid), self.assertRaises(ValueError):
                     kill_group(pgid)
             killpg.assert_not_called()
-            environment = mock.Mock()
-            environment.processes.lookup.return_value = mock.MagicMock().pid
-            with self.assertRaises(ValueError):
-                containment._contain_workers(environment, ["a1"])
-            killpg.assert_not_called()
 
     def test_judge_failure_keeps_execution_and_replay(self) -> None:
         def broken() -> None:
@@ -762,6 +790,15 @@ if __name__ == "__main__" and "--fake-runner" in sys.argv:
 
 if __name__ == "__main__" and "--setup-error-runner" in sys.argv:
     raise SystemExit(_setup_error_runner_main(sys.argv[sys.argv.index("--spec") + 1]))
+
+if __name__ == "__main__" and "--hung-runner" in sys.argv:
+    raise SystemExit(
+        _hung_runner_main(
+            sys.argv[sys.argv.index("--spec") + 1],
+            sys.argv[sys.argv.index("--hung-runner") + 1],
+            sys.argv[sys.argv.index("--hung-runner") + 2],
+        )
+    )
 
 if __name__ == "__main__" and "--deadline-runner" in sys.argv:
     raise SystemExit(
@@ -896,15 +933,18 @@ class RunnerCleanupBudgetTest(unittest.TestCase):
                         containment.load_history(os.path.join(tmp, "history.jsonl"))
                 raw = (Path(tmp) / "history.jsonl").read_bytes()
                 emitted = b"".join(chunks)
-                self.assertEqual(
-                    emitted if emitted.endswith(b"\n") else emitted + b"\n", raw
-                )
+                emitted = emitted if emitted.endswith(b"\n") else emitted + b"\n"
+                # Only an intact history gets the supervisor's run-closed record.
+                self.assertEqual(emitted, raw[: len(emitted)])
                 _, replay = containment.load_replay(
                     os.path.join(tmp, "replay.json"), FAKE
                 )
                 self.assertEqual(
-                    ["prefix", "é"] if accepted else ["prefix"],
-                    [e.data["text"] for e in replay],
+                    ["prefix", "é", None] if accepted else ["prefix"],
+                    [e.data.get("text") for e in replay],
+                )
+                self.assertEqual(
+                    accepted, b'"type":"run-closed"' in raw[len(emitted) :]
                 )
                 # The tolerant reader yields exactly the bound durable prefix.
                 self.assertEqual(
@@ -1019,7 +1059,7 @@ print(json.dumps({{'type': 'cleanup', 'time': time.monotonic(), 'pid': p.pid}}),
                 self.assertEqual(exit_status, runners[0].wait(timeout=HANG_GUARD))
                 self.assertEqual(exit_status, result.execution.returncode)
                 events = containment.load_history(os.path.join(tmp, "history.jsonl"))
-                self.assertEqual(1, len(events))
+                self.assertEqual(["cleanup", "run-closed"], [e.type for e in events])
                 _wait_dead(events[0].data["pid"])
                 self.assertEqual(
                     expected,
@@ -1030,251 +1070,39 @@ print(json.dumps({{'type': 'cleanup', 'time': time.monotonic(), 'pid': p.pid}}),
                 )
                 self.assertEqual(events, replay)
 
-    def test_resource_joins_preserve_environment_close(self) -> None:
-        """Resource joins cannot consume environment close time.
-
-        A frozen clock places cleanup inside the final quarter of the runner
-        budget; resource joins then consume their whole slice, and close
-        still receives exactly C/4.
-
-        test_returning_runner_has_one_cleanup_record is the accept twin.
-        """
-        now = [1000.0]
-        cleanup = 0.4
-        deadline = now[0] + HANG_GUARD
-        frozen = SimpleNamespace(monotonic=lambda: now[0], sleep=time.sleep)
-        closed: list[float] = []
-
-        class Env(FakeEnvironment):
-            def close(self) -> str | None:
-                """Record how much runner time remains for environment close."""
-                closed.append(deadline - now[0])
-                return None
-
-        env = Env()
-        original = FAKE.make_backend(env, from_json(_SPEC, FAKE), None)
-        real_unwind = original.unwind
-        joins: list[tuple[float, float]] = []
-
-        def unwind(sink: HistorySink, clock: Clock) -> dict[str, Any]:
-            result = real_unwind(sink, clock)
-            now[0] = deadline - 0.15
-            return result
-
-        def close_resources(join_deadline: float) -> int:
-            joins.append((now[0], join_deadline))
-            now[0] = join_deadline
-            return 0
-
-        target = replace(
-            FAKE, make_environment=lambda *_: env, make_backend=lambda *_: original
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "run-spec.json"
-            raw = json.loads(_SPEC)
-            raw["budgets"] = {
-                "operation_deadline_seconds": HANG_GUARD,
-                "cleanup_deadline_seconds": cleanup,
-                "runner_deadline_seconds": 2 * HANG_GUARD,
-            }
-            path.write_text(json.dumps(raw))
-            with (
-                mock.patch.dict(
-                    os.environ, {"EDEN_EXPLORATORY_RUNNER_DEADLINE": str(deadline)}
-                ),
-                mock.patch.object(containment, "time", frozen),
-                mock.patch.object(scheduler_module, "time", frozen),
-                mock.patch.object(original, "unwind", side_effect=unwind),
-                mock.patch.object(
-                    original, "close_resources", close_resources, create=True
-                ),
-                mock.patch("sys.stdout", io.StringIO()),
-            ):
-                self.assertEqual(runner_main(str(path), target), 0)
-        ((called, join_deadline),) = joins
-        self.assertEqual(deadline - 0.15, called)
-        self.assertEqual(deadline - cleanup / 4, join_deadline)
-        self.assertEqual([deadline - join_deadline], closed)
-
     def _cleanup_runner(self, backend: Any) -> tuple[int, dict[str, Any]]:
-        """Run the real runner with a substitute backend; return its exit and cleanup record."""
+        """Run the real runner with a substitute backend; return its exit and final record."""
         target = replace(FAKE, make_backend=lambda *_: backend)
         output = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "run-spec.json"
-            raw = json.loads(_SPEC)
-            raw["budgets"] = {
-                "operation_deadline_seconds": HANG_GUARD,
-                "cleanup_deadline_seconds": 0.4,
-                "runner_deadline_seconds": 2 * HANG_GUARD,
-            }
-            path.write_text(json.dumps(raw))
-            with mock.patch("sys.stdout", output):
+            path.write_text(_SPEC)
+            with mock.patch("sys.stdout", output), redirect_stderr(io.StringIO()):
                 code = runner_main(str(path), target)
         events = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual("cleanup", events[-1]["type"])
         (record,) = [e for e in events if "scheduler" in e]
         return code, record
 
-    def test_resource_leaks_survive_a_wedged_unwind(self) -> None:
-        release = threading.Event()
-
+    def test_unwind_leaks_fail_an_otherwise_clean_runner(self) -> None:
         class Backend:
             def __call__(self, action: Action) -> BackendResult:
                 """Complete every action."""
                 return BackendResult("ok", {"bytes": b"x".hex()})
 
             def unwind_faults(self, sink: HistorySink, clock: Clock) -> dict[str, Any]:
-                """Hang past the unwind slice without recording leaks."""
-                release.wait(HANG_GUARD)
-                return {"leaks": 0}
-
-            def close_resources(self, deadline: float) -> int:
-                """Report one leaked resource."""
-                return 1
-
-        try:
-            code, record = self._cleanup_runner(Backend())
-        finally:
-            release.set()
-        self.assertEqual(1, code)
-        self.assertNotIn("unwind", record)
-        self.assertEqual(1, record["resource_leaks"])
-
-    def test_resource_leaks_fail_an_otherwise_clean_runner(self) -> None:
-        class Backend:
-            def __call__(self, action: Action) -> BackendResult:
-                """Complete every action."""
-                return BackendResult("ok", {"bytes": b"x".hex()})
-
-            def unwind_faults(self, sink: HistorySink, clock: Clock) -> dict[str, Any]:
-                """Unwind cleanly; this backend has no `unwind` fallback at all."""
-                return {"leaks": 0}
-
-            def close_resources(self, deadline: float) -> int:
-                """Report one leaked resource."""
-                return 1
+                """Report one leaked fault; this backend has no `unwind` fallback."""
+                return {"leaks": 1}
 
         code, record = self._cleanup_runner(Backend())
         self.assertEqual(1, code)
+        self.assertEqual({"leaks": 1}, record["unwind"])
         self.assertEqual(
-            ({"leaks": 0}, 1), (record["unwind"], record["resource_leaks"])
+            (HARNESS_FAILURE, "cleanup-failed: unwind reported 1 leak(s)"),
+            containment._final_status(Event("cleanup", 1.0, record)),
         )
 
-    def _run_runner(
-        self,
-        *,
-        wedged: bool,
-        cleanup_seconds: float,
-        runner_seconds: float,
-        slow_setup: bool = False,
-    ) -> tuple[list[dict[str, Any]], list[str], float, list[float]]:
-        """Exercise the real runner lifecycle with synchronized fake target hooks.
-
-        Returns the stdout records, the hook order, the supervisor deadline, and
-        the runner deadline each scheduler run received.
-        """
-        order: list[str] = []
-        release = threading.Event()
-        returned = threading.Event()
-        process: list[subprocess.Popen[Any]] = []
-        deadline = time.monotonic() + runner_seconds
-
-        class Env(FakeEnvironment):
-            def setup(self) -> None:
-                """Spend time in setup before the scheduler starts."""
-                if slow_setup:
-                    time.sleep(0.5)
-
-            def close(self) -> str | None:
-                """Assert calls are released or killed before environment teardown."""
-                order.append("close")
-                if wedged:
-                    self_test.assertEqual(
-                        process[0].wait(timeout=HANG_GUARD), -signal.SIGKILL
-                    )
-                else:
-                    self_test.assertTrue(returned.is_set())
-                return None
-
-        env = Env()
-        self_test = self
-
-        class Backend:
-            def __call__(self, action: Action) -> BackendResult:
-                """Park a call on a fault or a contained process."""
-                if wedged:
-                    proc = subprocess.Popen(
-                        [sys.executable, "-c", "import signal; signal.pause()"],
-                        start_new_session=True,
-                    )
-                    process.append(proc)
-                    env.processes.publish(action.id, proc, time.monotonic())
-                    proc.wait()
-                    env.processes.retire(action.id, proc)
-                else:
-                    release.wait(HANG_GUARD)
-                    order.append("returned")
-                    returned.set()
-                return BackendResult("ok")
-
-            def unwind(self, sink: HistorySink, clock: Clock) -> dict[str, Any]:
-                """Release the fault without waiting for the parked call."""
-                order.append("unwind")
-                if not wedged:
-                    release.set()
-                return {}
-
-        spec = from_json(_SPEC, FAKE)
-        spec = replace(
-            spec,
-            budgets=replace(
-                spec.budgets,
-                operation_deadline_seconds=0.05,
-                cleanup_deadline_seconds=cleanup_seconds,
-                runner_deadline_seconds=runner_seconds,
-            ),
-            actors=(replace(spec.actors[0], actions=("w",)),),
-            actions=(next(a for a in spec.actions if a.id == "w"),),
-        )
-        target = replace(
-            FAKE, make_environment=lambda *_: env, make_backend=lambda *_: Backend()
-        )
-        runner_deadlines: list[float] = []
-        real_run_actions = containment.run_actions
-
-        def run_actions(*args: Any, **kwargs: Any) -> Any:
-            runner_deadlines.append(kwargs["runner_deadline"])
-            return real_run_actions(*args, **kwargs)
-
-        output = io.StringIO()
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
-                path = os.path.join(tmp, RUN_SPEC_NAME)
-                with open(path, "w") as handle:
-                    handle.write(to_json(spec))
-                with (
-                    mock.patch.dict(
-                        os.environ, {"EDEN_EXPLORATORY_RUNNER_DEADLINE": str(deadline)}
-                    ),
-                    mock.patch.object(containment, "run_actions", run_actions),
-                    mock.patch("sys.stdout", output),
-                ):
-                    self.assertEqual(runner_main(path, target), 1)
-        finally:
-            release.set()
-            for proc in process:
-                if proc.poll() is None:
-                    proc.kill()
-                proc.wait(timeout=HANG_GUARD)
-        return (
-            [json.loads(line) for line in output.getvalue().splitlines()],
-            order,
-            deadline,
-            runner_deadlines,
-        )
-
-    def test_returning_runner_has_one_cleanup_record(self) -> None:
-        """A returning runner retains one final cleanup record with no active workers."""
+    def test_returning_runner_ends_with_its_one_cleanup_record(self) -> None:
         output = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "run-spec.json"
@@ -1283,33 +1111,121 @@ print(json.dumps({{'type': 'cleanup', 'time': time.monotonic(), 'pid': p.pid}}),
                 self.assertEqual(runner_main(str(path), FAKE), 0)
         events = [json.loads(line) for line in output.getvalue().splitlines()]
         cleanups = [event for event in events if event["type"] == "cleanup"]
-        self.assertEqual(len(cleanups), 1)
-        self.assertEqual(cleanups[0]["active_at_teardown"], [])
-
-    def test_slow_setup_preserves_cleanup_and_releases_parked_call(self) -> None:
-        """Setup shares the supervisor deadline; fault unwind precedes worker join.
-
-        The scheduler receives the supervisor's absolute deadline after setup,
-        not a fresh one. Its C/2 join bound is a hang guard for the released
-        call.
-        """
-        events, order, deadline, runner_deadlines = self._run_runner(
-            wedged=False,
-            slow_setup=True,
-            cleanup_seconds=2 * HANG_GUARD,
-            runner_seconds=4 * HANG_GUARD,
+        self.assertEqual([events[-1]], cleanups)
+        self.assertEqual(
+            {"status": "completed", "reason": None, "error": None},
+            cleanups[0]["scheduler"],
         )
+
+    def test_scheduler_gets_the_supervisor_deadline_after_slow_setup(self) -> None:
+        """Setup spends the supervisor's absolute deadline; the scheduler gets no fresh one."""
+
+        class Env(FakeEnvironment):
+            def setup(self) -> None:
+                """Spend time in setup before the scheduler starts."""
+                time.sleep(0.5)
+
+        target = replace(FAKE, make_environment=lambda *_: Env())
+        deadline = time.monotonic() + 2 * HANG_GUARD
+        runner_deadlines: list[float] = []
+        real_run_actions = containment.run_actions
+
+        def run_actions(*args: Any, **kwargs: Any) -> Any:
+            runner_deadlines.append(kwargs["runner_deadline"])
+            return real_run_actions(*args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "run-spec.json"
+            path.write_text(_SPEC)
+            with (
+                mock.patch.dict(
+                    os.environ, {"EDEN_EXPLORATORY_RUNNER_DEADLINE": str(deadline)}
+                ),
+                mock.patch.object(containment, "run_actions", run_actions),
+                mock.patch("sys.stdout", io.StringIO()),
+            ):
+                self.assertEqual(runner_main(str(path), target), 0)
         self.assertEqual([deadline], runner_deadlines)
-        self.assertEqual(order, ["unwind", "returned", "close"])
-        self.assertEqual(events[-1]["type"], "cleanup")
 
-    def test_wedged_process_group_killed_and_recorded_before_close(self) -> None:
-        """A wedged owned process is killed and recorded before teardown."""
-        events, order, _deadline, _runner_deadlines = self._run_runner(
-            wedged=True, cleanup_seconds=1.0, runner_seconds=HANG_GUARD
+    def _hung_run(
+        self, mode: str, budgets: dict[str, float]
+    ) -> tuple[Any, list[Any], int, float]:
+        """Run `_hung_runner_main` under containment; return result, history, blocked child pid, seconds."""
+        raw = json.loads(_SPEC)
+        raw["budgets"] = budgets
+        spec = from_json(json.dumps(raw), FAKE)
+        with tempfile.TemporaryDirectory() as tmp:
+            pid_file = os.path.join(tmp, "blocked.pid")
+            argv = runner_argv_for(os.path.join(tmp, RUN_SPEC_NAME), FAKE.name)
+            argv[1] = os.path.abspath(__file__)
+            argv += ["--hung-runner", mode, pid_file]
+            started = time.monotonic()
+            result = run_exploration(spec, tmp, target=FAKE, runner_argv=argv)
+            elapsed = time.monotonic() - started
+            events = load_history(os.path.join(tmp, "history.jsonl"))
+            pid = int(Path(pid_file).read_text())
+        return result, events, pid, elapsed
+
+    def _assert_nothing_left(self, result: Any, pid: int) -> None:
+        run_dir = result.execution.setup["run_dir"]
+        self.assertEqual("supervisor: unmounted 0, removed", result.execution.cleanup)
+        self.assertFalse(os.path.lexists(run_dir))
+        self.assertEqual([], containment._pids_owning(run_dir))
+        _wait_dead(pid)
+
+    def test_a_hung_call_is_an_operation_timeout_and_the_supervisor_cleans_up(
+        self,
+    ) -> None:
+        """A call that never returns completes info, operation-timeout; the supervisor kills it.
+
+        The blocked call also keeps the runner alive after its final record,
+        so a supervisor that waited for the runner's exit would reach the
+        runner deadline instead.
+        """
+        result, events, pid, elapsed = self._hung_run(
+            "call",
+            {
+                "operation_deadline_seconds": 0.5,
+                "cleanup_deadline_seconds": 1,
+                "runner_deadline_seconds": HANG_GUARD,
+            },
         )
-        self.assertEqual(order, ["unwind", "close"])
-        self.assertEqual(events[-1]["active_at_teardown"], ["w"])
+        self.assertLess(elapsed, HANG_GUARD / 2)
+        self.assertEqual(
+            (HARNESS_FAILURE, "operation-timeout", None),
+            (
+                result.execution.status,
+                result.execution.reason,
+                result.execution.returncode,
+            ),
+        )
+        by_action = {e.data["action"]: e for e in events if "action" in e.data}
+        self.assertEqual(
+            ("info", "operation-timeout"),
+            (by_action["w"].type, by_action["w"].data["reason"]),
+        )
+        self.assertEqual("skipped", by_action["r"].type)
+        self.assertEqual(["cleanup", "run-closed"], [e.type for e in events[-2:]])
+        self._assert_nothing_left(result, pid)
+
+    def test_a_runner_past_its_deadline_is_killed_and_cleaned_up(self) -> None:
+        """A runner blocked in setup past D is a containment timeout; nothing of it survives."""
+        result, events, pid, _elapsed = self._hung_run(
+            "setup",
+            {
+                "operation_deadline_seconds": 0.5,
+                "cleanup_deadline_seconds": 0.5,
+                "runner_deadline_seconds": 2,
+            },
+        )
+        self.assertEqual(
+            (containment.CONTAINMENT_TIMEOUT, "runner exceeded 2s"),
+            (result.execution.status, result.execution.reason),
+        )
+        self.assertEqual(-signal.SIGKILL, result.execution.returncode)
+        self.assertEqual("setup-begin", result.execution.runner_phase)
+        self.assertEqual(["run-closed"], [e.type for e in events])
+        self._assert_nothing_left(result, pid)
 
 
 class RunnerDeadlineTransportTest(unittest.TestCase):
@@ -1370,7 +1286,7 @@ class RunnerProcessIsolationTest(unittest.TestCase):
             ["sleep", "300"], env={**os.environ, RUN_DIR_ENV: run_dir}
         )
         self.addCleanup(survivor.kill)
-        self.assertEqual("runner", containment.close_run_dir(run_dir))
+        self.assertEqual("runner", containment.close_run_dir(run_dir).text)
         self.assertEqual(-signal.SIGKILL, survivor.wait(timeout=HANG_GUARD))
 
     def test_close_run_dir_keeps_the_dir_when_a_kill_is_refused(self) -> None:
@@ -1387,7 +1303,12 @@ class RunnerProcessIsolationTest(unittest.TestCase):
             ):
                 cleanup = containment.close_run_dir(run_dir)
             self.assertTrue(os.path.isdir(run_dir))
-        self.assertEqual("supervisor: cannot kill [4242]; kept", cleanup)
+        self.assertEqual(
+            containment.RunDirClose(
+                "supervisor: cannot kill [4242]; kept", False, True
+            ),
+            cleanup,
+        )
         unmount.assert_not_called()
 
     def test_close_run_dir_aborts_only_its_own_wedged_fuse_connection(self) -> None:
@@ -1444,7 +1365,7 @@ class RunnerProcessIsolationTest(unittest.TestCase):
                     side_effect=lambda predicate, _deadline, _interval: predicate(),
                 ),
             ):
-                cleanup = containment.close_run_dir(run_dir)
+                cleanup = containment.close_run_dir(run_dir).text
             self.assertFalse(os.path.lexists(run_dir))
             self.assertEqual(
                 f"{containment.MOUNT_WEDGED_PREFIX}"
@@ -1475,10 +1396,27 @@ class RunnerProcessIsolationTest(unittest.TestCase):
                     side_effect=[busy, subprocess.CompletedProcess([], 0, "", "")],
                 ),
             ):
-                cleanup = containment.close_run_dir(run_dir)
+                cleanup = containment.close_run_dir(run_dir).text
             self.assertTrue(cleanup.startswith(containment.MOUNT_WEDGED_PREFIX))
             self.assertTrue(cleanup.endswith("unmounted 1, removed"))
             self.assertEqual([False, True], [aborted(c) for c in ("92", "123")])
+
+    def test_a_killed_process_counts_until_every_thread_is_a_zombie(self) -> None:
+        """A zombie leader whose other thread still waits in the kernel holds its files."""
+        with tempfile.TemporaryDirectory() as proc:
+            for tid, state in (("4242", "Z"), ("4243", "D")):
+                Path(proc, "4242", "task", tid).mkdir(parents=True)
+                stat = f"{tid} (a b) {state} " + " ".join(["0"] * 18) + " 777"
+                Path(proc, "4242", "task", tid, "stat").write_text(stat)
+            leader = Path(proc, "4242", "task", "4242", "stat").read_text()
+            Path(proc, "4242", "stat").write_text(leader)
+            with mock.patch.object(containment, "_PROC", proc):
+                self.assertEqual("777", containment._start_time(4242))
+                Path(proc, "4242", "task", "4243", "stat").write_text(
+                    leader.replace("4242", "4243")
+                )
+                self.assertIsNone(containment._start_time(4242))
+                self.assertIsNone(containment._start_time(4343))
 
     def test_children_inheriting_stdout_cannot_reach_the_history(self) -> None:
         """After the transport moves, a child's inherited fd 1 is stderr."""

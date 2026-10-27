@@ -139,17 +139,10 @@ class EnvironmentDegraded(RuntimeError):
 
 
 class Environment(Protocol):
-    """Lifecycle and process controls supplied by a target."""
+    """Setup supplied by a target; the supervisor's run-dir close tears it down."""
 
     def setup(self) -> None:
         """Create the target environment."""
-
-    def close(self) -> str | None:
-        """Close the target environment and return any cleanup error."""
-
-    @property
-    def processes(self) -> ProcessRegistry:
-        """Return the target's owned process registry."""
 
 
 class Backend(Protocol):

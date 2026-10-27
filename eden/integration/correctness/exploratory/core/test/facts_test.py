@@ -431,19 +431,22 @@ def _action(action_id: str, kind: str = "read", **payload: Any) -> Action:
 
 class HistoryFactsTest(unittest.TestCase):
     def test_cleanup_time_is_the_final_cleanup_record(self) -> None:
-        """The early record of calls active at teardown does not end the run."""
+        """Only a scheduler or setup-degradation cleanup record ends the run."""
         spec = _spec(_action("r1", path="a"))
-        events = [
+        start = [
             Event(INVOKE, 1.0, {"action": "r1", "actor": "a"}),
             Event(INFO, 2.0, {"action": "r1", "actor": "a", "reason": "stopped"}),
-            Event(CLEANUP, 3.0, {"active_at_teardown": ["r1"]}),
-            Event(
-                CLEANUP,
-                5.0,
-                {"close_error": None, "scheduler": {"status": "harness-failure"}},
-            ),
+            Event(CLEANUP, 3.0, {"unwind": {"leaks": 0}}),
         ]
-        self.assertEqual(5.0, HistoryFacts.build(spec, events, _TARGET).cleanup_time)
+        for final, expected in (
+            ({"scheduler": {"status": "harness-failure"}}, 5.0),
+            ({"environment_degraded": "daemon-oom-killed"}, 5.0),
+            ({"close_error": None}, float("inf")),
+        ):
+            with self.subTest(final=sorted(final)):
+                events = [*start, Event(CLEANUP, 5.0, final)]
+                facts = HistoryFacts.build(spec, events, _TARGET)
+                self.assertEqual(expected, facts.cleanup_time)
 
     def test_build_decodes_every_action_in_spec_order(self) -> None:
         spec = _spec(

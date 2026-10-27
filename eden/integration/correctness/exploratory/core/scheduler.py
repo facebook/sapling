@@ -6,9 +6,11 @@
 """Thread-per-actor scheduler for exploratory RunSpecs.
 
 Each action emits exactly one completion, plus one invoke when it is
-invoked; never-invoked actions complete as skipped. Actors share the runner deadline minus the cleanup reservation,
-measured from the supervisor spawn deadline. Sweeping atomically stops further invocation and
-marks in-flight actions info with a harness failure. Cleanup always runs.
+invoked; never-invoked actions complete as skipped. Actors share the runner
+deadline minus the cleanup reservation, measured from the supervisor spawn
+deadline. Sweeping atomically stops further invocation and marks in-flight
+actions info with a harness failure; fault unwind then always runs. Backend
+calls still running are left to the supervisor, which kills the run.
 """
 
 from __future__ import annotations
@@ -109,7 +111,7 @@ class _Swept(Exception):
 
 Backend = Callable[[Action], BackendResult]
 Clock = Callable[[], float]
-Cleanup = Callable[[], None]
+Unwind = Callable[[], None]
 
 
 class _GateTable:
@@ -167,7 +169,6 @@ class _Run:
             action_id: actor.id for actor in spec.actors for action_id in actor.actions
         }
         self._by_id = {action.id: action for action in spec.actions}
-        self._workers: dict[str, threading.Thread] = {}
 
     def stop_with(self, reason: str) -> None:
         """Set the stop flag, keeping only the first failure reason."""
@@ -259,7 +260,6 @@ class _Run:
         with self._completed_lock:
             if self._sweeping:
                 raise _Swept()
-            self._workers[action.id] = worker
             worker.start()
         worker.join(timeout=deadline)
         if worker.is_alive():
@@ -279,31 +279,12 @@ class _Run:
             raise HarnessFailure(INVALID_BACKEND_RESPONSE) from error
         return result
 
-    def join_workers(self, deadline: float) -> list[str]:
-        """Join every invoked backend call until the shared cleanup deadline."""
-        with self._completed_lock:
-            workers = dict(self._workers)
-        for worker in workers.values():
-            worker.join(timeout=max(0.0, deadline - time.monotonic()))
-        return [action_id for action_id, worker in workers.items() if worker.is_alive()]
-
-    def unwind_until(self, unwind: Cleanup, deadline: float) -> None:
-        """Bound fault unwind by the worker slice, preserving containment time."""
-        errors: list[Exception] = []
-
-        def invoke() -> None:
-            try:
-                unwind()
-            except Exception as error:  # noqa: BLE001 - recorded below
-                errors.append(error)
-
-        worker = threading.Thread(target=invoke, daemon=True, name="fault-unwind")
-        worker.start()
-        worker.join(timeout=max(0.0, deadline - time.monotonic()))
-        if worker.is_alive():
-            self.stop_with(RUNNER_DEADLINE)
-        elif errors:
-            self.record_error(errors[0])
+    def unwind(self, unwind: Unwind) -> None:
+        """Run fault unwind; an exception it raises is an invalid backend response."""
+        try:
+            unwind()
+        except Exception as error:  # noqa: BLE001 - recorded below
+            self.record_error(error)
             self.stop_with(INVALID_BACKEND_RESPONSE)
 
     def record_error(self, error: Exception) -> None:
@@ -374,60 +355,25 @@ class _Run:
                 break
 
 
-def _teardown(
-    run: _Run,
-    runner_deadline: float,
-    cleanup_bound: float,
-    cleanup: Cleanup | None,
-    unwind: Cleanup | None,
-    contain: Callable[[list[str]], None] | None,
-) -> None:
-    """Sweep, unwind, join, contain, and close; each later step runs even if an earlier one raises."""
-    try:
-        run.sweep()
-    finally:
-        cleanup_end = min(
-            runner_deadline - cleanup_bound / 2,
-            time.monotonic() + cleanup_bound / 2,
-        )
-        try:
-            if unwind is not None:
-                run.unwind_until(unwind, cleanup_end)
-        finally:
-            try:
-                active = run.join_workers(cleanup_end)
-                if contain is not None:
-                    contain(active)
-            finally:
-                if cleanup is not None:
-                    cleanup()
-
-
 def run_actions(
     spec: RunSpec,
     backend: Backend,
     sink: HistorySink,
     clock: Clock,
     *,
-    cleanup: Cleanup | None = None,
-    unwind: Cleanup | None = None,
-    contain: Callable[[list[str]], None] | None = None,
+    unwind: Unwind | None = None,
     runner_deadline: float | None = None,
-    cleanup_deadline_seconds: float | None = None,
 ) -> ExecutionStatus:
-    """Execute every action to exactly one completion event.
+    """Execute every action to exactly one completion event, then unwind faults.
 
-    Actors stop at D-C. Unwind and worker joins stop by D-C/2, reserving
-    the final C/2 for containment and environment close. Early failures
-    spend at most C/2 joining. Returns COMPLETED or HARNESS_FAILURE
-    with its first reason; deadline-driven skips are runner-deadline.
+    Actors stop at D-C. The sweep and `unwind` run even if starting an
+    actor raises; neither waits for a backend call still running. Returns
+    COMPLETED or HARNESS_FAILURE with its first reason; deadline-driven
+    skips are runner-deadline.
     """
     if runner_deadline is None:
         runner_deadline = time.monotonic() + spec.budgets.runner_deadline_seconds
-    cleanup_bound = spec.budgets.cleanup_deadline_seconds
-    if cleanup_deadline_seconds is not None:
-        cleanup_bound = cleanup_deadline_seconds
-    give_up = runner_deadline - cleanup_bound
+    give_up = runner_deadline - spec.budgets.cleanup_deadline_seconds
     run = _Run(spec, backend, sink, clock, give_up)
     try:
         threads = [
@@ -448,7 +394,11 @@ def run_actions(
             if thread.ident is not None:
                 thread.join(timeout=max(0.0, give_up - time.monotonic()))
     finally:
-        _teardown(run, runner_deadline, cleanup_bound, cleanup, unwind, contain)
+        try:
+            run.sweep()
+        finally:
+            if unwind is not None:
+                run.unwind(unwind)
     with run._state_lock:
         reason, error = run._reason, run._error
     if reason is None:

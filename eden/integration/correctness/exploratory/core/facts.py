@@ -31,6 +31,7 @@ from .history import (
     CLEANUP,
     Event,
     FAIL,
+    FINAL_CLEANUP_KEYS,
     History,
     history_problems,
     INFO,
@@ -802,17 +803,16 @@ class HistoryFacts:
     def cleanup_time(self) -> float:
         """Return when the runner's final cleanup record was written, or infinity.
 
-        The final record carries the environment close result (`close_error`)
-        or the scheduler's status; an earlier cleanup record, such as the
-        list of calls still active at teardown, is written before the
-        environment closes and does not end the run.
+        The final record carries the scheduler's status or the setup
+        degradation (`FINAL_CLEANUP_KEYS`); any other cleanup record does
+        not end the run.
         """
         return min(
             (
                 event.time
                 for event in self._run_events
                 if event.type == CLEANUP
-                and ("close_error" in event.data or "scheduler" in event.data)
+                and not FINAL_CLEANUP_KEYS.isdisjoint(event.data)
             ),
             default=float("inf"),
         )

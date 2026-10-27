@@ -109,13 +109,20 @@ class CoreRulesTest(unittest.TestCase):
         )
         self.assertEqual(1, len(t.result(rejected, CORE_ACTIVITY).findings))
 
-    def test_daemon_exit_during_close_is_not_a_crash(self) -> None:
-        """Shutdown after the cleanup event is the harness's own doing."""
+    def test_daemon_exit_after_the_final_record_is_not_a_crash(self) -> None:
+        """A daemon exit after the runner's final cleanup record is the harness's own doing."""
         spec = t.spec([t.action("write", "write")])
         events = [
             t.event(INVOKE, "write", 1.0),
             t.event(OK, "write", 2.0),
-            Event(type=CLEANUP, time=3.0, data={"unwind": {}, "close_error": None}),
+            Event(
+                type=CLEANUP,
+                time=3.0,
+                data={
+                    "unwind": {},
+                    "scheduler": {"status": "completed", "reason": None},
+                },
+            ),
             Event(
                 type=INFO,
                 time=4.0,

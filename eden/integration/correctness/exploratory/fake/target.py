@@ -74,7 +74,6 @@ from eden.integration.correctness.exploratory.core.target import (
     Binding,
     Environment,
     Grouping,
-    ProcessRegistry,
     Role,
     Target,
     TargetSources,
@@ -206,28 +205,13 @@ ACTIONS = compose_action_defs(CORE_ACTION_DEFS, FAKE_ACTION_DEFS)
 
 
 @dataclass
-class FakeProcesses(ProcessRegistry):
-    """Record fake process identifiers."""
-
-    pids: tuple[int, ...] = (1,)
-
-    def __post_init__(self) -> None:
-        super().__init__()
-
-
-@dataclass
 class FakeEnvironment:
-    """In-memory files and deterministic fake process lifecycle."""
+    """In-memory files."""
 
     files: dict[str, bytes] = field(default_factory=dict)
-    processes: FakeProcesses = field(default_factory=FakeProcesses)
 
     def setup(self) -> None:
         """Prepare the in-memory target."""
-
-    def close(self) -> str | None:
-        """Close the in-memory target without cleanup errors."""
-        return None
 
 
 class FakeBackend:

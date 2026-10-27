@@ -333,7 +333,7 @@ class JournalTest(unittest.TestCase):
         after its whole effect window; its acked twin is judged.
 
         The contracts keeps an indeterminate write's window open to
-        `target-closed`, so no real window covers it: the twin replaces
+        `run-closed`, so no real window covers it: the twin replaces
         the contract group's status to exercise the ACKED filter directly.
         """
         run = Run("t", "indeterminate", "a write, then a complete window")

@@ -163,12 +163,18 @@ class MutationTest(unittest.TestCase):
         self.assertEqual([], sink.observations)
 
     def test_an_open_write_lasts_until_the_resolution_boundary(self) -> None:
-        closed = Event("target-closed", 9.0, {"close_errors": []})
+        """The supervisor's run-closed record resolves it, else an unowned daemon exit.
+
+        The runner's own former close record, `target-closed`, resolves nothing.
+        """
+        closed = Event("run-closed", 9.0, {})
         exited = Event("info", 7.0, {"reason": "daemon-exit", "returncode": 1})
+        runner_closed = Event("target-closed", 8.0, {})
         for extra, end in (
             ([closed], 9.0),
             ([exited], 7.0),
             ([exited, closed], 9.0),
+            ([runner_closed], math.inf),
             ([], math.inf),
         ):
             with self.subTest(extra=[event.type for event in extra]):
