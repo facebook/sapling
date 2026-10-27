@@ -4891,6 +4891,14 @@ def push(ui, repo, dest=None, **opts):
 
     Add ``--create`` to create the remote bookmark if it doesn't already exist.
 
+    Add ``--no-rebase`` to move the remote bookmark to exactly the pushed
+    commit instead of rebasing the commit onto the remote bookmark, which
+    ``--rebase`` (the default) does. The move must be a fast-forward unless
+    ``-f/--force`` is given or the ``NON_FAST_FORWARD=true`` push var is set.
+    ``--rebase`` and ``--no-rebase`` require ``--to``. Git pushes never
+    rebase, so ``--no-rebase`` changes nothing for Git repos and ``--rebase``
+    is an error.
+
     The ``-f/--force`` flag allows non-fast-forward pushes.
 
     If DESTINATION is omitted, the default path will be used. See

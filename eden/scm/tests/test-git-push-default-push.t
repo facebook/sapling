@@ -38,3 +38,17 @@ pushing without specifying a path pushes to the 'default' path
 
   $ GIT_DIR="$TESTTMP/repo-2.git" git log --pretty=format:%s%n
   testcommit
+
+Git pushes never rebase, so --no-rebase is accepted and pushes as usual
+
+  $ echo 1 >> testfile
+  $ sl commit -m second
+  $ sl push -q -r . --to main --no-rebase
+  $ GIT_DIR="$TESTTMP/repo-1.git" git log -1 --pretty=%s
+  second
+
+and --rebase is an error
+
+  $ sl push -q -r . --to main --rebase
+  abort: Git pushes never rebase, so --rebase is not supported
+  [255]

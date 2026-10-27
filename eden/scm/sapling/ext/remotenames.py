@@ -531,6 +531,16 @@ def extsetup(ui):
         (pushcmd, ("", "create", None, "create a new remote bookmark")),
         (
             pushcmd,
+            (
+                "",
+                "rebase",
+                None,
+                "rebase the pushed commits onto the remote bookmark; --no-rebase "
+                "moves it to exactly the pushed commit (ADVANCED)",
+            ),
+        ),
+        (
+            pushcmd,
             ("", "allow-anon", None, "allow a new unbookmarked head (DEPRECATED)"),
         ),
         (
@@ -856,6 +866,10 @@ def _adjust_push_dest_opts(paths, renames, dest, opts):
 def expushcmd(orig, ui, repo, dest=None, **opts):
     dest, opts = adjust_push_dest_opts(ui, dest, opts)
     if git.isgitpeer(repo):
+        if opts.get("rebase"):
+            raise error.Abort(
+                _("Git pushes never rebase, so --rebase is not supported")
+            )
         if dest is None:
             dest = "default-push"
             if dest not in ui.paths:
@@ -935,6 +949,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             if opts.get(f):
                 flag = f
                 break
+        flag = flag or _rebase_flag(opts)
         if flag:
             msg = _("do not specify --delete and --%s at the same time") % flag
             raise error.Abort(msg)
@@ -971,9 +986,18 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             break
 
     if not opargs["to"]:
+        rebase_flag = _rebase_flag(opts)
+        if rebase_flag:
+            raise error.Abort(_("--%s requires --to") % rebase_flag)
         return _push_without_to(orig, ui, repo, dest, opts, opargs)
 
-    target = _resolve_to_target(ui, repo, dest, opts, opargs, plain=is_scratch)
+    no_rebase = opts.get("rebase") is False
+    target = _resolve_to_target(
+        ui, repo, dest, opts, opargs, plain=is_scratch or no_rebase
+    )
+    if no_rebase:
+        # A push without a server-side rebase is only implemented over SLAPI.
+        return _push_to_target(ui, repo, target, repo.edenapi)
     return _push_to_target(
         ui,
         repo,
@@ -981,6 +1005,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         edenapi,
         fallback=lambda: _wireproto_push_to(ui, repo, target, opts, opargs),
     )
+
+
+def _rebase_flag(opts):
+    """The flag that set `rebase` in push `opts` (`rebase` or `no-rebase`), or
+    None if neither was given."""
+    rebase = opts.get("rebase")
+    if rebase is None:
+        return None
+    return "rebase" if rebase else "no-rebase"
 
 
 def _is_scratch_bookmark(ui, repo, bookmark):
@@ -1090,13 +1123,18 @@ def _check_push_bookmark_allowed(ui, bookmark):
         raise error.Abort(msg, hint=hint)
 
 
-def _push_to_target(ui, repo, target, edenapi, fallback):
+def _push_to_target(ui, repo, target, edenapi, fallback=None):
     """Push `target` through SLAPI.
 
-    Returns `fallback()` instead when `edenapi` is None or SLAPI cannot
-    express the push (for example, merge commits).
+    With a `fallback`, returns `fallback()` instead when `edenapi` is None or
+    SLAPI cannot express the push (for example, merge commits). Without one,
+    `edenapi` is required and such a push aborts.
     """
     if edenapi is None:
+        if fallback is None:
+            raise error.Abort(
+                _("pushing to %s requires SLAPI, which is not available") % target.dest
+            )
         return fallback()
     try:
         return pushmod.push(
@@ -1110,6 +1148,8 @@ def _push_to_target(ui, repo, target, edenapi, fallback):
             force_plain=target.plain,
         )
     except error.UnsupportedEdenApiPush as e:
+        if fallback is None:
+            raise
         ui.status_err(_("fallback reason: %s\n") % e)
     return fallback()
 
