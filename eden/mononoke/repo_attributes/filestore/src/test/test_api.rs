@@ -1530,14 +1530,10 @@ async fn filestore_exists(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-/// FIXME: BUG! This did panic with "attempt to add with overflow" (or, without overflow
-/// checks, wrapped the range to `5..0`) when building `Range::range_inclusive(5, u64::MAX)`,
-/// which is what the LFS header `Range: bytes=5-18446744073709551615` parses to, but it should
-/// have returned a range that serves bytes 5..len of the file, as `Range::sized` does by
-/// saturating. This test pins the current behaviour; the next diff fixes it.
 #[mononoke::fbinit_test]
 async fn filestore_range_inclusive_u64_max(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
     let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
@@ -1551,18 +1547,26 @@ async fn filestore_range_inclusive_u64_max(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    // FIXME: BUG! Building the range does not give a `5..` span: with overflow checks (debug
-    // builds) `end + 1` panics, and without them (opt builds) the end wraps to 0.
-    match std::panic::catch_unwind(|| filestore::Range::range_inclusive(5, u64::MAX)) {
-        // FIXME: BUG! The overflow panic.
-        Err(_) => {}
-        // FIXME: BUG! The wrapped range `5..0`, which later makes `Bytes::slice(5..0)` panic
-        // when the inline file is fetched.
-        Ok(range) => assert_eq!(
-            format!("{:?}", range?),
-            "Range { inner: Span { start: 5, end: 0 }, strict: false }"
-        ),
-    }
+    let range = filestore::Range::range_inclusive(5, u64::MAX)?;
+
+    let (stream, size) = filestore::fetch_range_with_size(
+        blob.clone(),
+        ctx,
+        &FetchKey::Canonical(content_id),
+        range,
+    )
+    .await?
+    .ok_or_else(|| Error::msg("Object does not exist"))?;
+    let bytes = stream
+        .try_fold(BytesMut::new(), |mut buff, chunk| async move {
+            buff.extend_from_slice(&chunk);
+            Result::<_, Error>::Ok(buff)
+        })
+        .await?
+        .freeze();
+
+    assert_eq!(bytes, Bytes::from(&HELLO_WORLD[5..]));
+    assert_eq!(size, (HELLO_WORLD.len() - 5) as u64);
 
     Ok(())
 }

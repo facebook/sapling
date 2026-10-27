@@ -72,7 +72,7 @@ impl Range {
             return Err(anyhow::anyhow!("Invalid range bounds: {start}-{end}"));
         }
 
-        let end = end + 1;
+        let end = end.saturating_add(1);
 
         Ok(Self {
             inner: RangeInner::Span { start, end },
