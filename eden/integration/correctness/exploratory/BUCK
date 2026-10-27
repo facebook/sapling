@@ -617,6 +617,22 @@ python_unittest(
     ],
 )
 
+python_library(
+    name = "edenfs_contracts",
+    srcs = [
+        "edenfs/contracts/files.py",
+        "edenfs/contracts/model.py",
+    ],
+    deps = [
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":sites",
+        ":target",
+    ],
+)
+
 python_unittest(
     name = "edenfs_observation_bounds_test",
     srcs = ["edenfs/test/observation_bounds_test.py"],
