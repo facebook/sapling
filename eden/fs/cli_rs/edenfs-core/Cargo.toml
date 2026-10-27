@@ -47,7 +47,7 @@ libc = "0.2.186"
 [target.'cfg(target_os = "macos")'.dependencies]
 eden_apfs_mount_helper = { version = "0.1.0", path = "../../../scm/exec/eden_apfs_mount_helper" }
 libc = "0.2.186"
-psutil = "5.4.0"
+psutil = { version = "5.4.0", features = ["disk"], default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 mkscratch = { version = "0.1.0", path = "../../../scm/exec/scratch" }

@@ -5,6 +5,21 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-core",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "target": {
+                    "'cfg(target_os = \"macos\")'": {
+                        "dependencies": {
+                            # Only disk_usage is used; process pulls in darwin-libproc,
+                            # whose crates.io release pins memchr to ~2.3.
+                            "psutil": {"default-features": False, "features": ["disk"]},
+                        },
+                    },
+                },
+            },
+        },
+    },
     named_deps = {
         "hg_util": "//eden/scm/lib/util:util",
     },
