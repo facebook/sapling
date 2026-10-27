@@ -30,6 +30,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::StoreRequest;
 use mononoke_api::SubmoduleExpansionUpdate;
 use mononoke_api::SubmoduleExpansionUpdateCommitInfo;
+use mononoke_api::repo::Stack;
 use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
@@ -383,6 +384,10 @@ impl SourceControlServiceImpl {
         // get stack
         let stack = repo.stack(heads_ids, limit).await?;
 
+        if stack_limit_too_low(&stack, params.heads.len()) {
+            Err(scs_errors::limit_too_low(limit))?;
+        }
+
         // The ids in `stack` were just produced by walking the commit graph in
         // `repo.stack`, so they are guaranteed to exist. Skip the redundant
         // existence check that `repo.changeset(Bonsai(_))` would do.
@@ -401,10 +406,6 @@ impl SourceControlServiceImpl {
             .into_iter()
             .map(|cs_id| repo.changeset_from_existing_id(cs_id))
             .collect();
-
-        if draft_commits.len() <= params.heads.len() && !leftover_heads.is_empty() {
-            Err(scs_errors::limit_too_low(limit))?;
-        }
 
         // generate response
         let schemes = &params.identity_schemes;
@@ -699,5 +700,76 @@ impl SourceControlServiceImpl {
             ids: commit_ids,
             ..Default::default()
         })
+    }
+}
+
+fn stack_limit_too_low(stack: &Stack, requested_heads: usize) -> bool {
+    stack.draft.len() <= requested_heads && !stack.leftover_heads.is_empty()
+}
+
+#[cfg(test)]
+mod stack_info_tests {
+    use std::sync::Arc;
+
+    use anyhow::Result;
+    use context::CoreContext;
+    use fbinit::FacebookInit;
+    use mononoke_api::Repo;
+    use mononoke_api::RepoContext;
+    use mononoke_macros::mononoke;
+    use phases::PhasesRef;
+    use tests_utils::drawdag::extend_from_dag_with_actions;
+
+    use super::*;
+
+    /// FIXME: BUG! This did report `limit_too_low` for heads `[C, P]` with `P` public and a
+    /// limit of 2 on the stack `P-A-B-C`, but should have accepted the response:
+    /// `RepoContext::stack` returned a new draft commit (`B`) and a leftover head to continue
+    /// from, so the call made progress. `repo_stack_info` compares the number of draft commits
+    /// with the number of requested heads, which counts public heads (and heads that do not
+    /// exist and were skipped) as if they were draft heads the stack started from.
+    #[mononoke::fbinit_test]
+    async fn test_repo_stack_info_public_head_counts_toward_limit_too_low(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+        let (commits, _) = extend_from_dag_with_actions(
+            &ctx,
+            &repo,
+            r##"
+                P-A-B-C
+            "##,
+        )
+        .await?;
+        repo.phases()
+            .add_reachable_as_public(&ctx, vec![commits["P"]])
+            .await?;
+        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
+
+        // heads = [C (draft), P (public)], limit = 2: C and its parent B are returned and the
+        // client can continue from B.
+        let heads = vec![commits["C"], commits["P"]];
+        let stack = repo_ctx.stack(heads.clone(), 2).await?;
+        assert_eq!(stack.draft, vec![commits["C"], commits["B"]]);
+        assert_eq!(stack.public, vec![commits["P"]]);
+        assert_eq!(stack.leftover_heads, vec![commits["B"]]);
+        // FIXME: BUG! The public head P is counted as a draft head, so the progress goes unseen.
+        assert!(stack_limit_too_low(&stack, heads.len()));
+
+        // heads = [C, <missing>] resolve to [C] (missing changesets are skipped), but the
+        // handler still counts two requested heads.
+        let stack = repo_ctx.stack(vec![commits["C"]], 2).await?;
+        assert_eq!(stack.draft, vec![commits["C"], commits["B"]]);
+        assert_eq!(stack.leftover_heads, vec![commits["B"]]);
+        // FIXME: BUG! The skipped head is counted as a draft head, so the progress goes unseen.
+        assert!(stack_limit_too_low(&stack, 2));
+
+        // Control: with limit = 1 only the head C itself fits, so the limit really is too low.
+        let stack = repo_ctx.stack(heads.clone(), 1).await?;
+        assert_eq!(stack.draft, vec![commits["C"]]);
+        assert_eq!(stack.leftover_heads, vec![commits["C"]]);
+        assert!(stack_limit_too_low(&stack, heads.len()));
+        Ok(())
     }
 }
