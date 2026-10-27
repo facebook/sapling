@@ -30,7 +30,24 @@ ImmediateFuture<struct stat> statHelper(
   // had to bet probably blue screens. Needs to be fixed before we can call
   // stat.
 #ifndef _WIN32
-  return inode->stat(context);
+  return makeImmediateFutureWith([&] { return inode->stat(context); })
+      .thenTry([inode](folly::Try<struct stat> result) {
+        if (result.hasValue() ||
+            !inode->getMount()->getOverlay()->usesOnlineFsck() ||
+            inode->isDir() || !inode->isMaterialized()) {
+          return std::move(result).value();
+        }
+        // Only materialized non-directories read their payload from the
+        // overlay during stat. Let clients address and remove one whose
+        // payload is unreadable, but propagate backing-store failures.
+        XLOGF(
+            WARN,
+            "error getting attributes for inode {} ({}): {}",
+            inode->getNodeId(),
+            inode->getLogPath(),
+            result.exception().what());
+        return inode->getStatForCorruptOverlay();
+      });
 #else
   (void)inode;
   (void)context;

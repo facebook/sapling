@@ -139,6 +139,16 @@ InodeBase::~InodeBase() {
   }
 }
 
+#ifndef _WIN32
+struct stat InodeBase::getStatForCorruptOverlay() const noexcept {
+  struct stat st = {};
+  st.st_ino = getNodeId().get();
+  st.st_mode = getInitialMode() & S_IFMT;
+  st.st_nlink = 1;
+  return st;
+}
+#endif
+
 void InodeBase::removeOverlayData() noexcept {
   try {
     auto* overlay = mount_->getOverlay();

@@ -189,6 +189,13 @@ class InodeBase {
       const ObjectFetchContextPtr& fetchContext) = 0;
 
 #ifndef _WIN32
+  /**
+   * Return type-only attributes to let clients address and remove an inode
+   * whose overlay data is unreadable. Permission bits are omitted to prevent
+   * clients from interpreting the zero size as readable, empty contents.
+   */
+  struct stat getStatForCorruptOverlay() const noexcept;
+
   [[nodiscard]] folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
   [[nodiscard]] folly::Future<folly::Unit> removexattr(folly::StringPiece name);

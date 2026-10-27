@@ -50,11 +50,10 @@ fuse_entry_out computeEntryParam(const FuseDispatcher::Attr& attr) {
 
 constexpr int64_t kBrokenInodeCacheSeconds = 5;
 
-FuseDispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
-  struct stat st = {};
-  st.st_ino = ino.get();
-  st.st_mode = S_IFREG;
-  return FuseDispatcher::Attr{st, kBrokenInodeCacheSeconds};
+FuseDispatcher::Attr attrForInodeWithCorruptOverlay(
+    const InodeBase& inode) noexcept {
+  return FuseDispatcher::Attr{
+      inode.getStatForCorruptOverlay(), kBrokenInodeCacheSeconds};
 }
 
 bool isRestrictedTreeStat(const struct stat& st) {
@@ -262,7 +261,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
                         maybeStat.exception().what());
                     inode->incFsRefcount();
                     return computeEntryParam(
-                        attrForInodeWithCorruptOverlay(inode->getNodeId()));
+                        attrForInodeWithCorruptOverlay(*inode));
                   }
                 });
           });

@@ -681,6 +681,35 @@ class OverlayCorruptionTestBase(testcase.HgRepoTestMixin, testcase.EdenRepoTest)
         self.assertNotEqual(overflow, int(reservation.readlink().name))
 
 
+@testcase.eden_nfs_repo_test(run_io_uring=False)
+class UnreadableRuntimeInodeTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config() or {}
+        configs.setdefault("overlay", []).append("online-fsck = true")
+        return configs
+
+    def select_storage_engine(self) -> str:
+        return "sqlite"
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("README", "overlay corruption\n")
+        self.repo.commit("Initial commit.")
+
+    async def test_unreadable_runtime_inode_is_removable(self) -> None:
+        path = self.mount_path / "unreadable"
+        path.write_text("data")
+        inode = os.lstat(path).st_ino
+        overlay = self.eden.overlay_dir_for_mount(self.mount_path)
+        Ctx(overlay, {".": inode}, _BIG_INODE).path(inode).unlink()
+
+        async with self.get_async_thrift_client() as client:
+            await client.invalidateKernelInodeCache(os.fsencode(self.mount_path), b"")
+        self.assertEqual(inode, os.lstat(path).st_ino)
+        path.unlink()
+        with self.assertRaises(FileNotFoundError):
+            os.lstat(path)
+
+
 class OnlineFsckOffTest(OverlayCorruptionTestBase):
     expected: str = EXPECTED_ONLINE_FSCK_OFF
 
