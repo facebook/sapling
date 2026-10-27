@@ -7,13 +7,17 @@ oncall("scm_client_infra")
 python_library(
     name = "target",
     srcs = [
+        "core/actions.py",
         # Facts decode a paired reference side with the differential reader.
         "core/differential.py",
+        "core/differential_schedule.py",
         "core/effects.py",
         "core/facts.py",
+        "core/graph_rules.py",
         "core/history.py",
         "core/jsonio.py",
         "core/property.py",
+        "core/runspec.py",
         "core/spec_types.py",
         "core/target.py",
     ],
@@ -33,6 +37,25 @@ python_unittest(
     deps = [":sites"],
 )
 
+python_unittest(
+    name = "core_actions_test",
+    srcs = ["core/test/actions_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [":target"],
+)
+
+python_unittest(
+    name = "core_runspec_test",
+    srcs = ["core/test/runspec_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":target",
+        ":testing",
+    ],
+)
+
 python_library(
     name = "runspec",
     srcs = [],
@@ -48,6 +71,25 @@ python_library(
 # Continuous CI only: `ci.remove(ci.diff, ci.land)` drops the inherited diff-
 # and land-time CI labels and keeps the continuous ones (Citadel CI Label API
 # Reference, "Removing Values"). `long_running` (100-minute tpx timeout tier): the
+
+python_library(
+    name = "testing",
+    srcs = ["core/test/testing.py"],
+    deps = [
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_differential_test",
+    srcs = ["core/test/differential_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":target",
+        ":testing",
+    ],
+)
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
