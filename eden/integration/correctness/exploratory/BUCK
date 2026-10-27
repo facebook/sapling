@@ -1563,6 +1563,34 @@ python_integration_test(
 )
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
+# runner deadline and the harness cleanup before tpx stops the test.
+python_integration_test(
+    name = "fault_live_test",
+    srcs = ["test/fault_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    labels = [tpx_labels.long_running],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":campaign",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_backends",
+        ":edenfs_properties",
+        ":edenfs_target",
+        ":environment",
+        ":fault_fixtures",
+        ":scheduler",
+        ":target",
+        ":tasking",
+        "//eden/fs/service:thrift-python-types",
+        "//eden/integration/lib:lib",
+    ],
+)
 
 python_library(
     name = "generate",
@@ -1848,6 +1876,25 @@ python_unittest(
         ":edenfs_target",
         ":target",
         ":testing",
+    ],
+)
+
+python_unittest(
+    name = "nightly_test",
+    srcs = ["ci/test/nightly_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [
+        "ci/nightly.json",
+        "ci/release-decks.json",
+        "decks/red-control.json",
+    ],
+    deps = [
+        ":campaign",
+        ":cli_fixtures",
+        ":containment",
+        ":sites",
+        ":target",
     ],
 )
 
