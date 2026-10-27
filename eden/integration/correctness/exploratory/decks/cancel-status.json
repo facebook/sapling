@@ -1,0 +1,26 @@
+{
+  "actions": {
+    "i0": {"kind":"fault_install","deadline":"operation","fault_id":"F","site":"fetch-tree","target_action":"s0","behavior":"block"},
+    "a0": {"kind":"fault_await","deadline":"operation","fault_id":"F","requires":[["s0","started"]]},
+    "k0": {"kind":"kill_process","deadline":"operation","target_action":"s0","after_ms":3000,"requires":[["s0","started"],["a0","finished"]]},
+    "x0": {"kind":"fault_remove","deadline":"operation","fault_id":"F","requires":[["a0","finished"],["k0","finished"]]},
+    "s0": {"kind":"status","deadline":"run","channel":"sl","requires":[["i0","finished"]]},
+    "s1": {"kind":"status","deadline":"operation","channel":"sl","requires":[["x0","finished"],["s0","finished"]]},
+    "w1": {"kind":"write","deadline":"operation","path":"tree/registers/r0.reg","value_id":"s10k-w1"},
+    "w2": {"kind":"write","deadline":"operation","path":"tree/churn/c0","value_id":"s10k-w2"},
+    "w3": {"kind":"write","deadline":"operation","path":"tree/churn/c1","value_id":"s10k-w3"},
+    "w4": {"kind":"write","deadline":"operation","path":"tree/churn/c2","value_id":"s10k-w4"},
+    "w5": {"kind":"write","deadline":"operation","path":"tree/churn/c3","value_id":"s10k-w5"}
+  },
+  "actors": [
+    {"id":"nemesis","actions":["i0","a0","k0","x0"]},
+    {"id":"worker","actions":["w1","w2","w3","w4","w5","s0","s1"]}
+  ],
+  "budgets": {"operation_deadline_seconds":300,"cleanup_deadline_seconds":30,"runner_deadline_seconds":1800},
+  "environment": {"target":{"case_sensitive":true,"channel":"fuse","fixture_source":"backing","repository":{"commit_count":2,"file_count":10000,"registers":["tree/registers/r0.reg","tree/registers/r1.reg"]},"setup_profile":{"materialize":false,"scatter_dirty":5000}}},
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 7101,
+  "target": "edenfs",
+  "metadata": {"fatal_eden_bug": false, "expected": "accept", "added": "2026-09-10", "purpose": "sl status killed 3 s into a fetch-tree block while churn writes land; the next status, the FUSE reads, and the Thrift reads must stay consistent", "measured": "master 36e561210c9829062fe16d4e9d1487335065576d opt with fatal_eden_bug=false: completed, accept. With setup_profile.reference_clone (2026-10-13, ten release-parallel decks_live_test runs, artifacts retained): completed, accept, and the differential property compared 5 shared actions in every run. The replacement branch's validator-restricted differential mode admits only shared actions in comparable schedules, and its fault and kill nemeses are eden-only, so the deck does not opt into the reference; `differential-namespace` and `differential-checkout-fd` are the differential accept decks."}
+}

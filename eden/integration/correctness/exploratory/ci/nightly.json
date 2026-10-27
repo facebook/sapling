@@ -1,0 +1,80 @@
+{
+  "alias": "edenfs-exploratory-nightly",
+  "args": {
+    "steps": [
+      {
+        "name": "run campaigns, red controls, and findings reports",
+        "provide_artifacts": [
+          {
+            "base_path": ".",
+            "name": "reports",
+            "paths": [
+              "edenfs-exploratory-nightly/campaigns/fixed/report.json",
+              "edenfs-exploratory-nightly/campaigns/rotating/report.json",
+              "edenfs-exploratory-nightly/campaigns/differential/report.json",
+              "edenfs-exploratory-nightly/campaigns/fixed/artifacts/summary.jsonl",
+              "edenfs-exploratory-nightly/campaigns/rotating/artifacts/summary.jsonl",
+              "edenfs-exploratory-nightly/campaigns/differential/artifacts/summary.jsonl"
+            ]
+          },
+          {
+            "base_path": ".",
+            "name": "rejects",
+            "paths": [
+              "edenfs-exploratory-nightly/campaigns/fixed/artifacts/rejects",
+              "edenfs-exploratory-nightly/campaigns/rotating/artifacts/rejects",
+              "edenfs-exploratory-nightly/campaigns/differential/artifacts/rejects"
+            ]
+          },
+          {
+            "base_path": ".",
+            "name": "findings",
+            "paths": [
+              "edenfs-exploratory-nightly/campaigns/fixed/findings",
+              "edenfs-exploratory-nightly/campaigns/rotating/findings",
+              "edenfs-exploratory-nightly/campaigns/differential/findings"
+            ]
+          },
+          {
+            "base_path": ".",
+            "name": "red-controls",
+            "paths": [
+              "edenfs-exploratory-nightly/campaigns/fixed/red-controls",
+              "edenfs-exploratory-nightly/campaigns/rotating/red-controls",
+              "edenfs-exploratory-nightly/campaigns/differential/red-controls",
+              "edenfs-exploratory-nightly/vehicle"
+            ]
+          }
+        ],
+        "shell": "set -euo pipefail\noutput=edenfs-exploratory-nightly\nmkdir -p \"$output/campaigns\"\nruntime_dir=\"/run/user/$(id -u)\"\ntest -S \"$runtime_dir/bus\" || { echo \"no user DBus session bus at $runtime_dir/bus\"; exit 1; }\nexport XDG_RUNTIME_DIR=\"$runtime_dir\"\nexport DBUS_SESSION_BUS_ADDRESS=\"unix:path=$runtime_dir/bus\"\nsl help agent > /dev/null\nsl help log > /dev/null\nsl help goto > /dev/null\njob_commit=$(sl --reason 'Remember the job checkout that holds the harness - sl help log' log -r . -T '{node}')\nsl goto remote/master --reason 'Build the nightly daemon from master - sl help goto'\nEDENFS_DAEMON_SOURCE_COMMIT=$(sl --reason 'Capture nightly daemon source - sl help log' log -r . -T '{node}')\nEDENFS_DAEMON_SOURCE_TIMESTAMP=$(sl --reason 'Capture nightly daemon source time - sl help log' log -r \"$EDENFS_DAEMON_SOURCE_COMMIT\" -T '{date|hgdate}' | awk '{print $1}')\nexport EDENFS_DAEMON_SOURCE_COMMIT EDENFS_DAEMON_SOURCE_TIMESTAMP\nif grep -q fatal_eden_bug fbcode/eden/fs/service/EdenMain.cpp; then fatal_eden_bug=true; else fatal_eden_bug=false; fi\nbuild_output=$(mktemp)\nbuck2 build @fbcode//mode/opt fbcode//eden/fs/service:edenfs fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl fbcode//eden/fs/cli:edenfsctl fbcode//eden/scm:hg --show-full-output > \"$build_output\"\nbuilt() { awk -v target=\"$1\" '$1 == target {print $2}' \"$build_output\"; }\nEDENFS_SERVER_PATH=$(built fbcode//eden/fs/service:edenfs)\nEDENFSCTL_RUST_PATH=$(built fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl)\nEDENFSCTL_REAL_PATH=$(built fbcode//eden/fs/cli:edenfsctl)\nEDEN_HG_BINARY=$(built fbcode//eden/scm:hg)\nHG_REAL_BIN=\"$EDEN_HG_BINARY\"\nEDENFS_PRIVHELPER_PATH=/usr/local/libexec/eden/edenfs_privhelper\nfor binary in \"$EDENFS_SERVER_PATH\" \"$EDENFSCTL_RUST_PATH\" \"$EDENFSCTL_REAL_PATH\" \"$EDEN_HG_BINARY\" \"$EDENFS_PRIVHELPER_PATH\"; do test -x \"$binary\"; done\nexport EDENFS_SERVER_PATH EDENFSCTL_RUST_PATH EDENFSCTL_REAL_PATH EDEN_HG_BINARY HG_REAL_BIN EDENFS_PRIVHELPER_PATH\nexport EDENFS_DAEMON_FATAL_EDEN_BUG=\"$fatal_eden_bug\"\nsl goto \"$job_commit\" --reason 'Run the harness at the job checkout - sl help goto'\nexplore=\"buck2 run -c fbcc.rust=False @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:explore --\"\nred_control_spec=fbcode/eden/integration/correctness/exploratory/decks/red-control.json\nred_controls=$($explore red-controls --target edenfs)\nrotating_start=$(( 100000 + ($(date -u +%s) / 86400 % 10000) * 64 ))\nrun_campaign() {\n  name=$1\n  shift\n  dir=\"$output/campaigns/$name\"\n  set +e\n  $explore campaign --target edenfs --daemon public-master --files 256 --keep rejects --artifacts \"$dir/artifacts\" --report \"$dir/report.json\" \"$@\"\n  status=$?\n  set -e\n  test -f \"$dir/report.json\"\n  echo \"$name campaign exit: $status\"\n  campaign_id=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get(\"campaign_id\") or \"\")' \"$dir/report.json\")\n  for red_control in ${red_controls:-}; do\n    $explore run --target edenfs --spec \"$red_control_spec\" --red-control \"$red_control\" --campaign-id \"$campaign_id\" --artifacts \"$dir/red-controls/$red_control\" || true\n  done\n  $explore findings --target edenfs --report \"$dir/report.json\" --artifacts \"$dir/artifacts\" --red-controls \"$dir\"/red-controls/* || echo \"$name\" >> \"$output/failed-gates\"\n}\nrun_campaign fixed --seed-start 0 --seeds 40\nrun_campaign rotating --seed-start \"$rotating_start\" --seeds 40\nrun_campaign differential --seed-start \"$rotating_start\" --seeds 10 --differential\n$explore run --target edenfs --spec \"$red_control_spec\" --artifacts \"$output/vehicle\" || echo vehicle >> \"$output/failed-gates\""
+      },
+      {
+        "name": "emit scalar campaign rows",
+        "provide_artifacts": [
+          {
+            "base_path": ".",
+            "name": "telemetry",
+            "paths": [
+              "edenfs-exploratory-nightly/campaigns/fixed/telemetry.jsonl",
+              "edenfs-exploratory-nightly/campaigns/rotating/telemetry.jsonl",
+              "edenfs-exploratory-nightly/campaigns/differential/telemetry.jsonl"
+            ]
+          }
+        ],
+        "shell": "set -euo pipefail\nexplore=\"buck2 run -c fbcc.rust=False @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:explore --\"\nfor name in fixed rotating differential; do\n  dir=\"edenfs-exploratory-nightly/campaigns/$name\"\n  $explore emit --report \"$dir/report.json\" --findings \"$dir/findings/findings.json\" > \"$dir/telemetry.jsonl\"\ndone\nif [ -s edenfs-exploratory-nightly/failed-gates ]; then echo \"health or red-control gates failed: $(cat edenfs-exploratory-nightly/failed-gates)\"; exit 1; fi"
+      }
+    ],
+    "timeout": 64800
+  },
+  "capabilities": {
+    "type": "fbcode",
+    "unicastle_size": "I4_LARGE",
+    "vcs": "full-fbsource"
+  },
+  "command": "SandcastleUniversalCommand",
+  "hash": "master",
+  "oncall": "scm_client_infra",
+  "retries": 0,
+  "scheduleType": "continuous",
+  "description": "Nightly exploratory campaigns. Runs as a Sandcastle node in the eden/eden conveyor, beside \"eden smoke tests\"; the daemon is the release package's edenfs, passed through EDENFS_SERVER_PATH, the one variable the campaign hashes as the daemon identity. Every campaign seed uses the default runner deadline (600 s: operation 120 s, cleanup 30 s)."
+}

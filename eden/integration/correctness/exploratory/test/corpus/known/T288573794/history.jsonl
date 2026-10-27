@@ -1,0 +1,6 @@
+{"action":"w0","actor":"writer","time":1.0,"type":"invoke"}
+{"action":"w0","actor":"writer","bytes_written":64,"time":1.1,"type":"ok"}
+{"action":"s1","actor":"obs","time":1.2,"type":"invoke"}
+{"action":"s1","actor":"obs","diff_paths":[],"status":[],"time":1.5,"type":"ok"}
+{"close_errors":[],"host_oom_after_close":{},"reference":null,"time":1.6,"type":"target-closed"}
+{"scheduler":{"reason":null,"status":"completed"},"time":1.6,"type":"cleanup"}

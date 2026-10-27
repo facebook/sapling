@@ -1,0 +1,8 @@
+{"action":"w0","actor":"writer","time":1.0,"type":"invoke"}
+{"action":"w0","actor":"writer","bytes_written":64,"time":1.1,"type":"ok"}
+{"action":"s1","actor":"obs","time":1.2,"type":"invoke"}
+{"action":"s1","actor":"obs","diff_paths":[],"status":[],"time":1.5,"type":"ok"}
+{"action":"t0","actor":"obs","time":1.6,"type":"invoke"}
+{"action":"t0","actor":"obs","bytes_prefix":"5245473120736565643d323837383532393135207772697465723d77726974657220616374696f6e3d77302e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e","length":64,"sha256":"e947ee2e0d14605a4f908f87e13ba226e097e076e42d7f5ee50e73b9fa56562b","time":1.7,"type":"ok"}
+{"close_errors":[],"host_oom_after_close":{},"reference":null,"time":1.8,"type":"target-closed"}
+{"scheduler":{"reason":null,"status":"completed"},"time":1.8,"type":"cleanup"}

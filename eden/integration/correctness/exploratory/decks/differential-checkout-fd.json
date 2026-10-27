@@ -1,0 +1,113 @@
+{
+  "actions": {
+    "b0": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status"
+    },
+    "h0": {
+      "deadline": "operation",
+      "kind": "open",
+      "path": "tree/registers/r1.reg"
+    },
+    "h1": {
+      "deadline": "operation",
+      "fd": "h0",
+      "kind": "read_fd"
+    },
+    "h2": {
+      "deadline": "operation",
+      "fd": "h0",
+      "kind": "close"
+    },
+    "i1": {
+      "deadline": "operation",
+      "destination": "tree/registers/moved-i1",
+      "kind": "rename",
+      "requires": [
+        [
+          "h0",
+          "finished"
+        ],
+        [
+          "h1",
+          "finished"
+        ],
+        [
+          "h2",
+          "finished"
+        ]
+      ],
+      "source": "tree/registers/r1.reg"
+    },
+    "i2": {
+      "deadline": "operation",
+      "kind": "checkout",
+      "mode": "normal",
+      "requires": [
+        [
+          "b0",
+          "finished"
+        ]
+      ],
+      "revision": 1,
+      "via": "goto"
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "b0",
+        "i1"
+      ],
+      "id": "a0"
+    },
+    {
+      "actions": [
+        "h0",
+        "i2",
+        "h1",
+        "h2"
+      ],
+      "id": "a1"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 30.0,
+    "operation_deadline_seconds": 120.0,
+    "runner_deadline_seconds": 600
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 4,
+        "file_count": 64,
+        "registers": [
+          "tree/registers/r0.reg",
+          "tree/registers/r1.reg"
+        ]
+      },
+      "setup_profile": {
+        "aged_overlay": 1,
+        "materialize": false,
+        "memory_max_mb": 1536,
+        "reference_clone": true,
+        "scatter_dirty": 30,
+        "warm_readdir": false
+      }
+    }
+  },
+  "metadata": {"fatal_eden_bug": false, 
+    "added": "2026-10-21",
+    "expected": "accept",
+    "measured": "decks_live_test (testrun 21110623313170528): completed, accept, 7 differential obligations judged",
+    "purpose": "paired EdenFS/plain-Sapling run with a descriptor held across a rename and an sl goto checkout (composed by `compose(differential=True)`, seed 6)"
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 6,
+  "target": "edenfs"
+}

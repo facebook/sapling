@@ -1,0 +1,28 @@
+{
+  "actions": {
+    "a0": {"deadline":"operation","fault_id":"F","kind":"fault_await","requires":[["s0","started"]]},
+    "f0": {"channel":"fuse","deadline":"operation","kind":"read","path":"tree/registers/r0.reg","requires":[["s1","finished"]]},
+    "i0": {"behavior":"block","deadline":"operation","fault_id":"F","kind":"fault_install","requires":[["w0","finished"]],"site":"fetch-tree","target_action":"s0"},
+    "k0": {"after_ms":0,"deadline":"operation","kind":"kill_process","requires":[["s0","started"],["a0","finished"]],"target_action":"s0"},
+    "s0": {"channel":"sl","deadline":"run","kind":"status","requires":[["i0","finished"]]},
+    "s1": {"channel":"sl","deadline":"operation","kind":"status","requires":[["x0","finished"],["s0","finished"]]},
+    "t0": {"channel":"thrift","deadline":"operation","kind":"read","path":"tree/registers/r0.reg","requires":[["f0","finished"]],"sync_timeout_seconds":60},
+    "u1": {"channel":"thrift","deadline":"operation","kind":"status","requires":[["x0","finished"],["s0","finished"]]},
+    "w0": {"deadline":"operation","kind":"write","path":"tree/registers/r0.reg","value_id":"d"},
+    "w2": {"deadline":"operation","kind":"write","path":"tree/registers/r1.reg","requires":[["t0","finished"]],"value_id":"d2"},
+    "x0": {"deadline":"operation","fault_id":"F","kind":"fault_remove","requires":[["a0","finished"],["k0","finished"]]}
+  },
+  "actors": [
+    {"actions":["w0"],"id":"w"},
+    {"actions":["i0","a0","k0","x0"],"id":"n"},
+    {"actions":["s0"],"id":"s"},
+    {"actions":["u1","s1","f0","t0","w2"],"id":"o"}
+  ],
+  "budgets": {"runner_deadline_seconds":600,"cleanup_deadline_seconds":30,"operation_deadline_seconds":120},
+  "environment": {"target":{"case_sensitive":true,"channel":"fuse","fixture_source":"backing","repository":{"commit_count":4,"file_count":256,"registers":["tree/registers/r0.reg","tree/registers/r1.reg"]},"setup_profile":{"materialize":false,"scatter_dirty":0}}},
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 320001,
+  "target": "edenfs",
+  "metadata": {"fatal_eden_bug": false, "expected": "accept", "added": "2026-09-14", "purpose": "instrument calibration: seed 320001 fetch-tree block under a killed sl status; the pinned pre-fix SUT must reject it before advisory replays run", "measured": "master 36e561210c9829062fe16d4e9d1487335065576d opt with fatal_eden_bug=false: completed, accept; the same seed rejects on the pinned pre-fix SUT."}
+}

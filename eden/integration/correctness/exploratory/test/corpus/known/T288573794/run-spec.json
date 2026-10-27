@@ -1,0 +1,68 @@
+{
+  "actions": {
+    "s1": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status",
+      "requires": [
+        [
+          "w0",
+          "finished"
+        ]
+      ]
+    },
+    "w0": {
+      "deadline": "operation",
+      "kind": "write",
+      "path": "tree/registers/r0.reg",
+      "value_id": "w0"
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "w0"
+      ],
+      "id": "writer"
+    },
+    {
+      "actions": [
+        "s1"
+      ],
+      "id": "obs"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 30,
+    "operation_deadline_seconds": 120,
+    "runner_deadline_seconds": 600
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 2,
+        "file_count": 64,
+        "registers": [
+          "tree/registers/r0.reg",
+          "tree/registers/r1.reg"
+        ]
+      },
+      "setup_profile": {
+        "materialize": false,
+        "scatter_dirty": 0
+      }
+    }
+  },
+  "metadata": {
+    "known_task": "T288573794",
+    "origin": "translated",
+    "translated_from": "migration artifact https://artifacts.internalmeta.com/a/2351750168980124 tree/exploratory/test/corpus/old/inputs/known/T288573794"
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 288573794,
+  "target": "edenfs"
+}

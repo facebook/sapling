@@ -1,0 +1,28 @@
+{
+  "actions": {
+    "h0": {"deadline":"operation","fault_id":"F","kind":"fault_await","requires":[["s0","finished"]]},
+    "j0": {"deadline":"operation","kind":"journal_window","requires":[["m0","finished"]]},
+    "m0": {"deadline":"operation","from_revision":0,"kind":"manifest_presence","requires":[["o0","finished"]],"to_revision":3},
+    "n0": {"behavior":"error","deadline":"operation","fault_id":"F","kind":"fault_install","site":"status-cache-fill","target_action":"s0"},
+    "n2": {"deadline":"operation","fault_id":"F","kind":"fault_remove","requires":[["h0","finished"]]},
+    "o0": {"deadline":"operation","kind":"status_counts","requires":[["u0","finished"],["r0","finished"],["t0","finished"]]},
+    "r0": {"channel":"fuse","deadline":"operation","kind":"read","path":"tree/registers/r0.reg","requires":[["s1","finished"]]},
+    "s0": {"channel":"sl","deadline":"operation","kind":"status","requires":[["n0","finished"],["w0","finished"]]},
+    "s1": {"channel":"sl","deadline":"operation","kind":"status","requires":[["n2","finished"]]},
+    "t0": {"channel":"thrift","deadline":"operation","kind":"read","path":"tree/registers/r0.reg","requires":[["r0","finished"]],"sync_timeout_seconds":60},
+    "u0": {"channel":"thrift","deadline":"operation","kind":"status","requires":[["s1","finished"]],"revision":3},
+    "w0": {"deadline":"operation","kind":"write","path":"tree/registers/r0.reg","value_id":"w0"}
+  },
+  "actors": [
+    {"actions":["n0","h0","n2"],"id":"nemesis"},
+    {"actions":["w0"],"id":"writer"},
+    {"actions":["s0","s1","u0","r0","t0","o0","m0","j0"],"id":"obs"}
+  ],
+  "budgets": {"runner_deadline_seconds":600,"cleanup_deadline_seconds":30,"operation_deadline_seconds":120},
+  "environment": {"target":{"case_sensitive":true,"channel":"fuse","fixture_source":"backing","repository":{"commit_count":4,"file_count":64,"registers":["tree/registers/r0.reg","tree/registers/r1.reg"]},"setup_profile":{"materialize":false,"scatter_dirty":0}}},
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 300004,
+  "target": "edenfs",
+  "metadata": {"fatal_eden_bug": false, "task": "T288573775", "expected": "reject", "expected_execution": ["execution.operation-timeout"], "mechanism": "EdenMount.cpp:2601-2656: any exit between the doInnerDiff catch and dropPromise (throw from peekStatus/config read/the scmStatusCache checkpoint, or coroutine destruction while parked) leaves the ScmStatusCache promise unsettled or undropped; later same-sequence statuses wait on it until the journal advances or the daemon restarts. Error and block variants share the hole.", "added": "2026-09-22", "caveat": "Master replay on 81dec61881db with EDEN_BUG non-fatal (D118029922 unlanded)."}
+}

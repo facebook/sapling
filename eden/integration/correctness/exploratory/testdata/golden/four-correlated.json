@@ -1,0 +1,93 @@
+{
+  "controls": {},
+  "execution": [],
+  "findings": [
+    {
+      "errors": [
+        [
+          "bytes.torn-read",
+          "torn-read",
+          [
+            [
+              "channel",
+              "fuse"
+            ]
+          ]
+        ],
+        [
+          "cross-channel.byte-disagreement",
+          "byte-disagreement",
+          []
+        ],
+        [
+          "journal.missing-acked-write",
+          "missing-acked-write",
+          []
+        ],
+        [
+          "status.status-diff-mismatch",
+          "status-diff-mismatch",
+          [
+            [
+              "observed",
+              "absent"
+            ],
+            [
+              "producer-kinds",
+              "write"
+            ]
+          ]
+        ]
+      ],
+      "related": [],
+      "runs": [
+        {
+          "seed": 1,
+          "subjects": [
+            "path:tree/registers/r0.reg"
+          ],
+          "verdict": "reject",
+          "violated": [
+            [
+              "bytes.torn-read",
+              "undetermined",
+              "path:tree/registers/r0.reg"
+            ],
+            [
+              "cross-channel.byte-disagreement",
+              "product",
+              "path:tree/registers/r0.reg"
+            ],
+            [
+              "journal.missing-acked-write",
+              "product",
+              "path:tree/registers/r0.reg"
+            ],
+            [
+              "status.status-diff-mismatch",
+              "undetermined",
+              "path:tree/registers/r0.reg"
+            ]
+          ]
+        }
+      ],
+      "task_key": "sha256:aea444cd9b1de0939fc82dca23ee9f64d9bab6808f55156971811ca1d6d80f1e"
+    }
+  ],
+  "lines": [
+    "PASS health harness-failures",
+    "PASS health not-stopped",
+    "PASS health strata-covered",
+    "PASS health sites-witnessed",
+    "PASS health no-property-errors",
+    "PASS health no-leaked-run-dirs",
+    "PASS health obligations-judged",
+    "PASS health no-engine-shortfall",
+    "PASS provenance on every seed",
+    "red-controls: not supplied",
+    "FINDING bytes.torn-read + cross-channel.byte-disagreement + journal.missing-acked-write + status.status-diff-mismatch [sha256:aea444cd9b1de0939fc82dca23ee9f64d9bab6808f55156971811ca1d6d80f1e] seeds [1]: buck2 run @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:explore -- replay --target edenfs --run <root>/artifacts/seed-1 --artifacts <new dir>",
+    "findings: 1 written to <root>/findings"
+  ],
+  "routed": [],
+  "unclassified": []
+}

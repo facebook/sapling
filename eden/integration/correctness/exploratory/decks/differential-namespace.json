@@ -1,0 +1,221 @@
+{
+  "actions": {
+    "b0": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status"
+    },
+    "i1": {
+      "deadline": "operation",
+      "destination": "tree/registers/moved-i1",
+      "kind": "rename",
+      "source": "tree/registers/r0.reg"
+    },
+    "i2": {
+      "deadline": "operation",
+      "kind": "unlink",
+      "path": "tree/registers/r1.reg",
+      "requires": [
+        [
+          "b0",
+          "finished"
+        ]
+      ]
+    },
+    "i3": {
+      "channel": "fuse",
+      "deadline": "operation",
+      "kind": "readdir",
+      "path": "tree/registers",
+      "requires": [
+        [
+          "i1",
+          "finished"
+        ],
+        [
+          "i2",
+          "finished"
+        ]
+      ]
+    },
+    "i4": {
+      "channel": "fuse",
+      "deadline": "operation",
+      "kind": "readdir",
+      "path": "tree/registers",
+      "requires": [
+        [
+          "i1",
+          "finished"
+        ],
+        [
+          "i2",
+          "finished"
+        ]
+      ]
+    },
+    "i5": {
+      "channel": "fuse",
+      "deadline": "operation",
+      "kind": "read",
+      "path": "tree/registers/r0.reg",
+      "requires": [
+        [
+          "i1",
+          "finished"
+        ]
+      ]
+    },
+    "i6": {
+      "channel": "sl",
+      "deadline": "operation",
+      "kind": "status",
+      "requires": [
+        [
+          "i1",
+          "finished"
+        ],
+        [
+          "i2",
+          "finished"
+        ]
+      ]
+    },
+    "i7": {
+      "deadline": "operation",
+      "destination": "tree/registers/moved-i7",
+      "kind": "sl_mv",
+      "requires": [
+        [
+          "b0",
+          "finished"
+        ],
+        [
+          "i1",
+          "finished"
+        ],
+        [
+          "i2",
+          "finished"
+        ],
+        [
+          "i3",
+          "finished"
+        ],
+        [
+          "i4",
+          "finished"
+        ],
+        [
+          "i6",
+          "finished"
+        ]
+      ],
+      "source": "tree/registers/r1.reg"
+    },
+    "i8": {
+      "deadline": "operation",
+      "kind": "getattr",
+      "path": "tree/registers/r1.reg",
+      "requires": [
+        [
+          "i2",
+          "finished"
+        ],
+        [
+          "i7",
+          "finished"
+        ]
+      ]
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "b0",
+        "i1"
+      ],
+      "id": "a0"
+    },
+    {
+      "actions": [
+        "i2"
+      ],
+      "id": "a1"
+    },
+    {
+      "actions": [
+        "i3"
+      ],
+      "id": "a2"
+    },
+    {
+      "actions": [
+        "i4"
+      ],
+      "id": "a3"
+    },
+    {
+      "actions": [
+        "i5"
+      ],
+      "id": "a4"
+    },
+    {
+      "actions": [
+        "i6"
+      ],
+      "id": "a5"
+    },
+    {
+      "actions": [
+        "i7"
+      ],
+      "id": "a6"
+    },
+    {
+      "actions": [
+        "i8"
+      ],
+      "id": "a7"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 30.0,
+    "operation_deadline_seconds": 120.0,
+    "runner_deadline_seconds": 600
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 4,
+        "file_count": 64,
+        "registers": [
+          "tree/registers/r0.reg",
+          "tree/registers/r1.reg"
+        ]
+      },
+      "setup_profile": {
+        "aged_overlay": 3,
+        "materialize": true,
+        "memory_max_mb": null,
+        "reference_clone": true,
+        "scatter_dirty": 23,
+        "warm_readdir": false
+      }
+    }
+  },
+  "metadata": {"fatal_eden_bug": false, 
+    "added": "2026-10-21",
+    "expected": "accept",
+    "measured": "decks_live_test (testrun 21110623313170528): completed, accept, 11 differential obligations judged",
+    "purpose": "paired EdenFS/plain-Sapling run over rename, unlink, sl mv, readdir, read, getattr, and sl status with every pair of conflicting footprints ordered by a finished edge (composed by `compose(differential=True)`, seed 1)"
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 1,
+  "target": "edenfs"
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 6300,
+  "target": "edenfs",
+  "metadata": {"fatal_eden_bug": false, 
+    "expected": "accept",
+    "expected_controls": {
+      "common-status-loss": ["status.sl-fuse-stale-status"],
+      "diff-loss": ["status.status-diff-mismatch"],
+      "status-loss": ["status.status-diff-mismatch"],
+      "torn-write": ["bytes.torn-read"]
+    },
+    "added": "2026-09-30",
+    "purpose": "red-control vehicle: one write, both read channels, and sl status; every `explore run --red-control NAME` must reject it"
+  },
+  "environment": {
+    "target": {
+      "repository": {
+        "file_count": 8,
+        "commit_count": 2,
+        "registers": ["tree/registers/r0.reg", "tree/registers/r1.reg"]
+      },
+      "channel": "fuse",
+      "case_sensitive": true,
+      "fixture_source": "backing",
+      "setup_profile": {"materialize": false, "scatter_dirty": 0}
+    }
+  },
+  "budgets": {
+    "operation_deadline_seconds": 120,
+    "cleanup_deadline_seconds": 30,
+    "runner_deadline_seconds": 600
+  },
+  "actors": [{"id": "a", "actions": ["w1", "r1", "t1", "s1"]}],
+  "actions": {
+    "w1": {"kind": "write", "deadline": "operation", "path": "tree/registers/r0.reg", "value_id": "w1"},
+    "r1": {"kind": "read", "deadline": "operation", "path": "tree/registers/r0.reg", "channel": "fuse"},
+    "t1": {"kind": "read", "deadline": "operation", "path": "tree/registers/r0.reg", "channel": "thrift", "sync_timeout_seconds": 60},
+    "s1": {"kind": "status", "deadline": "operation", "channel": "sl"}
+  }
+}

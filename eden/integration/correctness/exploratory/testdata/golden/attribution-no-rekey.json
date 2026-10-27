@@ -1,0 +1,82 @@
+{
+  "controls": {},
+  "execution": [],
+  "findings": [
+    {
+      "errors": [
+        [
+          "bytes.torn-read",
+          "torn-read",
+          [
+            [
+              "channel",
+              "fuse"
+            ]
+          ]
+        ]
+      ],
+      "related": [],
+      "runs": [
+        {
+          "seed": 1,
+          "subjects": [
+            "path:tree/registers/r0.reg"
+          ],
+          "verdict": "reject",
+          "violated": [
+            [
+              "bytes.torn-read",
+              "undetermined",
+              "path:tree/registers/r0.reg"
+            ]
+          ]
+        },
+        {
+          "seed": 2,
+          "subjects": [
+            "path:tree/registers/r0.reg"
+          ],
+          "verdict": "reject",
+          "violated": [
+            [
+              "bytes.torn-read",
+              "undetermined",
+              "path:tree/registers/r0.reg"
+            ]
+          ]
+        }
+      ],
+      "task_key": "sha256:6bea56005b9fe4ef6aa6b3bbfe1c30620ad6196edd824b48d6fb49224331b36b"
+    }
+  ],
+  "lines": [
+    "PASS health harness-failures",
+    "PASS health not-stopped",
+    "PASS health strata-covered",
+    "PASS health sites-witnessed",
+    "PASS health no-property-errors",
+    "PASS health no-leaked-run-dirs",
+    "PASS health obligations-judged",
+    "PASS health no-engine-shortfall",
+    "PASS provenance on every seed",
+    "red-controls: not supplied",
+    "FINDING bytes.torn-read [sha256:6bea56005b9fe4ef6aa6b3bbfe1c30620ad6196edd824b48d6fb49224331b36b] seeds [1, 2]: buck2 run @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:explore -- replay --target edenfs --run <root>/artifacts/seed-1 --artifacts <new dir>",
+    "ROUTED HARNESS seed 2 on checkout:s: result-shape.channel-fields (harness)",
+    "findings: 1 written to <root>/findings"
+  ],
+  "routed": [
+    {
+      "attributions": [
+        "harness"
+      ],
+      "digest": "sha256:9335e43bd078991a62d74074cbc241e0dea88020379603c16b50577b6a2265fb",
+      "route": "harness",
+      "rules": [
+        "result-shape.channel-fields"
+      ],
+      "seed": 2,
+      "subject": "checkout:s"
+    }
+  ],
+  "unclassified": []
+}

@@ -1,0 +1,8 @@
+{"action":"d0","actor":"a","time":1.0,"type":"invoke"}
+{"action":"d0","actor":"a","paused_at":2,"pgid":1,"pos_at_pause":2,"time":1.1,"type":"ok"}
+{"action":"c0","actor":"a","time":1.2,"type":"invoke"}
+{"action":"c0","actor":"a","conflicts":0,"node":"cabdfa4b1dd71d11e95b04008ed558c6b912e0a9","revision":1,"time":1.3,"type":"ok","via":"thrift"}
+{"action":"d1","actor":"a","time":1.4,"type":"invoke"}
+{"action":"d1","actor":"a","entries":["000000-entry-whose-long-name-spreads-the-listing-over-several-responses.dat","000001-entry-whose-long-name-spreads-the-listing-over-several-responses.dat","000002-entry-whose-long-name-spreads-the-listing-over-several-responses.dat","000003-entry-whose-long-name-spreads-the-listing-over-several-responses.dat","000000-entry-whose-long-name-spreads-the-listing-over-several-responses.dat"],"pos_at_end":7,"pos_at_pause":2,"stream":"d0","time":1.5,"type":"ok"}
+{"close_errors":[],"host_oom_after_close":{},"reference":null,"time":1.6,"type":"target-closed"}
+{"scheduler":{"reason":null,"status":"completed"},"time":1.6,"type":"cleanup"}

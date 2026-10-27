@@ -1,0 +1,28 @@
+{
+  "actions": {
+    "c1": {"deadline":"operation","kind":"checkout","mode":"normal","revision":1,"via":"goto"},
+    "w0": {"deadline":"operation","kind":"write","path":"tree/registers/r0.reg","value_id":"w0"},
+    "o0": {"deadline":"operation","kind":"open","path":"tree/registers/r0.reg"},
+    "o1": {"deadline":"operation","kind":"open","path":"tree/registers/r1.reg"},
+    "u0": {"deadline":"operation","kind":"unload_inodes","path":"tree/registers"},
+    "c0": {"deadline":"operation","kind":"checkout","mode":"force","revision":2,"via":"thrift"},
+    "f0": {"deadline":"operation","fd":"o0","kind":"read_fd"},
+    "f1": {"deadline":"operation","fd":"o1","kind":"read_fd"},
+    "g0": {"deadline":"operation","kind":"getattr","path":"tree/registers/r0.reg"},
+    "g1": {"deadline":"operation","kind":"getattr","path":"tree/registers/r1.reg"},
+    "r0": {"channel":"fuse","deadline":"operation","kind":"read","path":"tree/registers/r0.reg"},
+    "r1": {"channel":"fuse","deadline":"operation","kind":"read","path":"tree/registers/r1.reg"},
+    "x0": {"deadline":"operation","fd":"o0","kind":"close"},
+    "x1": {"deadline":"operation","fd":"o1","kind":"close"}
+  },
+  "actors": [
+    {"actions":["c1","w0","o0","o1","u0","c0","f0","f1","g0","g1","r0","r1","x0","x1"],"id":"a"}
+  ],
+  "budgets": {"runner_deadline_seconds":600,"cleanup_deadline_seconds":30,"operation_deadline_seconds":120},
+  "environment": {"target":{"case_sensitive":true,"channel":"fuse","fixture_source":"backing","repository":{"commit_count":4,"file_count":32,"registers":["tree/registers/r0.reg","tree/registers/r1.reg"],"type_changes":[{"at_revision":2,"path":"tree/registers/r0.reg"},{"at_revision":2,"path":"tree/registers/r1.reg"}]},"setup_profile":{"materialize":false,"scatter_dirty":0}}},
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 60003,
+  "target": "edenfs",
+  "metadata": {"fatal_eden_bug": false, "expected": "not-evaluated", "expected_not_evaluated": ["checkout.conflict-count-unmodeled"], "added": "2026-09-23", "arm": "both arms with unload_inodes on the registers' parent between the opens and the force checkout to revision 2: r0 is materialized by w0, r1 is not; the unload targets the InodeMap lifetime of the opened inodes", "measured": "master 49dffa884c27: u0 prepared 2 inodes and invalidated 0; f0 returns w0's 64 bytes and f1 the committed blob through the held fds (no ESTALE, no EIO); g0/g1 fuse_type=directory thrift_type=directory; r0/r1 fail errno 21 (EISDIR). Replacement checker (2026-10-23 live run, history in `test/deck_histories/fd-across-type-change-unloaded.history.jsonl`): completed, not-evaluated `checkout.conflict-count-unmodeled`, because no conflict count is derived for a path the force checkout retypes; every other obligation is satisfied. The FORCE Thrift checkout is eden-only, so the deck does not opt into the reference."}
+}

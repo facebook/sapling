@@ -1,0 +1,38 @@
+{
+  "alias": "edenfs-exploratory-release-decks",
+  "args": {
+    "steps": [
+      {
+        "name": "deck lanes and calibration against the release candidate",
+        "provide_artifacts": [
+          {
+            "base_path": ".",
+            "name": "release-summary.json",
+            "paths": [
+              "edenfs-exploratory-release-decks/release-summary.json"
+            ]
+          },
+          {
+            "base_path": ".",
+            "name": "replays",
+            "paths": [
+              "edenfs-exploratory-release-decks/replays"
+            ]
+          }
+        ],
+        "shell": "set -euo pipefail\noutput=edenfs-exploratory-release-decks\nmkdir -p \"$output/replays\"\nruntime_dir=\"/run/user/$(id -u)\"\ntest -S \"$runtime_dir/bus\" || { echo \"no user DBus session bus at $runtime_dir/bus\"; exit 1; }\nexport XDG_RUNTIME_DIR=\"$runtime_dir\"\nexport DBUS_SESSION_BUS_ADDRESS=\"unix:path=$runtime_dir/bus\"\nsl help agent > /dev/null\nsl help log > /dev/null\nEDENFS_DAEMON_SOURCE_COMMIT=$(sl --reason 'Capture release candidate daemon source - sl help log' log -r . -T '{node}')\nEDENFS_DAEMON_SOURCE_TIMESTAMP=$(sl --reason 'Capture release candidate daemon source time - sl help log' log -r \"$EDENFS_DAEMON_SOURCE_COMMIT\" -T '{date|hgdate}' | awk '{print $1}')\nexport EDENFS_DAEMON_SOURCE_COMMIT EDENFS_DAEMON_SOURCE_TIMESTAMP\nbuild_output=$(mktemp)\nbuck2 build @fbcode//mode/opt fbcode//eden/fs/service:edenfs --show-full-output > \"$build_output\"\nEDENFS_SERVER_PATH=$(awk 'NR == 1 {print $2}' \"$build_output\")\nexport EDENFS_SERVER_PATH\nexport EDENFS_DAEMON_FATAL_EDEN_BUG=false\npinned_sut=\"$output/pinned-sut/edenfs\"\nmkdir -p \"$(dirname \"$pinned_sut\")\"\nmanifold get \"${EDEN_EXPLORATORY_PINNED_SUT_MANIFOLD:?set to the pinned pre-fix edenfs object, e.g. eden_exploratory/pinned-sut/<sha256>/edenfs}\" \"$pinned_sut\"\nchmod +x \"$pinned_sut\"\nenv_args=(--env \"EDENFS_SERVER_PATH=$EDENFS_SERVER_PATH\" --env \"XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR\" --env \"DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS\" --env \"EDENFS_DAEMON_FATAL_EDEN_BUG=false\" --env \"EDENFS_DAEMON_SOURCE_COMMIT=$EDENFS_DAEMON_SOURCE_COMMIT\" --env \"EDENFS_DAEMON_SOURCE_TIMESTAMP=$EDENFS_DAEMON_SOURCE_TIMESTAMP\")\nbuck2 test @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:decks_live_test -- \"${env_args[@]}\" --env EDEN_EXPLORATORY_REPLAYS=1\nset +e\nbuck2 test @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:decks_test -- \"${env_args[@]}\" --env EDEN_EXPLORATORY_REPLAYS=1 --env \"EDEN_EXPLORATORY_ARTIFACTS=$PWD/$output/replays\" --env \"EDEN_EXPLORATORY_PINNED_SUT=$PWD/$pinned_sut\"\necho \"calibration and advisory replays exit: $?\"\nset -e\nbuck2 run -c fbcc.rust=False @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:explore -- release-summary --target edenfs --decks fbcode/eden/integration/correctness/exploratory/decks --artifacts \"$output/replays\" > \"$output/release-summary.json\"\ncat \"$output/release-summary.json\""
+      }
+    ],
+    "timeout": 14400
+  },
+  "capabilities": {
+    "type": "fbcode",
+    "unicastle_size": "I4_LARGE",
+    "vcs": "full-fbsource"
+  },
+  "command": "SandcastleUniversalCommand",
+  "description": "Release-week deck lanes: accept and not-evaluated decks and the calibration pair block; reject decks are advisory (release-summary lists the reproduced ones). Set hash to the release candidate commit and EDEN_EXPLORATORY_PINNED_SUT_MANIFOLD in the job environment.",
+  "hash": "master",
+  "oncall": "scm_client_infra",
+  "retries": 0
+}

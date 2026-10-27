@@ -1,0 +1,167 @@
+{
+  "actions": {
+    "c1": {
+      "deadline": "run",
+      "kind": "checkout",
+      "mode": "normal",
+      "requires": [
+        [
+          "f1",
+          "finished"
+        ]
+      ],
+      "revision": 0,
+      "via": "thrift"
+    },
+    "f1": {
+      "behavior": "block",
+      "deadline": "operation",
+      "fault_id": "F",
+      "key": "tree/registers",
+      "kind": "fault_install",
+      "ordinal": 1,
+      "requires": [
+        [
+          "r0",
+          "finished"
+        ]
+      ],
+      "site": "tree-checkout",
+      "target_action": "c1"
+    },
+    "g1": {
+      "deadline": "operation",
+      "kind": "getattr",
+      "path": "tree/registers/r1.reg",
+      "requires": [
+        [
+          "c1",
+          "finished"
+        ],
+        [
+          "u1",
+          "finished"
+        ]
+      ]
+    },
+    "h1": {
+      "deadline": "operation",
+      "fault_id": "F",
+      "kind": "fault_await",
+      "requires": [
+        [
+          "c1",
+          "started"
+        ]
+      ]
+    },
+    "r0": {
+      "channel": "fuse",
+      "deadline": "operation",
+      "kind": "read",
+      "path": "tree/registers/r0.reg"
+    },
+    "u1": {
+      "deadline": "operation",
+      "kind": "unlink",
+      "path": "tree/registers/r0.reg",
+      "requires": [
+        [
+          "h1",
+          "finished"
+        ]
+      ]
+    },
+    "x1": {
+      "deadline": "operation",
+      "fault_id": "F",
+      "kind": "fault_remove",
+      "requires": [
+        [
+          "z1",
+          "finished"
+        ]
+      ]
+    },
+    "z1": {
+      "deadline": "operation",
+      "kind": "sleep",
+      "requires": [
+        [
+          "u1",
+          "started"
+        ]
+      ],
+      "seconds": 3.0
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "r0",
+        "f1"
+      ],
+      "id": "setup"
+    },
+    {
+      "actions": [
+        "c1",
+        "g1"
+      ],
+      "id": "checkout"
+    },
+    {
+      "actions": [
+        "h1",
+        "z1",
+        "x1"
+      ],
+      "id": "nemesis"
+    },
+    {
+      "actions": [
+        "u1"
+      ],
+      "id": "unlinker"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 30,
+    "operation_deadline_seconds": 45,
+    "runner_deadline_seconds": 240
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 4,
+        "file_count": 64,
+        "registers": [
+          "tree/registers/r0.reg",
+          "tree/registers/r1.reg"
+        ]
+      },
+      "setup_profile": {
+        "materialize": false,
+        "scatter_dirty": 0
+      }
+    }
+  },
+  "metadata": {
+    "added": "2026-10-24",
+    "caveat": "Overlaps the unlink with the checkout by declaring `task: T293953113` (`edenfs.actions.WALK_DEADLOCK_TASK`), which exempts it from checkout ordering.",
+    "expected": "reject",
+    "expected_execution": [
+      "execution.mount-wedged"
+    ],
+    "fatal_eden_bug": false,
+    "purpose": "normal Thrift checkout parked at TreeInode::checkout(tree/registers) while an unlink of the loaded tree/registers/r0.reg is dispatched, then released; the mount wedges and teardown aborts the run's own FUSE connection",
+    "task": "T293953113"
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 293953114,
+  "target": "edenfs"
+}

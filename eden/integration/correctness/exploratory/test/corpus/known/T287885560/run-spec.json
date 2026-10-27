@@ -1,0 +1,82 @@
+{
+  "actions": {
+    "c0": {
+      "deadline": "operation",
+      "kind": "checkout",
+      "mode": "normal",
+      "requires": [
+        [
+          "d0",
+          "finished"
+        ]
+      ],
+      "revision": 1,
+      "via": "thrift"
+    },
+    "d0": {
+      "deadline": "operation",
+      "kind": "readdir_stream",
+      "path": "tree/wide",
+      "pause_after": 2
+    },
+    "d1": {
+      "deadline": "operation",
+      "kind": "readdir_resume",
+      "requires": [
+        [
+          "c0",
+          "finished"
+        ]
+      ],
+      "stream": "d0"
+    }
+  },
+  "actors": [
+    {
+      "actions": [
+        "d0",
+        "c0",
+        "d1"
+      ],
+      "id": "a"
+    }
+  ],
+  "budgets": {
+    "cleanup_deadline_seconds": 30,
+    "operation_deadline_seconds": 120,
+    "runner_deadline_seconds": 600
+  },
+  "environment": {
+    "target": {
+      "case_sensitive": true,
+      "channel": "fuse",
+      "fixture_source": "backing",
+      "repository": {
+        "commit_count": 2,
+        "file_count": 64,
+        "registers": [
+          "tree/registers/r0.reg",
+          "tree/registers/r1.reg"
+        ]
+      },
+      "setup_profile": {
+        "materialize": false,
+        "scatter_dirty": 0,
+        "wide_dir": {
+          "churn_all": true,
+          "entries": 4,
+          "name": "tree/wide"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "known_task": "T287885560",
+    "origin": "translated",
+    "translated_from": "migration artifact https://artifacts.internalmeta.com/a/2351750168980124 tree/exploratory/test/corpus/old/inputs/known/T287885560"
+  },
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 287885560,
+  "target": "edenfs"
+}

@@ -1,0 +1,27 @@
+{
+  "actions": {
+    "c0": {"deadline":"run","kind":"checkout","requires":[["n0","finished"]],"revision":1,"via":"thrift","mode":"normal"},
+    "h0": {"deadline":"operation","fault_id":"F","kind":"fault_await","requires":[["c0","started"]]},
+    "j1": {"deadline":"operation","kind":"journal_window","requires":[["t1","finished"]],"since_sequence":1},
+    "n0": {"behavior":"block","deadline":"operation","fault_id":"F","key":"tree/a1","kind":"fault_install","ordinal":1,"requires":[["w0","finished"]],"site":"tree-checkout","target_action":"c0"},
+    "s1": {"channel":"sl","deadline":"operation","kind":"status","requires":[["c0","finished"]]},
+    "t0": {"channel":"fuse","deadline":"operation","kind":"read","path":"tree/registers/r0.reg","requires":[["s1","finished"]]},
+    "t1": {"channel":"fuse","deadline":"operation","kind":"read","path":"tree/registers/r1.reg","requires":[["t0","finished"]]},
+    "w0": {"deadline":"operation","kind":"write","path":"tree/registers/r0.reg","value_id":"w0"},
+    "w1": {"deadline":"operation","kind":"write","path":"tree/registers/r1.reg","requires":[["h0","finished"]],"value_id":"w1"},
+    "x0": {"deadline":"operation","fault_id":"F","kind":"fault_remove","requires":[["h0","finished"],["w1","finished"]]}
+  },
+  "actors": [
+    {"actions":["n0","h0","x0"],"id":"nemesis"},
+    {"actions":["c0"],"id":"parker"},
+    {"actions":["w0","w1"],"id":"writer"},
+    {"actions":["s1","t0","t1","j1"],"id":"obs"}
+  ],
+  "budgets": {"runner_deadline_seconds":600,"cleanup_deadline_seconds":30,"operation_deadline_seconds":120},
+  "environment": {"target":{"case_sensitive":true,"channel":"fuse","fixture_source":"backing","repository":{"commit_count":4,"file_count":64,"registers":["tree/registers/r0.reg","tree/registers/r1.reg"]},"setup_profile":{"materialize":true,"scatter_dirty":0}}},
+  "schema": "edenfs-exploratory-run",
+  "schema_version": 1,
+  "seed": 307003,
+  "target": "edenfs",
+  "metadata": {"fatal_eden_bug": false, "task": "T288573788", "waiting_on": "T294594828", "expected": "reject", "expected_rules": ["core.input-legality"], "expected_task_key": "sha256:97a74efde7852e106f50cdc5e7fdc217f8534bf969e09f7139bb515974a45118", "mechanism": "Checkout holds the mount-wide rename lock for its lifetime (EdenMount.cpp:2140-2158, CheckoutContext.cpp:154-156); a first write to an unmaterialized file on a disjoint path takes the runWhileMaterialized slow path whose SCOPE_EXIT needs that lock (FileInode.cpp:907-913) and parks; FuseRequestContext.cpp:101-110 replies ETIMEDOUT at 60 s without cancelling the write, whose bytes landed synchronously at FileInode.cpp:338-340.", "added": "2026-09-22", "caveat": "Master replay on 81dec61881db with EDEN_BUG non-fatal (D118029922 unlanded). The replacement checker treats the ETIMEDOUT write as indeterminate, so reading its bytes and listing r1 M are legal; the task's identity is now the unexcused ETIMEDOUT on r1 (its key under the contracts)."}
+}
