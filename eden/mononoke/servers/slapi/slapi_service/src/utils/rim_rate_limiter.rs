@@ -19,6 +19,9 @@ use backend_if::RimBackend;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use context::CoreContext;
+use context::PerfCounterType;
+use gotham::state::State;
+use gotham_ext::middleware::PostResponseCallbacks;
 use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use rate_limiting_config::RimMetadataField;
@@ -34,6 +37,7 @@ use tracing::warn;
 
 const RIM_ACQUIRE_TIMEOUT: Duration = Duration::from_millis(500);
 const WORKLOAD_CONFIG_PATH: &str = "scm/mononoke/ratelimiting/rim_workloads";
+pub(crate) const STORAGE_READS_RESOURCE: &str = "storage_reads";
 
 define_stats! {
     prefix = "mononoke.rim";
@@ -171,7 +175,7 @@ pub(crate) async fn check_rate_limit(
     };
 
     let result = match timeout(RIM_ACQUIRE_TIMEOUT, async {
-        let options = rim_ligen::create_acquire_options(selection_key.is_none())?;
+        let options = rim_ligen::create_acquire_options(false)?;
         RimThinClient::acquire_v2(
             rim_backend,
             tenancy_path.to_vec(),
@@ -216,15 +220,6 @@ pub(crate) async fn check_rate_limit(
             );
             return decision;
         }
-        if let Err(error) = report_admission(
-            rim_backend,
-            tenancy_path,
-            requirements,
-            decision == RimDecision::Reject,
-        ) {
-            STATS::admission_report_errors.add_value(1);
-            log("RIM admission report failed", error.to_string());
-        }
         decision
     } else if result.rejected() {
         RimDecision::Reject
@@ -263,11 +258,12 @@ fn report_admission(
     Ok(())
 }
 
-pub(crate) async fn report_load(
+pub(crate) async fn report_request(
     ctx: &CoreContext,
     tenancy_path: &[String],
     rim_backend: RimBackend,
     usage: &HashMap<String, f64>,
+    rejected: bool,
 ) {
     let log = |tag: &str, detail: String| {
         let mut scuba = ctx.scuba().clone();
@@ -276,6 +272,14 @@ pub(crate) async fn report_load(
         scuba.add("rim_requirements", format!("{usage:?}"));
         scuba.log_with_msg(tag, detail);
     };
+
+    if let Err(error) = report_admission(rim_backend, tenancy_path, usage, rejected) {
+        STATS::admission_report_errors.add_value(1);
+        log("RIM admission report failed", error.to_string());
+    }
+    if rejected {
+        return;
+    }
 
     match timeout(
         RIM_ACQUIRE_TIMEOUT,
@@ -296,6 +300,33 @@ pub(crate) async fn report_load(
                 format!("timeout after {RIM_ACQUIRE_TIMEOUT:?}"),
             );
         }
+    }
+}
+
+pub(crate) fn record_storage_reads(
+    state: &mut State,
+    ctx: CoreContext,
+    backend: RimBackend,
+    tenancy_path: Vec<String>,
+) {
+    if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
+        callbacks.add(move |_| {
+            let usage = [(
+                STORAGE_READS_RESOURCE.to_owned(),
+                ctx.perf_counters().get_counter(PerfCounterType::BlobGets) as f64,
+            )]
+            .into();
+            let result = RimThinClient::sync_report(backend, tenancy_path.clone(), usage);
+            let error = match result {
+                Ok(result) if result.success() => return,
+                Ok(result) => format!("{:?}", result.status()),
+                Err(error) => error.to_string(),
+            };
+            let mut scuba = ctx.scuba().clone();
+            scuba.add("rim_tenancy_path", tenancy_path.join("/"));
+            scuba.add("rim_backend", backend.0);
+            scuba.log_with_msg("RIM storage usage report failed", error);
+        });
     }
 }
 

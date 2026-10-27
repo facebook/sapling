@@ -43,9 +43,13 @@ use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimRateLimiter;
 #[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::STORAGE_READS_RESOURCE;
+#[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::check_rate_limit;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::report_load;
+use crate::utils::rim_rate_limiter::record_storage_reads;
+#[cfg(fbcode_build)]
+use crate::utils::rim_rate_limiter::report_request;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::request_attribution;
 #[cfg(fbcode_build)]
@@ -85,16 +89,13 @@ async fn apply_rim_decision(
 ) -> Option<Response<Body>> {
     let decision =
         check_rate_limit(ctx, tenancy_path, rim_backend, requirements, selection_key).await;
-    // The deployed backends use demand_equals_usage: report all work offered
-    // to this stage, including requests this stage rejects.
+    let rejected = decision == RimDecision::Reject && justknobs::eval(RIM_ENFORCE_JK, None, None);
     if decision != RimDecision::FailOpen {
-        report_load(ctx, tenancy_path, rim_backend, requirements).await;
+        report_request(ctx, tenancy_path, rim_backend, requirements, rejected).await;
     }
     match decision {
         RimDecision::Allow => None,
-        RimDecision::Reject if justknobs::eval(RIM_ENFORCE_JK, None, None) => {
-            Some(rim_rejection_response(state))
-        }
+        RimDecision::Reject if rejected => Some(rim_rejection_response(state)),
         RimDecision::Reject => {
             let mut scuba = ctx.scuba().clone();
             scuba.add("rim_tenancy_path", tenancy_path.join("/"));
@@ -181,7 +182,9 @@ impl Middleware for ThrottleMiddleware {
                 })
                 .flatten();
             match request_requirements(&config, fetches, &rim.cost_resource) {
-                Ok(requirements) => {
+                Ok(mut requirements) => {
+                    // The quantity is reported after execution; acquire selects the resource.
+                    requirements.insert(STORAGE_READS_RESOURCE.to_owned(), 0.0);
                     if let Some(response) = apply_rim_decision(
                         state,
                         &ctx,
@@ -194,6 +197,7 @@ impl Middleware for ThrottleMiddleware {
                     {
                         return Some(response);
                     }
+                    record_storage_reads(state, ctx.clone(), rim.backend, path);
                 }
                 Err(error) => {
                     let mut scuba = ctx.scuba().clone();
