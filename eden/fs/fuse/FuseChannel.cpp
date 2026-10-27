@@ -2463,8 +2463,14 @@ void FuseChannel::dispatchRequest(
                        request,
                        requestId,
                        headerCopy,
-                       requestPermit = std::move(requestPermit)] {
-                finishRequest(requestId, headerCopy, request->getResult());
+                       requestPermit = std::move(requestPermit)]() mutable {
+                // finishRequest() deletes this channel when it completes the
+                // last request of a destroyed session, and the request's
+                // RequestContext records into the channel's ProcessAccessLog
+                // when it is destroyed, so it has to go first.
+                auto result = request->getResult();
+                request.reset();
+                finishRequest(requestId, headerCopy, result);
               });
         }
         break;
