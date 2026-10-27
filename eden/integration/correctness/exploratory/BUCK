@@ -620,6 +620,8 @@ python_unittest(
 python_library(
     name = "edenfs_contracts",
     srcs = [
+        "edenfs/contracts/__init__.py",
+        "edenfs/contracts/checkout.py",
         "edenfs/contracts/files.py",
         "edenfs/contracts/model.py",
     ],
@@ -630,6 +632,36 @@ python_library(
         ":edenfs_fixture",
         ":sites",
         ":target",
+    ],
+)
+
+python_library(
+    name = "edenfs_contracts_fixtures",
+    srcs = ["edenfs/test/contracts_fixtures.py"],
+    deps = [
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_contracts",
+        ":edenfs_encoding",
+        ":edenfs_testing",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_contracts_checkout_structure_test",
+    srcs = ["edenfs/test/contracts_checkout_structure_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_contracts",
+        ":edenfs_contracts_fixtures",
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":edenfs_testing",
+        ":target",
+        ":testing",
+        "//eden/integration/correctness:repo",
     ],
 )
 
