@@ -590,13 +590,8 @@ pub async fn test_is_linear_stack(
     Ok(())
 }
 
-/// FIXME: BUG! This did return true from `is_linear_stack(ancestor, descendant)` when
-/// `descendant` is a merge commit but should have returned false: the stack includes
-/// `descendant`, and the docstring requires that none of its changesets has more than
-/// one parent. The merge check reads `merge_ancestor_or_root`, which `build_edges`
-/// leaves as `None` for merges, so a merge `descendant` skips the check and the result
-/// degrades to a plain ancestry test. This test pins the current behaviour; the next
-/// diff fixes it.
+/// A merge commit is never the top of a linear stack: the stack includes `descendant`,
+/// and a linear stack has no changeset with more than one parent.
 pub async fn test_is_linear_stack_merge_descendant(
     ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorageTest>,
@@ -614,27 +609,23 @@ pub async fn test_is_linear_stack_merge_descendant(
     storage.flush();
 
     // G is a merge of D and F, so no stack whose top is G is linear.
-    // FIXME: BUG! D..G is reported as linear.
     assert!(
-        graph
+        !graph
             .is_linear_stack(&ctx, name_cs_id("D"), name_cs_id("G"))
             .await?
     );
-    // FIXME: BUG! A..G is reported as linear.
     assert!(
-        graph
+        !graph
             .is_linear_stack(&ctx, name_cs_id("A"), name_cs_id("G"))
             .await?
     );
-    // FIXME: BUG! F..G is reported as linear.
     assert!(
-        graph
+        !graph
             .is_linear_stack(&ctx, name_cs_id("F"), name_cs_id("G"))
             .await?
     );
-    // FIXME: BUG! G on its own is reported as linear.
     assert!(
-        graph
+        !graph
             .is_linear_stack(&ctx, name_cs_id("G"), name_cs_id("G"))
             .await?
     );
