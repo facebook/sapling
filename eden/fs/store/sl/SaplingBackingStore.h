@@ -637,6 +637,14 @@ class SaplingBackingStore final
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
 
+  /**
+   * A detector backed by the Rust walk detector for `mountPath`. It follows
+   * `backingstore.walk-mode` and the other walk settings as the store reloads
+   * them, so it exists even while the mode is off.
+   */
+  std::shared_ptr<WalkDetector> createWalkDetector(
+      AbsolutePathPiece mountPath) override;
+
   void workingCopyParentHint(const RootId& parent) override {
     sapling_backingstore_set_parent_hint(*store_.get(), parent.value());
   }

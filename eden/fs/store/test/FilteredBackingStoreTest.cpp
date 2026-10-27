@@ -33,9 +33,11 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/store/WalkDetector.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/ErrorLogger.h"
@@ -1057,6 +1059,46 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter) {
   EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
   EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
   EXPECT_NE(helloFindRes, srcRes->cend());
+}
+
+TEST_F(SaplingFilteredBackingStoreTest, walkDetectorAcceptsRawAndFilteredIds) {
+  // Under the null filter the root's directories are recursively unfiltered,
+  // so the entries of their trees keep their raw sapling ids while the root's
+  // own entries carry filtered ids.
+  auto rootDirRes = folly::coro::blockingWait(
+      folly::coro::timeout(
+          filteredStoreFFI_->co_getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  commit1.value(), "null")},
+              ObjectFetchContext::getNullContext()),
+          kTestTimeout));
+  auto srcId = rootDirRes.tree->find("src"_pc)->second.getObjectId();
+  auto fooTxtId = rootDirRes.tree->find("foo.txt"_pc)->second.getObjectId();
+  auto srcTree =
+      filteredStoreFFI_->getTree(srcId, ObjectFetchContext::getNullContext())
+          .get(kTestTimeout)
+          .tree;
+  auto helloId = srcTree->find("hello.txt"_pc)->second.getObjectId();
+  ASSERT_TRUE(SlOid::hasValidType(helloId));
+  ASSERT_FALSE(SlOid::hasValidType(fooTxtId));
+
+  auto detector = filteredStoreFFI_->createWalkDetector(testPath + "mount"_pc);
+  ASSERT_NE(detector, nullptr);
+  EXPECT_NO_THROW(detector->witnessFileRead(
+      helloId,
+      ObjectFetchContext::FromNetworkFetch,
+      OptionalProcessId{},
+      std::nullopt));
+  EXPECT_NO_THROW(detector->witnessFileRead(
+      fooTxtId,
+      ObjectFetchContext::FromNetworkFetch,
+      OptionalProcessId{},
+      std::nullopt));
+  EXPECT_NO_THROW(detector->witnessTreeRead(
+      srcId,
+      *srcTree,
+      ObjectFetchContext::FromNetworkFetch,
+      OptionalProcessId{}));
 }
 
 TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {

@@ -71,6 +71,13 @@ class FilteredBackingStore
 
   std::optional<folly::StringPiece> getRepoName() override;
 
+  /**
+   * The underlying store's detector, fed object and root ids with their
+   * filter stripped.
+   */
+  std::shared_ptr<WalkDetector> createWalkDetector(
+      AbsolutePathPiece mountPath) override;
+
   void workingCopyParentHint(const RootId& parent) override;
 
   void witnessDirectorySize(
@@ -147,6 +154,9 @@ class FilteredBackingStore
   FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFI);
   FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter);
   FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID);
+  FRIEND_TEST(
+      SaplingFilteredBackingStoreTest,
+      walkDetectorAcceptsRawAndFilteredIds);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getNonExistent);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getBlob);
   FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, co_getBlobAuxData);

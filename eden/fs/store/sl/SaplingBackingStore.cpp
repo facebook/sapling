@@ -48,6 +48,7 @@
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/sl/SaplingImportRequest.h"
 #include "eden/fs/store/sl/SaplingObjectId.h"
+#include "eden/fs/store/sl/SaplingWalkDetector.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
 #include "eden/fs/telemetry/EdenFsEventsLogger.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -483,6 +484,19 @@ void SaplingBackingStore::getBlobBatch(
         // Make sure that we're stopping this watch.
         watch.reset();
       });
+}
+
+std::shared_ptr<WalkDetector> SaplingBackingStore::createWalkDetector(
+    AbsolutePathPiece mountPath) {
+  // The detector passes the Rust store back on every report. Aliasing it to
+  // this object keeps the store alive for as long as the detector exists.
+  std::shared_ptr<sapling::BackingStore> store{
+      shared_from_this(), store_.get()};
+  return std::make_shared<SaplingWalkDetector>(
+      std::move(store),
+      sapling::sapling_backingstore_walk_detector(
+          *store_.get(),
+          rust::Str{mountPath.view().data(), mountPath.view().size()}));
 }
 
 folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(

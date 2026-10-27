@@ -43,8 +43,14 @@ cpp_library(
 
 cpp_library(
     name = "sapling_backing_store",
-    srcs = ["SaplingBackingStore.cpp"],
-    headers = ["SaplingBackingStore.h"],
+    srcs = [
+        "SaplingBackingStore.cpp",
+        "SaplingWalkDetector.cpp",
+    ],
+    headers = [
+        "SaplingBackingStore.h",
+        "SaplingWalkDetector.h",
+    ],
     deps = [
         "fbsource//third-party/fmt:fmt",
         "fbsource//third-party/re2:re2",

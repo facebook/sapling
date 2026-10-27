@@ -36,6 +36,7 @@ class Future;
 namespace facebook::eden {
 
 class TreeEntry;
+class WalkDetector;
 enum class TreeEntryType : uint8_t;
 
 enum class ObjectComparison : uint8_t {
@@ -161,6 +162,16 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   virtual void startRecordingFetch() {}
   virtual std::unordered_set<std::string> stopRecordingFetch() {
     return {};
+  }
+
+  /**
+   * Walk detection for the mount at `mountPath`, which reports the mount's
+   * fetches and working-copy parent to this store. The default detects no
+   * walks and returns nullptr.
+   */
+  virtual std::shared_ptr<WalkDetector> createWalkDetector(
+      AbsolutePathPiece /*mountPath*/) {
+    return nullptr;
   }
 
   /**

@@ -25,12 +25,74 @@
 
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/WalkDetector.h"
 #include "eden/fs/testharness/StoredObject.h"
 
 namespace facebook::eden {
 
 class FakeTreeBuilder;
 class ServerState;
+
+/**
+ * The WalkDetector of a mount on a FakeBackingStore. Records what the mount
+ * reports so tests can check it.
+ */
+class FakeWalkDetector final : public WalkDetector {
+ public:
+  void witnessFileRead(
+      const ObjectId& id,
+      ObjectFetchContext::Origin /*origin*/,
+      OptionalProcessId /*pid*/,
+      std::optional<ObjectFetchContext::DirEntryCounts> /*parentCounts*/)
+      override {
+    data_.wlock()->fileReads.push_back(id);
+  }
+
+  void witnessTreeRead(
+      const ObjectId& id,
+      const Tree& /*tree*/,
+      ObjectFetchContext::Origin /*origin*/,
+      OptionalProcessId /*pid*/) override {
+    data_.wlock()->treeReads.push_back(id);
+  }
+
+  void witnessDirectorySize(
+      RelativePathPiece path,
+      ObjectFetchContext::DirEntryCounts counts) override {
+    data_.wlock()->directorySizes.emplace_back(path.copy(), counts);
+  }
+
+  void workingCopyParentHint(const RootId& parent) override {
+    data_.wlock()->parents.push_back(parent);
+  }
+
+  std::vector<ObjectId> fileReads() const {
+    return data_.rlock()->fileReads;
+  }
+
+  std::vector<ObjectId> treeReads() const {
+    return data_.rlock()->treeReads;
+  }
+
+  std::vector<std::pair<RelativePath, ObjectFetchContext::DirEntryCounts>>
+  directorySizes() const {
+    return data_.rlock()->directorySizes;
+  }
+
+  std::vector<RootId> parents() const {
+    return data_.rlock()->parents;
+  }
+
+ private:
+  struct Data {
+    std::vector<ObjectId> fileReads;
+    std::vector<ObjectId> treeReads;
+    std::vector<std::pair<RelativePath, ObjectFetchContext::DirEntryCounts>>
+        directorySizes;
+    std::vector<RootId> parents;
+  };
+  folly::Synchronized<Data> data_;
+};
 
 /**
  * A BackingStore implementation for test code.
@@ -206,6 +268,11 @@ class FakeBackingStore final : public BackingStore {
 
   std::vector<ObjectId> getAuxDataLookups() const {
     return data_.rlock()->auxDataLookups;
+  }
+
+  std::shared_ptr<WalkDetector> createWalkDetector(
+      AbsolutePathPiece /*mountPath*/) override {
+    return std::make_shared<FakeWalkDetector>();
   }
 
   void witnessDirectorySize(

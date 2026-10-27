@@ -19,6 +19,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/WalkDetector.h"
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
@@ -645,6 +646,69 @@ void FilteredBackingStore::witnessDirectorySize(
     RelativePathPiece path,
     ObjectFetchContext::DirEntryCounts counts) {
   backingStore_->witnessDirectorySize(path, counts);
+}
+
+namespace {
+
+class FilteredWalkDetector final : public WalkDetector {
+ public:
+  FilteredWalkDetector(
+      std::shared_ptr<WalkDetector> detector,
+      bool isSaplingBackingStore)
+      : detector_{std::move(detector)},
+        isSaplingBackingStore_{isSaplingBackingStore} {}
+
+  void witnessFileRead(
+      const ObjectId& id,
+      ObjectFetchContext::Origin origin,
+      OptionalProcessId pid,
+      std::optional<ObjectFetchContext::DirEntryCounts> parentCounts) override {
+    detector_->witnessFileRead(underlyingId(id), origin, pid, parentCounts);
+  }
+
+  void witnessTreeRead(
+      const ObjectId& id,
+      const Tree& tree,
+      ObjectFetchContext::Origin origin,
+      OptionalProcessId pid) override {
+    detector_->witnessTreeRead(underlyingId(id), tree, origin, pid);
+  }
+
+  void witnessDirectorySize(
+      RelativePathPiece path,
+      ObjectFetchContext::DirEntryCounts counts) override {
+    detector_->witnessDirectorySize(path, counts);
+  }
+
+  void workingCopyParentHint(const RootId& parent) override {
+    auto [rootId, _] = parseFilterIdFromRootId(parent);
+    detector_->workingCopyParentHint(rootId);
+  }
+
+ private:
+  // The entries of a recursively unfiltered tree keep the underlying store's
+  // raw ids, the same fast path `FilteredBackingStore::isSlOid` serves.
+  ObjectId underlyingId(const ObjectId& id) const {
+    if (isSaplingBackingStore_ && SlOid::hasValidType(id)) {
+      return id;
+    }
+    return FilteredObjectId::fromObjectId(id).object();
+  }
+
+  std::shared_ptr<WalkDetector> detector_;
+  bool isSaplingBackingStore_;
+};
+
+} // namespace
+
+std::shared_ptr<WalkDetector> FilteredBackingStore::createWalkDetector(
+    AbsolutePathPiece mountPath) {
+  auto detector = backingStore_->createWalkDetector(mountPath);
+  if (!detector) {
+    return nullptr;
+  }
+  return std::make_shared<FilteredWalkDetector>(
+      std::move(detector), isSaplingBackingStore_);
 }
 
 std::string FilteredBackingStore::renderRootId(const RootId& rootId) {

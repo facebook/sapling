@@ -48,7 +48,10 @@ cpp_library(
     ],
 )
 
-BACKING_STORE_INF = ["BackingStore.h"]
+BACKING_STORE_INF = [
+    "BackingStore.h",
+    "WalkDetector.h",
+]
 
 cpp_library(
     name = "backing_store_interface",
