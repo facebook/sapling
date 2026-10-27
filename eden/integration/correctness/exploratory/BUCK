@@ -413,6 +413,22 @@ python_unittest(
     ],
 )
 
+python_unittest(
+    name = "boundary_test",
+    srcs = ["core/test/boundary_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":core_checker",
+        ":core_containment",
+        ":exhaustive",
+        ":generate",
+        ":scheduler",
+        ":target",
+    ],
+)
+
 python_library(
     name = "testing",
     srcs = ["core/test/testing.py"],
@@ -1570,6 +1586,17 @@ python_unittest(
         ":edenfs_contracts",
         ":edenfs_encoding",
         ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "campaign",
+    srcs = ["core/campaign.py"],
+    deps = [
+        ":core_checker",
+        ":core_containment",
+        ":generate",
         ":target",
     ],
 )
