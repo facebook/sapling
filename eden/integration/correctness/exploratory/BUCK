@@ -665,6 +665,35 @@ python_unittest(
 )
 
 python_unittest(
+    name = "edenfs_contracts_checkout_semantics_test",
+    srcs = ["edenfs/test/contracts_checkout_semantics_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_contracts",
+        ":edenfs_contracts_fixtures",
+        ":edenfs_encoding",
+        ":edenfs_testing",
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_contracts_interruption_test",
+    srcs = ["edenfs/test/contracts_interruption_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_contracts",
+        ":edenfs_contracts_fixtures",
+        ":edenfs_testing",
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
     name = "edenfs_contracts_checkout_structure_test",
     srcs = ["edenfs/test/contracts_checkout_structure_test.py"],
     compatible_with = ["ovr_config//os:linux"],
