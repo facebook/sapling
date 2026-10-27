@@ -1830,6 +1830,23 @@ python_library(
     ],
 )
 
+python_library(
+    name = "campaign_fixtures",
+    srcs = ["test/campaign_fixtures.py"],
+    resources = glob(["edenfs/test/red_controls/**/*"]),
+    deps = [
+        ":campaign",
+        ":core_checker",
+        ":core_containment",
+        ":corpus_author",
+        ":edenfs_target",
+        ":generate",
+        ":generation_fixtures",
+        ":target",
+        ":tasking",
+    ],
+)
+
 python_unittest(
     name = "schemas_test",
     srcs = ["test/schemas_test.py"],
@@ -1889,6 +1906,98 @@ python_unittest(
         ":fake_target",
         ":target",
         ":tasking",
+    ],
+)
+
+python_unittest(
+    name = "campaign_run_test",
+    srcs = ["test/campaign_run_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":cli_fixtures",
+        ":containment",
+        ":core_containment",
+        ":fake_target",
+        ":generate",
+        ":target",
+        ":targets",
+        ":tasking",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "telemetry_test",
+    srcs = ["test/telemetry_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":cli_fixtures",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":fake_target",
+        ":target",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "campaign_report_test",
+    srcs = ["test/campaign_report_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":cli_fixtures",
+        ":containment",
+        ":core_containment",
+        ":edenfs_target",
+        ":fake_target",
+        ":target",
+        ":targets",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "campaign_account_test",
+    srcs = ["test/campaign_account_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":cli_fixtures",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_testing",
+        ":fake_target",
+        ":target",
+        ":targets",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "campaign_plan_test",
+    srcs = ["test/campaign_plan_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":cli_fixtures",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_target",
+        ":fake_target",
+        ":generate",
+        ":target",
+        ":targets",
     ],
 )
 
