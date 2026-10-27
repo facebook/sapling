@@ -681,7 +681,23 @@ folly::File openFileNoVerifyWithFlags(
     InodeNumber inodeNumber,
     const InodePath& path,
     int flags) {
-  int fd = openat(dirFd, path.c_str(), flags | O_CLOEXEC | O_NOFOLLOW);
+  flags |= O_CLOEXEC | O_NOFOLLOW;
+#ifdef O_NOATIME
+  // Reading an overlay file can update atime and force a later fdatasync() to
+  // persist otherwise-clean metadata. Overlay files normally belong to the
+  // daemon user; retry without O_NOATIME if an overlay has different ownership.
+  int fd = openat(dirFd, path.c_str(), flags | O_NOATIME);
+  if (fd < 0 && errno == EPERM) {
+    XLOGF(
+        DBG3,
+        "O_NOATIME open returned EPERM for overlay inode {} in {}; retrying without O_NOATIME",
+        inodeNumber,
+        localDir.view());
+    fd = openat(dirFd, path.c_str(), flags);
+  }
+#else
+  int fd = openat(dirFd, path.c_str(), flags);
+#endif
   folly::checkUnixError(
       fd,
       fmt::format(
