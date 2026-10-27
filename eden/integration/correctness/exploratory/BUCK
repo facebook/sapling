@@ -474,6 +474,37 @@ python_unittest(
     ],
 )
 
+python_library(
+    name = "edenfs_encoding",
+    srcs = ["edenfs/encoding.py"],
+)
+
+python_library(
+    name = "edenfs_fixture",
+    srcs = ["edenfs/fixture.py"],
+    deps = [
+        ":edenfs_encoding",
+        ":target",
+        "//eden/integration/correctness:repo",
+    ],
+)
+
+python_library(
+    name = "edenfs_actions",
+    srcs = [
+        "edenfs/actions.py",
+        "edenfs/observation_bounds.py",
+        "edenfs/sites.py",
+    ],
+    deps = [
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":sites",
+        ":target",
+        "//eden/integration/correctness:repo",
+    ],
+)
+
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
 # Typed task identity, the findings report, replay, and the run admission and
