@@ -543,6 +543,41 @@ python_unittest(
 )
 
 python_unittest(
+    name = "edenfs_actions_test",
+    srcs = ["edenfs/test/actions_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_actions_fixtures",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "edenfs_actions_fixtures",
+    srcs = ["edenfs/test/actions_fixtures.py"],
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_testing",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_actions_differential_test",
+    srcs = ["edenfs/test/actions_differential_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_actions_fixtures",
+        ":target",
+        "//eden/integration/correctness:repo",
+    ],
+)
+
+python_unittest(
     name = "edenfs_sites_test",
     srcs = ["edenfs/test/sites_test.py"],
     compatible_with = ["ovr_config//os:linux"],
