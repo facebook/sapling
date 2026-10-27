@@ -1316,6 +1316,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * This helper function starts loading a currently unloaded child inode.
    * Must be called with the contents_ lock held.
+   * name must use the canonical spelling from the DirEntry key, which may
+   * differ from the source-control spelling on case-insensitive mounts.
    */
   ImmediateFuture<InodePtr> loadChildLocked(
       PathComponentPiece name,

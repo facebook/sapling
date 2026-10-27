@@ -1430,6 +1430,51 @@ TEST_P(CheckoutTest, checkoutCaseChangedTreeInsensitive) {
       testMount.getFileInode("dir/file1"_relpath), "lower one", 0644);
 }
 
+TEST_P(CheckoutTest, checkoutRememberedChildWithDifferentCaseInsensitive) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder, true, true, CaseSensitivity::Insensitive};
+  applyParam(testMount);
+  testMount.addFile("Foo", "local\n");
+
+  auto child = testMount.getFileInode("Foo");
+  auto childNumber = child->getNodeId();
+  child->incFsRefcount();
+  child.reset();
+  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
+  SCOPE_EXIT {
+    inodeMap->decFsRefcount(childNumber);
+  };
+  testMount.getRootInode()->unloadChildrenNow();
+  ASSERT_TRUE(inodeMap->isInodeRemembered(childNumber));
+  {
+    auto contents = testMount.getRootInode()->lockContentsRead();
+    auto it = contents->entries.find("foo"_pc);
+    ASSERT_NE(it, contents->entries.end());
+    ASSERT_EQ(it->first, "Foo"_pc);
+    ASSERT_EQ(it->second.getInode(), nullptr);
+  }
+
+  FakeTreeBuilder targetBuilder;
+  targetBuilder.setFile("foo", "tracked\n");
+  targetBuilder.finalize(testMount.getBackingStore(), true);
+  testMount.getBackingStore()->putCommit("2", targetBuilder)->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto result = testMount.getEdenMount()
+                    ->checkout(
+                        testMount.getRootInode(),
+                        RootId{"2"},
+                        ObjectFetchContext::getNullContext(),
+                        __func__,
+                        CheckoutMode::FORCE)
+                    .semi()
+                    .via(executor)
+                    .getVia(executor);
+  ASSERT_EQ(result.conflicts.size(), 1);
+  EXPECT_EQ(*result.conflicts[0].type(), ConflictType::UNTRACKED_ADDED);
+  EXPECT_FILE_INODE(testMount.getFileInode("foo"), "tracked\n", 0644);
+}
+
 TEST_P(CheckoutTest, checkoutCaseChangedTreeToFileInsensitive) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("root", "root");

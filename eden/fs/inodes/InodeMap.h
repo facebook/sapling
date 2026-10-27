@@ -367,7 +367,9 @@ class InodeMap {
    * startLoadingChildIfNotLoading() will be called when TreeInode wants to load
    * one of its child entries that already has an allocated inode number.  It
    * returns true if the TreeInode should start loading the inode now, or false
-   * if the inode is already being loaded. If it will return true, the function
+   * if the inode is already being loaded or the entry conflicts with another
+   * reference to this inode (in which case the promise receives EIO).
+   * If it will return true, the function
    * publishes an event to tracebus marking the start of the inode load and
    * attaches an initial promise to the inode to resolve when the load ends.
    *
@@ -392,8 +394,7 @@ class InodeMap {
    *   The InodeMap is responsible for fulfilling this promise.
    *
    * @return Returns true if the TreeInode should continue loading this child
-   *   inode, or false if this child was already being loaded or its number is
-   *   loaded under another entry.
+   *   inode, or false if this child was already being loaded or was rejected.
    */
   bool startLoadingChildIfNotLoading(
       TreeInode* parent,
@@ -548,6 +549,13 @@ class InodeMap {
      * Helper function to get an InodeType from the inode's mode attribute
      */
     InodeType getInodeType() const;
+
+    // Match the linked binding and file type; permission bits may have changed
+    // since the parent's DirEntry recorded its initial mode.
+    bool matchesLinkedChild(
+        InodeNumber parentNumber,
+        PathComponentPiece entryName,
+        mode_t initialMode) const;
 
     /**
      * If the entry is not materialized, this contains the id

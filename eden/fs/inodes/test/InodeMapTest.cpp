@@ -113,6 +113,41 @@ TEST(InodeMap, loadFaultFailsAllPendingLookupsAndAllowsRetry) {
   EXPECT_EQ(number, inodeMap->lookupInode(number).get(0ms)->getNodeId());
 }
 
+TEST(InodeMap, rejectsConflictingConcurrentChildLoad) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  auto* inodeMap = testMount.getEdenMount()->getInodeMap();
+  auto parent = testMount.getEdenMount()->getRootInode();
+  const InodeNumber child{1234};
+
+  folly::Promise<InodePtr> firstPromise;
+  auto firstFuture = firstPromise.getSemiFuture();
+  EXPECT_TRUE(inodeMap->startLoadingChildIfNotLoading(
+      parent.get(),
+      "first"_pc,
+      child,
+      S_IFREG | 0644,
+      std::move(firstPromise)));
+
+  folly::Promise<InodePtr> conflictingPromise;
+  auto conflictingFuture = conflictingPromise.getSemiFuture();
+  EXPECT_FALSE(inodeMap->startLoadingChildIfNotLoading(
+      parent.get(),
+      "second"_pc,
+      child,
+      S_IFREG | 0644,
+      std::move(conflictingPromise)));
+  EXPECT_THROW_RE(
+      std::move(conflictingFuture).get(),
+      std::system_error,
+      "conflicting inode reference to inode 1234");
+
+  inodeMap->inodeLoadFailed(
+      child,
+      folly::make_exception_wrapper<std::runtime_error>("stop test load"));
+  EXPECT_THROW(std::move(firstFuture).get(), std::runtime_error);
+}
+
 #ifdef __linux__
 TEST(InodeMap, forgetMultipleReferencesFromLoadedInode) {
   FakeTreeBuilder builder;

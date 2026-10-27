@@ -96,6 +96,14 @@ InodeType InodeMap::UnloadedInode::getInodeType() const {
   return S_ISDIR(mode) ? InodeType::TREE : InodeType::FILE;
 }
 
+bool InodeMap::UnloadedInode::matchesLinkedChild(
+    InodeNumber parentNumber,
+    PathComponentPiece entryName,
+    mode_t initialMode) const {
+  return parent == parentNumber && name == entryName && !isUnlinked &&
+      (mode & S_IFMT) == (initialMode & S_IFMT);
+}
+
 InodeMap::InodeMap(
     EdenMount* mount,
     std::shared_ptr<ReloadableConfig> config,
@@ -1391,6 +1399,22 @@ bool InodeMap::startLoadingChildIfNotLoading(
     }
     UnloadedInode* unloadedData{nullptr};
     auto iter = data->unloadedInodes_.find(childInode);
+    // The caller holds the parent's contents lock and its DirEntry has no
+    // inode pointer. A loaded inode therefore belongs to a different entry.
+    // Likewise, only the same linked entry may join an in-progress load.
+    // A torn rename can leave two disk entries referring to the same inode;
+    // do not attach the second entry to that inode or its load promises.
+    if (iter != data->unloadedInodes_.end() &&
+        !iter->second.matchesLinkedChild(parent->getNodeId(), name, mode)) {
+      data.unlock();
+      promise.setException(
+          folly::make_exception_wrapper<std::system_error>(
+              EIO,
+              std::generic_category(),
+              fmt::format(
+                  "conflicting inode reference to inode {}", childInode)));
+      return false;
+    }
     if (iter == data->unloadedInodes_.end()) {
       InodeNumber parentNumber = parent->getNodeId();
       // T127459236: not all attributes of the UnloadedInode are set here. For

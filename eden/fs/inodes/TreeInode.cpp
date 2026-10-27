@@ -5439,7 +5439,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     // updated), but is not currently loaded. Start loading it and create a
     // CheckoutAction to process it once it is loaded.
     auto inodeFuture =
-        loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+        loadChildLocked(it->first, entry, pendingLoads, ctx->getFetchContext());
     if (entry.isDirectory() && !entry.isMaterialized() &&
         entry.isRestricted() && oldScmEntry && oldScmEntry->second.isTree() &&
         destinationIsRestrictedTree) {
@@ -5478,8 +5478,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       case ObjectComparison::Unknown: {
         // We don't know if the files are different or not. The only way to know
         // for sure is to load the inode.
-        auto inodeFuture =
-            loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+        auto inodeFuture = loadChildLocked(
+            it->first, entry, pendingLoads, ctx->getFetchContext());
         return std::make_shared<CheckoutAction>(
             ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
       }
@@ -5499,8 +5499,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     // If this is a directory we unfortunately have to load it and recurse into
     // it just so we can accurately report the list of files with conflicts.
     if (entry.isDirectory()) {
-      auto inodeFuture =
-          loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+      auto inodeFuture = loadChildLocked(
+          it->first, entry, pendingLoads, ctx->getFetchContext());
       return std::make_shared<CheckoutAction>(
           ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
     }
@@ -5549,8 +5549,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
             "loading child inode after invalidation failed: inode={} child={}",
             getNodeId(),
             name);
-        auto inodeFuture =
-            loadChildLocked(name, entry, pendingLoads, ctx->getFetchContext());
+        auto inodeFuture = loadChildLocked(
+            it->first, entry, pendingLoads, ctx->getFetchContext());
         return std::make_shared<CheckoutAction>(
             ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
       }
