@@ -878,6 +878,23 @@ python_library(
     ],
 )
 
+# The kernel as the reference for the POSIX layer: real concurrent histories.
+python_unittest(
+    name = "edenfs_posix_lane_test",
+    srcs = ["edenfs/test/posix_lane_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":edenfs_reference",
+        ":edenfs_target",
+        ":scheduler",
+        ":target",
+    ],
+)
+
 python_unittest(
     name = "edenfs_properties_test",
     srcs = ["edenfs/test/properties_test.py"],
@@ -1155,6 +1172,14 @@ python_unittest(
         ":target",
         "//eden/integration/correctness:repo",
     ],
+)
+
+python_unittest(
+    name = "edenfs_results_test",
+    srcs = ["edenfs/test/file_results_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [":edenfs_results"],
 )
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
