@@ -9,6 +9,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -35,6 +36,7 @@ use types::fetch_mode::FetchMode;
 use crate::backingstore::BackingStore;
 use crate::backingstore::HgCacheStats;
 use crate::ffi_errors::into_backingstore_err;
+use crate::walk::WalkDetector;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -452,6 +454,50 @@ pub(crate) mod ffi {
 
         pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str);
 
+        /// Walk detection for one mount of the store. The witness functions take the store the
+        /// detector was created from so it follows the store's current configuration.
+        type WalkDetector;
+
+        pub fn sapling_backingstore_walk_detector(
+            store: &BackingStore,
+            mount: &str,
+        ) -> Box<WalkDetector>;
+
+        pub fn sapling_walk_detector_witness_file_read(
+            store: &BackingStore,
+            detector: &WalkDetector,
+            path: &[u8],
+            local: bool,
+            pid: u32,
+            dir_size_known: bool,
+            dir_num_files: usize,
+            dir_num_dirs: usize,
+        );
+
+        pub fn sapling_walk_detector_witness_dir_read(
+            store: &BackingStore,
+            detector: &WalkDetector,
+            path: &[u8],
+            num_files: usize,
+            num_dirs: usize,
+            local: bool,
+            pid: u32,
+        );
+
+        pub fn sapling_walk_detector_witness_dir_size(
+            store: &BackingStore,
+            detector: &WalkDetector,
+            path: &[u8],
+            num_files: usize,
+            num_dirs: usize,
+        );
+
+        pub fn sapling_walk_detector_set_parent_hint(
+            store: &BackingStore,
+            detector: &WalkDetector,
+            parent_id: &str,
+        );
+
         pub fn sapling_backingstore_get_cache_stats(store: &BackingStore) -> GetCacheStatsResult;
 
         pub fn sapling_flush_counters();
@@ -606,6 +652,83 @@ pub fn sapling_backingstore_new(
 
     let store = BackingStore::new_with_config(repository, mount, &extra_sapling_configs)?;
     Ok(Box::new(store))
+}
+
+pub fn sapling_backingstore_walk_detector(store: &BackingStore, mount: &str) -> Box<WalkDetector> {
+    Box::new(store.walk_detector(Path::new(mount)))
+}
+
+/// The path of a walk report. Paths from sapling object ids were copied from a Sapling `RepoPath`
+/// and inode paths passed EdenFS's component checks, so only UTF-8 is left to verify: a checkout
+/// without `require-utf8-path` can hold a local directory name that is not, and such a report is
+/// dropped.
+fn walk_path(path: &[u8]) -> Option<&RepoPath> {
+    match std::str::from_utf8(path) {
+        // SAFETY: the components were validated by Sapling or EdenFS, as described above.
+        Ok(path) => Some(unsafe { RepoPath::from_str_unchecked(path) }),
+        Err(err) => {
+            tracing::debug!(?err, "ignoring walk report for a non-UTF-8 path");
+            None
+        }
+    }
+}
+
+pub fn sapling_walk_detector_witness_file_read(
+    store: &BackingStore,
+    detector: &WalkDetector,
+    path: &[u8],
+    local: bool,
+    pid: u32,
+    dir_size_known: bool,
+    dir_num_files: usize,
+    dir_num_dirs: usize,
+) {
+    let Some(path) = walk_path(path) else {
+        return;
+    };
+    detector.witness_file_read(
+        store,
+        path,
+        local,
+        pid,
+        dir_size_known.then_some((dir_num_files, dir_num_dirs)),
+    );
+}
+
+pub fn sapling_walk_detector_witness_dir_read(
+    store: &BackingStore,
+    detector: &WalkDetector,
+    path: &[u8],
+    num_files: usize,
+    num_dirs: usize,
+    local: bool,
+    pid: u32,
+) {
+    let Some(path) = walk_path(path) else {
+        return;
+    };
+    detector.witness_dir_read(store, path, local, num_files, num_dirs, pid);
+}
+
+pub fn sapling_walk_detector_witness_dir_size(
+    store: &BackingStore,
+    detector: &WalkDetector,
+    path: &[u8],
+    num_files: usize,
+    num_dirs: usize,
+) {
+    let Some(path) = walk_path(path) else {
+        return;
+    };
+    detector.witness_dir_size(store, path, num_files, num_dirs);
+}
+
+pub fn sapling_walk_detector_set_parent_hint(
+    store: &BackingStore,
+    detector: &WalkDetector,
+    parent_id: &str,
+) {
+    detector.set_parent_hint(store, parent_id);
 }
 
 pub fn sapling_backingstore_set_scribe_logging_enabled(enabled: bool) {
