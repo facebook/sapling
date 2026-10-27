@@ -1,4 +1,6 @@
+load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
@@ -6,6 +8,8 @@ load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_
 load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 oncall("scm_client_infra")
+
+artifacts = get_integration_test_env_and_deps()
 
 python_library(
     name = "target",
@@ -1180,6 +1184,34 @@ python_unittest(
     compatible_with = ["ovr_config//os:linux"],
     network_access = network_access_utils.none(),
     deps = [":edenfs_results"],
+)
+
+python_integration_test(
+    name = "environment_test",
+    srcs = ["edenfs/test/environment_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":core_containment",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":environment",
+        ":environment_fixtures",
+        ":target",
+        "//eden/integration/correctness:repo",
+        "//eden/test_support:py",
+    ],
+)
+
+python_library(
+    name = "environment_fixtures",
+    srcs = ["edenfs/test/environment_fixtures.py"],
+    deps = [
+        ":edenfs_target",
+        ":target",
+    ],
 )
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
