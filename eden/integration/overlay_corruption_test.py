@@ -13,6 +13,7 @@ on-disk overlay data, and records the following user-visible results:
   first     start EdenFS with the corrupted data, then walk the directory
   restart   cleanly restart and repeat the walk (`unchanged` if it matches
             `first`), forcing a reload from disk
+  archive   corrupt directory inputs preserved by online fsck
   fsck      problems `eden fsck --check-only` attributes to the case
   mv        rename `b` to `b2`, then back to `b`
   rm        delete from the bottom up, stopping at the first error
@@ -82,8 +83,8 @@ _BAD_MODE: int = 0x0F000000 | _REG
 # problems can be attributed.
 _BIG_INODE: int = 1 << 40
 
-_COLUMNS = ("first", "restart", "fsck", "mv", "rm", "recreate")
-_WIDTHS = (20, 20, 18, 23, 9, 11, 8)
+_COLUMNS = ("first", "restart", "archive", "fsck", "mv", "rm", "recreate")
+_WIDTHS = (20, 20, 18, 9, 23, 9, 11, 8)
 
 _FSCK_PATTERNS: List[Tuple[re.Pattern[str], str, int]] = [
     (re.compile(r"error reading data for inode (\d+)"), "data", 0),
@@ -362,83 +363,83 @@ CASES: List[Case] = [
 ]
 
 EXPECTED_ONLINE_FSCK_OFF = """
-case                 | first                | restart            | fsck                    | mv        | rm          | recreate
-control              | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-base_bad_mode        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_no_mode         | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_big_inode       | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_root_inode      | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_zero_inode      | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_bad_name        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_dup_name        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_dup_inode       | a b:EIO s/ s/f       | unchanged          | hardlink,orphan         | ok        | a:EIO       | -
-base_self_ref        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_unknown_field   | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_trailing        | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_negative_inode  | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_no_stop         | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_truncated       | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_cycle_x         | a b s/ s/f s/p:EIO   | unchanged          | hardlink                | ok        | s/p:EIO     | -
-base_mode_conflict_x | a b s/ s/f s/g:EIO   | unchanged          | hardlink                | ok        | ok          | ok
-wal_bad_mode         | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_big_inode        | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_shadow_big_inode | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-wal_root_inode       | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_zero_inode       | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_negative_inode   | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_bad_name         | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-wal_rename_crash     | b c:"a" s/ s/f       | unchanged          | -                       | ok        | ok          | ok
-wal_rename_crash_rev | 0:"a" b s/ s/f       | unchanged          | -                       | ok        | ok          | ok
-wal_rename_crash_x   | a b s/ s/f s/g:EIO   | unchanged          | hardlink                | ok        | ok          | ok
-wal_self_ref         | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_torn             | b s/ s/f             | unchanged          | orphan                  | ok        | ok          | ok
-wal_torn_len         | b s/ s/f             | unchanged          | orphan                  | ok        | ok          | ok
-wal_remove_payload   | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-file_bad_header      | a b s/ s/f           | unchanged          | data                    | ok        | ok          | ok
-file_truncated       | a b:EIO s/ s/f       | unchanged          | data                    | ok        | b:EIO       | -
-file_missing         | a b:ENOENT s/ s/f    | unchanged          | missing                 | ok        | b:ENOENT    | -
-subdir_truncated     | a b s:EIO            | unchanged          | data,orphan             | ok        | s:EIO       | -
-subdir_missing       | a b s/               | unchanged          | missing,orphan          | ok        | ok          | ok
+case                 | first                | restart            | archive   | fsck                    | mv        | rm          | recreate
+control              | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+base_bad_mode        | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_no_mode         | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_big_inode       | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_root_inode      | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_zero_inode      | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_bad_name        | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_dup_name        | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_dup_inode       | a b:EIO s/ s/f       | unchanged          | -         | hardlink,orphan         | ok        | a:EIO       | -
+base_self_ref        | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_unknown_field   | .:EIO                | unchanged          | -         | data,orphan             | b:EIO     | .:EIO       | -
+base_trailing        | .:EIO                | unchanged          | -         | data,orphan             | b:EIO     | .:EIO       | -
+base_negative_inode  | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+base_no_stop         | .:EIO                | unchanged          | -         | data,orphan             | b:EIO     | .:EIO       | -
+base_truncated       | .:EIO                | unchanged          | -         | data,orphan             | b:EIO     | .:EIO       | -
+base_cycle_x         | a b s/ s/f s/p:EIO   | unchanged          | -         | hardlink                | ok        | s/p:EIO     | -
+base_mode_conflict_x | a b s/ s/f s/g:EIO   | unchanged          | -         | hardlink                | ok        | ok          | ok
+wal_bad_mode         | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+wal_big_inode        | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+wal_shadow_big_inode | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+wal_root_inode       | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+wal_zero_inode       | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+wal_negative_inode   | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+wal_bad_name         | a s/ s/f             | unchanged          | -         | orphan                  | b:ENOENT  | ok          | ok
+wal_rename_crash     | b c:"a" s/ s/f       | unchanged          | -         | -                       | ok        | ok          | ok
+wal_rename_crash_rev | 0:"a" b s/ s/f       | unchanged          | -         | -                       | ok        | ok          | ok
+wal_rename_crash_x   | a b s/ s/f s/g:EIO   | unchanged          | -         | hardlink                | ok        | ok          | ok
+wal_self_ref         | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+wal_torn             | b s/ s/f             | unchanged          | -         | orphan                  | ok        | ok          | ok
+wal_torn_len         | b s/ s/f             | unchanged          | -         | orphan                  | ok        | ok          | ok
+wal_remove_payload   | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+file_bad_header      | a b s/ s/f           | unchanged          | -         | data                    | ok        | ok          | ok
+file_truncated       | a b:EIO s/ s/f       | unchanged          | -         | data                    | ok        | b:EIO       | -
+file_missing         | a b:ENOENT s/ s/f    | unchanged          | -         | missing                 | ok        | b:ENOENT    | -
+subdir_truncated     | a b s:EIO            | unchanged          | -         | data,orphan             | ok        | s:EIO       | -
+subdir_missing       | a b s/               | unchanged          | -         | missing,orphan          | ok        | ok          | ok
 """
 
 EXPECTED_ONLINE_FSCK_ON = """
-case                 | first                | restart            | fsck                    | mv        | rm          | recreate
-control              | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-base_bad_mode        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_no_mode         | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_big_inode       | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_root_inode      | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_zero_inode      | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_bad_name        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_dup_name        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_dup_inode       | a b:EIO s/ s/f       | unchanged          | hardlink,orphan         | ok        | a:EIO       | -
-base_self_ref        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_unknown_field   | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_trailing        | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_negative_inode  | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-base_no_stop         | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_truncated       | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
-base_cycle_x         | a b s/ s/f s/p:EIO   | unchanged          | hardlink                | ok        | s/p:EIO     | -
-base_mode_conflict_x | a b s/ s/f s/g:EIO   | unchanged          | hardlink                | ok        | ok          | ok
-wal_bad_mode         | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_big_inode        | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_shadow_big_inode | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-wal_root_inode       | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_zero_inode       | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_negative_inode   | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_bad_name         | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
-wal_rename_crash     | b c:"a" s/ s/f       | unchanged          | -                       | ok        | ok          | ok
-wal_rename_crash_rev | 0:"a" b s/ s/f       | unchanged          | -                       | ok        | ok          | ok
-wal_rename_crash_x   | a b s/ s/f s/g:EIO   | unchanged          | hardlink                | ok        | ok          | ok
-wal_self_ref         | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-wal_torn             | b s/ s/f             | unchanged          | orphan                  | ok        | ok          | ok
-wal_torn_len         | b s/ s/f             | unchanged          | orphan                  | ok        | ok          | ok
-wal_remove_payload   | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
-file_bad_header      | a b s/ s/f           | unchanged          | data                    | ok        | ok          | ok
-file_truncated       | a b:EIO s/ s/f       | unchanged          | data                    | ok        | b:EIO       | -
-file_missing         | a b:ENOENT s/ s/f    | unchanged          | missing                 | ok        | b:ENOENT    | -
-subdir_truncated     | a b s:EIO            | unchanged          | data,orphan             | ok        | s:EIO       | -
-subdir_missing       | a b s/               | unchanged          | missing,orphan          | ok        | ok          | ok
+case                 | first                | restart            | archive   | fsck                    | mv        | rm          | recreate
+control              | a b s/ s/f           | unchanged          | -         | -                       | ok        | ok          | ok
+base_bad_mode        | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_no_mode         | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_big_inode       | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_root_inode      | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_zero_inode      | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_bad_name        | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_dup_name        | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_dup_inode       | a b:EIO s/ s/f       | unchanged          | -         | hardlink,orphan         | ok        | a:EIO       | -
+base_self_ref        | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_unknown_field   | a b s/ s/f           | unchanged          | dir       | -                       | ok        | ok          | ok
+base_trailing        | a b s/ s/f           | unchanged          | dir       | -                       | ok        | ok          | ok
+base_negative_inode  | a s/ s/f             | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_no_stop         | a b s/ s/f           | unchanged          | dir       | -                       | ok        | ok          | ok
+base_truncated       | a                    | unchanged          | dir       | orphan                  | b:ENOENT  | ok          | ok
+base_cycle_x         | a b s/ s/f s/p:EIO   | unchanged          | -         | hardlink                | ok        | s/p:EIO     | -
+base_mode_conflict_x | a b s/ s/f s/g:EIO   | unchanged          | -         | hardlink                | ok        | ok          | ok
+wal_bad_mode         | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+wal_big_inode        | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+wal_shadow_big_inode | a s/ s/f             | unchanged          | dir,wal   | orphan                  | b:ENOENT  | ok          | ok
+wal_root_inode       | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+wal_zero_inode       | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+wal_negative_inode   | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+wal_bad_name         | a s/ s/f             | unchanged          | dir,wal   | orphan                  | b:ENOENT  | ok          | ok
+wal_rename_crash     | b c:"a" s/ s/f       | unchanged          | -         | -                       | ok        | ok          | ok
+wal_rename_crash_rev | 0:"a" b s/ s/f       | unchanged          | -         | -                       | ok        | ok          | ok
+wal_rename_crash_x   | a b s/ s/f s/g:EIO   | unchanged          | -         | hardlink                | ok        | ok          | ok
+wal_self_ref         | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+wal_torn             | b s/ s/f             | unchanged          | dir,wal   | orphan                  | ok        | ok          | ok
+wal_torn_len         | b s/ s/f             | unchanged          | dir,wal   | orphan                  | ok        | ok          | ok
+wal_remove_payload   | a b s/ s/f           | unchanged          | dir,wal   | -                       | ok        | ok          | ok
+file_bad_header      | a b s/ s/f           | unchanged          | -         | data                    | ok        | ok          | ok
+file_truncated       | a b:EIO s/ s/f       | unchanged          | -         | data                    | ok        | b:EIO       | -
+file_missing         | a b:ENOENT s/ s/f    | unchanged          | -         | missing                 | ok        | b:ENOENT    | -
+subdir_truncated     | a b s/               | unchanged          | dir       | orphan                  | ok        | ok          | ok
+subdir_missing       | a b s/               | unchanged          | -         | missing,orphan          | ok        | ok          | ok
 """
 
 
@@ -564,6 +565,19 @@ class OverlayCorruptionTestBase(testcase.HgRepoTestMixin, testcase.EdenRepoTest)
             return _errname(e)
         return "ok"
 
+    def _archive(self, ctx: Ctx) -> str:
+        repair_root = ctx.overlay_dir.parent / "fsck"
+        if not repair_root.exists():
+            return "-"
+        inodes = set(ctx.ino.values())
+        kinds: Set[str] = set()
+        for repair_dir in repair_root.iterdir():
+            for path in repair_dir.iterdir():
+                match = re.fullmatch(r"(-?\d+)\.(dir|wal)(?:\.\d+)?", path.name)
+                if match and int(match.group(1)) in inodes:
+                    kinds.add(match.group(2))
+        return ",".join(sorted(kinds)) or "-"
+
     def _fsck(self, mount: pathlib.Path, ctxs: Dict[str, Ctx]) -> Dict[str, str]:
         result = self.eden.run_unchecked(
             "fsck",
@@ -649,8 +663,10 @@ class OverlayCorruptionTestBase(testcase.HgRepoTestMixin, testcase.EdenRepoTest)
         self._phase(mount, results, "restart", walk)
 
         self.eden.shutdown()
+        archive = {n: self._archive(ctx) for n, ctx in ctxs.items()}
         fsck = self._fsck(mount, ctxs)
         self._start(mount)
+        self._phase(mount, results, "archive", archive)
         self._phase(mount, results, "fsck", fsck)
 
         mv = {n: self._mv(d) for n, d in dirs.items()}

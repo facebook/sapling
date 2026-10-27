@@ -15,6 +15,7 @@
 
 #ifndef _WIN32
 #include <fcntl.h>
+#include <sys/stat.h>
 #endif
 
 #include <fmt/format.h>
@@ -51,11 +52,20 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/EdenError.h"
 
+#ifndef _WIN32
+#include "eden/fs/inodes/fscatalog/InodePath.h"
+#endif
+
 namespace facebook::eden {
 
 namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
+
+class OverlayEntryCorruption : public OverlayDataCorruption {
+ public:
+  using OverlayDataCorruption::OverlayDataCorruption;
+};
 
 #ifndef _WIN32
 constexpr folly::StringPiece kInodeReservationFile{"inode-reservation"};
@@ -646,7 +656,92 @@ void Overlay::saveInodeReservation(uint64_t reservation) {
   folly::checkUnixError(
       fsyncResult, "Failed to persist inode reservation in ", localDir_.view());
 }
+
+const AbsolutePath& Overlay::getOrCreateOnlineRepairDir() {
+  std::lock_guard lock{onlineRepairMutex_};
+  if (onlineRepairDir_) {
+    return *onlineRepairDir_;
+  }
+
+  auto baseDir = localDir_.dirname() + PathComponentPiece{"fsck"};
+  ensureDirectoryExists(baseDir);
+  for (size_t attempt = 0; attempt < 100; ++attempt) {
+    auto name = attempt == 0 ? fmt::format("online-{}", getpid())
+                             : fmt::format("online-{}.{}", getpid(), attempt);
+    auto candidate = baseDir + PathComponent{name};
+    if (::mkdir(candidate.c_str(), 0700) == 0) {
+      onlineRepairDir_ = std::move(candidate);
+      return *onlineRepairDir_;
+    }
+    if (errno != EEXIST) {
+      folly::throwSystemError("failed to create online fsck repair directory");
+    }
+  }
+  folly::throwSystemErrorExplicit(
+      EEXIST, "unable to allocate online fsck repair directory");
+}
+
+void Overlay::archiveOverlayFile(
+    InodeNumber inodeNumber,
+    folly::StringPiece suffix,
+    bool wal) {
+  AbsolutePath source = [&] {
+    if (!wal) {
+      return static_cast<FsFileContentStore*>(fileContentStore_.get())
+          ->getAbsoluteFilePath(inodeNumber);
+    }
+    auto path = FsFileContentStore::getWalPath(inodeNumber);
+    return localDir_ + RelativePathPiece{path.c_str()};
+  }();
+  const auto& repairDir = getOrCreateOnlineRepairDir();
+  for (size_t attempt = 0; attempt < 100; ++attempt) {
+    auto name = attempt == 0
+        ? fmt::format("{}{}", inodeNumber, suffix)
+        : fmt::format("{}{}.{}", inodeNumber, suffix, attempt);
+    auto destination = repairDir + PathComponent{name};
+    if (::link(source.c_str(), destination.c_str()) == 0) {
+      XLOGF(
+          WARN,
+          "Archived corrupt overlay data for inode {} at {}",
+          inodeNumber,
+          destination);
+      return;
+    }
+    if (errno == ENOENT) {
+      return;
+    }
+    if (errno != EEXIST) {
+      folly::throwSystemError(
+          "failed to archive corrupt overlay data for inode ",
+          inodeNumber.get());
+    }
+  }
+  folly::throwSystemErrorExplicit(
+      EEXIST,
+      fmt::format(
+          "unable to archive corrupt overlay data for inode {}", inodeNumber));
+}
 #endif
+
+void Overlay::recoverOverlayDir(
+    InodeNumber inodeNumber,
+    const DirContents& dir) {
+#ifndef _WIN32
+  // Preserve the complete input pair, even if only one part was corrupt.
+  archiveOverlayFile(inodeNumber, ".dir", /*wal=*/false);
+  if (canHaveWalFiles()) {
+    archiveOverlayFile(inodeNumber, ".wal", /*wal=*/true);
+  }
+  // Publish the recovered base before removing its now-redundant WAL. If the
+  // process stops between those operations, replaying the stale net delta is
+  // idempotent and preserves the recovered contents.
+  saveOverlayDir(inodeNumber, dir, /*isMaterialized=*/true);
+  stats_->increment(&OverlayStats::onlineFsckDirectoryRecovery);
+#else
+  (void)inodeNumber;
+  (void)dir;
+#endif
+}
 
 void Overlay::validateOverlayEntry(
     InodeNumber parentInodeNumber,
@@ -654,7 +749,7 @@ void Overlay::validateOverlayEntry(
     const overlay::OverlayEntry& entry,
     std::string_view source) const {
   auto corruption = [&](std::string_view reason) {
-    return OverlayDataCorruption{fmt::format(
+    return OverlayEntryCorruption{fmt::format(
         "{} ({} entry: parent inode {}, name hex \"{}\", inode {})",
         reason,
         source,
@@ -695,7 +790,8 @@ void Overlay::validateOverlayEntry(
 bool Overlay::buildDirEntries(
     InodeNumber inodeNumber,
     OverlayEntrySource source,
-    folly::fbvector<std::pair<PathComponent, DirEntry>>& entries) {
+    folly::fbvector<std::pair<PathComponent, DirEntry>>& entries,
+    bool& droppedCorruptEntry) {
   bool shouldRewriteOverlay = false;
 
   source([&](const std::string& name, const overlay::OverlayEntry& value) {
@@ -717,7 +813,7 @@ bool Overlay::buildDirEntries(
       try {
         pathName.emplace(name);
       } catch (const PathComponentValidationError& ex) {
-        throw OverlayDataCorruption{fmt::format(
+        throw OverlayEntryCorruption{fmt::format(
             "invalid overlay name (hex \"{}\") in base entry (parent inode {}, inode {}): {}",
             folly::hexlify(name),
             inodeNumber,
@@ -732,6 +828,7 @@ bool Overlay::buildDirEntries(
           inodeNumber,
           ex.what());
       shouldRewriteOverlay = true;
+      droppedCorruptEntry = true;
       return;
     }
 
@@ -771,12 +868,34 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     hasWal = inodeCatalog_->hasWal(inodeNumber);
   }
 
-  bool found = inodeCatalog_->loadOverlayEntries(
-      inodeNumber,
-      [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
-        entries.reserve(count);
-        shouldRewriteOverlay = buildDirEntries(inodeNumber, iterate, entries);
-      });
+  bool droppedCorruptEntry = false;
+  bool baseCorrupt = false;
+  bool found = false;
+  try {
+    found = inodeCatalog_->loadOverlayEntries(
+        inodeNumber,
+        [&](uint32_t count, InodeCatalog::OverlayEntryIterator iterate) {
+          entries.reserve(count);
+          shouldRewriteOverlay = buildDirEntries(
+              inodeNumber, iterate, entries, droppedCorruptEntry);
+        });
+    if (useOnlineFsck_ && droppedCorruptEntry) {
+      baseCorrupt = true;
+    }
+  } catch (const OverlayEntryCorruption&) {
+    throw;
+  } catch (const OverlayDataCorruption& ex) {
+    if (!useOnlineFsck_) {
+      throw;
+    }
+    found = true;
+    baseCorrupt = true;
+    XLOGF(
+        WARN,
+        "Recovering readable prefix of overlay directory {}: {}",
+        inodeNumber,
+        ex.what());
+  }
   if (!found && !hasWal) {
     stats_->increment(&OverlayStats::loadOverlayDirFailure);
     return DirContents{caseSensitive_};
@@ -795,6 +914,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
         inodeNumber);
   }
 
+  bool walCorrupt = false;
   if (hasWal) {
     // Pre-process WAL into a collapsed net delta and merge it into the
     // streamed-load PathMap. saveOverlayDir below flushes the merged
@@ -807,6 +927,9 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     if (merged.size() != entryCount) {
       XLOGF(ERR, "Dropping duplicate names from overlay dir {}", inodeNumber);
       shouldRewriteOverlay = true;
+      if (useOnlineFsck_) {
+        baseCorrupt = true;
+      }
     }
 
     // Only the Overlay knows which inode numbers exist and which mode bits a
@@ -823,7 +946,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
         validateOverlayEntry(
             inodeNumber, name, walDelta.entry, "overlay WAL ADD");
         if (*walDelta.entry.inodeNumber() == 0) {
-          throw OverlayDataCorruption{fmt::format(
+          throw OverlayEntryCorruption{fmt::format(
               "zero inode number in overlay WAL ADD (parent inode {}, name hex \"{}\", inode {})",
               inodeNumber,
               folly::hexlify(name),
@@ -928,7 +1051,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
           }
         }
       } catch (const PathComponentValidationError& ex) {
-        throw OverlayDataCorruption{fmt::format(
+        throw OverlayEntryCorruption{fmt::format(
             "invalid overlay name (hex \"{}\") in WAL op {} (parent inode {}): {}",
             folly::hexlify(name),
             static_cast<int>(walDelta.type),
@@ -948,9 +1071,15 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
       stats_->increment(
           &OverlayStats::walParseFailure,
           static_cast<double>(walResult.parseErrors));
+      if (useOnlineFsck_) {
+        walCorrupt = true;
+      }
     }
 
-    if (!shouldDeferWalFlush() || walResult.parseErrors > 0 ||
+    if (baseCorrupt || walCorrupt) {
+      recoverOverlayDir(inodeNumber, merged);
+    } else if (
+        !shouldDeferWalFlush() || walResult.parseErrors > 0 ||
         shouldRewriteOverlay) {
       // The clean-WAL rewrite is opportunistic compaction, redundant with what
       // saveOverlayPostCheckout does, so it's deferred during checkout. But a
@@ -969,8 +1098,13 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   if (result.size() != entryCount) {
     XLOGF(ERR, "Dropping duplicate names from overlay dir {}", inodeNumber);
     shouldRewriteOverlay = true;
+    if (useOnlineFsck_) {
+      baseCorrupt = true;
+    }
   }
-  if (shouldRewriteOverlay) {
+  if (baseCorrupt) {
+    recoverOverlayDir(inodeNumber, result);
+  } else if (shouldRewriteOverlay) {
     saveOverlayDir(inodeNumber, result);
   }
   stats_->increment(&OverlayStats::loadOverlayDirSuccessful);

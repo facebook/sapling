@@ -586,12 +586,14 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   /**
    * Process overlay entries from the given source, handling inode allocation
    * and AppleDouble filtering. Appends processed entries to the output vector.
-   * Returns true if the overlay should be rewritten.
+   * Returns true if the overlay should be rewritten and reports whether an
+   * invalid entry was dropped.
    */
   bool buildDirEntries(
       InodeNumber inodeNumber,
       OverlayEntrySource source,
-      folly::fbvector<std::pair<PathComponent, DirEntry>>& entries);
+      folly::fbvector<std::pair<PathComponent, DirEntry>>& entries,
+      bool& droppedCorruptEntry);
 
   void validateOverlayEntry(
       InodeNumber parentInodeNumber,
@@ -607,7 +609,14 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void initializeInodeReservation(uint64_t nextInodeNumber);
   void ensureInodeReservation(uint64_t allocatedEnd);
   void saveInodeReservation(uint64_t reservation);
+
+  const AbsolutePath& getOrCreateOnlineRepairDir();
+  void archiveOverlayFile(
+      InodeNumber inodeNumber,
+      folly::StringPiece suffix,
+      bool wal);
 #endif
+  void recoverOverlayDir(InodeNumber inodeNumber, const DirContents& dir);
 
   bool hadCleanStartup_{false};
 
@@ -704,6 +713,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   bool useInodeReservation_;
   bool useOnlineFsck_;
+
+#ifndef _WIN32
+  std::mutex onlineRepairMutex_;
+  std::optional<AbsolutePath> onlineRepairDir_;
+#endif
 
   bool useWal_{false};
   bool backgroundInodeRemoval_{false};

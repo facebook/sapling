@@ -749,6 +749,7 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Counter walEntriesReplayed{"overlay.wal_entries_replayed"};
   Counter walParseFailure{"overlay.wal_parse_failure"};
   Counter walCompaction{"overlay.wal_compaction"};
+  Counter onlineFsckDirectoryRecovery{"overlay.online_fsck_directory_recovery"};
   // Wall time spent inside the synchronous saveOverlayDir triggered by
   // maybeCompactWal. Bounded by kCompactionCap, but worth a histogram
   // because compaction runs on the FUSE/NFS dispatch thread under the

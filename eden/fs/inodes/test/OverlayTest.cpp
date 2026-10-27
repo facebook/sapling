@@ -1837,6 +1837,7 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
     bool cacheWalFiles = true,
     bool useWal = true,
     bool writeWalV2 = false,
+    bool onlineFsck = false,
     std::optional<size_t> walCompactionMultiplier = std::nullopt) {
   auto rawConfig = EdenConfig::createTestEdenConfig();
   rawConfig->overlayUseWal.setValue(useWal, ConfigSourceType::CommandLine);
@@ -1848,6 +1849,8 @@ WalLifecycleOverlay makeWalLifecycleOverlay(
   }
   rawConfig->experimentalOverlayCacheWalFiles.setValue(
       cacheWalFiles, ConfigSourceType::CommandLine);
+  rawConfig->overlayOnlineFsck.setValue(
+      onlineFsck, ConfigSourceType::CommandLine);
   rawConfig->experimentalOverlayWalMinCompactionThreshold.setValue(
       walMinCompactionThreshold, ConfigSourceType::CommandLine);
   auto reloadable = std::make_shared<ReloadableConfig>(rawConfig);
@@ -2098,6 +2101,7 @@ TEST(WalCompactionTest, zeroMultiplierWithoutMinimumThreshold) {
       /*cacheWalFiles=*/true,
       /*useWal=*/true,
       /*writeWalV2=*/false,
+      /*onlineFsck=*/false,
       /*walCompactionMultiplier=*/0);
   ASSERT_NE(nullptr, bundle.store);
   OverlayTestHelper::setWalCompactionRng(*bundle.overlay, [] { return 7u; });
@@ -2249,6 +2253,126 @@ TEST(OverlayLoadWalTest, loadAppliesDelta) {
   auto loaded = bundle.overlay->loadOverlayDir(parent);
   EXPECT_NE(loaded.end(), loaded.find("a"_pc));
   EXPECT_NE(loaded.end(), loaded.find("b"_pc));
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayLoadTest, onlineFsckArchivesAndRepairsDirectoryPrefix) {
+  folly::test::TemporaryDirectory tmp("eden_online_fsck_dir");
+  auto root = canonicalPath(tmp.path().string());
+  auto dir = root + "overlay"_pc;
+  ASSERT_TRUE(boost::filesystem::create_directory(dir.asString()));
+  auto bundle = makeWalLifecycleOverlay(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      0,
+      /*cacheWalFiles=*/true,
+      /*useWal=*/true,
+      /*writeWalV2=*/false,
+      /*onlineFsck=*/true);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto child = bundle.overlay->allocateInodeNumber();
+  DirContents base(kPathMapDefaultCaseSensitive);
+  base.emplace("kept"_pc, S_IFREG | 0644, child);
+  bundle.overlay->saveOverlayDir(parent, base);
+
+  auto path = bundle.store->getAbsoluteFilePath(parent);
+  std::string contents;
+  ASSERT_TRUE(folly::readFile(path.c_str(), contents));
+  contents.push_back('\0');
+  ASSERT_TRUE(folly::writeFile(contents, path.c_str()));
+
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  EXPECT_NE(loaded.end(), loaded.find("kept"_pc));
+  EXPECT_TRUE(boost::filesystem::is_directory((root + "fsck"_pc).asString()));
+  EXPECT_NO_THROW(bundle.overlay->loadOverlayDir(parent));
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayLoadTest, onlineFsckArchivesBeforeDroppingInvalidDirectoryEntry) {
+  folly::test::TemporaryDirectory tmp("eden_online_fsck_bad_entry");
+  auto root = canonicalPath(tmp.path().string());
+  auto dir = root + "overlay"_pc;
+  ASSERT_TRUE(boost::filesystem::create_directory(dir.asString()));
+  auto bundle = makeWalLifecycleOverlay(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      0,
+      /*cacheWalFiles=*/true,
+      /*useWal=*/true,
+      /*writeWalV2=*/false,
+      /*onlineFsck=*/true);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  auto child = bundle.overlay->allocateInodeNumber();
+  bundle.overlay->getRawInodeCatalog()->saveOverlayEntries(
+      parent, 1, [&](InodeCatalog::OverlayEntryVisitor visitor) {
+        overlay::OverlayEntry entry;
+        entry.mode() = 0xffffffff;
+        entry.inodeNumber() = child.get();
+        visitor("bad-mode", entry);
+      });
+
+  EXPECT_TRUE(bundle.overlay->loadOverlayDir(parent).empty());
+  EXPECT_TRUE(boost::filesystem::is_directory((root + "fsck"_pc).asString()));
+  auto rewritten = bundle.overlay->getRawInodeCatalog()->loadOverlayDir(parent);
+  ASSERT_TRUE(rewritten.has_value());
+  EXPECT_TRUE(rewritten->entries()->empty());
+
+  bundle.overlay->close();
+}
+
+TEST(OverlayLoadTest, onlineFsckArchivesAndRepairsWalPrefix) {
+  folly::test::TemporaryDirectory tmp("eden_online_fsck_wal");
+  auto root = canonicalPath(tmp.path().string());
+  auto dir = root + "overlay"_pc;
+  ASSERT_TRUE(boost::filesystem::create_directory(dir.asString()));
+  auto bundle = makeWalLifecycleOverlay(
+      dir,
+      kPathMapDefaultCaseSensitive,
+      0,
+      /*cacheWalFiles=*/true,
+      /*useWal=*/true,
+      /*writeWalV2=*/false,
+      /*onlineFsck=*/true);
+  ASSERT_NE(nullptr, bundle.store);
+
+  auto parent = bundle.overlay->allocateInodeNumber();
+  bundle.overlay->saveOverlayDir(
+      parent, DirContents{kPathMapDefaultCaseSensitive});
+  overlay::OverlayEntry entry;
+  entry.mode() = S_IFREG | 0644;
+  entry.inodeNumber() = bundle.overlay->allocateInodeNumber().get();
+  auto walPath = FsFileContentStore::getWalPath(parent);
+  auto fullWalPath = dir + RelativePathPiece{walPath.c_str()};
+  auto appendTornWal = [&] {
+    bundle.store->appendWalEntry(parent, WalOpType::ADD, "kept"_pc, &entry);
+    bundle.store->appendWalEntry(parent, WalOpType::ADD, "dropped"_pc, &entry);
+    std::string wal;
+    ASSERT_TRUE(folly::readFile(fullWalPath.c_str(), wal));
+    ASSERT_GT(wal.size(), 3u);
+    ASSERT_TRUE(
+        folly::writeFile(wal.substr(0, wal.size() - 3), fullWalPath.c_str()));
+  };
+  appendTornWal();
+
+  auto loaded = bundle.overlay->loadOverlayDir(parent);
+  EXPECT_NE(loaded.end(), loaded.find("kept"_pc));
+  EXPECT_EQ(loaded.end(), loaded.find("dropped"_pc));
+  EXPECT_FALSE(bundle.store->hasWal(parent));
+  EXPECT_TRUE(boost::filesystem::is_directory((root + "fsck"_pc).asString()));
+
+  // Simulate a crash after publishing the recovered base but before removing
+  // the old WAL. Replaying that stale delta must leave the recovery intact.
+  appendTornWal();
+  auto reloaded = bundle.overlay->loadOverlayDir(parent);
+  EXPECT_NE(reloaded.end(), reloaded.find("kept"_pc));
+  EXPECT_EQ(reloaded.end(), reloaded.find("dropped"_pc));
   EXPECT_FALSE(bundle.store->hasWal(parent));
 
   bundle.overlay->close();
