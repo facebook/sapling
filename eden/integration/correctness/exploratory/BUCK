@@ -550,6 +550,16 @@ python_library(
     ],
 )
 
+python_library(
+    name = "edenfs_live",
+    srcs = ["edenfs/test/live.py"],
+    deps = [
+        ":core_containment",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
 python_unittest(
     name = "edenfs_encoding_test",
     srcs = ["edenfs/test/encoding_test.py"],
@@ -1301,6 +1311,103 @@ python_unittest(
 )
 
 python_integration_test(
+    name = "backends_live_test",
+    srcs = ["edenfs/test/backends_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        # `run_live` spawns the runner from this par's `cli.py`.
+        ":containment",  # @manual
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_backends",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":environment",
+        ":generate",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "reference_live_test",
+    srcs = ["edenfs/test/reference_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_contracts",
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":edenfs_live",
+        ":edenfs_target",
+        ":environment",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "edenfs_red_control_live_test",
+    srcs = ["edenfs/test/red_control_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_live",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "edenfs_namespace_live_test",
+    srcs = ["edenfs/test/namespace_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":edenfs_live",
+        ":edenfs_target",
+        ":generate",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "edenfs_metadata_live_test",
+    srcs = ["edenfs/test/metadata_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":edenfs_fixture",
+        ":edenfs_live",
+        ":edenfs_target",
+        ":generate",
+        ":target",
+    ],
+)
+
+python_integration_test(
     name = "environment_test",
     srcs = ["edenfs/test/environment_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1325,6 +1432,31 @@ python_library(
     deps = [
         ":edenfs_target",
         ":target",
+    ],
+)
+
+python_integration_test(
+    name = "environment_live_test",
+    srcs = ["edenfs/test/environment_live_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_encoding",
+        ":edenfs_live",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":environment",
+        ":environment_fixtures",
+        ":runspec",
+        ":target",
+        "//eden/fs/service:thrift-python-types",
+        "//eden/integration/correctness:repo",
+        "//eden/test_support:py",
     ],
 )
 
