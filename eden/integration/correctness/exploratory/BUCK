@@ -38,6 +38,25 @@ python_unittest(
 )
 
 python_unittest(
+    name = "core_facts_test",
+    srcs = ["core/test/facts_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
+    name = "core_effects_test",
+    srcs = ["core/test/effects_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [":target"],
+)
+
+python_unittest(
     name = "core_actions_test",
     srcs = ["core/test/actions_test.py"],
     compatible_with = ["ovr_config//os:linux"],
