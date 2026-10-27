@@ -1382,6 +1382,38 @@ python_integration_test(
     ],
 )
 
+python_library(
+    name = "fault_fixtures",
+    srcs = ["test/fault_fixtures.py"],
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_encoding",
+        ":edenfs_fixture",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_integration_test(
+    name = "fault_validation_test",
+    srcs = ["test/fault_validation_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    env = artifacts["env"],
+    network_access = network_access_utils.all(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_backends",
+        ":environment",
+        ":fault_fixtures",
+        ":scheduler",
+        ":target",
+        "//eden/fs/service:thrift-python-types",
+    ],
+)
+
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
 python_library(
