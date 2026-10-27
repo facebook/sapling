@@ -32,6 +32,13 @@ pub struct FileRevision {
     pub digest: Option<Md5Digest>,
 }
 
+/// A file's head revision at some point in history, from `p4 fstat`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileAt {
+    pub file: FileRevision,
+    pub change: u64,
+}
+
 /// Shown as uppercase hex, as p4 reports it.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Md5Digest([u8; 16]);
