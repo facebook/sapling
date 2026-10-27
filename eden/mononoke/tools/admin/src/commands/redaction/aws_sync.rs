@@ -182,7 +182,7 @@ fn import_key_lists_command(mode: ExecMode) -> Vec<String> {
             "monad redaction sync-key-lists-from-json --payload-stdin".to_string()
         }
         ExecMode::TemporaryJob(TemporaryJobMonad::Bootstrap) => format!(
-            "{BOOTSTRAP_MONAD_PATH} --acl-file /cfg/acls/acls --config-path /cfg/config --local-configerator-path /cfg --cache-mode local-only --just-knobs-config-path /cfg/justknobs/justknobs.json --log-level=OFF redaction sync-key-lists-from-json --payload-stdin"
+            "{BOOTSTRAP_MONAD_PATH} --acl-file /cfg/acls/acls --config-tier aws --local-configerator-path /cfg --cache-mode local-only --just-knobs-config-path /cfg/justknobs/justknobs.json --log-level=OFF redaction sync-key-lists-from-json --payload-stdin"
         ),
     };
     vec![
@@ -862,7 +862,7 @@ mod tests {
 
         assert!(command.contains(BOOTSTRAP_MONAD_PATH));
         assert!(command.contains("--acl-file /cfg/acls/acls"));
-        assert!(command.contains("--config-path /cfg/config"));
+        assert!(command.contains("--config-tier aws --local-configerator-path /cfg"));
         assert!(command.contains("sync-key-lists-from-json --payload-stdin"));
         assert!(command.contains(&format!("touch {JOB_COMPLETION_FILE}")));
     }
