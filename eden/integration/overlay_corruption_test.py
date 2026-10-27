@@ -401,7 +401,45 @@ subdir_truncated     | a b s:EIO            | unchanged          | data,orphan  
 subdir_missing       | a b s/               | unchanged          | missing,orphan          | ok        | ok          | ok
 """
 
-EXPECTED_ONLINE_FSCK_ON = EXPECTED_ONLINE_FSCK_OFF
+EXPECTED_ONLINE_FSCK_ON = """
+case                 | first                | restart            | fsck                    | mv        | rm          | recreate
+control              | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+base_bad_mode        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_no_mode         | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_big_inode       | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_root_inode      | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_zero_inode      | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_bad_name        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_dup_name        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_dup_inode       | a b:EIO s/ s/f       | unchanged          | hardlink,orphan         | ok        | a:EIO       | -
+base_self_ref        | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_unknown_field   | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
+base_trailing        | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
+base_negative_inode  | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+base_no_stop         | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
+base_truncated       | .:EIO                | unchanged          | data,orphan             | b:EIO     | .:EIO       | -
+base_cycle_x         | a b s/ s/f s/p:EIO   | unchanged          | hardlink                | ok        | s/p:EIO     | -
+base_mode_conflict_x | a b s/ s/f s/g:EIO   | unchanged          | hardlink                | ok        | ok          | ok
+wal_bad_mode         | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+wal_big_inode        | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+wal_shadow_big_inode | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+wal_root_inode       | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+wal_zero_inode       | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+wal_negative_inode   | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+wal_bad_name         | a s/ s/f             | unchanged          | orphan                  | b:ENOENT  | ok          | ok
+wal_rename_crash     | b c:"a" s/ s/f       | unchanged          | -                       | ok        | ok          | ok
+wal_rename_crash_rev | 0:"a" b s/ s/f       | unchanged          | -                       | ok        | ok          | ok
+wal_rename_crash_x   | a b s/ s/f s/g:EIO   | unchanged          | hardlink                | ok        | ok          | ok
+wal_self_ref         | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+wal_torn             | b s/ s/f             | unchanged          | orphan                  | ok        | ok          | ok
+wal_torn_len         | b s/ s/f             | unchanged          | orphan                  | ok        | ok          | ok
+wal_remove_payload   | a b s/ s/f           | unchanged          | -                       | ok        | ok          | ok
+file_bad_header      | a b s/ s/f           | unchanged          | data                    | ok        | ok          | ok
+file_truncated       | a b:EIO s/ s/f       | unchanged          | data                    | ok        | b:EIO       | -
+file_missing         | a b:ENOENT s/ s/f    | unchanged          | missing                 | ok        | b:ENOENT    | -
+subdir_truncated     | a b s:EIO            | unchanged          | data,orphan             | ok        | s:EIO       | -
+subdir_missing       | a b s/               | unchanged          | missing,orphan          | ok        | ok          | ok
+"""
 
 
 class OverlayCorruptionTestBase(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
