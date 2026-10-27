@@ -1186,6 +1186,57 @@ python_unittest(
     deps = [":edenfs_results"],
 )
 
+python_unittest(
+    name = "reference_test",
+    srcs = ["edenfs/test/reference_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":backends_fixtures",
+        ":edenfs_actions",
+        ":edenfs_backends",
+        ":edenfs_differential_backend",
+        ":edenfs_encoding",
+        ":edenfs_reference",
+        ":edenfs_testing",
+        ":environment",
+        ":reference_fixtures",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "reference_fixtures",
+    srcs = ["edenfs/test/reference_fixtures.py"],
+    deps = [
+        ":backends_fixtures",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "differential_backend_test",
+    srcs = ["edenfs/test/differential_backend_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_backends",
+        ":edenfs_differential_backend",
+        ":edenfs_encoding",
+        ":edenfs_reference",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":environment",
+        ":reference_fixtures",
+        ":scheduler",
+        ":target",
+    ],
+)
+
 python_integration_test(
     name = "environment_test",
     srcs = ["edenfs/test/environment_test.py"],
