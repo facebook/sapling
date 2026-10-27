@@ -3943,6 +3943,26 @@ mod tests {
         OpenOptions::new().create_in_memory().unwrap()
     }
 
+    // The SIGBUS handler zero-fills an mmapped page that cannot be read back,
+    // and another process can rewrite the file, so the type byte of an entry
+    // can differ from what `Offset::to_typed` saw a moment earlier.
+    #[test]
+    #[should_panic(expected = "LeafOffset constructed with non-leaf types")]
+    fn test_leaf_offset_at_non_leaf_entry() {
+        let dir = tempdir().unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+        index.insert(b"ab", 1).unwrap();
+        index.flush().unwrap();
+        let index = open_opts().open(dir.path().join("a")).unwrap();
+        // The root radix entry is on disk and is not a leaf.
+        let radix: Offset = index.dirty_root.radix_offset.into();
+        assert!(!radix.is_dirty());
+        let leaf = LeafOffset::from_offset_unchecked(radix);
+        // FIXME: this must be a corruption error, not a panic. In EdenFS the
+        // panic reaches the cxx bridge and aborts the daemon.
+        let _ = leaf.key_and_link_offset(&index);
+    }
+
     #[test]
     fn test_scan_prefix() {
         let dir = tempdir().unwrap();
