@@ -1061,6 +1061,21 @@ python_unittest(
 )
 
 python_unittest(
+    name = "edenfs_checkout_property_test",
+    srcs = ["edenfs/test/checkout_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus",
+        ":corpus_author",
+        ":edenfs_contracts",
+        ":edenfs_judging",
+        ":edenfs_target",
+    ],
+)
+
+python_unittest(
     name = "edenfs_checkout_count_property_test",
     srcs = ["edenfs/test/checkout_count_property_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -1215,6 +1230,23 @@ python_unittest(
         ":target",
         ":testing",
         ":waiting",
+    ],
+)
+
+python_unittest(
+    name = "corpus_test",
+    srcs = ["test/corpus/corpus_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus",
+        ":corpus_author",
+        ":edenfs_actions",
+        ":edenfs_contracts",
+        ":edenfs_encoding",
+        ":edenfs_target",
+        ":target",
     ],
 )
 
