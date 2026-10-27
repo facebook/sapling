@@ -18,6 +18,7 @@ pub(crate) mod restriction_info;
 mod test_utils;
 
 use std::collections::BTreeSet;
+use std::mem;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -1241,6 +1242,11 @@ where
             restriction_check::source_enforcement_outcome(handle, &candidates, &pre_filter_variant)
         }))
         .await;
+    // `selected_for` lists config before AclManifest: when both fail, report
+    // the AclManifest error.
+    if let [config @ Err(_), acl_manifest @ Err(_)] = source_outcomes.as_mut_slice() {
+        mem::swap(config, acl_manifest);
+    }
     if selected_sources.missing_source {
         source_outcomes.push(Err(missing_source_error));
     }
@@ -1277,10 +1283,11 @@ mod tests {
     use crate::test_utils::build_test_restricted_paths_with_options;
 
     // What it tests: a matching exemption does not apply when a source fails.
-    // Expected: the first source error is returned, both when the other
-    // source denies and when it also fails, so an exempted request fails
-    // closed with the source error rather than an authorization error. Without
-    // an exemption the denial still wins over the error.
+    // Expected: a source error is returned, both when the other source denies
+    // and when it also fails (the AclManifest error when both fail), so an
+    // exempted request fails closed with the source error rather than an
+    // authorization error. Without an exemption the denial still wins over
+    // the error.
     #[mononoke::test]
     async fn test_enforcement_exemption_returns_source_error() -> Result<()> {
         let error = enforce_with_results(
@@ -1305,8 +1312,8 @@ mod tests {
         .err()
         .context("an exemption must not turn a failed lookup into an allow")?;
         assert!(
-            format!("{error:#}").contains("config source failed"),
-            "the first source's error (config) should be returned: {error:#}",
+            format!("{error:#}").contains("AclManifest source failed"),
+            "the AclManifest error should be returned when both sources fail: {error:#}",
         );
 
         assert_eq!(
@@ -1323,6 +1330,59 @@ mod tests {
                 permission_request_group: MononokeIdentity::from_str("REPO_REGION:denied")?,
             }),
             "without an exemption the denial should still win over the source error",
+        );
+        Ok(())
+    }
+
+    /// What it tests: the error reported when both authoritative sources fail
+    /// and no exemption matches.
+    /// Expected: the AclManifest error is returned, not the config error.
+    #[mononoke::test]
+    async fn test_enforcement_reports_acl_manifest_error_when_both_sources_fail() -> Result<()> {
+        let error = enforce_with_results(
+            Err(anyhow::anyhow!("config source failed")),
+            Err(anyhow::anyhow!("AclManifest source failed")),
+            false,
+        )
+        .await
+        .err()
+        .context("a request whose sources both failed should return an error")?;
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("AclManifest source failed"),
+            "the AclManifest error should be returned: {message}",
+        );
+        assert!(
+            !message.contains("config source failed"),
+            "the config error should not be returned: {message}",
+        );
+        Ok(())
+    }
+
+    /// What it tests: the error reported when the AclManifest handle is missing
+    /// and the config read fails.
+    /// Expected: the config error is returned; the missing-source error stays
+    /// behind every real source error.
+    #[mononoke::test]
+    async fn test_enforcement_reports_source_error_before_missing_source() -> Result<()> {
+        let handles = SourceHandles {
+            config: Some(SharedFetchHandle::from_result(Err(anyhow::anyhow!(
+                "config source failed"
+            )))),
+            acl_manifest: None,
+        };
+        let error = enforce_with_handles(&handles, false)
+            .await
+            .err()
+            .context("a request with a failed and a missing source should return an error")?;
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("config source failed"),
+            "the config error should be returned: {message}",
+        );
+        assert!(
+            !message.contains("missing source"),
+            "the missing-source error should not be returned: {message}",
         );
         Ok(())
     }
@@ -1593,10 +1653,19 @@ mod tests {
             config: Some(SharedFetchHandle::from_result(config_result)),
             acl_manifest: Some(SharedFetchHandle::from_result(acl_manifest_result)),
         };
+        enforce_with_handles(&handles, exemption_matched).await
+    }
+
+    /// Runs enforcement with both authoritative sources selected over the
+    /// given handles and a definite pre-filter match.
+    async fn enforce_with_handles(
+        handles: &SourceHandles<PathRestrictionCheckResult>,
+        exemption_matched: bool,
+    ) -> Result<AccessEnforcementOutcome> {
         enforce_with_source_handles(
             true,
             true,
-            &handles,
+            handles,
             PreFilteredRequest {
                 conditions: PreFilterResult::DefiniteMatch { candidates: vec![] },
                 exemption_matched,
