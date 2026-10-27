@@ -11,6 +11,7 @@
 #include <re2/re2.h>
 
 #include <array>
+#include <stdexcept>
 
 #include <fb303/ServiceData.h>
 #include <folly/coro/GtestHelpers.h>
@@ -224,7 +225,45 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
   ObjectId readyTreeId;
 };
 
+class ThrowingWalkDetector final : public WalkDetector {
+ public:
+  void witnessFileRead(
+      const ObjectId&,
+      ObjectFetchContext::Origin,
+      OptionalProcessId,
+      std::optional<ObjectFetchContext::DirEntryCounts>) override {
+    throw std::runtime_error("walk detector failure");
+  }
+  void witnessTreeRead(
+      const ObjectId&,
+      const Tree&,
+      ObjectFetchContext::Origin,
+      OptionalProcessId) override {
+    throw std::runtime_error("walk detector failure");
+  }
+  void witnessDirectorySize(
+      RelativePathPiece,
+      ObjectFetchContext::DirEntryCounts) override {}
+  void workingCopyParentHint(const RootId&) override {}
+};
+
 } // namespace
+
+TEST_P(ObjectStoreTest, fetches_survive_a_throwing_walk_detector) {
+  auto store = ObjectStore::create(
+      fakeBackingStore,
+      treeCache,
+      stats.copy(),
+      std::make_shared<ProcessInfoCache>(),
+      makeTestEdenFsEventsLogger(),
+      std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
+      GetParam(),
+      folly::getGlobalCPUExecutor(),
+      std::make_shared<ThrowingWalkDetector>());
+  EXPECT_NE(store->getBlob(readyBlobId, context).get(0ms), nullptr);
+  EXPECT_NE(store->getTree(readyTreeId, context).get(0ms), nullptr);
+}
+
 TEST_P(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());

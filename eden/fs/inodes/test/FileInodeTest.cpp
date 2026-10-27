@@ -962,6 +962,18 @@ CO_TEST(FileInode, isSameAsHashesWhenSizesMatch) {
           blobId, TreeEntryType::REGULAR_FILE, fetchContext));
 }
 
+TEST(FileInode, loadReportsBlobReadToWalkDetector) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"dir/a.txt", "a"}});
+  TestMount mount{builder};
+
+  auto inode = mount.getFileInode("dir/a.txt");
+  EXPECT_EQ("a", inode->readAll(ObjectFetchContext::getNullContext()).get(0ms));
+
+  const std::vector<ObjectId> expected{*inode->getObjectId()};
+  EXPECT_EQ(expected, mount.getWalkDetector().fileReads());
+}
+
 // TODO: test multiple flags together
 // TODO: ensure ctime is updated after every call to setattr()
 // TODO: ensure mtime is updated after opening a file, writing to it, then

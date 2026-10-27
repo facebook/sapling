@@ -31,6 +31,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/WalkDetector.h"
 #include "eden/fs/utils/ShardedLruCache.h"
 
 namespace facebook::eden {
@@ -115,6 +116,11 @@ class ObjectStore : public IObjectStore,
                     public ObjectIdCodec,
                     public std::enable_shared_from_this<ObjectStore> {
  public:
+  /**
+   * `walkDetector` is the mount's walk detector, which gets told about the
+   * blobs and trees fetched from the backing store, or nullptr when the
+   * backing store does not detect walks.
+   */
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
@@ -123,7 +129,8 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
       CaseSensitivity caseSensitive,
-      folly::Executor::KeepAlive<> executor);
+      folly::Executor::KeepAlive<> executor,
+      std::shared_ptr<WalkDetector> walkDetector = nullptr);
   ~ObjectStore() override;
 
   /**
@@ -472,7 +479,23 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
       std::shared_ptr<ReloadableConfig> edenConfig,
       CaseSensitivity caseSensitive,
-      folly::Executor::KeepAlive<> executor);
+      folly::Executor::KeepAlive<> executor,
+      std::shared_ptr<WalkDetector> walkDetector);
+
+  /**
+   * Report a blob or tree that came back from the backing store to the walk
+   * detector, for the fetch causes that count as walking.
+   */
+  void witnessBlobFetch(
+      const ObjectId& id,
+      const BackingStore::GetBlobResult& result,
+      const ObjectFetchContext& context) const;
+  void witnessTreeFetch(
+      const ObjectId& id,
+      const Tree& tree,
+      ObjectFetchContext::Origin origin,
+      const ObjectFetchContext& context) const;
+
   // Forbidden copy constructor and assignment operator
 
   /**
@@ -563,6 +586,8 @@ class ObjectStore : public IObjectStore,
   std::shared_ptr<BackingStore> backingStore_;
   /** Resumes fetches that had to wait on the backing store. */
   folly::Executor::KeepAlive<> executor_;
+  /** The mount's walk detector; nullptr when the store detects no walks. */
+  std::shared_ptr<WalkDetector> walkDetector_;
 
   EdenStatsPtr const stats_;
 

@@ -42,6 +42,7 @@ class TreeCache;
 class CheckoutConfig;
 class ErrorLogger;
 class FakeBackingStore;
+class FakeWalkDetector;
 class FakeFuse;
 class FakePrivHelper;
 class FakeTreeBuilder;
@@ -231,6 +232,11 @@ class TestMount {
    * must be parseable by the ConfigSetting.
    */
   void updateEdenConfig(const std::map<std::string, std::string>& values);
+
+  /**
+   * The mount's walk detector, which records what it is told for tests.
+   */
+  FakeWalkDetector& getWalkDetector() const;
 
   /**
    * Callers can use this to populate the BackingStore before calling build().

@@ -1775,6 +1775,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether a mount gets a walk detector at all. Off means the mount creates
+   * none, so its reads are never reported to the backing store's walk
+   * detection, whatever `backingstore:walk-mode` says. Read when the mount is
+   * created.
+   */
+  ConfigSetting<bool> enableWalkDetector{
+      "experimental:enable-walk-detector",
+      true,
+      this};
+
+  /**
    * Whether a file load tells the walk detector how many entries the file's
    * directory had when its inode was loaded, so small and large directories
    * are recognized even when their trees were already cached.

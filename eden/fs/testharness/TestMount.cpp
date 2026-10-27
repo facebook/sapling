@@ -283,7 +283,16 @@ void TestMount::createMountWithoutInitializing(
   createMount(inodeCatalogType);
 }
 
+FakeWalkDetector& TestMount::getWalkDetector() const {
+  auto* detector =
+      dynamic_cast<FakeWalkDetector*>(edenMount_->getWalkDetector());
+  XCHECK(detector) << "FakeBackingStore mounts always have a walk detector";
+  return *detector;
+}
+
 void TestMount::createMount(InodeCatalogType inodeCatalogType) {
+  auto walkDetector =
+      backingStore_->createWalkDetector(config_->getMountPath());
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       backingStore_,
       treeCache_,
@@ -292,7 +301,8 @@ void TestMount::createMount(InodeCatalogType inodeCatalogType) {
       serverState_->getEdenFsEventsLogger(),
       serverState_->getReloadableConfig(),
       config_->getCaseSensitive(),
-      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()),
+      walkDetector);
   auto journal = std::make_unique<Journal>(stats_.copy());
   edenMount_ = EdenMount::create(
       std::move(config_),
@@ -301,7 +311,8 @@ void TestMount::createMount(InodeCatalogType inodeCatalogType) {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      inodeCatalogType);
+      inodeCatalogType,
+      std::move(walkDetector));
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
 #endif
@@ -383,6 +394,7 @@ void TestMount::remount(bool simulateUncleanShutdown) {
   auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
   auto overlayPath = config->getOverlayPath();
   // Create a new ObjectStore pointing to our local store and backing store
+  auto walkDetector = backingStore_->createWalkDetector(config->getMountPath());
   auto objectStore = ObjectStore::create(
       backingStore_,
       treeCache_,
@@ -391,7 +403,8 @@ void TestMount::remount(bool simulateUncleanShutdown) {
       serverState_->getEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(edenConfig_),
       config->getCaseSensitive(),
-      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()),
+      walkDetector);
 
   auto journal = std::make_unique<Journal>(stats_.copy());
 
@@ -442,7 +455,8 @@ void TestMount::remount(bool simulateUncleanShutdown) {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kInodeCatalogTypeDefault);
+      kInodeCatalogTypeDefault,
+      std::move(walkDetector));
   initializeEdenMount();
 }
 
@@ -451,6 +465,7 @@ void TestMount::remountGracefully() {
   // Create a new copy of the CheckoutConfig
   auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
   // Create a new ObjectStore pointing to our local store and backing store
+  auto walkDetector = backingStore_->createWalkDetector(config->getMountPath());
   auto objectStore = ObjectStore::create(
       backingStore_,
       treeCache_,
@@ -459,7 +474,8 @@ void TestMount::remountGracefully() {
       serverState_->getEdenFsEventsLogger(),
       std::make_shared<ReloadableConfig>(edenConfig_),
       config->getCaseSensitive(),
-      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()),
+      walkDetector);
 
   auto journal = std::make_unique<Journal>(stats_.copy());
 
@@ -493,7 +509,8 @@ void TestMount::remountGracefully() {
       serverState_,
       std::move(journal),
       stats_.copy(),
-      kInodeCatalogTypeDefault);
+      kInodeCatalogTypeDefault,
+      std::move(walkDetector));
   edenMount_
       ->initialize(
           [](auto) {},

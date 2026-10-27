@@ -53,7 +53,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
     CaseSensitivity caseSensitive,
-    folly::Executor::KeepAlive<> executor) {
+    folly::Executor::KeepAlive<> executor,
+    std::shared_ptr<WalkDetector> walkDetector) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
       std::move(treeCache),
@@ -62,7 +63,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       edenFsEventsLogger,
       edenConfig,
       caseSensitive,
-      std::move(executor)}};
+      std::move(executor),
+      std::move(walkDetector)}};
 }
 
 ObjectStore::ObjectStore(
@@ -73,7 +75,8 @@ ObjectStore::ObjectStore(
     std::shared_ptr<EdenFsEventsLogger> edenFsEventsLogger,
     std::shared_ptr<ReloadableConfig> edenConfig,
     CaseSensitivity caseSensitive,
-    folly::Executor::KeepAlive<> executor)
+    folly::Executor::KeepAlive<> executor,
+    std::shared_ptr<WalkDetector> walkDetector)
     : blobAuxDataCache_{
           edenConfig->getEdenConfig()->metadataCacheShards.getValue(),
           edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
@@ -83,6 +86,7 @@ ObjectStore::ObjectStore(
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
       executor_{std::move(executor)},
+      walkDetector_{std::move(walkDetector)},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processInfoCache_(processInfoCache),
@@ -96,6 +100,46 @@ ObjectStore::ObjectStore(
 }
 
 ObjectStore::~ObjectStore() = default;
+
+void ObjectStore::witnessBlobFetch(
+    const ObjectId& id,
+    const BackingStore::GetBlobResult& result,
+    const ObjectFetchContext& context) const {
+  if (!walkDetector_ ||
+      !ObjectFetchContext::shouldTriggerWalkDetection(context.getCause())) {
+    return;
+  }
+  // Walk detection is best effort and must not fail the read it observed.
+  try {
+    walkDetector_->witnessFileRead(
+        id,
+        result.origin,
+        context.getClientPid(),
+        context.getParentDirEntryCounts());
+  } catch (const std::exception& ex) {
+    XLOGF_EVERY_MS(
+        WARN, 60000, "walk detector failed on blob {}: {}", id, ex.what());
+  }
+}
+
+void ObjectStore::witnessTreeFetch(
+    const ObjectId& id,
+    const Tree& tree,
+    ObjectFetchContext::Origin origin,
+    const ObjectFetchContext& context) const {
+  // A restricted placeholder has no entries and was not a directory read.
+  if (!walkDetector_ || tree.isRestricted() ||
+      !ObjectFetchContext::shouldTriggerWalkDetection(context.getCause())) {
+    return;
+  }
+  // Walk detection is best effort and must not fail the read it observed.
+  try {
+    walkDetector_->witnessTreeRead(id, tree, origin, context.getClientPid());
+  } catch (const std::exception& ex) {
+    XLOGF_EVERY_MS(
+        WARN, 60000, "walk detector failed on tree {}: {}", id, ex.what());
+  }
+}
 
 void ObjectStore::updateProcessFetch(
     const ObjectFetchContext& fetchContext) const {
@@ -318,6 +362,7 @@ folly::coro::now_task<std::shared_ptr<const Tree>> ObjectStore::co_getTree(
   }
   fetchContext->didFetch(
       ObjectFetchContext::Tree, id, result.origin, tree->getSizeBytes());
+  witnessTreeFetch(id, *tree, result.origin, *fetchContext);
   updateProcessFetch(*fetchContext);
   co_return tree;
 }
@@ -485,6 +530,7 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
                 id,
                 result.origin,
                 result.blob->getSize());
+            self->witnessBlobFetch(id, result, *fetchContext);
             return std::move(result.blob);
           });
 }
@@ -498,6 +544,7 @@ folly::coro::now_task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
   updateProcessFetch(*fetchContext);
   fetchContext->didFetch(
       ObjectFetchContext::Blob, id, result.origin, result.blob->getSize());
+  witnessBlobFetch(id, result, *fetchContext);
   co_return std::move(result.blob).unwrap();
 }
 

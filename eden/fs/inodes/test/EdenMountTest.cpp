@@ -344,6 +344,24 @@ TEST(EdenMount, canonicalizePathFromTree) {
   }
 }
 
+TEST(EdenMount, walkDetectorLearnsWorkingCopyParent) {
+  TestMount testMount;
+
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "int main() { return 0; }\n");
+  builder1.finalize(testMount.getBackingStore(), true);
+  testMount.getBackingStore()->putCommit("1", builder1)->setReady();
+  auto builder2 = builder1.clone();
+  builder2.finalize(testMount.getBackingStore(), true);
+  testMount.getBackingStore()->putCommit("2", builder2)->setReady();
+
+  testMount.initialize(RootId("1"));
+  testMount.getEdenMount()->resetParent(RootId("2"));
+
+  const std::vector<RootId> expected{RootId("1"), RootId("2")};
+  EXPECT_EQ(expected, testMount.getWalkDetector().parents());
+}
+
 TEST(EdenMount, resetParents) {
   TestMount testMount;
 

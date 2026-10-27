@@ -448,9 +448,12 @@ TreeInode::TreeInode(
 TreeInode::~TreeInode() = default;
 
 void TreeInode::witnessLoadedSize() {
+  auto* walkDetector = getMount()->getWalkDetector();
+  if (!walkDetector) {
+    return;
+  }
   if (auto path = getPath()) {
-    getObjectStore().getBackingStore()->witnessDirectorySize(
-        *path, loadTimeEntryCounts_);
+    walkDetector->witnessDirectorySize(*path, loadTimeEntryCounts_);
   }
 }
 

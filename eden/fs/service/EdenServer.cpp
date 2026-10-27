@@ -2524,6 +2524,13 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto backingStore =
       getBackingStore(bsType, initialConfig->getRepoSource(), *initialConfig);
 
+  std::shared_ptr<WalkDetector> walkDetector;
+  if (serverState_->getReloadableConfig()
+          ->getEdenConfig()
+          ->enableWalkDetector.getValue()) {
+    walkDetector =
+        backingStore->createWalkDetector(initialConfig->getMountPath());
+  }
   auto objectStore = ObjectStore::create(
       backingStore,
       treeCache_,
@@ -2532,7 +2539,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_->getEdenFsEventsLogger(),
       serverState_->getReloadableConfig(),
       initialConfig->getCaseSensitive(),
-      folly::getKeepAliveToken(serverState_->getThreadPool().get()));
+      folly::getKeepAliveToken(serverState_->getThreadPool().get()),
+      walkDetector);
   auto journal = std::make_unique<Journal>(getStats().copy());
 
   // Create the EdenMount object and insert the mount into the mountPoints_ map.
@@ -2542,7 +2550,9 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
       blobCache_,
       serverState_,
       std::move(journal),
-      getStats().copy());
+      getStats().copy(),
+      std::nullopt,
+      std::move(walkDetector));
   addToMountPoints(edenMount);
 
   if (fsckSemaphore_) {

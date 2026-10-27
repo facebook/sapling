@@ -21,7 +21,9 @@ namespace facebook::eden {
  * Walk detection for one mount. EdenFS reports the mount's backing store
  * fetches and its working-copy parent here, and the backing store's walk
  * detector turns crawls of the mount into prefetches. A BackingStore that
- * does not detect walks creates no WalkDetector, so holders check for null.
+ * does not detect walks creates no WalkDetector, and neither does a mount
+ * created with `experimental:enable-walk-detector` off, so holders check for
+ * null.
  */
 class WalkDetector {
  public:

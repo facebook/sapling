@@ -162,7 +162,7 @@ TEST(TreeInode, loadTimeEntryCountsAreSnapshotAtLoad) {
   EXPECT_EQ(1u, dir->loadTimeEntryCounts().dirs);
 }
 
-TEST(TreeInode, loadReportsEntryCountsToBackingStore) {
+TEST(TreeInode, loadReportsEntryCountsToWalkDetector) {
   FakeTreeBuilder builder;
   for (int i = 0; i < 5; ++i) {
     builder.setFile(fmt::format("dir/f{}.txt", i), "x");
@@ -171,7 +171,7 @@ TEST(TreeInode, loadReportsEntryCountsToBackingStore) {
   TestMount mount{builder};
 
   mount.getTreeInode("dir");
-  auto reported = mount.getBackingStore()->witnessedDirectorySizes();
+  auto reported = mount.getWalkDetector().directorySizes();
   auto dir = std::find_if(reported.begin(), reported.end(), [](auto& entry) {
     return entry.first == RelativePath{"dir"};
   });

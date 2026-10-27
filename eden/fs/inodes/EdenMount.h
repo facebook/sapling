@@ -51,6 +51,7 @@
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ScmStatusCache.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/store/WalkDetector.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
@@ -369,7 +370,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
       EdenStatsPtr stats,
-      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt);
+      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt,
+      std::shared_ptr<WalkDetector> walkDetector = nullptr);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -586,6 +588,14 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   const std::shared_ptr<ObjectStore>& getObjectStore() const {
     return objectStore_;
+  }
+
+  /**
+   * The walk detector that watches this mount's reads, or nullptr when the
+   * backing store does not detect walks.
+   */
+  WalkDetector* getWalkDetector() const {
+    return walkDetector_.get();
   }
 
   /**
@@ -1286,7 +1296,14 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
       EdenStatsPtr stats,
-      std::optional<InodeCatalogType> inodeCatalogType = std::nullopt);
+      std::optional<InodeCatalogType> inodeCatalogType,
+      std::shared_ptr<WalkDetector> walkDetector);
+
+  /**
+   * Tell the walk detector, if this mount has one, which commit the working
+   * copy is at.
+   */
+  void setWalkDetectorParent(const RootId& parent);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -1397,6 +1414,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   InodePathCache inodePathCache_;
 
   std::shared_ptr<ObjectStore> objectStore_;
+  std::shared_ptr<WalkDetector> walkDetector_;
   std::shared_ptr<BlobCache> blobCache_;
   BlobAccess blobAccess_;
   std::shared_ptr<Overlay> overlay_;

@@ -253,7 +253,8 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
     EdenStatsPtr stats,
-    std::optional<InodeCatalogType> inodeCatalogType) {
+    std::optional<InodeCatalogType> inodeCatalogType,
+    std::shared_ptr<WalkDetector> walkDetector) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config),
@@ -262,8 +263,15 @@ std::shared_ptr<EdenMount> EdenMount::create(
           std::move(serverState),
           std::move(journal),
           std::move(stats),
-          std::move(inodeCatalogType)},
+          std::move(inodeCatalogType),
+          std::move(walkDetector)},
       EdenMountDeleter{}};
+}
+
+void EdenMount::setWalkDetectorParent(const RootId& parent) {
+  if (walkDetector_) {
+    walkDetector_->workingCopyParentHint(parent);
+  }
 }
 
 EdenMount::EdenMount(
@@ -273,7 +281,8 @@ EdenMount::EdenMount(
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
     EdenStatsPtr stats,
-    std::optional<InodeCatalogType> inodeCatalogType)
+    std::optional<InodeCatalogType> inodeCatalogType,
+    std::shared_ptr<WalkDetector> walkDetector)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
 #ifdef _WIN32
@@ -289,6 +298,7 @@ EdenMount::EdenMount(
       inodePathCache_{
           serverState_->getEdenConfig()->inodePathCacheSize.getValue()},
       objectStore_{std::move(objectStore)},
+      walkDetector_{std::move(walkDetector)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
       overlay_{Overlay::create(
@@ -386,7 +396,7 @@ InodeCatalogType EdenMount::getInodeCatalogType(
             *parentState_.wlock() = ParentCommitState{
                 parent, parentTree.tree, wcParent, std::move(checkoutState)};
 
-            objectStore_->workingCopyParentHint(wcParent);
+            setWalkDetectorParent(wcParent);
 
             // Record the transition from no snapshot to the current snapshot in
             // the journal.  This also sets things up so that we can carry the
@@ -2041,7 +2051,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   // checkout
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
 
-  objectStore_->workingCopyParentHint(snapshotId);
+  setWalkDetectorParent(snapshotId);
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
@@ -2233,7 +2243,7 @@ folly::coro::now_task<CheckoutResult> EdenMount::co_checkout(
       objectStore_->displayRootId(snapshotId));
 
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
-  objectStore_->workingCopyParentHint(snapshotId);
+  setWalkDetectorParent(snapshotId);
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
   bool resumingCheckout =
@@ -2677,7 +2687,7 @@ void EdenMount::resetParent(const RootId& parent) {
 
   checkoutConfig_->setWorkingCopyParentCommit(parent);
   parentLock->workingCopyParentRootId = parent;
-  objectStore_->workingCopyParentHint(parent);
+  setWalkDetectorParent(parent);
 
   journal_->recordRootUpdate(oldParent, parent);
 }
