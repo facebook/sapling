@@ -899,6 +899,26 @@ python_unittest(
 )
 
 python_unittest(
+    name = "edenfs_status_property_test",
+    srcs = ["edenfs/test/status_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = glob([
+        "edenfs/test/red_controls/**/*",
+        "edenfs/test/sapling_evidence/*",
+    ]),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_contracts",
+        ":edenfs_judging",
+        ":edenfs_properties",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_unittest(
     name = "edenfs_bytes_property_test",
     srcs = ["edenfs/test/bytes_property_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -929,6 +949,34 @@ python_unittest(
         ":edenfs_properties",
         ":edenfs_target",
         ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_journal_property_test",
+    srcs = ["edenfs/test/journal_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_judging",
+        ":edenfs_properties",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_differential_property_test",
+    srcs = ["edenfs/test/differential_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_judging",
+        ":edenfs_testing",
     ],
 )
 
