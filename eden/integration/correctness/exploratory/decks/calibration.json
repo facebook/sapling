@@ -24,5 +24,5 @@
   "schema_version": 1,
   "seed": 320001,
   "target": "edenfs",
-  "metadata": {"fatal_eden_bug": false, "expected": "accept", "added": "2026-09-14", "purpose": "instrument calibration: seed 320001 fetch-tree block under a killed sl status; the pinned pre-fix SUT must reject it before advisory replays run", "measured": "master 36e561210c9829062fe16d4e9d1487335065576d opt with fatal_eden_bug=false: completed, accept; the same seed rejects on the pinned pre-fix SUT."}
+  "metadata": {"fatal_eden_bug": false, "expected": "accept", "added": "2026-09-14", "purpose": "seed 320001 fetch-tree block under a killed sl status; master accepts", "measured": "master 36e561210c9829062fe16d4e9d1487335065576d opt with fatal_eden_bug=false: completed, accept."}
 }

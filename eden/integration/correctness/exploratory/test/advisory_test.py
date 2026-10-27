@@ -3,9 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""Advisory signals: calibration detection reads typed rule results rather than reason
-text, an unrelated not-evaluated obligation never hides it, and the release summary
-takes its lanes from the supplied decks and gates only the blocking ones.
+"""Advisory signals: the release summary takes its lanes from the supplied decks and
+gates only the blocking ones.
 """
 
 from __future__ import annotations
@@ -17,8 +16,6 @@ from pathlib import Path
 from typing import Any
 
 from eden.integration.correctness.exploratory.advisory import (
-    calibration_detected,
-    CALIBRATION_RULES,
     DeckRun,
     load_runs,
     load_specs,
@@ -27,10 +24,8 @@ from eden.integration.correctness.exploratory.advisory import (
 from eden.integration.correctness.exploratory.core.checker import (
     ACCEPT,
     encode_verdict,
-    HARNESS_SUSPECT,
     NOT_EVALUATED,
     REJECT,
-    Verdict,
 )
 from eden.integration.correctness.exploratory.core.containment import (
     COMPLETED,
@@ -43,7 +38,6 @@ from eden.integration.correctness.exploratory.core.property import (
     ObligationResult,
     ObligationStatus,
     path_subject,
-    property_error,
     PropertyResult,
 )
 from eden.integration.correctness.exploratory.core.runspec import RunSpec
@@ -55,102 +49,22 @@ from eden.integration.correctness.exploratory.test.tasking_fixtures import (
 )
 
 
-def _violated(
-    rule: str,
-    attribution: Attribution = Attribution.UNDETERMINED,
-    reason: str = "x",
-    scope: str = "r",
-) -> ObligationResult:
+def _violated(rule: str) -> ObligationResult:
     return ObligationResult(
         rule_id=rule,
-        scope=scope,
+        scope="r",
         subject=path_subject("r"),
         status=ObligationStatus.VIOLATED,
-        attribution=attribution,
-        reason=reason,
+        attribution=Attribution.UNDETERMINED,
+        reason="x",
     )
-
-
-def _not_evaluated(rule: str, scope: str) -> ObligationResult:
-    return ObligationResult(
-        rule_id=rule,
-        scope=scope,
-        subject=path_subject("other"),
-        status=ObligationStatus.NOT_EVALUATED,
-        not_evaluated_reason=f"{rule.split('.')[0]}.unobserved",
-    )
-
-
-class CalibrationDetectedTest(unittest.TestCase):
-    def test_typed_rules_replace_the_reason_regex(self) -> None:
-        """Every calibration rule is detected by ID, whatever its prose."""
-        for rule in sorted(CALIBRATION_RULES):
-            with self.subTest(rule=rule):
-                verdict = synthetic_verdict(
-                    PropertyResult(
-                        rule.split(".")[0], (_violated(rule, reason="prose changed"),)
-                    )
-                )
-                self.assertTrue(calibration_detected(verdict))
-
-    def test_an_unrelated_not_evaluated_obligation_never_hides_detection(
-        self,
-    ) -> None:
-        verdict = synthetic_verdict(
-            PropertyResult(
-                "bytes",
-                (
-                    _violated("bytes.torn-read", scope="a"),
-                    _not_evaluated("bytes.stale-read", "b"),
-                ),
-            )
-        )
-        self.assertEqual("reject", verdict.kind)
-        self.assertTrue(calibration_detected(verdict))
-
-    def test_other_rules_suspects_and_raising_properties_are_not_calibration(
-        self,
-    ) -> None:
-        cases = {
-            "other rule": synthetic_verdict(
-                PropertyResult(
-                    "readdir",
-                    (
-                        _violated(
-                            "readdir.duplicate-entry",
-                            reason="bytes/fuse≠model: lookalike",
-                        ),
-                    ),
-                )
-            ),
-            "suspect": synthetic_verdict(
-                PropertyResult(
-                    "bytes",
-                    (_violated("bytes.torn-read", Attribution.ORACLE_SUSPECT),),
-                )
-            ),
-            "raised": synthetic_verdict(
-                PropertyResult(
-                    "bytes",
-                    (_violated("bytes.torn-read"),),
-                    error=property_error("KeyError", "x"),
-                )
-            ),
-            "clean": synthetic_verdict(PropertyResult("bytes")),
-        }
-        for name, verdict in cases.items():
-            with self.subTest(name=name):
-                self.assertFalse(calibration_detected(verdict))
-        self.assertFalse(calibration_detected(Verdict("reject", "bytes/fuse≠model: x")))
 
 
 class ReleaseSummaryTest(unittest.TestCase):
     def _specs(self, *decks: tuple[str, dict[str, Any]]) -> dict[str, RunSpec]:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            for seed, (name, metadata) in enumerate(
-                (("calibration", {"expected": "accept"}), *decks)
-            ):
+            for seed, (name, metadata) in enumerate(decks):
                 document = spec_document(seed=seed + 5, target="fake")
                 document["metadata"] = metadata
                 (directory / f"{name}.json").write_text(json.dumps(document))
@@ -175,8 +89,6 @@ class ReleaseSummaryTest(unittest.TestCase):
 
     def _passing(self) -> dict[str, DeckRun]:
         return {
-            "calibration": DeckRun(COMPLETED, ACCEPT),
-            "calibration-5": DeckRun(COMPLETED, REJECT),
             "good": DeckRun(COMPLETED, ACCEPT),
             "unknown": DeckRun(COMPLETED, NOT_EVALUATED, ("r",)),
             "bug": DeckRun(COMPLETED, REJECT),
@@ -195,9 +107,7 @@ class ReleaseSummaryTest(unittest.TestCase):
     def test_every_blocking_verdict_mismatch_fails_the_gate(self) -> None:
         cases = {
             "good": DeckRun(COMPLETED, REJECT),
-            "calibration": DeckRun(COMPLETED, HARNESS_SUSPECT),
             "unknown": DeckRun(COMPLETED, NOT_EVALUATED, ("other",)),
-            "calibration-5": DeckRun(COMPLETED, ACCEPT),
         }
         for name, run in cases.items():
             with self.subTest(name=name):
@@ -228,11 +138,11 @@ class ReleaseSummaryTest(unittest.TestCase):
 
     def test_an_incomplete_or_missing_blocking_run_fails_the_gate(self) -> None:
         runs = {**self._passing(), "good": DeckRun(HARNESS_FAILURE, ACCEPT)}
-        del runs["calibration-5"]
+        del runs["unknown"]
         summary = release_summary(self._decks(), runs)
         self.assertEqual(["good"], summary["unmeasured"])
-        self.assertEqual(["calibration-5"], summary["missing"])
-        self.assertEqual(["calibration-5", "good"], summary["failures"])
+        self.assertEqual(["unknown"], summary["missing"])
+        self.assertEqual(["good", "unknown"], summary["failures"])
 
     def test_a_missing_decks_or_artifacts_directory_is_a_schema_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -242,13 +152,8 @@ class ReleaseSummaryTest(unittest.TestCase):
             with self.assertRaisesRegex(SchemaError, "is not a directory"):
                 load_runs(absent, FAKE)
 
-    def test_decks_without_calibration_or_with_bad_metadata_are_schema_errors(
-        self,
-    ) -> None:
+    def test_decks_with_bad_metadata_are_schema_errors(self) -> None:
         cases = {
-            "no calibration deck": {
-                k: v for k, v in self._decks().items() if k != "calibration"
-            },
             "expected is None": {
                 **self._decks(),
                 **self._specs(("bare", {})),

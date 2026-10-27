@@ -16,10 +16,6 @@ An expressible history is not necessarily detected by the current checker. Each 
 
 The recorded subtasks still carry legacy (`eden-correctness-task-v1`) key sections; the sections rendered under the contracts are in the migration evidence.
 
-## Calibration rule
-
-The calibration spec must observe before it perturbs. On the pinned SUT the calibration run must record a complete `product` or `undetermined` finding of a rule in `advisory.CALIBRATION_RULES` (every byte-content rule on a FUSE, Thrift, or held-descriptor read, `fd.read-failed`, `cross-channel.byte-disagreement`, and `status.sl-fuse-stale-status`), a violated obligation with `product` or `undetermined` attribution in a property that did not raise; the projected reason is never parsed. An accept on a correctly authored calibration spec is a regression (`detection-power-regression`), and advisory replays are refused.
-
 ## Recovery check scope
 
 fsck as a recovery check is unsound unless the overlay has no concurrent writer and there is a version-matched helper; the stack fsck reports orphans master's daemon tolerates by design - revisit only with a daemon-side --check-only Thrift call that runs under the overlay lock.

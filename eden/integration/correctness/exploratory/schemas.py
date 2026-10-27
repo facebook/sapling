@@ -52,8 +52,6 @@ class RunPurpose(StrEnum):
 
     EXPLORE = "explore"
     RED_CONTROL = "red-control"
-    CALIBRATION = "calibration"
-    PINNED_SUT = "pinned-sut"
     REPLAY = "replay"
     MANUAL = "manual"
 

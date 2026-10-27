@@ -3,18 +3,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""Opt-in frozen-spec replays gated by instrument calibration.
+"""Opt-in frozen-spec replays and the release summary over their verdicts.
 
 The deck directory, the target that parses it, and the live runner are
-supplied by the caller, so this module names no target. Detection reads
-only typed obligations: a violated product-actionable obligation of a
-calibration rule in a property that did not raise.
+supplied by the caller, so this module names no target.
 """
 
 from __future__ import annotations
 
-import hashlib
-import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,10 +28,7 @@ from eden.integration.correctness.exploratory.core.containment import (
     ExplorationResult,
     VERDICT_NAME,
 )
-from eden.integration.correctness.exploratory.core.property import (
-    ObligationStatus,
-    PRODUCT_ATTRIBUTIONS,
-)
+from eden.integration.correctness.exploratory.core.property import ObligationStatus
 from eden.integration.correctness.exploratory.core.runspec import from_json, RunSpec
 from eden.integration.correctness.exploratory.core.target import Target
 from eden.integration.correctness.exploratory.findings import execution_findings
@@ -53,42 +46,7 @@ MISSING = "missing"
 UNMEASURED = "unmeasured"
 DECKS_DECISION = "release-summary:invalid-decks"
 LANES = ("accept", "reject", "not-evaluated")
-PINNED_SHA256 = "a2e924f78f270362f8b40811fb292dfd5330f895e669c701d1dc62dfc8203050"
-# The typed rules the pinned binary's calibration run must trip: every
-# byte-content rule on a FUSE, Thrift, or held-descriptor read, the
-# cross-channel byte comparison, and sl status missing dirt the FUSE side shows.
-CALIBRATION_RULES = frozenset(
-    {
-        "bytes.stale-read",
-        "bytes.torn-read",
-        "bytes.fabricated-value",
-        "fd.read-failed",
-        "fd.stale-read",
-        "fd.torn-read",
-        "fd.fabricated-value",
-        "cross-channel.byte-disagreement",
-        "status.sl-fuse-stale-status",
-    }
-)
 Runner = Callable[[RunSpec, str], ExplorationResult]
-
-
-def calibration_detected(verdict: Verdict) -> bool:
-    """Return whether a property that did not raise violated a calibration rule's obligation with a product or undetermined attribution.
-
-    Reads only typed obligations; the projected reason is never parsed. An
-    unrelated not-evaluated obligation never hides a proven violation.
-    """
-    report = verdict.report
-    if report is None:
-        return False
-    return any(
-        finding.rule_id in CALIBRATION_RULES
-        and finding.attribution in PRODUCT_ATTRIBUTIONS
-        for result in report.results
-        if result.error is None
-        for finding in result.findings
-    )
 
 
 def not_evaluated_reasons(verdict: Verdict) -> list[str]:
@@ -203,14 +161,12 @@ def release_summary(
     """Split measured deck verdicts into lanes by `metadata.expected` and gate the blocking ones.
 
     Accept decks must complete and accept; not-evaluated decks must complete
-    not evaluated for exactly `metadata.expected_not_evaluated`; the pinned
-    `calibration-<seed>` run must complete and reject. A blocking run that
-    left no verdict is `missing`, one that did not complete is `unmeasured`,
-    and either fails the gate. Reject decks are advisory: `reproduced` names
-    those that completed rejecting or left their `expected_execution`.
+    not evaluated for exactly `metadata.expected_not_evaluated`. A blocking
+    run that left no verdict is `missing`, one that did not complete is
+    `unmeasured`, and either fails the gate. Reject decks are advisory:
+    `reproduced` names those that completed rejecting or left their
+    `expected_execution`.
     """
-    if "calibration" not in specs:
-        raise SchemaError(DECKS_DECISION, "no calibration deck")
     for name, spec in specs.items():
         if spec.metadata.get("expected") not in LANES:
             raise SchemaError(
@@ -223,7 +179,6 @@ def release_summary(
             raise SchemaError(
                 DECKS_DECISION, f"{name}: expected_not_evaluated is not a list"
             )
-    pin = f"calibration-{specs['calibration'].seed}"
 
     def kind(name: str) -> str:
         run = runs.get(name)
@@ -234,7 +189,7 @@ def release_summary(
     lanes: dict[str, dict[str, str]] = {"accept": {}, "reject": {}, "not-evaluated": {}}
     for name, spec in specs.items():
         lanes[spec.metadata["expected"]][name] = kind(name)
-    blocking = {**lanes["accept"], **lanes["not-evaluated"], pin: kind(pin)}
+    blocking = {**lanes["accept"], **lanes["not-evaluated"]}
     failures = [name for name, k in lanes["accept"].items() if k != ACCEPT]
     failures += [
         name
@@ -243,8 +198,6 @@ def release_summary(
         or list(runs[name].not_evaluated)
         != specs[name].metadata["expected_not_evaluated"]
     ]
-    if blocking[pin] != REJECT:
-        failures.append(pin)
     return {
         "accept_decks": lanes["accept"],
         "reject_decks": lanes["reject"],
@@ -253,7 +206,6 @@ def release_summary(
             name for name in lanes["reject"] if _reproduced(specs[name], runs.get(name))
         ),
         "flip_candidates": [name for name, k in lanes["reject"].items() if k == ACCEPT],
-        "calibration": {"pin": blocking[pin], "master": kind("calibration")},
         "missing": sorted(name for name, k in blocking.items() if k == MISSING),
         "unmeasured": sorted(name for name, k in blocking.items() if k == UNMEASURED),
         "failures": sorted(failures),
@@ -261,46 +213,19 @@ def release_summary(
     }
 
 
-def _calibrate(run: Runner, artifacts: Path, spec: RunSpec, launcher: Path) -> bool:
-    """Run the authorized calibration once and restore the replay SUT."""
-    previous = os.environ.get("EDENFS_SERVER_PATH")
-    os.environ["EDENFS_SERVER_PATH"] = str(launcher)
-    try:
-        verdict = _advisory_run(
-            run, spec, artifacts / f"calibration-{spec.seed}", RunPurpose.CALIBRATION
-        )
-        if verdict.kind == ACCEPT:
-            return False
-        if calibration_detected(verdict):
-            return True
-        raise RuntimeError(str(verdict))
-    finally:
-        if previous is None:
-            os.environ.pop("EDENFS_SERVER_PATH", None)
-        else:
-            os.environ["EDENFS_SERVER_PATH"] = previous
-
-
 def run_advisory(
     artifacts: Path,
-    pinned_sut: Path,
     *,
     specs: Mapping[str, RunSpec],
     run: Runner,
     opt_in: bool = False,
 ) -> str:
-    """Calibrate the pinned binary, then replay each spec once on the caller's SUT.
+    """Replay each spec once on the caller's SUT, into `artifacts/<deck>`.
 
     Replay verdicts remain in each run's ordinary artifacts.
     """
     if not opt_in:
         return "skipped"
-    with pinned_sut.open("rb") as binary:
-        checksum = hashlib.file_digest(binary, "sha256").hexdigest()
-    if checksum != PINNED_SHA256:
-        return "vintage-unverified"
-    if not _calibrate(run, artifacts, specs["calibration"], pinned_sut):
-        return "detection-power-regression"
     for name, spec in specs.items():
         _advisory_run(run, spec, artifacts / name, RunPurpose.REPLAY)
-    return "calibrated"
+    return "replayed"

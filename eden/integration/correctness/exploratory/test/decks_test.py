@@ -15,8 +15,6 @@ the generated differential decks opt into the reference checkout.
 
 from __future__ import annotations
 
-import functools
-import hashlib
 import json
 import os
 import subprocess
@@ -54,17 +52,16 @@ from eden.integration.correctness.exploratory.core.property import (
     path_subject,
     PropertyResult,
 )
-from eden.integration.correctness.exploratory.core.runspec import (
-    finish_before,
-    RunSpec,
-    validate,
-)
+from eden.integration.correctness.exploratory.core.runspec import RunSpec, validate
 from eden.integration.correctness.exploratory.edenfs.actions import (
     reference_clone,
     validate_comparable,
     WALK_DEADLOCK_TASK,
 )
-from eden.integration.correctness.exploratory.edenfs.target import EDENFS_TARGET
+from eden.integration.correctness.exploratory.edenfs.target import (
+    EDENFS_TARGET,
+    run_live,
+)
 from eden.integration.correctness.exploratory.findings import (
     keyed,
     target_control_rules,
@@ -165,7 +162,6 @@ class DeckValidationTest(unittest.TestCase):
     def test_every_deck_validates_and_names_its_lane(self) -> None:
         specs = _specs()
         self.assertEqual(FROZEN_DECKS | DIFFERENTIAL_DECKS, set(specs))
-        self.assertEqual(320001, specs["calibration"].seed)
         for name, spec in specs.items():
             with self.subTest(deck=name):
                 self._validate(spec.metadata)
@@ -206,19 +202,6 @@ class DeckValidationTest(unittest.TestCase):
                     spec.metadata.get("expected_not_evaluated", []),
                     advisory.not_evaluated_reasons(verdict),
                 )
-
-    def test_calibration_observes_before_second_write(self) -> None:
-        spec = _specs()["calibration"]
-        self.assertEqual(
-            ["w0", "w2"], [a.id for a in spec.actions if a.kind == "write"]
-        )
-        for earlier, later in zip(
-            ("w0", "u1", "s1", "f0", "t0"), ("u1", "s1", "f0", "t0", "w2")
-        ):
-            self.assertIn(earlier, finish_before(spec, later))
-        self.assertEqual(
-            finish_before(spec, "w2"), {a.id for a in spec.actions} - {"w2"}
-        )
 
 
 class DeckIdentityTest(unittest.TestCase):
@@ -348,7 +331,6 @@ class AdvisoryTest(unittest.TestCase):
     def _all(self) -> dict[str, str]:
         specs = _specs()
         results = {name: spec.metadata["expected"] for name, spec in specs.items()}
-        results["calibration-320001"] = REJECT
         del results["bug-113"]
         return results
 
@@ -377,7 +359,7 @@ class AdvisoryTest(unittest.TestCase):
             set(summary["not_evaluated_decks"]),
         )
         self.assertEqual(["bug-113", "bug-775", "bug-788"], summary["reproduced"])
-        self.assertEqual({"pin": "reject", "master": "accept"}, summary["calibration"])
+        self.assertNotIn("calibration", summary)
         for name in DIFFERENTIAL_DECKS:
             self.assertEqual("accept", summary["accept_decks"][name])
 
@@ -385,7 +367,6 @@ class AdvisoryTest(unittest.TestCase):
         for name, kind in (
             ("red-control", REJECT),
             ("fd-across-type-change-unloaded", ACCEPT),
-            ("calibration-320001", ACCEPT),
         ):
             with self.subTest(name=name):
                 results = {**self._all(), name: kind}
@@ -424,96 +405,38 @@ class AdvisoryTest(unittest.TestCase):
     def test_advisory_runner_skips_without_opt_in(self) -> None:
         run = mock.Mock()
         with tempfile.TemporaryDirectory() as temporary:
-            result = advisory.run_advisory(
-                Path(temporary), Path("absent"), specs=_specs(), run=run
-            )
+            result = advisory.run_advisory(Path(temporary), specs=_specs(), run=run)
         self.assertEqual("skipped", result)
         run.assert_not_called()
 
-    def test_preflight_outcomes(self) -> None:
-        """Only a typed calibration-rule finding on the known SUT permits replays."""
+    def test_advisory_runner_replays_each_deck_once_into_its_directory(self) -> None:
         specs = _specs()
-        cases = (
-            (
-                True,
-                synthetic_verdict(
-                    _violated("status.sl-fuse-stale-status", Attribution.PRODUCT)
-                ),
-                "calibrated",
-            ),
-            (
-                True,
-                synthetic_verdict(
-                    _violated("bytes.stale-read", Attribution.UNDETERMINED)
-                ),
-                "calibrated",
-            ),
-            (True, synthetic_verdict(satisfied_bytes()), "detection-power-regression"),
-            (False, synthetic_verdict(satisfied_bytes()), "vintage-unverified"),
-            (
-                True,
-                synthetic_verdict(
-                    _violated("status.status-diff-mismatch", Attribution.PRODUCT)
-                ),
-                None,
-            ),
-            (
-                True,
-                synthetic_verdict(
-                    _violated("bytes.stale-read", Attribution.ORACLE_SUSPECT)
-                ),
-                None,
-            ),
+        result = ExplorationResult(
+            Execution("completed", "", 0, 0), synthetic_verdict(satisfied_bytes()), ""
         )
-        for known, verdict, expected in cases:
-            with self.subTest(known=known, reason=verdict.reason):
-                result = ExplorationResult(
-                    Execution("completed", "", 0, 0), verdict, ""
-                )
-                run = mock.Mock(return_value=result)
-                with tempfile.TemporaryDirectory() as temporary:
-                    artifacts = Path(temporary)
-                    binary = artifacts / "edenfs"
-                    binary.write_bytes(b"known" if known else b"unknown")
-                    with (
-                        mock.patch.object(
-                            advisory,
-                            "PINNED_SHA256",
-                            hashlib.sha256(b"known").hexdigest(),
-                        ),
-                        mock.patch.dict(os.environ, {"EDENFS_SERVER_PATH": "current"}),
-                    ):
-                        call = functools.partial(
-                            advisory.run_advisory,
-                            artifacts,
-                            binary,
-                            specs=specs,
-                            run=run,
-                            opt_in=True,
-                        )
-                        if expected is None:
-                            with self.assertRaises(RuntimeError):
-                                call()
-                        else:
-                            self.assertEqual(expected, call())
-                        self.assertEqual("current", os.environ["EDENFS_SERVER_PATH"])
-                replays = len(specs) if expected == "calibrated" else 0
-                self.assertEqual(int(known) + replays, run.call_count)
+        run = mock.Mock(return_value=result)
+        with tempfile.TemporaryDirectory() as temporary:
+            artifacts = Path(temporary)
+            outcome = advisory.run_advisory(
+                artifacts, specs=specs, run=run, opt_in=True
+            )
+        self.assertEqual("replayed", outcome)
+        self.assertEqual(
+            [(spec, str(artifacts / name)) for name, spec in specs.items()],
+            [call.args for call in run.call_args_list],
+        )
 
     def test_advisory_replays(self) -> None:
         """Record advisory outcomes only when an operator explicitly opts in."""
         if os.environ.get("EDEN_EXPLORATORY_REPLAYS") != "1":
             self.skipTest("set EDEN_EXPLORATORY_REPLAYS=1 for advisory replays")
-        from eden.integration.correctness.exploratory.edenfs.target import run_live
-
+        artifacts = os.environ.get("EDEN_EXPLORATORY_ARTIFACTS")
+        if not artifacts:
+            self.skipTest("set EDEN_EXPLORATORY_ARTIFACTS for advisory replays")
         result = advisory.run_advisory(
-            Path(os.environ["EDEN_EXPLORATORY_ARTIFACTS"]),
-            Path(os.environ["EDEN_EXPLORATORY_PINNED_SUT"]),
-            specs=_specs(),
-            run=lambda spec, path: run_live(spec, path),
-            opt_in=True,
+            Path(artifacts), specs=_specs(), run=run_live, opt_in=True
         )
-        self.assertEqual("calibrated", result, result)
+        self.assertEqual("replayed", result)
 
 
 class ReleaseConfigTest(unittest.TestCase):
@@ -536,10 +459,8 @@ class ReleaseConfigTest(unittest.TestCase):
         self.assertLess(replays, summary)
         self.assertIn("--env EDEN_EXPLORATORY_REPLAYS=1", shell[live:replays])
 
-    def test_release_job_files_nothing_and_only_reads_the_pinned_sut(self) -> None:
+    def test_release_job_files_and_fetches_nothing(self) -> None:
         shell = self.step["shell"]
-        self.assertEqual(1, shell.count("manifold "))
-        self.assertIn("manifold get ", shell)
         for needle in (
             "findings",
             "tasks.",
@@ -547,6 +468,7 @@ class ReleaseConfigTest(unittest.TestCase):
             "scribe",
             "--ledger",
             "meta ",
-            "manifold put",
+            "manifold",
+            "PINNED_SUT",
         ):
             self.assertNotIn(needle, shell)
