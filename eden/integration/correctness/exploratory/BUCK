@@ -5,6 +5,22 @@ load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_
 oncall("scm_client_infra")
 
 python_library(
+    name = "target",
+    srcs = [
+        # Facts decode a paired reference side with the differential reader.
+        "core/differential.py",
+        "core/effects.py",
+        "core/facts.py",
+        "core/history.py",
+        "core/jsonio.py",
+        "core/property.py",
+        "core/spec_types.py",
+        "core/target.py",
+    ],
+    deps = [":sites"],
+)
+
+python_library(
     name = "sites",
     srcs = ["core/sites.py"],
 )
@@ -15,6 +31,18 @@ python_unittest(
     compatible_with = ["ovr_config//os:linux"],
     network_access = network_access_utils.none(),
     deps = [":sites"],
+)
+
+python_library(
+    name = "runspec",
+    srcs = [],
+    deps = [":target"],
+)
+
+python_library(
+    name = "history",
+    srcs = [],
+    deps = [":target"],
 )
 
 # Continuous CI only: `ci.remove(ci.diff, ci.land)` drops the inherited diff-
