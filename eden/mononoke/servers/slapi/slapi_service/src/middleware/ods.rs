@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use context::CoreContext;
+use context::PerfCounterType;
 use edenapi_types::file::FILE_COUNT_HEADER;
 use edenapi_types::tree::TREE_COUNT_HEADER;
 use gotham::helpers::http::Body;
@@ -73,6 +75,9 @@ define_stats! {
     request_load: quantile_stat(Average; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
     total_requests: timeseries(Rate, Sum),
+    processed_requests: timeseries(Rate, Sum),
+    processed_files: timeseries(Rate, Sum),
+    processed_trees: timeseries(Rate, Sum),
     response_bytes_sent: dynamic_quantile_stat("{}.response_bytes_sent", (method: String); Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     set_bookmark_duration_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
     replay_identical_moves_duration_ms: quantile_stat(Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
@@ -230,6 +235,21 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 }
 
 pub struct OdsMiddleware;
+
+pub(crate) fn record_processed_work(state: &mut State, ctx: CoreContext) {
+    if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
+        callbacks.add(move |_| {
+            let counters = ctx.perf_counters();
+            STATS::processed_requests.add_value(1);
+            STATS::processed_files.add_value(counters.get_counter(PerfCounterType::EdenapiFiles));
+            STATS::processed_trees.add_value(
+                counters.get_counter(PerfCounterType::EdenapiTrees)
+                    + counters.get_counter(PerfCounterType::EdenapiAugmentedTrees)
+                    + counters.get_counter(PerfCounterType::EdenapiOriginalRoutedToAugmented),
+            );
+        });
+    }
+}
 
 impl OdsMiddleware {
     pub fn new() -> Self {

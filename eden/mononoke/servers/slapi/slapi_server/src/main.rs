@@ -97,15 +97,12 @@ struct MononokeServerArgs {
     /// Configerator path to the MononokeRateLimits config to load
     #[clap(long, default_value = "scm/mononoke/ratelimiting/ratelimits")]
     rate_limit_config_path: Option<String>,
-    /// RIM backend ID for EdenAPI QPS shadow probes
+    /// RIM workload backend ID for EdenAPI rate limiting
     #[clap(long)]
     rim_backend: Option<i32>,
-    /// Additional RIM backend for per-serving-region EdenAPI rate limiting
+    /// Charge cost_<region> in rim_backend using the configured request costs.
     #[clap(long, requires = "rim_backend")]
-    rim_regional_backend: Option<i32>,
-    /// Use workload/instance tenancy; requires backends configured with the new schema
-    #[clap(long, requires = "rim_backend")]
-    rim_workload_tenancy: bool,
+    rim_regional_resources: bool,
     /// Mark this instance as a shadow tier. Shadow tiers never forward
     /// shadow traffic, preventing forwarding loops.
     #[clap(long, default_value_t = false)]
@@ -398,8 +395,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 Some(Path::new(&args.tls_args.tls_ca)),
                 rate_limit_config_path,
                 args.rim_backend,
-                args.rim_regional_backend,
-                args.rim_workload_tenancy,
+                args.rim_regional_resources,
             )
             .await
         }

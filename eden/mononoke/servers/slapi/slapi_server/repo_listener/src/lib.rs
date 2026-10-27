@@ -60,8 +60,7 @@ pub async fn create_repo_listeners<'a>(
     tls_ca_path: Option<&Path>,
     rate_limit_config_path: Option<String>,
     rim_backend: Option<i32>,
-    rim_regional_backend: Option<i32>,
-    rim_workload_tenancy: bool,
+    rim_regional_resources: bool,
 ) -> Result<()> {
     let rate_limiter = {
         let handle = config_store
@@ -98,8 +97,7 @@ pub async fn create_repo_listeners<'a>(
             is_shadow_tier,
             tls_ca_path,
             rim_backend,
-            rim_regional_backend,
-            rim_workload_tenancy,
+            rim_regional_resources,
         )
         .context("Error instantiating SaplingRemoteAPI")?
     };

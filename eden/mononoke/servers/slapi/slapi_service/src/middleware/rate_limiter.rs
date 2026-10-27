@@ -35,16 +35,15 @@ use http::StatusCode;
 use http::Uri;
 
 use crate::handlers::JsonErrorFormatter;
+use crate::middleware::ods::record_processed_work;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::FetchResource;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::WorkloadConfig;
+use crate::utils::rim_rate_limiter::RimRateLimiter;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::check_rate_limit;
-#[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::legacy_tenancy_path;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::report_load;
 #[cfg(fbcode_build)]
@@ -126,25 +125,13 @@ fn load_shedding_response(state: &mut State, ctx: &CoreContext) -> Option<Respon
 #[derive(Clone)]
 pub struct ThrottleMiddleware {
     #[cfg(fbcode_build)]
-    rim_backend: Option<RimBackend>,
-    #[cfg(fbcode_build)]
-    rim_regional_backend: Option<(RimBackend, String)>,
-    #[cfg(fbcode_build)]
-    rim_workload_config: Option<WorkloadConfig>,
+    rim: Option<RimRateLimiter>,
 }
 impl ThrottleMiddleware {
-    pub fn new(
-        #[cfg(fbcode_build)] rim_backend: Option<RimBackend>,
-        #[cfg(fbcode_build)] rim_regional_backend: Option<(RimBackend, String)>,
-        #[cfg(fbcode_build)] rim_workload_config: Option<WorkloadConfig>,
-    ) -> Self {
+    pub(crate) fn new(#[cfg(fbcode_build)] rim: Option<RimRateLimiter>) -> Self {
         Self {
             #[cfg(fbcode_build)]
-            rim_backend,
-            #[cfg(fbcode_build)]
-            rim_regional_backend,
-            #[cfg(fbcode_build)]
-            rim_workload_config,
+            rim,
         }
     }
 }
@@ -166,59 +153,40 @@ impl Middleware for ThrottleMiddleware {
         }
 
         #[cfg(fbcode_build)]
-        if self.rim_backend.is_some() || self.rim_regional_backend.is_some() {
-            let scopes = [
-                self.rim_regional_backend
-                    .as_ref()
-                    .map(|(backend, region)| (*backend, Some(region.as_str()))),
-                self.rim_backend.map(|backend| (backend, None)),
-            ];
-            let config = self.rim_workload_config.as_ref().map(|config| config.get());
-            let paths = state.try_borrow::<MetadataState>().map(|metadata| {
-                scopes.map(|scope| {
-                    let (backend, region) = scope?;
-                    let (path, selection_key) = if let Some(config) = &config {
-                        request_attribution(metadata.metadata(), region, config, backend)
-                    } else {
-                        (
-                            legacy_tenancy_path(&metadata.metadata().tenant_info(), region)?,
-                            None,
-                        )
+        if let Some(rim) = &self.rim
+            && let Some(metadata) = state.try_borrow::<MetadataState>()
+        {
+            let config = rim.config.get();
+            let (path, selection_key) = request_attribution(metadata.metadata(), &config);
+            // Missing fetch headers charge only the base request cost.
+            let fetches = (Method::borrow_from(state) == Method::POST)
+                .then(|| {
+                    // The API prefix is stripped; the encoded repo is one path segment.
+                    let (_, endpoint) = Uri::borrow_from(state)
+                        .path()
+                        .strip_prefix('/')?
+                        .split_once('/')?;
+                    let (header, resource) = match endpoint {
+                        "files2" => (FILE_COUNT_HEADER, FetchResource::Files),
+                        "trees" => (TREE_COUNT_HEADER, FetchResource::Trees),
+                        _ => return None,
                     };
-                    Some((backend, path, selection_key))
+                    let count = HeaderMap::borrow_from(state)
+                        .get(header)?
+                        .to_str()
+                        .ok()?
+                        .parse::<u32>()
+                        .ok()?;
+                    Some((resource, count))
                 })
-            });
-            if let Some(paths) = paths {
-                // Missing fetch headers charge only the base request cost.
-                let fetches = (Method::borrow_from(state) == Method::POST)
-                    .then(|| {
-                        // The API prefix is stripped; the encoded repo is one path segment.
-                        let (_, endpoint) = Uri::borrow_from(state)
-                            .path()
-                            .strip_prefix('/')?
-                            .split_once('/')?;
-                        let (header, resource) = match endpoint {
-                            "files2" => (FILE_COUNT_HEADER, FetchResource::Files),
-                            "trees" => (TREE_COUNT_HEADER, FetchResource::Trees),
-                            _ => return None,
-                        };
-                        let count = HeaderMap::borrow_from(state)
-                            .get(header)?
-                            .to_str()
-                            .ok()?
-                            .parse::<u32>()
-                            .ok()?;
-                        Some((resource, count))
-                    })
-                    .flatten();
-                // Global accounting sees only traffic that proceeds past the regional stage.
-                for (backend, path, selection_key) in paths.into_iter().flatten() {
-                    let requirements = request_requirements(config.as_deref(), backend, fetches);
+                .flatten();
+            match request_requirements(&config, fetches, &rim.cost_resource) {
+                Ok(requirements) => {
                     if let Some(response) = apply_rim_decision(
                         state,
                         &ctx,
                         &path,
-                        backend,
+                        rim.backend,
                         &requirements,
                         selection_key.as_deref(),
                     )
@@ -227,9 +195,14 @@ impl Middleware for ThrottleMiddleware {
                         return Some(response);
                     }
                 }
+                Err(error) => {
+                    let mut scuba = ctx.scuba().clone();
+                    scuba.log_with_msg("RIM request cost unavailable", error.to_string());
+                }
             }
         }
 
+        record_processed_work(state, ctx);
         None
     }
 }
