@@ -649,6 +649,22 @@ python_library(
 )
 
 python_unittest(
+    name = "edenfs_contracts_invariants_test",
+    srcs = ["edenfs/test/contracts_invariants_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_contracts",
+        ":edenfs_contracts_fixtures",
+        ":edenfs_encoding",
+        ":edenfs_testing",
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
     name = "edenfs_contracts_checkout_structure_test",
     srcs = ["edenfs/test/contracts_checkout_structure_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -662,6 +678,38 @@ python_unittest(
         ":target",
         ":testing",
         "//eden/integration/correctness:repo",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_contracts_errno_test",
+    srcs = ["edenfs/test/contracts_errno_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_contracts",
+        ":edenfs_contracts_fixtures",
+        ":edenfs_testing",
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_contracts_mutations_test",
+    srcs = ["edenfs/test/contracts_mutations_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_actions",
+        ":edenfs_contracts",
+        ":edenfs_contracts_fixtures",
+        ":edenfs_encoding",
+        ":edenfs_testing",
+        ":target",
+        ":testing",
     ],
 )
 
