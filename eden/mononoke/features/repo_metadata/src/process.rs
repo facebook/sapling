@@ -81,15 +81,29 @@ async fn manifest_and_unode(
     repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<(ContentManifestId, RootUnodeManifestId)> {
-    let (content_manifest, blame) = try_join!(
-        repo.repo_derived_data().derive::<RootContentManifestId>(
-            ctx,
-            cs_id,
-            DerivationPriority::LOW
-        ),
-        repo.repo_derived_data()
-            .derive::<RootBlameV2>(ctx, cs_id, DerivationPriority::LOW)
-    )?;
+    let derived_data = repo.repo_derived_data();
+    let wait_for_derived_blame = justknobs::eval(
+        "scm/mononoke:repo_metadata_logger_wait_for_derived_blame",
+        None,
+        None,
+    );
+
+    let (content_manifest, blame) = if wait_for_derived_blame {
+        let (Some(content_manifest), Some(blame)) = try_join!(
+            derived_data.fetch_derived::<RootContentManifestId>(ctx, cs_id),
+            derived_data.fetch_derived::<RootBlameV2>(ctx, cs_id),
+        )?
+        else {
+            return Err(anyhow!("Derived data not ready for changeset {cs_id}"));
+        };
+        (content_manifest, blame)
+    } else {
+        try_join!(
+            derived_data.derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW),
+            derived_data.derive::<RootBlameV2>(ctx, cs_id, DerivationPriority::LOW),
+        )?
+    };
+
     Ok((
         content_manifest.into_content_manifest_id(),
         blame.root_manifest(),
