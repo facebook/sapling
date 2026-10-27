@@ -98,9 +98,42 @@ python_library(
 python_library(
     name = "core_checker",
     srcs = [
+        "core/semantics.py",
+        "core/solver.py",
         "core/sources.py",
     ],
     deps = [":target"],
+)
+
+python_library(
+    name = "exhaustive",
+    srcs = ["core/exhaustive.py"],
+    deps = [
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "engine_problems",
+    srcs = ["core/test/problems.py"],
+    deps = [
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_semantics_test",
+    srcs = ["core/test/semantics_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":engine_problems",
+        ":exhaustive",
+        ":target",
+    ],
 )
 
 # Continuous CI only: `ci.remove(ci.diff, ci.land)` drops the inherited diff-
