@@ -294,6 +294,7 @@ members = [
   "features/async_requests/types",
   "features/async_requests/worker",
   "features/async_requests/worker_lib",
+  "features/bookmark_selection",
   "features/cache_warmup",
   "features/changesets_creation",
   "features/commit_cloud",
