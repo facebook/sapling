@@ -20,6 +20,9 @@ use derived_data_manager::DerivationContext;
 use derived_data_manager::DerivationStagePayload;
 use derived_data_manager::PipelineDerivable;
 use derived_data_manager::StageId;
+use derived_data_manager::manifest_pipeline::derive_manifest_batch;
+use derived_data_manager::manifest_pipeline::fetch_stage_blobs;
+use derived_data_manager::manifest_pipeline::store_stage_blobs;
 use fbthrift::compact_protocol;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -327,97 +330,62 @@ impl PipelineDerivable for MappedHgChangesetId {
         };
         let cur_stage_path = &payload.path;
 
-        let mut results: HashMap<ChangesetId, HgStageOutput> = HashMap::new();
+        derive_manifest_batch(
+            bonsais,
+            parents,
+            dependency_outputs,
+            |bonsai, parent_outputs, dependencies| async move {
+                // Parent entries at stage_path, in bonsai-parent order. Positional
+                // slots are preserved so `get_manifest_entry_from_bonsai` can align
+                // `parent_entries[i]` with `bcs.parents().nth(i)` for copy-from
+                // filenode lookup. `None` means the parent has nothing at
+                // stage_path. The Traced wrappers from the producing stage are
+                // stripped; the callee re-tags by bonsai-parent position.
+                let parent_entries: Vec<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>> =
+                    parent_outputs
+                        .iter()
+                        .map(|out| out.entry.clone().map(untrace_entry))
+                        .collect();
 
-        for bonsai in bonsais {
-            let cs_id = bonsai.get_changeset_id();
-
-            // Build parent stage outputs in bonsai-parent order, preferring
-            // results from this batch over the externally supplied `parents`.
-            let parent_outputs: Vec<HgStageOutput> = bonsai
-                .parents()
-                .map(|parent_csid| {
-                    results
-                        .get(&parent_csid)
-                        .or_else(|| parents.get(&parent_csid))
-                        .cloned()
-                        .ok_or_else(|| {
-                            anyhow!("missing stage output for parent {parent_csid} of {cs_id}")
-                        })
-                })
-                .collect::<Result<Vec<_>>>()?;
-
-            // Parent entries at stage_path, in bonsai-parent order. Positional
-            // slots are preserved so `get_manifest_entry_from_bonsai` can align
-            // `parent_entries[i]` with `bcs.parents().nth(i)` for copy-from
-            // filenode lookup. `None` means the parent has nothing at
-            // stage_path. The Traced wrappers from the producing stage are
-            // stripped; the callee re-tags by bonsai-parent position.
-            let parent_entries: Vec<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>> =
-                parent_outputs
-                    .iter()
-                    .map(|out| out.entry.clone().map(untrace_entry))
+                let known_entries = dependencies
+                    .into_iter()
+                    .map(|(path, output)| (path, output.entry))
                     .collect();
 
-            // Build `known_entries` from dependency stage outputs. The manager
-            // keys dependency_outputs by absolute dep path, so we can copy
-            // entries straight in.
-            let known_entries: HashMap<
-                MPath,
-                Option<
-                    Entry<
-                        Traced<ParentIndex, HgManifestId>,
-                        Traced<ParentIndex, (FileType, HgFileNodeId)>,
-                    >,
-                >,
-            > = dependency_outputs
-                .get(&cs_id)
-                .map(|deps| {
-                    deps.iter()
-                        .map(|(dep_path, dep_output)| (dep_path.clone(), dep_output.entry.clone()))
-                        .collect()
-                })
-                .unwrap_or_default();
+                // Resolve cross-stage copy sources: a file change under
+                // `cur_stage_path` whose `copy_from` source is a real parent
+                // (p1/p2) but lies outside `cur_stage_path`. The source filenode
+                // lives in the parent's full root manifest, which the stage output
+                // doesn't carry, so we load the parent's root hg envelope and look
+                // it up there. Keyed by destination path.
+                let cross_stage_copy_sources = resolve_cross_stage_copy_sources(
+                    ctx,
+                    derivation,
+                    blobstore,
+                    &bonsai,
+                    cur_stage_path,
+                )
+                .await?;
 
-            // Resolve cross-stage copy sources: a file change under
-            // `cur_stage_path` whose `copy_from` source is a real parent
-            // (p1/p2) but lies outside `cur_stage_path`. The source filenode
-            // lives in the parent's full root manifest, which the stage output
-            // doesn't carry, so we load the parent's root hg envelope and look
-            // it up there. Keyed by destination path.
-            let cross_stage_copy_sources = resolve_cross_stage_copy_sources(
-                ctx,
-                derivation,
-                blobstore,
-                &bonsai,
-                cur_stage_path,
-            )
-            .await?;
+                let entry = get_manifest_entry_from_bonsai(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    derivation.restricted_paths(),
+                    bonsai,
+                    parent_entries,
+                    cur_stage_path.clone(),
+                    known_entries,
+                    cross_stage_copy_sources,
+                )
+                .await?;
 
-            let entry = get_manifest_entry_from_bonsai(
-                ctx.clone(),
-                blobstore.clone(),
-                derivation.restricted_paths(),
-                bonsai.clone(),
-                parent_entries,
-                cur_stage_path.clone(),
-                known_entries,
-                cross_stage_copy_sources,
-            )
-            .await?;
-
-            // Manifest stages never finalize; the hg changeset is produced by
-            // the separate finalize stage.
-            results.insert(
-                cs_id,
-                HgStageOutput {
+                Ok(HgStageOutput {
                     entry,
                     hg_cs_id: None,
-                },
-            );
-        }
-
-        Ok(results)
+                })
+            },
+        )
+        .await
     }
 
     async fn extract_stage_output_from_derived(
@@ -455,75 +423,49 @@ impl PipelineDerivable for MappedHgChangesetId {
         stage: &StageId,
         outputs: HashMap<ChangesetId, Self::StageOutput>,
     ) -> Result<()> {
-        match stage {
-            StageId::Manifest(stage_path) => {
-                // Manifest stages are never the canonical mapping; always write
-                // the thrift-serialized stage output to the blobstore.
-                let key_prefix = derivation.mapping_key_prefix::<MappedHgChangesetId>();
-                stream::iter(outputs.into_iter().map(|(cs_id, output)| async move {
-                    let key = stage_blobstore_key(stage_path, key_prefix, cs_id);
-                    let thrift_output = stage_output_to_thrift(&output)?;
-                    let bytes = compact_protocol::serialize(&thrift_output);
-                    derivation
-                        .blobstore()
-                        .put(ctx, key, BlobstoreBytes::from_bytes(bytes))
-                        .await
-                }))
-                .buffered(100)
-                .try_collect::<Vec<_>>()
+        if matches!(stage, StageId::Finalize)
+            && justknobs::eval(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
+                None,
+                Some("hg_changesets"),
+            )
+        {
+            let entries: Vec<BonsaiHgMappingEntry> = outputs
+                .iter()
+                .map(|(bcs_id, output)| {
+                    let hg_cs_id = output.hg_cs_id.ok_or_else(|| {
+                        anyhow!(
+                            "finalize stage output for {bcs_id} missing hg_cs_id (cannot write bonsai_hg_mapping)",
+                        )
+                    })?;
+                    Ok(BonsaiHgMappingEntry {
+                        hg_cs_id,
+                        bcs_id: *bcs_id,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            derivation
+                .bonsai_hg_mapping()?
+                .bulk_add(ctx, &entries)
                 .await?;
-                Ok(())
-            }
-            StageId::Finalize => {
-                let use_normal_mapping = justknobs::eval(
-                    "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
-                    None,
-                    Some("hg_changesets"),
-                );
-
-                if use_normal_mapping {
-                    // The finalize stage is the canonical terminal: write the
-                    // bonsai_hg_mapping SQL row and skip the blobstore.
-                    let entries: Vec<BonsaiHgMappingEntry> = outputs
-                        .iter()
-                        .map(|(bcs_id, output)| {
-                            let hg_cs_id = output.hg_cs_id.ok_or_else(|| {
-                                anyhow!(
-                                    "finalize stage output for {bcs_id} missing hg_cs_id (cannot write bonsai_hg_mapping)",
-                                )
-                            })?;
-                            Ok(BonsaiHgMappingEntry {
-                                hg_cs_id,
-                                bcs_id: *bcs_id,
-                            })
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    derivation
-                        .bonsai_hg_mapping()?
-                        .bulk_add(ctx, &entries)
-                        .await?;
-                    return Ok(());
-                }
-
-                // Prod-mapping off (transitional): write the thrift-serialized
-                // terminal stage output (hg_cs_id + root manifest id) to the
-                // blobstore under the finalize key.
-                let key_prefix = derivation.mapping_key_prefix::<MappedHgChangesetId>();
-                stream::iter(outputs.into_iter().map(|(cs_id, output)| async move {
-                    let key = finalize_blobstore_key(key_prefix, cs_id);
-                    let thrift_output = stage_output_to_thrift(&output)?;
-                    let bytes = compact_protocol::serialize(&thrift_output);
-                    derivation
-                        .blobstore()
-                        .put(ctx, key, BlobstoreBytes::from_bytes(bytes))
-                        .await
-                }))
-                .buffered(100)
-                .try_collect::<Vec<_>>()
-                .await?;
-                Ok(())
-            }
+            return Ok(());
         }
+        let key_prefix = derivation.mapping_key_prefix::<Self>();
+        store_stage_blobs(
+            ctx,
+            derivation,
+            outputs,
+            |csid| match stage {
+                StageId::Manifest(path) => stage_blobstore_key(path, key_prefix, csid),
+                StageId::Finalize => finalize_blobstore_key(key_prefix, csid),
+            },
+            |output| {
+                Ok(BlobstoreBytes::from_bytes(compact_protocol::serialize(
+                    &stage_output_to_thrift(&output)?,
+                )))
+            },
+        )
+        .await
     }
 
     async fn fetch_stage_outputs(
@@ -532,93 +474,57 @@ impl PipelineDerivable for MappedHgChangesetId {
         stage: &StageId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::StageOutput>> {
-        match stage {
-            StageId::Manifest(stage_path) => {
-                // Read the thrift-serialized stage output from the blobstore.
-                // Returns None for any cs_id without stored output (skipped).
-                let key_prefix = derivation.mapping_key_prefix::<MappedHgChangesetId>();
-                let results = stream::iter(cs_ids.into_iter().map(|cs_id| async move {
-                    let key = stage_blobstore_key(stage_path, key_prefix, cs_id);
-                    let Some(blob_data) = derivation.blobstore().get(ctx, &key).await? else {
-                        return Ok::<_, Error>(None);
-                    };
-                    let thrift_output: mercurial_thrift::HgManifestStageOutput =
-                        compact_protocol::deserialize(blob_data.into_raw_bytes())?;
-                    let output = stage_output_from_thrift(cs_id, thrift_output)?;
-                    Ok(Some((cs_id, output)))
+        if matches!(stage, StageId::Finalize)
+            && justknobs::eval(
+                "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
+                None,
+                Some("hg_changesets"),
+            )
+        {
+            let entries = derivation
+                .bonsai_hg_mapping()?
+                .get(ctx, cs_ids.clone().into())
+                .await?;
+            let hg_by_bcs: HashMap<ChangesetId, HgChangesetId> = entries
+                .into_iter()
+                .map(|e| (e.bcs_id, e.hg_cs_id))
+                .collect();
+
+            let results =
+                stream::iter(hg_by_bcs.into_iter().map(|(bcs_id, hg_cs_id)| async move {
+                    let envelope = hg_cs_id.load(ctx, derivation.blobstore()).await?;
+                    let root_mfid = envelope.manifestid();
+                    let raw_entry = root_mfid
+                        .find_entry(ctx.clone(), derivation.blobstore().clone(), MPath::ROOT)
+                        .await?;
+                    let entry = raw_entry.map(wrap_entry_traced);
+                    Ok::<_, Error>((
+                        bcs_id,
+                        HgStageOutput {
+                            entry,
+                            hg_cs_id: Some(hg_cs_id),
+                        },
+                    ))
                 }))
                 .buffer_unordered(100)
-                .try_filter_map(|opt| async move { Ok(opt) })
                 .try_collect::<HashMap<_, _>>()
                 .await?;
-                Ok(results)
-            }
-            StageId::Finalize => {
-                let use_normal_mapping = justknobs::eval(
-                    "scm/mononoke:derived_data_pipeline_terminal_stage_prod_mapping",
-                    None,
-                    Some("hg_changesets"),
-                );
-
-                if use_normal_mapping {
-                    // Read from bonsai_hg_mapping, then materialize the root
-                    // manifest entry for each commit. Wrap with Traced::generate
-                    // as the lineage isn't recoverable from a SQL-only derivation.
-                    let entries = derivation
-                        .bonsai_hg_mapping()?
-                        .get(ctx, cs_ids.clone().into())
-                        .await?;
-                    let hg_by_bcs: HashMap<ChangesetId, HgChangesetId> = entries
-                        .into_iter()
-                        .map(|e| (e.bcs_id, e.hg_cs_id))
-                        .collect();
-
-                    let results =
-                        stream::iter(hg_by_bcs.into_iter().map(|(bcs_id, hg_cs_id)| async move {
-                            let envelope = hg_cs_id.load(ctx, derivation.blobstore()).await?;
-                            let root_mfid = envelope.manifestid();
-                            let raw_entry = root_mfid
-                                .find_entry(
-                                    ctx.clone(),
-                                    derivation.blobstore().clone(),
-                                    MPath::ROOT,
-                                )
-                                .await?;
-                            let entry = raw_entry.map(wrap_entry_traced);
-                            Ok::<_, Error>((
-                                bcs_id,
-                                HgStageOutput {
-                                    entry,
-                                    hg_cs_id: Some(hg_cs_id),
-                                },
-                            ))
-                        }))
-                        .buffer_unordered(100)
-                        .try_collect::<HashMap<_, _>>()
-                        .await?;
-                    return Ok(results);
-                }
-
-                // Prod-mapping off (transitional): read the thrift-serialized
-                // terminal stage output from the finalize blob key.
-                let key_prefix = derivation.mapping_key_prefix::<MappedHgChangesetId>();
-                let results = stream::iter(cs_ids.into_iter().map(|cs_id| async move {
-                    let key = finalize_blobstore_key(key_prefix, cs_id);
-                    let Some(blob_data) = derivation.blobstore().get(ctx, &key).await? else {
-                        return Ok::<_, Error>(None);
-                    };
-                    let thrift_output: mercurial_thrift::HgManifestStageOutput =
-                        compact_protocol::deserialize(blob_data.into_raw_bytes())?;
-                    let output = stage_output_from_thrift(cs_id, thrift_output)?;
-                    Ok(Some((cs_id, output)))
-                }))
-                .buffer_unordered(100)
-                .try_filter_map(|opt| async move { Ok(opt) })
-                .try_collect::<HashMap<_, _>>()
-                .await?;
-                Ok(results)
-            }
+            return Ok(results);
         }
+        let key_prefix = derivation.mapping_key_prefix::<Self>();
+        fetch_stage_blobs(
+            ctx,
+            derivation,
+            cs_ids,
+            |csid| match stage {
+                StageId::Manifest(path) => stage_blobstore_key(path, key_prefix, csid),
+                StageId::Finalize => finalize_blobstore_key(key_prefix, csid),
+            },
+            |csid, bytes| {
+                stage_output_from_thrift(csid, compact_protocol::deserialize(bytes.into_bytes())?)
+            },
+        )
+        .await
     }
 }
 
@@ -683,71 +589,61 @@ async fn finalize_stage_batch(
         .try_collect()
         .await?;
 
-    // Serial hashing pass: each commit's hg changeset id chains off its
-    // parents', so this runs in topological order.
-    let mut results: HashMap<ChangesetId, HgStageOutput> = HashMap::new();
-    for bonsai in bonsais {
-        let cs_id = bonsai.get_changeset_id();
-
-        let root_manifest_entry = dependency_outputs
-            .get(&cs_id)
-            .and_then(|deps| deps.get(&MPath::ROOT))
-            .and_then(|out| out.entry.clone())
-            .ok_or_else(|| {
-                anyhow!("finalize for {cs_id}: missing root manifest dependency output")
-            })?;
-        let manifest_id = untraced_manifest_id(&root_manifest_entry).ok_or_else(|| {
-            anyhow!("finalize for {cs_id}: root manifest dependency is not a tree")
-        })?;
-
-        // Parent hg changeset ids come straight from the parents' finalize
-        // outputs (preferring in-batch results) — no envelope loads.
-        let parent_hg_cs_ids: Vec<HgChangesetId> = bonsai
-            .parents()
-            .map(|parent_csid| {
-                results
-                    .get(&parent_csid)
-                    .or_else(|| parents.get(&parent_csid))
-                    .and_then(|out| out.hg_cs_id)
+    derive_manifest_batch(
+        bonsais,
+        parents,
+        dependency_outputs,
+        |bonsai, parent_outputs, mut dependencies| {
+            let cs_id = bonsai.get_changeset_id();
+            let files = files_by_cs.remove(&cs_id);
+            let derivation_opts = &derivation_opts;
+            async move {
+                let root_manifest_entry = dependencies
+                    .remove(&MPath::ROOT)
+                    .and_then(|out| out.entry)
                     .ok_or_else(|| {
-                        anyhow!("finalize parent {parent_csid} of {cs_id} has no hg_cs_id")
+                        anyhow!("finalize for {cs_id}: missing root manifest dependency output")
+                    })?;
+                let manifest_id = untraced_manifest_id(&root_manifest_entry).ok_or_else(|| {
+                    anyhow!("finalize for {cs_id}: root manifest dependency is not a tree")
+                })?;
+                let parent_hg_cs_ids = bonsai
+                    .parents()
+                    .zip(parent_outputs)
+                    .map(|(parent_csid, output)| {
+                        output.hg_cs_id.ok_or_else(|| {
+                            anyhow!("finalize parent {parent_csid} of {cs_id} has no hg_cs_id")
+                        })
                     })
-            })
-            .collect::<Result<_>>()?;
-
-        let files = files_by_cs
-            .remove(&cs_id)
-            .ok_or_else(|| anyhow!("finalize for {cs_id}: changed files were not computed"))?;
-
-        let subtree_change_sources =
-            get_subtree_change_sources(ctx, derivation, &bonsai, &HashMap::new()).await?;
-        let subtree_changes = HgSubtreeChanges::from_bonsai_subtree_changes(
-            bonsai.subtree_changes(),
-            subtree_change_sources,
-        )?;
-
-        let (hg_cs_id, _hg_blob_cs) = generate_hg_changeset(
-            ctx,
-            blobstore,
-            bonsai,
-            manifest_id,
-            parent_hg_cs_ids,
-            files,
-            subtree_changes,
-            &derivation_opts,
-        )
-        .await?;
-
-        results.insert(
-            cs_id,
-            HgStageOutput {
-                entry: Some(root_manifest_entry),
-                hg_cs_id: Some(hg_cs_id),
-            },
-        );
-    }
-
-    Ok(results)
+                    .collect::<Result<Vec<_>>>()?;
+                let files = files.ok_or_else(|| {
+                    anyhow!("finalize for {cs_id}: changed files were not computed")
+                })?;
+                let subtree_change_sources =
+                    get_subtree_change_sources(ctx, derivation, &bonsai, &HashMap::new()).await?;
+                let subtree_changes = HgSubtreeChanges::from_bonsai_subtree_changes(
+                    bonsai.subtree_changes(),
+                    subtree_change_sources,
+                )?;
+                let (hg_cs_id, _hg_blob_cs) = generate_hg_changeset(
+                    ctx,
+                    blobstore,
+                    bonsai,
+                    manifest_id,
+                    parent_hg_cs_ids,
+                    files,
+                    subtree_changes,
+                    derivation_opts,
+                )
+                .await?;
+                Ok(HgStageOutput {
+                    entry: Some(root_manifest_entry),
+                    hg_cs_id: Some(hg_cs_id),
+                })
+            }
+        },
+    )
+    .await
 }
 
 fn stage_output_to_thrift(

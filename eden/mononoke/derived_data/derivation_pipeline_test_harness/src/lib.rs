@@ -302,15 +302,52 @@ async fn verify_pipeline_first_then_canonical_with_repo<F: PipelineTestFixture +
         .await?;
     all_commits.reverse();
 
-    let run = run_pipeline_first_then_canonical::<F>(
-        ctx,
-        &repo,
-        manager,
-        &config,
-        types,
-        &all_commits,
-        head,
-    );
+    let run = async {
+        if !use_terminal_mapping {
+            return run_pipeline_first_then_canonical::<F>(
+                ctx,
+                &repo,
+                manager,
+                &config,
+                types,
+                &all_commits,
+                head,
+            )
+            .await;
+        }
+
+        let plan = plan_pipeline(ctx, &repo, manager, &config, types, head, vec![]).await?;
+        run_pipeline(manager, ctx, &config, &plan).await?;
+
+        // A separate blobstore and mapping database keep canonical derivation
+        // from reusing or filling in the pipeline's terminal outputs.
+        let (canonical_repo, _, _) = F::get_repo_and_dag::<TestRepo>(fb).await;
+        let canonical = canonical_repo.repo_derived_data().manager();
+        canonical
+            .derive_bulk_locally(ctx, &all_commits, None, types, None, None)
+            .await?;
+        for &derived_type in types {
+            let expected = BulkDerivation::fetch_derived_batch(
+                canonical,
+                ctx,
+                &all_commits,
+                None,
+                derived_type,
+            )
+            .await?;
+            let actual =
+                BulkDerivation::fetch_derived_batch(manager, ctx, &all_commits, None, derived_type)
+                    .await?;
+            assert_eq!(expected.len(), all_commits.len());
+            assert_eq!(
+                actual,
+                expected,
+                "terminal mappings for {derived_type:?} in {}",
+                F::REPO_NAME
+            );
+        }
+        Ok(())
+    };
     with_just_knobs_async(
         JustKnobsInMemory::new(HashMap::from([
             (
@@ -773,6 +810,57 @@ mod tests {
             AugmentedManifestV2P3PlusParentsNoHgMapping,
         >(fb)
         .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_hg_parent_identity(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_first_then_canonical::<AugmentedManifestV2AbsentParentStageNoHgMapping>(
+            fb,
+            &PIPELINE_FIRST_TYPES,
+        )
+        .await?;
+        verify_pipeline_first_then_canonical::<AugmentedManifestV2DuplicateParentEntriesNoHgMapping>(
+            fb, &PIPELINE_FIRST_TYPES,
+        ).await?;
+        verify_pipeline_first_then_canonical::<AugmentedManifestV2P3PlusParentsNoHgMapping>(
+            fb,
+            &PIPELINE_FIRST_TYPES,
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_first_hg_stage_transitions(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_first_then_canonical::<NestedDirectories>(fb, &PIPELINE_FIRST_TYPES)
+            .await?;
+        verify_pipeline_first_then_canonical::<AugmentedManifestV2NoHgMapping>(
+            fb,
+            &PIPELINE_FIRST_TYPES,
+        )
+        .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_pipeline_terminal_mappings(fb: FacebookInit) -> Result<()> {
+        verify_pipeline_first_then_canonical_with_repo::<NestedDirectories>(
+            fb,
+            &PIPELINE_TYPES,
+            true,
+        )
+        .await?;
+        verify_pipeline_first_then_canonical_with_repo::<AugmentedManifestV2NoHgMapping>(
+            fb,
+            &PIPELINE_FIRST_TYPES,
+            true,
+        )
+        .await?;
+        verify_pipeline_first_then_canonical_with_repo::<CrossStageFileCopy>(
+            fb,
+            &PIPELINE_FIRST_TYPES,
+            true,
+        )
+        .await?;
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

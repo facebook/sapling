@@ -17,6 +17,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use derived_data_manager::ManifestDerivation;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::TryStreamExt;
@@ -412,10 +413,12 @@ async fn test_derivation_pipeline_independent_dirs(fb: FacebookInit) -> Result<(
         let entry = derive_skeleton_manifest_v2_entry(
             &ctx,
             &derivation_ctx,
-            parents,
+            ManifestDerivation {
+                parents,
+                known_entries: HashMap::new(),
+                path: prefix.clone(),
+            },
             changes.clone(),
-            HashMap::new(),
-            prefix.clone(),
         )
         .await?;
         known_entries.insert(prefix, entry);
@@ -425,10 +428,12 @@ async fn test_derivation_pipeline_independent_dirs(fb: FacebookInit) -> Result<(
     let root_entry = derive_skeleton_manifest_v2_entry(
         &ctx,
         &derivation_ctx,
-        vec![Entry::Tree(parent_manifest)],
+        ManifestDerivation {
+            parents: vec![Entry::Tree(parent_manifest)],
+            known_entries,
+            path: MPath::ROOT,
+        },
         changes,
-        known_entries,
-        MPath::ROOT,
     )
     .await?
     .expect("root stage should produce an entry");
@@ -487,10 +492,12 @@ async fn test_derivation_pipeline_nested_dirs(fb: FacebookInit) -> Result<()> {
     let subdir1_entry = derive_skeleton_manifest_v2_entry(
         &ctx,
         &derivation_ctx,
-        subdir1_parents,
+        ManifestDerivation {
+            parents: subdir1_parents,
+            known_entries: HashMap::new(),
+            path: subdir1.clone(),
+        },
         changes.clone(),
-        HashMap::new(),
-        subdir1.clone(),
     )
     .await?
     .expect("dir1/subdir1 stage should produce an entry");
@@ -509,10 +516,12 @@ async fn test_derivation_pipeline_nested_dirs(fb: FacebookInit) -> Result<()> {
     let dir1_entry = derive_skeleton_manifest_v2_entry(
         &ctx,
         &derivation_ctx,
-        dir1_parents,
+        ManifestDerivation {
+            parents: dir1_parents,
+            known_entries: dir1_known,
+            path: dir1.clone(),
+        },
         changes.clone(),
-        dir1_known,
-        dir1.clone(),
     )
     .await?
     .expect("dir1 stage should produce an entry");
@@ -523,10 +532,12 @@ async fn test_derivation_pipeline_nested_dirs(fb: FacebookInit) -> Result<()> {
     let root_entry = derive_skeleton_manifest_v2_entry(
         &ctx,
         &derivation_ctx,
-        vec![Entry::Tree(parent_manifest)],
+        ManifestDerivation {
+            parents: vec![Entry::Tree(parent_manifest)],
+            known_entries: root_known,
+            path: MPath::ROOT,
+        },
         changes,
-        root_known,
-        MPath::ROOT,
     )
     .await?
     .expect("root stage should produce an entry");

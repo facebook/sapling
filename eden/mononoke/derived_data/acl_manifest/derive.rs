@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -19,6 +18,7 @@ use cloned::cloned;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
+use derived_data_manager::ManifestDerivation;
 use filestore::fetch_concat;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -32,7 +32,6 @@ use manifest::PathOrPrefix;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
 use manifest::derive_manifest;
-use manifest::derive_manifest_with_known_entries;
 use metaconfig_types::RestrictedPathsAclFile;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
@@ -270,32 +269,24 @@ async fn inner_derive(
     .await
 }
 
-/// Derive the raw AclManifest entry for a single bonsai changeset at a given
-/// `stage_path`, reusing already-derived subtree entries via `known_entries`.
-/// Returns the entry produced by `derive_manifest_with_known_entries`
-/// directly, without the None/tree extraction.
 pub(crate) async fn derive_acl_manifest_entry(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
-    parents: Vec<Entry<AclManifestId, AclManifestRestriction>>,
+    input: ManifestDerivation<AclManifestId, AclManifestRestriction>,
     changes: Vec<(NonRootMPath, Option<RestrictedPathsAclFile>)>,
-    known_entries: HashMap<MPath, Option<Entry<AclManifestId, AclManifestRestriction>>>,
-    stage_path: MPath,
     acl_file_name: &str,
 ) -> Result<Option<Entry<AclManifestId, AclManifestRestriction>>> {
     let acl_file_bytes: Vec<u8> = acl_file_name.as_bytes().to_vec();
 
-    derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
-        parents,
-        changes,
-        known_entries,
-        stage_path,
-        acl_create_tree_callback(ctx.clone(), blobstore.clone(), acl_file_bytes),
-        acl_create_leaf_callback(ctx.clone(), blobstore.clone()),
-    )
-    .await
+    input
+        .derive(
+            ctx.clone(),
+            blobstore.clone(),
+            changes,
+            acl_create_tree_callback(ctx.clone(), blobstore.clone(), acl_file_bytes),
+            acl_create_leaf_callback(ctx.clone(), blobstore.clone()),
+        )
+        .await
 }
 
 // ---------------------------------------------------------------------------

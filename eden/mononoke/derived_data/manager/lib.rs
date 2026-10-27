@@ -11,6 +11,7 @@ pub mod context;
 pub mod derivable;
 pub mod error;
 pub mod manager;
+pub mod manifest_pipeline;
 pub mod stage_payload;
 
 pub use mononoke_types::DerivableType;
@@ -25,6 +26,8 @@ pub use self::manager::DerivedDataManager;
 pub use self::manager::derive::Rederivation;
 pub use self::manager::derive::VisitedDerivableTypesMap;
 pub use self::manager::derive::VisitedDerivableTypesMapStatic;
+pub use self::manifest_pipeline::ManifestDerivable;
+pub use self::manifest_pipeline::ManifestDerivation;
 pub use self::stage_payload::DerivationStagePayload;
 pub use self::stage_payload::ManifestStagePayload;
 pub use self::stage_payload::StageId;

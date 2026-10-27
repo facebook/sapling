@@ -18,6 +18,7 @@ use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_manager::ManifestDerivation;
 use futures::future;
 use futures::future::TryFutureExt;
 use futures::future::try_join_all;
@@ -26,7 +27,6 @@ use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::Traced;
 use manifest::TreeInfo;
-use manifest::derive_manifest_with_known_entries;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mercurial_types::HgFileNodeId;
@@ -219,30 +219,33 @@ pub(crate) async fn derive_hg_manifest_with_known_entries(
         })
         .collect();
 
-    let entry = derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
-        parents.clone(),
-        changes,
+    let input = ManifestDerivation {
+        parents: parents.clone(),
         known_entries,
-        stage_path.clone(),
-        {
-            cloned!(ctx, blobstore, restricted_paths);
-            move |tree_info| {
-                create_hg_manifest(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    tree_info,
-                    restricted_paths.clone(),
-                )
-            }
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
-        },
-    )
-    .await?;
+        path: stage_path.clone(),
+    };
+    let entry = input
+        .derive(
+            ctx.clone(),
+            blobstore.clone(),
+            changes.into_iter().collect(),
+            {
+                cloned!(ctx, blobstore, restricted_paths);
+                move |tree_info| {
+                    create_hg_manifest(
+                        ctx.clone(),
+                        blobstore.clone(),
+                        tree_info,
+                        restricted_paths.clone(),
+                    )
+                }
+            },
+            {
+                cloned!(ctx, blobstore);
+                move |leaf_info| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
+            },
+        )
+        .await?;
 
     match entry {
         Some(entry) => Ok(Some(entry)),

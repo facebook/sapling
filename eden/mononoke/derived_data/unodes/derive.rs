@@ -16,8 +16,8 @@ use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
+use derived_data_manager::ManifestDerivation;
 use futures::future;
-use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::future::try_join_all;
 use manifest::Entry;
@@ -25,7 +25,6 @@ use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
 use manifest::derive_manifest;
-use manifest::derive_manifest_with_known_entries;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mononoke_types::BlobstoreKey;
@@ -89,38 +88,32 @@ pub(crate) async fn derive_unode_manifest_stack(
     Ok(res.into_iter().collect())
 }
 
-/// Derives the raw unode entry for a changeset given parent unodes.
-/// Returns the entry produced by `derive_manifest_with_known_entries`
-/// directly, supporting prefix and known_entries for pipeline derivation.
 pub(crate) async fn derive_unode_entry(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     cs_id: ChangesetId,
-    parents: Vec<Entry<ManifestUnodeId, FileUnodeId>>,
+    input: ManifestDerivation<ManifestUnodeId, FileUnodeId>,
     changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-    known_entries: HashMap<MPath, Option<Entry<ManifestUnodeId, FileUnodeId>>>,
-    prefix: MPath,
 ) -> Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
     let blobstore = derivation_ctx.blobstore();
 
-    let derive_fut = derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
-        parents,
-        changes,
-        known_entries,
-        prefix,
-        {
-            cloned!(ctx, blobstore);
-            move |tree_info| create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info)
-        },
-        {
-            cloned!(ctx, blobstore);
-            move |leaf_info| create_unode_file(ctx.clone(), cs_id, blobstore.clone(), leaf_info)
-        },
-    )
-    .boxed();
-    derive_fut.await
+    input
+        .derive(
+            ctx.clone(),
+            blobstore.clone(),
+            changes,
+            {
+                cloned!(ctx, blobstore);
+                move |tree_info| {
+                    create_unode_manifest(ctx.clone(), cs_id, blobstore.clone(), tree_info)
+                }
+            },
+            {
+                cloned!(ctx, blobstore);
+                move |leaf_info| create_unode_file(ctx.clone(), cs_id, blobstore.clone(), leaf_info)
+            },
+        )
+        .await
 }
 
 /// Derives unode manifests for bonsai changeset `cs_id` given parent unode manifests.
@@ -1197,10 +1190,12 @@ mod tests {
             &ctx,
             &derivation_ctx,
             bcs_id,
-            dir1_parents,
+            ManifestDerivation {
+                parents: dir1_parents,
+                known_entries: HashMap::new(),
+                path: MPath::new("dir1").unwrap(),
+            },
             changes.clone(),
-            HashMap::new(),
-            MPath::new("dir1").unwrap(),
         )
         .await
         .unwrap()
@@ -1219,10 +1214,12 @@ mod tests {
             &ctx,
             &derivation_ctx,
             bcs_id,
-            dir2_parents,
+            ManifestDerivation {
+                parents: dir2_parents,
+                known_entries: HashMap::new(),
+                path: MPath::new("dir2").unwrap(),
+            },
             changes.clone(),
-            HashMap::new(),
-            MPath::new("dir2").unwrap(),
         )
         .await
         .unwrap()
@@ -1238,10 +1235,12 @@ mod tests {
             &ctx,
             &derivation_ctx,
             bcs_id,
-            vec![Entry::Tree(parent_unode_id)],
+            ManifestDerivation {
+                parents: vec![Entry::Tree(parent_unode_id)],
+                known_entries,
+                path: MPath::ROOT,
+            },
             changes,
-            known_entries,
-            MPath::ROOT,
         )
         .await
         .unwrap()
@@ -1332,10 +1331,12 @@ mod tests {
             &ctx,
             &derivation_ctx,
             bcs_id,
-            subdir1_parents,
+            ManifestDerivation {
+                parents: subdir1_parents,
+                known_entries: HashMap::new(),
+                path: MPath::new("dir1/subdir1").unwrap(),
+            },
             changes.clone(),
-            HashMap::new(),
-            MPath::new("dir1/subdir1").unwrap(),
         )
         .await
         .unwrap()
@@ -1356,10 +1357,12 @@ mod tests {
             &ctx,
             &derivation_ctx,
             bcs_id,
-            dir1_parents,
+            ManifestDerivation {
+                parents: dir1_parents,
+                known_entries: dir1_known_entries,
+                path: MPath::new("dir1").unwrap(),
+            },
             changes.clone(),
-            dir1_known_entries,
-            MPath::new("dir1").unwrap(),
         )
         .await
         .unwrap()
@@ -1372,10 +1375,12 @@ mod tests {
             &ctx,
             &derivation_ctx,
             bcs_id,
-            vec![Entry::Tree(parent_unode_id)],
+            ManifestDerivation {
+                parents: vec![Entry::Tree(parent_unode_id)],
+                known_entries: root_known_entries,
+                path: MPath::ROOT,
+            },
             changes,
-            root_known_entries,
-            MPath::ROOT,
         )
         .await
         .unwrap()

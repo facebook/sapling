@@ -21,8 +21,8 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::prefetch_content_metadata;
 use derived_data_manager::DerivationContext;
+use derived_data_manager::ManifestDerivation;
 use digest::Digest;
-use futures::future::FutureExt;
 use futures::stream::FuturesOrdered;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
@@ -30,7 +30,6 @@ use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
-use manifest::derive_manifest_with_known_entries;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use mononoke_types::BlobstoreKey;
@@ -118,27 +117,18 @@ pub(crate) async fn derive_fsnodes_stack(
     Ok(res.into_iter().collect())
 }
 
-/// Derives the raw fsnode entry for bonsai_changeset `cs_id` given parent
-/// fsnodes. Returns the entry produced by `derive_manifest_with_known_entries`
-/// directly, without handling the None/tree extraction.
+/// Derive an entry from parent entries and completed child stages.
 pub(crate) async fn derive_fsnode_entry(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    parents: Vec<Entry<FsnodeId, FsnodeFile>>,
+    input: ManifestDerivation<FsnodeId, FsnodeFile>,
     changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
-    known_entries: HashMap<MPath, Option<Entry<FsnodeId, FsnodeFile>>>,
-    prefix: MPath,
 ) -> Result<Option<Entry<FsnodeId, FsnodeFile>>> {
     let blobstore = derivation_ctx.blobstore();
     let restricted_paths = derivation_ctx.restricted_paths();
     let content_ids = changes
         .iter()
-        .filter(|(mpath, _)| {
-            prefix.is_prefix_of(mpath)
-                && !known_entries
-                    .keys()
-                    .any(|known_path| known_path.is_prefix_of(mpath))
-        })
+        .filter(|(mpath, _)| input.contains_change(mpath))
         .filter_map(|(_, content_id_and_file_type)| {
             content_id_and_file_type.map(|(content_id, _file_type)| content_id)
         })
@@ -147,29 +137,26 @@ pub(crate) async fn derive_fsnode_entry(
     let prefetched_content_metadata =
         Arc::new(prefetch_content_metadata(ctx, &blobstore, content_ids).await?);
 
-    // We must box and store the derivation future, otherwise lifetime
-    // analysis is unable to see that the blobstore lasts long enough.
-    let derive_fut = derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
-        parents,
-        changes,
-        known_entries,
-        prefix,
-        {
-            cloned!(blobstore, ctx, restricted_paths);
-            move |tree_info| {
+    input
+        .derive(
+            ctx.clone(),
+            blobstore.clone(),
+            changes,
+            {
                 cloned!(blobstore, ctx, restricted_paths);
-                async move { create_fsnode(&ctx, &blobstore, &restricted_paths, tree_info).await }
-            }
-        },
-        move |leaf_info| {
-            cloned!(prefetched_content_metadata);
-            async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
-        },
-    )
-    .boxed();
-    derive_fut.await
+                move |tree_info| {
+                    cloned!(blobstore, ctx, restricted_paths);
+                    async move {
+                        create_fsnode(&ctx, &blobstore, &restricted_paths, tree_info).await
+                    }
+                }
+            },
+            move |leaf_info| {
+                cloned!(prefetched_content_metadata);
+                async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
+            },
+        )
+        .await
 }
 
 /// Derives fsnodes for bonsai_changeset `cs_id` given parent fsnodes. Note
@@ -190,10 +177,12 @@ pub(crate) async fn derive_fsnode(
     let maybe_entry = derive_fsnode_entry(
         ctx,
         derivation_ctx,
-        parent_entries,
+        ManifestDerivation {
+            parents: parent_entries,
+            known_entries: HashMap::new(),
+            path: MPath::ROOT,
+        },
         changes,
-        HashMap::new(),
-        MPath::ROOT,
     )
     .await?;
 
@@ -979,10 +968,12 @@ mod test {
         let dir1_entry = derive_fsnode_entry(
             &ctx,
             &derivation_ctx,
-            dir1_parents,
+            ManifestDerivation {
+                parents: dir1_parents,
+                known_entries: HashMap::new(),
+                path: MPath::new("dir1").unwrap(),
+            },
             changes.clone(),
-            HashMap::new(),
-            MPath::new("dir1").unwrap(),
         )
         .await
         .unwrap()
@@ -1000,10 +991,12 @@ mod test {
         let dir2_entry = derive_fsnode_entry(
             &ctx,
             &derivation_ctx,
-            dir2_parents,
+            ManifestDerivation {
+                parents: dir2_parents,
+                known_entries: HashMap::new(),
+                path: MPath::new("dir2").unwrap(),
+            },
             changes.clone(),
-            HashMap::new(),
-            MPath::new("dir2").unwrap(),
         )
         .await
         .unwrap()
@@ -1017,10 +1010,12 @@ mod test {
         let root_entry = derive_fsnode_entry(
             &ctx,
             &derivation_ctx,
-            vec![Entry::Tree(parent_fsnode_id)],
+            ManifestDerivation {
+                parents: vec![Entry::Tree(parent_fsnode_id)],
+                known_entries,
+                path: MPath::ROOT,
+            },
             changes,
-            known_entries,
-            MPath::ROOT,
         )
         .await
         .unwrap()
@@ -1101,10 +1096,12 @@ mod test {
         let subdir1_entry = derive_fsnode_entry(
             &ctx,
             &derivation_ctx,
-            subdir1_parents,
+            ManifestDerivation {
+                parents: subdir1_parents,
+                known_entries: HashMap::new(),
+                path: MPath::new("dir1/subdir1").unwrap(),
+            },
             changes.clone(),
-            HashMap::new(),
-            MPath::new("dir1/subdir1").unwrap(),
         )
         .await
         .unwrap()
@@ -1124,10 +1121,12 @@ mod test {
         let dir1_entry = derive_fsnode_entry(
             &ctx,
             &derivation_ctx,
-            dir1_parents,
+            ManifestDerivation {
+                parents: dir1_parents,
+                known_entries: dir1_known_entries,
+                path: MPath::new("dir1").unwrap(),
+            },
             changes.clone(),
-            dir1_known_entries,
-            MPath::new("dir1").unwrap(),
         )
         .await
         .unwrap()
@@ -1139,10 +1138,12 @@ mod test {
         let root_entry = derive_fsnode_entry(
             &ctx,
             &derivation_ctx,
-            vec![Entry::Tree(parent_fsnode_id)],
+            ManifestDerivation {
+                parents: vec![Entry::Tree(parent_fsnode_id)],
+                known_entries: root_known_entries,
+                path: MPath::ROOT,
+            },
             changes,
-            root_known_entries,
-            MPath::ROOT,
         )
         .await
         .unwrap()

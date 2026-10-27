@@ -20,6 +20,7 @@ use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::prefetch_content_metadata;
+use derived_data_manager::ManifestDerivation;
 use either::Either;
 use filestore::FetchKey;
 use futures::future;
@@ -36,7 +37,6 @@ use manifest::PathOrPrefix;
 use manifest::Span;
 use manifest::TreeInfo;
 use manifest::TreeInfoSubentries;
-use manifest::derive_manifest_with_known_entries;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
@@ -1505,23 +1505,17 @@ where
     let copy_from_arc = Arc::new(copy_from_filenodes);
     let restricted_paths_arc = Arc::clone(restricted_paths);
 
-    let entry = derive_manifest_with_known_entries(
-        ctx.clone(),
-        blobstore.clone(),
+    let input = ManifestDerivation {
         parents,
-        file_changes,
         known_entries,
-        stage_path,
-        {
-            cloned!(
-                ctx,
-                blobstore_arc,
-                restricted_paths_arc,
-                acl_map,
-                merge_acl_root_overlay,
-                acl_root_path
-            );
-            move |tree_info| {
+        path: stage_path,
+    };
+    let entry = input
+        .derive(
+            ctx.clone(),
+            blobstore.clone(),
+            file_changes,
+            {
                 cloned!(
                     ctx,
                     blobstore_arc,
@@ -1530,48 +1524,57 @@ where
                     merge_acl_root_overlay,
                     acl_root_path
                 );
-                async move {
-                    let acl_map = match merge_acl_root_overlay {
-                        Some(root_id) => Arc::new(
-                            rebuilt_tree_acl_overlay_map(
-                                &ctx,
-                                &blobstore_arc,
-                                &acl_root_path,
-                                root_id,
-                                &tree_info.path,
-                            )
-                            .await?,
-                        ),
-                        None => acl_map,
-                    };
-                    create_augmented_tree(
+                move |tree_info| {
+                    cloned!(
                         ctx,
                         blobstore_arc,
                         restricted_paths_arc,
-                        restricted_paths_enabled,
                         acl_map,
-                        tree_info,
-                    )
-                    .await
+                        merge_acl_root_overlay,
+                        acl_root_path
+                    );
+                    async move {
+                        let acl_map = match merge_acl_root_overlay {
+                            Some(root_id) => Arc::new(
+                                rebuilt_tree_acl_overlay_map(
+                                    &ctx,
+                                    &blobstore_arc,
+                                    &acl_root_path,
+                                    root_id,
+                                    &tree_info.path,
+                                )
+                                .await?,
+                            ),
+                            None => acl_map,
+                        };
+                        create_augmented_tree(
+                            ctx,
+                            blobstore_arc,
+                            restricted_paths_arc,
+                            restricted_paths_enabled,
+                            acl_map,
+                            tree_info,
+                        )
+                        .await
+                    }
                 }
-            }
-        },
-        {
-            cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
-            move |leaf_info| {
+            },
+            {
                 cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
-                create_augmented_leaf(
-                    ctx,
-                    blobstore_arc,
-                    content_metadata_arc,
-                    copy_from_arc,
-                    parent_bonsai_csids,
-                    leaf_info,
-                )
-            }
-        },
-    )
-    .await?;
+                move |leaf_info| {
+                    cloned!(ctx, blobstore_arc, content_metadata_arc, copy_from_arc);
+                    create_augmented_leaf(
+                        ctx,
+                        blobstore_arc,
+                        content_metadata_arc,
+                        copy_from_arc,
+                        parent_bonsai_csids,
+                        leaf_info,
+                    )
+                }
+            },
+        )
+        .await?;
 
     Ok(entry.map(augmented_entry_from_indexed))
 }

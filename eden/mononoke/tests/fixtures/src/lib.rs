@@ -1169,9 +1169,8 @@ impl TestRepoFixture for AugmentedManifestV2DuplicateParentEntriesNoHgMapping {
     }
 }
 
-/// A copy-free merge fixture whose first parent has no `top1` entry while its
-/// second parent does. The merge changes `top1`, so the second parent's stage
-/// entry must retain its original parent position.
+/// A merge whose first parent has no `top1` entry. A copy within `top1` from
+/// the second parent requires its stage entry to retain that parent position.
 pub struct AugmentedManifestV2AbsentParentStageNoHgMapping;
 
 #[async_trait]
@@ -1206,6 +1205,7 @@ impl TestRepoFixture for AugmentedManifestV2AbsentParentStageNoHgMapping {
         let d = CreateCommitContext::new(&ctx, repo, vec![c, b])
             .set_message("D")
             .add_file("top1/merged", "merged\n")
+            .add_file_with_copy_info("top1/copied", "second\n", (b, "top1/from_second_parent"))
             .commit()
             .await?;
 
