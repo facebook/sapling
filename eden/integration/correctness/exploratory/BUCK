@@ -181,6 +181,18 @@ python_unittest(
 )
 
 python_unittest(
+    name = "core_engine_regression_test",
+    srcs = ["core/test/engine_regression_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":engine_problems",
+        ":target",
+    ],
+)
+
+python_unittest(
     name = "core_solver_scale_test",
     srcs = ["core/test/solver_scale_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -204,6 +216,18 @@ python_unittest(
     network_access = network_access_utils.none(),
     deps = [
         ":engine_problems",
+    ],
+)
+
+python_unittest(
+    name = "core_attribution_test",
+    srcs = ["core/test/attribution_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":engine_problems",
+        ":target",
     ],
 )
 
@@ -242,6 +266,19 @@ python_unittest(
 )
 
 python_unittest(
+    name = "core_semantic_digest_test",
+    srcs = ["core/test/semantic_digest_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
     name = "core_verdict_document_test",
     srcs = ["core/test/verdict_document_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -251,6 +288,20 @@ python_unittest(
         ":checker_testing",
         ":core_checker",
         ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_engine_input_test",
+    srcs = ["core/test/engine_input_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+        ":testing",
     ],
 )
 
