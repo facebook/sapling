@@ -30,9 +30,11 @@ use git_types::fetch_non_blob_git_object;
 use git_types::tree::GitEntry;
 use gix_hash::ObjectId;
 use manifest::ManifestOps;
+use manifest::PathOrPrefix;
 use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use mononoke_types::hash::GitSha1;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
@@ -110,29 +112,44 @@ async fn boundary_trees_and_blobs(
                 .context("Error in fetching boundary commit")?
                 .with_parsed_as_commit(|commit| GitTreeId(commit.tree()))
                 .ok_or_else(|| anyhow::anyhow!("Git object {git_commit_id:?} is not a commit"))?;
-            let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_collect::<Vec<_>>().await?;
-            let objects = stream::iter(objects).map(async |(path, entry)| {
-                // If the entry is a submodule OR if the request has no filter or doesn't care about size, then let's assume size as 0
-                let size = if entry.is_submodule() || filter.as_ref().as_ref().is_none_or(|filter| filter.no_size_constraint()) {
-                    0
-                } else {
-                    entry.size(&ctx, &blobstore).await?
-                };
-                Ok((path, entry, size))
-            })
-            .buffer_unordered(concurrency.trees_and_blobs)
-            .try_filter_map(async |(path, entry, size)| {
-                let kind = entry.kind();
-                let oid = entry.oid();
-                // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
-                // If the object is ignored by the filter, then we ignore it
-                if !filter_object(filter.clone(), &path, kind, size) || entry.is_submodule() {
-                    anyhow::Ok(None)
-                } else {
-                    Ok(Some(FullObjectEntry::new(changeset_id, path, oid, size, kind)))
-                }
-            })
-            .try_collect::<FxHashSet<_>>()
+            let max_tree_depth = filter.as_ref().as_ref().map(|filter| filter.max_tree_depth);
+            let max_blob_size = filter
+                .as_ref()
+                .as_ref()
+                .filter(|filter| !filter.no_size_constraint())
+                .map(|filter| filter.max_blob_size);
+            // `find_entries_filtered` must keep its per-directory spawn: the downstream
+            // buffer stops polling the traversal when full. Spawning lets in-flight
+            // directory reads progress independently, avoiding a subexecutor deadlock
+            // if a metadata lookup depends on one of those reads.
+            let objects = root_tree
+                .find_entries_filtered(
+                    (*ctx).clone(),
+                    blobstore.clone(),
+                    [PathOrPrefix::Prefix(MPath::ROOT)],
+                    move |path, _| max_tree_depth.is_none_or(|depth| path.depth() < depth),
+                )
+                .map_ok(async |(path, entry)| {
+                    let kind = entry.kind();
+                    if entry.is_submodule() || !filter_object(filter.clone(), &path, kind, 0) {
+                        return anyhow::Ok(None);
+                    }
+                    let size = if let Some(max_blob_size) = max_blob_size
+                        && kind.is_blob()
+                    {
+                        let size = entry.size(&ctx, &blobstore).await?;
+                        if size >= max_blob_size {
+                            return Ok(None);
+                        }
+                        size
+                    } else {
+                        0
+                    };
+                    Ok(Some(FullObjectEntry::new(changeset_id, path, entry.oid(), size, kind)))
+                })
+                .try_buffer_unordered(concurrency.trees_and_blobs)
+                .try_filter_map(futures::future::ok)
+                .try_collect::<FxHashSet<_>>()
             .await
             .with_context(|| {
                 format!(

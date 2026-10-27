@@ -19,19 +19,26 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
+use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
+use filestore::StoreRequest;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use git_types::DummyCgdmChangesetDivider;
 use git_types::GDMV2Entry;
 use git_types::GDMV2ObjectEntry;
 use git_types::GitDeltaManifestEntryOps;
+use git_types::upload_non_blob_git_object;
 use gix_hash::ObjectId;
+use gix_object::Kind;
 use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::MPath;
+use mononoke_types_mocks::changesetid::ONES_CSID;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
@@ -39,17 +46,23 @@ use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
 use rustc_hash::FxHashSet;
+use sha1::Digest;
+use sha1::Sha1;
 use tokio::sync::Semaphore;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
 
 use super::GDMEntryProvider;
+use super::boundary_trees_and_blobs;
 use super::packfile_stream_from_changesets;
 use crate::types::ChainBreakingMode;
 use crate::types::DeltaInclusion;
 use crate::types::FetchContainer;
+use crate::types::FetchFilter;
 use crate::types::PackfileConcurrency;
 use crate::types::PackfileItemInclusion;
+use crate::types::ShallowCommits;
+use crate::types::ShallowInfoResponse;
 
 const EVENT_TIMEOUT: Duration = Duration::from_secs(5);
 const CANCELLATION_TIMEOUT: Duration = Duration::from_secs(1);
@@ -350,6 +363,46 @@ async fn dropping_pack_stream_cancels_inflight_object_read(fb: FacebookInit) -> 
     assert_released_on_cancel(gate, started, dropped, || drop(stream)).await
 }
 
+async fn store_object(fetch: &FetchContainer, kind: &str, body: Vec<u8>) -> Result<ObjectId> {
+    let mut bytes = format!("{kind} {}\0", body.len()).into_bytes();
+    bytes.extend(body);
+    let oid = ObjectId::from_bytes_or_panic(&Sha1::digest(&bytes));
+    upload_non_blob_git_object(&fetch.ctx, &fetch.blobstore, &oid, bytes).await?;
+    Ok(oid)
+}
+
+async fn boundary_with_entry(
+    fetch: &mut FetchContainer,
+    mode: &str,
+    entry_oid: ObjectId,
+) -> Result<ObjectId> {
+    let mut tree_bytes = format!("{mode} child\0").into_bytes();
+    tree_bytes.extend_from_slice(entry_oid.as_bytes());
+    let root = store_object(fetch, "tree", tree_bytes).await?;
+    let commit_body = format!(
+        "tree {root}\nauthor Test <test@example.com> 0 +0000\ncommitter Test <test@example.com> 0 +0000\n\nboundary fixture\n"
+    );
+    let commit = store_object(fetch, "commit", commit_body.into_bytes()).await?;
+    let commits = ShallowCommits {
+        commits: Vec::new(),
+        boundary_commits: vec![(ONES_CSID, commit).into()],
+    };
+    fetch.shallow_info = Arc::new(Some(ShallowInfoResponse::new(
+        commits.clone(),
+        commits,
+        Vec::new(),
+    )));
+    Ok(root)
+}
+
+fn filter(max_blob_size: u64, max_tree_depth: u64) -> Arc<Option<FetchFilter>> {
+    Arc::new(Some(FetchFilter {
+        max_blob_size,
+        max_tree_depth,
+        allowed_object_types: vec![Kind::Tree, Kind::Blob, Kind::Commit, Kind::Tag],
+    }))
+}
+
 #[mononoke::fbinit_test]
 async fn provider_error_bypasses_stalled_object_read(fb: FacebookInit) -> Result<()> {
     let mut fetch = fetch_container(fb).await?;
@@ -522,6 +575,79 @@ async fn pack_stream_keeps_workers_alive_until_consumed(fb: FacebookInit) -> Res
         items.len(),
         1,
         "live consumers must still receive the pack item"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_blob_none_does_not_read_blob_metadata(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let absent_blob = ObjectId::from_hex(b"1111111111111111111111111111111111111111")?;
+    let root = boundary_with_entry(&mut fetch, "100644", absent_blob).await?;
+    fetch.filter = filter(0, u64::MAX);
+    let reads = observe_reads(&mut fetch, None);
+    let result = boundary_trees_and_blobs(fetch).await;
+    let reads = reads.lock().expect("read log lock").clone();
+    eprintln!("blob:none planning reads: {reads:?}; result={result:?}");
+    let entries = result.expect("excluded blob does not require stored size metadata");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries.into_iter().next().expect("root tree").oid, root);
+    assert_eq!(
+        reads.len(),
+        2,
+        "one commit read and one tree read, no metadata/size reread"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_blob_size_filter_preserves_strict_limit(fb: FacebookInit) -> Result<()> {
+    for size in [0, 3, 4, 5] {
+        let mut fetch = fetch_container(fb).await?;
+        let content = Bytes::from(vec![b'x'; size]);
+        let mut raw = format!("blob {size}\0").into_bytes();
+        raw.extend_from_slice(&content);
+        let oid = ObjectId::from_bytes_or_panic(&Sha1::digest(&raw));
+        filestore::store(
+            &fetch.blobstore,
+            FilestoreConfig::no_chunking_filestore(),
+            &fetch.ctx,
+            &StoreRequest::new(size as u64),
+            stream::iter([Ok(content)]),
+        )
+        .await?;
+        let root = boundary_with_entry(&mut fetch, "100644", oid).await?;
+        fetch.filter = filter(4, u64::MAX);
+        let entries = boundary_trees_and_blobs(fetch).await?;
+        assert!(entries.iter().any(|entry| entry.oid == root));
+        let blob = entries.iter().find(|entry| entry.oid == oid);
+        assert_eq!(
+            blob.map(|entry| entry.size),
+            (size < 4).then_some(size as u64),
+            "only blob sizes strictly below the limit are included"
+        );
+        assert_eq!(entries.len(), 1 + usize::from(size < 4));
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_depth_filter_does_not_load_excluded_subtree(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let absent_subtree = ObjectId::from_hex(b"2222222222222222222222222222222222222222")?;
+    let root = boundary_with_entry(&mut fetch, "40000", absent_subtree).await?;
+    fetch.filter = filter(u64::MAX, 1);
+    let reads = observe_reads(&mut fetch, None);
+    let result = boundary_trees_and_blobs(fetch).await;
+    let reads = reads.lock().expect("read log lock").clone();
+    eprintln!("tree-depth planning reads: {reads:?}; result={result:?}");
+    let entries = result.expect("subtree at excluded depth must not be loaded");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries.into_iter().next().expect("root tree").oid, root);
+    assert_eq!(
+        reads.len(),
+        2,
+        "only boundary commit and root tree are read"
     );
     Ok(())
 }

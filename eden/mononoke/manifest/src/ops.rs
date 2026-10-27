@@ -97,6 +97,10 @@ where
                         if !filter(&path, manifest_id.clone()) {
                             return Ok((Vec::new(), Vec::new()));
                         }
+                        // DO NOT REMOVE THIS SPAWN: Git boundary filtering has a downstream
+                        // async buffer that can stop polling this traversal while full.
+                        // Its metadata lookups may depend on in-flight directory reads;
+                        // those reads must keep progressing to avoid a subexecutor deadlock.
                         AbortOnDropHandle::new(mononoke::spawn_task(async move {
                             let manifest = manifest_id.load(&ctx, &store).await?;
                             let mut output = Vec::new();
