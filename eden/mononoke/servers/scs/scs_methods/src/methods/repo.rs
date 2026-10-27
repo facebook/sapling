@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -31,6 +32,7 @@ use mononoke_api::StoreRequest;
 use mononoke_api::SubmoduleExpansionUpdate;
 use mononoke_api::SubmoduleExpansionUpdateCommitInfo;
 use mononoke_api::repo::Stack;
+use mononoke_types::ChangesetId;
 use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
@@ -382,9 +384,9 @@ impl SourceControlServiceImpl {
         .collect::<Vec<_>>();
 
         // get stack
-        let stack = repo.stack(heads_ids, limit).await?;
+        let stack = repo.stack(heads_ids.clone(), limit).await?;
 
-        if stack_limit_too_low(&stack, params.heads.len()) {
+        if stack_limit_too_low(&stack, &heads_ids) {
             Err(scs_errors::limit_too_low(limit))?;
         }
 
@@ -703,8 +705,10 @@ impl SourceControlServiceImpl {
     }
 }
 
-fn stack_limit_too_low(stack: &Stack, requested_heads: usize) -> bool {
-    stack.draft.len() <= requested_heads && !stack.leftover_heads.is_empty()
+fn stack_limit_too_low(stack: &Stack, heads: &[ChangesetId]) -> bool {
+    let public: HashSet<&ChangesetId> = stack.public.iter().collect();
+    let draft_heads = heads.iter().filter(|cs_id| !public.contains(cs_id)).count();
+    stack.draft.len() <= draft_heads && !stack.leftover_heads.is_empty()
 }
 
 #[cfg(test)]
@@ -722,12 +726,10 @@ mod stack_info_tests {
 
     use super::*;
 
-    /// FIXME: BUG! This did report `limit_too_low` for heads `[C, P]` with `P` public and a
-    /// limit of 2 on the stack `P-A-B-C`, but should have accepted the response:
-    /// `RepoContext::stack` returned a new draft commit (`B`) and a leftover head to continue
-    /// from, so the call made progress. `repo_stack_info` compares the number of draft commits
-    /// with the number of requested heads, which counts public heads (and heads that do not
-    /// exist and were skipped) as if they were draft heads the stack started from.
+    /// `repo_stack_info` must only report `limit_too_low` when the stack made no progress, i.e.
+    /// when no draft commit beyond the draft heads it started from fits into the limit. Public
+    /// heads (and heads that do not exist, which are skipped before the stack is built) are not
+    /// draft heads and must not be counted.
     #[mononoke::fbinit_test]
     async fn test_repo_stack_info_public_head_counts_toward_limit_too_low(
         fb: FacebookInit,
@@ -754,22 +756,20 @@ mod stack_info_tests {
         assert_eq!(stack.draft, vec![commits["C"], commits["B"]]);
         assert_eq!(stack.public, vec![commits["P"]]);
         assert_eq!(stack.leftover_heads, vec![commits["B"]]);
-        // FIXME: BUG! The public head P is counted as a draft head, so the progress goes unseen.
-        assert!(stack_limit_too_low(&stack, heads.len()));
+        assert!(!stack_limit_too_low(&stack, &heads));
 
-        // heads = [C, <missing>] resolve to [C] (missing changesets are skipped), but the
-        // handler still counts two requested heads.
+        // heads = [C, <missing>] resolve to [C] (missing changesets are skipped) before the
+        // stack is built and the limit is checked.
         let stack = repo_ctx.stack(vec![commits["C"]], 2).await?;
         assert_eq!(stack.draft, vec![commits["C"], commits["B"]]);
         assert_eq!(stack.leftover_heads, vec![commits["B"]]);
-        // FIXME: BUG! The skipped head is counted as a draft head, so the progress goes unseen.
-        assert!(stack_limit_too_low(&stack, 2));
+        assert!(!stack_limit_too_low(&stack, &[commits["C"]]));
 
         // Control: with limit = 1 only the head C itself fits, so the limit really is too low.
         let stack = repo_ctx.stack(heads.clone(), 1).await?;
         assert_eq!(stack.draft, vec![commits["C"]]);
         assert_eq!(stack.leftover_heads, vec![commits["C"]]);
-        assert!(stack_limit_too_low(&stack, heads.len()));
+        assert!(stack_limit_too_low(&stack, &heads));
         Ok(())
     }
 }
