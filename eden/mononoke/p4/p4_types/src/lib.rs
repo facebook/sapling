@@ -133,6 +133,21 @@ impl Action {
     }
 }
 
+/// A file's revisions as `p4 filelog` lists them, newest first.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileLog {
+    pub depot_path: String,
+    pub revisions: Vec<FileLogRevision>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileLogRevision {
+    pub revision: u32,
+    pub change: u64,
+    pub action: Action,
+    pub file_type: String,
+}
+
 /// What `p4 info` reports about the server, enough to tell one server from another.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServerInfo {
