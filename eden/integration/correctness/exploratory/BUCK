@@ -228,6 +228,71 @@ python_unittest(
     ],
 )
 
+python_unittest(
+    name = "core_history_test",
+    srcs = ["core/test/history_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_verdict_document_test",
+    srcs = ["core/test/verdict_document_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_collector_sink_test",
+    srcs = ["core/test/collector_sink_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_rules_test",
+    srcs = ["core/test/core_rules_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_input_legality_test",
+    srcs = ["core/test/input_legality_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
 python_library(
     name = "testing",
     srcs = ["core/test/testing.py"],
