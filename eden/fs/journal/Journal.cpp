@@ -7,6 +7,7 @@
 
 #include "eden/fs/journal/Journal.h"
 #include <folly/logging/xlog.h>
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/journal/JournalDelta.h"
 
 namespace facebook::eden {
@@ -108,7 +109,8 @@ void Journal::DeltaState::appendDelta(RootUpdateJournalDelta&& delta) {
   rootUpdateDeltas.emplace_back(std::move(delta));
 }
 
-Journal::Journal(EdenStatsPtr edenStats) : edenStats_{std::move(edenStats)} {
+Journal::Journal(EdenStatsPtr edenStats, FaultInjector* faultInjector)
+    : edenStats_{std::move(edenStats)}, faultInjector_{faultInjector} {
   // Add 0 so that this counter shows up in ODS
   edenStats_->increment(&JournalStats::truncatedReads, 0);
 }
@@ -124,6 +126,9 @@ void Journal::recordRemoved(RelativePathPiece fileName, dtype_t type) {
 }
 
 void Journal::recordChanged(RelativePathPiece fileName, dtype_t type) {
+  if (faultInjector_) {
+    faultInjector_->check("journal-record", fileName.view());
+  }
   addDelta(
       FileChangeJournalDelta(fileName, type, FileChangeJournalDelta::CHANGED));
 }

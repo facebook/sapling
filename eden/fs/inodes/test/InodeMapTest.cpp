@@ -11,8 +11,10 @@
 #include <folly/String.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -63,6 +65,52 @@ TEST(InodeMap, forgetOnUnknownInodeFromUserspaceFsPeer) {
   inodeMap->decFsRefcount(0x12345678_ino, 1);
   auto root = testMount.getEdenMount()->getRootInode();
   EXPECT_NE(nullptr, root.get());
+}
+
+TEST(InodeMap, loadFaultFailsAllPendingLookupsAndAllowsRetry) {
+  FakeTreeBuilder builder;
+  builder.setFile("file.txt", "contents");
+  TestMount mount{builder, true, false};
+  auto inode = mount.getFileInode("file.txt"_relpath);
+  auto number = inode->getNodeId();
+  inode->incFsRefcount();
+  auto* inodeMap = mount.getEdenMount()->getInodeMap();
+  auto& injector = mount.getServerState()->getFaultInjector();
+  const auto key = fmt::format("{}", number);
+  injector.injectError("inodemap-load", key, std::runtime_error("loaded"));
+  EXPECT_EQ(inode, inodeMap->lookupFileInode(number).get(0ms));
+  injector.removeFault("inodemap-load", key);
+  inode.reset();
+  mount.getEdenMount()->getRootInode()->unloadChildrenNow();
+  ASSERT_FALSE(inodeMap->lookupLoadedInode(number));
+  injector.injectError("inodemap-load", "0", std::runtime_error("wrong key"));
+  EXPECT_EQ(number, inodeMap->lookupInode(number).get(0ms)->getNodeId());
+  injector.removeFault("inodemap-load", "0");
+  mount.getEdenMount()->getRootInode()->unloadChildrenNow();
+  ASSERT_FALSE(inodeMap->lookupLoadedInode(number));
+  injector.injectBlock("inodemap-load", key, 1);
+  std::optional<std::string> firstError;
+  std::thread request([&] {
+    try {
+      inodeMap->lookupInode(number).get(5s);
+    } catch (const std::exception& ex) {
+      firstError = ex.what();
+    }
+  });
+  const auto reached = injector.waitUntilBlocked("inodemap-load", 5s);
+  const auto blocked = injector.getBlockedFaults("inodemap-load");
+  auto second = inodeMap->lookupInode(number);
+  injector.removeFault("inodemap-load", key);
+  const auto unblocked = injector.unblockWithError(
+      "inodemap-load", key, std::runtime_error("inode load blocked"));
+  request.join();
+  EXPECT_TRUE(reached);
+  EXPECT_EQ(std::vector<std::string>{key}, blocked);
+  EXPECT_EQ(1, unblocked);
+  EXPECT_EQ(std::optional<std::string>{"inode load blocked"}, firstError);
+  EXPECT_THROW_RE(
+      std::move(second).get(5s), std::runtime_error, "inode load blocked");
+  EXPECT_EQ(number, inodeMap->lookupInode(number).get(0ms)->getNodeId());
 }
 
 #ifdef __linux__

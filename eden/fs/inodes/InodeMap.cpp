@@ -15,6 +15,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/TimeUtil.h"
 #include "eden/fs/config/EdenConfig.h"
@@ -492,6 +493,11 @@ void InodeMap::startChildLookup(
     InodeNumber childInodeNumber,
     std::optional<ObjectId> id,
     mode_t mode) {
+  auto fault = mount_->getServerState()->getFaultInjector().checkTry(
+      "inodemap-load", childInodeNumber);
+  if (fault.hasException()) {
+    return inodeLoadFailed(childInodeNumber, fault.exception());
+  }
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
     auto bug = EDEN_BUG_EXCEPTION()

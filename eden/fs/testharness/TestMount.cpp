@@ -303,7 +303,8 @@ void TestMount::createMount(InodeCatalogType inodeCatalogType) {
       config_->getCaseSensitive(),
       folly::getKeepAliveToken(serverState_->getThreadPool().get()),
       walkDetector);
-  auto journal = std::make_unique<Journal>(stats_.copy());
+  auto journal = std::make_unique<Journal>(
+      stats_.copy(), &serverState_->getFaultInjector());
   edenMount_ = EdenMount::create(
       std::move(config_),
       std::move(objectStore),
@@ -406,7 +407,8 @@ void TestMount::remount(bool simulateUncleanShutdown) {
       folly::getKeepAliveToken(serverState_->getThreadPool().get()),
       walkDetector);
 
-  auto journal = std::make_unique<Journal>(stats_.copy());
+  auto journal = std::make_unique<Journal>(
+      stats_.copy(), &serverState_->getFaultInjector());
 
   // Reset the edenMount_ pointer.  This will destroy the old EdenMount
   // assuming that no-one else still has any references to it.
@@ -477,7 +479,8 @@ void TestMount::remountGracefully() {
       folly::getKeepAliveToken(serverState_->getThreadPool().get()),
       walkDetector);
 
-  auto journal = std::make_unique<Journal>(stats_.copy());
+  auto journal = std::make_unique<Journal>(
+      stats_.copy(), &serverState_->getFaultInjector());
 
   rootInode_.reset();
 

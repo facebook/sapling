@@ -23,6 +23,8 @@
 
 namespace facebook::eden {
 
+class FaultInjector;
+
 /** Contains statistics about the current state of the journal */
 struct InternalJournalStats {
   size_t entryCount = 0;
@@ -67,7 +69,10 @@ class Journal {
   using FileChangeCallback = std::function<bool(const FileChangeJournalDelta&)>;
   using RootUpdateCallback = std::function<bool(const RootUpdateJournalDelta&)>;
 
-  explicit Journal(EdenStatsPtr edenStats);
+  /** The optional fault injector must outlive this journal. */
+  explicit Journal(
+      EdenStatsPtr edenStats,
+      FaultInjector* faultInjector = nullptr);
 
   Journal(const Journal&) = delete;
   Journal& operator=(const Journal&) = delete;
@@ -394,5 +399,6 @@ class Journal {
   folly::Synchronized<SubscriberState> subscriberState_;
 
   EdenStatsPtr edenStats_;
+  FaultInjector* const faultInjector_;
 };
 } // namespace facebook::eden

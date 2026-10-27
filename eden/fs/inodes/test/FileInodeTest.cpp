@@ -18,10 +18,12 @@
 #include <chrono>
 #include <thread>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/StatTimes.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -220,6 +222,47 @@ TEST_P(FileInodeTest, getType) {
   auto regularFile = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(dtype_t::Dir, dir->getType());
   EXPECT_EQ(dtype_t::Regular, regularFile->getType());
+}
+
+TEST_P(FileInodeTest, overlayWriteFaultUsesInodeNumberBeforeChangingBytes) {
+  auto inode = mount_.getFileInode("dir/a.txt");
+  auto context = ObjectFetchContext::getNullContext();
+  const auto original = inode->readAll(context).get();
+  auto& injector = mount_.getServerState()->getFaultInjector();
+  injector.injectError("overlay-write", "0", std::runtime_error("wrong key"));
+  EXPECT_EQ(original.size(), inode->write(original, 0, context).get());
+  injector.removeFault("overlay-write", "0");
+  injector.injectError(
+      "overlay-write",
+      fmt::format("{}", inode->getNodeId()),
+      std::runtime_error("overlay write blocked"),
+      1);
+  EXPECT_THROW_RE(
+      inode->write("new", 0, context).get(),
+      std::runtime_error,
+      "overlay write blocked");
+  EXPECT_EQ(original, inode->readAll(context).get());
+  EXPECT_EQ(original.size(), inode->write(original, 0, context).get());
+}
+
+TEST_P(FileInodeTest, journalFaultUsesMountInjectorBeforeAdvancingSequence) {
+  auto inode = mount_.getFileInode("dir/a.txt");
+  auto context = ObjectFetchContext::getNullContext();
+  EXPECT_EQ(3, inode->write("old", 0, context).get());
+  auto& journal = mount_.getEdenMount()->getJournal();
+  const auto sequence = journal.peekLatest()->sequenceID;
+  mount_.getServerState()->getFaultInjector().injectError(
+      "journal-record",
+      "dir/a[.]txt",
+      std::runtime_error("journal record blocked"),
+      1);
+  EXPECT_THROW_RE(
+      inode->write("new", 0, context).get(),
+      std::runtime_error,
+      "journal record blocked");
+  EXPECT_EQ(sequence, journal.peekLatest()->sequenceID);
+  EXPECT_EQ(3, inode->write("new", 0, context).get());
+  EXPECT_EQ(sequence + 1, journal.peekLatest()->sequenceID);
 }
 
 TEST_P(FileInodeTest, getattrFromBlob) {

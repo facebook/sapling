@@ -14,12 +14,15 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/OpenSSL.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/digest/Blake3.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/telemetry/EdenErrorInfoBuilder.h"
@@ -340,6 +343,8 @@ size_t OverlayFileAccess::write(
     const struct iovec* iov,
     size_t iovcnt,
     FileOffset off) {
+  inode.getMount()->getServerState()->getFaultInjector().check(
+      "overlay-write", inode.getNodeId());
   auto entry = getEntryForInode(inode.getNodeId());
 
   auto xfer =

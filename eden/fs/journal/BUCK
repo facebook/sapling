@@ -8,6 +8,7 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "fbsource//xplat/folly/logging:logging",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:match",
     ],
     exported_deps = [

@@ -7,9 +7,11 @@
 
 #include "eden/fs/journal/Journal.h"
 
+#include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/model/RootId.h"
 
 using namespace facebook::eden;
@@ -110,6 +112,25 @@ TEST_F(JournalTest, containsOnlySaplingChanges_matches_accumulateRange) {
 
   journal.recordRootUpdate(RootId{"1111111111111111111111111111111111111111"});
   EXPECT_EQ(viaAccumulateRange(1), journal.containsOnlySaplingChanges(1));
+}
+
+TEST_F(JournalTest, recordFaultUsesPathBeforeAdvancingSequence) {
+  FaultInjector injector{true};
+  Journal injectedJournal{edenStats.copy(), &injector};
+  injector.injectError(
+      "journal-record",
+      "file[.]txt",
+      std::runtime_error("journal record blocked"),
+      1);
+  injectedJournal.recordChanged("other.txt"_relpath, dtype_t::Regular);
+  EXPECT_EQ(1, injectedJournal.peekLatest()->sequenceID);
+  EXPECT_THROW_RE(
+      injectedJournal.recordChanged("file.txt"_relpath, dtype_t::Regular),
+      std::runtime_error,
+      "journal record blocked");
+  EXPECT_EQ(1, injectedJournal.peekLatest()->sequenceID);
+  injectedJournal.recordChanged("file.txt"_relpath, dtype_t::Regular);
+  EXPECT_EQ(2, injectedJournal.peekLatest()->sequenceID);
 }
 
 struct JournalDeltaTest : ::testing::Test {
