@@ -1060,6 +1060,47 @@ python_unittest(
 )
 
 python_unittest(
+    name = "edenfs_checkout_count_property_test",
+    srcs = ["edenfs/test/checkout_count_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_contracts",
+        ":edenfs_judging",
+        ":edenfs_recorded_count",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "edenfs_recorded_count",
+    srcs = ["edenfs/test/recorded_count.py"],
+    resources = glob(["edenfs/test/recorded/*"]),
+    deps = [
+        ":core_checker",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+# Continuous CI only (see `core_solver_scale_slow_test`); about 4 minutes.
+python_unittest(
+    name = "edenfs_namespace_checkout_slow_test",
+    srcs = ["edenfs/test/namespace_checkout_slow_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    labels = ci.labels(ci.remove(ci.diff, ci.land)),
+    network_access = network_access_utils.none(),
+    deps = [
+        ":edenfs_recorded_count",
+        ":target",
+    ],
+)
+
+python_unittest(
     name = "edenfs_actions_target_test",
     srcs = ["edenfs/test/actions_target_test.py"],
     compatible_with = ["ovr_config//os:linux"],
