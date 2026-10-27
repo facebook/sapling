@@ -532,43 +532,6 @@ pub(crate) struct SourceRestrictionSummary {
     restriction_roots: Vec<NonRootMPath>,
 }
 
-/// Preserve the legacy single-source contract: ACL and rollout require every
-/// restriction, while repository-wide tooling and admin grants require any.
-fn aggregate_single_source_authorization(
-    checks: &[impl SourceRestrictionCheck],
-) -> AuthorizationCheckResult {
-    AuthorizationCheckResult::new(
-        checks
-            .iter()
-            .all(|check| check.authorization().acl_result().is_authorized()),
-        checks
-            .iter()
-            .any(|check| check.authorization().tooling_result().is_authorized()),
-        all_rollout_allowlisted(
-            checks
-                .iter()
-                .map(|check| check.authorization().rollout_result().is_authorized()),
-        ),
-        checks
-            .iter()
-            .any(|check| check.authorization().admin_result().is_authorized()),
-    )
-}
-
-/// Aggregate per-restriction rollout-allowlist flags for one request.
-///
-/// Every restriction must allowlist the caller: being allowlisted for one tent
-/// must not authorize reads of a different tent caught by the same request.
-///
-/// The emptiness guard is load-bearing. `all()` is vacuously true, and an empty
-/// batch means nothing was restricted — already authorized via `has_acl_access`,
-/// but not *rollout-allowlisted*. Without the guard every unrestricted access
-/// would be logged as rollout-allowlisted.
-fn all_rollout_allowlisted(flags: impl IntoIterator<Item = bool>) -> bool {
-    let mut flags = flags.into_iter().peekable();
-    flags.peek().is_some() && flags.all(|allowlisted| allowlisted)
-}
-
 impl SourceRestrictionSummary {
     pub(crate) fn from_checks(checks: &[impl SourceRestrictionCheck]) -> Self {
         let authorization = aggregate_single_source_authorization(checks);
@@ -1247,52 +1210,6 @@ where
     ))
 }
 
-/// Calculate enforcement after one source fetch has completed successfully.
-///
-/// `Definite` always produces `Enforced`; `NeedsFetch` produces `Enforced` only
-/// when a restriction ACL matches an active condition, and otherwise produces
-/// `NotEnforced`. An enforced result carries a denial group only when at least
-/// one fetched restriction is unauthorized. Fetch errors must be handled by
-/// the caller before invoking this helper.
-fn completed_source_enforcement_outcome<T>(
-    result: &[T],
-    candidates: &[&EnforcementConditionSet],
-    pre_filter_variant: &PreFilterVariant,
-) -> AccessEnforcementOutcome
-where
-    T: SourceRestrictionCheck,
-{
-    let any_match = match pre_filter_variant {
-        PreFilterVariant::Definite => true,
-        PreFilterVariant::NeedsFetch => {
-            let restriction_acls = result
-                .iter()
-                .map(SourceRestrictionCheck::repo_region_identity)
-                .collect::<Vec<_>>();
-            condition_sets_match_restriction_acls(candidates, &restriction_acls)
-        }
-    };
-
-    if !any_match {
-        return AccessEnforcementOutcome::NotEnforced;
-    }
-
-    let denial = result
-        .iter()
-        .filter(|check| !check.authorization().has_authorization())
-        // Multiple denied checks can be returned by one source. Pick a stable
-        // denying restriction so error messages do not depend on source
-        // result ordering.
-        .min_by(|left, right| compare_denied_checks(*left, *right))
-        .map(|check| DenyingRestriction {
-            restriction_root: check.restriction_root().cloned(),
-            repo_region_acl: check.repo_region_identity().clone(),
-            permission_request_group: check.permission_request_group().clone(),
-        });
-
-    AccessEnforcementOutcome::Enforced { denial }
-}
-
 /// Combine authoritative source enforcement outcomes.
 ///
 /// Returns a denial when any source denies access, even if a sibling source
@@ -1571,4 +1488,87 @@ async fn check_restriction_authorization_with_acl(
             is_rollout_allowlisted,
         ),
     ))
+}
+
+/// Preserve the legacy single-source contract: ACL and rollout require every
+/// restriction, while repository-wide tooling and admin grants require any.
+fn aggregate_single_source_authorization(
+    checks: &[impl SourceRestrictionCheck],
+) -> AuthorizationCheckResult {
+    AuthorizationCheckResult::new(
+        checks
+            .iter()
+            .all(|check| check.authorization().acl_result().is_authorized()),
+        checks
+            .iter()
+            .any(|check| check.authorization().tooling_result().is_authorized()),
+        all_rollout_allowlisted(
+            checks
+                .iter()
+                .map(|check| check.authorization().rollout_result().is_authorized()),
+        ),
+        checks
+            .iter()
+            .any(|check| check.authorization().admin_result().is_authorized()),
+    )
+}
+
+/// Aggregate per-restriction rollout-allowlist flags for one request.
+///
+/// Every restriction must allowlist the caller: being allowlisted for one tent
+/// must not authorize reads of a different tent caught by the same request.
+///
+/// The emptiness guard is load-bearing. `all()` is vacuously true, and an empty
+/// batch means nothing was restricted — already authorized via `has_acl_access`,
+/// but not *rollout-allowlisted*. Without the guard every unrestricted access
+/// would be logged as rollout-allowlisted.
+fn all_rollout_allowlisted(flags: impl IntoIterator<Item = bool>) -> bool {
+    let mut flags = flags.into_iter().peekable();
+    flags.peek().is_some() && flags.all(|allowlisted| allowlisted)
+}
+
+/// Calculate enforcement after one source fetch has completed successfully.
+///
+/// `Definite` always produces `Enforced`; `NeedsFetch` produces `Enforced` only
+/// when a restriction ACL matches an active condition, and otherwise produces
+/// `NotEnforced`. An enforced result carries a denial group only when at least
+/// one fetched restriction is unauthorized. Fetch errors must be handled by
+/// the caller before invoking this helper.
+fn completed_source_enforcement_outcome<T>(
+    result: &[T],
+    candidates: &[&EnforcementConditionSet],
+    pre_filter_variant: &PreFilterVariant,
+) -> AccessEnforcementOutcome
+where
+    T: SourceRestrictionCheck,
+{
+    let any_match = match pre_filter_variant {
+        PreFilterVariant::Definite => true,
+        PreFilterVariant::NeedsFetch => {
+            let restriction_acls = result
+                .iter()
+                .map(SourceRestrictionCheck::repo_region_identity)
+                .collect::<Vec<_>>();
+            condition_sets_match_restriction_acls(candidates, &restriction_acls)
+        }
+    };
+
+    if !any_match {
+        return AccessEnforcementOutcome::NotEnforced;
+    }
+
+    let denial = result
+        .iter()
+        .filter(|check| !check.authorization().has_authorization())
+        // Multiple denied checks can be returned by one source. Pick a stable
+        // denying restriction so error messages do not depend on source
+        // result ordering.
+        .min_by(|left, right| compare_denied_checks(*left, *right))
+        .map(|check| DenyingRestriction {
+            restriction_root: check.restriction_root().cloned(),
+            repo_region_acl: check.repo_region_identity().clone(),
+            permission_request_group: check.permission_request_group().clone(),
+        });
+
+    AccessEnforcementOutcome::Enforced { denial }
 }
