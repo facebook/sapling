@@ -69,6 +69,19 @@ python_unittest(
 )
 
 python_unittest(
+    name = "core_identity_test",
+    srcs = ["core/test/identity_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":fake_target",
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_unittest(
     name = "core_actions_test",
     srcs = ["core/test/actions_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -359,6 +372,19 @@ python_unittest(
 python_unittest(
     name = "core_rules_test",
     srcs = ["core/test/core_rules_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "core_input_subject_test",
+    srcs = ["core/test/input_subject_test.py"],
     compatible_with = ["ovr_config//os:linux"],
     network_access = network_access_utils.none(),
     resources = [],
