@@ -41,6 +41,16 @@ DEFINE_bool(
 namespace {
 constexpr auto kTimeout = std::chrono::seconds{1};
 constexpr size_t kStartingInodeWidth = 5;
+
+// subscribeInline() delivers an empty Try once the stream ends, after any
+// error, so an empty Try is not itself an error.
+template <typename T>
+void printStreamEnd(const folly::Try<T>& event) {
+  if (event.hasException()) {
+    fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+  }
+}
+
 static const auto kTreeEmoji =
     reinterpret_cast<const char*>(u8"\U0001F332"); // 🌲
 static const auto kTreeAuxEmoji =
@@ -363,8 +373,8 @@ int trace_hg(
 
   std::unordered_map<uint64_t, ActiveHgRequest> activeRequests;
   std::move(traceHgStream).subscribeInline([&](folly::Try<HgEvent>&& event) {
-    if (event.hasException()) {
-      fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+    if (!event.hasValue()) {
+      printStreamEnd(event);
       return;
     }
     print_hg_event(event.value(), activeRequests);
@@ -491,8 +501,8 @@ int trace_fs(
   std::unordered_map<uint64_t, FsEvent> activeRequests;
 
   std::move(traceFsStream).subscribeInline([&](folly::Try<FsEvent>&& event) {
-    if (event.hasException()) {
-      fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+    if (!event.hasValue()) {
+      printStreamEnd(event);
       return;
     }
 
@@ -692,9 +702,8 @@ int trace_thrift(
           [c = std::move(client),
            startTimesNs = std::move(requestStartMonoTimesNs)](
               folly::Try<ThriftRequestEvent>&& maybeEvent) mutable {
-            if (maybeEvent.hasException()) {
-              fmt::print(
-                  "Error: {}\n", folly::exceptionStr(maybeEvent.exception()));
+            if (!maybeEvent.hasValue()) {
+              printStreamEnd(maybeEvent);
               return;
             }
             print_thrift_event(maybeEvent.value(), startTimesNs);
@@ -786,8 +795,8 @@ int trace_inode(
 
   std::move(traceInodeStream)
       .subscribeInline([&](folly::Try<InodeEvent>&& event) {
-        if (event.hasException()) {
-          fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+        if (!event.hasValue()) {
+          printStreamEnd(event);
           return;
         }
         inode_width =
@@ -810,8 +819,8 @@ int trace_task(
   std::unordered_set<uint64_t> metadataPrinted;
 
   std::move(traceTaskStream).subscribeInline([&](folly::Try<TaskEvent>&& event) {
-    if (event.hasException()) {
-      fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+    if (!event.hasValue()) {
+      printStreamEnd(event);
       return;
     }
     auto task = event.value();
@@ -933,16 +942,8 @@ AbsolutePath getSocketPath(AbsolutePathPiece mountRoot) {
     return mountRoot + ".eden"_pc + "socket"_pc;
   }
 }
-} // namespace
 
-int main(int argc, char** argv) {
-  // Don't buffer stdout, even if piped to a file.
-  setbuf(stdout, nullptr);
-
-  const folly::Init init(&argc, &argv);
-
-  folly::ScopedEventBaseThread evbThread;
-
+int run(folly::ScopedEventBaseThread& evbThread) {
   AbsolutePath mountRoot = canonicalPath(FLAGS_mountRoot);
   AbsolutePath socketPath = getSocketPath(mountRoot);
 
@@ -986,6 +987,26 @@ int main(int argc, char** argv) {
     return 1;
   } else {
     fmt::print(stderr, "Unknown trace mode: {}\n", FLAGS_trace);
+    return 1;
+  }
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
+  // Don't buffer stdout, even if piped to a file.
+  setbuf(stdout, nullptr);
+
+  const folly::Init init(&argc, &argv);
+
+  folly::ScopedEventBaseThread evbThread;
+
+  // A closed stdout pipe makes fmt::print throw, and the daemon going away
+  // fails the stream calls; neither deserves a core dump.
+  try {
+    return run(evbThread);
+  } catch (const std::exception& ex) {
+    fmt::print(stderr, "Error: {}\n", folly::exceptionStr(ex));
     return 1;
   }
 }
