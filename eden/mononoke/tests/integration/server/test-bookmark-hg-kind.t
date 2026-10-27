@@ -93,6 +93,10 @@ test publishing
      master_bookmark           43806d3afe2b66f1765d44d1191c66cd3adbbe93
      not_pull_default          8db75f0f53d84e2684b2368e760cfb3555875a53
      scratch                   20396342f20004f5f3c139f12681b3dd07b08d8b
+
+Listing remote bookmarks without patterns shows only pull-default bookmarks
+  $ hg bookmarks --remote
+     remote/master_bookmark           43806d3afe2b66f1765d44d1191c66cd3adbbe93
 Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ cd ../repo-push
   $ hg push -r . --to "more/1" --create >/dev/null 2>&1

@@ -44,6 +44,10 @@ start mononoke
   default = mono:repo
   $ hg id -r _gitlookup_git_37b0a167e07f2b84149c918cec818ffeb183dddd mono:repo
   ed9644eae39f
+  $ hg id -r _gitlookup_git_37b0a167e07f2b84149c918cec818ffeb183dddd mono:repo --debug 2>&1 | grep -E '^sending [a-z_]+ command$'
+  sending hello command
+  sending lookup command
+  sending listkeys command
   $ hg id -r _gitlookup_hg_$A mono:repo
   37b0a167e07f
   $ hg id -r _gitlookup_hg_$B mono:repo
