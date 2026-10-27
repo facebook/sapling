@@ -280,6 +280,49 @@ pub enum UserType {
     Other(String),
 }
 
+/// A line of the protections table that applies to the user running p4.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Protection {
+    /// Its line number in the table, which counts every user's lines: later lines win.
+    pub line: u32,
+    pub mode: ProtectionMode,
+    pub principal: Principal,
+    /// An IP address or range, or `*`.
+    pub host: String,
+    /// Without the `-` of an exclusion.
+    pub path: String,
+    /// An exclusion line (`-//depot/...`): removes the access instead of granting it.
+    pub exclusion: bool,
+}
+
+/// The modes `p4 help protect` lists for files.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ProtectionMode {
+    List,
+    Read,
+    Open,
+    Write,
+    Admin,
+    Owner,
+    Super,
+    Review,
+    /// `=read`, `=branch`, `=open`, `=write`: that one right only.
+    OnlyRead,
+    OnlyBranch,
+    OnlyOpen,
+    OnlyWrite,
+    /// One added by a newer server.
+    Other(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Principal {
+    /// `*`: every user.
+    Everyone,
+    User(String),
+    Group(String),
+}
+
 /// What `p4 info` reports about the server, enough to tell one server from another.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServerInfo {
