@@ -24,6 +24,9 @@ fn main() {
     if bench_enabled("dag_ops") {
         dag_ops::main();
     }
+    if bench_enabled("parents_single_segment") {
+        dag_ops::bench_parents_single_segment();
+    }
     if bench_enabled(
         "dag_import/clone_clone_data dag_import/import_clone_data dag_import/import_pull_data",
     ) {

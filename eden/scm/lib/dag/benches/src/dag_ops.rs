@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::hint::black_box;
+
 use dag::Group;
 use dag::Id;
 use dag::IdDag;
@@ -33,6 +35,53 @@ pub fn main() {
     bench_with_iddag(IdDag::new_in_memory);
 
     bench_many_heads_dag();
+}
+
+pub fn bench_parents_single_segment() {
+    let dag_dir = tempdir().unwrap();
+    bench_parents_with_single_segment("indexedlog", || IdDag::open(dag_dir.path()).unwrap());
+    bench_parents_with_single_segment("memory", IdDag::new_in_memory);
+}
+
+fn bench_parents_with_single_segment<S: IdDagStore + Persist>(
+    backend: &str,
+    get_empty_iddag: impl Fn() -> IdDag<S>,
+) {
+    let mut dag = get_empty_iddag();
+    let segment_count = dag
+        .build_segments(Id(200_000), &|id| {
+            Ok(if id == Id(0) { vec![] } else { vec![id - 1] })
+        })
+        .unwrap();
+    assert_eq!(segment_count, 1);
+    assert_eq!(dag.max_level().unwrap(), 0);
+    {
+        let locked = dag.lock().unwrap();
+        dag.persist(&locked).unwrap();
+    }
+
+    // Keep the DAG fixed while increasing the number of spans within its
+    // single flat segment. All selected IDs have their parent at id - 1.
+    for span_count in [100u64, 1_000, 10_000, 100_000] {
+        let set = IdSet::from_spans((1..=span_count).map(|i| Id(i * 2)));
+        let expected = IdSet::from_spans((1..=span_count).map(|i| Id(i * 2 - 1)));
+        assert_eq!(
+            dag.parents(set.clone()).unwrap().as_spans(),
+            expected.as_spans()
+        );
+        bench(
+            format!("parents_single_segment/{backend}/{span_count} spans"),
+            || {
+                // Each measurement includes 16 calls, with input cloning and
+                // result destruction included just like the other DAG benches.
+                elapsed(|| {
+                    for _ in 0..16 {
+                        black_box(dag.parents(black_box(set.clone())).unwrap());
+                    }
+                })
+            },
+        );
+    }
 }
 
 fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag<S>) {
