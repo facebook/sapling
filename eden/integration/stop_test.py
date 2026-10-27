@@ -12,12 +12,13 @@ import sys
 import time
 import unittest
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from eden.fs.cli import proc_utils as proc_utils_mod
 from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until
 from eden.fs.service.eden.thrift_clients import EdenService
+from eden.fs.service.eden.thrift_types import FaultDefinition, MountState
 from eden.thrift.client import create_thrift_client, EdenNotRunningError
 from thrift.python.client import ClientType, get_sync_client
 from thrift.python.exceptions import TransportError
@@ -31,7 +32,13 @@ from .lib.pexpect import (
     wait_for_pexpect_process,
 )
 from .lib.service_test_case import service_test, ServiceTestCaseBase
-from .lib.testcase import eden_test, EdenTestCase, IntegrationTestCase
+from .lib.testcase import (
+    eden_repo_test,
+    eden_test,
+    EdenRepoTest,
+    EdenTestCase,
+    IntegrationTestCase,
+)
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
@@ -275,6 +282,55 @@ class StopWithIdleClientTest(EdenTestCase):
             self.eden.shutdown()
             with self.assertRaises(TransportError):
                 client.getPid()
+
+
+@eden_repo_test
+class StopWhileAnUnmountIsInFlightTest(EdenRepoTest):
+    enable_fault_injection = True
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.commit("Initial commit.")
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config() or {}
+        # The daemon aborts when a request outlives this wait after a stop.
+        # Keep it short so the test does not take the production two minutes.
+        configs.setdefault("thrift", []).append('workers-join-timeout = "5s"')
+        return configs
+
+    def test_stop_while_an_unmount_is_in_flight(self) -> None:
+        # Hold the mount's shutdown back so the stop arrives while a Thrift
+        # unmount is still waiting on it.
+        with self.eden.get_thrift_client() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="mountShutdown",
+                    keyValueRegex=".*",
+                    delayMilliseconds=15000,
+                )
+            )
+
+        mount = Path(self.mount)
+        with self.eden.get_thrift_client(timeout=1) as client:
+            # The client gives up after a second; the request stays in flight
+            # in the daemon.
+            with self.assertRaises(TransportError):
+                client.unmount(os.fsencode(mount))
+
+        def mount_is_shutting_down() -> Optional[bool]:
+            state = self.eden.get_mount_state(mount)
+            return True if state == MountState.SHUTTING_DOWN else None
+
+        poll_until(mount_is_shutting_down, timeout=30)
+
+        # FIXME: the stop must answer the unmount and exit cleanly. Instead the
+        # request stays open through the stop: its answer is produced on the
+        # main event base, which does not run while Thrift drains requests, so
+        # the drain times out and Thrift aborts the daemon. shutdown() raises
+        # when the daemon exits with a non-zero status.
+        with self.assertRaisesRegex(Exception, "exited unsuccessfully"):
+            self.eden.shutdown()
 
 
 @eden_test
