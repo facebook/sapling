@@ -10,6 +10,13 @@ setup configuration
   $ setup_common_config
   $ cd $TESTTMP
 
+The wireproto connection is what this test exercises, so the peer connects
+when it is created
+  $ cat >> $HGRCPATH <<EOF
+  > [experimental]
+  > mononokepeer-lazy-connect=false
+  > EOF
+
   $ testtool_drawdag -R repo << EOF
   > A
   > # bookmark: A master_bookmark

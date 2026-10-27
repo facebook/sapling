@@ -84,6 +84,17 @@ server refuses that connection first:
   abort: unexpected EOL, expected netstring digit
   [255]
 
+With lazy connect, the peer does not connect for these commands, so SLAPI
+refuses them:
+  $ hg bookmarks --remote $NO_ACCESS --config experimental.mononokepeer-lazy-connect=true
+  abort: permission denied: Failed to load repository: repo: permission denied: Repo metadata read access in repo 'repo' is not permitted with Identity for * (glob)
+  (check that you have access to this repository)
+  [255]
+  $ hg id -r master_bookmark mono:repo $NO_ACCESS --config experimental.mononokepeer-lazy-connect=true
+  abort: permission denied: Failed to load repository: repo: permission denied: Repo metadata read access in repo 'repo' is not permitted with Identity for * (glob)
+  (check that you have access to this repository)
+  [255]
+
 A read-only identity can upload commits but not move, create or delete a public
 bookmark:
   $ hg push --to master_bookmark $READ_ONLY

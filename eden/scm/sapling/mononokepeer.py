@@ -242,6 +242,21 @@ def _listbookmarks(api, patterns, kinds):
     )
 
 
+# Capabilities in Mononoke's `hello` reply (`wireprotocaps()` and `bundle2caps()`
+# in `eden/mononoke/repo_client/src/client.rs`).
+_MONONOKE_CAPABILITIES = frozenset(
+    [
+        "lookup",
+        "known",
+        "unbundle=HG10GZ,HG10BZ,HG10UN",
+        "unbundlereplay",
+        "remotefilelog",
+        "pushkey",
+        "bundle2=HG20%0Achangegroup%3D02%2C03%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads%0Aobsmarkers%3DV1%0Alistkeys%0Ab2x%3Ainfinitepushmutation",
+    ]
+)
+
+
 _GITLOOKUP_SCHEMES = (
     ("_gitlookup_git_", "GitSha1", "Hg"),
     ("_gitlookup_hg_", "Hg", "GitSha1"),
@@ -348,12 +363,26 @@ class mononokepeer(stdiopeer.stdiopeer):
                 error.RepoError(_("creating repositories in Mononoke is not supported"))
             )
 
+        self._lazyconnect = ui.configbool("experimental", "mononokepeer-lazy-connect")
+        if self._lazyconnect:
+            self._caps.update(_MONONOKE_CAPABILITIES)
+        else:
+            self._connect()
+
+    def _connect(self):
         with (
             self.ui.timeblockedsection("mononokesetup"),
             progress.suspend(),
             util.traced("mononoke_setup", cat="blocked"),
         ):
             self._validaterepo()
+
+    def _callstream(self, cmd, **args):
+        # Every wire command starts here, so a lazy peer connects on its first
+        # one. `_validaterepo` opens the pipe before it sends `hello`.
+        if self._lazyconnect and self._pipeo is None:
+            self._connect()
+        return super()._callstream(cmd, **args)
 
     def _connectionerror(self, ex, tlserror=False):
         msg = ""

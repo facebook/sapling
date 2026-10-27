@@ -135,3 +135,78 @@ ambiguous hash prefix, over SLAPI and with SLAPI lookup disabled
   $ wire hg id -r b mono:repo --config experimental.slapi-lookup=false
   sending hello command
   sending lookup command
+
+lazy connect: the peer opens its wireproto connection only for a wire command
+  $ cat >> $HGRCPATH <<EOF
+  > [experimental]
+  > mononokepeer-lazy-connect=true
+  > EOF
+
+the hard-coded capabilities are the ones the server sends in its hello reply
+  $ hg debugcapabilities mono:repo --config experimental.mononokepeer-lazy-connect=false > $TESTTMP/caps-hello
+  $ wire hg debugcapabilities mono:repo
+  [1]
+  $ hg debugcapabilities mono:repo > $TESTTMP/caps-lazy
+  $ diff $TESTTMP/caps-hello $TESTTMP/caps-lazy
+  $ cat $TESTTMP/caps-lazy
+  Main capabilities:
+    bundle2=HG20%0Achangegroup%3D02%2C03%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks%0Apushkey%0Atreemanifestserver%3DTrue%0Ab2x%3Arebase%0Ab2x%3Arebasepackpart%0Aphases%3Dheads%0Aobsmarkers%3DV1%0Alistkeys%0Ab2x%3Ainfinitepushmutation
+    known
+    lookup
+    pushkey
+    remotefilelog
+    unbundle=HG10GZ,HG10BZ,HG10UN
+    unbundlereplay
+  Bundle2 capabilities:
+    HG20
+    b2x:infinitepush
+    b2x:infinitepushmutation
+    b2x:infinitepushscratchbookmarks
+    b2x:rebase
+    b2x:rebasepackpart
+    changegroup
+      02
+      03
+    listkeys
+    obsmarkers
+      V1
+    phases
+      heads
+    pushkey
+    treemanifestserver
+      True
+
+push connects when it sends unbundle
+  $ cd ../pusher
+  $ echo d > d
+  $ hg commit -qAm d
+  $ wire hg push -r . --to other_bookmark
+  sending hello command
+  sending unbundle command
+  $ hg log -r . -T '{node}\n'
+  14a0239b14fec79e9b9684376b11db69e48b845f
+
+reads send no wireproto commands
+  $ cd ../client
+  $ wire hg pull -B other_bookmark
+  [1]
+  $ hg log -r other_bookmark -T '{node}\n'
+  14a0239b14fec79e9b9684376b11db69e48b845f
+  $ wire hg bookmarks --remote
+  [1]
+  $ wire hg id -r master_bookmark mono:repo
+  [1]
+  $ wire hg log -r "remote(master_bookmark)" -T '{node}\n'
+  [1]
+  $ wire hg debugknown mono:repo $A
+  [1]
+  $ cd $TESTTMP
+  $ wire hg clone -q --updaterev ${A:0:8} mono:repo client4
+  [1]
+  $ hg -R client4 log -r . -T '{node}\n'
+  9c7bec57ce44e5380b77562bf4bf9f41df23585d
+
+a read that still needs the wire connects for it
+  $ wire hg id -r master_bookmark mono:repo --config experimental.slapi-lookup=false
+  sending hello command
+  sending lookup command
