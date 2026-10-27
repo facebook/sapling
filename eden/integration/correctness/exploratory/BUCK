@@ -878,6 +878,89 @@ python_library(
 )
 
 python_unittest(
+    name = "edenfs_properties_test",
+    srcs = ["edenfs/test/properties_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = glob([
+        "edenfs/test/red_controls/**/*",
+        "edenfs/test/sapling_evidence/*",
+    ]),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_contracts",
+        ":edenfs_encoding",
+        ":edenfs_judging",
+        ":edenfs_properties",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_bytes_property_test",
+    srcs = ["edenfs/test/bytes_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = glob([
+        "edenfs/test/red_controls/**/*",
+        "edenfs/test/sapling_evidence/*",
+    ]),
+    deps = [
+        ":corpus_author",
+        ":edenfs_contracts",
+        ":edenfs_judging",
+        ":edenfs_properties",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_cross_channel_property_test",
+    srcs = ["edenfs/test/cross_channel_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_judging",
+        ":edenfs_properties",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_attributes_property_test",
+    srcs = ["edenfs/test/attributes_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":corpus_author",
+        ":edenfs_judging",
+        ":edenfs_testing",
+    ],
+)
+
+python_unittest(
+    name = "edenfs_fd_property_test",
+    srcs = ["edenfs/test/fd_property_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_contracts",
+        ":edenfs_judging",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":target",
+    ],
+)
+
+python_unittest(
     name = "edenfs_actions_target_test",
     srcs = ["edenfs/test/actions_target_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -904,6 +987,20 @@ python_unittest(
 )
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
+
+python_library(
+    name = "corpus_author",
+    srcs = [
+        "test/corpus/author.py",
+    ],
+    deps = [
+        ":core_checker",
+        ":edenfs_encoding",
+        ":edenfs_testing",
+        ":target",
+        "//eden/integration/correctness:repo",
+    ],
+)
 
 # Typed task identity, the findings report, replay, and the run admission and
 
