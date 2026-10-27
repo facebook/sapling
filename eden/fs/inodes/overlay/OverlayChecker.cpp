@@ -21,6 +21,7 @@
 #include <mutex>
 #include <optional>
 #include <set>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -141,7 +142,8 @@ class OverlayChecker::RepairState {
   template <typename Arg1, typename... Args>
   void warn(const Arg1& arg1, const Args&... args) {
     auto msg = fmt::to_string(
-        fmt::join(std::make_tuple<const Arg1&, const Args&...>(arg1, args...)));
+        fmt::join(
+            std::make_tuple<const Arg1&, const Args&...>(arg1, args...), ""));
     XLOGF(WARN, "fsck:{}:{}", checker_->impl_->fcs->getLocalDir(), msg);
     logLine(msg);
   }
@@ -832,7 +834,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 
 class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
  public:
-  explicit HardLinkedInode(const InodeInfo& info) : number_(info.number) {
+  explicit HardLinkedInode(const InodeInfo& info)
+      : number_(info.number), type_(info.type) {
     // info.parents is sorted and holds one element per directory entry, so a
     // directory with two names for the inode appears twice in a row.
     for (auto parent : info.parents) {
@@ -863,20 +866,16 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
       return false;
     }
 
-    std::string reason;
-    const Link& keep = chooseLinkToKeep(checker, links, reason);
     // Load every directory before writing any, so a directory that cannot be
     // read leaves all of them as they were. A directory holding several of
-    // the links is written once.
+    // the links is written once. The memory-efficient scan does not cache
+    // directory contents, so read each link's mode from these loaded entries.
     struct Removal {
       overlay::OverlayDir dir;
       std::vector<const Link*> links;
     };
     std::map<InodeNumber, Removal> removals;
-    for (const auto& link : links) {
-      if (&link == &keep) {
-        continue;
-      }
+    for (auto& link : links) {
       auto removal = removals.find(link.parent);
       if (removal == removals.end()) {
         auto loaded = checker->impl_->inodeCatalog->loadOverlayDir(link.parent);
@@ -884,17 +883,56 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
           repair.log(
               "  ! could not load directory inode ",
               link.parent,
-              " to remove ",
+              " to repair ",
               link.path.toString());
           return false;
         }
         removal = removals.emplace(link.parent, Removal{std::move(*loaded), {}})
                       .first;
       }
-      removal->second.dir.entries()->erase(link.name.asString());
-      removal->second.links.push_back(&link);
+      const auto& entries = *removal->second.dir.entries();
+      auto entry = entries.find(link.name.asString());
+      if (entry == entries.end() ||
+          static_cast<uint64_t>(*entry->second.inodeNumber()) !=
+              number_.get()) {
+        repair.log(
+            "  ! entry ",
+            link.path.toString(),
+            " no longer references inode ",
+            number_);
+        return false;
+      }
+      auto mode = static_cast<mode_t>(*entry->second.mode());
+      if (!S_ISREG(mode) && !S_ISDIR(mode) && !S_ISLNK(mode)) {
+        repair.log(
+            "  ! invalid mode ", mode, " for entry ", link.path.toString());
+        return false;
+      }
+      link.mode = mode;
+    }
+
+    std::string reason;
+    const auto* selected = chooseLinkToKeep(checker, links, reason);
+    if (!selected) {
+      repair.log(
+          "  ! unable to repair duplicate references to directory inode ",
+          number_,
+          " without retaining a cycle");
+      return false;
+    }
+    const auto& keep = *selected;
+    for (const auto& link : links) {
+      if (&link == &keep) {
+        continue;
+      }
+      auto& removal = removals.at(link.parent);
+      removal.dir.entries()->erase(link.name.asString());
+      removal.links.push_back(&link);
     }
     for (auto& [parent, removal] : removals) {
+      if (removal.links.empty()) {
+        continue;
+      }
       checker->impl_->inodeCatalog->saveOverlayDir(
           parent, std::move(removal.dir));
       auto* parentInfo = checker->getInodeInfo(parent);
@@ -927,6 +965,7 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
     InodeNumber parent;
     PathComponent name;
     PathInfo path;
+    mode_t mode{};
   };
 
   std::vector<Link> findLinks(OverlayChecker* checker) const {
@@ -949,23 +988,55 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
   }
 
   /**
-   * The link a WAL ADD introduced is the newest. Among the rest, a link
+   * Exclude links that would retain a directory cycle, and prefer links whose
+   * recorded type matches the inode data. The link a WAL ADD introduced is
+   * the newest. Among the rest, a link
    * reachable from the root beats one below an unlinked directory, and a path
    * source control knows beats the temporary name it was renamed from. The
    * first path in sorted order settles what is left.
    */
-  const Link& chooseLinkToKeep(
+  const Link* FOLLY_NULLABLE chooseLinkToKeep(
       OverlayChecker* checker,
       const std::vector<Link>& links,
       std::string& reason) const {
     std::vector<const Link*> candidates;
     candidates.reserve(links.size());
+    auto wouldCreateCycle = [&](InodeNumber parent) {
+      if (type_ != InodeType::Dir) {
+        return false;
+      }
+      std::vector<InodeNumber> pending{parent};
+      folly::F14FastSet<InodeNumber> visited;
+      while (!pending.empty()) {
+        auto current = pending.back();
+        pending.pop_back();
+        if (current == number_) {
+          return true;
+        }
+        if (!visited.insert(current).second) {
+          continue;
+        }
+        auto* info = checker->getInodeInfo(current);
+        if (info) {
+          pending.insert(
+              pending.end(), info->parents.begin(), info->parents.end());
+        }
+      }
+      return false;
+    };
+
     for (const auto& link : links) {
-      candidates.push_back(&link);
+      if (!wouldCreateCycle(link.parent)) {
+        candidates.push_back(&link);
+      }
+    }
+    if (candidates.empty()) {
+      return nullptr;
     }
     // Keep the candidates that pass the rule when there are any, and return
     // the link when one is left.
-    auto narrow = [&](std::string_view why, auto&& passes) -> const Link* {
+    auto narrow = [&](std::string_view why,
+                      auto&& passes) -> const Link* FOLLY_NULLABLE {
       std::vector<const Link*> passing;
       passing.reserve(candidates.size());
       for (const auto* link : candidates) {
@@ -979,6 +1050,21 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
       }
       return candidates.size() == 1 ? candidates.at(0) : nullptr;
     };
+    if (const auto* only = narrow(
+            "its recorded type matches the inode data", [&](const Link& link) {
+              switch (type_) {
+                case InodeType::Dir:
+                  return S_ISDIR(link.mode);
+                case InodeType::File:
+                  return !S_ISDIR(link.mode);
+                case InodeType::Unknown:
+                case InodeType::Error:
+                  return true;
+              }
+              return true;
+            })) {
+      return only;
+    }
     auto reachable = [](const Link& link) {
       return link.path.parent == kRootNodeId;
     };
@@ -987,26 +1073,27 @@ class OverlayChecker::HardLinkedInode : public OverlayChecker::Error {
               return checker->impl_->walAddedEntries.contains(
                   {number_, link.parent});
             })) {
-      return *only;
+      return only;
     }
     if (const auto* only = narrow("it is reachable from the root", reachable)) {
-      return *only;
+      return only;
     }
     if (const auto* only =
             narrow("source control has that path", [&](const Link& link) {
               return reachable(link) &&
                   checker->lookup(link.path.path).getTry().hasValue();
             })) {
-      return *only;
+      return only;
     }
     reason = "first path in sorted order";
-    return **std::min_element(
+    return *std::min_element(
         candidates.begin(), candidates.end(), [](const Link* a, const Link* b) {
           return a->path.toString() < b->path.toString();
         });
   }
 
   InodeNumber number_;
+  InodeType type_;
   std::vector<InodeNumber> parents_;
 };
 

@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <folly/Conv.h>
@@ -139,6 +140,16 @@ class TestDir {
       std::optional<ObjectId> id = std::nullopt,
       mode_t permissions = 0755) {
     addEntry(name, id, S_IFREG | (permissions & 07777), number.get());
+    return TestDir(overlay_, number);
+  }
+
+  TestDir linkDir(
+      InodeNumber number,
+      StringPiece name,
+      std::optional<ObjectId> id = std::nullopt,
+      mode_t permissions = 0755) {
+    addEntry(
+        name, std::move(id), S_IFDIR | (permissions & 07777), number.get());
     return TestDir(overlay_, number);
   }
 
@@ -972,6 +983,97 @@ TEST_F(FsckTest, hardLinkRepairKeepsTheTrackedName) {
   EXPECT_EQ(0u, y->entries()->count("z.txt.tmp"));
   EXPECT_TRUE(
       testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
+}
+
+TEST_F(FsckTest, hardLinkRepairRejectsInvalidMode) {
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
+  auto first = root.mkdir("first");
+  auto second = root.mkdir("second");
+  auto file = first.create("file", "contents");
+  second.linkFile(file.number(), "alias");
+  root.save();
+  first.save();
+  second.save();
+
+  auto firstBefore =
+      testOverlay->inodeCatalog()->loadOverlayDir(first.number());
+  auto secondBefore =
+      testOverlay->inodeCatalog()->loadOverlayDir(second.number());
+  ASSERT_TRUE(firstBefore.has_value());
+  ASSERT_TRUE(secondBefore.has_value());
+  // Zero is also the default when the serialized mode field is absent.
+  secondBefore->entries()->at("alias").mode() = 0;
+  testOverlay->inodeCatalog()->saveOverlayDir(
+      second.number(), overlay::OverlayDir{*secondBefore});
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+
+  auto [result, fsckLog] = performRepair(checker, 1, 0);
+  EXPECT_THAT(fsckLog, HasSubstr("invalid mode 0 for entry second/alias"));
+  EXPECT_EQ(
+      firstBefore, testOverlay->inodeCatalog()->loadOverlayDir(first.number()));
+  EXPECT_EQ(
+      secondBefore,
+      testOverlay->inodeCatalog()->loadOverlayDir(second.number()));
+  EXPECT_TRUE(testOverlay->fcs().hasOverlayFile(file.number()));
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
+}
+
+TEST_F(FsckTest, repairHardLinks) {
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
+  auto first = root.mkdir("first");
+  auto second = root.mkdir("second");
+
+  auto file = second.create("file", "contents");
+  first.linkDir(file.number(), "file-with-wrong-type");
+
+  auto dir = first.mkdir("dir");
+  dir.create("child", "child contents");
+  dir.save();
+  second.linkDir(dir.number(), "dir-alias");
+
+  root.save();
+  first.save();
+  second.save();
+
+  InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
+    return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
+
+  auto [result, fsckLog] = performRepair(checker, 2, 2);
+  EXPECT_THAT(fsckLog, HasSubstr("removed first/file-with-wrong-type"));
+  EXPECT_THAT(fsckLog, HasSubstr("removed second/dir-alias"));
+
+  auto firstAfter = testOverlay->inodeCatalog()->loadOverlayDir(first.number());
+  auto secondAfter =
+      testOverlay->inodeCatalog()->loadOverlayDir(second.number());
+  ASSERT_TRUE(firstAfter.has_value());
+  ASSERT_TRUE(secondAfter.has_value());
+  EXPECT_EQ(0, firstAfter->entries()->count("file-with-wrong-type"));
+  EXPECT_EQ(1, firstAfter->entries()->count("dir"));
+  EXPECT_EQ(1, secondAfter->entries()->count("file"));
+  EXPECT_EQ(0, secondAfter->entries()->count("dir-alias"));
+  EXPECT_TRUE(testOverlay->fcs().hasOverlayFile(file.number()));
+  EXPECT_TRUE(testOverlay->inodeCatalog()->hasOverlayDir(dir.number()));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
