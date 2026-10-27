@@ -1,0 +1,30 @@
+load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "repo",
+    srcs = ["repo.py"],
+    deps = [
+        "//eden/integration/lib:lib",
+        "//eden/test_support:py",
+    ],
+)
+
+python_unittest(
+    name = "repo_test",
+    srcs = ["test/repo_test.py"],
+    # Fixture generation runs FUSE-adjacent sl layouts on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    # RepoAuthorSlTest authors a real backing repo with the test sl binary.
+    env = get_integration_test_env_and_deps()["env"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":repo",
+        "//eden/integration/lib:lib",
+        "//eden/test_support:py",
+    ],
+)

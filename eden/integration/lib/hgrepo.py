@@ -184,6 +184,31 @@ class HgRepository(repobase.Repository):
 
         return None
 
+    def _hg_input_file(
+        self, input: Optional[str], encoding: str
+    ) -> tuple[Optional[Any], Any]:
+        if input is None:
+            return None, subprocess.DEVNULL
+        input_file = self.temp_mgr.make_temp_binary(prefix="hg_input.")
+        input_file.write(input.encode(encoding))
+        input_file.seek(0)
+        return input_file, input_file.fileno()
+
+    def _hg_output_file(self, output: Any) -> tuple[Any, Optional[Any]]:
+        if output is not subprocess.PIPE:
+            return output, None
+        output_file = self.temp_mgr.make_temp_binary(prefix="hg_stdout.")
+        return output_file, output_file
+
+    @staticmethod
+    def _read_and_close_hg_output(output_file: Optional[Any]) -> Optional[bytes]:
+        if output_file is None:
+            return None
+        output_file.seek(0)
+        output = output_file.read()
+        output_file.close()
+        return output
+
     def run_hg(
         self,
         *args: str,
@@ -196,6 +221,7 @@ class HgRepository(repobase.Repository):
         check: bool = True,
         traceback: bool = True,
         env: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = None,
     ) -> subprocess.CompletedProcess:
         env = _append_tsan_suppressions(self.hg_environment | (env or {}))
         argslist = list(args)
@@ -204,30 +230,16 @@ class HgRepository(repobase.Repository):
         if hgeditor is not None:
             env["HGEDITOR"] = hgeditor
 
-        # Create a temporary file for the input as a more reliable way than the PIPE
-        # and Python threads.
-        input_file = None
-        stdin = subprocess.DEVNULL
-        if input is not None:
-            input_bytes = input.encode(encoding)
-            input_file = self.temp_mgr.make_temp_binary(prefix="hg_input.")
-            input_file.write(input_bytes)
-            input_file.seek(0)
-            stdin = input_file.fileno()
-
-        # Turn subprocess.PIPE to temporary files to avoid issues with selectors.
-        stdout_file = None
-        stderr_file = None
-        if stdout is subprocess.PIPE:
-            stdout = stdout_file = self.temp_mgr.make_temp_binary(prefix="hg_stdout.")
-        if stderr is subprocess.PIPE:
-            stderr = stderr_file = self.temp_mgr.make_temp_binary(prefix="hg_stdout.")
+        input_file, stdin = self._hg_input_file(input, encoding)
+        stdout, stdout_file = self._hg_output_file(stdout)
+        stderr, stderr_file = self._hg_output_file(stderr)
 
         if cwd is None:
             cwd = self.path
 
         result = None
         error = None
+        timed_out = None
         stdout_content = None
         stderr_content = None
         try:
@@ -239,21 +251,21 @@ class HgRepository(repobase.Repository):
                 check=check,
                 cwd=cwd,
                 env=env,
+                timeout=timeout,
             )
         except subprocess.CalledProcessError as ex:
             error = ex
+        except subprocess.TimeoutExpired as ex:
+            timed_out = ex
         finally:
             if input_file:
                 input_file.close()
-            if stdout_file is not None:
-                stdout_file.seek(0)
-                stdout_content = stdout_file.read()
-                stdout_file.close()
-            if stderr_file is not None:
-                stderr_file.seek(0)
-                stderr_content = stderr_file.read()
-                stderr_file.close()
+            stdout_content = self._read_and_close_hg_output(stdout_file)
+            stderr_content = self._read_and_close_hg_output(stderr_file)
 
+        if timed_out is not None:
+            timed_out.stdout, timed_out.stderr = stdout_content, stderr_content
+            raise timed_out
         return _finish_hg_result(cmd, result, error, stdout_content, stderr_content)
 
     def run(
@@ -270,6 +282,7 @@ class HgRepository(repobase.Repository):
         cwd: Optional[str] = None,
         check: bool = True,
         env: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = None,
     ) -> str:
         if "--debug" in args:
             stderr = subprocess.STDOUT
@@ -284,6 +297,7 @@ class HgRepository(repobase.Repository):
             check=check,
             stderr=stderr,
             env=env,
+            timeout=timeout,
         )
         return typing.cast(
             str, completed_process.stdout.decode(encoding, errors="replace")
@@ -411,6 +425,7 @@ class HgRepository(repobase.Repository):
         author_email: Optional[str] = None,
         date: Optional[datetime.datetime] = None,
         amend: bool = False,
+        timeout: Optional[float] = None,
     ) -> str:
         """
         - message Commit message to use.
@@ -457,10 +472,11 @@ class HgRepository(repobase.Repository):
                 *args,
                 stdout=None,
                 stderr=None,
+                timeout=timeout,
             )
 
         # Get the commit ID and return it
-        return self.hg("log", "-T{node}", "-r.")
+        return self.hg("log", "-T{node}", "-r.", timeout=timeout)
 
     def log(self, template: str = "{node}", revset: str = "::.") -> List[str]:
         """Runs `hg log` with the specified template and revset.
