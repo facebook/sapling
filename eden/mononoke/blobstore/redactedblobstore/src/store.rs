@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -176,6 +177,20 @@ impl InnerConfig {
         .await?
         .into_iter()
         .flatten()
+        .fold(
+            HashMap::<String, (BTreeSet<String>, bool)>::new(),
+            |mut map, (key, metadata)| {
+                let (tasks, log_only) = map.entry(key).or_insert_with(|| (BTreeSet::new(), true));
+                tasks.insert(metadata.task);
+                *log_only &= metadata.log_only;
+                map
+            },
+        )
+        .into_iter()
+        .map(|(key, (tasks, log_only))| {
+            let task = tasks.into_iter().collect::<Vec<_>>().join(", ");
+            (key, RedactedMetadata { task, log_only })
+        })
         .collect();
         Ok(Self {
             raw_config: config,
@@ -235,23 +250,20 @@ mod tests {
         Ok(id.to_string())
     }
 
-    async fn log_only_for(
+    async fn metadata_for(
         ctx: &CoreContext,
         bs: &RedactionConfigBlobstore,
         sets: Vec<RedactionSet>,
         key: &str,
-    ) -> Result<bool> {
+    ) -> Result<(String, bool)> {
         let config = Arc::new(RedactionSets {
             all_redactions: sets,
         });
         let inner = InnerConfig::new(config, ctx, bs).await?;
-        Ok(inner.map.get(key).expect("key must be redacted").log_only)
+        let meta = inner.map.get(key).expect("key must be redacted");
+        Ok((meta.task.clone(), meta.log_only))
     }
 
-    /// FIXME: BUG! Two redaction sets that share a key merged last-writer-wins in key-list
-    /// completion order, so an enforced redaction could be downgraded to log-only (access allowed)
-    /// depending on fetch order. A key enforced by any set must be enforced whatever the order. This
-    /// test pins the current order-dependent behaviour; the next diff fixes it.
     #[mononoke::fbinit_test]
     async fn overlapping_redaction_sets_merge(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
@@ -272,18 +284,21 @@ mod tests {
             enforce: false,
         };
 
-        // Enforced set listed first, log-only second (with an in-memory blobstore, key lists
-        // complete in list order, so the log-only entry is collected last and wins).
-        let a = log_only_for(&ctx, &bs, vec![enforced.clone(), log_only.clone()], "k").await?;
-        // Same two sets, other order.
-        let b = log_only_for(&ctx, &bs, vec![log_only.clone(), enforced.clone()], "k").await?;
+        // Whatever the order of the sets, the key enforced by T1 stays enforced and the
+        // merged entry names both sets.
+        let a = metadata_for(&ctx, &bs, vec![enforced.clone(), log_only.clone()], "k").await?;
+        let b = metadata_for(&ctx, &bs, vec![log_only.clone(), enforced.clone()], "k").await?;
 
-        // FIXME: BUG! "k" is enforced by T1, so it must be enforced (log_only == false) whatever the
-        // order. Today the result depends on the order the key lists are fetched.
-        assert_eq!((a, b), (true, false), "merge is order dependent today");
+        // "k" is enforced by T1, so it is enforced (log_only == false) in both orders, and the
+        // task lists both sets in a fixed order.
+        let expected = ("T1 enforced, T2 log only".to_string(), false);
+        assert_eq!(
+            (&a, &b),
+            (&expected, &expected),
+            "an enforced key stays enforced, with the same metadata, regardless of order"
+        );
 
-        // And the observable effect: with order (enforced, log_only) a get of the redacted key is
-        // ALLOWED.
+        // And the observable effect: a get of the enforced key is denied.
         let config = Arc::new(RedactionSets {
             all_redactions: vec![enforced, log_only],
         });
@@ -296,8 +311,7 @@ mod tests {
                 MononokeScubaSampleBuilder::with_discard(),
             ),
         );
-        // FIXME: BUG! should be Err(RedactionError::Redacted)
-        assert!(blob.get(&ctx, "k").await.is_ok());
+        assert!(blob.get(&ctx, "k").await.is_err());
         Ok(())
     }
 }

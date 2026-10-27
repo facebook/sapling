@@ -7,14 +7,10 @@
 # Contract: a blob key that any ENFORCED redaction set lists is enforced
 # (access denied), whatever other sets list it as log-only and whatever the
 # order in which the sets' key lists are fetched; the merged redaction map must
-# not depend on fetch order.
-#
-# FIXME: BUG! `InnerConfig::new` merges the key lists with a last-writer-wins
-# `collect()` in `buffer_unordered` completion order. Two sets share the key of
-# file `c`: a small enforced set (T1) and a large log-only set (T0, 1000 more
-# keys, so its key-list blob is read last). The log-only entry wins and the
-# content of `c` is served although T1 enforces its redaction. This test pins
-# the buggy behaviour; the next diff fixes it.
+# not depend on fetch order. Two sets share the key of file `c`: a small
+# enforced set (T1) and a large log-only set (T0, 1000 more keys, so its
+# key-list blob is read last); `c` stays enforced and its entry names both
+# sets, whatever the fetch order.
 
   $ . "${TEST_FIXTURES}/library.sh"
 
@@ -68,13 +64,14 @@ Both sets are active, the enforced one listed first:
   > }
   > EOF
 
-FIXME: BUG! `c` is enforced by T1 but is reported as log-only (the T0 entry,
-fetched last, overwrote it), and its content is served instead of being censored:
+`c` is enforced by T1 although the log-only T0 key list is fetched last, its
+entry names both sets, and its content is censored:
   $ mononoke_admin redaction list -R repo -i "$A" | grep ": c"
-  T0                  : c (log only)
+  T0, T1              : c
   $ mononoke_admin blobstore -R repo fetch "$C_KEY"
-  Key: content.blake2.000a1a9b74aa3da71fcceb653a62cb6987ae440c2b5c3d7e5d08d7c526b1dca8
-  Ctime: * (glob)
-  Size: 4
+  Error: Failed to fetch blob
   
-  00000000: 63                                c
+  Caused by:
+      The blob content.blake2.000a1a9b74aa3da71fcceb653a62cb6987ae440c2b5c3d7e5d08d7c526b1dca8 is censored.
+       Task/Sev: T0, T1
+  [1]
