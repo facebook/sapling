@@ -1618,7 +1618,59 @@ python_library(
     ],
 )
 
+# The one place the CLI names its targets.
+python_library(
+    name = "targets",
+    srcs = ["targets.py"],
+    deps = [
+        ":edenfs_target",
+        ":fake_target",
+        ":target",
+    ],
+)
+
 # cli.py ships with the runner libraries so the runner lookup
+# (core/containment.py looks for cli.py) resolves in every link tree.
+python_library(
+    name = "containment",
+    srcs = [
+        "advisory.py",
+        "cli.py",
+    ],
+    deps = [
+        ":campaign",
+        ":core_checker",
+        ":core_containment",
+        ":generate",
+        ":sites",
+        ":target",
+        ":targets",
+        ":tasking",
+    ],
+)
+
+python_binary(
+    name = "explore",
+    main_function = "eden.integration.correctness.exploratory.cli.main",
+    deps = [":containment"],
+)
+
+python_unittest(
+    name = "cli_test",
+    srcs = ["test/cli_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":cli_fixtures",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_actions",
+        ":edenfs_target",
+        ":target",
+        ":testing",
+    ],
+)
 
 python_library(
     name = "tasking_fixtures",
@@ -1630,6 +1682,19 @@ python_library(
         ":scheduler",
         ":target",
         ":tasking",
+    ],
+)
+
+python_library(
+    name = "cli_fixtures",
+    srcs = ["test/cli_fixtures.py"],
+    deps = [
+        ":campaign",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":fake_target",
+        ":target",
     ],
 )
 
@@ -1672,6 +1737,58 @@ python_unittest(
         ":corpus_author",
         ":edenfs_judging",
         ":edenfs_target",
+        ":fake_target",
+        ":target",
+        ":tasking",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "findings_report_test",
+    srcs = ["test/findings_report_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":cli_fixtures",
+        ":containment",
+        ":core_checker",
+        ":core_containment",
+        ":fake_target",
+        ":target",
+        ":tasking",
+    ],
+)
+
+python_unittest(
+    name = "containment_test",
+    srcs = ["test/containment_test.py"],
+    # Exploratory MVP runs FUSE on Linux.
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":containment",
+        ":containment_testing",
+        ":core_checker",
+        ":core_containment",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":fake_target",
+        ":target",
+        ":targets",
+        ":testing",
+    ],
+)
+
+python_unittest(
+    name = "advisory_test",
+    srcs = ["test/advisory_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":containment",
+        ":core_checker",
+        ":core_containment",
         ":fake_target",
         ":target",
         ":tasking",
