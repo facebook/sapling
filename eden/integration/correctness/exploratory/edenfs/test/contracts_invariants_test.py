@@ -380,7 +380,7 @@ class DeclarationParityTest(unittest.TestCase):
         meanings = {
             (kind, NO_ERRNO if name == contracts_files._FORBIDDEN else name)
             for kind, name in contracts_files._STATE_MEANINGS
-        }
+        } | contracts_files.NONEMPTY_DESTINATION_ERRNOS
         self.assertLessEqual(meanings, declared)
         self.assertEqual(set(), declared - meanings - UNJUDGED_STATE_ERRNOS)
         self.assertLessEqual(UNJUDGED_STATE_ERRNOS, declared)

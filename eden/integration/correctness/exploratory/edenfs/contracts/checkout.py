@@ -167,6 +167,7 @@ from eden.integration.correctness.exploratory.core.runspec import Action, RunSpe
 from eden.integration.correctness.exploratory.edenfs.actions import (
     CHECKOUT_CONTINUE,
     CHECKOUT_FORCE,
+    MOVE_KINDS,
 )
 from eden.integration.correctness.exploratory.edenfs.fixture import CHURN_FILES
 from eden.integration.correctness.exploratory.edenfs.sites import CHECKOUT_BEGIN_SITE
@@ -190,6 +191,8 @@ from .files import (
     DESCRIPTOR_RULE,
     DescriptorGap,
     failure_errno_name,
+    NONEMPTY_DESTINATION_ERRNOS,
+    nonempty_destination_rows,
     object_cell,
     OPENED,
     PRECONDITION_RULE,
@@ -560,8 +563,9 @@ def relevant_paths(
     They are the paths actions name, the paths in `listed` (the contracts
     passes `listed_paths`, so a listed path's state is derived even when
     no action names it), the reserved paths, type-changed paths and their
-    children, and, when some aggregate observation covers untouched paths,
-    one representative per equivalence class of the rest.
+    children, where moves carry any of those (`_carried`), and, when some
+    aggregate observation covers untouched paths, one representative per
+    equivalence class of the rest.
     """
     fixture = pinned.fixture
     layout = fixture.layout
@@ -574,7 +578,29 @@ def relevant_paths(
         paths |= {item.representative for item in fixture.classes(revisions, named)}
         if layout.wide_dir is not None:
             paths.add(next(layout.wide_files()).path)
-    return tuple(sorted(normalize_path(path) for path in paths))
+    return tuple(sorted(_carried(spec, {normalize_path(path) for path in paths})))
+
+
+def _carried(spec: RunSpec, paths: set[str]) -> set[str]:
+    """Return `paths` plus where moves can carry every path under their sources.
+
+    A move carries the relevant paths under its source to the same paths
+    under its destination. Each move runs once, so a chain of moves is at
+    most as long as the spec has moves.
+    """
+    moves = [
+        (normalize_path(action.payload["source"]) + "/", action.payload["destination"])
+        for action in spec.actions
+        if action.kind in MOVE_KINDS
+    ]
+    for _ in moves:
+        paths |= {
+            normalize_path(f"{destination}/{path[len(source) :]}")
+            for path in paths
+            for source, destination in moves
+            if path.startswith(source)
+        }
+    return paths
 
 
 def class_weights(
@@ -1884,13 +1910,18 @@ def state_observation(
     name = failure_errno_name(recorded)
     if ref is not None and (action.kind, name) in _UNOPENED:
         return _unopened_observation(ctx, action, recorded, ref)
-    meaning = None if name is None else _STATE_MEANINGS.get((action.kind, name))
-    if name is None or meaning is None or ref is None or recorded.completed is None:
+    if (action.kind, name) in NONEMPTY_DESTINATION_ERRNOS:
+        rows = nonempty_destination_rows(ctx, action.payload)
+    else:
+        meaning = None if name is None else _STATE_MEANINGS.get((action.kind, name))
+        rows = None if meaning is None else meaning(action.payload)
+    if name is None or rows is None or ref is None or recorded.completed is None:
         return None
     assert recorded.invoked is not None
     named = action.payload.get("path", action.payload.get("source"))
-    # Under the mount root no state allows a missing parent or a file above.
-    rows = meaning(action.payload) or (((PATH, named, NEVER),),)
+    # Under the mount root no state allows a missing parent or a file above,
+    # and no state lets a rename onto an empty directory fail.
+    rows = rows or (((PATH, named, NEVER),),)
     cells, expect = _meaning_rows(rows)
     if (action.kind, name) == (
         "getattr",

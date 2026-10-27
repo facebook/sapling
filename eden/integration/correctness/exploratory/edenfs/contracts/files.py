@@ -16,6 +16,7 @@ from __future__ import annotations
 import errno
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
+from pathlib import PurePosixPath
 from typing import Any
 
 from eden.integration.correctness.exploratory.core.checker import (
@@ -57,7 +58,10 @@ from eden.integration.correctness.exploratory.core.facts import (
     ResultSchema,
 )
 from eden.integration.correctness.exploratory.core.runspec import Action, RunSpec
-from eden.integration.correctness.exploratory.edenfs.actions import MOVE_KINDS
+from eden.integration.correctness.exploratory.edenfs.actions import (
+    GENERATED_DIRECTORIES,
+    MOVE_KINDS,
+)
 from eden.integration.correctness.exploratory.edenfs.encoding import encode_value
 from eden.integration.correctness.exploratory.edenfs.fixture import DIRECTORY, FILE
 
@@ -625,12 +629,6 @@ _STATE_MEANINGS: Mapping[
     ("rename", "EISDIR"): lambda p: (
         ((PATH, p["source"], of_class({FILE})), (PATH, p["destination"], eq(DIR))),
     ),
-    ("rename", "ENOTEMPTY"): lambda p: (
-        ((PATH, p["source"], eq(DIR)), (PATH, p["destination"], eq(DIR))),
-    ),
-    ("rename", "EEXIST"): lambda p: (
-        ((PATH, p["source"], eq(DIR)), (PATH, p["destination"], eq(DIR))),
-    ),
     ("rename", "ENOTDIR"): lambda p: (
         ((PATH, p["source"], eq(DIR)), (PATH, p["destination"], of_class({FILE}))),
         *_file_on_the_way(p["source"], itself=False),
@@ -642,6 +640,43 @@ _STATE_MEANINGS: Mapping[
         for kind in ("write", "read", "getattr", "open", "chmod", "unlink", "mkdir")
     },
 }
+
+
+# A rename onto a non-empty directory fails with either errno; their rows
+# read the run's relevant paths (`nonempty_destination_rows`).
+NONEMPTY_DESTINATION_ERRNOS = frozenset({("rename", "ENOTEMPTY"), ("rename", "EEXIST")})
+
+
+def nonempty_destination_rows(
+    ctx: _Context, payload: Mapping[str, Any]
+) -> tuple[_Row, ...] | None:
+    """Return the rows of a rename failing `ENOTEMPTY`/`EEXIST`, or None when undecided.
+
+    The source and the destination are directories and some path under
+    the destination is present: one row per relevant path under it. Away
+    from the generated trees and the wide directory every child is a
+    reserved path, a type-change path or its child, a path some action
+    names, or where a move carries one of those (all relevant), and a
+    non-root `.eden` is resolved on lookup, never a directory entry; no
+    row means the destination is empty. A destination that is, holds, or
+    lies in a tree with untouched generated entries is None.
+    """
+    destination = normalize_path(payload["destination"])
+    roots: list[tuple[str, ...]] = list(GENERATED_DIRECTORIES)
+    wide = ctx.pinned.fixture.layout.wide_dir
+    if wide is not None:
+        roots.append(PurePosixPath(wide.name).parts)
+    parts = PurePosixPath(destination).parts
+    if any(parts[: len(root)] == root[: len(parts)] for root in roots):
+        return None
+    return tuple(
+        (
+            (PATH, payload["source"], eq(DIR)),
+            (PATH, destination, eq(DIR)),
+            (PATH, child, _PRESENT),
+        )
+        for child in _descendants(ctx, destination)
+    )
 
 
 # The STATE errnos of modeled inputs that no row above judges: the

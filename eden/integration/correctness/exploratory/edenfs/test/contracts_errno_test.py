@@ -497,3 +497,108 @@ class TopLevelStateErrnoTest(unittest.TestCase):
                         for value in (ABSENT, DIR, committed_value("top", TIP))
                     )
                 )
+
+
+# Type-changing registers: directories holding one file at the tip.
+_T = "tree/t"
+_U = "tree/u"
+
+
+# One input of a sequence: its id, its payload, and its completion event's
+# type and facts.
+_Step = tuple[str, dict[str, Any], str, dict[str, Any]]
+
+
+def _sequence(*steps: _Step) -> tuple[RunSpec, list[Event]]:
+    """One actor runs `steps` in order, each completing before the next starts."""
+    actions, events = {}, []
+    for time, (action_id, payload, done, facts) in enumerate(steps, start=1):
+        actions[action_id] = payload
+        events += [
+            ev("invoke", action_id, float(time)),
+            ev(done, action_id, time + 0.5, **facts),
+        ]
+    spec = run_spec(
+        actions,
+        [{"id": "a", "actions": list(actions)}],
+        registers=(R0, _T, _U, R1),
+        type_changes=((_T, 1), (_U, 1)),
+    )
+    return spec, events
+
+
+def _outcome(code: int | None, **ok: Any) -> tuple[str, dict[str, Any]]:
+    return ("ok", ok) if code is None else ("fail", {"reason": "x", "errno": code})
+
+
+def _mkdir(action_id: str, path: str, code: int | None = None) -> _Step:
+    return (action_id, action_payload("mkdir", path=path), *_outcome(code, path=path))
+
+
+def _rename(
+    action_id: str, source: str, destination: str, code: int | None = None
+) -> _Step:
+    payload = action_payload("rename", source=source, destination=destination)
+    return (
+        action_id,
+        payload,
+        *_outcome(code, source=source, destination=destination),
+    )
+
+
+def _unlink(action_id: str, path: str) -> _Step:
+    return (action_id, action_payload("unlink", path=path), "ok", {"path": path})
+
+
+# A mkdir of a generated directory lets a later input name a path in it.
+_KNOWN_A0 = _mkdir("k", "tree/a0", errno.EEXIST)
+
+
+class NonemptyDestinationTest(unittest.TestCase):
+    """A rename fails `ENOTEMPTY`/`EEXIST` only onto a directory with a present child."""
+
+    def test_onto_an_empty_created_directory_is_a_violation(self) -> None:
+        for code in (errno.ENOTEMPTY, errno.EEXIST):
+            with self.subTest(errno=errno.errorcode[code]):
+                spec, events = _sequence(
+                    _mkdir("m", "tree/d"), _rename("x", _T, "tree/d", code)
+                )
+                self.assertFalse(is_explained(spec, events))
+
+    def test_a_directory_moved_into_place_makes_its_destination_nonempty(self) -> None:
+        for name, steps, legal in (
+            ("moved", (_rename("y", _T, "tree/n"),), True),
+            ("moved twice", (_rename("y", _T, R1), _rename("z", R1, "tree/n")), True),
+            ("made", (_mkdir("m", "tree/n"),), False),
+        ):
+            with self.subTest(case=name):
+                spec, events = _sequence(
+                    *steps, _rename("x", _U, "tree/n", errno.ENOTEMPTY)
+                )
+                self.assertEqual(legal, is_explained(spec, events))
+
+    def test_onto_a_committed_directory_of_registers_needs_a_present_register(
+        self,
+    ) -> None:
+        """`tree/registers` holds only the registers `R0` and `R1`."""
+        for name, steps, legal in (
+            ("present", (), True),
+            ("removed", (_unlink("u", R0), _unlink("v", R1)), False),
+        ):
+            with self.subTest(case=name):
+                spec, events = _sequence(
+                    *steps, _rename("x", _T, "tree/registers", errno.ENOTEMPTY)
+                )
+                self.assertEqual(legal, is_explained(spec, events))
+
+    def test_onto_a_committed_generated_directory_is_not_evaluated(self) -> None:
+        """Untouched generated children are not all relevant paths."""
+        for destination in ("tree/a0", "tree/a0/001"):
+            with self.subTest(destination=destination):
+                spec, events = _sequence(
+                    _KNOWN_A0, _rename("x", _T, destination, errno.ENOTEMPTY)
+                )
+                self.assertEqual(
+                    f"not-evaluated {checker.CORE_INPUT_STATE_UNOBSERVED}",
+                    _input_legality(spec, events)["x"],
+                )

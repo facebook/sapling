@@ -198,7 +198,7 @@ def _validate_environment(spec: RunSpec) -> None:
 
 # Every generated file and generated directory is one of these or under one
 # (`repo.GeneratedRepo.file_at`), at every revision and repository shape.
-_GENERATED_DIRECTORIES = (("tree", "a0"), ("tree", "a1"))
+GENERATED_DIRECTORIES = (("tree", "a0"), ("tree", "a1"))
 
 
 def _validate_registers(spec: RunSpec) -> None:
@@ -223,7 +223,7 @@ def _validate_registers(spec: RunSpec) -> None:
         parts = PurePosixPath(path).parts
         if "/".join(parts) != path:
             raise SpecError(f"register {path!r} is not a canonical path")
-        if parts == ("tree",) or parts[:2] in _GENERATED_DIRECTORIES:
+        if parts == ("tree",) or parts[:2] in GENERATED_DIRECTORIES:
             raise SpecError(
                 f"register {path!r} is a generated path or directory, or under one"
             )
