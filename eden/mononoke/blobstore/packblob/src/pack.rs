@@ -646,4 +646,36 @@ mod tests {
 
         Ok(())
     }
+
+    /// FIXME: BUG! This hangs forever (the work queue `keys_to_decode` grows by one entry per
+    /// iteration until the process runs out of memory) when decoding a pack whose dictionary
+    /// chain is cyclic, but it should have returned an Err so that `PackBlob::get` resolves to
+    /// Ok/Err instead of never returning. This test pins the current behaviour with a bounded
+    /// timeout so it does not hang the test binary; the next diff fixes it.
+    #[mononoke::test]
+    fn decode_pack_cyclic_dict_chain() {
+        // A pack whose only entry says "my dictionary is myself". The in-tree Pack builder cannot
+        // produce this, but decode_pack reads PackedFormat straight from the blobstore.
+        let packed = PackedFormat {
+            key: "repo0000.packed.pack".to_string(),
+            entries: vec![PackedEntry {
+                key: "0".to_string(),
+                data: PackedValue::ZstdFromDict(ZstdFromDictValue {
+                    dict_key: "0".to_string(),
+                    zstd: Bytes::new(),
+                }),
+            }],
+        };
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(decode_pack(packed, "repo0000.0").is_ok());
+        });
+        // FIXME: BUG! decode_pack never finishes on a cyclic dictionary chain, so the thread
+        // never reports back and the receive times out.
+        let outcome = rx.recv_timeout(std::time::Duration::from_millis(200));
+        assert!(
+            outcome.is_err(),
+            "decode_pack returned {outcome:?} instead of hanging; the cycle bug seems fixed"
+        );
+    }
 }
