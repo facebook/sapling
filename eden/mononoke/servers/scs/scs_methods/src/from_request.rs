@@ -439,10 +439,12 @@ impl FromRequest<thrift::CreateCommitCheckMode> for CreateChangesetCheckMode {
 
 impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
     fn from_request(date: &thrift::DateTime) -> Result<Self, thrift::RequestError> {
-        Ok(FixedOffset::east_opt(date.tz)
-            .unwrap()
-            .timestamp_opt(date.timestamp, 0)
-            .unwrap())
+        let tz = FixedOffset::east_opt(date.tz).ok_or_else(|| {
+            scs_errors::invalid_request(format!("invalid timezone offset ({})", date.tz))
+        })?;
+        tz.timestamp_opt(date.timestamp, 0).single().ok_or_else(|| {
+            scs_errors::invalid_request(format!("invalid timestamp ({})", date.timestamp))
+        })
     }
 }
 
@@ -551,12 +553,6 @@ mod tests {
         }
     }
 
-    /// FIXME: BUG! This did panic (`Option::unwrap()` on `None`) when a client-supplied
-    /// `thrift::DateTime` had a `tz` outside the range chrono accepts or an out-of-range
-    /// `timestamp`, but it should have returned an `invalid_request` error like every other
-    /// `FromRequest` impl. The SCS server runs with `panichandler::Fate::Abort`, so the panic
-    /// takes the whole process down. This test pins the current behaviour; the next diff
-    /// fixes it.
     #[mononoke::test]
     fn datetime_from_request_rejects_out_of_range_tz_and_timestamp() {
         let valid = thrift::DateTime {
@@ -579,10 +575,8 @@ mod tests {
             ..Default::default()
         };
         for invalid in [out_of_range_tz, out_of_range_timestamp] {
-            let result =
-                std::panic::catch_unwind(|| <DateTime<FixedOffset>>::from_request(&invalid));
-            // FIXME: BUG! The conversion panics instead of returning an invalid request error.
-            assert!(result.is_err());
+            let err = <DateTime<FixedOffset>>::from_request(&invalid).unwrap_err();
+            assert_eq!(err.kind, thrift::RequestErrorKind::INVALID_REQUEST);
         }
     }
 }
