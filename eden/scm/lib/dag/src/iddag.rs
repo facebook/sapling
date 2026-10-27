@@ -776,10 +776,13 @@ pub trait IdDagAlgorithm: IdDagStore {
         }
         debug!(target: "dag::algo::parents", "parents({:?})", &set);
 
-        // Collect the parents as spans and build the result once at the end.
-        // Updating the result and the remaining set for each segment would
-        // take time quadratic in the number of spans.
-        let mut parents: Vec<IdSpan> = Vec::new();
+        // Internal parents are produced in descending order. External parents
+        // can interleave with later spans, so merge them once at the end.
+        // Updating the result with them for each segment would take time
+        // quadratic in the number of spans.
+        let mut parents = IdSet::empty();
+        let mut external_parents = Vec::new();
+        let mut cached_flat_segment: Option<(Segment, IdSpan)> = None;
         let max_level = self.max_level()?;
 
         for span in set.iter_span_desc() {
@@ -787,42 +790,55 @@ pub trait IdDagAlgorithm: IdDagStore {
             let mut head = span.high;
             'span: loop {
                 trace(&|| format!("check head {head:?}"));
-                // For high-level segments. If the span covers the entire segment, then
-                // the parents is (the segment - its head + its parents).
-                for level in (1..=max_level).rev() {
-                    if let Some(seg) = self.find_segment_by_head_and_level(head, level)? {
-                        let seg_span = seg.span()?;
-                        if seg_span.low >= span.low {
-                            if seg_span.low < head {
-                                parents.push(IdSpan::new(seg_span.low, head - 1));
+                if cached_flat_segment
+                    .as_ref()
+                    .is_none_or(|(_, cached_span)| !cached_span.contains(head))
+                {
+                    // For high-level segments. If the span covers the entire segment, then
+                    // the parents is (the segment - its head + its parents).
+                    for level in (1..=max_level).rev() {
+                        if let Some(seg) = self.find_segment_by_head_and_level(head, level)? {
+                            let seg_span = seg.span()?;
+                            if seg_span.low >= span.low {
+                                if seg_span.low < head {
+                                    parents.push_span(IdSpan::new(seg_span.low, head - 1));
+                                }
+                                external_parents.extend(seg.parents()?);
+                                trace(&|| format!(" push lv{level} {seg_span:?}"));
+                                if seg_span.low == span.low {
+                                    break 'span;
+                                }
+                                head = seg_span.low - 1;
+                                continue 'span;
                             }
-                            parents.extend(seg.parents()?.into_iter().map(IdSpan::from));
-                            trace(&|| format!(" push lv{level} {seg_span:?}"));
-                            if seg_span.low == span.low {
-                                break 'span;
-                            }
-                            head = seg_span.low - 1;
-                            continue 'span;
                         }
                     }
-                }
 
-                // A flat segment contains information to calculate
-                // parents(subset of the segment).
-                let seg = match self.find_flat_segment_including_id(head)? {
-                    Some(seg) => seg,
-                    None => return head.not_found(),
+                    // A flat segment contains information to calculate
+                    // parents(subset of the segment).
+                    let seg = match self.find_flat_segment_including_id(head)? {
+                        Some(seg) => seg,
+                        None => return head.not_found(),
+                    };
+                    let seg_span = seg.span()?;
+                    cached_flat_segment = Some((seg, seg_span));
+                }
+                // High-level segments end at flat segment heads. Since head
+                // decreases, a cache hit is inside the previous flat segment
+                // and cannot be the head of a high-level segment.
+                let Some((seg, seg_span)) = cached_flat_segment.as_ref() else {
+                    return bug("missing flat segment in parents");
                 };
-                let seg_low = seg.span()?.low;
+                let seg_low = seg_span.low;
                 let low = seg_low.max(span.low);
                 // Within the segment, parent(i) is (i - 1), except for its low.
                 if low == seg_low {
                     if low < head {
-                        parents.push(IdSpan::new(low, head - 1));
+                        parents.push_span(IdSpan::new(low, head - 1));
                     }
-                    parents.extend(seg.parents()?.into_iter().map(IdSpan::from));
+                    external_parents.extend(seg.parents()?);
                 } else {
-                    parents.push(IdSpan::new(low - 1, head - 1));
+                    parents.push_span(IdSpan::new(low - 1, head - 1));
                 }
                 trace(&|| format!(" push lv0 {low:?}..={head:?}"));
                 if low == span.low {
@@ -832,7 +848,11 @@ pub trait IdDagAlgorithm: IdDagStore {
             }
         }
 
-        let result = IdSet::from_spans(parents);
+        let result = if external_parents.is_empty() {
+            parents
+        } else {
+            parents.union(&IdSet::from_spans(external_parents))
+        };
         trace(&|| format!(" result: {result:?}"));
 
         Ok(result)
@@ -2229,6 +2249,66 @@ mod tests {
                 "parents of {set:?}"
             );
         }
+    }
+
+    #[test]
+    fn test_parents_linear_segments() {
+        fn check<S: IdDagStore>(mut dag: IdDag<S>) {
+            dag.set_new_segment_size(2);
+            dag.build_segments(Id(101), &|id| {
+                Ok(if id == Id(0) {
+                    vec![]
+                } else if id.0 % 10 == 0 {
+                    vec![id - 1, Id(0)]
+                } else {
+                    vec![id - 1]
+                })
+            })
+            .unwrap();
+            assert!(dag.max_level().unwrap() > 0);
+            dag.build_segments(nid(5), &|id| {
+                Ok(if id == nid(0) {
+                    vec![Id(3)]
+                } else {
+                    vec![id - 1]
+                })
+            })
+            .unwrap();
+
+            let sets = [
+                dag.all().unwrap(),
+                IdSet::from(Id(0)),
+                IdSet::from(Id(2)..=Id(8)),
+                IdSet::from(Id(3)..=Id(67)),
+                // Reuse flat segments across spans and split spans at boundaries.
+                IdSet::from_spans([
+                    Id(2)..=Id(5),
+                    Id(7)..=Id(15),
+                    Id(20)..=Id(24),
+                    Id(27)..=Id(46),
+                    Id(80)..=Id(101),
+                ]),
+                IdSet::from_spans((0..=101).step_by(2).map(Id)),
+                // External parents cross groups and interleave with linear parents.
+                IdSet::from_spans([Id(20)..=Id(25), nid(1)..=nid(2), nid(4)..=nid(5)]),
+                IdSet::empty(),
+            ];
+            for set in sets {
+                let expected =
+                    IdSet::from_spans(set.iter_desc().flat_map(|id| dag.parent_ids(id).unwrap()));
+                assert_eq!(
+                    dag.parents(set.clone()).unwrap().as_spans(),
+                    expected.as_spans(),
+                    "parents of {set:?}"
+                );
+            }
+            assert!(dag.parents(IdSet::from(Id(102))).is_err());
+            assert!(dag.parents(IdSet::from(Id(200)..=nid(2))).is_err());
+        }
+
+        check(IdDag::new_in_memory());
+        let dir = tempdir().unwrap();
+        check(IdDag::open(dir.path()).unwrap());
     }
 
     #[test]
