@@ -14,6 +14,9 @@ from .node import bin, hex, nullhex, short
 
 MUTATION_KEYS = {"mutpred", "mutuser", "mutdate", "mutop", "mutsplit"}
 
+# `ServerError` code for a request that the repo's access control denied.
+CODE_PERMISSION_DENIED = 4
+
 CFG_SECTION = "push"
 CFG_KEY_ENABLE_DEBUG_INFO = "enable_debug_info"
 CFG_KEY_USE_LOCAL_BOOKMARK_VALUE = "use_local_bookmark_value"
@@ -213,6 +216,7 @@ def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, oparg
     if not _is_noop_plain_push(repo, from_node, to_node):
         result = edenapi.setbookmark(bookmark, to_node, from_node, pushvars)["data"]
         if "Err" in result:
+            check_permission_denied(repo.ui, result["Err"])
             hint = gen_hint(
                 repo.ui,
                 result["Err"]["message"],
@@ -272,6 +276,7 @@ def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None
 
     result = response["data"]
     if "Err" in result:
+        check_permission_denied(ui, result["Err"])
         raise error.Abort(_("Server error: %s") % result["Err"]["message"])
 
     data = result["Ok"]
@@ -369,6 +374,7 @@ def create_remote_bookmark(
     pushvars = parse_pushvars(opargs.get("pushvars"))
     result = edenapi.setbookmark(bookmark, node, None, pushvars=pushvars)["data"]
     if "Err" in result:
+        check_permission_denied(ui, result["Err"])
         hint = gen_hint(
             ui,
             result["Err"]["message"],
@@ -400,6 +406,7 @@ def record_remote_bookmark(repo, bookmark, new_node) -> None:
 
 def delete_remote_bookmark(repo, edenapi, bookmark, force, pushvars_strs) -> None:
     def handle_error(ui, edenapi, bookmark, curr_bookmark_val, err):
+        check_permission_denied(ui, err)
         hint = ""
 
         if curr_bookmark_val.source == RemoteBookmarkValueSource.LOCAL:
@@ -489,6 +496,13 @@ def check_mutation_metadata(repo, to_node):
                 % ctx,
                 hint=hint,
             )
+
+
+def check_permission_denied(ui, err) -> None:
+    """Abort with the repo access hint if the in-band SLAPI error `err` is an
+    access control denial."""
+    if err.get("code") == CODE_PERMISSION_DENIED:
+        raise error.Abort(err["message"], hint=scmutil.repoaccesshint(ui))
 
 
 def is_true(s: Optional[str]) -> bool:

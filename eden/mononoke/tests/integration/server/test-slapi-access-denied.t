@@ -82,7 +82,7 @@ Listing remote bookmarks and looking up a remote commit use the wire protocol:
   abort: unexpected EOL, expected netstring digit
   [255]
 
-A read-only identity can upload commits but not move or create a public
+A read-only identity can upload commits but not move, create or delete a public
 bookmark:
   $ hg push --to master_bookmark $READ_ONLY
   pushing rev 0d40ce7c3acb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
@@ -93,18 +93,25 @@ bookmark:
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   pushrebasing stack (20ca2a4749a4, 0d40ce7c3acb] (1 commit) to remote bookmark master_bookmark
-  abort: Server error: permission denied: Repo write access for LandStack(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  abort: permission denied: Repo write access for LandStack(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  (check that you have access to this repository)
   [255]
   $ hg push --to master_bookmark --force $READ_ONLY
   pushing rev 0d40ce7c3acb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   moving remote bookmark master_bookmark from 20ca2a4749a4 to 0d40ce7c3acb
-  abort: server error: permission denied: Repo write access for UpdateBookmark(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  abort: permission denied: Repo write access for UpdateBookmark(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  (check that you have access to this repository)
   [255]
   $ hg push --to newbook --create $READ_ONLY
   pushing rev 0d40ce7c3acb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark newbook
   creating remote bookmark newbook
-  abort: failed to create remote bookmark:
-    remote server error: permission denied: Repo write access for CreateBookmark(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  abort: permission denied: Repo write access for CreateBookmark(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  (check that you have access to this repository)
+  [255]
+  $ hg push --delete master_bookmark $READ_ONLY
+  deleting remote bookmark master_bookmark
+  abort: permission denied: Repo write access for DeleteBookmark(Publishing) in repo 'repo' is not permitted with Identity for * (glob)
+  (check that you have access to this repository)
   [255]
 
 The server marks a write that access control denied with error code 4
