@@ -100,7 +100,8 @@ impl TryFrom<BlobstoreBytes> for PackEnvelope {
 
     fn try_from(bytes: BlobstoreBytes) -> Result<Self, Error> {
         let mut bytes = bytes.into_bytes();
-        let header: HeaderType = HeaderType::try_from(bytes.get_u32())?;
+        let header = bytes.try_get_u32().context("packblob envelope too short")?;
+        let header: HeaderType = HeaderType::try_from(header)?;
         let t: StorageEnvelope = match header {
             HeaderType::PackBlobCompactFormat => compact_protocol::deserialize(&bytes)?,
         };

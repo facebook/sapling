@@ -431,13 +431,8 @@ mod tests {
         Ok(())
     }
 
-    /// FIXME: BUG! This panicked ("advance out of bounds" in `bytes::Buf::get_u32`) when the inner
-    /// blob under the `.pack` key is shorter than 4 bytes, but `PackBlob::get` should have returned
-    /// an Err describing the corrupt envelope. This test pins the current behaviour by observing the
-    /// panic; the next diff fixes it.
     #[mononoke::fbinit_test]
     async fn get_short_inner_blob(fb: FacebookInit) -> Result<()> {
-        use futures::FutureExt;
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
         let inner = Arc::new(Memblob::default());
@@ -453,14 +448,11 @@ mod tests {
             )
             .await?;
 
-        let res = std::panic::AssertUnwindSafe(packblob.get(ctx, outer_key))
-            .catch_unwind()
-            .await;
-        // FIXME: BUG! `get` should return Err(..), not panic.
+        let res = packblob.get(ctx, outer_key).await;
         assert!(
             res.is_err(),
-            "expected a panic, got {:?}",
-            res.map(|r| r.map(|v| v.map(|d| d.len())))
+            "expected an error for a too-short envelope, got {:?}",
+            res.map(|v| v.map(|d| d.len()))
         );
         Ok(())
     }
