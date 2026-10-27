@@ -31,6 +31,7 @@ ignore.test=$RUNTESTDIR/gitignore
 
 [agent]
 ignore-quiet=False
+hide-hint-ack=False
 
 [devel]
 all-warnings=True

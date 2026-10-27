@@ -64,6 +64,24 @@ Test HGPLAIN=1 or HGPLAIN=hint silences all hints
   $ HGPLAIN=1 sl showhint
   $ HGPLAIN=hint sl showhint
 
+Agents see the hints without the instruction to silence them:
+
+  $ unset CODING_AGENT_METADATA
+  $ CODING_AGENT_METADATA=id=test_agent sl showhint --config agent.hide-hint-ack=true
+  hint[slow]: 'date(x)' is slow - be patient
+  hint[export]: use 'sl export P' to show commit content
+  hint[next]: use 'sl next' to go from X to Y
+  $ sl showhint --config agent.hide-hint-ack=true
+  hint[slow]: 'date(x)' is slow - be patient
+  hint[export]: use 'sl export P' to show commit content
+  hint[next]: use 'sl next' to go from X to Y
+  hint[hint-ack]: use 'sl hint --ack export next' to silence these hints
+  $ CODING_AGENT_METADATA=id=test_agent sl showhint --config agent.hide-hint-ack=false
+  hint[slow]: 'date(x)' is slow - be patient
+  hint[export]: use 'sl export P' to show commit content
+  hint[next]: use 'sl next' to go from X to Y
+  hint[hint-ack]: use 'sl hint --ack export next' to silence these hints
+
 Test silence configs
 
   $ sl showhint --config hint.ack-export=True --config hint.ack-slow=True

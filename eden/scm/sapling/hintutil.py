@@ -117,7 +117,11 @@ def show(ui) -> None:
         if not isacked(ui, name):
             write("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
             names.append(name)
-    if names and not isacked(ui, "hint-ack"):
+    if (
+        names
+        and not isacked(ui, "hint-ack")
+        and not (ui.agent() and ui.configbool("agent", "hide-hint-ack", True))
+    ):
         msg = _("use '@prog@ hint --ack %s' to silence these hints\n") % " ".join(names)
         write(msg, notice=_("hint[%s]") % "hint-ack")
     messages[:] = []
