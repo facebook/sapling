@@ -10,6 +10,7 @@ use std::io::Write;
 use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
+use itertools::Itertools;
 use restricted_paths::manifest_id_store::RestrictedPathsManifestIdStoreRef;
 
 use super::Repo;
@@ -30,7 +31,10 @@ pub async fn delete(ctx: &CoreContext, repo: &Repo, args: DeleteArgs) -> Result<
     let store = repo.restricted_paths_manifest_id_store();
     let entries = store
         .get_all_paths_by_manifest_id(ctx, &manifest_id)
-        .await?;
+        .await?
+        .into_iter()
+        .sorted()
+        .collect::<Vec<_>>();
 
     if entries.is_empty() {
         println!("No entries found for manifest_id {manifest_id}; nothing to delete.");
