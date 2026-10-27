@@ -1255,3 +1255,49 @@ python_unittest(
 # cli.py ships with the runner libraries so the runner lookup
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
+
+python_library(
+    name = "legal_simulator",
+    srcs = ["test/legal_simulator.py"],
+    deps = [
+        ":core_checker",
+        ":corpus_author",
+        ":edenfs_target",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "planted_counts",
+    srcs = ["test/planted_counts.py"],
+    deps = [
+        ":core_checker",
+        ":legal_simulator",
+        ":waiting",
+    ],
+)
+
+python_unittest(
+    name = "legal_batch_test",
+    srcs = ["test/legal_batch_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":legal_simulator",
+        ":planted_counts",
+        ":waiting",
+    ],
+)
+
+# Continuous CI only (see `core_solver_scale_slow_test`); about 9 minutes.
+python_unittest(
+    name = "legal_batch_slow_test",
+    srcs = ["test/legal_batch_slow_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    labels = [tpx_labels.long_running] + ci.labels(ci.remove(ci.diff, ci.land)),
+    network_access = network_access_utils.none(),
+    deps = [
+        ":planted_counts",
+    ],
+)
