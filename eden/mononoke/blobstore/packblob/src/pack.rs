@@ -322,6 +322,11 @@ pub(crate) fn decode_pack(
                     }
                     relevant_compressed_size += compressed_size;
                     decoded_blobs.insert(next_key, decoded);
+                } else if v.dict_key == next_key || keys_to_decode.contains(&v.dict_key) {
+                    bail!(
+                        "Key {key} needs dictionary {} but it forms a cycle in the pack",
+                        v.dict_key
+                    );
                 } else {
                     // Can't yet decode it - push the keys we need to decode this onto the work queue in order.
                     keys_to_decode.push(next_key.clone());
@@ -647,11 +652,6 @@ mod tests {
         Ok(())
     }
 
-    /// FIXME: BUG! This hangs forever (the work queue `keys_to_decode` grows by one entry per
-    /// iteration until the process runs out of memory) when decoding a pack whose dictionary
-    /// chain is cyclic, but it should have returned an Err so that `PackBlob::get` resolves to
-    /// Ok/Err instead of never returning. This test pins the current behaviour with a bounded
-    /// timeout so it does not hang the test binary; the next diff fixes it.
     #[mononoke::test]
     fn decode_pack_cyclic_dict_chain() {
         // A pack whose only entry says "my dictionary is myself". The in-tree Pack builder cannot
@@ -666,16 +666,11 @@ mod tests {
                 }),
             }],
         };
-        let (tx, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            let _ = tx.send(decode_pack(packed, "repo0000.0").is_ok());
-        });
-        // FIXME: BUG! decode_pack never finishes on a cyclic dictionary chain, so the thread
-        // never reports back and the receive times out.
-        let outcome = rx.recv_timeout(std::time::Duration::from_millis(200));
+        let err = decode_pack(packed, "repo0000.0")
+            .expect_err("decode_pack must reject a cyclic dictionary chain");
         assert!(
-            outcome.is_err(),
-            "decode_pack returned {outcome:?} instead of hanging; the cycle bug seems fixed"
+            err.to_string().contains("cycle"),
+            "expected a cycle error, got: {err}"
         );
     }
 }
