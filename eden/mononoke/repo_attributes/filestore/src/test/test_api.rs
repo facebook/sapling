@@ -1529,3 +1529,40 @@ async fn filestore_exists(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+/// FIXME: BUG! This did panic with "attempt to add with overflow" (or, without overflow
+/// checks, wrapped the range to `5..0`) when building `Range::range_inclusive(5, u64::MAX)`,
+/// which is what the LFS header `Range: bytes=5-18446744073709551615` parses to, but it should
+/// have returned a range that serves bytes 5..len of the file, as `Range::sized` does by
+/// saturating. This test pins the current behaviour; the next diff fixes it.
+#[mononoke::fbinit_test]
+async fn filestore_range_inclusive_u64_max(fb: FacebookInit) -> Result<()> {
+    let req = request(HELLO_WORLD);
+    let blob = KeyedMemblob::default();
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
+
+    filestore::store(
+        blob,
+        DEFAULT_CONFIG,
+        ctx,
+        req,
+        stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
+    )
+    .await?;
+
+    // FIXME: BUG! Building the range does not give a `5..` span: with overflow checks (debug
+    // builds) `end + 1` panics, and without them (opt builds) the end wraps to 0.
+    match std::panic::catch_unwind(|| filestore::Range::range_inclusive(5, u64::MAX)) {
+        // FIXME: BUG! The overflow panic.
+        Err(_) => {}
+        // FIXME: BUG! The wrapped range `5..0`, which later makes `Bytes::slice(5..0)` panic
+        // when the inline file is fetched.
+        Ok(range) => assert_eq!(
+            format!("{:?}", range?),
+            "Range { inner: Span { start: 5, end: 0 }, strict: false }"
+        ),
+    }
+
+    Ok(())
+}
