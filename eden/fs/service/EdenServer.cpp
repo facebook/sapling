@@ -2735,8 +2735,13 @@ void EdenServer::mountFinished(
     shutdownFuture = edenMount->shutdown(doTakeover);
   }
 
-  std::move(shutdownFuture)
+  serverState_->getFaultInjector()
+      .checkAsync("mountShutdown", mountPath.view())
+      .semi()
       .via(getMainEventBase())
+      .thenValue([shutdownFuture = std::move(shutdownFuture)](auto&&) mutable {
+        return std::move(shutdownFuture);
+      })
       .thenTry([this,
                 mountPath = mountPath,
                 unmountPromise = std::move(unmountPromise),

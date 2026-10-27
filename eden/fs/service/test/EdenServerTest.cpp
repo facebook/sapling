@@ -36,8 +36,12 @@
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
 #include "eden/common/utils/FaultInjector.h"
+#include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/nfs/MountdRpc.h"
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/service/EdenServiceHandler.h"
@@ -45,8 +49,12 @@
 #include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #ifdef __linux__
+#include "eden/fs/privhelper/PrivHelper.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #endif
@@ -956,6 +964,137 @@ TEST_F(
   ASSERT_EQ(std::future_status::ready, stopResult.wait_for(5s));
   EXPECT_TRUE(stopResult.get());
 }
+
+#ifdef __linux__
+namespace {
+
+class SingleBackingStoreFactory : public BackingStoreFactory {
+ public:
+  explicit SingleBackingStoreFactory(std::shared_ptr<BackingStore> store)
+      : store_{std::move(store)} {}
+
+  std::shared_ptr<BackingStore> createBackingStore(
+      BackingStoreType,
+      const CreateParams&) override {
+    return store_;
+  }
+
+ private:
+  std::shared_ptr<BackingStore> store_;
+};
+
+} // namespace
+
+// A server that can mount a checkout over a FakeFuse through EdenServer::mount,
+// so the mount runs the production shutdown path from the FsChannel through
+// mountFinished() to performCleanup().
+class EdenServerMountTest : public ::testing::Test {
+ protected:
+  EdenServerMountTest() {
+    GFLAGS_NAMESPACE::SetCommandLineOptionWithMode(
+        "enable_fault_injection", "true", GFLAGS_NAMESPACE::SET_FLAGS_VALUE);
+    FakeTreeBuilder builder;
+    builder.setFile("hello", "world\n");
+    backingStore_->putCommit(kCommit, builder.finalize(backingStore_, true))
+        ->setReady();
+    TestServer::Options options;
+    options.backingStoreFactory = &factory_;
+    testServer_ = std::make_unique<TestServer>(options);
+  }
+
+  TestServer& testServer() {
+    return *testServer_;
+  }
+
+  std::shared_ptr<EdenMount> mountCheckout() {
+    auto& server = testServer_->getServer();
+    auto clientDir = testServer_->getTmpDir() + "client"_pc;
+    ensureDirectoryExists(clientDir + "local"_pc);
+    mountPath_ = testServer_->getTmpDir() + "mount"_pc;
+    ensureDirectoryExists(mountPath_);
+    writeFile(
+        clientDir + "config.toml"_pc,
+        folly::ByteRange{folly::StringPiece{
+            "[repository]\npath = \"/repo\"\ntype = \"hg\"\n"}})
+        .value();
+    auto config =
+        CheckoutConfig::loadFromClientDirectory(mountPath_, clientDir);
+    config->setCheckedOutCommit(kCommit);
+
+    auto* privHelper =
+        dynamic_cast<FakePrivHelper*>(server.getServerState()->getPrivHelper());
+    privHelper->registerMount(mountPath_, fuse_);
+
+    // The mount's ImmediateFuture defers its work until it is driven; run it
+    // on the server's pool so the FUSE handshake below can happen meanwhile.
+    auto mountFuture = server.mount(std::move(config), /*readOnly=*/false)
+                           .semi()
+                           .via(server.getServerState()->getThreadPool().get());
+    // The mount opens the FUSE device partway through its start; answer the
+    // FUSE_INIT it then sends, as the kernel would.
+    auto deadline = std::chrono::steady_clock::now() + 10s;
+    while (!fuse_->isStarted()) {
+      if (std::chrono::steady_clock::now() > deadline) {
+        throw std::runtime_error("the mount never opened its FUSE device");
+      }
+      std::this_thread::sleep_for(10ms);
+    }
+    fuse_->sendInitRequest();
+    fuse_->recvResponse();
+    return std::move(mountFuture).get(10s);
+  }
+
+  const AbsolutePath& mountPath() const {
+    return mountPath_;
+  }
+
+ private:
+  static inline const RootId kCommit{"1"};
+
+  std::shared_ptr<FakeBackingStore> backingStore_{
+      std::make_shared<FakeBackingStore>()};
+  SingleBackingStoreFactory factory_{backingStore_};
+  std::unique_ptr<TestServer> testServer_;
+  AbsolutePath mountPath_;
+  std::shared_ptr<FakeFuse> fuse_{std::make_shared<FakeFuse>()};
+};
+
+// `eden rm` unmounts a checkout, and `eden stop` arrives while the mount is
+// still shutting down: performCleanup() finds the mount in mountPoints_ and
+// waits on its unmount promise.
+TEST_F(EdenServerMountTest, StopWhileAMountIsShuttingDown) {
+  auto& server = testServer().getServer();
+  ScopedServerThread serverThread{server};
+  ASSERT_TRUE(driveMainEventBaseUntil(server, [&] {
+    return server.getStatus() == EdenServer::RunState::RUNNING;
+  }));
+  auto mount = mountCheckout();
+
+  // Hold the mount in SHUTTING_DOWN: its shutdown has started, and the
+  // continuation that erases it from mountPoints_ has not run.
+  auto& faultInjector = server.getServerState()->getFaultInjector();
+  faultInjector.injectBlock("mountShutdown", ".*");
+  auto unmountFuture = server.unmount(mountPath(), UnmountOptions{});
+  ASSERT_TRUE(driveMainEventBaseUntil(
+      server, [&] { return mount->getState() == MountState::SHUTTING_DOWN; }));
+  ASSERT_TRUE(faultInjector.waitUntilBlocked("mountShutdown", 5s));
+
+  server.stop();
+  ASSERT_TRUE(serverThread.waitForExit(5s));
+  serverThread.join();
+  ASSERT_NO_THROW(serverThread.throwIfServeFailed());
+  faultInjector.removeFault("mountShutdown", ".*");
+  faultInjector.unblock("mountShutdown", ".*");
+
+  // FIXME: the stop must wait for the shutdown and exit cleanly. Instead
+  // unmountAll() takes a future from a SharedPromise that mountFinished()
+  // moved out of the entry when the shutdown began, and that future breaks
+  // when the entry is erased. In the daemon nothing catches the exception
+  // performCleanup() rethrows, and the process aborts in std::terminate.
+  EXPECT_THROW(server.performCleanup(), folly::BrokenPromise);
+  EXPECT_NO_THROW(std::move(unmountFuture).get(1s));
+}
+#endif
 
 TEST(EdenServerMountHealthTest, OnlyRunningMountsAreProbed) {
   EXPECT_TRUE(EdenServer::shouldProbeMountHealth(MountState::RUNNING));

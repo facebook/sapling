@@ -120,7 +120,8 @@ unique_ptr<EdenServer> TestServer::createServer(
       [](std::shared_ptr<const EdenMount>) {
         return std::make_unique<NullActivityRecorder>();
       },
-      &gEmptyBackingStoreFactory,
+      options.backingStoreFactory ? options.backingStoreFactory
+                                  : &gEmptyBackingStoreFactory,
       make_shared<NullScribeLogger>(),
       std::move(startupSubscriberChannel),
       "test server");

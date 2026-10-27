@@ -19,6 +19,7 @@
 
 namespace facebook::eden {
 
+class BackingStoreFactory;
 class EdenServer;
 
 /**
@@ -36,6 +37,9 @@ class TestServer {
     std::optional<std::chrono::nanoseconds> takeoverRequestGrace;
     std::optional<bool> takeoverWaitsForRequests;
     std::optional<std::chrono::nanoseconds> takeoverRecentActivityWindow;
+    // Serves the server's mounts. The default refuses to create any backing
+    // store, so a test that mounts a checkout has to provide one.
+    BackingStoreFactory* backingStoreFactory{nullptr};
   };
 
   TestServer();
