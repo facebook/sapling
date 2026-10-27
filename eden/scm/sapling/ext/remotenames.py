@@ -1045,10 +1045,16 @@ def _is_scratch_bookmark(ui, repo, bookmark):
 
 
 def _push_without_to(orig, ui, repo, dest, opts, opargs):
-    """Push without a destination bookmark, through the wrapped push command."""
-    if ui.configbool("remotenames", "forceto"):
+    """Push without a destination bookmark, through the wrapped push command.
+
+    With `remotenames.forceto`, only `-B` pushes are allowed.
+    """
+    if ui.configbool("remotenames", "forceto") and not opts.get("bookmark"):
         msg = _("must specify --to when pushing")
-        hint = _("see configuration option %s") % "remotenames.forceto"
+        hint = _(
+            "use '@prog@ push --to BOOKMARK' to push to a remote bookmark, "
+            "or '@prog@ cloud upload' to back up commits"
+        )
         raise error.Abort(msg, hint=hint)
 
     if not opts.get("rev"):

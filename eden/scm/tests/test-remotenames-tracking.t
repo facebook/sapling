@@ -119,7 +119,7 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
   $ sl book c -t foo
   $ sl push
   abort: must specify --to when pushing
-  (see configuration option remotenames.forceto)
+  (use 'sl push --to BOOKMARK' to push to a remote bookmark, or 'sl cloud upload' to back up commits)
   [255]
 
 Test renaming a remote and tracking

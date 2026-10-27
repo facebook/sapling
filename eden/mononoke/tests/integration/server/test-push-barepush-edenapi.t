@@ -88,3 +88,37 @@ it at the write):
   pushing to mono:repo
   searching for changes
   updating bookmark master_bookmark
+
+With remotenames.forceto, a push without a destination bookmark is an error,
+both bare and with -r. The hint points to --to, and to commit cloud for
+backing up commits:
+  $ setconfig remotenames.forceto=true
+  $ echo foo4 > foo && hg ci -qm foo4
+  $ hg push
+  abort: must specify --to when pushing
+  (use 'hg push --to BOOKMARK' to push to a remote bookmark, or 'hg cloud upload' to back up commits)
+  [255]
+  $ hg push -r .
+  abort: must specify --to when pushing
+  (use 'hg push --to BOOKMARK' to push to a remote bookmark, or 'hg cloud upload' to back up commits)
+  [255]
+
+-B names its destination bookmark, so it is still allowed:
+  $ hg push -B master_bookmark
+  pushing to mono:repo
+  searching for changes
+  updating bookmark master_bookmark
+
+--to is still allowed, and goes through EdenApi:
+  $ echo foo5 > foo && hg ci -qm foo5
+  $ hg push --to master_bookmark
+  pushing rev da53f8091095 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (6f9031444a33, da53f8091095] (1 commit) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to da53f8091095

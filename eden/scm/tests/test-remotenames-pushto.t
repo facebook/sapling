@@ -56,7 +56,11 @@ Test that forceto works
   $ setconfig remotenames.forceto=true
   $ sl push
   abort: must specify --to when pushing
-  (see configuration option remotenames.forceto)
+  (use 'sl push --to BOOKMARK' to push to a remote bookmark, or 'sl cloud upload' to back up commits)
+  [255]
+  $ sl push -r .
+  abort: must specify --to when pushing
+  (use 'sl push --to BOOKMARK' to push to a remote bookmark, or 'sl cloud upload' to back up commits)
   [255]
 
 Test that --to limits other options
