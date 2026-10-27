@@ -222,6 +222,42 @@ impl IntegrationHow {
     }
 }
 
+/// A stream spec as `p4 streams` lists it, without its description.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Stream {
+    /// Its depot path, e.g. `//streams/main`.
+    pub stream: String,
+    pub name: String,
+    pub stream_type: StreamType,
+    /// `None` for a mainline (p4's `none`).
+    pub parent: Option<String>,
+    /// The nearest non-virtual ancestor; `None` for a mainline.
+    pub base_parent: Option<String>,
+    pub parent_view: ParentView,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StreamType {
+    Mainline,
+    Development,
+    Release,
+    SparseDev,
+    SparseRel,
+    Task,
+    Virtual,
+    /// One added by a newer server.
+    Other(String),
+}
+
+/// Whether the stream's view adds to its parent's.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ParentView {
+    Inherit,
+    NoInherit,
+    /// One added by a newer server.
+    Other(String),
+}
+
 /// What `p4 info` reports about the server, enough to tell one server from another.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ServerInfo {
