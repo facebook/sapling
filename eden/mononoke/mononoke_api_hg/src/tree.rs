@@ -509,7 +509,9 @@ mod tests {
     use mercurial_types::HgAugmentedManifestEnvelope;
     use mercurial_types::NULL_HASH;
     use metaconfig_types::AclManifestMode;
+    use metaconfig_types::EnforcementConditionSet;
     use metaconfig_types::PathRestrictionMetadata;
+    use metaconfig_types::RequestMatchers;
     use metaconfig_types::RestrictedPathsConfig;
     use metaconfig_types::RestrictedPathsManifestIdStoreConfig;
     use metadata::Metadata;
@@ -654,13 +656,14 @@ mod tests {
         ctx: &CoreContext,
         path_acls: Vec<(&str, &str)>,
     ) -> anyhow::Result<Repo> {
-        setup_restricted_repo_with_mode(ctx, path_acls, AclManifestMode::Both).await
+        setup_restricted_repo_with_mode(ctx, path_acls, AclManifestMode::Both, false).await
     }
 
     async fn setup_restricted_repo_with_mode(
         ctx: &CoreContext,
         path_acls: Vec<(&str, &str)>,
         acl_manifest_mode: AclManifestMode,
+        enable_enforcement: bool,
     ) -> anyhow::Result<Repo> {
         let repo_id = RepositoryId::new(0);
 
@@ -693,6 +696,16 @@ mod tests {
                 cache_update_interval_ms: 5,
                 ..Default::default()
             },
+            enforcement_condition_sets: enable_enforcement
+                .then(|| EnforcementConditionSet {
+                    always_enabled: true,
+                    require_client_request_flag: false,
+                    restriction_acls: Vec::new(),
+                    matchers: RequestMatchers::default(),
+                })
+                .into_iter()
+                .collect(),
+            enforcement_enabled: enable_enforcement,
             acl_manifest_mode,
             ..Default::default()
         };
@@ -845,9 +858,40 @@ mod tests {
         file_to_add: (&str, &str),
         target_manifest_path: &str,
     ) -> anyhow::Result<Vec<ManifestRestrictionCheckResult>> {
+        let (hg, target_mfid) = create_both_mode_manifest_context(
+            fb,
+            config_path_acls,
+            acl_manifest_path_acls,
+            file_to_add,
+            target_manifest_path,
+            false,
+        )
+        .await?;
+
+        let restriction_ctx =
+            HgAugmentedTreeRestrictionContext::new_check_exists(hg, target_mfid).await?;
+        restriction_ctx
+            .restriction_check()
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn create_both_mode_manifest_context(
+        fb: FacebookInit,
+        config_path_acls: Vec<(&str, &str)>,
+        acl_manifest_path_acls: Vec<(&str, &str)>,
+        file_to_add: (&str, &str),
+        target_manifest_path: &str,
+        enable_enforcement: bool,
+    ) -> anyhow::Result<(HgRepoContext<Repo>, HgAugmentedManifestId)> {
         let ctx = create_test_ctx(fb).await;
-        let repo =
-            setup_restricted_repo_with_mode(&ctx, config_path_acls, AclManifestMode::Both).await?;
+        let repo = setup_restricted_repo_with_mode(
+            &ctx,
+            config_path_acls,
+            AclManifestMode::Both,
+            enable_enforcement,
+        )
+        .await?;
 
         let mut commit_ctx =
             CreateCommitContext::new_root(&ctx, &repo).add_file(file_to_add.0, file_to_add.1);
@@ -869,12 +913,7 @@ mod tests {
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
-        let restriction_ctx =
-            HgAugmentedTreeRestrictionContext::new_check_exists(hg, target_mfid).await?;
-        restriction_ctx
-            .restriction_check()
-            .await
-            .map_err(Into::into)
+        Ok((hg, target_mfid))
     }
 
     // What it tests: Hg manifest restriction metadata should include
@@ -981,6 +1020,97 @@ mod tests {
         Ok(())
     }
 
+    /// What it tests: Both-mode manifest checks retain independent config and
+    /// AclManifest authorization factors when their same-root ACLs disagree.
+    /// Expected: the rooted config row is denied while the rootless
+    /// AclManifest row is authorized directly by its ACL.
+    #[mononoke::fbinit_test]
+    async fn test_check_manifest_permission_both_mode_reports_row_authorization_factors(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        let result = get_both_mode_restriction_check_for_manifest(
+            fb,
+            vec![("shared", "REPO_REGION:restricted_acl")],
+            vec![("shared", "REPO_REGION:myusername_project")],
+            ("shared/file.txt", "secret"),
+            "shared",
+        )
+        .await?;
+
+        let mut rows = result
+            .iter()
+            .map(|check| {
+                let info = check.restriction_info();
+                (
+                    info.restriction_root.as_ref().map(ToString::to_string),
+                    info.repo_region_acl.clone(),
+                    check.has_authorization(),
+                    check.has_acl_access(),
+                    check.is_rollout_allowlisted(),
+                    check.is_allowlisted_tooling(),
+                    check.is_admin_bypass(),
+                )
+            })
+            .collect::<Vec<_>>();
+        rows.sort();
+
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    None,
+                    "REPO_REGION:myusername_project".to_string(),
+                    true,
+                    true,
+                    false,
+                    false,
+                    false,
+                ),
+                (
+                    Some("shared".to_string()),
+                    "REPO_REGION:restricted_acl".to_string(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                ),
+            ]
+        );
+
+        Ok(())
+    }
+
+    /// What it tests: the Hg augmented-tree constructor propagates Both-mode
+    /// enforcement when config denies and AclManifest allows the same root.
+    /// Expected: constructing the restricted tree returns a restricted-paths
+    /// authorization error rather than serving the manifest.
+    #[mononoke::fbinit_test]
+    async fn test_hg_augmented_tree_context_both_mode_propagates_denial(
+        fb: FacebookInit,
+    ) -> anyhow::Result<()> {
+        let (hg, target_mfid) = create_both_mode_manifest_context(
+            fb,
+            vec![("shared", "REPO_REGION:restricted_acl")],
+            vec![("shared", "REPO_REGION:myusername_project")],
+            ("shared/file.txt", "secret"),
+            "shared",
+            true,
+        )
+        .await?;
+
+        let result = HgAugmentedTreeContext::new_check_exists(hg, target_mfid).await;
+        let Err(error) = result else {
+            anyhow::bail!("expected Both-mode manifest enforcement to deny access");
+        };
+        assert!(
+            matches!(error, MononokeError::RestrictedPathsAuthorizationError(_)),
+            "expected restricted-paths authorization error, got {error:#}"
+        );
+
+        Ok(())
+    }
+
     #[mononoke::fbinit_test]
     async fn test_check_manifest_permission_restricted_path_with_access(
         fb: FacebookInit,
@@ -993,9 +1123,10 @@ mod tests {
         )
         .await?;
 
-        let check = result.first().ok_or_else(|| {
-            anyhow::anyhow!("expected restriction info for restricted root manifest")
-        })?;
+        let check = result
+            .iter()
+            .find(|check| check.restriction_info().restriction_root.is_none())
+            .ok_or_else(|| anyhow::anyhow!("expected AclManifest restriction info"))?;
         let info = check.restriction_info();
         assert_eq!(
             info.restriction_root, None,
@@ -1023,9 +1154,10 @@ mod tests {
         )
         .await?;
 
-        let check = result.first().ok_or_else(|| {
-            anyhow::anyhow!("expected restriction info for restricted root manifest")
-        })?;
+        let check = result
+            .iter()
+            .find(|check| check.restriction_info().restriction_root.is_none())
+            .ok_or_else(|| anyhow::anyhow!("expected AclManifest restriction info"))?;
         let info = check.restriction_info();
         assert_eq!(
             info.restriction_root, None,
@@ -1060,9 +1192,10 @@ mod tests {
         )
         .await?;
 
-        let check = result.first().ok_or_else(|| {
-            anyhow::anyhow!("expected restriction info for nested restricted root")
-        })?;
+        let check = result
+            .iter()
+            .find(|check| check.restriction_info().restriction_root.is_none())
+            .ok_or_else(|| anyhow::anyhow!("expected nested AclManifest restriction info"))?;
         let info = check.restriction_info();
         assert_eq!(
             info.restriction_root, None,
