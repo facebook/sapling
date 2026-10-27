@@ -34,6 +34,7 @@ Disabling mTLS allows the reqwest client to connect without presenting a client 
   $ SHADOW_MONONOKE_ADDR_FILE="$TESTTMP/shadow_mononoke_addr.txt"
   $ rm -f "$SHADOW_MONONOKE_ADDR_FILE"
   $ if [[ "$LOCALIP" == *":"* ]]; then SHADOW_BIND_ADDR="[$LOCALIP]:0"; else SHADOW_BIND_ADDR="$LOCALIP:0"; fi
+  $ render_mononoke_config
   $ GLOG_minloglevel=5 \
   >   "$MONONOKE_SERVER" \
   >   --shadow-tier \
@@ -41,7 +42,7 @@ Disabling mTLS allows the reqwest client to connect without presenting a client 
   >   --debug \
   >   --listening-host-port "$SHADOW_BIND_ADDR" \
   >   --bound-address-file "$SHADOW_MONONOKE_ADDR_FILE" \
-  >   --mononoke-config-path "$TESTTMP/mononoke-config" \
+  >   --config-tier "$MONONOKE_CONFIG_TIER" \
   >   --tls-ca "$TEST_CERTDIR/root-ca.crt" \
   >   --tls-private-key "$TEST_CERTDIR/localhost.key" \
   >   --tls-certificate "$TEST_CERTDIR/localhost.crt" \

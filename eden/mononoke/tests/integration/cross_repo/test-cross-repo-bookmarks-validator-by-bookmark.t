@@ -41,13 +41,14 @@ source repository.
   $ quiet enable_pushredirect "$SMALL_REPO_ID"
 
   $ start_bookmarks_validator() {
+  >   render_mononoke_config
   >   "$BOOKMARKS_VALIDATOR" \
   >     "${CACHE_ARGS[@]}" \
   >     "${COMMON_ARGS[@]}" \
   >     --debug \
   >     --source-repo-id "$LARGE_REPO_ID" \
   >     --target-repo-id "$SMALL_REPO_ID" \
-  >     --mononoke-config-path "$TESTTMP/mononoke-config" \
+  >     --config-tier "$MONONOKE_CONFIG_TIER" \
   >     --scuba-log-file "$TESTTMP/bookmarks-validator-scuba.json" \
   >     > "$TESTTMP/bookmarks-validator.out" 2>&1 &
   >   BOOKMARKS_VALIDATOR_PID=$!

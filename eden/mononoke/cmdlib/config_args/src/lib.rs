@@ -66,8 +66,11 @@ impl ConfigArgs {
         }
     }
 
+    /// Production means live configerator: a tier read through the real
+    /// config store. A tier served from `--local-configerator-path` is a
+    /// development setup (the integration tests), as is any local path.
     pub fn mode(&self) -> ConfigMode {
-        if self.tier_name().is_some() {
+        if self.tier_name().is_some() && self.local_configerator_path.is_none() {
             ConfigMode::Production
         } else {
             ConfigMode::Development

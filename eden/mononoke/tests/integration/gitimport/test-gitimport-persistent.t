@@ -2,7 +2,8 @@
 
   $ . "$TEST_FIXTURES/library.sh"
   $ COMMIT_IDENTITY_SCHEME=3 GIT_LFS_INTERPRET_POINTERS=1 setup_common_config blob_files
-  $ printf '%s\0' "$MONONOKE_GITIMPORT" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --repo-id "$REPOID" --mononoke-config-path "$TESTTMP/mononoke-config" --tracing-test-format --persist-partial-mappings > "$TESTTMP/importer-argv"
+  $ render_mononoke_config
+  $ printf '%s\0' "$MONONOKE_GITIMPORT" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --repo-id "$REPOID" --config-tier "$MONONOKE_CONFIG_TIER" --tracing-test-format --persist-partial-mappings > "$TESTTMP/importer-argv"
 
 Use a local GitHub LFS Batch server and dummy tokens. One importer handles multiple
 imports, token rotation, a mapped rewind, bookmark repair and ref subsets before

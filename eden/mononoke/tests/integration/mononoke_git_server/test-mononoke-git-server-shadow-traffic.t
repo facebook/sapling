@@ -43,6 +43,7 @@ Start the shadow git server on plain HTTP (no TLS) with --shadow-tier flag
   $ SHADOW_GIT_ADDR_FILE="$TESTTMP/shadow_git_service_addr.txt"
   $ SHADOW_GIT_LOG="$TESTTMP/shadow_git_service.out"
   $ rm -f "$SHADOW_GIT_ADDR_FILE"
+  $ render_mononoke_config
   $ GLOG_minloglevel=5 \
   >   "$MONONOKE_GIT_SERVER" \
   >   --shadow-tier \
@@ -50,7 +51,7 @@ Start the shadow git server on plain HTTP (no TLS) with --shadow-tier flag
   >   --listen-port 0 \
   >   --scuba-log-file "$TESTTMP/shadow_git_scuba.json" \
   >   --log-level DEBUG \
-  >   --mononoke-config-path "$TESTTMP/mononoke-config" \
+  >   --config-tier "$MONONOKE_CONFIG_TIER" \
   >   --bound-address-file "$SHADOW_GIT_ADDR_FILE" \
   >   --tracing-test-format \
   >   --local-configerator-path "$LOCAL_CONFIGERATOR_PATH" \

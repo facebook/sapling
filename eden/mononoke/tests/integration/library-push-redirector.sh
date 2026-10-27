@@ -10,11 +10,12 @@
 function verify_wc() {
    local large_repo_commit
    large_repo_commit="$1"
+   render_mononoke_config
    GLOG_minloglevel=5 \
    "$MONONOKE_ADMIN" \
      "${CACHE_ARGS[@]}" \
      "${COMMON_ARGS[@]}" --log-level ERROR \
-     --mononoke-config-path  "$TESTTMP"/mononoke-config \
+     --config-tier "$MONONOKE_CONFIG_TIER" \
      cross-repo --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL" \
      verify-working-copy "$large_repo_commit"
 }
@@ -23,10 +24,11 @@ function validate_commit_sync() {
   local entry_id
   entry_id="$1"
   shift
+  render_mononoke_config
   "$COMMIT_VALIDATOR" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --debug --repo-id "$REPOIDLARGE" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --config-tier "$MONONOKE_CONFIG_TIER" \
     --master-bookmark="${MASTER_BOOKMARK:-master_bookmark}" \
     once --entry-id "$entry_id" "$@"
 }
@@ -623,10 +625,11 @@ function backsync_large_to_small() {
     mkdir "$SCRIBE_LOGS_DIR"
   fi
 
+  render_mononoke_config
   "$BACKSYNCER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --config-tier "$MONONOKE_CONFIG_TIER" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --scuba-log-file "$TESTTMP/scuba_backsyncer.json" \
     --target-repo-id "$REPOIDSMALL" \
@@ -638,10 +641,11 @@ function backsync_large_to_small_forever {
     mkdir "$SCRIBE_LOGS_DIR"
   fi
 
+  render_mononoke_config
   "$BACKSYNCER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --debug \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --config-tier "$MONONOKE_CONFIG_TIER" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --source-repo-id "$REPOIDLARGE" \
     --target-repo-id "$REPOIDSMALL" \
@@ -658,10 +662,11 @@ function mononoke_x_repo_sync_forever() {
   target_repo_id=$2
   shift
   shift
+  render_mononoke_config
   GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --config-tier "$MONONOKE_CONFIG_TIER" \
     --scuba-log-file "$TESTTMP/x_repo_sync_scuba_logs" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
@@ -757,10 +762,11 @@ function enable_pushredirect {
   setup_acls
   mkdir -p "$TESTTMP"/mononoke-config
   # redirecting stderr is not nice, but avoids a lot of noise in the "disable-all-network-access" case
+  render_mononoke_config
   "$MONONOKE_ADMIN" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --log-level ERROR \
-    --mononoke-config-path  "$TESTTMP"/mononoke-config \
+    --config-tier "$MONONOKE_CONFIG_TIER" \
     megarepo push-redirection enable --repo-id "$repo_id" -d "$draft_push" -p "$public_push" 2> /dev/null
 }
 

@@ -11,7 +11,8 @@
   $ setup_common_config
   $ echo "foobar" > "${TESTTMP}/foo"
 
-  $ GLOG_minloglevel=5 "$MONONOKE_BENCHMARK_FILESTORE" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --mononoke-config-path "$TESTTMP"/mononoke-config "${TESTTMP}/foo" memory
+  $ render_mononoke_config
+  $ GLOG_minloglevel=5 "$MONONOKE_BENCHMARK_FILESTORE" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --config-tier "$MONONOKE_CONFIG_TIER" "${TESTTMP}/foo" memory
   Test with FilestoreConfig { * }, writing into NoopKeyedBlobstore { * } (glob)
   Write start: 7 B
   Success: * (glob)

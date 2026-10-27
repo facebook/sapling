@@ -63,12 +63,12 @@ use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::NonRootMPath;
-use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::args::RepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
@@ -779,11 +779,14 @@ fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkKey, Error> {
 }
 
 // Note: pushredirection only works from small repo to large repo.
+//
+// `repo_config_by_id` must be able to find a repo that has not been loaded
+// yet: in tier mode `app.repo_configs()` only holds the repos opened so far.
 async fn get_large_repo_config_if_pushredirected(
     ctx: &CoreContext,
     repo: &Repo,
     live_commit_sync_config: &CfgrLiveCommitSyncConfig,
-    repos: &RepoConfigs,
+    repo_config_by_id: impl Fn(RepositoryId) -> Result<RepoConfig, Error>,
 ) -> Result<Option<RepoConfig>, Error> {
     let repo_id = repo.repo_id();
     let enabled = live_commit_sync_config
@@ -800,19 +803,9 @@ async fn get_large_repo_config_if_pushredirected(
             }
         };
         let large_repo_id = common_commit_sync_config.large_repo_id;
-        let large_repo_config = match repos
-            .repos
-            .values()
-            .find(|repo_config| repo_config.repoid == large_repo_id)
-        {
-            Some(result) => result,
-            None => {
-                return Err(format_err!(
-                    "Couldn't fetch the large repo config we pushredirect into"
-                ));
-            }
-        };
-        return Ok(Some((**large_repo_config).clone()));
+        let large_repo_config = repo_config_by_id(large_repo_id)
+            .context("Couldn't fetch the large repo config we pushredirect into")?;
+        return Ok(Some(large_repo_config));
     }
     Ok(None)
 }
@@ -988,7 +981,6 @@ async fn repo_import(
     ctx: CoreContext,
     mut repo: Repo,
     recovery_fields: &mut RecoveryFields,
-    configs: &RepoConfigs,
     env: &MononokeEnvironment,
     no_merge: bool,
     git_command_path: Option<String>,
@@ -1049,8 +1041,10 @@ async fn repo_import(
     // large repo.  In that case we will import to the large repo and then
     // backsync to the small repo.
     let maybe_large_repo_config =
-        get_large_repo_config_if_pushredirected(&ctx, &repo, &live_commit_sync_config, configs)
-            .await?;
+        get_large_repo_config_if_pushredirected(&ctx, &repo, &live_commit_sync_config, |id| {
+            app.repo_config(&RepoArg::Id(id)).map(|(_, config)| config)
+        })
+        .await?;
     let mut maybe_small_repo_back_sync_vars = None;
     let mover = Arc::new(CrossRepoMover::new(
         HashMap::new(),
@@ -1416,7 +1410,6 @@ async fn check_additional_setup_steps(
     ctx: CoreContext,
     repo: Repo,
     check_additional_setup_steps_args: &CheckAdditionalSetupStepsArgs,
-    configs: &RepoConfigs,
     env: &MononokeEnvironment,
 ) -> Result<(), Error> {
     let bookmark_suffix = check_additional_setup_steps_args.bookmark_suffix.as_str();
@@ -1462,8 +1455,10 @@ async fn check_additional_setup_steps(
         CfgrLiveCommitSyncConfig::new(&env.config_store, repo.push_redirection_config_arc())?;
 
     let maybe_large_repo_config =
-        get_large_repo_config_if_pushredirected(&ctx, &repo, &live_commit_sync_config, configs)
-            .await?;
+        get_large_repo_config_if_pushredirected(&ctx, &repo, &live_commit_sync_config, |id| {
+            app.repo_config(&RepoArg::Id(id)).map(|(_, config)| config)
+        })
+        .await?;
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, _syncers) = get_pushredirected_vars(
             app,
@@ -1612,22 +1607,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: MononokeRepoImportArgs = app.args()?;
     let env = app.environment();
-    let configs = app.repo_configs();
     let ctx = app.new_basic_context();
 
     let repo: Repo = app.open_repo(&args.repo).await?;
     info!("using repo \"{}\" repoid {:?}", repo.name(), repo.repo_id());
     let mut recovery_fields = match args.command {
         Some(CheckAdditionalSetupSteps(check_additional_setup_steps_args)) => {
-            check_additional_setup_steps(
-                &app,
-                ctx,
-                repo,
-                &check_additional_setup_steps_args,
-                &configs,
-                env,
-            )
-            .await?;
+            check_additional_setup_steps(&app, ctx, repo, &check_additional_setup_steps_args, env)
+                .await?;
             return Ok(());
         }
         Some(RecoverProcess(recover_process_args)) => {
@@ -1643,7 +1630,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         ctx,
         repo,
         &mut recovery_fields,
-        &configs,
         env,
         args.no_merge,
         args.git_command_path,

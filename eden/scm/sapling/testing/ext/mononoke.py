@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import time
+import tomllib
 from typing import BinaryIO, List, Union
 from urllib.parse import quote, unquote
 
@@ -99,6 +100,7 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+    t.command(render_mononoke_config)
 
 
 def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
@@ -107,6 +109,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         fs.mkdir(scribe_logs_dir)
 
     setup_configerator_configs(fs, env)
+    render_mononoke_config(stderr, fs, env)
 
     localip = env.getenv("LOCALIP")
     if ":" in localip:
@@ -147,8 +150,8 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         bind_addr,
         "--bound-address-file",
         mononoke_server_addr_file,
-        "--mononoke-config-path",
-        f"{test_tmp}/mononoke-config",
+        "--config-tier",
+        MONONOKE_TEST_TIER,
         "--no-default-scuba-dataset",
         "--tracing-test-format",
         "--with-dynamic-observability=true",
@@ -1268,6 +1271,104 @@ def urlencode(args: List[str], stderr: BinaryIO) -> Union[str, int]:
     return ""
 
 
+# The tier every test binary runs as. The TOML tree under
+# $TESTTMP/mononoke-config is the authoring format; before each launch it is
+# rendered into the manifest + per-repo RepoSpec layout production reads,
+# under $LOCAL_CONFIGERATOR_PATH.
+MONONOKE_TEST_TIER = "test"
+# repos.thrift RawCommitIdentityScheme::HG
+RAW_COMMIT_IDENTITY_SCHEME_HG = 2
+
+
+def _read_toml(fs: ShellFS, path: str) -> dict:
+    if not fs.exists(path):
+        return {}
+    with fs.open(path, "rb") as f:
+        return tomllib.loads(f.read().decode())
+
+
+def _write_json(fs: ShellFS, path: str, value: dict) -> None:
+    """Write only on change: a running server's config store watches these
+    files, so a rewrite with identical content must not look like an update."""
+    data = json.dumps(value, indent=2, sort_keys=True).encode()
+    if fs.exists(path):
+        with fs.open(path, "rb") as f:
+            if f.read() == data:
+                return
+    parent = os.path.dirname(path)
+    if not fs.exists(parent):
+        fs.mkdir(parent)
+    with fs.open(path, "wb") as f:
+        f.write(data)
+
+
+def render_mononoke_config(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
+    """Render $TESTTMP/mononoke-config (TOML RawRepoConfigs tree) into
+    $LOCAL_CONFIGERATOR_PATH as `scm/mononoke/repos/tiers/<tier>_manifest`
+    plus one `scm/mononoke/repos/<tier>/<repo>` RepoSpec per repo.
+
+    The TOML keys are the thrift field names, so a repo's `server.toml`
+    becomes the RepoSpec's `repo_config` as-is; `repo_definitions` supplies the
+    RepoSpec's own fields. `common/acl_regions.toml` and
+    `common/commitsyncmap.toml` have no manifest equivalent: commit sync maps
+    are read from `scm/mononoke/repos/commitsyncmaps` like production.
+    """
+    test_tmp = env.getenv("TESTTMP")
+    src = f"{test_tmp}/mononoke-config"
+    dst = env.getenv("LOCAL_CONFIGERATOR_PATH")
+    if not fs.exists(src) or not dst:
+        return 0
+    tier = MONONOKE_TEST_TIER
+
+    entries = []
+    defs_dir = f"{src}/repo_definitions"
+    for encoded in sorted(fs.listdir(defs_dir)) if fs.exists(defs_dir) else []:
+        definition = _read_toml(fs, f"{defs_dir}/{encoded}/server.toml")
+        if "repo_id" not in definition:
+            continue
+        repo_name = definition.get("repo_name") or unquote(encoded)
+        config_key = definition.get("repo_config", repo_name)
+        repo_config = _read_toml(
+            fs, f"{src}/repos/{quote(config_key, safe='')}/server.toml"
+        )
+        spec = {
+            "repo_id": int(definition["repo_id"]),
+            "repo_name": repo_name,
+            "hipster_acl": definition.get("hipster_acl", ""),
+            "enabled": bool(definition.get("enabled", True)),
+            "readonly": bool(definition.get("readonly", False)),
+            # RawRepoDefinition left this optional and the parser defaulted
+            # it to HG; RepoSpec requires it.
+            "default_commit_identity_scheme": definition.get(
+                "default_commit_identity_scheme", RAW_COMMIT_IDENTITY_SCHEME_HG
+            ),
+            "tiers": [tier],
+            "t_shirt_size": 0,
+            "sharding_regions": 0,
+            "repo_config": repo_config,
+        }
+        if "enable_git_bundle_uri" in definition:
+            spec["enable_git_bundle_uri"] = bool(definition["enable_git_bundle_uri"])
+        config_path = f"scm/mononoke/repos/{tier}/{encoded}"
+        _write_json(fs, f"{dst}/{config_path}", spec)
+        entries.append(
+            {
+                "repo_name": repo_name,
+                "repo_id": spec["repo_id"],
+                "config_path": config_path,
+                "is_deep_sharded": False,
+            }
+        )
+
+    manifest = {
+        "repos": entries,
+        "common": _read_toml(fs, f"{src}/common/common.toml"),
+        "storage": _read_toml(fs, f"{src}/common/storage.toml"),
+    }
+    _write_json(fs, f"{dst}/scm/mononoke/repos/tiers/{tier}_manifest", manifest)
+    return 0
+
+
 def setup_mononoke_storage_config(
     args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env
 ) -> int:
@@ -1567,6 +1668,7 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     env.setenv("MONONOKE_SERVER_ADDR_FILE", mononoke_server_addr_file)
     env.setenv("DDS_SERVER_ADDR_FILE", dds_server_addr_file)
     env.setenv("LOCAL_CONFIGERATOR_PATH", local_configerator_path)
+    env.setenv("MONONOKE_CONFIG_TIER", MONONOKE_TEST_TIER)
     env.setenv("ACL_FILE", acl_file)
 
     # Create directories

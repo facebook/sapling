@@ -63,6 +63,7 @@ use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
+use tracing::debug;
 use tracing::info;
 use tracing::warn;
 
@@ -278,7 +279,7 @@ impl<Repo> MononokeReposManager<Repo> {
         let manifest_source = match (configs.tier_name(), configs.manifest()) {
             (Some(tier), Some(manifest)) => {
                 let on = justknobs::eval(TIER_NAMES_FROM_MANIFEST_KNOB, None, Some(tier));
-                info!("tier_repo_names_from_manifest={on} for tier {tier}");
+                debug!("tier_repo_names_from_manifest={on} for tier {tier}");
                 if on {
                     repo_names_in_tier.store(Arc::new(repo_names_from_manifest(&manifest)));
                 }
@@ -963,7 +964,7 @@ impl<Repo> Drop for MononokeReposManager<Repo> {
         // Stop the loop; otherwise it would run forever on a torn-down manager.
         if let Some(handle) = self.reconcile_loop_handle.as_ref() {
             handle.abort();
-            info!("Config reconcile loop stopped: repos manager dropped");
+            debug!("Config reconcile loop stopped: repos manager dropped");
         }
     }
 }

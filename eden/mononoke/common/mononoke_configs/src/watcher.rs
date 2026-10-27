@@ -410,7 +410,13 @@ async fn run_manifest_reload_pass(
         return;
     }
 
-    info!("Manifest config content changed, applying update");
+    // The first pass only seeds state; a real change is worth an info line.
+    let bootstrap = state.prev_manifest.is_none();
+    if bootstrap {
+        debug!("Seeding manifest state");
+    } else {
+        info!("Manifest config content changed, applying update");
+    }
 
     // Parse first: fail closed before any state mutation.
     let (common, storage) = match parse_manifest_common_and_storage(&current_manifest) {
@@ -426,7 +432,7 @@ async fn run_manifest_reload_pass(
         }
     };
 
-    match sync_repo_handles(&current_manifest, repo_handles, config_store) {
+    match sync_repo_handles(&current_manifest, repo_handles, config_store, bootstrap) {
         Ok(new_watchers) => {
             // Register new watchers so per-repo changes propagate without a bulk reload.
             for (name, watcher) in new_watchers {
@@ -556,7 +562,13 @@ async fn run_manifest_reload_pass(
     state.prev_manifest = Some(current_manifest);
     state.parsed_specs = parsed_specs;
     storage_configs.store(storage);
-    notify_receivers(repo_configs.load_full(), storage_configs, update_receivers).await;
+    notify_receivers(
+        repo_configs.load_full(),
+        storage_configs,
+        update_receivers,
+        bootstrap,
+    )
+    .await;
 }
 
 /// Fan the committed bulk update out to receivers and bump the refresh stats.
@@ -564,6 +576,7 @@ async fn notify_receivers(
     new_configs: Arc<RepoConfigs>,
     storage_configs: &Swappable<StorageConfigs>,
     update_receivers: &Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
+    bootstrap: bool,
 ) {
     let current_storage = storage_configs.load_full();
     let receivers = update_receivers.load();
@@ -582,7 +595,11 @@ async fn notify_receivers(
     if had_failure {
         STATS::refresh_failure_count.add_value(1);
     } else {
-        info!("Successfully applied config update");
+        if bootstrap {
+            debug!("Seeded config state");
+        } else {
+            info!("Successfully applied config update");
+        }
         STATS::refresh_success_count.add_value(1);
         // Keep the timeseries alive for OneDetection alerting
         STATS::refresh_failure_count.add_value(0);
@@ -718,6 +735,7 @@ pub(crate) fn sync_repo_handles(
     manifest: &TierManifest,
     repo_handles: &RwLock<HashMap<String, ConfigHandle<RepoSpec>>>,
     config_store: &ConfigStore,
+    bootstrap: bool,
 ) -> Result<Vec<(String, ConfigUpdateWatcher<RepoSpec>)>> {
     let current_repos: HashSet<String> = repo_handles
         .read()
@@ -735,7 +753,11 @@ pub(crate) fn sync_repo_handles(
         .filter_map(
             |entry| match configerator_repo_spec_handle(&entry.config_path, config_store) {
                 Ok(handle) => {
-                    info!("Added config handle for new repo: {}", entry.repo_name);
+                    if bootstrap {
+                        debug!("Added config handle for repo: {}", entry.repo_name);
+                    } else {
+                        info!("Added config handle for new repo: {}", entry.repo_name);
+                    }
                     Some((entry.repo_name.clone(), handle))
                 }
                 Err(e) => {

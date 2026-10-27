@@ -397,6 +397,15 @@ mod tests {
         repos.insert(format!("repo{id}"), repo_config);
     }
 
+    fn repo_config_by_id(repo_configs: &RepoConfigs, id: RepositoryId) -> Result<RepoConfig> {
+        repo_configs
+            .repos
+            .values()
+            .find(|config| config.repoid == id)
+            .map(|config| (**config).clone())
+            .ok_or_else(|| anyhow::anyhow!("no config for {id}"))
+    }
+
     /*
         repo0: no push-redirection => None
         repo1: push-redirects to repo0 => Some(repo_config)
@@ -438,12 +447,9 @@ mod tests {
         insert_repo_config(0, &mut repos);
         let repo_configs = RepoConfigs::new(repos.clone(), CommonConfig::default());
         assert!(
-            get_large_repo_config_if_pushredirected(
-                &ctx,
-                &repo0,
-                &live_commit_sync_config,
-                &repo_configs
-            )
+            get_large_repo_config_if_pushredirected(&ctx, &repo0, &live_commit_sync_config, |id| {
+                repo_config_by_id(&repo_configs, id)
+            },)
             .await?
             .is_none()
         );
@@ -455,12 +461,9 @@ mod tests {
         insert_repo_config(1, &mut repos);
         let repo_configs = RepoConfigs::new(repos.clone(), CommonConfig::default());
         assert!(
-            get_large_repo_config_if_pushredirected(
-                &ctx,
-                &repo1,
-                &live_commit_sync_config,
-                &repo_configs
-            )
+            get_large_repo_config_if_pushredirected(&ctx, &repo1, &live_commit_sync_config, |id| {
+                repo_config_by_id(&repo_configs, id)
+            },)
             .await?
             .is_some()
         );
@@ -472,12 +475,9 @@ mod tests {
         insert_repo_config(2, &mut repos);
         let repo_configs = RepoConfigs::new(repos.clone(), CommonConfig::default());
         assert!(
-            get_large_repo_config_if_pushredirected(
-                &ctx,
-                &repo2,
-                &live_commit_sync_config,
-                &repo_configs
-            )
+            get_large_repo_config_if_pushredirected(&ctx, &repo2, &live_commit_sync_config, |id| {
+                repo_config_by_id(&repo_configs, id)
+            },)
             .await?
             .is_none()
         );
