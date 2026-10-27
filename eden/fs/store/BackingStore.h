@@ -175,14 +175,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   }
 
   /**
-   * The entry counts of a directory whose inode was just loaded, for walk
-   * detection. The default ignores them.
-   */
-  virtual void witnessDirectorySize(
-      RelativePathPiece /*path*/,
-      ObjectFetchContext::DirEntryCounts /*counts*/) {}
-
-  /**
    * Directly import a manifest for a root.
    *
    * Subclasses of BackingStore can override this to opportunistically import
@@ -365,8 +357,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectFetchContextPtr& /*context*/) {
     co_return folly::unit;
   }
-
-  virtual void workingCopyParentHint(const RootId&) {}
 
   /**
    * Strip the ObjectId to a smaller representation for memory optimization.

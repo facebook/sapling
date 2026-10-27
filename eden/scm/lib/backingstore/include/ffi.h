@@ -166,16 +166,6 @@ class TreeBuilder {
     missing_ = true;
   }
 
-  // Number of file entries added so far.
-  size_t num_files() const {
-    return numFiles_;
-  }
-
-  // Number of dir entries added so far.
-  size_t num_dirs() const {
-    return numDirs_;
-  }
-
   // Construct the Tree.
   facebook::eden::TreePtr build();
 
@@ -196,8 +186,6 @@ class TreeBuilder {
   facebook::eden::CaseSensitivity caseSensitive_;
   facebook::eden::HgObjectIdFormat objectIdFormat_;
   bool missing_ = false;
-  size_t numFiles_ = 0;
-  size_t numDirs_ = 0;
 };
 
 std::unique_ptr<TreeBuilder> new_builder(

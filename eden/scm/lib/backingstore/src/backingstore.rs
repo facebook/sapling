@@ -82,9 +82,6 @@ pub struct HgCacheStats {
 pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
     inner: ArcSwap<Inner>,
-
-    /// The detector of the mount given at construction, behind the store's own witness methods.
-    mount_walk_detector: WalkDetector,
 }
 
 pub(crate) struct Inner {
@@ -143,8 +140,8 @@ impl RestrictedTreeMode {
 
 impl BackingStore {
     /// Initialize `BackingStore`.
-    pub fn new<P: AsRef<Path>>(root: P, mount: P) -> Result<Self> {
-        Self::new_with_config(root.as_ref(), mount.as_ref(), &[])
+    pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
+        Self::new_with_config(root.as_ref(), &[])
     }
 
     /// Walk detection for the checkout at `mount`. The detector follows this store's
@@ -164,28 +161,20 @@ impl BackingStore {
 
     /// Initialize `BackingStore` with extra configs.
     /// This is used by benches/ to set cache path to control warm/code test cases.
-    pub fn new_with_config(
-        root: impl AsRef<Path>,
-        mount: impl AsRef<Path>,
-        extra_configs: &[String],
-    ) -> Result<Self> {
-        let (root, mount) = (root.as_ref(), mount.as_ref());
+    pub fn new_with_config(root: impl AsRef<Path>, extra_configs: &[String]) -> Result<Self> {
         let extra_configs = extra_configs
             .iter()
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
             .collect::<Vec<_>>();
 
-        let store = Self {
+        Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
-                root,
+                root.as_ref(),
                 &extra_configs,
                 touch_file_mtime(),
                 1,
             )?)),
-            mount_walk_detector: WalkDetector::new(mount),
-        };
-        store.mount_walk_detector.sync(&store);
-        Ok(store)
+        })
     }
 
     fn new_inner(
@@ -427,41 +416,6 @@ impl BackingStore {
         self.maybe_reload()
             .treestore
             .check_path_permissions(hg_cs_id, path_bufs)
-    }
-
-    /// `dir_size` is the `(num_files, num_dirs)` of the directory containing `path`, if the
-    /// caller knows it.
-    pub fn witness_file_read(
-        &self,
-        path: &RepoPath,
-        local: bool,
-        pid: u32,
-        dir_size: Option<(usize, usize)>,
-    ) {
-        self.mount_walk_detector
-            .witness_file_read(self, path, local, pid, dir_size);
-    }
-
-    /// Record the size of directory `path` whose inode EdenFS loaded.
-    pub fn witness_dir_size(&self, path: &RepoPath, num_files: usize, num_dirs: usize) {
-        self.mount_walk_detector
-            .witness_dir_size(self, path, num_files, num_dirs);
-    }
-
-    pub fn witness_dir_read(
-        &self,
-        path: &RepoPath,
-        local: bool,
-        num_files: usize,
-        num_dirs: usize,
-        pid: u32,
-    ) {
-        self.mount_walk_detector
-            .witness_dir_read(self, path, local, num_files, num_dirs, pid);
-    }
-
-    pub fn set_parent_hint(&self, parent_id: &str) {
-        self.mount_walk_detector.set_parent_hint(self, parent_id);
     }
 
     /// Get cache statistics for the hgcache (Sapling disk cache).

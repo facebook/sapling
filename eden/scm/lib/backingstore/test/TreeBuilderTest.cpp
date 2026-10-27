@@ -76,9 +76,6 @@ class TreeBuilderTest : public ::testing::Test {
 TEST_F(TreeBuilderTest, EmptyBuilder) {
   TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
-  EXPECT_EQ(builder.num_files(), 0);
-  EXPECT_EQ(builder.num_dirs(), 0);
-
   auto tree = builder.build();
   EXPECT_EQ(tree->size(), 0);
   EXPECT_EQ(SlOid{tree->getObjectId()}, oid_);
@@ -112,9 +109,6 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
       false,
       false);
 
-  EXPECT_EQ(builder.num_files(), 1);
-  EXPECT_EQ(builder.num_dirs(), 0);
-
   auto tree = builder.build();
   EXPECT_EQ(tree->size(), 1);
 
@@ -145,9 +139,6 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
 
   // Add the directory entry (we don't currently support dir aux data):
   builder.add_entry(dirName, hgNode, entryType, false, true);
-
-  EXPECT_EQ(builder.num_files(), 0);
-  EXPECT_EQ(builder.num_dirs(), 1);
 
   auto tree = builder.build();
   EXPECT_EQ(tree->size(), 1);
@@ -211,9 +202,6 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
 
     builder.add_entry(dirNameStr, hgNode, TreeEntryType::TREE, false, false);
   }
-
-  EXPECT_EQ(builder.num_files(), 3);
-  EXPECT_EQ(builder.num_dirs(), 2);
 
   auto tree = builder.build();
   EXPECT_EQ(tree->size(), 5);
@@ -365,7 +353,7 @@ TEST(SaplingBackingStoreTelemetryTest, GlobalBindingDoesNotRetainLogger) {
   // Logger binding happens before loading the repository. An empty directory
   // lets us exercise the production static binding without a Sapling repo.
   EXPECT_THROW(
-      sapling_backingstore_new(Str{repository}, Str{}, Str{}, eventsLogger),
+      sapling_backingstore_new(Str{repository}, Str{}, eventsLogger),
       rust::Error);
 
   EXPECT_EQ(eventsLogger.use_count(), 1);

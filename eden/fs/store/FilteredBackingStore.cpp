@@ -636,18 +636,6 @@ RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {
       std::move(parsedRootId).value(), std::move(filterId))};
 }
 
-void FilteredBackingStore::workingCopyParentHint(const RootId& parent) {
-  // Pass along the root id sans filter id.
-  auto [startingRootId, _] = parseFilterIdFromRootId(parent);
-  backingStore_->workingCopyParentHint(startingRootId);
-}
-
-void FilteredBackingStore::witnessDirectorySize(
-    RelativePathPiece path,
-    ObjectFetchContext::DirEntryCounts counts) {
-  backingStore_->witnessDirectorySize(path, counts);
-}
-
 namespace {
 
 class FilteredWalkDetector final : public WalkDetector {

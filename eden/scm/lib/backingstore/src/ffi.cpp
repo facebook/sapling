@@ -251,12 +251,6 @@ void TreeBuilder::emplace_entry(
     facebook::eden::TreeEntry&& entry) {
   auto nameView = std::string_view{name.data(), name.length()};
 
-  if (entry.isTree()) {
-    numDirs_++;
-  } else {
-    numFiles_++;
-  }
-
   // We skip the path sanity check below, but let's check in debug builds, just
   // in case.
   XDCHECK_EQ(facebook::eden::RelativePathPiece{nameView}.view(), nameView);

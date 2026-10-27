@@ -240,7 +240,6 @@ std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions) {
   return std::make_shared<SaplingBackingStore>(
       repoPath,
-      config.getMountPath(),
       config.getCaseSensitive(),
       params.sharedStats.copy(),
       params.serverState->getThreadPool().get(),

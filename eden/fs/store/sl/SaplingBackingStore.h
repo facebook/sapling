@@ -180,7 +180,6 @@ class SaplingBackingStore final
 
   SaplingBackingStore(
       AbsolutePathPiece repository,
-      AbsolutePathPiece mount,
       CaseSensitivity caseSensitive,
       EdenStatsPtr stats,
       UnboundedQueueExecutor* serverThreadPool,
@@ -199,7 +198,6 @@ class SaplingBackingStore final
    */
   SaplingBackingStore(
       AbsolutePathPiece repository,
-      AbsolutePathPiece mount,
       CaseSensitivity caseSensitive,
       EdenStatsPtr stats,
       folly::Executor* executor,
@@ -644,22 +642,6 @@ class SaplingBackingStore final
    */
   std::shared_ptr<WalkDetector> createWalkDetector(
       AbsolutePathPiece mountPath) override;
-
-  void workingCopyParentHint(const RootId& parent) override {
-    sapling_backingstore_set_parent_hint(*store_.get(), parent.value());
-  }
-
-  void witnessDirectorySize(
-      RelativePathPiece path,
-      ObjectFetchContext::DirEntryCounts counts) override {
-    sapling_backingstore_witness_dir_size(
-        *store_.get(),
-        rust::Slice<const uint8_t>{
-            reinterpret_cast<const uint8_t*>(path.view().data()),
-            path.view().size()},
-        counts.files,
-        counts.dirs);
-  }
 
   void processBlobImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);

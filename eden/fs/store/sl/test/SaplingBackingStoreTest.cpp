@@ -111,7 +111,6 @@ bool checkRestrictedTreePermission(std::optional<folly::StringPiece> mode) {
   ErrorLogger noopErrorLogger{};
   auto backingStore = std::make_shared<SaplingBackingStore>(
       testRepo.repo.path(),
-      testRepo.repo.path(),
       kPathMapDefaultCaseSensitive,
       stats.copy(),
       &executor,
@@ -166,7 +165,6 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
           repo.path(),
-          repo.path(),
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor,
@@ -189,7 +187,6 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
-          repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
           stats.copy(),
@@ -214,7 +211,6 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
-          repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
           stats.copy(),
@@ -832,7 +828,6 @@ struct SaplingBackingStoreErrorLoggingTest : SaplingBackingStoreTestBase {
 
   std::shared_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_shared<SaplingBackingStore>(
-          repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
           stats.copy(),

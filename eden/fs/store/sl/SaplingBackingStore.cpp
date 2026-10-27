@@ -166,7 +166,6 @@ HgImportTraceEvent::HgImportTraceEvent(
 
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
-    AbsolutePathPiece mount,
     CaseSensitivity caseSensitive,
     EdenStatsPtr stats,
     UnboundedQueueExecutor* serverThreadPool,
@@ -193,7 +192,6 @@ SaplingBackingStore::SaplingBackingStore(
       store_{
           sapling::sapling_backingstore_new(
               rust::Str{repository.view().data(), repository.view().size()},
-              rust::Str{mount.view().data(), mount.view().size()},
               config_->getEdenConfig()->backingstoreWalkMode.getValue(),
               edenFsEventsLogger_)
               .into_raw(),
@@ -234,7 +232,6 @@ SaplingBackingStore::SaplingBackingStore(
  */
 SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
-    AbsolutePathPiece mount,
     CaseSensitivity caseSensitive,
     EdenStatsPtr stats,
     folly::Executor* executor,
@@ -261,7 +258,6 @@ SaplingBackingStore::SaplingBackingStore(
       store_{
           sapling::sapling_backingstore_new(
               rust::Str{repository.view().data(), repository.view().size()},
-              rust::Str{mount.view().data(), mount.view().size()},
               config_->getEdenConfig()->backingstoreWalkMode.getValue(),
               edenFsEventsLogger_)
               .into_raw(),
@@ -501,10 +497,9 @@ std::shared_ptr<WalkDetector> SaplingBackingStore::createWalkDetector(
 
 folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     SlOidView slOid,
-    const ObjectFetchContextPtr& context,
+    const ObjectFetchContextPtr& /*context*/,
     sapling::FetchMode fetchMode) {
   auto node = slOid.node();
-  auto path = slOid.path();
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
@@ -519,18 +514,6 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
   }
 
   if (result.data != nullptr) {
-    if (ObjectFetchContext::shouldTriggerWalkDetection(context->getCause())) {
-      auto dirCounts = context->getParentDirEntryCounts();
-      sapling_backingstore_witness_file_read(
-          *store_.get(),
-          rust::Str{path.view().data(), path.view().size()},
-          fetchMode == sapling::FetchMode::LocalOnly,
-          context->getClientPid().valueOrZero().get(),
-          dirCounts.has_value(),
-          dirCounts ? dirCounts->files : 0,
-          dirCounts ? dirCounts->dirs : 0);
-    }
-
     return GetBlobResult{
         std::make_shared<BlobPtr::element_type>(std::move(*result.data))};
   } else {
@@ -587,7 +570,6 @@ void SaplingBackingStore::getTreeBatch(
         sapling::Request{
             request.oid.rustData(),
             request.cause,
-            request.context->getClientPid().valueOrZero().get(),
         });
   }
 
@@ -869,7 +851,6 @@ void SaplingBackingStore::getTreeAuxDataBatch(
         sapling::Request{
             request.oid.rustData(),
             request.cause,
-            request.context->getClientPid().valueOrZero().get(),
         });
   }
 
@@ -957,7 +938,6 @@ void SaplingBackingStore::getBlobAuxDataBatch(
         sapling::Request{
             request.oid.rustData(),
             request.cause,
-            request.context->getClientPid().valueOrZero().get(),
         });
   }
   // store_.getBlobAuxDataBatch is blocking, hence we can take these by
@@ -1480,7 +1460,7 @@ SaplingBackingStore::convertPermissionDeniedToRestrictedTree(
 
 folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
     SlOidView slOid,
-    const ObjectFetchContextPtr& context,
+    const ObjectFetchContextPtr& /*context*/,
     sapling::FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree {} from hgcache", slOid);
   return folly::makeTryWith([&] {
@@ -1503,22 +1483,7 @@ folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
       throw std::move(*result.error);
     }
 
-    facebook::eden::TreePtr tree = tb.build();
-
-    if (tree &&
-        ObjectFetchContext::shouldTriggerWalkDetection(context->getCause())) {
-      sapling_backingstore_witness_dir_read(
-          *store_.get(),
-          rust::Slice<const uint8_t>{
-              reinterpret_cast<const uint8_t*>(slOid.path().view().data()),
-              slOid.path().view().size()},
-          tb.num_files(),
-          tb.num_dirs(),
-          fetch_mode == sapling::FetchMode::LocalOnly,
-          context->getClientPid().valueOrZero().get());
-    }
-
-    return tree;
+    return tb.build();
   });
 }
 
@@ -2122,22 +2087,7 @@ sapling::BatchFetchStats SaplingBackingStore::nativeGetBlobBatch(
         sapling::Request{
             request.oid.rustData(),
             request.cause,
-            request.context->getClientPid().valueOrZero().get(),
         });
-
-    if (ObjectFetchContext::shouldTriggerWalkDetection(request.cause)) {
-      auto dirCounts = request.context->getParentDirEntryCounts();
-      sapling_backingstore_witness_file_read(
-          *store_.get(),
-          rust::Str{
-              request.oid.path().view().data(),
-              request.oid.path().view().size()},
-          fetch_mode == sapling::FetchMode::LocalOnly,
-          request.context->getClientPid().valueOrZero().get(),
-          dirCounts.has_value(),
-          dirCounts ? dirCounts->files : 0,
-          dirCounts ? dirCounts->dirs : 0);
-    }
   }
 
   return sapling_backingstore_get_blob_batch(

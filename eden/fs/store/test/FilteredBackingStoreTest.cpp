@@ -167,7 +167,6 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
   std::shared_ptr<SaplingBackingStore> wrappedStore_{
       std::make_shared<SaplingBackingStore>(
           repo.path(),
-          repo.path(),
           kPathMapDefaultCaseSensitive,
           stats.copy(),
           &executor_,
