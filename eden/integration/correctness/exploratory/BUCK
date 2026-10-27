@@ -19,6 +19,7 @@ python_library(
         "core/history.py",
         "core/identity.py",
         "core/jsonio.py",
+        "core/processes.py",
         "core/property.py",
         "core/runspec.py",
         "core/spec_types.py",
@@ -90,6 +91,31 @@ python_library(
     name = "runspec",
     srcs = [],
     deps = [":target"],
+)
+
+python_library(
+    name = "fake_target",
+    srcs = ["fake/target.py"],
+    deps = [
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_unittest(
+    name = "fake_inprocess_test",
+    srcs = ["fake/test/inprocess_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":containment_testing",
+        ":core_checker",
+        ":core_containment",
+        ":fake_target",
+        ":scheduler",
+        ":target",
+        ":testing",
+    ],
 )
 
 python_library(
@@ -216,6 +242,18 @@ python_unittest(
     network_access = network_access_utils.none(),
     deps = [
         ":engine_problems",
+    ],
+)
+
+python_unittest(
+    name = "fake_linearizability_test",
+    srcs = ["fake/test/linearizability_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":fake_target",
+        ":target",
     ],
 )
 
@@ -362,6 +400,14 @@ python_library(
 )
 
 python_library(
+    name = "containment_testing",
+    srcs = ["core/test/containment_testing.py"],
+    deps = [
+        ":core_containment",
+    ],
+)
+
+python_library(
     name = "scheduler",
     srcs = ["core/scheduler.py"],
     deps = [
@@ -376,6 +422,16 @@ python_unittest(
     compatible_with = ["ovr_config//os:linux"],
     network_access = network_access_utils.none(),
     deps = [
+        ":scheduler",
+        ":target",
+    ],
+)
+
+python_library(
+    name = "core_containment",
+    srcs = ["core/containment.py"],
+    deps = [
+        ":core_checker",
         ":scheduler",
         ":target",
     ],
