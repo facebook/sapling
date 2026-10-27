@@ -58,6 +58,7 @@ macro_rules! impl_commit_graph_tests {
             test_is_ancestor_skew_ancestors_prefetching,
             test_filter_ancestors,
             test_is_linear_stack,
+            test_is_linear_stack_merge_descendant,
             test_skip_tree,
             test_p1_linear_tree,
             test_parents_and_subtree_sources_tree,
@@ -583,6 +584,58 @@ pub async fn test_is_linear_stack(
     assert!(
         !graph
             .is_linear_stack(&ctx, name_cs_id("B"), name_cs_id("E"))
+            .await?
+    );
+
+    Ok(())
+}
+
+/// FIXME: BUG! This did return true from `is_linear_stack(ancestor, descendant)` when
+/// `descendant` is a merge commit but should have returned false: the stack includes
+/// `descendant`, and the docstring requires that none of its changesets has more than
+/// one parent. The merge check reads `merge_ancestor_or_root`, which `build_edges`
+/// leaves as `None` for merges, so a merge `descendant` skips the check and the result
+/// degrades to a plain ancestry test. This test pins the current behaviour; the next
+/// diff fixes it.
+pub async fn test_is_linear_stack_merge_descendant(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+             A-B-C-D-G-H-I
+              \     /
+               E---F
+         ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    // G is a merge of D and F, so no stack whose top is G is linear.
+    // FIXME: BUG! D..G is reported as linear.
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("D"), name_cs_id("G"))
+            .await?
+    );
+    // FIXME: BUG! A..G is reported as linear.
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("A"), name_cs_id("G"))
+            .await?
+    );
+    // FIXME: BUG! F..G is reported as linear.
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("F"), name_cs_id("G"))
+            .await?
+    );
+    // FIXME: BUG! G on its own is reported as linear.
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("G"), name_cs_id("G"))
             .await?
     );
 
