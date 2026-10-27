@@ -1164,6 +1164,27 @@ python_unittest(
 )
 
 python_unittest(
+    name = "edenfs_target_test",
+    srcs = ["edenfs/test/target_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_backends",
+        ":edenfs_contracts",
+        ":edenfs_differential_backend",
+        ":edenfs_encoding",
+        ":edenfs_reference",
+        ":edenfs_results",
+        ":edenfs_target",
+        ":environment",
+        ":target",
+        ":testing",
+    ],
+)
+
+python_unittest(
     name = "edenfs_observation_bounds_test",
     srcs = ["edenfs/test/observation_bounds_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -1184,6 +1205,32 @@ python_unittest(
     compatible_with = ["ovr_config//os:linux"],
     network_access = network_access_utils.none(),
     deps = [":edenfs_results"],
+)
+
+python_unittest(
+    name = "edenfs_result_schema_test",
+    srcs = ["edenfs/test/result_schema_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":backends_fixtures",
+        ":core_checker",
+        ":edenfs_actions",
+        ":edenfs_actions_fixtures",
+        ":edenfs_backends",
+        ":edenfs_differential_backend",
+        ":edenfs_encoding",
+        ":edenfs_reference",
+        ":edenfs_results",
+        ":edenfs_target",
+        ":edenfs_testing",
+        ":scheduler",
+        ":target",
+        "//eden/fs/service:thrift-python-types",
+        "//eden/integration/correctness:repo",
+        "//eden/integration/lib:lib",
+        "//thrift/lib/python:types",
+    ],
 )
 
 python_unittest(
