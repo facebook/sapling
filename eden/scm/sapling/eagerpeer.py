@@ -148,19 +148,7 @@ class eagerpeer(repository.peer):
 
     def known(self, nodes):
         assert isinstance(nodes, list)
-        stream = self.edenapi.commitknown(nodes)
-        knownnodes = set()
-        # ex. [{'hgid': '11111111111111111111', 'known': {'Ok': False}}]
-        for res in stream:
-            node = res["hgid"]
-            known = unwrap(res["known"], node)
-            if known:
-                knownnodes.add(node)
-        shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
-        if shouldtrace:
-            for node in sorted(nodes):
-                tracing.trace("known %s: %s" % (hex(node), node in knownnodes))
-        return [n in knownnodes for n in nodes]
+        return apiknown(self.edenapi, nodes)
 
     def listkeys(self, namespace):
         if namespace == "bookmarks":
@@ -185,33 +173,10 @@ class eagerpeer(repository.peer):
         return result
 
     def lookup(self, key):
-        node = None
-        if len(key) == 40:
-            # hex node?
-            try:
-                node = bin(key)
-            except Exception:
-                pass
-        if isinstance(key, bytes) and len(key) == 20:
-            # binary node?
-            node = key
-        if node is not None:
-            if self.known([node]) == [True]:
-                return node
-
-        if _ishexprefix(key):
-            prefix_resp = self.edenapi.hashlookup([key])
-            hgids = prefix_resp[0]["hgids"]
-            if len(hgids) == 1:
-                return hgids[0]
-
-        # bookmark?
-        m = self.listkeyspatterns("bookmarks", [key])
-        hexnode = m.get(key, None)
-        tracing.debug("lookup %s = %s" % (key, hexnode))
-        if hexnode is None:
+        node, _candidates = apilookup(self.edenapi, key)
+        if node is None:
             raise error.RepoLookupError(_("unknown revision %r") % (key,))
-        return bin(hexnode)
+        return node
 
     def pushkey(self, namespace, key, old, new):
         changed = False
@@ -235,6 +200,58 @@ class eagerpeer(repository.peer):
 
     def iterbatch(self):
         return peer.localiterbatcher(self)
+
+
+def apiknown(api, nodes):
+    """Return whether the SLAPI server knows each of nodes, as a list of bools."""
+    stream = api.commitknown(nodes)
+    knownnodes = set()
+    # ex. [{'hgid': '11111111111111111111', 'known': {'Ok': False}}]
+    for res in stream:
+        node = res["hgid"]
+        known = unwrap(res["known"], node)
+        if known:
+            knownnodes.add(node)
+    shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
+    if shouldtrace:
+        for node in sorted(nodes):
+            tracing.trace("known %s: %s" % (hex(node), node in knownnodes))
+    return [n in knownnodes for n in nodes]
+
+
+def apilookup(api, key):
+    """Resolve key on the SLAPI server as a full node, a hash prefix, then a bookmark.
+
+    Returns (node, candidates). node is None if key does not resolve, in which
+    case candidates lists the nodes key matches as an ambiguous hash prefix.
+    """
+    node = None
+    if len(key) == 40:
+        # hex node?
+        try:
+            node = bin(key)
+        except Exception:
+            pass
+    if isinstance(key, bytes) and len(key) == 20:
+        # binary node?
+        node = key
+    if node is not None:
+        if apiknown(api, [node]) == [True]:
+            return node, []
+
+    candidates = []
+    if _ishexprefix(key):
+        prefix_resp = api.hashlookup([key])
+        candidates = prefix_resp[0]["hgids"]
+        if len(candidates) == 1:
+            return candidates[0], []
+
+    # bookmark?
+    hexnode = api.bookmarks([key]).get(key)
+    tracing.debug("lookup %s = %s" % (key, hexnode))
+    if hexnode is None:
+        return None, candidates
+    return bin(hexnode), []
 
 
 def _ishexprefix(key):
