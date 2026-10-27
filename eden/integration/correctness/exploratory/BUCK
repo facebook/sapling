@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs/testinfra:network_access_utils.bzl", "network_access_utils")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "sites",
+    srcs = ["core/sites.py"],
+)
+
+python_unittest(
+    name = "core_sites_test",
+    srcs = ["core/test/sites_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [":sites"],
+)
+
+# Continuous CI only: `ci.remove(ci.diff, ci.land)` drops the inherited diff-
+# and land-time CI labels and keeps the continuous ones (Citadel CI Label API
+# Reference, "Removing Values"). `long_running` (100-minute tpx timeout tier): the
+
+# `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
+
+# Typed task identity, the findings report, replay, and the run admission and
+
+# cli.py ships with the runner libraries so the runner lookup
+
+# `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
