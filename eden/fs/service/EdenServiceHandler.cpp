@@ -999,45 +999,93 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_mount(
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmount(
     std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+      INFO, true, requestContext, *mountPoint);
   server_->noteActivity("unmount");
+  auto requestId = helper->getRequestId();
   return wrapImmediateFuture(
              std::move(helper),
-             makeImmediateFutureWith([&]() mutable {
-               auto mountPath = absolutePathFromThrift(*mountPoint);
-               return server_->unmount(mountPath, UnmountOptions{});
-             }).thenError([this](const folly::exception_wrapper& ex) {
-               ex.with_exception([&](const std::exception& e) {
-                 server_->getServerState()->getErrorLogger().log(
-                     EdenErrorInfo::thrift(
-                         ErrorArg::fromExceptionWithoutTrace(e), "unmount"));
-               });
-               throw newEdenError(ex);
-             }))
+             unmountUnlessCancelled(
+                 requestId,
+                 absolutePathFromThrift(*mountPoint),
+                 UnmountOptions{}))
       .semi();
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmountV2(
     std::unique_ptr<UnmountArgument> unmountArg) {
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(INFO, *unmountArg->mountId()->mountPoint());
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+      INFO, true, requestContext, *unmountArg->mountId()->mountPoint());
   server_->noteActivity("unmount");
+  auto requestId = helper->getRequestId();
   return wrapImmediateFuture(
              std::move(helper),
-             makeImmediateFutureWith([&]() mutable {
-               auto mountPath =
-                   absolutePathFromThrift(*unmountArg->mountId()->mountPoint());
-               return server_->unmount(
-                   mountPath, UnmountOptions{.force = *unmountArg->useForce()});
-             }).thenError([this](const folly::exception_wrapper& ex) {
-               ex.with_exception([&](const std::exception& e) {
-                 server_->getServerState()->getErrorLogger().log(
-                     EdenErrorInfo::thrift(
-                         ErrorArg::fromExceptionWithoutTrace(e), "unmount"));
-               });
-               throw newEdenError(ex);
-             }))
+             unmountUnlessCancelled(
+                 requestId,
+                 absolutePathFromThrift(*unmountArg->mountId()->mountPoint()),
+                 UnmountOptions{.force = *unmountArg->useForce()}))
       .semi();
+}
+
+ImmediateFuture<folly::Unit> EdenServiceHandler::unmountUnlessCancelled(
+    uint64_t requestId,
+    AbsolutePath mountPath,
+    UnmountOptions options) {
+  // The unmount answers once the mount has shut down, and that shutdown
+  // finishes on the main event base. EdenServer::stop() cancels every active
+  // request and then waits for Thrift to drain them while the main event
+  // base is not running, so an unmount that waited through the stop would
+  // hold the drain until Thrift aborts the daemon. Cancellation answers the
+  // request instead; the mount's shutdown carries on without it, and
+  // unmountAll() waits for it during cleanup.
+  struct Wait {
+    folly::Promise<folly::Unit> promise;
+    std::atomic<bool> answered{false};
+    void answer(folly::Try<folly::Unit>&& result) {
+      if (!answered.exchange(true)) {
+        promise.setTry(std::move(result));
+      }
+    }
+  };
+  auto wait = std::make_shared<Wait>();
+  auto answer = wait->promise.getSemiFuture();
+
+  std::shared_ptr<folly::CancellationCallback> onCancel;
+  if (auto token = getCancellationToken(requestId)) {
+    onCancel = std::make_shared<
+        folly::CancellationCallback>(std::move(*token), [wait, mountPath] {
+      wait->answer(
+          folly::Try<folly::Unit>{newEdenError(
+              EdenErrorType::GENERIC_ERROR,
+              fmt::format(
+                  "EdenFS is stopping; the unmount of {} completes as part of "
+                  "the shutdown",
+                  mountPath))});
+    });
+  }
+
+  folly::futures::detachOn(
+      server_->getServerState()->getThreadPool().get(),
+      makeImmediateFutureWith([this, mountPath, options] {
+        return server_->unmount(mountPath, options);
+      })
+          .semi()
+          .defer([wait](folly::Try<folly::Unit>&& result) {
+            wait->answer(std::move(result));
+          }));
+
+  return ImmediateFuture<folly::Unit>{std::move(answer)}
+      .thenError([this](const folly::exception_wrapper& ex) {
+        ex.with_exception([&](const std::exception& e) {
+          server_->getServerState()->getErrorLogger().log(
+              EdenErrorInfo::thrift(
+                  ErrorArg::fromExceptionWithoutTrace(e), "unmount"));
+        });
+        throw newEdenError(ex);
+      })
+      .ensure([onCancel = std::move(onCancel)] {});
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {

@@ -295,7 +295,7 @@ class StopWhileAnUnmountIsInFlightTest(EdenRepoTest):
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         configs = super().edenfs_extra_config() or {}
         # The daemon aborts when a request outlives this wait after a stop.
-        # Keep it short so the test does not take the production two minutes.
+        # Keep it short so a regression fails the test in seconds.
         configs.setdefault("thrift", []).append('workers-join-timeout = "5s"')
         return configs
 
@@ -324,13 +324,10 @@ class StopWhileAnUnmountIsInFlightTest(EdenRepoTest):
 
         poll_until(mount_is_shutting_down, timeout=30)
 
-        # FIXME: the stop must answer the unmount and exit cleanly. Instead the
-        # request stays open through the stop: its answer is produced on the
-        # main event base, which does not run while Thrift drains requests, so
-        # the drain times out and Thrift aborts the daemon. shutdown() raises
-        # when the daemon exits with a non-zero status.
-        with self.assertRaisesRegex(Exception, "exited unsuccessfully"):
-            self.eden.shutdown()
+        # The stop answers the unmount, the unmount completes as part of the
+        # shutdown, and the daemon exits cleanly. shutdown() raises when the
+        # daemon exits with a non-zero status.
+        self.eden.shutdown()
 
 
 @eden_test

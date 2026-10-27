@@ -48,6 +48,7 @@ struct EntryAttributes;
 struct EntryAttributeFlags;
 template <typename T>
 class ImmediateFuture;
+struct UnmountOptions;
 
 extern const char* const kServiceName;
 
@@ -181,6 +182,16 @@ class EdenServiceHandler
 
   folly::SemiFuture<folly::Unit> semifuture_unmountV2(
       std::unique_ptr<UnmountArgument> unmountArg) override;
+
+  /**
+   * Waits for the unmount, or answers the request with an error once it is
+   * cancelled, as EdenServer::stop() cancels every active request. The mount's
+   * shutdown is not affected.
+   */
+  ImmediateFuture<folly::Unit> unmountUnlessCancelled(
+      uint64_t requestId,
+      AbsolutePath mountPath,
+      UnmountOptions options);
 
   void listMounts(std::vector<MountInfo>& results) override;
 
