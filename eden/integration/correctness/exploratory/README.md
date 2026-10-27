@@ -1,0 +1,137 @@
+# Exploratory correctness harness
+
+The harness composes concurrent client inputs, fault injection, and observations into a validated RunSpec, runs it against an isolated daemon, and judges the recorded history with one consistency engine over target-contract effects. Each run owns an isolated daemon and repository fixture; `fake` exercises the pipeline offline. Planned daemon kill/restart (lifecycle) is a separate later migration.
+
+## Layers and internal interface
+
+`core/` owns the graph, scheduling, containment, history, typed result facts, effects and constraints, the consistency engine, the checker, generation, and campaign accounting, with no target-specific imports (`boundary_test` enforces it). `edenfs/` supplies environments, client operations, fault sites, the reference checkout, effect contracts, pinned fixture facts, and the EdenFS properties; `fake/` supplies an in-memory target. `targets.py` is the one target seam the CLI reads. Task keys, the findings report, and manual replay live in `findings.py`, with the run admission and verdict-file readers in `schemas.py`.
+
+`Target` is an internal MVP interface, not a compatibility promise: action definitions, sites, ordered properties, red controls, serving paths, the effect contracts hook (`contracts`), pinned fixture facts (`pinned`), environment schema, semantics profile, and factories. `ActionDef` statically declares the payload schema and validator, the strict result schema (`ResultSchema`: exact `ok`/`fail`/`info` fields, their kinds, which are diagnostic, and each errno's use: `state`, `fault`, or `timeout`), the footprint, roles (`produce`, `remove`, `transfer`, `observe`, `can-supersede`), binding, and grouping. Generators may read those declarations; they never import checker modules.
+
+## Glossary
+
+Each term has one meaning in this package; its home module defines it.
+
+- **core**: the target-neutral layer, `core/` (no EdenFS import; `boundary_test`). Core rules are the `core.*` rules `core/checker.py` registers for every target. The engine's minimal unsatisfiable input sets are *proofs* (`core/solver.py`).
+- **reference**: the plain Sapling checkout a differential run pairs with EdenFS, and everything recorded from it (`edenfs/reference.py`, `reference_result`, the `reference` attribution). The brute-force evaluator the engine is cross-checked against is `core/exhaustive.py`.
+- **oracle**: only in the `oracle-suspect` attribution: observers on two independent serving paths agree with each other against the contract effects, so the checker's own model is suspect (`core/target.py`, `core/checker.py`). Rules, properties, and checks are never called oracles.
+- **settled**: a checkout whose start sees exactly one EdenFS parent, because every parent move that may precede it is acked and ordered, no other parent move, checkout, or aggregate observation overlaps its window, and no possibly interrupted attempt to the same revision can resume into it; the contracts read that parent as a constant (`edenfs/contracts/`, `_plans`). An action that has completed is *finished*, never settled.
+- **terminal**: an action's last history event (`ok`, `fail`, or `info`; `core/history.py`).
+- **gate**: a check whose failure stops the next step: the verdict's gate (history and RunSpec problems; nothing is evaluated, `core/checker.py`) and the release-summary gate (fails the release job, `advisory.py`). Campaign health produces *checks*, which stop nothing (`core/campaign.py`); a failed one makes `findings` exit 1, which fails the nightly job after its rows are emitted.
+- **explanation**: an `Assignment` (which outcome variables happened and one order of every happened node) under which every engine input holds; `explains` in `core/semantics.py` decides it. An *explanation trial* asks whether some subset of an unsatisfiable component's inputs has an explanation; proof extraction is a sequence of explanation trials, and `EXPLANATION_WORK`, the `explanation` work phase, and `core.solver.explanation-budget` count those trials (`core/solver.py`).
+- **projection**: the verdict's `kind`, `reason`, and per-property lanes, computed from its obligations and never the source of a finding or key (`core/checker.py`).
+- **probe**: a `status` or `manifest_presence` action, whose one result reports many paths' state at once (`edenfs/properties/status.py`, `edenfs/properties/manifest.py`). A satisfiability question the engine answers for a collector is a *query* (`core/solver.py`, readdir stream membership); a live observation of EdenFS behavior outside a run is a *measurement*.
+
+## How a history is judged
+
+There is no shadow EdenFS model. A verdict is computed in stages:
+
+1. **Typed history.** The history must follow the RunSpec's grammar, and every terminal result must decode exactly against its action's `ResultSchema` (required ⊆ keys ⊆ declared, exact types). A result that does not decode is a direct `core.result-schema` violation with `harness` attribution, never a task key. Every consumed field is read by some property or the contracts hook, or the target says why not (`unported_fields`).
+2. **Contracts.** The target's contracts hook (`edenfs/contracts/`) reads the decoded facts and pinned fixture facts and emits typed effect groups over cells (`path`, `mode`, `track`, `parent`, descriptor cells): an acknowledged action's effects in its window, an indeterminate outcome (`info`, ETIMEDOUT, a daemon-death errno ECONNABORTED or ENOTCONN, a killed Sapling command) as an optional group up to its resolution boundary, nothing for a definite failure. Checkouts are progressive (one group per relevant path, plus the parent); renames transfer the source's value and atomically replace the destination's binding. Untouched paths are judged through equivalence-class representatives; nothing enumerates the repository (1M-file sparse fixtures are supported; complete 10k–1M observations are not, under the 512 KiB event and 16 MiB history limits).
+3. **Collectors.** Each property reads the facts and the shared effects and declares obligations: one `(rule, scope)` each, with a subject. It files observations and named constraints for the engine, or decides an obligation directly (a value no candidate could produce, a duplicate listing entry, a typed rejection contract). It never chooses a producer, an order, or an outcome.
+4. **Engine.** `core/solver.py` splits the inputs into independent components and propagates each deterministically (precedence cycles, window feasibility, producer candidates). A component with no observation and no requirement is satisfied by dropping its indeterminate groups; every other component goes to the frontier search (the `core/solver.py` module docstring lists the stages). Footprints only find possible interactions; factor components are built from variables constraints actually couple. Budgets are deterministic work counters (`DECISION_WORK`, `EXPLANATION_WORK`, `MAX_LIVE_STATES`, `MAX_CANDIDATES`); exhaustion leaves that component's undecided obligations `NotEvaluated(core.solver.budget)`, or `NotEvaluated(core.solver.explanation-budget)` when an explanation trial runs out during proof extraction. An unsatisfiable component yields minimal proof certificates by deletion; a proven violation is never downgraded by later stages or by an unrelated not-evaluated obligation. `core/exhaustive.py` is the independent brute-force evaluator the engine is cross-checked against (`core_engine_crosscheck_test`: optimized = exhaustive, lazy = eager, factored = monolithic).
+
+Each obligation ends `satisfied`, `violated`, or `not-evaluated` with a declared reason. Modeled ambiguity (an `info` outcome, repeated producers, legal overlap, an interrupted checkout's per-path effects) is a finite choice, never a skip. State-dependent errnos (`ENOENT`, `EEXIST`, `EISDIR`, ...) are observations of state; they are findings only when no legal state explains them. At most one of any set of overlapping checkouts applies; the rejected one has no effects and is checked against its typed rejection contract.
+
+A violated obligation's attribution is `product`, `undetermined`, `oracle-suspect`, `harness`, or `reference`. Engine proofs are attributed by corroboration: observers on two serving paths that agree with each other against the contract effects make the proof `oracle-suspect`; two observers on one serving path (sl status and its sl diff share `sapling`) make it `undetermined`; otherwise `product`. Only `product` and `undetermined` findings are product-actionable.
+
+## Rules and properties
+
+A rule is a `RuleDef`: ID (`<property>.<name>`, never reused with another meaning), statement, subject kind, identity roles, and red controls. A registered rule is asserted; there is no maturity, evidence, tolerated, or forbidden field. Core rules (`core.daemon-exit`, `core.activity`, `core.input-legality`, `core.result-schema`) live in `core/checker.py`; the EdenFS properties (`bytes`, `status`, `journal`, `cross-channel`, `namespace`, `checkout`, `existence`, `manifest`, `listing`, `result-shape`, `fd`, `attributes`, `readdir`, `differential`) in `edenfs/properties/`, one module each, registered in evaluation order by `PROPERTIES` in `edenfs/target.py`.
+
+Every rule has legal and violating tests (the expected-results corpus under `test/corpus/` states rule-level outcomes for 352 synthetic cases); every red control trips the rules that map it. `identity_digest` (rule IDs, subject kinds, identity roles, red controls) is bound into every verdict; the semantic digest (checker source closure, every action's static declarations, engine budgets, checker version) too. `findings_keying_test` pins the registry's identity digest, so a change to any rule's identity is reviewed. There is no prose contract file.
+
+## Adding a property
+
+A property is one module, `edenfs/properties/<name>.py`: its rule table, its collector, its `PropertyDef` (coverage IDs, declared not-evaluated reasons, and the `(action, field)` pairs it consumes). Register it with one entry in `PROPERTIES`. Add legal and violating cases to its family in `test/corpus/families/` (rendered in memory; nothing to regenerate). A red control is a corruption the backend applies to what it records: `edenfs/target.py` derives `RED_CONTROLS` from the rules' `red_controls`, and each control must also be implemented in `edenfs/backend_scm.py` (its own `RED_CONTROLS`). Update `findings_keying_test`'s registry identity digest pin: the new digest shows the change.
+
+## Changing a rule
+
+A rule changes in its own diff, before and never bundled with the check change that motivated it, so a check is never weakened to fit what it observed. That diff says which change it is: a new measurement (name the live test or recorded run), a product change that moved the guarantee (cite the diff), or a correction (say what was wrong). An identity change (ID, subject kind, roles, red controls) changes `identity_digest`. Only an ID or role change also changes keys, because a key is `(rule ID, finding kind, role values)`; a subject-kind or red-control change moves `identity_digest` alone.
+
+## Vocabulary
+
+Every action has `kind`, `deadline`, optional `requires`, and kind-specific fields. The JSON action key is its ID; each ID belongs to exactly one sequential actor. Each kind's exact result fields are its `ResultSchema` in `edenfs/actions.py`.
+
+| Axis | Kinds | Payload |
+|---|---|---|
+| Input | `write` | `path`, `value_id` (unique per RunSpec; the writer `init` and `commit*` names are reserved for fixture images) |
+| Input | `read` | `path`, `channel` (`fuse`/`thrift`), optional `sync_timeout_seconds`; records `bytes_prefix` (128 bytes, hex), `length`, and `sha256` |
+| Input | `getattr` | `path`; records FUSE and Thrift types, `mode`, `size`, and `mtime_ns` |
+| Input | `status` | `channel` (`sl`/`thrift`), optional `revision`; sl status runs `sl status` then `sl diff --stat`, two observations at their own points, status first |
+| Input | `checkout` | `revision`, `via` (`goto`/`thrift`), `mode` (`normal`/`force`/`continue`; `force` via `goto` runs `goto --clean`, `continue` needs `goto`) |
+| Input | `readdir_stream`, `readdir_resume` | a directory stream paused across other inputs and drained later |
+| Input | `readdir` | directory `path`, `channel`; one-shot sorted `entries` |
+| Input | `open`, `read_fd`, `close` | a read-only descriptor held across other inputs; `read_fd` reads through it (there is no `write_fd`) |
+| Input | `rename`, `unlink`, `mkdir`, `chmod`, `sl_rm`, `sl_mv` | namespace and metadata mutations |
+| Nemesis | `fault_install`, `fault_await`, `fault_remove`, `kill_process`, `background_read`, `unload_inodes` | a fault's install, wait, and removal around its target action; a kill of one spawned process (never the daemon); a timed directory-read lease under a root; unloading one subtree's inodes. Sites and behaviors are in `edenfs/sites.py` |
+| Observation | `manifest_presence`, `journal_window`, `status_counts`, `blocked_faults` | |
+| Input (unmodeled) | `sleep` | `seconds` |
+
+The composer samples every kind except `sleep`, `unload_inodes`, and `blocked_faults`: namespace mutations at 0.25 each, a held descriptor in no-fault and differential specs, a paused readdir stream across a checkout in fault specs, and one-shot `readdir` in differential specs only. Committed register images are revision-specific (`edenfs/encoding.py` `encode_committed`); ordinary generated files keep revision-stable bytes.
+
+## Hand-writing a spec
+
+Start from `decks/` JSON with `schema`, `schema_version`, `seed`, `target`, `environment`, `budgets`, `actors`, and `actions`. `budgets.runner_deadline_seconds` is the one whole-run deadline (default 600 when omitted); there are no latency assertions. Actor order supplies sequential edges; `requires: [["a0", "finished"]]` adds cross-actor ordering; `started` overlaps actions. Pre-arm a fault by making its target require install completion; place `fault_await` after target start; pair every install with a remove.
+
+Validate with `buck2 run fbcode//eden/integration/correctness/exploratory:explore -- validate --target edenfs --spec <spec.json>`; run with `buck2 run @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:explore -- run --target edenfs --spec <spec.json> --artifacts <directory>`. `EDENFS_SERVER_PATH` selects the daemon. Live runs need a FUSE-capable Linux host and a working user systemd session.
+
+## Differential mode
+
+A RunSpec whose environment sets `setup_profile.reference_clone` runs every shared action also against a plain Sapling checkout. Validation admits only actions, channels, and modes EdenFS and plain Sapling share (write, read over FUSE, read_fd, getattr, open, close, rename, unlink, mkdir, chmod, non-root readdir over FUSE, sl status, NORMAL `sl goto`, sl rm, sl mv) and only schedules in which every pair with conflicting footprints is ordered by a finished edge, so every compared observation follows every conflicting mutation. The EdenFS side is judged normally; the `differential` property then compares normalized paired results directly. A disagreement is `product` only once the EdenFS side's own legality is known (`reference` when the EdenFS side is legal); reference-side failures are `reference`. `compose(..., differential=True)` generates such specs; `campaign --differential` runs them.
+
+## Artifacts and verdicts
+
+Every run writes `run-spec.json`, `history.jsonl`, `execution.json`, `verdict.json`, `replay.json`, `admission.json`, and `stderr.log`. Execution and verdict are independent: a durable history prefix is judged as a prefix beside a harness failure.
+
+`verdict.json` is schema v1: `schema_version`, `identity_digest`, `bindings` (`runspec`, `history`, `semantic`, `execution` digests and `semantics_profile`), `kind`, `reason`, `not_evaluated_cause`, `lanes`, `gate`, `properties` (each with every obligation, sorted by rule and scope: status, subject, attribution, reason, not-evaluated reason, proof reference, witnesses), `proofs` (minimal certificates), and `work` (deterministic counters per phase and per component; never wall-clock). `kind` is a projection (`reject` > `harness-suspect` > `not-evaluated` > `accept`) and never supplies task identity. Verdicts are never truncated; one past the 2 MiB operational threshold is reported as `execution.verdict-oversize`. `check --target edenfs --spec S --history H [--execution E]` recomputes a verdict offline.
+
+## Campaigns
+
+`campaign --target edenfs --seeds 25 --files 256 --artifacts <dir> --report <report.json>` composes and runs a stratified campaign. The report records completed and missing strata, harness failures, per-property obligation counts by status and not-evaluated reason, two funnels (actions: planned, started, recorded; obligations: applicable, observed, evaluated, not evaluated, violated), deterministic work totals and component high-water marks, not-evaluated causes, and the named health checks (`campaign_health`). `--no-fault` composes without the fault stage; `--runner-deadline` sets every composed RunSpec's whole-run deadline. `campaign --differential` is its own campaign (its ID names the flag): every seed composes a paired RunSpec over the target's differential environment (the plain sampler's draws, case-sensitive, with the reference clone).
+
+`red-controls --target edenfs` lists the red controls; `run --target edenfs --spec decks/red-control.json --red-control <name> --campaign-id <id> --artifacts <dir>/red-controls/<name>` runs one for one campaign. `<id>` is the `campaign_id` field of the campaign's `report.json` (`campaign` does not print it; `ci/nightly.json` reads it from the report). A control must trip exactly the rules that map it: `common-status-loss` → `status.sl-fuse-stale-status`, `diff-loss` and `status-loss` → `status.status-diff-mismatch`, `torn-write` → `bytes.torn-read`.
+
+Daemon provenance comes from the environment of `campaign` and `run`: `EDENFS_DAEMON_SOURCE_COMMIT` (the daemon's source commit) turns it on, and then `EDENFS_SERVER_PATH` (the daemon a live run starts, recorded by SHA-256; the same variable is the daemon identity without provenance), `EDENFS_DAEMON_SOURCE_TIMESTAMP` (the source commit's time, Unix seconds), and `EDENFS_DAEMON_FATAL_EDEN_BUG` (`true` or `false`, JSON) are required; `EDENFS_DAEMON_LOG` is optional. They are checked once before any run, and a malformed one exits 2. `fatal_eden_bug` is part of the campaign ID. `ci/nightly.json` shows how to set them. Without them `findings` prints `FAIL provenance on every seed`, and a source timestamp more than 7 days old records every campaign seed as environment-degraded.
+
+## Task identity
+
+Findings are the violated obligations. They are partitioned by exact subject occurrence; each subject's product-actionable findings become a canonical error set: the sorted, deduplicated list of `[rule_id, finding kind, identity roles]` (`core.identity.error_set_document`, schema `exploratory-error-set-v1`), whose `document_digest` is the task key. Action IDs, witnesses, the concrete path, the target, `semantics_profile`, digests, run, and seed never enter a key; they stay as evidence. Subjects with equal sets share a key; subset and superset sets stay distinct and are reported as related. A subject with only non-product findings is routed (to the harness, or to the reference) and never keyed. Findings-level problems (unknown rule, subject-kind mismatch, missing role) leave the subject unkeyed and listed as unclassified.
+
+The four known tasks' translated reproducers live in `test/corpus/known/`; their keys under the contracts, the corpus cases encoding the product bugs filed from live measurements, and the rendered key sections are in the migration evidence artifact (https://artifacts.internalmeta.com/a/2351750168980124), outside the tree. Nothing writes them to the tasks.
+
+## Findings report
+
+`findings --target edenfs --report R --artifacts A [--red-controls C...]` writes `findings/findings.json` and one `finding-NN.md` per key, and prints the health checks, red-control outcomes (a target control with no supplied directory is `missing`), and one `FINDING` line per key; it exits 1 when any line is a `FAIL`. Each key's entry names every run that produced it with its RunSpec digest, run directory, verdict, the violated obligations on its subjects (rule, scope, attribution, reason, proof, witnesses), per-property obligation tallies, related (subset or superset) keys, and the replay command. Routed harness and reference subjects, execution findings, and unclassified findings are listed beside the keys. A person deduplicates findings by task key. Nothing is filed and no store is contacted. `testdata/golden/` holds the reviewed reports for the key cases (`golden_test`).
+
+`replay --target edenfs --run <run dir> --artifacts <new dir>` re-runs that run's exact RunSpec once and prints both verdicts and which task keys each produced; it exits 1 when a key of the original run is absent from the replay.
+
+Nothing in this package files tasks; a filer would read these interfaces. A human reads each nightly's `findings/` output; unattended operation needs an independent signal that the latest campaign ran, is less than a day old, and passed its red controls.
+
+## Telemetry
+
+`emit --report R --findings F` prints fixed scalar rows (`campaign`, `property`, `reason`, `symptom`, `finding`, `action`, `obligation`, `work`; each type's exact fields are `ROW_FIELDS`) to stdout; nothing leaves the job.
+
+## Nightly
+
+The nightly runs as a Sandcastle node in the `eden/eden` conveyor, beside "eden smoke tests". The daemon is the release package's edenfs, passed through `EDENFS_SERVER_PATH`, the one variable the campaign hashes as the daemon identity; it is the shipped daemon, not the `edenfs-oss` build the integration-test environment uses (`eden/defs.bzl`). `ci/nightly.json` is the job: its seed blocks, red controls, findings, and `emit` steps, and its timeout, are pinned by `nightly_test`. Every campaign seed carries the default runner deadline (600 s: operation 120 s, cleanup 30 s), so a hang is recorded as `execution.operation-timeout`. The nightly files nothing.
+
+## Decks
+
+Every `decks/*.json` carries `metadata.expected`: `accept`, `reject`, or `not-evaluated` (with the exact reasons in `expected_not_evaluated`). `decks_test` validates them offline on every package test, judges each recorded live history in `test/deck_histories/` against its deck's expectation (every `not-evaluated` deck has one), pins each reject deck's `expected_task_key` to a canonical key its task's translated reproducer yields (`expected_rules` are that key's rules); every reject deck names an `expected_task_key` or an `expected_execution`, and every deck declares the `fatal_eden_bug` fact its live run's setup must record. A deck that must overlap an unlink or rename with a checkout declares `task: T293953113` (`edenfs.actions.WALK_DEADLOCK_TASK`); `bug-113` does, and expects `execution.mount-wedged`. A deck, a corpus case (in its RunSpec metadata), or a refused simulated spec (`SpecError.waiting_on`) may wait on a task with `waiting_on: "T<number>"` (`test/waiting.py`): while it fails it is skipped as `waiting on <task>` and counted per task, and once it passes it prints `<case> now passes; remove the marker` without failing. `decks_live_test` generates one method per deck plus one per red control; they skip unless `EDEN_EXPLORATORY_REPLAYS=1`, which `ci/release-decks.json` passes. An `accept` deck rejecting, or a `not-evaluated` deck giving another verdict or other reasons, fails the build. A `reject` deck that completes must reject with its `expected_task_key`, and one that does not complete must leave its `expected_execution`; anything else, an accept included, fails it. A keyless reject deck that completes rejecting is a skip notice. `differential-namespace` and `differential-checkout-fd` are the generated differential accept decks; no other deck opts into the reference (the validator refuses their eden-only actions). The flip is the fix's job: a diff that fixes a reject deck's task changes it to `expected: accept`.
+
+`explore release-summary --target edenfs --decks <dir> --artifacts <dir>` maps each run directory into accept, reject, and not-evaluated lanes and gates the blocking ones: an accept deck must complete and accept, a not-evaluated deck must complete with exactly its reasons, and the pinned calibration run must complete and reject; a blocking run that is `missing` or `unmeasured` fails too. Reject decks are advisory: `reproduced` lists those that completed rejecting or left their `expected_execution`, and `flip_candidates` those that accepted.
+
+## Frozen advisory replays
+
+Live replays additionally require `EDEN_EXPLORATORY_REPLAYS=1`, `EDEN_EXPLORATORY_ARTIFACTS`, `EDEN_EXPLORATORY_PINNED_SUT`, and `EDENFS_SERVER_PATH`, passed through `-- --env`. The pinned binary hash is verified before one seed-320001 calibration run, which must record a product-actionable violation of a calibration rule (`advisory.CALIBRATION_RULES`); only then does each deck run once. See `REDISCOVERY.md`.
+
+## Long targets
+
+Checks that spend whole engine budgets live in their own targets, which continuous CI runs and diff- and land-time CI do not (`ci.labels(ci.remove(ci.diff, ci.land))`): `core_solver_scale_slow_test` (140-node legal histories, about 9 minutes) and `legal_batch_slow_test` (planted counts on every generated history, about 9 minutes), both also `long_running` (tpx timeout tiers are 10 minutes by default, 100 for `long_running`, 300 for `glacial`), and `edenfs_namespace_checkout_slow_test` (planted counts 1-6 on the recorded seed-13008 history, about 4 minutes). A local `buck2 test` of the package runs them too. Each asserts at least its measured decided counts, so a run that leaves everything to the budget fails.
+
+## Regenerating
+
+Every generated file is derived from its source, and each test that compares one names the command in its failure message. Goldens: `buck2 test @fbcode//mode/opt fbcode//eden/integration/correctness/exploratory:golden_test -- --env EDEN_EXPLORATORY_UPDATE_GOLDEN=$PWD/fbcode/eden/integration/correctness/exploratory/testdata/golden`. Review the diff afterwards.
+
+The corpus is not checked in: `loader.cases()` renders every case of `test/corpus/families/` (one module per corpus family) in memory. To replay one by hand, `buck2 run fbcode//eden/integration/correctness/exploratory:corpus_export -- <family>/<case> <dir>` writes its `run-spec.json`, `history.jsonl`, and `expected.json`, and `buck2 run fbcode//eden/integration/correctness/exploratory:explore -- check --target edenfs --spec <dir>/run-spec.json --history <dir>/history.jsonl` prints its verdict.
