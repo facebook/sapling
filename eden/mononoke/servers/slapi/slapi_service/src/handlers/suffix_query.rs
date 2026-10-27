@@ -89,3 +89,76 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
         .boxed())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+
+    use context::CoreContext;
+    use edenapi_types::CommitId;
+    use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use gotham::extractor::NoopQueryStringExtractor;
+    use gotham_ext::handler::SlapiCommitIdentityScheme;
+    use gotham_ext::middleware::request_context::RequestContext;
+    use mononoke_api::Mononoke;
+    use mononoke_api_hg::RepoContextHgExt;
+    use mononoke_macros::mononoke;
+    use test_repo_factory::TestRepoFactory;
+    use types::HgId;
+
+    use super::*;
+    use crate::context::ServerContext;
+    use crate::handlers::handler::BasicPathExtractor;
+
+    type TestContext = SaplingRemoteApiContext<BasicPathExtractor, NoopQueryStringExtractor, Repo>;
+
+    async fn suffix_query_context(fb: FacebookInit) -> anyhow::Result<TestContext> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+        let mononoke = Arc::new(Mononoke::new_test(vec![("test".to_string(), repo)]).await?);
+        let hg_repo = mononoke
+            .repo(ctx.clone(), "test")
+            .await?
+            .expect("test repo is loaded")
+            .build()
+            .await?
+            .hg();
+        let sctx = ServerContext::new(mononoke, Arc::new(AtomicBool::new(false)));
+        Ok(SaplingRemoteApiContext::new(
+            RequestContext { ctx },
+            sctx,
+            hg_repo,
+            BasicPathExtractor {
+                repo: vec!["test".to_string()],
+            },
+            NoopQueryStringExtractor,
+            SlapiCommitIdentityScheme::Hg,
+        ))
+    }
+
+    /// FIXME: BUG! This did panic inside `SuffixQueryHandler::handler` when a client-supplied
+    /// `prefixes` entry was not a valid `MPath` (here `..`; also `.`, a component with a NUL
+    /// byte or a component longer than 255 bytes) but should have rejected the request with
+    /// HTTP 400 like every other handler that takes paths. The panic is not caught by
+    /// gotham_ext, so it tears down the whole HTTP connection with every stream multiplexed
+    /// on it. This test pins the current behaviour; the next diff fixes it.
+    #[mononoke::fbinit_test]
+    async fn test_suffix_query_invalid_prefix(fb: FacebookInit) -> anyhow::Result<()> {
+        let ectx = suffix_query_context(fb).await?;
+        let request = SuffixQueryRequest {
+            commit: CommitId::Hg(HgId::null_id().clone()),
+            basename_suffixes: vec![".rs".to_string()],
+            prefixes: Some(vec!["..".to_string()]),
+        };
+
+        let outcome = std::panic::AssertUnwindSafe(SuffixQueryHandler::handler(ectx, request))
+            .catch_unwind()
+            .await;
+
+        // FIXME: BUG! The handler panics on client input instead of returning a 400 error.
+        assert!(outcome.is_err());
+        Ok(())
+    }
+}

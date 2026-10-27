@@ -20,6 +20,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_factory:test_repo_factory",
     ]
     + ([] if rust_oss.is_oss_build() else ["//thrift/lib/rust:fbthrift"]),
     deps = [
