@@ -46,7 +46,6 @@ start mononoke
   ed9644eae39f
   $ hg id -r _gitlookup_git_37b0a167e07f2b84149c918cec818ffeb183dddd mono:repo --debug 2>&1 | grep -E '^sending [a-z_]+ command$'
   sending hello command
-  sending lookup command
   $ hg id -r _gitlookup_hg_$A mono:repo
   37b0a167e07f
   $ hg id -r _gitlookup_hg_$B mono:repo
@@ -56,3 +55,15 @@ We have bookmark with the same name which points to d5b0942fd0ec9189debf6915e950
 Make sure that git lookup takes preference
   $ hg id -r _gitlookup_git_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb mono:repo
   795c4a744701
+
+A key whose id is not hex, or names a commit with no git mapping, falls back to
+normal resolution, which finds nothing:
+  $ hg id -r _gitlookup_git_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz mono:repo
+  abort: _gitlookup_git_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz not found!
+  [255]
+  $ hg id -r _gitlookup_git_cccccccccccccccccccccccccccccccccccccccc mono:repo
+  abort: _gitlookup_git_cccccccccccccccccccccccccccccccccccccccc not found!
+  [255]
+  $ hg id -r _gitlookup_hg_cccccccccccccccccccccccccccccccccccccccc mono:repo
+  abort: _gitlookup_hg_cccccccccccccccccccccccccccccccccccccccc not found!
+  [255]

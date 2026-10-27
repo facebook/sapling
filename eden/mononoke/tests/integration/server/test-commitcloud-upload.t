@@ -130,6 +130,8 @@ This test also checks file content deduplication. We upload 1 file content and 1
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
@@ -139,6 +141,8 @@ This test also checks file content deduplication. We upload 1 file content and 1
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
@@ -147,6 +151,8 @@ This test also checks file content deduplication. We upload 1 file content and 1
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote  # remote check
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting lookup for 1 item(s)
    INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
@@ -191,6 +197,8 @@ The eden api version performs a remote lookup with the `--remote` option only
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   pulling '65289540f44d80cecffca8a3fd655c0ca6243cd9' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   abort: unknown revision '65289540f44d80cecffca8a3fd655c0ca6243cd9'!
@@ -199,6 +207,8 @@ The eden api version performs a remote lookup with the `--remote` option only
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --remote
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
   pulling '65289540f44d80cecffca8a3fd655c0ca6243cd9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting lookup for 1 item(s)
    INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found
    INFO edenapi::client: Requesting commit hash to location (batch size = 1)
@@ -219,6 +229,8 @@ Try pull an uploaded commit from another client
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d  # pull doesn't update backup state
   pulling '65289540f44d' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting full hashes for 1 prefix(es)
+   INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 65289540f44d not found
   abort: unknown revision '65289540f44d'!
   [255]
@@ -233,7 +245,8 @@ Try pull an uploaded commit from another client
   pulling '65289540f44d' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
   sending hello command
-  sending lookup command
+   INFO edenapi::client: Requesting full hashes for 1 prefix(es)
+   INFO edenapi::client: Requesting 1 bookmarks
   pull failed: 65289540f44d not found
   abort: unknown revision '65289540f44d'!
   [255]
@@ -361,12 +374,16 @@ Check both ways to specify a commit to back up work - even though we're going th
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup c8b3ca487837
   pulling 'c8b3ca487837' from 'mono:repo'
    INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting full hashes for 1 prefix(es)
+   INFO edenapi::client: Requesting 1 bookmarks
   pull failed: c8b3ca487837 not found
   abort: unknown revision 'c8b3ca487837'!
   [255]
  
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup -r c8b3ca487837
   pulling 'c8b3ca487837' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting full hashes for 1 prefix(es)
    INFO edenapi::client: Requesting 1 bookmarks
   pull failed: c8b3ca487837 not found
   abort: unknown revision 'c8b3ca487837'!
@@ -375,6 +392,8 @@ Check both ways to specify a commit to back up work - even though we're going th
 Check the force flag for backup. Local cache checks must be ignoree
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup -r c8b3ca487837 --force
   pulling 'c8b3ca487837' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting full hashes for 1 prefix(es)
    INFO edenapi::client: Requesting 1 bookmarks
   pull failed: c8b3ca487837 not found
   abort: unknown revision 'c8b3ca487837'!

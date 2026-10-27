@@ -240,7 +240,7 @@ def apilookup(api, key):
             return node, []
 
     candidates = []
-    if _ishexprefix(key):
+    if node is None and _ishexprefix(key):
         prefix_resp = api.hashlookup([key])
         candidates = prefix_resp[0]["hgids"]
         if len(candidates) == 1:

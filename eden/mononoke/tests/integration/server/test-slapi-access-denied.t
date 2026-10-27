@@ -68,7 +68,9 @@ Code that turns a transport error into its own abort leaves a denial alone:
   (check that you have access to this repository)
   [255]
 
-Listing remote bookmarks and looking up a remote commit use the wire protocol:
+Listing remote bookmarks and looking up a remote commit are served over SLAPI,
+but the peer opens its wire protocol connection when it is created, and the
+server refuses that connection first:
   $ hg bookmarks --remote $NO_ACCESS
   remote: Authorization failed:
   remote:   Error:
