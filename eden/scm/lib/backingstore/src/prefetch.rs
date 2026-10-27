@@ -106,6 +106,7 @@ pub(crate) fn prefetch_manager(
     detector: walkdetector::Detector,
     repo_root: PathBuf,
     make_matcher: impl Fn(PathBuf) -> SparseMatcherResult + Send + 'static,
+    limits: Limits,
 ) -> flume::Sender<()> {
     // We don't need to queue up lots of kicks. A single one will suffice.
     let (send, recv) = flume::bounded(1);
@@ -117,7 +118,7 @@ pub(crate) fn prefetch_manager(
         detector,
         repo_root,
         make_matcher: Box::new(make_matcher),
-        limits: Limits::new(&config),
+        limits,
         commit: None,
         prefetches: Prefetches::default(),
         last_tick: None,
@@ -150,14 +151,16 @@ struct CommitState {
 }
 
 /// Shared limits on the work prefetches do concurrently.
+/// The concurrency limits of a store's prefetches. Clones share the permits, so every prefetch
+/// manager fetching through one store is bounded together.
 #[derive(Clone)]
-struct Limits {
+pub(crate) struct Limits {
     manifest_walks: ConcurrencyLimiter,
     file_fetches: ConcurrencyLimiter,
 }
 
 impl Limits {
-    fn new(config: &Config) -> Self {
+    pub(crate) fn new(config: &Config) -> Self {
         Self {
             manifest_walks: ConcurrencyLimiter::new(config.max_concurrent_manifest_walks),
             file_fetches: ConcurrencyLimiter::new(config.max_concurrent_file_fetches),
@@ -1638,6 +1641,7 @@ mod test {
             detector.clone(),
             "".into(),
             make_test_sparse_matcher,
+            Limits::new(&Config::default()),
         );
 
         // Trigger a walk of dir1.
@@ -1676,6 +1680,7 @@ mod test {
             detector.clone(),
             "".into(),
             make_test_sparse_matcher,
+            Limits::new(&Config::default()),
         );
 
         // Trigger a walk of the root.
@@ -1762,6 +1767,7 @@ mod test {
             detector.clone(),
             "".into(),
             |_| Ok(None),
+            Limits::new(&Config::default()),
         );
 
         // Trigger a directory walk for each of "dir1" and "dir2".
@@ -2069,6 +2075,7 @@ mod test {
             detector.clone(),
             "".into(),
             make_test_sparse_matcher,
+            Limits::new(&Config::default()),
         );
         let wait_for_fetches = |count: usize| {
             for _ in 0..2000 {

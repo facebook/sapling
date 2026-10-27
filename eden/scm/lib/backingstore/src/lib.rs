@@ -23,7 +23,9 @@ mod ffi_errors;
 mod init;
 mod prefetch;
 mod request;
+mod walk;
 
 pub use crate::backingstore::BackingStore;
 pub use crate::backingstore::HgCacheStats;
 pub use crate::init::backingstore_global_init;
+pub use crate::walk::WalkDetector;

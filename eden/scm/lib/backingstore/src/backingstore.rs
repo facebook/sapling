@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -31,7 +30,6 @@ use edenapi::configmodel::config::ContentHash;
 use log::warn;
 #[cfg(fbcode_build)]
 use metrics_fb::install as install_metrics_sink;
-use parking_lot::RwLock;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
 use revisionstore::scmstore::KeyFetchError;
@@ -54,8 +52,8 @@ use types::errors::KeyedError;
 
 use crate::ffi::ffi::BackingStoreErrorKind;
 use crate::ffi_errors::classify_backingstore_error;
-use crate::prefetch;
-use crate::prefetch::prefetch_manager;
+use crate::walk::WalkConfig;
+use crate::walk::WalkDetector;
 
 /// Statistics about the hgcache (Sapling disk cache). Named `HgCacheStats`
 /// (not `CacheStats`) to avoid colliding with the unrelated in-memory
@@ -85,14 +83,14 @@ pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
     inner: ArcSwap<Inner>,
 
-    parent_hint: Arc<RwLock<Option<String>>>,
+    /// The detector of the mount given at construction, behind the store's own witness methods.
+    mount_walk_detector: WalkDetector,
 }
 
-struct Inner {
-    filestore: Arc<dyn FileStore>,
+pub(crate) struct Inner {
+    pub(crate) filestore: Arc<dyn FileStore>,
     treestore: Arc<dyn TreeStore>,
-    repo: Arc<Repo>,
-    mount_path: PathBuf,
+    pub(crate) repo: Arc<Repo>,
 
     // We store these so we can maintain them when reloading ourself.
     extra_configs: Vec<PinnedConfig>,
@@ -115,88 +113,12 @@ struct Inner {
     // Sets the maximum time since last reload until we force a reload (defaults to 5m).
     reload_interval: Duration,
 
-    prefetch_send: flume::Sender<()>,
-    walk_event_send: crossfire::MTx<crossfire::mpsc::Array<WalkEvent>>,
-    walk_mode: WalkMode,
+    /// Counts the full reloads of the store, starting at 1. Walk detectors compare it with the
+    /// generation they built their state from, so they follow configuration changes.
+    pub(crate) generation: u64,
+
+    pub(crate) walk: WalkConfig,
     restricted_tree_mode: RestrictedTreeMode,
-    walk_detector: walkdetector::Detector,
-}
-
-/// A remote read that no active walk covered, reported to the walk detector off the filesystem
-/// thread because creating or extending walks takes the detector's write lock.
-enum WalkEvent {
-    FileLoaded(RepoPathBuf, Option<(usize, usize)>, u32),
-    DirLoaded(RepoPathBuf, usize, usize, u32),
-    DirMetadata(RepoPathBuf, usize, usize),
-}
-
-/// Bound on queued walk events. Walk detection is best effort, so events beyond it are dropped
-/// rather than letting a flood of remote reads grow memory.
-const WALK_EVENT_QUEUE_LIMIT: usize = 16_384;
-
-/// Spawn the thread that feeds queued walk events to the detector and kicks prefetching when a
-/// walk changes. It exits once every sender is dropped.
-fn spawn_walk_event_worker(
-    detector: walkdetector::Detector,
-    prefetch_send: flume::Sender<()>,
-) -> crossfire::MTx<crossfire::mpsc::Array<WalkEvent>> {
-    let (send, recv) = crossfire::mpsc::bounded_blocking(WALK_EVENT_QUEUE_LIMIT);
-    let spawned = std::thread::Builder::new()
-        .name("walkdet-events".to_owned())
-        .spawn(move || {
-            while let Ok(event) = recv.recv() {
-                handle_walk_event(&detector, &prefetch_send, event);
-            }
-        });
-    if let Err(err) = spawned {
-        tracing::warn!(?err, "failed to spawn walk event worker thread");
-    }
-    send
-}
-
-/// Feed one walk event to the detector and kick prefetching if a walk changed.
-fn handle_walk_event(
-    detector: &walkdetector::Detector,
-    prefetch_send: &flume::Sender<()>,
-    event: WalkEvent,
-) {
-    let walk_changed = match event {
-        WalkEvent::FileLoaded(path, dir_size, pid) => {
-            detector.file_loaded_with_dir_size(&path, dir_size, pid)
-        }
-        WalkEvent::DirLoaded(path, num_files, num_dirs, pid) => {
-            detector.dir_loaded(&path, num_files, num_dirs, pid)
-        }
-        WalkEvent::DirMetadata(path, num_files, num_dirs) => {
-            detector.dir_metadata(&path, num_files, num_dirs);
-            false
-        }
-    };
-    if walk_changed {
-        let _ = prefetch_send.try_send(());
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum WalkMode {
-    // Don't observe walks.
-    Off,
-    // Watch for walks, but don't take any action.
-    Monitor,
-    // Prefetch files/trees based on observed walks.
-    Prefetch,
-}
-
-impl FromStr for WalkMode {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "monitor" => Ok(Self::Monitor),
-            "prefetch" => Ok(Self::Prefetch),
-            _ => Ok(Self::Off),
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -225,6 +147,14 @@ impl BackingStore {
         Self::new_with_config(root.as_ref(), mount.as_ref(), &[])
     }
 
+    /// Walk detection for the checkout at `mount`. The detector follows this store's
+    /// configuration, including the walk mode, on each call that passes the store.
+    pub fn walk_detector(&self, mount: &Path) -> WalkDetector {
+        let detector = WalkDetector::new(mount);
+        detector.sync(self);
+        detector
+    }
+
     pub fn name(&self) -> Result<String> {
         match self.maybe_reload().repo.repo_name() {
             Some(repo_name) => Ok(repo_name.to_string()),
@@ -245,28 +175,24 @@ impl BackingStore {
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
             .collect::<Vec<_>>();
 
-        let parent_hint = Arc::new(RwLock::default());
-
-        Ok(Self {
+        let store = Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root,
-                mount,
                 &extra_configs,
                 touch_file_mtime(),
-                parent_hint.clone(),
-                walkdetector::Detector::new(),
+                1,
             )?)),
-            parent_hint,
-        })
+            mount_walk_detector: WalkDetector::new(mount),
+        };
+        store.mount_walk_detector.sync(&store);
+        Ok(store)
     }
 
     fn new_inner(
         root: &Path,
-        mount: &Path,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
-        parent_hint: Arc<RwLock<Option<String>>>,
-        mut walk_detector: walkdetector::Detector,
+        generation: u64,
     ) -> Result<Inner> {
         constructors::init();
 
@@ -320,111 +246,15 @@ impl BackingStore {
             }
         }
 
-        let walk_mode = WalkMode::from_str(
-            config
-                .get("backingstore", "walk-mode")
-                .unwrap_or_default()
-                .as_ref(),
-        )?;
+        let walk = WalkConfig::from_config(config.as_ref())?;
         let restricted_tree_mode = RestrictedTreeMode::from_config(config.as_ref());
 
         let repo = Arc::new(repo);
-
-        // First reset to default config values to handle the case when a config item was specified
-        // in the sl config, but is no longer present (i.e. need to revert to the in-code default).
-        walk_detector.reset_config();
-
-        if let Some(threshold) = config.get_opt("backingstore", "walk-threshold")? {
-            walk_detector.set_walk_threshold(threshold);
-        }
-
-        if let Some(threshold) = config.get_opt("backingstore", "walk-ratio")? {
-            walk_detector.set_walk_ratio(threshold);
-        }
-
-        if let Some(threshold) = config.get_opt("backingstore", "walk-gc-interval")? {
-            walk_detector.set_gc_interval(threshold);
-        }
-
-        if let Some(timeout) = config.get_opt("backingstore", "walk-gc-timeout")? {
-            walk_detector.set_gc_timeout(timeout);
-        }
-
-        walk_detector.set_root(Some(mount.to_path_buf()));
-
-        let prefetch_send = if walk_mode == WalkMode::Prefetch {
-            let prefetch_config = prefetch::Config {
-                // Pause prefetch if ratio of walker reads to prefetches is below min_ratio AND
-                // prefetches - reads is greater than max_initial_lag.
-                min_ratio: config.get_or("backingstore", "walk-prefetch-min-ratio", || 0.25)?,
-                max_initial_lag: config.get_or(
-                    "backingstore",
-                    "walk-prefetch-max-initial-lag",
-                    || 50_000,
-                )?,
-                min_interval: config.get_or(
-                    "backingstore",
-                    "walk-prefetch-min-interval",
-                    || Duration::from_millis(10),
-                )?,
-                file_batch_size: config.get_or(
-                    "backingstore",
-                    "walk-prefetch-file-batch-size",
-                    || 2_048,
-                )?,
-                max_concurrent_file_fetches: config
-                    .get_or(
-                        "backingstore",
-                        "walk-prefetch-max-concurrent-file-fetches",
-                        || 4,
-                    )?
-                    .max(1),
-                max_concurrent_manifest_walks: config
-                    .get_or(
-                        "backingstore",
-                        "walk-prefetch-max-concurrent-manifest-walks",
-                        || 4,
-                    )?
-                    .max(1),
-                max_concurrent_prefetches: config
-                    .get_or(
-                        "backingstore",
-                        "walk-prefetch-max-concurrent-prefetches",
-                        || 4,
-                    )?
-                    .max(1),
-                skip_lfs: config.get_or("backingstore", "walk-prefetch-skip-lfs", || true)?,
-            };
-
-            prefetch_manager(
-                prefetch_config,
-                repo.tree_resolver()?,
-                filestore.clone(),
-                parent_hint,
-                walk_detector.clone(),
-                root.into(),
-                |root: PathBuf| {
-                    let repo = Repo::load(root, &Vec::new())?;
-                    let wc = repo.working_copy()?;
-                    wc.read().sparse_matcher()
-                },
-            )
-        } else {
-            // Stick a dummy channel in so we don't need to fuss with Option.
-            flume::bounded(0).0
-        };
-
-        let walk_event_send = if walk_mode == WalkMode::Off {
-            crossfire::mpsc::bounded_blocking(1).0
-        } else {
-            spawn_walk_event_worker(walk_detector.clone(), prefetch_send.clone())
-        };
 
         Ok(Inner {
             treestore,
             filestore,
             repo,
-            mount_path: mount.to_path_buf(),
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -436,11 +266,9 @@ impl BackingStore {
             reload_interval: config
                 .get_opt("backingstore", "reload-interval-secs")?
                 .unwrap_or(Duration::from_mins(5)),
-            prefetch_send,
-            walk_event_send,
-            walk_mode,
+            generation,
+            walk,
             restricted_tree_mode,
-            walk_detector,
         })
     }
 
@@ -603,7 +431,6 @@ impl BackingStore {
 
     /// `dir_size` is the `(num_files, num_dirs)` of the directory containing `path`, if the
     /// caller knows it.
-    #[instrument(level = "trace", skip(self))]
     pub fn witness_file_read(
         &self,
         path: &RepoPath,
@@ -611,38 +438,16 @@ impl BackingStore {
         pid: u32,
         dir_size: Option<(usize, usize)>,
     ) {
-        let inner = self.inner.load();
-
-        if inner.walk_mode == WalkMode::Off {
-            return;
-        }
-
-        if local {
-            inner.walk_detector.file_read(path, pid);
-        } else if !inner.walk_detector.file_loaded_fast(path, pid) {
-            inner.send_walk_event(WalkEvent::FileLoaded(path.to_owned(), dir_size, pid));
-        }
+        self.mount_walk_detector
+            .witness_file_read(self, path, local, pid, dir_size);
     }
 
-    /// Record the size of directory `path` whose inode EdenFS loaded. Only sizes large enough
-    /// to change walk detection reach the detector; this is not a read of the directory.
-    #[instrument(level = "trace", skip(self))]
+    /// Record the size of directory `path` whose inode EdenFS loaded.
     pub fn witness_dir_size(&self, path: &RepoPath, num_files: usize, num_dirs: usize) {
-        let inner = self.inner.load();
-
-        if inner.walk_mode == WalkMode::Off {
-            return;
-        }
-
-        if inner
-            .walk_detector
-            .is_dir_metadata_important(num_files, num_dirs)
-        {
-            inner.send_walk_event(WalkEvent::DirMetadata(path.to_owned(), num_files, num_dirs));
-        }
+        self.mount_walk_detector
+            .witness_dir_size(self, path, num_files, num_dirs);
     }
 
-    #[instrument(level = "trace", skip(self))]
     pub fn witness_dir_read(
         &self,
         path: &RepoPath,
@@ -651,39 +456,12 @@ impl BackingStore {
         num_dirs: usize,
         pid: u32,
     ) {
-        let inner = self.inner.load();
-
-        if inner.walk_mode == WalkMode::Off {
-            return;
-        }
-
-        if local {
-            inner.walk_detector.dir_read(path, pid);
-            if inner
-                .walk_detector
-                .is_dir_metadata_important(num_files, num_dirs)
-            {
-                inner.send_walk_event(WalkEvent::DirMetadata(path.to_owned(), num_files, num_dirs));
-            }
-        } else if !inner
-            .walk_detector
-            .dir_loaded_fast(path, num_files, num_dirs, pid)
-        {
-            inner.send_walk_event(WalkEvent::DirLoaded(
-                path.to_owned(),
-                num_files,
-                num_dirs,
-                pid,
-            ));
-        }
+        self.mount_walk_detector
+            .witness_dir_read(self, path, local, num_files, num_dirs, pid);
     }
 
     pub fn set_parent_hint(&self, parent_id: &str) {
-        tracing::info!(parent_id, "setting parent hint");
-
-        *self.parent_hint.write() = Some(parent_id.to_string());
-
-        self.maybe_reload().notify_prefetch();
+        self.mount_walk_detector.set_parent_hint(self, parent_id);
     }
 
     /// Get cache statistics for the hgcache (Sapling disk cache).
@@ -741,7 +519,7 @@ impl BackingStore {
     //
     // We return an arc_swap::Guard so we only call inner.load() once normally.
     #[instrument(level = "trace", skip(self))]
-    fn maybe_reload(&self) -> arc_swap::Guard<Arc<Inner>> {
+    pub(crate) fn maybe_reload(&self) -> arc_swap::Guard<Arc<Inner>> {
         let inner = self.inner.load();
 
         if inner.create_time.elapsed() < inner.reload_check_interval {
@@ -799,11 +577,9 @@ impl BackingStore {
 
             match Self::new_inner(
                 inner.repo.path(),
-                &inner.mount_path,
                 &inner.extra_configs,
                 new_mtime,
-                self.parent_hint.clone(),
-                inner.walk_detector.clone(),
+                inner.generation + 1,
             ) {
                 Ok(mut new_inner) => {
                     new_inner.last_reload = Instant::now();
@@ -869,7 +645,6 @@ impl Inner {
             filestore: self.filestore.clone(),
             treestore: self.treestore.clone(),
             repo: self.repo.clone(),
-            mount_path: self.mount_path.clone(),
             extra_configs: self.extra_configs.clone(),
 
             touch_file_mtime,
@@ -878,30 +653,10 @@ impl Inner {
             already_reloading: AtomicBool::new(false),
             reload_check_interval: self.reload_check_interval,
             reload_interval: self.reload_interval,
+            generation: self.generation,
 
-            prefetch_send: self.prefetch_send.clone(),
-            walk_event_send: self.walk_event_send.clone(),
-            walk_mode: self.walk_mode,
+            walk: self.walk.clone(),
             restricted_tree_mode: self.restricted_tree_mode,
-            walk_detector: self.walk_detector.clone(),
-        }
-    }
-
-    fn send_walk_event(&self, event: WalkEvent) {
-        match self.walk_event_send.try_send(event) {
-            Ok(()) => {}
-            Err(crossfire::TrySendError::Full(_)) => {
-                tracing::trace!("walk event queue full; dropping event");
-            }
-            Err(crossfire::TrySendError::Disconnected(event)) => {
-                // The worker thread never started or has exited. Keep detecting walks on this
-                // thread rather than stopping silently.
-                static WARNED: AtomicBool = AtomicBool::new(false);
-                if !WARNED.swap(true, Ordering::Relaxed) {
-                    tracing::warn!("walk event worker is gone; handling walk events inline");
-                }
-                handle_walk_event(&self.walk_detector, &self.prefetch_send, event);
-            }
         }
     }
 
@@ -911,14 +666,6 @@ impl Inner {
 
         // Sync pending counters to ODS/OBC.
         metrics::Registry::global().sync();
-    }
-
-    fn notify_prefetch(&self) {
-        if self.walk_mode != WalkMode::Prefetch {
-            return;
-        }
-
-        let _ = self.prefetch_send.try_send(());
     }
 }
 
@@ -1270,7 +1017,6 @@ mod tests {
     use std::collections::BTreeMap;
     use std::fmt;
     use std::path::Path;
-    use std::time::Duration;
 
     use edenapi::types::SaplingRemoteApiServerError;
     use edenapi::types::SaplingRemoteApiServerErrorKind;
@@ -1488,36 +1234,5 @@ mod tests {
             source.downcast_ref::<TestNetworkError>().is_some(),
             "non-PermissionDenied source should remain visible: {source:?}"
         );
-    }
-
-    #[test]
-    fn test_walk_event_worker_detects_and_kicks() -> Result<()> {
-        let mut detector = walkdetector::Detector::new();
-        detector.set_walk_threshold(2);
-        let (prefetch_send, prefetch_recv) = flume::bounded(1);
-        let send = spawn_walk_event_worker(detector.clone(), prefetch_send);
-
-        for name in ["dir/a", "dir/b"] {
-            send.send(WalkEvent::FileLoaded(
-                RepoPathBuf::from_string(name.to_string())?,
-                None,
-                0,
-            ))?;
-        }
-        send.send(WalkEvent::DirLoaded(
-            RepoPathBuf::from_string("dir/sub".to_string())?,
-            0,
-            0,
-            0,
-        ))?;
-
-        // The second file load forms the walk, which kicks prefetching.
-        prefetch_recv.recv_timeout(Duration::from_secs(10))?;
-        assert_eq!(
-            detector.file_walks(),
-            vec![(RepoPathBuf::from_string("dir".to_string())?, 0)]
-        );
-
-        Ok(())
     }
 }
