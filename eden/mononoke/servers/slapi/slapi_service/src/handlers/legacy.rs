@@ -235,14 +235,9 @@ async fn list_bookmarks_for_pattern<R: MononokeRepo>(
     max: u64,
     kinds: &[EdenApiBookmarkKind],
 ) -> Result<Vec<BookmarkEntry>, Error> {
-    // Default to PullDefaultPublishing only when kinds is empty.
-    let kinds: &[EdenApiBookmarkKind] = if kinds.is_empty() {
-        &[EdenApiBookmarkKind::PullDefaultPublishing]
-    } else {
-        kinds
-    };
-
-    // Derive include_scratch from kinds.
+    // A prefix match lists every non-scratch bookmark; `kinds` only decides
+    // whether it lists scratch bookmarks as well. An exact match resolves a
+    // bookmark of any kind.
     let include_scratch = kinds.contains(&EdenApiBookmarkKind::Scratch);
 
     if pattern.ends_with('*') {

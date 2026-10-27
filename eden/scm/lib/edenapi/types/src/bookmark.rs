@@ -216,8 +216,10 @@ pub struct ListBookmarkPatternsRequest {
     #[id(0)]
     pub patterns: Vec<String>,
 
-    /// Which bookmark kinds to include in results.
-    /// Empty means PullDefaultPublishing only (the most common case).
+    /// Whether prefix matches include scratch bookmarks: they do if this
+    /// contains `Scratch`. Prefix matches always include every non-scratch
+    /// bookmark, and exact matches resolve a bookmark of any kind, so the
+    /// other kinds make no difference.
     #[id(1)]
     pub kinds: Vec<BookmarkKind>,
 }

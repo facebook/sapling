@@ -250,9 +250,10 @@ py_class!(pub class client |py| {
     ///
     /// List bookmarks matching patterns. Patterns can be exact names or
     /// prefix patterns ending with '*' (e.g., "foo*" matches "foo", "foobar", etc.).
-    /// `kinds` is an optional list of strings specifying which bookmark kinds to
-    /// include: "Scratch", "Publishing", "PullDefaultPublishing".
-    /// When kinds is None or empty, only PullDefaultPublishing bookmarks are returned.
+    /// `kinds` is an optional list of bookmark kinds: "Scratch", "Publishing",
+    /// "PullDefaultPublishing". A prefix pattern returns every non-scratch
+    /// bookmark with that prefix, and scratch bookmarks too if `kinds` contains
+    /// "Scratch". An exact name returns a bookmark of any kind.
     def listbookmarkpatterns(
         &self,
         patterns: Vec<String>,

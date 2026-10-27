@@ -250,7 +250,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
 
     /// List bookmarks matching patterns (replacement for wireproto listkeyspatterns).
     /// Patterns can be exact bookmark names or prefix patterns ending with '*'.
-    /// `kinds` specifies which bookmark kinds to include; empty means PullDefaultPublishing only.
+    /// A prefix pattern matches every non-scratch bookmark with that prefix, and
+    /// scratch bookmarks too if `kinds` contains `Scratch`; `kinds` does not tell
+    /// the other kinds apart. An exact name matches a bookmark of any kind.
     async fn list_bookmark_patterns(
         &self,
         patterns: Vec<String>,
