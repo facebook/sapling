@@ -146,6 +146,73 @@ pub struct FileLogRevision {
     pub change: u64,
     pub action: Action,
     pub file_type: String,
+    pub integrations: Vec<Integration>,
+}
+
+/// One integration record as p4 stores it. `file` and the revisions are the other side's:
+/// the source of a `... from` record, the target of a `... into` one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Integration {
+    pub how: IntegrationHow,
+    pub file: String,
+    /// The revisions after `start_rev` up to `end_rev`; `None` for `#none`, the start.
+    pub start_rev: Option<u32>,
+    pub end_rev: u32,
+}
+
+/// Each kind comes in both directions: the target's record and the source's.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IntegrationHow {
+    BranchFrom,
+    BranchInto,
+    CopyFrom,
+    CopyInto,
+    MovedFrom,
+    MovedInto,
+    MergeFrom,
+    MergeInto,
+    EditFrom,
+    EditInto,
+    IntegrateFrom,
+    IntegrateInto,
+    Ignored,
+    IgnoredBy,
+    DeleteFrom,
+    DeleteInto,
+    AddFrom,
+    AddInto,
+    Undid,
+    UndoneBy,
+    /// One added by a newer server.
+    Other(String),
+}
+
+impl IntegrationHow {
+    pub fn from_p4(how: String) -> Self {
+        match how.as_str() {
+            "branch from" => Self::BranchFrom,
+            "branch into" => Self::BranchInto,
+            "copy from" => Self::CopyFrom,
+            "copy into" => Self::CopyInto,
+            "moved from" => Self::MovedFrom,
+            "moved into" => Self::MovedInto,
+            "merge from" => Self::MergeFrom,
+            "merge into" => Self::MergeInto,
+            "edit from" => Self::EditFrom,
+            "edit into" => Self::EditInto,
+            "integrate from" => Self::IntegrateFrom,
+            "integrate into" => Self::IntegrateInto,
+            "ignored" => Self::Ignored,
+            "ignored by" => Self::IgnoredBy,
+            "delete from" => Self::DeleteFrom,
+            "delete into" => Self::DeleteInto,
+            "add from" => Self::AddFrom,
+            "add into" => Self::AddInto,
+            "undid" => Self::Undid,
+            "undone by" => Self::UndoneBy,
+            _ => Self::Other(how),
+        }
+    }
 }
 
 /// What `p4 info` reports about the server, enough to tell one server from another.
