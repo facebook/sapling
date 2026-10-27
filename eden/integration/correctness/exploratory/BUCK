@@ -1602,8 +1602,82 @@ python_library(
 )
 
 # Typed task identity, the findings report, replay, and the run admission and
+# verdict-file readers. Nothing here talks to a service.
+python_library(
+    name = "tasking",
+    srcs = [
+        "findings.py",
+        "schemas.py",
+    ],
+    deps = [
+        ":campaign",
+        ":core_checker",
+        ":core_containment",
+        ":scheduler",
+        ":target",
+    ],
+)
 
 # cli.py ships with the runner libraries so the runner lookup
+
+python_library(
+    name = "tasking_fixtures",
+    srcs = ["test/tasking_fixtures.py"],
+    deps = [
+        ":core_checker",
+        ":core_containment",
+        ":fake_target",
+        ":scheduler",
+        ":target",
+        ":tasking",
+    ],
+)
+
+python_unittest(
+    name = "schemas_test",
+    srcs = ["test/schemas_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":target",
+        ":tasking",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "findings_records_test",
+    srcs = ["test/findings_records_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":core_containment",
+        ":target",
+        ":tasking",
+        ":tasking_fixtures",
+    ],
+)
+
+python_unittest(
+    name = "findings_keying_test",
+    srcs = ["test/findings_keying_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":campaign",
+        ":core_checker",
+        ":corpus",
+        ":corpus_author",
+        ":edenfs_judging",
+        ":edenfs_target",
+        ":fake_target",
+        ":target",
+        ":tasking",
+        ":tasking_fixtures",
+    ],
+)
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
