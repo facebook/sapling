@@ -147,6 +147,9 @@ fn symbolize_captured_trace() -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::Ordering;
+
     use super::*;
 
     #[test]
@@ -179,5 +182,40 @@ mod tests {
         assert!(has_captured_trace());
         let trace = symbolize_captured_trace();
         assert!(trace.is_empty());
+    }
+
+    // A C++ exception thrown while a thread runs its TLS destructors reaches
+    // the throw hook after CAPTURED is gone.
+    #[test]
+    fn test_capture_after_tls_destruction() {
+        static PANICKED: AtomicBool = AtomicBool::new(false);
+        struct CaptureOnDrop;
+        impl Drop for CaptureOnDrop {
+            fn drop(&mut self) {
+                let result = std::panic::catch_unwind(|| {
+                    capture_backtrace(8);
+                    let _ = has_captured_trace();
+                    let _ = symbolize_captured_trace();
+                    clear_captured_trace();
+                });
+                PANICKED.store(result.is_err(), Ordering::SeqCst);
+            }
+        }
+        thread_local! {
+            static ON_DROP: RefCell<Option<CaptureOnDrop>> = const { RefCell::new(None) };
+        }
+        std::thread::spawn(|| {
+            // TLS destructors run in reverse registration order: register
+            // ON_DROP first so CAPTURED is destroyed before it runs.
+            ON_DROP.with(|slot| *slot.borrow_mut() = Some(CaptureOnDrop));
+            capture_backtrace(8);
+            assert!(has_captured_trace());
+        })
+        .join()
+        .expect("thread should exit cleanly");
+        // FIXME: the capture must not panic once CAPTURED is gone. In the
+        // daemon this panic is raised inside a cxx bridge function and aborts
+        // the process.
+        assert!(PANICKED.load(Ordering::SeqCst));
     }
 }
