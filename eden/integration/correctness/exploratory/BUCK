@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
@@ -1129,16 +1130,70 @@ python_unittest(
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 
 python_library(
+    name = "corpus",
+    srcs = [
+        "test/corpus/export.py",
+        "test/corpus/loader.py",
+    ],
+    deps = [
+        ":corpus_author",
+        ":target",
+        ":waiting",
+    ],
+)
+
+# `buck2 run fbcode//eden/integration/correctness/exploratory:corpus_export -- <family>/<case> <dir>`
+python_binary(
+    name = "corpus_export",
+    main_function = "eden.integration.correctness.exploratory.test.corpus.export.main",
+    deps = [":corpus"],
+)
+
+python_library(
     name = "corpus_author",
     srcs = [
         "test/corpus/author.py",
+        "test/corpus/catalog.py",
+        "test/corpus/families/__init__.py",
+        "test/corpus/families/aggregate_omission.py",
+        "test/corpus/families/common.py",
     ],
     deps = [
         ":core_checker",
         ":edenfs_encoding",
+        ":edenfs_target",
         ":edenfs_testing",
         ":target",
         "//eden/integration/correctness:repo",
+    ],
+)
+
+python_library(
+    name = "waiting",
+    srcs = ["test/waiting.py"],
+)
+
+python_unittest(
+    name = "waiting_test",
+    srcs = ["test/waiting_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [":waiting"],
+)
+
+python_unittest(
+    name = "corpus_engine_test",
+    srcs = ["test/corpus/corpus_engine_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":core_checker",
+        ":corpus",
+        ":edenfs_contracts",
+        ":edenfs_target",
+        ":target",
+        ":testing",
+        ":waiting",
     ],
 )
 
