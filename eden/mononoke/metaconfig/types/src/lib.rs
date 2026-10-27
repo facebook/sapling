@@ -1095,7 +1095,17 @@ pub struct PushrebaseFlags {
     /// Checked after `merge_resolution_excluded_path_prefixes`; gated by the
     /// `pushrebase_take_incoming_enabled` JustKnob. Empty everywhere by
     /// default, in which case merge resolution is unchanged.
+    ///
+    /// Deprecated in favour of the caller asking per request
+    /// (`merge_resolution_take_incoming`); kept while the prebuilt ingestion
+    /// jobs move to the pushvar.
     pub merge_resolution_take_incoming_prefixes: PrefixTrie,
+    /// Per-request: the caller asked for every content conflict in this push
+    /// to resolve to the pushed side (`MERGE_TAKE_INCOMING_PUSHVAR_KEY`), the
+    /// way `git rebase -X theirs` would on a checkout. Gated by the
+    /// `pushrebase_take_incoming_enabled` JustKnob per repo. Request-scoped,
+    /// never loaded from configerator (mirrors `merge_resolution_override`).
+    pub merge_resolution_take_incoming: bool,
     /// Per-request override for `pushrebase_enable_merge_resolution`.
     /// `UseJk` defers to the JustKnob; `ForceOn`/`ForceOff` wins. Request-scoped,
     /// never loaded from configerator — set on a cloned `PushrebaseFlags`
@@ -1112,6 +1122,22 @@ pub const LAND_INSTANCE_ID_PUSHVAR_KEY: &str = "LAND_INSTANCE_ID";
 
 /// Pushvar key for the Phabricator diff FBID (see `PushrebaseFlags::phab_diff_id`).
 pub const PHAB_DIFF_ID_PUSHVAR_KEY: &str = "PHAB_DIFF_ID";
+
+/// Pushvar key for the caller's take-incoming request (see
+/// `PushrebaseFlags::merge_resolution_take_incoming`). Spelled as a git push
+/// header so a direct `git push` sets it with
+/// `-c http.extraHeader='x-git-merge-take-incoming: true'`; Landcastle sends
+/// the same key for a tagged diff.
+pub const MERGE_TAKE_INCOMING_PUSHVAR_KEY: &str = "x-git-merge-take-incoming";
+
+/// Whether a pushvar value asks for take-incoming: `"true"` or `"1"`,
+/// case-insensitive. Missing, empty or anything else is a no.
+pub fn merge_take_incoming_from_pushvar_value(raw: Option<&[u8]>) -> bool {
+    matches!(
+        raw.map(<[u8]>::to_ascii_lowercase).as_deref(),
+        Some(b"true" | b"1")
+    )
+}
 
 /// Per-request override for the `pushrebase_enable_merge_resolution` JustKnob.
 ///
@@ -1233,6 +1259,7 @@ impl Default for PushrebaseFlags {
             monitoring_bookmark: None,
             merge_resolution_excluded_path_prefixes: PrefixTrie::new(),
             merge_resolution_take_incoming_prefixes: PrefixTrie::new(),
+            merge_resolution_take_incoming: false,
             merge_resolution_override: MergeResolutionOverride::UseJk,
             land_instance_id: None,
             phab_diff_id: None,

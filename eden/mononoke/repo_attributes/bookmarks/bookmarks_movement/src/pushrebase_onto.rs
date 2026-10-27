@@ -16,10 +16,12 @@ use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use metaconfig_types::LAND_INSTANCE_ID_PUSHVAR_KEY;
+use metaconfig_types::MERGE_TAKE_INCOMING_PUSHVAR_KEY;
 use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::PHAB_DIFF_ID_PUSHVAR_KEY;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfigRef;
+use metaconfig_types::merge_take_incoming_from_pushvar_value;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::RepoLockPolicy;
 use repo_authorization::AuthorizationContext;
@@ -60,6 +62,11 @@ pub fn pushrebase_flags(
     flags.merge_resolution_override = MergeResolutionOverride::from_pushvar_value(
         pushvars
             .and_then(|p| p.get(MergeResolutionOverride::PUSHVAR_KEY))
+            .map(|b| b.as_ref()),
+    );
+    flags.merge_resolution_take_incoming = merge_take_incoming_from_pushvar_value(
+        pushvars
+            .and_then(|p| p.get(MERGE_TAKE_INCOMING_PUSHVAR_KEY))
             .map(|b| b.as_ref()),
     );
     flags.land_instance_id = pushvars

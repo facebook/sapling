@@ -142,8 +142,9 @@ pub use queue::PushrebaseRequest;
 use queue::QueuedPushrebaseRequest;
 use take_incoming::Resolution;
 use take_incoming::TakeIncoming;
+use take_incoming::TakeIncomingScope;
 use take_incoming::log_take_incoming;
-use take_incoming::take_incoming_prefixes;
+use take_incoming::take_incoming_scope;
 use three_way_merge::MergeResult;
 use three_way_merge::merge_text;
 use three_way_merge::merge_text_prefer_local;
@@ -885,7 +886,7 @@ pub async fn rebase_stack_onto_manifest(
                 max_conflicts,
                 max_file_size,
                 &config.merge_resolution_excluded_path_prefixes,
-                take_incoming_prefixes(config, reponame),
+                take_incoming_scope(config, reponame),
             ) {
                 Ok(overrides) => (Some(overrides), conflicts.len() as u64),
                 Err(err) => {
@@ -2064,7 +2065,7 @@ async fn check_pushrebase_conflicts_with(
                         max_merge_file_size,
                         derive_manifests,
                         &config.merge_resolution_excluded_path_prefixes,
-                        take_incoming_prefixes(config, reponame),
+                        take_incoming_scope(config, reponame),
                     )
                     .await,
                 )
@@ -2924,7 +2925,7 @@ fn collect_overlap_states(
     max_conflicts: usize,
     max_file_size: u64,
     excluded_path_prefixes: &PrefixTrie,
-    take_incoming_prefixes: Option<&PrefixTrie>,
+    take_incoming: Option<TakeIncomingScope<'_>>,
 ) -> Result<Vec<MergedFileInfo>, MergeResolutionError> {
     if conflicts.iter().any(|c| c.left != c.right) {
         return Err(MergeResolutionError::Skipped(
@@ -2977,13 +2978,13 @@ fn collect_overlap_states(
             // only the two manifests, so a path that would be taken verbatim
             // keeps today's outcome under a reason of its own, and a text
             // path merges as usual.
-            if take_incoming_prefixes.is_some_and(|trie| trie.contains_prefix(&path))
+            if take_incoming.is_some_and(|scope| scope.covers(&path))
                 && changes
                     .iter()
                     .all(|fc| matches!(fc, FileChange::Change(tc) if tc.git_lfs().is_lfs_pointer()))
             {
                 return Err(MergeResolutionError::Skipped(format!(
-                    "file {path} is under a take-incoming prefix but the baseline is off-branch",
+                    "file {path} would take the pushed side but the baseline is off-branch",
                 )));
             }
             // Safe to skip the merge guards below: the cascade equalises both
@@ -3223,7 +3224,7 @@ async fn collect_merge_file_info(
     max_file_size: u64,
     derive_manifests: bool,
     excluded_path_prefixes: &PrefixTrie,
-    take_incoming_prefixes: Option<&PrefixTrie>,
+    take_incoming: Option<TakeIncomingScope<'_>>,
 ) -> Result<Vec<MergedFileInfo>, MergeResolutionError> {
     // Only handle exact path matches (not prefix conflicts like dir vs dir/file)
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
@@ -3325,7 +3326,7 @@ async fn collect_merge_file_info(
         };
 
         let resolution = Resolution::for_path(
-            take_incoming_prefixes,
+            take_incoming,
             &non_root_path,
             client_fc.git_lfs().is_lfs_pointer(),
         );
@@ -3597,6 +3598,10 @@ async fn create_rebased_changesets_with(
 ) -> Result<RebaseOutput, PushrebaseError> {
     let rebased_set_ids: HashSet<_> = rebased_set.iter().map(|cs| cs.get_changeset_id()).collect();
 
+    // Only consulted for the Scuba row of a path that took the pushed side,
+    // which exists only when a scope was present at eligibility.
+    let take_incoming = take_incoming_scope(config, repo.repo_identity().name())
+        .unwrap_or(TakeIncomingScope::Requested);
     let date = if config.rewritedates {
         Some(Timestamp::now())
     } else {
@@ -3691,6 +3696,7 @@ async fn create_rebased_changesets_with(
                         bcs: &bcs_old,
                         path,
                         resolution,
+                        scope: take_incoming,
                         base: &base,
                         local: &local_file,
                         other: &other_file,
@@ -3722,6 +3728,7 @@ async fn create_rebased_changesets_with(
                                 bcs: &bcs_old,
                                 path,
                                 resolution,
+                                scope: take_incoming,
                                 base: &base,
                                 local: &local_file,
                                 other: &other_file,

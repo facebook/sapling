@@ -8647,7 +8647,8 @@ async fn pushrebase_take_incoming_off_is_todays_conflict(fb: FacebookInit) -> Re
     .await;
     assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
 
-    // Knob on but no prefixes configured: likewise, and the knob is not read.
+    // Knob on but neither requested nor prefixes configured: likewise, and
+    // the knob is not read.
     init_just_knobs_for_merge_test();
     let res = do_pushrebase_bonsai(
         &ctx,
@@ -8674,6 +8675,102 @@ async fn pushrebase_take_incoming_rejects_conflict_outside_prefixes(
     // and the whole land rejects, exactly as today.
     init_just_knobs_for_take_incoming_test(true);
     let flags = take_incoming_flags(&["prebuilt_manifest.json"]);
+    let res = do_pushrebase_bonsai(&ctx, &repo, &flags, &book, &hashset![client_bcs], &[]).await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+    Ok(())
+}
+
+/// The caller asked for the pushed side (the pushvar), no prefixes configured.
+fn take_incoming_requested_flags() -> PushrebaseFlags {
+    PushrebaseFlags {
+        merge_resolution_take_incoming: true,
+        ..Default::default()
+    }
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_requested_resolves_without_prefixes(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Same race, no path list: the request alone covers the APK (verbatim)
+    // and the manifest (prefer incoming), and leaves the untouched ArtB and
+    // README as the server has them.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let (book, client_bcs) = take_incoming_race(&ctx, &repo).await?;
+
+    init_just_knobs_for_take_incoming_test(true);
+    let flags = take_incoming_requested_flags();
+    let result =
+        do_pushrebase_bonsai(&ctx, &repo, &flags, &book, &hashset![client_bcs], &[]).await?;
+
+    let result_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
+    ensure_content(
+        &ctx,
+        result_hg,
+        &repo,
+        btreemap! {
+            "prebuilt_manifest.json".to_string() => manifest(3, 2),
+            "ArtA/pkg.apk".to_string() => apk(3),
+            "ArtB/pkg.apk".to_string() => apk(2),
+            "README".to_string() => "v1\n".to_string(),
+        },
+    )
+    .await?;
+    let result_bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
+    match result_bcs
+        .file_changes_map()
+        .get(&NonRootMPath::new("ArtA/pkg.apk")?)
+    {
+        Some(FileChange::Change(tc)) => assert!(tc.git_lfs().is_lfs_pointer()),
+        other => panic!("unexpected ArtA/pkg.apk change: {other:?}"),
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_requested_needs_the_knob(fb: FacebookInit) -> Result<(), Error> {
+    // The request is honoured only where the repo knob allows it: knob off,
+    // the race rejects exactly as today.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let (book, client_bcs) = take_incoming_race(&ctx, &repo).await?;
+
+    init_just_knobs_for_take_incoming_test(false);
+    let flags = take_incoming_requested_flags();
+    let res = do_pushrebase_bonsai(&ctx, &repo, &flags, &book, &hashset![client_bcs], &[]).await;
+    assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn pushrebase_take_incoming_requested_still_rejects_both_sides_added(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // `-X theirs` resolves content conflicts only: a path new on both sides
+    // has no base and is not a merge, so the request does not cover it.
+    let ctx = CoreContext::test_mock(fb);
+    let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+    let lfs = GitLfs::canonical_pointer();
+    let base = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("prebuilt_manifest.json", manifest(1, 1))
+        .commit()
+        .await?;
+    let server = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file_with_type_and_lfs("ArtC/pkg.apk", apk(2), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let book = BookmarkKey::new("master")?;
+    let hg_server = repo.derive_hg_changeset(&ctx, server).await?;
+    set_bookmark(ctx.clone(), &repo, &book, &format!("{hg_server}")).await?;
+    let client = CreateCommitContext::new(&ctx, &repo, vec![base])
+        .add_file_with_type_and_lfs("ArtC/pkg.apk", apk(3), FileType::Regular, lfs)
+        .commit()
+        .await?;
+    let client_bcs = client.load(&ctx, repo.repo_blobstore()).await?;
+
+    init_just_knobs_for_take_incoming_test(true);
+    let flags = take_incoming_requested_flags();
     let res = do_pushrebase_bonsai(&ctx, &repo, &flags, &book, &hashset![client_bcs], &[]).await;
     assert!(matches!(res, Err(PushrebaseError::Conflicts(_))), "{res:?}");
     Ok(())
@@ -8749,7 +8846,9 @@ async fn pushrebase_take_incoming_rejects_already_landed_and_superseded(
         2_000,
         true,
         &no_excluded,
-        Some(&flags.merge_resolution_take_incoming_prefixes),
+        Some(TakeIncomingScope::Prefixes(
+            &flags.merge_resolution_take_incoming_prefixes,
+        )),
     )
     .await
     .expect_err("the superseded pointer must be rejected");

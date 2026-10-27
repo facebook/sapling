@@ -1639,6 +1639,7 @@ mod test {
                         monitoring_bookmark: None,
                         merge_resolution_excluded_path_prefixes: Default::default(),
                         merge_resolution_take_incoming_prefixes: Default::default(),
+                        merge_resolution_take_incoming: false, // request-scoped, not loaded from config
                         merge_resolution_override: MergeResolutionOverride::UseJk,
                         land_instance_id: None,
                         phab_diff_id: None,
