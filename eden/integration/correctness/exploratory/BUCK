@@ -17,6 +17,7 @@ python_library(
         "core/facts.py",
         "core/graph_rules.py",
         "core/history.py",
+        "core/identity.py",
         "core/jsonio.py",
         "core/property.py",
         "core/runspec.py",
@@ -100,6 +101,7 @@ python_library(
 python_library(
     name = "core_checker",
     srcs = [
+        "core/checker.py",
         "core/semantics.py",
         "core/solver.py",
         "core/sources.py",
@@ -213,10 +215,32 @@ python_unittest(
     deps = [":core_checker"],
 )
 
+python_unittest(
+    name = "core_checker_test",
+    srcs = ["core/test/checker_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    resources = [],
+    deps = [
+        ":checker_testing",
+        ":core_checker",
+        ":target",
+    ],
+)
+
 python_library(
     name = "testing",
     srcs = ["core/test/testing.py"],
     deps = [
+        ":target",
+    ],
+)
+
+python_library(
+    name = "checker_testing",
+    srcs = ["core/test/checker_testing.py"],
+    deps = [
+        ":core_checker",
         ":target",
     ],
 )
