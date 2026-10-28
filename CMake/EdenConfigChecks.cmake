@@ -85,6 +85,18 @@ find_package(pexpect)
 
 if (NOT WIN32)
   find_package(CURL REQUIRED)
+  # The static libcurl that getdeps builds also needs nghttp2.
+  find_library(NGHTTP2_LIBRARY nghttp2)
+  if(NGHTTP2_LIBRARY AND CURL_LIBRARY MATCHES "\\.a$")
+    set_property(
+      TARGET CURL::libcurl
+      APPEND PROPERTY INTERFACE_LINK_LIBRARIES "${NGHTTP2_LIBRARY}"
+    )
+  endif()
+  find_library(SYSTEMD_LIBRARY systemd)
+  if(SYSTEMD_LIBRARY)
+    set(SYSTEMD_LIBRARIES "${SYSTEMD_LIBRARY}")
+  endif()
 endif()
 
 if (WIN32)

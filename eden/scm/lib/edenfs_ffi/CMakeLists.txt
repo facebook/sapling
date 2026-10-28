@@ -3,15 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# Due to some tools changing '-' to '_' when building,
-# this library/crate is named using an '_' so that it can link successfully.
-rust_static_library(rust_edenfs_ffi CRATE edenfs_ffi USE_CXX_INCLUDE)
-
-install_rust_static_library(
-  rust_edenfs_ffi
-  INSTALL_DIR lib
-)
-
 rust_cxx_bridge(
   edenfs_ffi
   "src/lib.rs"
@@ -44,7 +35,7 @@ target_include_directories(
 target_link_libraries(
   edenfs_ffi
   PUBLIC
-  rust_edenfs_ffi
+  rust_edenfs_staticlib
   Folly::folly
   edencommon::edencommon_utils
   fmt::fmt

@@ -1,0 +1,37 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+# Only the CMake build uses this crate, see src/lib.rs.
+rust_library(
+    name = "edenfs-staticlib",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "crate_type": ["staticlib"],
+        },
+        "cargo_toml_config": {
+            # Sapling's termwiz from crates.io needs the std feature of the git
+            # wezterm-dynamic that this workspace patches in.
+            "extra_buck_dependencies": {
+                "dependencies": ["fbsource//third-party/rust:wezterm-dynamic"],
+            },
+            "features": {
+                "fb": ["sapling-backingstore/fb"],
+            },
+        },
+    },
+    # redirect-ffi's thrift client doesn't build for Windows with Buck.
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/fs/rust/backtrace_ffi:backtrace-ffi",
+        "//eden/fs/rust/manifold_ffi:manifold-ffi",
+        "//eden/fs/rust/redirect_ffi:redirect-ffi",
+        "//eden/scm/lib/backingstore:backingstore",
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi",
+    ],
+)

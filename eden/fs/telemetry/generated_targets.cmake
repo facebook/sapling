@@ -113,6 +113,9 @@ eden_add_library(eden_fs_telemetry_throw_trace_capture
   EXPORTED_DEPS
     ${EDEN_FS_TELEMETRY_THROW_TRACE_CAPTURE_SELECT_DEPS}
 )
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_options(eden_fs_telemetry_throw_trace_capture INTERFACE "-Wl,--wrap=__cxa_throw")
+endif ()
 
 eden_add_library(eden_fs_telemetry_stack_trace_uploader
   SRCS

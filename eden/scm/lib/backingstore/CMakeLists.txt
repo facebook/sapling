@@ -3,22 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-if (IS_FB_BUILD)
-  rust_static_library(
-    rust_backingstore
-    CRATE backingstore
-    USE_CXX_INCLUDE
-    FEATURES fb)
-else()
-  rust_static_library(rust_backingstore CRATE backingstore USE_CXX_INCLUDE)
-endif()
-
-install_rust_static_library(
-  rust_backingstore
-  EXPORT mercurial
-  INSTALL_DIR lib
-)
-
 rust_cxx_bridge(
   backingstore
   "src/ffi.rs"
@@ -56,13 +40,13 @@ target_link_libraries(
   PUBLIC
   edencommon::edencommon_os
   ${SAPLING_NATIVE_BACKINGSTORE_DEPS}
-  rust_backingstore
+  rust_edenfs_staticlib
   backingstore_iobuf
   fmt::fmt
   Folly::folly
 )
 
-rust_cxx_header(rust_cxx LIBS rust_backingstore)
+rust_cxx_header(rust_cxx LIBS rust_edenfs_staticlib)
 
 # curl used in the Rust crate has its own copy of curl compiled and it uses
 # Crypt32 and Secur32 on Windows. We need to declare the link dependencies here

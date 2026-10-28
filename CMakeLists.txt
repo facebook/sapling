@@ -3,8 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# The add_fbthrift_library() calls require CMake 3.8+
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+# Policy CMP0099, which passes link options such as throw_trace_capture's --wrap
+# through the private dependencies of static libraries, requires CMake 3.17.
+cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 
 # We use the GoogleTest module if it is available (only in CMake 3.9+)
 # It requires CMP0054 and CMP0057 to be enabled.

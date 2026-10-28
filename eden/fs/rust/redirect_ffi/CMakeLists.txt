@@ -5,4 +5,4 @@
 
 rust_cxx_bridge(redirect_ffi "src/lib.rs")
 target_sources(redirect_ffi PRIVATE src/ffi.cpp)
-target_link_libraries(redirect_ffi PUBLIC eden_service_thrift_cpp)
+target_link_libraries(redirect_ffi PUBLIC rust_edenfs_staticlib eden_service_thrift_cpp)

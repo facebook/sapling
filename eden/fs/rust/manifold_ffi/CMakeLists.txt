@@ -4,3 +4,4 @@
 # GNU General Public License version 2.
 
 rust_cxx_bridge(manifold_ffi "src/lib.rs")
+target_link_libraries(manifold_ffi PUBLIC rust_edenfs_staticlib)

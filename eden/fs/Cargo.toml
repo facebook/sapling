@@ -176,6 +176,7 @@ members = [
   "rust/backtrace_ffi",
   "rust/edenfs-asserted-states",
   "rust/edenfs-asserted-states-client",
+  "rust/edenfs-staticlib",
   "rust/edenfs-telemetry",
   "rust/manifold_ffi",
   "rust/redirect_ffi",
