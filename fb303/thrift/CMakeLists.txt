@@ -60,3 +60,26 @@ if (PYTHON_EXTENSIONS)
     EXPORT fb303-exports
   )
 endif ()
+
+if (FB303_THRIFT_PYTHON)
+  include(FBThriftPythonLibrary)
+  add_fbthrift_python_library(
+    fb303_core_thrift_python
+    fb303_core.thrift
+    THRIFT_INCLUDE_DIR "${INCLUDE_INSTALL_DIR}/thrift-files"
+    SERVICES
+      BaseService
+  )
+  add_library(
+    fb303::fb303_core_thrift_python.py_lib ALIAS fb303_core_thrift_python.py_lib
+  )
+  add_library(
+    fb303::fb303_core_thrift_python.thrift_includes
+    ALIAS fb303_core_thrift_python.thrift_includes
+  )
+  install_fb_python_library(fb303_core_thrift_python EXPORT fb303-exports)
+  install(
+    TARGETS fb303_core_thrift_python.thrift_includes
+    EXPORT fb303-exports
+  )
+endif ()
