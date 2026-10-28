@@ -436,6 +436,35 @@ class NotifyTest(testcase.EdenRepoTest):
             added_hello2, changes_after_left, msg=f"changes: {changes_after_left}"
         )
 
+    async def test_debug_subscribe_with_underscore_state(self) -> None:
+        # A state whose name contains an underscore is asserted under the lock
+        # name "my_state"; the journal reports that name back.
+        subscription = await self.subscribe_with_states(["my_state"])
+        event = await self.wait_for_next_event(subscription)
+        self.assertIsNotNone(event)
+        self.assertListEqual(event["changes"], [])
+
+        state_process = await self.enter_state("my_state")
+        await self.wait_for_state("my_state")
+        event = await self.wait_for_next_event(subscription)
+        self.assertIsNotNone(event)
+        # The Entered event for "my_state" is not recognized: the notification
+        # name "my_state" is mapped back to "my.state", which is not tracked, so
+        # the raw state change is passed through as an ordinary change.
+        self.assertNotIn("event_type", event, msg=f"event: {event}")
+        self.assertIn(
+            {"StateChange": {"StateEntered": {"name": "my_state"}}},
+            event["changes"],
+            msg=f"event: {event}",
+        )
+
+        # Kill the state holder. The wrapper never saw the state as asserted,
+        # so its timer check does not run and no Left event is ever reported.
+        state_process.terminate()
+        await state_process.wait()
+        event = await self.wait_for_next_event(subscription, attempt=3)
+        self.assertIsNone(event, msg=f"event: {event}")
+
     async def test_debug_subscribe_with_multiple_states(self) -> None:
         subscription = await self.subscribe_with_states(["hello", "goodbye"])
         event = await self.wait_for_next_event(subscription)

@@ -900,6 +900,37 @@ mod tests {
     }
 
     #[test]
+    fn test_state_events_for_a_state_name_with_an_underscore() -> anyhow::Result<()> {
+        let mount_point = std::env::temp_dir().join("test_mount_underscore");
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
+        let journal_pos = JournalPosition {
+            mount_generation: 0,
+            sequence_number: 0,
+            snapshot_hash: vec![],
+        };
+        let tracked_states = vec!["my_state".to_string()];
+        let mut asserted_states = HashSet::new();
+        let changes_since = ChangesSinceV2Result {
+            to_position: journal_pos.clone(),
+            changes: vec![ChangeNotification::StateChange(
+                StateChangeNotification::StateEntered(StateEntered {
+                    name: util::lock::sanitize_lock_name("my_state"),
+                }),
+            )],
+        };
+
+        let result = client.insert_change_events(
+            &tracked_states,
+            &mut asserted_states,
+            changes_since.clone(),
+        );
+
+        assert_eq!(result, vec![Changes::ChangesSince(changes_since)]);
+        assert!(asserted_states.is_empty());
+        Ok(())
+    }
+
+    #[test]
     fn test_insert_change_events() -> anyhow::Result<()> {
         let bytify = |str: &str| str.as_bytes().to_vec();
 
