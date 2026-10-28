@@ -428,12 +428,11 @@ class NotifyTest(testcase.EdenRepoTest):
             event = await self.wait_for_next_event(subscription, attempt=1)
 
         # The state was asserted before the stream started, so the change made
-        # while it was asserted is delivered at once instead of being deferred
-        # until the state is left.
-        self.assertIn(
+        # while it was asserted is deferred until the state is left.
+        self.assertNotIn(
             added_hello2, changes_before_left, msg=f"changes: {changes_before_left}"
         )
-        self.assertNotIn(
+        self.assertIn(
             added_hello2, changes_after_left, msg=f"changes: {changes_after_left}"
         )
 

@@ -296,10 +296,18 @@ impl StreamingChangesClient {
         self.instrument("stream_changes_since_with_deferral");
 
         let mut deferred_changes: Vec<ChangeNotification> = Vec::new();
-        let mut asserted_states = HashSet::new();
+        let initially_asserted_states = match known_asserted_states {
+            Some(known_states) => self.filter_states(states, known_states),
+            None => self.which_states_asserted(states)?,
+        };
+        let mut asserted_states = initially_asserted_states.clone();
 
         let stream = self
-            ._stream_changes_since_with_states_wrapper(inner_stream, states, known_asserted_states)
+            ._stream_changes_since_with_states_wrapper(
+                inner_stream,
+                states,
+                Some(&initially_asserted_states),
+            )
             .await?;
         let stream = stream.flat_map(move |from_stream| match from_stream {
             Ok(changes) => match changes {
@@ -887,7 +895,7 @@ mod tests {
                     .join(","),
             })
             .collect();
-        assert_eq!(rendered, vec!["file1.txt", "left hg.update", "file2.txt"]);
+        assert_eq!(rendered, vec!["left hg.update", "file1.txt", "file2.txt"]);
         Ok(())
     }
 
