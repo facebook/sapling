@@ -1109,6 +1109,20 @@ struct RepoCreateCommitParamsCommitInfo {
   7: optional map<small_binary, binary_bytes> git_extra_headers;
 }
 
+/// A mutation (such as an amend or a rebase) that produced a new commit from
+/// existing commits, so clients can follow the replaced commits to it.
+struct RepoCreateCommitParamsMutationInfo {
+  /// The commits the new commit replaces.
+  1: list<CommitId> predecessors;
+
+  /// The mutation operation name (e.g., "amend", "rebase").
+  2: string op;
+
+  /// The user performing the mutation. If omitted, the service identity is
+  /// used, or the caller's user name when there is no service identity.
+  3: optional string user;
+}
+
 struct RepoCreateCommitParams {
   /// The info for the new commit.
   1: RepoCreateCommitParamsCommitInfo info;
@@ -1138,6 +1152,11 @@ struct RepoCreateCommitParams {
   // 6: deleted
 
   7: CreateCommitChecks checks;
+
+  /// Optional: the mutation that produced this commit, recorded for
+  /// Mercurial repos (other repos reject it). The mutation timestamp is the
+  /// server time.
+  8: optional RepoCreateCommitParamsMutationInfo mutation_info;
 }
 
 struct RepoCreateStackParamsCommit {
@@ -1146,6 +1165,11 @@ struct RepoCreateStackParamsCommit {
 
   /// A mapping from path to the change that is made at that path.
   3: map<string, RepoCreateCommitParamsChange> changes;
+
+  /// Optional: the mutation that produced this commit, recorded for
+  /// Mercurial repos (other repos reject it). The mutation timestamp is the
+  /// server time. All of the stack's mutations are recorded together.
+  4: optional RepoCreateCommitParamsMutationInfo mutation_info;
 }
 
 struct RepoCreateStackParams {

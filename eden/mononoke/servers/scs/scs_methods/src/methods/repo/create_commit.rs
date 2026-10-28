@@ -45,6 +45,33 @@ use crate::commit_id::map_commit_identity;
 use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
 
+/// A mutation to record for a commit that is about to be created.
+struct PendingMutation {
+    predecessors: Vec<ChangesetId>,
+    op: String,
+    user: String,
+}
+
+impl PendingMutation {
+    fn for_commit(self, successor: ChangesetId) -> CommitMutation {
+        CommitMutation {
+            successor,
+            predecessors: self.predecessors,
+            op: self.op,
+            user: self.user,
+        }
+    }
+}
+
+/// The user a mutation is recorded under when the request names none: the
+/// service identity, else the caller's user name, else "scs".
+fn default_mutation_user(ctx: &CoreContext, service_identity: Option<&str>) -> String {
+    service_identity
+        .or_else(|| ctx.metadata().unix_name())
+        .unwrap_or("scs")
+        .to_string()
+}
+
 impl SourceControlServiceImpl {
     /// Convert thrift parent CommitIds to ChangesetContexts.
     /// Returns the contexts which can be used for file type inheritance lookup,
@@ -76,6 +103,59 @@ impl SourceControlServiceImpl {
         }
 
         Ok(parents)
+    }
+
+    /// Check a mutation in a commit-creation request and resolve its
+    /// predecessors.
+    async fn convert_create_commit_mutation_info(
+        repo: &RepoContext<Repo>,
+        info: &thrift::RepoCreateCommitParamsMutationInfo,
+        service_identity: Option<&str>,
+    ) -> Result<PendingMutation, scs_errors::ServiceError> {
+        if repo.config().default_commit_identity_scheme != CommitIdentityScheme::HG {
+            return Err(scs_errors::invalid_request(
+                "mutation info is only supported in Mercurial repos",
+            )
+            .into());
+        }
+        if info.predecessors.is_empty() {
+            return Err(scs_errors::invalid_request(
+                "mutation info must name at least one predecessor",
+            )
+            .into());
+        }
+        if info.op.is_empty() {
+            return Err(scs_errors::invalid_request("mutation info must name an operation").into());
+        }
+        let user = match info.user.as_deref() {
+            Some("") => {
+                return Err(scs_errors::invalid_request("mutation user must not be empty").into());
+            }
+            Some(user) => user.to_string(),
+            None => default_mutation_user(repo.ctx(), service_identity),
+        };
+
+        let predecessors = info
+            .predecessors
+            .iter()
+            .map(|predecessor| async move {
+                let changeset_specifier = ChangesetSpecifier::from_request(predecessor)
+                    .context("invalid commit id for predecessor")?;
+                let changeset = repo
+                    .changeset(changeset_specifier)
+                    .await?
+                    .ok_or_else(|| scs_errors::commit_not_found(predecessor.to_string()))?;
+                Ok::<_, scs_errors::ServiceError>(changeset.id())
+            })
+            .collect::<FuturesOrdered<_>>()
+            .try_collect()
+            .await?;
+
+        Ok(PendingMutation {
+            predecessors,
+            op: info.op.clone(),
+            user,
+        })
     }
 
     async fn convert_create_commit_file_content(
@@ -265,6 +345,17 @@ impl SourceControlServiceImpl {
 
         let parent_ctxs = Self::convert_create_commit_parents(&repo, &params.parents).await?;
         let parent_ids: Vec<ChangesetId> = parent_ctxs.iter().map(|ctx| ctx.id()).collect();
+        let mutation = match params.mutation_info.as_ref() {
+            Some(info) => Some(
+                Self::convert_create_commit_mutation_info(
+                    &repo,
+                    info,
+                    params.service_identity.as_deref(),
+                )
+                .await?,
+            ),
+            None => None,
+        };
         let mut info = CreateInfo::from_request(&params.info)?;
         let changes = Self::convert_create_commit_changes(&repo, params.changes).await?;
         let bubble = None;
@@ -283,6 +374,14 @@ impl SourceControlServiceImpl {
         let created_changeset = repo
             .create_changeset(parent_ids, info, changes, bubble, checks)
             .await?;
+        if let Some(mutation) = mutation {
+            repo.clone()
+                .hg()
+                .record_hg_mutations(vec![
+                    mutation.for_commit(created_changeset.changeset_ctx.id()),
+                ])
+                .await?;
+        }
 
         // If you ask for a git identity back, then we'll assume that you supplied one to us
         // and set it. Later, when we can derive a git commit hash, this'll become more
@@ -343,6 +442,24 @@ impl SourceControlServiceImpl {
             }
         }
 
+        let service_identity = params.service_identity.as_deref();
+        let mutations: Vec<Option<PendingMutation>> = params
+            .commits
+            .iter()
+            .map(|commit| async move {
+                match commit.mutation_info.as_ref() {
+                    Some(info) => {
+                        Self::convert_create_commit_mutation_info(repo, info, service_identity)
+                            .await
+                            .map(Some)
+                    }
+                    None => Ok(None),
+                }
+            })
+            .collect::<FuturesOrdered<_>>()
+            .try_collect()
+            .await?;
+
         let changes_stack =
             stream::iter(
                 params.commits.into_iter().map({
@@ -359,6 +476,19 @@ impl SourceControlServiceImpl {
         let stack = repo
             .create_changeset_stack(stack_parent_ids, info_stack, changes_stack, bubble, checks)
             .await?;
+        let stack_mutations: Vec<CommitMutation> = stack
+            .iter()
+            .zip(mutations)
+            .filter_map(|(created_changeset, mutation)| {
+                Some(mutation?.for_commit(created_changeset.changeset_ctx.id()))
+            })
+            .collect();
+        if !stack_mutations.is_empty() {
+            repo.clone()
+                .hg()
+                .record_hg_mutations(stack_mutations)
+                .await?;
+        }
         // If you ask for a git identity back, then we'll assume that you supplied one to us
         // and set it. Later, when we can derive a git commit hash, this'll become more
         // open, because we'll only do the check if you ask for a hash different to the
@@ -467,10 +597,7 @@ impl SourceControlServiceImpl {
                     } else {
                         "fold".to_string()
                     },
-                    params
-                        .service_identity
-                        .clone()
-                        .unwrap_or_else(|| "scs".to_string()),
+                    default_mutation_user(repo.ctx(), params.service_identity.as_deref()),
                 ),
             };
             repo.clone()

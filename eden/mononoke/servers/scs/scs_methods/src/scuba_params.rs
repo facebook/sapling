@@ -66,6 +66,16 @@ impl AddScubaParams for thrift::RepoCreateCommitParams {
         if let Some(service_identity) = self.service_identity.as_deref() {
             scuba.add("service_identity", service_identity);
         }
+        if let Some(mutation_info) = self.mutation_info.as_ref() {
+            scuba.add("param_mutation_op", mutation_info.op.as_str());
+            if let Some(user) = mutation_info.user.as_deref() {
+                scuba.add("param_mutation_user", user);
+            }
+            scuba.add(
+                "param_mutation_predecessor_count",
+                mutation_info.predecessors.len(),
+            );
+        }
     }
 }
 
@@ -132,6 +142,18 @@ impl AddScubaParams for thrift::RepoCreateStackParams {
         self.identity_schemes.add_scuba_params(scuba);
         if let Some(service_identity) = self.service_identity.as_deref() {
             scuba.add("service_identity", service_identity);
+        }
+        let mutation_ops = self
+            .commits
+            .iter()
+            .filter_map(|commit| commit.mutation_info.as_ref())
+            .map(|mutation_info| mutation_info.op.clone())
+            .collect::<BTreeSet<_>>();
+        if !mutation_ops.is_empty() {
+            scuba.add(
+                "param_mutation_ops",
+                mutation_ops.into_iter().collect::<ScubaValue>(),
+            );
         }
     }
 }
