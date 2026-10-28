@@ -86,6 +86,8 @@ use crate::utils::tag_entries_to_hashes;
 use crate::utils::to_git_object_stream;
 
 #[cfg(test)]
+mod tag_tests;
+#[cfg(test)]
 mod tests;
 
 /// Fetch and collect the tree and blob objects that are expressed as full objects
@@ -821,7 +823,7 @@ async fn tags_packfile_stream<'a>(
     // NOTE: Fun git trick. If the client says it doesn't want tags, then instead of excluding all tags (like regular systems)
     // we still send the tags that were explicitly part of the client's WANT request :)
     let required_tag_names = match include_tags {
-        true => list_tags(&ctx, repo, refs_source)
+        true if !requested_commits.is_empty() => list_tags(&ctx, repo, refs_source)
             .await
             .map(|entries| {
                 entries
@@ -836,8 +838,11 @@ async fn tags_packfile_stream<'a>(
                     .collect::<FxHashSet<_>>()
             })
             .context("Error in getting tags pointing to input set of commits")?,
-        false => FxHashSet::default(),
+        _ => FxHashSet::default(),
     };
+    if required_tag_names.is_empty() && requested_tag_names.is_empty() {
+        return Ok((stream::empty().boxed(), 0));
+    }
     // Fetch entries corresponding to annotated tags in the repo or with names
     // that match the requested tag names
     let tag_entries = repo

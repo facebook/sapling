@@ -269,22 +269,26 @@ pub(crate) async fn tagged_commits(
         resolved_tags = tag_names.len(),
         refs_source = ?refs_source,
         client_correlator = ?client_correlator,
-        "tagged_commits: bonsai_tag_mapping done, calling list_tags"
+        "tagged_commits: bonsai_tag_mapping resolved tag names"
     );
     // Fetch the commits pointed to by those tags using the same refs_source
     // as the rest of the fetch to ensure consistency
-    let tagged_commits = list_tags(ctx, repo, refs_source).await.map(|entries| {
-        entries
-            .into_iter()
-            .filter_map(|(bookmark, (cs_id, _))| {
-                if tag_names.contains(&bookmark.name().to_string()) {
-                    Some(cs_id)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>()
-    })?;
+    let tagged_commits = if tag_names.is_empty() {
+        Vec::new()
+    } else {
+        list_tags(ctx, repo, refs_source).await.map(|entries| {
+            entries
+                .into_iter()
+                .filter_map(|(bookmark, (cs_id, _))| {
+                    if tag_names.contains(&bookmark.name().to_string()) {
+                        Some(cs_id)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        })?
+    };
     let non_tag_oids = non_tag_shas
         .into_iter()
         .map(|sha| sha.to_object_id())
