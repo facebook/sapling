@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::BTreeMap;
+use std::io;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -13,13 +14,16 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use gitcompat::RepoGit;
+use identity::Identity;
 use repo_minimal_info::RepoMinimalInfo;
 
+use crate::WORKTREE_NAME_FILE;
 use crate::dissolve_group;
 use crate::dissolve_group_if_empty;
-use crate::load_registry;
 use crate::with_registry_lock;
+use crate::write_worktree_name_marker;
 
 #[derive(Debug, Eq, PartialEq)]
 /// A worktree presented through the backend-independent listing API.
@@ -34,21 +38,24 @@ pub struct ListedWorktree {
     pub current: bool,
 }
 
-trait WorktreeBackend {
-    fn list(&self) -> Result<Vec<ListedWorktree>>;
+enum WorktreeBackend {
+    Eden(EdenBackend),
+    Git(GitBackend),
 }
 
-struct SaplingBackend {
+struct EdenBackend {
     repo_path: PathBuf,
     shared_store_path: PathBuf,
+    ident: Identity,
 }
 
 struct GitBackend {
     repo_path: PathBuf,
     git: RepoGit,
+    ident: Identity,
 }
 
-impl WorktreeBackend for SaplingBackend {
+impl EdenBackend {
     fn list(&self) -> Result<Vec<ListedWorktree>> {
         let current = util::path::strip_unc_prefix(
             util::path::canonicalize_best_effort(&self.repo_path)
@@ -94,37 +101,71 @@ impl WorktreeBackend for SaplingBackend {
                 })
                 .unwrap_or_default())
         })
-        .context("failed to list Sapling worktrees")
+        .context("failed to list EdenFS worktrees")
+    }
+
+    fn set_label(&self, target: &Path, label: Option<&str>) -> Result<Option<anyhow::Error>> {
+        let current = canonicalize_or_original(&self.repo_path);
+        with_registry_lock(&self.shared_store_path, |registry| {
+            let Some(group_id) = registry.find_group_for_path(&current) else {
+                anyhow::bail!("this worktree is not part of a group");
+            };
+            let Some(entry) = registry
+                .groups
+                .get_mut(&group_id)
+                .and_then(|group| group.worktrees.get_mut(target))
+            else {
+                anyhow::bail!("'{}' is not in this worktree group", target.display());
+            };
+            entry.label = label.map(str::to_owned);
+
+            // The registry is the source of truth; the marker only lets external
+            // tools such as `scm-prompt.sh` avoid reading it. Writing it under the
+            // registry lock keeps the two in step.
+            Ok(
+                write_worktree_name_marker(target, &self.ident.resolve_full_dot_dir(target), label)
+                    .err(),
+            )
+        })
     }
 }
 
-impl WorktreeBackend for GitBackend {
+impl GitBackend {
     fn list(&self) -> Result<Vec<ListedWorktree>> {
-        let shared_store_path = self.git.common_dir().join("sl").join("store");
-        let labels = load_labels(&shared_store_path)?;
         let current = canonicalize_or_original(&self.repo_path);
 
-        Ok(self
-            .git
+        self.git
             .list_worktrees()
             .context("failed to list Git worktrees")?
             .into_iter()
             .map(|worktree| {
                 let canonical_path = canonicalize_or_original(&worktree.path);
-                ListedWorktree {
+                Ok(ListedWorktree {
+                    label: read_git_label(&self.ident.resolve_full_dot_dir(&worktree.path))?,
                     path: worktree.path,
                     is_main: worktree.is_main,
-                    label: labels.get(&canonical_path).cloned(),
                     current: canonical_path == current,
-                }
+                })
             })
-            .collect())
+            .collect::<Result<Vec<_>>>()
+    }
+
+    fn set_label(&self, target: &Path, label: Option<&str>) -> Result<()> {
+        let is_member = self
+            .git
+            .list_worktrees()?
+            .iter()
+            .any(|worktree| canonicalize_or_original(&worktree.path) == target);
+        if !is_member {
+            anyhow::bail!("'{}' is not in this worktree group", target.display());
+        }
+        write_git_label(&self.ident.resolve_full_dot_dir(target), label)
     }
 }
 
 /// Access to the worktrees associated with one repository.
 pub struct Worktrees {
-    backend: Box<dyn WorktreeBackend>,
+    backend: WorktreeBackend,
 }
 
 impl Worktrees {
@@ -132,24 +173,28 @@ impl Worktrees {
     pub fn open(repo: &RepoMinimalInfo, config: &dyn Config) -> Result<Self> {
         let is_git =
             repo.requirements.contains("dotgit") && repo.store_requirements.contains("git-store");
-        let backend: Box<dyn WorktreeBackend> = if is_git {
+        let backend = if is_git {
             if !config
                 .get_or("worktree", "git-enabled", || true)
                 .context("invalid worktree.git-enabled configuration")?
             {
                 anyhow::bail!("worktree commands for git are disabled by worktree.git-enabled");
             }
-            Box::new(GitBackend {
+            WorktreeBackend::Git(GitBackend {
                 repo_path: repo.path.clone(),
                 git: RepoGit::from_root_and_config(repo.path.clone(), config),
+                ident: repo.ident,
             })
         } else if repo.requirements.contains("eden") {
-            Box::new(SaplingBackend {
+            WorktreeBackend::Eden(EdenBackend {
                 repo_path: repo.path.clone(),
                 shared_store_path: repo.store_path.clone(),
+                ident: repo.ident,
             })
         } else {
-            anyhow::bail!("worktree commands require an EdenFS-backed repository");
+            anyhow::bail!(
+                "worktree commands require an EdenFS-backed repository or a native Git repository"
+            );
         };
 
         Ok(Self { backend })
@@ -157,27 +202,57 @@ impl Worktrees {
 
     /// List the repository's worktrees using the backend's source of truth.
     pub fn list(&self) -> Result<Vec<ListedWorktree>> {
-        self.backend.list()
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.list(),
+            WorktreeBackend::Git(backend) => backend.list(),
+        }
+    }
+
+    /// Set or remove the label of `target`, a canonical member path.
+    /// `Ok(Some(error))` means the label was saved but the EdenFS marker file read
+    /// by `scm-prompt.sh` could not be written; callers should warn and continue.
+    pub fn set_label(&self, target: &Path, label: Option<&str>) -> Result<Option<anyhow::Error>> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.set_label(target, label),
+            WorktreeBackend::Git(backend) => backend.set_label(target, label).map(|()| None),
+        }
     }
 }
 
-fn load_labels(shared_store_path: &Path) -> Result<BTreeMap<PathBuf, String>> {
-    Ok(load_registry(shared_store_path)
-        .with_context(|| {
-            format!(
-                "failed to load worktree labels from {}",
-                shared_store_path.display()
-            )
-        })?
-        .groups
-        .into_values()
-        .flat_map(|group| group.worktrees)
-        .filter_map(|(path, entry)| {
-            entry
-                .label
-                .map(|label| (canonicalize_or_original(&path), label))
-        })
-        .collect())
+/// Git labels live in each checkout's admin directory, which Git keeps attached
+/// to the checkout across moves and deletes with it, so a label cannot outlive
+/// or detach from its checkout.
+fn read_git_label(dot_dir: &Path) -> Result<Option<String>> {
+    match fs::read_to_string(dot_dir.join(WORKTREE_NAME_FILE)) {
+        Ok(label) => Ok(Some(label).filter(|label| !label.is_empty())),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// Unlike the EdenFS marker, a missing file means no label; the prompt then
+/// falls back to Git's worktree name.
+fn write_git_label(dot_dir: &Path, label: Option<&str>) -> Result<()> {
+    let path = dot_dir.join(WORKTREE_NAME_FILE);
+    match label {
+        Some(label) => {
+            // Not `create_dir_all`: a concurrent `git worktree remove` deletes the
+            // admin directory, and recreating it would leave junk at the removed path.
+            match fs::create_dir(dot_dir) {
+                Err(error) if error.kind() != io::ErrorKind::AlreadyExists => {
+                    return Err(error.into());
+                }
+                _ => {}
+            }
+            // Written atomically so `list` never reads a partial marker.
+            util::file::atomic_write(&path, |file| file.write_all(label.as_bytes()))?;
+        }
+        None => match fs::remove_file(&path) {
+            Err(error) if error.kind() != io::ErrorKind::NotFound => return Err(error.into()),
+            _ => {}
+        },
+    }
+    Ok(())
 }
 
 fn canonicalize_or_original(path: &Path) -> PathBuf {

@@ -20,6 +20,7 @@ fs-err = { version = "3.3.2", features = ["tokio"] }
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
+sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "../repo/repo-minimal-info" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-util = { version = "0.1.0", path = "../util" }

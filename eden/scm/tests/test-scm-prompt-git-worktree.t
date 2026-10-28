@@ -51,6 +51,22 @@ Add a linked worktree on a new branch and check the prompt shows branch | worktr
   $ _scm_prompt "%s\n"
   feature|wt1
 
+The label marker takes precedence, and the display flag still gates it
+  $ mkdir -p ../main/.git/worktrees/wt1/sl
+  $ printf 'review label' > ../main/.git/worktrees/wt1/sl/worktreename
+  $ _scm_prompt "%s\n"
+  feature|review label
+  $ SCM_PROMPT_SHOW_WORKTREE= _scm_prompt "%s\n"
+  feature
+
+Empty and missing markers keep the linked gitdir basename fallback
+  $ printf '' > ../main/.git/worktrees/wt1/sl/worktreename
+  $ _scm_prompt "%s\n"
+  feature|wt1
+  $ rm ../main/.git/worktrees/wt1/sl/worktreename
+  $ _scm_prompt "%s\n"
+  feature|wt1
+
 Relative gitdir pointers should resolve from subdirectories
   $ cd ../main
   $ git worktree add -q ../wt-rel -b relative-feature
@@ -64,6 +80,10 @@ Relative gitdir pointers should resolve from subdirectories
   $ cd sub
   $ _scm_prompt "%s\n"
   relative-feature|wt-rel
+  $ mkdir -p ../../main/.git/worktrees/wt-rel/sl
+  $ printf relative-label > ../../main/.git/worktrees/wt-rel/sl/worktreename
+  $ _scm_prompt "%s\n"
+  relative-feature|relative-label
   $ cd ../../wt1
 
 A subdirectory of the worktree should walk up and still resolve correctly
@@ -96,6 +116,17 @@ A detached worktree should show the short hash plus the worktree name
 
 The main checkout has no worktree-name suffix
   $ cd ../main
+  $ _scm_prompt "(%s)\n"
+  (master)
+
+An explicit main-checkout label is shown when worktree display is enabled
+  $ mkdir -p .git/sl
+  $ printf main-label > .git/sl/worktreename
+  $ _scm_prompt "(%s)\n"
+  (master|main-label)
+  $ SCM_PROMPT_SHOW_WORKTREE= _scm_prompt "(%s)\n"
+  (master)
+  $ rm .git/sl/worktreename
   $ _scm_prompt "(%s)\n"
   (master)
 

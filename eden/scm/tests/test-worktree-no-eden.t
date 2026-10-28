@@ -12,18 +12,18 @@ empty or unknown subcommands keep their existing errors
   abort: unknown worktree subcommand 'unknown'
   [255]
 
-all worktree subcommands require an Eden-backed repo
+all worktree subcommands require an EdenFS-backed or native Git repo
 
   $ sl worktree add $TESTTMP/linked
   abort: worktree commands require an EdenFS-backed repository
   [255]
 
   $ sl worktree list
-  abort: worktree commands require an EdenFS-backed repository
+  abort: worktree commands require an EdenFS-backed repository or a native Git repository
   [255]
 
   $ sl worktree label $TESTTMP/linked test
-  abort: worktree commands require an EdenFS-backed repository
+  abort: worktree commands require an EdenFS-backed repository or a native Git repository
   [255]
 
   $ sl worktree remove $TESTTMP/linked -y

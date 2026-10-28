@@ -62,9 +62,12 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
             let worktrees = Worktrees::open(repo, repo.config().as_ref())?;
             return list::run(&ctx, repo, &worktrees);
         }
+        "label" => {
+            let worktrees = Worktrees::open(repo, repo.config().as_ref())?;
+            return label::run(&ctx, repo, &worktrees);
+        }
         "add" => add::run,
         "remove" | "rm" => remove::run,
-        "label" => label::run,
         "" => abort!("you need to specify a subcommand (run with --help to see a list)"),
         other => abort!("unknown worktree subcommand '{}'", other),
     };
@@ -142,11 +145,11 @@ pub fn doc() -> &'static str {
       worktree.require-generated-path=true     Require path generator, disallow manual PATH
       worktree.path-generator=CMD              Shell command to generate PATH when omitted
       worktree.snapshot-direct-copy=true       Use direct copy for --snapshot
-      worktree.git-enabled=true                Enable worktree listing in native Git repositories
+      worktree.git-enabled=true                Enable worktree commands in native Git repositories
       worktree.direct-eden-removal=false       Remove EdenFS checkouts via edenfsctl instead of in-process (default: true)
 
-    Git repositories currently support the `list` subcommand. Other subcommands
-    require an EdenFS-backed repository."#
+    Git repositories currently support the `list` and `label` subcommands.
+    Other subcommands require an EdenFS-backed repository."#
 }
 
 pub fn synopsis() -> Option<&'static str> {

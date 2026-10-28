@@ -141,3 +141,57 @@ Git support can be disabled independently from EdenFS worktrees.
   $ sl worktree list --config worktree.git-enabled=false
   abort: worktree commands for git are disabled by worktree.git-enabled
   [255]
+
+Labels work before Sapling has been used in the main checkout.
+
+  $ cd $TESTTMP
+  $ git init -qb main labels
+  $ cd labels
+  $ git commit --allow-empty -qm init
+  $ git worktree add -q $TESTTMP/labels-linked --detach
+  $ cd $TESTTMP/labels-linked
+  $ test ! -e $TESTTMP/labels/.git/sl
+  $ sl worktree label linked-label
+  label set for $TESTTMP/labels-linked
+  $ sl worktree label $TESTTMP/labels main-label
+  label set for $TESTTMP/labels
+  $ cat $TESTTMP/labels/.git/worktrees/labels-linked/sl/worktreename
+  linked-label (no-eol)
+  $ cat $TESTTMP/labels/.git/sl/worktreename
+  main-label (no-eol)
+  $ sl worktree list
+    main    $TESTTMP/labels   main-label
+  * linked  $TESTTMP/labels-linked   linked-label
+
+Labels follow a checkout that Git moves.
+
+  $ cd $TESTTMP/labels
+  $ git worktree move $TESTTMP/labels-linked $TESTTMP/labels-moved
+  $ sl worktree list
+  * main    $TESTTMP/labels   main-label
+    linked  $TESTTMP/labels-moved   linked-label
+
+Labels can be removed from another checkout; an unrelated repository is rejected.
+
+  $ sl worktree label $TESTTMP/labels-moved --remove
+  label removed for $TESTTMP/labels-moved
+  $ test ! -e $TESTTMP/labels/.git/worktrees/labels-linked/sl/worktreename
+  $ sl worktree label $TESTTMP/repo wrong
+  abort: '$TESTTMP/repo' is not in this worktree group
+  [255]
+  $ sl worktree label disabled --config worktree.git-enabled=false
+  abort: worktree commands for git are disabled by worktree.git-enabled
+  [255]
+
+A label is deleted with its checkout, even if Git later reuses the admin
+directory name.
+
+  $ sl worktree label $TESTTMP/labels-moved moved-label
+  label set for $TESTTMP/labels-moved
+  $ git worktree remove $TESTTMP/labels-moved
+  $ sl worktree list
+  * main    $TESTTMP/labels   main-label
+  $ git worktree add -q $TESTTMP/labels-linked --detach
+  $ sl worktree list
+  * main    $TESTTMP/labels   main-label
+    linked  $TESTTMP/labels-linked

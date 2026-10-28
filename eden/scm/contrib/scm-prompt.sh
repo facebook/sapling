@@ -57,13 +57,11 @@
 #    For git, show staged change with +.  When SHOW_DIRTY_STATE is set,
 #    you can opt out individual repo by setting shell.showDirtyState to false
 #    in .hg/hgrc or .git/config.
-#  * SCM_PROMPT_SHOW_WORKTREE : When in a linked worktree, append the
-#    worktree's name to the prompt so two checkouts at the same commit are
-#    visually distinguishable. For git, the name is the basename of the
-#    per-worktree gitdir (set automatically by `git worktree add`). For
-#    sl/hg, the name is read from `.sl/worktreename` (or
-#    `.hg/worktreename`), which `sl worktree add` and `sl worktree label`
-#    auto-write.
+#  * SCM_PROMPT_SHOW_WORKTREE : Append the worktree's name to the prompt.
+#    For git, read `sl/worktreename` under the resolved gitdir, falling back
+#    to the gitdir basename for linked worktrees. For sl/hg, read
+#    `.sl/worktreename` (or `.hg/worktreename`). `sl worktree add` and
+#    `sl worktree label` write these markers.
 #
 # Notes to developers:
 #
@@ -218,6 +216,10 @@ _git_prompt() {
             ;;
         esac
       fi
+  fi
+  if [[ -n "$SCM_PROMPT_SHOW_WORKTREE" ]] && [[ -f "$git/sl/worktreename" ]]; then
+    local label="$(command cat "$git/sl/worktreename")"
+    [[ -n "$label" ]] && wtname="$label"
   fi
   if [[ -f "$git/HEAD" ]]; then
     read br < "$git/HEAD"
