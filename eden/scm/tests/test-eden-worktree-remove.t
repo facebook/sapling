@@ -375,15 +375,18 @@ test worktree remove - pre-worktree-remove hook failure in --all mode still remo
   $ sl worktree list
   this worktree is not part of a group
 
-test worktree remove - pre-worktree-remove hook does not fire when user declines confirmation
+test worktree remove - no prompt without a terminal
 
-  $ sl worktree add $TESTTMP/pre_hook_decline
-  created linked worktree at $TESTTMP/pre_hook_decline
+  $ sl worktree add $TESTTMP/no_tty
+  created linked worktree at $TESTTMP/no_tty
   $ setconfig hooks.pre-worktree-remove="echo HOOK_FIRED"
-  $ echo n | sl worktree remove $TESTTMP/pre_hook_decline
-  abort: running non-interactively, use -y instead
-  [255]
-  $ test -d $TESTTMP/pre_hook_decline
+  $ echo n | sl worktree remove $TESTTMP/no_tty
+  HOOK_FIRED
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/no_tty
+  $ test -d $TESTTMP/no_tty
+  [1]
 
 test worktree remove - modified or untracked files require --force
 
@@ -399,11 +402,7 @@ test worktree remove - modified or untracked files require --force
   $ sl worktree remove --all -y
   failed to remove $TESTTMP/dirty_modified: $TESTTMP/dirty_modified contains modified or untracked files, use --force to remove it
   failed to remove $TESTTMP/dirty_untracked: $TESTTMP/dirty_untracked contains modified or untracked files, use --force to remove it
-  HOOK_FIRED
-  Unmounting checkout...
-  Deleting EdenFS checkout state...
-  removed $TESTTMP/pre_hook_decline
-  removed 1 of 3 worktrees; 2 failed
+  removed 0 of 2 worktrees; 2 failed
   abort: $TESTTMP/dirty_modified contains modified or untracked files, use --force to remove it
   [255]
   $ test -f $TESTTMP/dirty_untracked/untracked.txt

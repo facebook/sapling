@@ -174,13 +174,13 @@ fn ensure_clean(ctx: &ReqCtx<WorktreeOpts>, checkouts: &Checkouts, target: &Path
 }
 
 fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {
-    if ctx.global_opts().noninteractive || ctx.opts.force {
+    // Don't prompt without a terminal. The check for modified or untracked files
+    // still applies.
+    if ctx.global_opts().noninteractive
+        || ctx.opts.force
+        || !ctx.io().with_input(|input| input.is_tty())
+    {
         return Ok(());
-    }
-
-    let is_interactive = ctx.io().with_input(|input| input.is_tty());
-    if !is_interactive {
-        abort!("running non-interactively, use -y instead");
     }
 
     if paths.len() == 1 {
