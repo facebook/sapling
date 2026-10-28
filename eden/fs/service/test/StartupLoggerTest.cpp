@@ -47,9 +47,9 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include "eden/common/testharness/ScopedEnvVar.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/SpawnedProcess.h"
-#include "eden/common/utils/test/ScopedEnvVar.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"
 

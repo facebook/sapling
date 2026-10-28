@@ -51,9 +51,9 @@
 #endif
 
 #include "eden/common/telemetry/DynamicEvent.h"
+#include "eden/common/testharness/ScopedEnvVar.h"
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/UserInfo.h"
-#include "eden/common/utils/test/ScopedEnvVar.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/privhelper/PrivHelperImpl.h"
