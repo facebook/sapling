@@ -8,6 +8,7 @@
 
 import logging
 import os
+import subprocess
 import sys
 import time
 import typing
@@ -56,6 +57,53 @@ class GenericStatsTest(testcase.EdenRepoTest):
                     f"Reading {path} should increment {counter_name}",
                 )
             )
+
+    def test_debug_counters_delta_across_a_restart(self) -> None:
+        # Make the cumulative counters non-zero, then snapshot them.
+        path = Path(self.mount) / "file"
+        for _ in range(5):
+            path.read_bytes()
+        self.poll_until_counter_condition(
+            lambda counters: self.assertGreater(
+                counters[self.protocol_type() + ".lookup_us.count"], 0
+            )
+        )
+        snapshot = os.path.join(self.tmp_dir, "counters_snapshot.json")
+        # `eden debug counters` is a Rust command; force the Rust dispatch so
+        # the test does not depend on the rollout state of this host.
+        rust_env = {"EDENFSCTL_ONLY_RUST": "1"}
+        self.eden.run_cmd(
+            "debug",
+            "counters",
+            "start-recording",
+            "--snapshot-path",
+            snapshot,
+            env=rust_env,
+        )
+
+        # A full restart starts the daemon's counters again from zero.
+        self.eden.restart()
+
+        # The later snapshot is smaller than the earlier one. Instead of
+        # reporting what happened since the restart, the delta wraps around
+        # (an opt build has no overflow checks) or the command panics with
+        # "attempt to subtract with overflow" (the Windows and macOS CI
+        # builds check for overflow).
+        result = self.eden.run_unchecked(
+            "debug",
+            "counters",
+            "finalize",
+            "--snapshot-path",
+            snapshot,
+            env=rust_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        output = result.stdout.decode() + result.stderr.decode()
+        self.assertTrue(
+            "1844674407" in output or "attempt to subtract with overflow" in output,
+            msg=f"output: {output}",
+        )
 
     def test_writing_untracked_file_bumps_write_counter(self) -> None:
         counters_before = self.get_counters()

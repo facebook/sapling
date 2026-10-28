@@ -1081,3 +1081,76 @@ impl EdenFsClient {
         Ok(counters.get_crawling_score())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn filesystem_counters(value: u64) -> FilesystemTelemetryCounters {
+        FilesystemTelemetryCounters {
+            syscall_open: value,
+            syscall_read: value,
+            syscall_readdir: value,
+            syscall_readdirplus: value,
+            syscall_write: value,
+            syscall_statfs: value,
+            syscall_getattr: value,
+            syscall_setattr: value,
+            syscall_lookup: value,
+            syscall_access: value,
+            syscall_mkdir: value,
+        }
+    }
+
+    fn crawling_score(value: u64) -> CrawlingScore {
+        CrawlingScore {
+            remote_blob_fetches: value,
+            remote_tree_fetches: value,
+            remote_blob_prefetches: value,
+            remote_tree_prefetches: value,
+            local_cache_blob_fetch_hits: value,
+            local_cache_tree_fetch_hits: value,
+            local_cache_blob_prefetch_hits: value,
+            local_cache_tree_prefetch_hits: value,
+            fs_open_plus_read: value,
+            fs_readdir: value,
+        }
+    }
+
+    #[test]
+    fn test_delta_while_the_daemon_keeps_running() {
+        assert_eq!(
+            filesystem_counters(5) - filesystem_counters(2),
+            filesystem_counters(3)
+        );
+        assert_eq!(crawling_score(5) - crawling_score(2), crawling_score(3));
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "attempt to subtract with overflow")]
+    fn test_filesystem_delta_across_a_daemon_restart_panics() {
+        let _ = filesystem_counters(2) - filesystem_counters(5);
+    }
+
+    #[cfg(not(debug_assertions))]
+    #[test]
+    fn test_filesystem_delta_across_a_daemon_restart_wraps() {
+        let delta = filesystem_counters(2) - filesystem_counters(5);
+        assert_eq!(delta.syscall_read, u64::MAX - 2);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "attempt to subtract with overflow")]
+    fn test_crawling_score_delta_across_a_daemon_restart_panics() {
+        let _ = crawling_score(2) - crawling_score(5);
+    }
+
+    #[cfg(not(debug_assertions))]
+    #[test]
+    fn test_crawling_score_delta_across_a_daemon_restart_wraps() {
+        let delta = crawling_score(2) - crawling_score(5);
+        assert_eq!(delta.fs_readdir, u64::MAX - 2);
+    }
+}
