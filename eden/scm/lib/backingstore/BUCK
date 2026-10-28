@@ -17,9 +17,7 @@ constraint(
 
 cpp_library(
     name = "sapling_backingstore_error",
-    headers = {
-        "SaplingBackingStoreError.h": "include/SaplingBackingStoreError.h",
-    },
+    headers = ["include/SaplingBackingStoreError.h"],
     exported_deps = ["fbsource//third-party/rust:cxx-core"],
 )
 

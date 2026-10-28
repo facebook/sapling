@@ -14,7 +14,7 @@
 
 #include "eden/common/utils/Utf8.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/scm/lib/backingstore/SaplingBackingStoreError.h"
+#include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
 
 namespace facebook::eden {
 
