@@ -2262,7 +2262,7 @@ TEST(OverlayLoadTest, onlineFsckArchivesAndRepairsDirectoryPrefix) {
   folly::test::TemporaryDirectory tmp("eden_online_fsck_dir");
   auto root = canonicalPath(tmp.path().string());
   auto dir = root + "overlay"_pc;
-  ASSERT_TRUE(boost::filesystem::create_directory(dir.asString()));
+  ASSERT_TRUE(folly::fs::create_directory(dir.asString()));
   auto bundle = makeWalLifecycleOverlay(
       dir,
       kPathMapDefaultCaseSensitive,
@@ -2287,7 +2287,7 @@ TEST(OverlayLoadTest, onlineFsckArchivesAndRepairsDirectoryPrefix) {
 
   auto loaded = bundle.overlay->loadOverlayDir(parent);
   EXPECT_NE(loaded.end(), loaded.find("kept"_pc));
-  EXPECT_TRUE(boost::filesystem::is_directory((root + "fsck"_pc).asString()));
+  EXPECT_TRUE(folly::fs::is_directory((root + "fsck"_pc).asString()));
   EXPECT_NO_THROW(bundle.overlay->loadOverlayDir(parent));
 
   bundle.overlay->close();
@@ -2297,7 +2297,7 @@ TEST(OverlayLoadTest, onlineFsckArchivesBeforeDroppingInvalidDirectoryEntry) {
   folly::test::TemporaryDirectory tmp("eden_online_fsck_bad_entry");
   auto root = canonicalPath(tmp.path().string());
   auto dir = root + "overlay"_pc;
-  ASSERT_TRUE(boost::filesystem::create_directory(dir.asString()));
+  ASSERT_TRUE(folly::fs::create_directory(dir.asString()));
   auto bundle = makeWalLifecycleOverlay(
       dir,
       kPathMapDefaultCaseSensitive,
@@ -2319,7 +2319,7 @@ TEST(OverlayLoadTest, onlineFsckArchivesBeforeDroppingInvalidDirectoryEntry) {
       });
 
   EXPECT_TRUE(bundle.overlay->loadOverlayDir(parent).empty());
-  EXPECT_TRUE(boost::filesystem::is_directory((root + "fsck"_pc).asString()));
+  EXPECT_TRUE(folly::fs::is_directory((root + "fsck"_pc).asString()));
   auto rewritten = bundle.overlay->getRawInodeCatalog()->loadOverlayDir(parent);
   ASSERT_TRUE(rewritten.has_value());
   EXPECT_TRUE(rewritten->entries()->empty());
@@ -2331,7 +2331,7 @@ TEST(OverlayLoadTest, onlineFsckArchivesAndRepairsWalPrefix) {
   folly::test::TemporaryDirectory tmp("eden_online_fsck_wal");
   auto root = canonicalPath(tmp.path().string());
   auto dir = root + "overlay"_pc;
-  ASSERT_TRUE(boost::filesystem::create_directory(dir.asString()));
+  ASSERT_TRUE(folly::fs::create_directory(dir.asString()));
   auto bundle = makeWalLifecycleOverlay(
       dir,
       kPathMapDefaultCaseSensitive,
@@ -2365,7 +2365,7 @@ TEST(OverlayLoadTest, onlineFsckArchivesAndRepairsWalPrefix) {
   EXPECT_NE(loaded.end(), loaded.find("kept"_pc));
   EXPECT_EQ(loaded.end(), loaded.find("dropped"_pc));
   EXPECT_FALSE(bundle.store->hasWal(parent));
-  EXPECT_TRUE(boost::filesystem::is_directory((root + "fsck"_pc).asString()));
+  EXPECT_TRUE(folly::fs::is_directory((root + "fsck"_pc).asString()));
 
   // Simulate a crash after publishing the recovered base but before removing
   // the old WAL. Replaying that stale delta must leave the recovery intact.
