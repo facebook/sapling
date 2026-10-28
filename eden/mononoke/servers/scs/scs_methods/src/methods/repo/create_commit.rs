@@ -6,10 +6,8 @@
  */
 
 use std::collections::BTreeMap;
-use std::collections::HashSet;
 
 use bytes::Bytes;
-use chrono::Utc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
@@ -17,8 +15,6 @@ use futures::stream;
 use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mercurial_mutation::HgMutationEntry;
-use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
@@ -34,6 +30,8 @@ use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
+use mononoke_api_hg::CommitMutation;
+use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
@@ -460,65 +458,30 @@ impl SourceControlServiceImpl {
             .collect()
             .await;
 
-        // Store mutation info for Mercurial repositories
         if repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG {
-            // Derive HgChangesetId for successor
-            let successor_hg_id =
-                folded_changeset
-                    .changeset_ctx
-                    .hg_id()
-                    .await?
-                    .ok_or_else(|| {
-                        scs_errors::internal_error(
-                            "failed to derive mercurial id for folded commit",
-                        )
-                    })?;
-
-            // Derive HgChangesetIds for all predecessors
-            let predecessor_hg_ids = repo
-                .many_changeset_hg_ids(predecessor_ids.clone())
-                .await?
-                .into_iter()
-                .map(|(_, hg_id)| hg_id)
-                .collect::<Vec<_>>();
-
-            // Get operation and user from mutation_info or use defaults
             let (op, user) = match &params.mutation_info {
                 Some(info) => (info.op.clone(), info.user.clone()),
                 None => (
-                    // Default op: "amend" for single predecessor, "fold" for multiple
                     if predecessor_ids.len() == 1 {
                         "amend".to_string()
                     } else {
                         "fold".to_string()
                     },
-                    // Use service identity or a default
                     params
                         .service_identity
                         .clone()
                         .unwrap_or_else(|| "scs".to_string()),
                 ),
             };
-
-            // Create mutation entry
-            let mutation_entry = HgMutationEntry::new(
-                successor_hg_id,
-                predecessor_hg_ids,
-                vec![], // No split commits for fold
-                op,
-                user,
-                Utc::now().timestamp(),
-                0,      // UTC timezone offset
-                vec![], // No extra info
-            );
-
-            // Store in mutation store
-            let hg_changeset_ids = HashSet::from([successor_hg_id]);
-            repo.repo()
-                .hg_mutation_store()
-                .add_entries(repo.ctx(), hg_changeset_ids, vec![mutation_entry])
-                .await
-                .map_err(scs_errors::internal_error)?;
+            repo.clone()
+                .hg()
+                .record_hg_mutations(vec![CommitMutation {
+                    successor: folded_changeset.changeset_ctx.id(),
+                    predecessors: predecessor_ids.clone(),
+                    op,
+                    user,
+                }])
+                .await?;
         }
 
         if params

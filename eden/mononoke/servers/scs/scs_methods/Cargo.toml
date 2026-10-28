@@ -49,7 +49,6 @@ maplit = "1.0"
 megarepo_api = { version = "0.1.0", path = "../../../megarepo_api" }
 megarepo_config = { version = "0.1.0", path = "../../../megarepo_api/megarepo_config" }
 memory = { version = "0.1.0", path = "../../../common/memory" }
-mercurial_mutation = { version = "0.1.0", path = "../../../mercurial/mutation" }
 metaconfig_parser = { version = "0.1.0", path = "../../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../../../common/metadata" }

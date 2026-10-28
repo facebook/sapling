@@ -73,6 +73,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::DateTime;
 use mononoke_types::RepoPath;
 use mononoke_types::hash::GitSha1;
 use phases::PhasesRef;
@@ -113,6 +114,20 @@ const REQUIRE_AUGMENTED_MANIFEST_FOR_TREE_LOOKUP: &str =
 #[derive(Clone)]
 pub struct HgRepoContext<R> {
     repo_ctx: RepoContext<R>,
+}
+
+/// A commit that replaces other commits, as recorded when they are amended,
+/// rebased or folded.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CommitMutation {
+    /// The new commit.
+    pub successor: ChangesetId,
+    /// The commits it replaces.
+    pub predecessors: Vec<ChangesetId>,
+    /// The operation, such as "amend", "rebase" or "fold".
+    pub op: String,
+    /// The user who performed the operation.
+    pub user: String,
 }
 
 /// Where `get_graph_mapping` takes the draft flag of each commit from.
@@ -771,6 +786,56 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .await?)
     }
 
+    /// Record mutations in the mutation store, timestamped with the current
+    /// time. The Mercurial changesets of the successors and predecessors are
+    /// derived if necessary.
+    pub async fn record_hg_mutations(
+        &self,
+        mutations: Vec<CommitMutation>,
+    ) -> Result<(), MononokeError> {
+        let cs_ids: HashSet<ChangesetId> = mutations
+            .iter()
+            .flat_map(|mutation| {
+                std::iter::once(mutation.successor).chain(mutation.predecessors.iter().copied())
+            })
+            .collect();
+        let hg_ids: HashMap<ChangesetId, HgChangesetId> = stream::iter(cs_ids)
+            .map(|cs_id| async move {
+                let hg_id = self.repo().derive_hg_changeset(self.ctx(), cs_id).await?;
+                Ok::<_, MononokeError>((cs_id, hg_id))
+            })
+            .buffer_unordered(10)
+            .try_collect()
+            .await?;
+
+        let timestamp = DateTime::now().timestamp_secs();
+        let entries: Vec<HgMutationEntry> = mutations
+            .into_iter()
+            .map(|mutation| {
+                HgMutationEntry::new(
+                    hg_ids[&mutation.successor],
+                    mutation
+                        .predecessors
+                        .iter()
+                        .map(|cs_id| hg_ids[cs_id])
+                        .collect(),
+                    Vec::new(),
+                    mutation.op,
+                    mutation.user,
+                    timestamp,
+                    0,
+                    Vec::new(),
+                )
+            })
+            .collect();
+        let successors = entries.iter().map(|entry| *entry.successor()).collect();
+        self.repo()
+            .hg_mutation_store()
+            .add_entries(self.ctx(), successors, entries)
+            .await?;
+        Ok(())
+    }
+
     // TODO(mbthomas): get_hg_from_bonsai -> derive_hg_changeset
     pub async fn get_hg_from_bonsai(
         &self,
@@ -1235,6 +1300,84 @@ mod tests {
 
         let hg = repo_ctx.hg();
         assert_eq!(hg.repo_ctx().name(), "repo");
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_record_hg_mutations(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+
+        // B1 amends B, and C1 and D1 rebase C and D onto B1.
+        let a = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a", "a")
+            .commit()
+            .await?;
+        let b = CreateCommitContext::new(&ctx, &repo, vec![a])
+            .add_file("b", "b")
+            .commit()
+            .await?;
+        let c = CreateCommitContext::new(&ctx, &repo, vec![b])
+            .add_file("c", "c")
+            .commit()
+            .await?;
+        let b1 = CreateCommitContext::new(&ctx, &repo, vec![a])
+            .add_file("b", "b1")
+            .commit()
+            .await?;
+        let c1 = CreateCommitContext::new(&ctx, &repo, vec![b1])
+            .add_file("c", "c")
+            .commit()
+            .await?;
+
+        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
+        let hg = repo_ctx.hg();
+        hg.record_hg_mutations(vec![
+            CommitMutation {
+                successor: b1,
+                predecessors: vec![b],
+                op: "amend".to_string(),
+                user: "alice".to_string(),
+            },
+            CommitMutation {
+                successor: c1,
+                predecessors: vec![c],
+                op: "rebase".to_string(),
+                user: "bob".to_string(),
+            },
+        ])
+        .await?;
+
+        let hg_b = hg.get_hg_from_bonsai(b).await?;
+        let hg_c = hg.get_hg_from_bonsai(c).await?;
+        let hg_b1 = hg.get_hg_from_bonsai(b1).await?;
+        let hg_c1 = hg.get_hg_from_bonsai(c1).await?;
+        let summary = |entries: Vec<HgMutationEntry>| {
+            entries
+                .iter()
+                .map(|entry| {
+                    (
+                        *entry.successor(),
+                        entry.predecessors().copied().collect::<Vec<_>>(),
+                        entry.op().to_string(),
+                        entry.user().to_string(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            summary(hg.fetch_mutations(HashSet::from([hg_b1])).await?),
+            vec![(hg_b1, vec![hg_b], "amend".to_string(), "alice".to_string())],
+        );
+        assert_eq!(
+            summary(hg.fetch_mutations(HashSet::from([hg_c1])).await?),
+            vec![(hg_c1, vec![hg_c], "rebase".to_string(), "bob".to_string())],
+        );
+        assert!(
+            hg.fetch_mutations(HashSet::from([hg_b])).await?.is_empty(),
+            "the replaced commit has no mutation history of its own",
+        );
 
         Ok(())
     }
