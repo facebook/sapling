@@ -75,9 +75,44 @@ find_package(gflags CONFIG REQUIRED)
 find_package(BLAKE3 REQUIRED CONFIG)
 include_directories(${BLAKE3_INCLUDE_DIR})
 
-find_package(python-toml REQUIRED)
-find_package(python-filelock REQUIRED)
 find_package(python-psutil REQUIRED)
+
+# The Python CLI uses thrift-python, which getdeps only builds on Linux, and
+# the thrift-python modules that fb303 builds with FB303_THRIFT_PYTHON.
+if (ENABLE_THRIFT_PYTHON AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  include(FBThriftPythonLibrary)
+  if (ENABLE_THRIFT_PYTHON STREQUAL "AUTO")
+    fb_find_thrift_python_runtime(QUIET)
+  else()
+    fb_find_thrift_python_runtime()
+  endif()
+endif()
+set(eden_no_python_cli "")
+if (NOT ENABLE_THRIFT_PYTHON)
+  set(eden_no_python_cli "ENABLE_THRIFT_PYTHON is OFF")
+elseif (NOT (THRIFT_PYTHON_SITE_PACKAGES AND FOLLY_PYTHON_SITE_PACKAGES))
+  set(eden_no_python_cli "thrift-python not found")
+elseif (NOT TARGET fb303::fb303_core_thrift_python.py_lib)
+  set(eden_no_python_cli "fb303 was built without FB303_THRIFT_PYTHON")
+else()
+  find_package(python-toml QUIET)
+  find_package(python-filelock QUIET)
+  if (NOT (python-toml_FOUND AND python-filelock_FOUND))
+    set(eden_no_python_cli
+      "getdeps' python-toml and python-filelock packages were not found")
+  endif()
+endif()
+if (eden_no_python_cli)
+  set(eden_no_python_cli
+    "${eden_no_python_cli}, so the Python CLI that edenfsctl hands "
+    "commands like clone, start and stop to is not built")
+  if (ENABLE_THRIFT_PYTHON AND NOT ENABLE_THRIFT_PYTHON STREQUAL "AUTO")
+    message(FATAL_ERROR ${eden_no_python_cli})
+  endif()
+  message(STATUS ${eden_no_python_cli})
+else()
+  set(EDEN_HAVE_THRIFT_PYTHON ON)
+endif()
 
 # pexpect is used by some of the integration tests.
 # If we don't find it we simply won't run those tests.

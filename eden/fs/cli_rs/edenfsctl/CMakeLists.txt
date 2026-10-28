@@ -4,5 +4,7 @@
 # GNU General Public License version 2.
 
 rust_executable(edenfsctl)
-add_dependencies(edenfsctl.cargo edenfsctl.real.GEN_PY_EXE)
+if (EDEN_HAVE_THRIFT_PYTHON)
+  add_dependencies(edenfsctl.cargo edenfsctl.real.GEN_PY_EXE)
+endif()
 install_rust_executable(edenfsctl)

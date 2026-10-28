@@ -97,7 +97,7 @@ class FindExeClass:
             "edenfsctl (Python)",
             env="EDENFSCTL_REAL_PATH",
             buck_path="eden/fs/cli/edenfsctl.par",
-            cmake_path="eden/fs/cli/edenfsctl.real",
+            cmake_path="eden/fs/cli/edenfsctl.real/__main__.py",
             system_candidates=["/usr/local/bin/edenfsctl.real"],
         )
 

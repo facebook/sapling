@@ -10,5 +10,13 @@ add_fbthrift_library(
   PY_NAMESPACE facebook.eden.overlay
 )
 
+if (EDEN_HAVE_THRIFT_PYTHON)
+  add_fbthrift_python_library(
+    eden_overlay_thrift_python
+    overlay.thrift
+    NAMESPACE facebook.eden
+  )
+endif()
+
 include(generated_targets.cmake)
 eden_add_directory_library(eden_overlay_checker)

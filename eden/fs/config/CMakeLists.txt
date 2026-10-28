@@ -10,6 +10,14 @@ add_fbthrift_library(
   PY_NAMESPACE facebook.eden.eden_config
 )
 
+if (EDEN_HAVE_THRIFT_PYTHON)
+  add_fbthrift_python_library(
+    eden_config_thrift_python
+    eden_config.thrift
+    NAMESPACE eden.fs.config
+  )
+endif()
+
 include(generated_targets.cmake)
 eden_add_directory_library(eden_config)
 

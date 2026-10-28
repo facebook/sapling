@@ -116,6 +116,9 @@ set(ENABLE_EDENSCM AUTO CACHE STRING "Enable support for Eden SCM repositories")
 set_property(CACHE ENABLE_EDENSCM PROPERTY STRINGS AUTO ON OFF)
 set(ENABLE_GIT AUTO CACHE STRING "Enable support for Git repositories")
 set_property(CACHE ENABLE_GIT PROPERTY STRINGS AUTO ON OFF)
+set(ENABLE_THRIFT_PYTHON AUTO CACHE STRING
+  "Build the Python CLI, which needs thrift-python")
+set_property(CACHE ENABLE_THRIFT_PYTHON PROPERTY STRINGS AUTO ON OFF)
 option(BUILD_TESTS "If enabled, compile the tests." OFF)
 
 include(FBCompilerSettings)

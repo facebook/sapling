@@ -11,17 +11,17 @@ if (IS_FB_BUILD)
   list(APPEND EDENFSCTL_SRCS ${EDENFSCTL_FB_DOCTOR_SRCS} ${EDENFSCTL_FB_SRCS})
 endif()
 
-add_fb_python_executable(
-  edenfsctl.real
-  MAIN_MODULE eden.fs.cli.main:zipapp_main
-  SOURCES ${EDENFSCTL_SRCS}
-  DEPENDS
-    eden_py
-    eden_overlay_thrift_py
-    eden_scm_redact
-    eden_service_thrift_py
-    FBThrift::thrift_py_inspect
-    python-toml::python-toml
-    python-filelock::python-filelock
-)
-install_fb_python_executable(edenfsctl.real)
+if (EDEN_HAVE_THRIFT_PYTHON)
+  add_fb_thrift_python_executable(
+    edenfsctl.real
+    MAIN_MODULE eden.fs.cli.main:zipapp_main
+    SOURCES ${EDENFSCTL_SRCS}
+    DEPENDS
+      eden_py
+      eden_overlay_thrift_python
+      eden_scm_redact
+      python-toml::python-toml
+      python-filelock::python-filelock
+  )
+  install_fb_python_executable(edenfsctl.real LIB_DESTINATION lib/eden)
+endif()
