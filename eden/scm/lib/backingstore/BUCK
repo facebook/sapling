@@ -31,7 +31,6 @@ cpp_library(
     deps = [
         "fbsource//xplat/folly:cpp_attributes",
         "fbsource//xplat/folly:try",
-        "fbsource//xplat/folly/io:iobuf",
         "fbsource//xplat/folly/json:dynamic",
         "fbsource//xplat/folly/logging:logging",
         "//eden/common/telemetry:log_info",
@@ -42,6 +41,7 @@ cpp_library(
         "fbsource//xplat/folly:range",
         "fbsource//xplat/folly/container:fbvector",
         "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/io:iobuf",
         ":backingstore@header",  # @manual
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:path",
@@ -68,11 +68,17 @@ sl_rust_library(
                 "dependencies": {
                     "sapling-constructors": {"default-features": False},
                     "sapling-indexedlog": {"features": ["configurable"]},
+                    "sapling-repo": {"features": ["wdir"]},
                 },
             },
             "features": {
                 "cas": [],
                 "fb": ["sapling-configloader/fb"],
+            },
+            "oss_dependencies_override": {
+                "dependencies": {
+                    "edenfs-telemetry": {"path": "../../../fs/rust/edenfs-telemetry"},
+                },
             },
         },
     },

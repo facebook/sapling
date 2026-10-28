@@ -27,6 +27,9 @@ rust_cxx_bridge(
   Folly::folly
 )
 
+# Open-source builds declare folly::IOBuf in a second bridge, see src/oss.rs.
+rust_cxx_bridge(backingstore_iobuf "src/oss.rs" LIBS Folly::folly)
+
 file(GLOB C_API_SRCS "src/*.cpp")
 file(GLOB C_API_HDRS "include/*.h")
 target_sources(
@@ -52,6 +55,7 @@ target_link_libraries(
   PUBLIC
   edencommon::edencommon_os
   rust_backingstore
+  backingstore_iobuf
   fmt::fmt
   Folly::folly
 )

@@ -20,6 +20,7 @@ blob = { version = "0.1.0", path = "../blob" }
 crossfire = "3.1.20"
 cxx = "1.0.194"
 cxxerror = { version = "0.1.0", path = "../edenfs_ffi/cxxerror" }
+edenfs-telemetry = { path = "../../../fs/rust/edenfs-telemetry" }
 env_logger = { version = "0.11.11", features = ["color"] }
 flume = "0.11.1"
 log = { version = "0.4.34", features = ["kv_unstable", "kv_unstable_std"] }
@@ -36,7 +37,7 @@ sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
-sapling-repo = { version = "0.1.0", path = "../repo" }
+sapling-repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-testutil = { version = "0.1.0", path = "../util/testutil" }

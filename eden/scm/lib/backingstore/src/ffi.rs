@@ -35,6 +35,7 @@ use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
 use crate::backingstore::HgCacheStats;
+use crate::facebook;
 use crate::ffi_errors::into_backingstore_err;
 use crate::walk::WalkDetector;
 
@@ -167,7 +168,7 @@ pub(crate) mod ffi {
         type EdenFsEventsLogger;
 
         #[namespace = "folly"]
-        type IOBuf = iobuf::IOBuf;
+        type IOBuf = crate::facebook::IOBuf;
 
         type GetTreeBatchResolver;
         type GetTreeAuxBatchResolver;
@@ -938,7 +939,7 @@ pub fn sapling_backingstore_get_blob(
         FetchContext::new_with_mode_and_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
     );
-    let (data, error) = resolve_result!(res, transform_some: |blob: blob::Blob| blob.into_iobuf().into(), replace_none: UniquePtr::null());
+    let (data, error) = resolve_result!(res, transform_some: facebook::blob_into_iobuf, replace_none: UniquePtr::null());
     ffi::GetBlobResult { data, error }
 }
 
@@ -977,7 +978,7 @@ pub fn sapling_backingstore_get_blob_batch(
                         )
                     }
                 }
-                Some(blob) => (UniquePtr::null(), blob.into_iobuf().into()),
+                Some(blob) => (UniquePtr::null(), facebook::blob_into_iobuf(blob)),
             },
             Err(error) => (into_backingstore_err(error), UniquePtr::null()),
         };
