@@ -3,49 +3,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB STORE_SRCS "*.cpp")
-list(
-  REMOVE_ITEM STORE_SRCS
-  "${CMAKE_CURRENT_SOURCE_DIR}/BackingStoreType.cpp"
-)
+include(generated_targets.cmake)
+eden_add_directory_library(eden_store)
 
-add_library(
-  eden_store_type STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/BackingStoreType.cpp"
-)
-add_library(
-  eden_store STATIC
-    ${STORE_SRCS}
-)
-
-target_link_libraries(
-  eden_store_type
-  PUBLIC
-    eden_utils
-)
-target_link_libraries(
-  eden_store
-  PUBLIC
-    edencommon::edencommon_os
-    eden_config
-    eden_journal
-    eden_model
-    eden_model_git
-    eden_service_thrift_cpp
-    eden_service_thrift_util
-    eden_store_type
-    eden_store_filter
-    eden_telemetry
-    eden_utils
-    fb303::fb303
-    edencommon::edencommon_utils
-)
-
-add_subdirectory(hg)
+add_subdirectory(sl)
 add_subdirectory(filter)
 
 if("${EDEN_HAVE_GIT}")
   add_subdirectory(git)
+else()
+  add_library(eden_fs_store_git INTERFACE)
 endif()
 
 add_subdirectory(test)

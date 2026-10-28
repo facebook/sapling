@@ -50,15 +50,19 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
+include(generated_targets.cmake)
 target_link_libraries(
   backingstore
   PUBLIC
   edencommon::edencommon_os
+  ${SAPLING_NATIVE_BACKINGSTORE_DEPS}
   rust_backingstore
   backingstore_iobuf
   fmt::fmt
   Folly::folly
 )
+
+rust_cxx_header(rust_cxx LIBS rust_backingstore)
 
 # curl used in the Rust crate has its own copy of curl compiled and it uses
 # Crypt32 and Secur32 on Windows. We need to declare the link dependencies here

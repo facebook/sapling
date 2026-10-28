@@ -41,6 +41,7 @@ eden_add_library(eden_fs_store_sl_sapling_import_request_queue
 eden_add_library(eden_fs_store_sl_sapling_backing_store
   SRCS
     SaplingBackingStore.cpp
+    SaplingWalkDetector.cpp
   DEPS
     ${GFLAGS_LIBRARIES}
     ${RE2_LIBRARY}

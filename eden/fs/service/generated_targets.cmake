@@ -22,6 +22,7 @@ eden_add_library(eden_fs_service_main
     Folly::folly_logging_init
     Folly::folly_logging_logging
     Folly::folly_map_util
+    Folly::folly_portability
     Folly::folly_portability_unistd
     Folly::folly_stop_watch
     Folly::folly_string
@@ -192,6 +193,7 @@ eden_add_library(eden_fs_service_server
     cpptoml
     eden_fs_config
     eden_fs_fuse
+    eden_fs_inodes_inode_metadata
     eden_fs_journal
     eden_fs_model
     eden_fs_model_git_gitignore

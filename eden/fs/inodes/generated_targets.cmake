@@ -124,6 +124,7 @@ eden_add_library(eden_fs_inodes
     Folly::folly_string
     Folly::folly_system_pid
     Folly::folly_system_thread_name
+    Folly::folly_try
     Folly::folly_unit
     cpptoml
     eden_build_config

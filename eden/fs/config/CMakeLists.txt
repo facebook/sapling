@@ -10,24 +10,7 @@ add_fbthrift_library(
   PY_NAMESPACE facebook.eden.eden_config
 )
 
-file(GLOB CONFIG_SRCS "*.cpp")
-add_library(
-  eden_config STATIC
-    ${CONFIG_SRCS}
-)
-target_link_libraries(
-  eden_config
-  PUBLIC
-    Boost::filesystem
-    Folly::folly
-    edencommon::edencommon_os
-    edencommon::edencommon_utils
-    eden_config_thrift_cpp
-    eden_store_type
-    eden_model
-    eden_utils
-    cpptoml
-    ${RE2_LIBRARY}
-)
+include(generated_targets.cmake)
+eden_add_directory_library(eden_config)
 
 add_subdirectory(test)

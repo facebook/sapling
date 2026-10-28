@@ -5,3 +5,4 @@
 
 add_subdirectory(edenfs_ffi)
 add_subdirectory(backingstore)
+add_subdirectory(util/sigbus-memops)
