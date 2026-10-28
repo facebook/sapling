@@ -543,6 +543,31 @@ mod tests {
     }
 
     #[test]
+    fn test_augmented_manifest_parsing_leading_whitespace_names() {
+        let tree = concat!(
+            "v1 1111111111111111111111111111111111111111 - - -\n",
+            " 01.png\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 -\n",
+            " secure_pipes\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+        );
+        let augmented_tree_entry =
+            AugmentedTree::try_deserialize(std::io::Cursor::new(tree)).expect("parsing failed");
+
+        let names: Vec<&str> = augmented_tree_entry
+            .entries
+            .iter()
+            .map(|(path, _)| path.as_str())
+            .collect();
+        // FIXME: deserializing strips the leading whitespace from entry names.
+        assert_eq!(names, vec!["01.png", "secure_pipes"]);
+
+        let mut buf: Vec<u8> = Vec::new();
+        augmented_tree_entry
+            .try_serialize(&mut buf)
+            .expect("writing failed");
+        assert_ne!(std::str::from_utf8(&buf), Ok(tree));
+    }
+
+    #[test]
     fn test_augmented_manifest_parsing_2() {
         // test on a real example from the repo
         let mut reader = std::io::Cursor::new(concat!(
