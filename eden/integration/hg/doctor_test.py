@@ -133,8 +133,8 @@ class DoctorTest(EdenHgTestCase):
 
     def test_doctor_watchman_error_reply(self) -> None:
         # A watchman whose `watch-project` fails answers with an error, not
-        # with a watcher. `eden doctor` reports that as a watcher of the wrong
-        # type and offers to replace the watch.
+        # with a watcher. `eden doctor` skips the watcher check instead of
+        # reporting a watcher of the wrong type.
         fake_bin = Path(self.tmp_dir) / "fake_watchman_bin"
         fake_bin.mkdir()
         script = fake_bin / "watchman"
@@ -152,9 +152,5 @@ class DoctorTest(EdenHgTestCase):
             "doctor", "--current-edenfs-only", "-n", stdout=subprocess.PIPE, env=env
         )
         out = result.stdout.decode()
-        self.assertIn(
-            f"Watchman is watching {self.mount} with the wrong watcher type: "
-            '"None" instead of "eden"',
-            out,
-        )
-        self.assertIn(f"Would fix watchman watch for {self.mount}", out)
+        self.assertNotIn("wrong watcher type", out)
+        self.assertNotIn("Would fix watchman watch", out)

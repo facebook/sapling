@@ -776,19 +776,34 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
     def test_watchman_error_response(self, mock_watchman: MagicMock) -> None:
         edenfs_path = "/path/to/eden-mount"
         mock_watchman.side_effect = [{"error": "watch-project timed out"}]
-        fixer, out = self.create_fixer(dry_run=True)
+        fixer, out = self.create_fixer(dry_run=False)
         watchman_info = check_watchman.WatchmanCheckInfo({edenfs_path})
         check_watchman.check_active_mount(fixer, edenfs_path, watchman_info)
-        mock_watchman.assert_has_calls([call(["watch-project", edenfs_path])])
-        self.assertIn(
-            "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
-            '"None" instead of "eden"',
+        mock_watchman.assert_called_once_with(["watch-project", edenfs_path])
+        self.assertEqual("", out.getvalue())
+        self.assert_results(fixer, num_problems=0)
+
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    def test_watchman_response_without_watcher(self, mock_watchman: MagicMock) -> None:
+        edenfs_path = "/path/to/eden-mount"
+        mock_watchman.side_effect = [{"version": "2026.10.20.00", "watch": edenfs_path}]
+        fixer, out = self.create_fixer(dry_run=False)
+        watchman_info = check_watchman.WatchmanCheckInfo({edenfs_path})
+        check_watchman.check_active_mount(fixer, edenfs_path, watchman_info)
+        mock_watchman.assert_called_once_with(["watch-project", edenfs_path])
+        self.assertEqual(
+            (
+                "<yellow>- Found problem:<reset>\n"
+                "Watchman returned an unexpected reply for "
+                "`watch-project /path/to/eden-mount`, with no watcher: "
+                '{"version": "2026.10.20.00", "watch": "/path/to/eden-mount"}\n'
+                'Try running "watchman watch-del /path/to/eden-mount" and then '
+                '"watchman watch-project /path/to/eden-mount"\n'
+                "\n"
+            ),
             out.getvalue(),
         )
-        self.assertIn(
-            "Would fix watchman watch for /path/to/eden-mount", out.getvalue()
-        )
-        self.assert_results(fixer, num_problems=1)
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.

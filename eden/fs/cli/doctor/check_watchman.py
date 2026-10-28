@@ -76,6 +76,18 @@ class IncorrectWatchmanWatch(FixableProblem):
         return self.fix_result == "eden"
 
 
+class UnexpectedWatchmanWatchReply(Problem):
+    def __init__(self, path: str, watch_details: Dict[str, Any]) -> None:
+        super().__init__(
+            f"Watchman returned an unexpected reply for `watch-project {path}`, "
+            f"with no watcher: {json.dumps(watch_details)}",
+            remediation=(
+                f'Try running "watchman watch-del {path}" and then '
+                f'"watchman watch-project {path}"'
+            ),
+        )
+
+
 class MissingOrDuplicatedSubscription(Problem):
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -88,7 +100,15 @@ def check_watchman_subscriptions(
         return
 
     watch_details = _call_watchman(["watch-project", path])
+    if "error" in watch_details:
+        log.warning(
+            f"skipping the watchman watcher check for {path}: {watch_details['error']}"
+        )
+        return
     watcher = watch_details.get("watcher")
+    if watcher is None:
+        tracker.add_problem(UnexpectedWatchmanWatchReply(path, watch_details))
+        return
     if watcher == "eden":
         return
 
