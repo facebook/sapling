@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::BTreeSet;
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -210,6 +211,36 @@ impl GitBackend {
         }
         write_git_label(&self.ident.resolve_full_dot_dir(target), label)
     }
+
+    fn check_add(&self, _dest: &Path) -> Result<(PathBuf, usize)> {
+        let worktrees = self.git.list_worktrees()?;
+        let main = worktrees
+            .iter()
+            .find(|worktree| worktree.is_main)
+            .context("Git did not report a main worktree")?;
+        let main = canonicalize_or_original(&main.path);
+        let linked = worktrees
+            .iter()
+            .filter(|worktree| !worktree.is_main)
+            .count();
+        Ok((main, linked))
+    }
+
+    fn occupied_slots(&self, reservations: &Reservations, main: &Path) -> Result<usize> {
+        // Git lists a new checkout before its reservation is released; count it once.
+        let linked = self
+            .git
+            .list_worktrees()?
+            .into_iter()
+            .filter(|worktree| !worktree.is_main)
+            .map(|worktree| canonicalize_or_original(&worktree.path));
+        let reserved = reservations
+            .reservations
+            .values()
+            .filter(|reservation| reservation.group_main == main)
+            .map(|reservation| reservation.dest.clone());
+        Ok(linked.chain(reserved).collect::<BTreeSet<_>>().len())
+    }
 }
 
 /// Access to the worktrees associated with one repository.
@@ -282,7 +313,7 @@ impl Worktrees {
     pub fn check_add(&self, dest: &Path) -> Result<(PathBuf, usize)> {
         match &self.backend {
             WorktreeBackend::Eden(backend) => backend.check_add(dest),
-            WorktreeBackend::Git(_) => git_add_unsupported(),
+            WorktreeBackend::Git(backend) => backend.check_add(dest),
         }
     }
 
@@ -299,12 +330,12 @@ impl Worktrees {
             WorktreeBackend::Eden(_) => {
                 Ok(count_linked_worktrees(registry, main) + reservations.count_for_group(main))
             }
-            WorktreeBackend::Git(_) => git_add_unsupported(),
+            WorktreeBackend::Git(backend) => backend.occupied_slots(reservations, main),
         }
     }
 
-    /// Record a newly created checkout. As with `set_label`, `Ok(Some(error))`
-    /// means only the marker could not be written.
+    /// Record a newly created checkout. `Ok(Some(error))` means the checkout is
+    /// usable, but its `worktreename` file could not be written.
     pub fn register(
         &self,
         main: &Path,
@@ -313,13 +344,19 @@ impl Worktrees {
     ) -> Result<Option<anyhow::Error>> {
         match &self.backend {
             WorktreeBackend::Eden(backend) => backend.register(main, dest, label),
-            WorktreeBackend::Git(_) => git_add_unsupported(),
+            WorktreeBackend::Git(backend) => {
+                Ok(write_git_label(&backend.ident.resolve_full_dot_dir(dest), label).err())
+            }
         }
     }
-}
 
-fn git_add_unsupported<T>() -> Result<T> {
-    anyhow::bail!("worktree add is not supported in Git repositories")
+    /// The Git repository, if this is a native Git checkout.
+    pub fn git(&self) -> Option<&RepoGit> {
+        match &self.backend {
+            WorktreeBackend::Eden(_) => None,
+            WorktreeBackend::Git(backend) => Some(&backend.git),
+        }
+    }
 }
 
 /// Git labels live in each checkout's admin directory, which Git keeps attached

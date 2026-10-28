@@ -161,8 +161,11 @@ pub(crate) fn run(
     worktrees: &Worktrees,
 ) -> Result<u8> {
     let logger = ctx.logger();
-    let checkouts = Checkouts::new(repo);
+    let checkouts = Checkouts::new(repo, worktrees);
 
+    if ctx.opts.snapshot && !checkouts.supports_snapshot() {
+        abort!("--snapshot is not supported for Git worktrees");
+    }
     if ctx.opts.snapshot && !ctx.opts.rev.is_empty() {
         abort!("cannot use --rev with --snapshot");
     }
@@ -321,6 +324,7 @@ pub(crate) fn run(
     };
 
     // Lock the destination path while creating and initializing that checkout.
+    let cleanup_command = checkouts.cleanup_command(&dest);
     with_worktree_path_op_lock(repo.config().as_ref(), &shared_store_path, &dest, || {
         if dest.exists() {
             abort!("destination path '{}' already exists", dest.display());
@@ -328,10 +332,11 @@ pub(crate) fn run(
         check_dest_not_in_repo(&dest)?;
 
         prepared.create(&dest).inspect_err(|_| {
-            ctx.logger().warn(format!(
-                "worktree add may have left a partial checkout; try running `eden rm {}` to recover",
-                dest.display()
-            ));
+            if let Some(command) = &cleanup_command {
+                ctx.logger().warn(format!(
+                    "worktree add may have left a partial checkout; try running `{command}` to recover"
+                ));
+            }
         })
     })?;
 
@@ -339,12 +344,13 @@ pub(crate) fn run(
     let marker_error = worktrees
         .register(&group_main_path, &dest, label)
         .inspect_err(|_| {
-            logger.warn(format!(
-                "worktree add left a checkout at {} that could not be registered; \
-                 try running `eden rm {}` to recover",
-                dest.display(),
-                dest.display()
-            ));
+            if let Some(command) = &cleanup_command {
+                logger.warn(format!(
+                    "worktree add left a checkout at {} that could not be registered; \
+                     try running `{command}` to recover",
+                    dest.display(),
+                ));
+            }
         })?;
     if let Some(error) = marker_error {
         logger.warn(format!(
@@ -668,8 +674,8 @@ fn drain_workers(result_items: vfs::VfsBatchItems, logger: &TermLogger) -> anyho
 /// Update destination treestate so `sl status` in the dest matches the source.
 ///
 /// Only `added` and `removed` files need treestate entries. Modified, untracked,
-/// and deleted files are detected automatically by EdenFS (worktree commands
-/// require EdenFS — enforced in `lib.rs`).
+/// and deleted files are detected automatically by EdenFS (`--snapshot` requires
+/// EdenFS).
 fn update_dest_treestate(dest: &Path, status: &status::Status) -> anyhow::Result<()> {
     use treestate::filestate::FileStateV2;
     use treestate::filestate::StateFlags;

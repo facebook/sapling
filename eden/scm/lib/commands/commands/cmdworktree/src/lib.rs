@@ -67,10 +67,7 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
     match subcmd {
         "list" | "ls" => list::run(&ctx, repo, &worktrees()?),
         "label" => label::run(&ctx, repo, &worktrees()?),
-        "add" => {
-            require_eden()?;
-            add::run(&ctx, repo, wc, &worktrees()?)
-        }
+        "add" => add::run(&ctx, repo, wc, &worktrees()?),
         "remove" | "rm" => {
             require_eden()?;
             remove::run(&ctx, repo, wc)
@@ -149,8 +146,8 @@ pub fn doc() -> &'static str {
       worktree.git-enabled=true                Enable worktree commands in native Git repositories
       worktree.direct-eden-removal=false       Remove EdenFS checkouts via edenfsctl instead of in-process (default: true)
 
-    Git repositories currently support the `list` and `label` subcommands.
-    Other subcommands require an EdenFS-backed repository."#
+    Git repositories support `list`, `label`, and detached `add`. The `remove`
+    subcommand and `add --snapshot` require an EdenFS-backed repository."#
 }
 
 pub fn synopsis() -> Option<&'static str> {
