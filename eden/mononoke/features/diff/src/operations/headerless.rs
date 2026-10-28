@@ -17,7 +17,6 @@ use crate::types::HeaderlessUnifiedDiff;
 use crate::types::Repo;
 use crate::utils::content::LoadResult;
 use crate::utils::content::load_content;
-use crate::utils::whitespace::strip_horizontal_whitespace;
 
 /// Compute headerless unified diff between two inputs.
 ///
@@ -31,8 +30,6 @@ pub async fn headerless_unified(
     other: Option<DiffSingleInput>,
     options: HeaderlessDiffOpts,
 ) -> Result<HeaderlessUnifiedDiff, DiffError> {
-    let ignore_whitespace = options.ignore_whitespace;
-
     let (base_result, other_result) = try_join!(
         async {
             if let Some(base_input) = base {
@@ -67,18 +64,12 @@ pub async fn headerless_unified(
         other_result.and_then(LoadResult::into_content),
     );
 
-    let (mut base_content, mut other_content) = match (base_bytes, other_bytes) {
+    let (base_content, other_content) = match (base_bytes, other_bytes) {
         (None, None) => return Err(DiffError::empty_inputs()),
         (Some(base), None) => (base, Bytes::new()),
         (None, Some(other)) => (Bytes::new(), other),
         (Some(base), Some(other)) => (base, other),
     };
-
-    // Only strip whitespace if NOT binary and ignore_whitespace is enabled
-    if !any_binary && ignore_whitespace {
-        base_content = strip_horizontal_whitespace(&base_content);
-        other_content = strip_horizontal_whitespace(&other_content);
-    }
 
     let xdiff_opts = xdiff::HeaderlessDiffOpts::from(options);
 
@@ -538,10 +529,53 @@ mod tests {
         )
         .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
-        // Should show a diff because there's actual content difference beyond whitespace
-        assert!(
-            !diff_str.is_empty() && diff_str.contains("@@"),
-            "Diff should show content changes even with ignore_whitespace=true"
+        // The output keeps the original spacing.
+        assert_eq!(
+            diff_str,
+            "@@ -1,3 +1,3 @@\n line1\n-modified  line2\n+line2\n line3\n"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_ignore_whitespace_one_side_missing(
+        fb: FacebookInit,
+    ) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let input = DiffSingleInput::String(DiffInputString {
+            content: "a b\n\tc\n".to_string(),
+        });
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: true,
+        };
+
+        // Missing base: the other input is the old side, shown as removed with
+        // its whitespace intact.
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            None,
+            Some(input.clone()),
+            options.clone(),
+        )
+        .await?;
+        assert_eq!(
+            String::from_utf8_lossy(&diff.raw_diff),
+            "@@ -1,2 +0,0 @@\n-a b\n-\tc\n"
+        );
+
+        // Missing other: the base input is the new side, shown as added.
+        let diff = headerless_unified(&ctx, &repo, &repo, Some(input), None, options).await?;
+        assert_eq!(
+            String::from_utf8_lossy(&diff.raw_diff),
+            "@@ -0,0 +1,2 @@\n+a b\n+\tc\n"
         );
 
         Ok(())

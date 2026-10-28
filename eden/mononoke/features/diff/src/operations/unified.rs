@@ -22,7 +22,6 @@ use crate::utils::content::DiffFileOpts;
 use crate::utils::content::LoadDiffFileResult;
 use crate::utils::content::LoadedDiffFileKind;
 use crate::utils::content::load_diff_file;
-use crate::utils::whitespace::strip_horizontal_whitespace;
 
 const LFS_NON_TEXT_SENTINEL: &str = "Git LFS: none (non-text content omitted)\n";
 
@@ -82,17 +81,12 @@ pub async fn unified(
         return Err(DiffError::empty_inputs());
     }
 
-    let (base_file, other_file) =
-        if !has_binary_input && !rendered_lfs_non_text_sentinel && options.ignore_whitespace {
-            (
-                base_file.map(strip_whitespace_from_diff_file),
-                other_file.map(strip_whitespace_from_diff_file),
-            )
-        } else {
-            (base_file, other_file)
-        };
-
-    let xdiff_opts = xdiff::DiffOpts::from(options);
+    let ignore_whitespace =
+        options.ignore_whitespace && !has_binary_input && !rendered_lfs_non_text_sentinel;
+    let xdiff_opts = xdiff::DiffOpts {
+        ignore_whitespace,
+        ..xdiff::DiffOpts::from(options)
+    };
     let raw_diff =
         mononoke::spawn_blocking(move || xdiff::diff_unified(base_file, other_file, xdiff_opts))
             .await
@@ -130,26 +124,6 @@ fn render_lfs_non_text_sentinel(
         true
     } else {
         false
-    }
-}
-
-/// Strip horizontal whitespace from inline content in a DiffFile
-fn strip_whitespace_from_diff_file(
-    file: xdiff::DiffFile<String, Bytes>,
-) -> xdiff::DiffFile<String, Bytes> {
-    let contents = match file.contents {
-        xdiff::FileContent::Inline(bytes) => {
-            let stripped = strip_horizontal_whitespace(&bytes);
-            xdiff::FileContent::Inline(stripped)
-        }
-        // For Omitted and Submodule, no whitespace stripping needed
-        other => other,
-    };
-
-    xdiff::DiffFile {
-        path: file.path,
-        contents,
-        file_type: file.file_type,
     }
 }
 
@@ -771,7 +745,6 @@ mod tests {
         });
 
         // With ignore_whitespace: true, should still show content change
-        // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
         let options = UnifiedDiffOpts {
             context: 3,
             copy_info: DiffCopyInfo::None,
@@ -788,7 +761,7 @@ mod tests {
         )
         .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
-        // Should show a diff because there's actual content difference beyond whitespace
+        // The output keeps the original spacing.
         assert_eq!(
             diff_str,
             r#"diff --git a/base_path b/other_path
@@ -797,7 +770,7 @@ mod tests {
 @@ -1,3 +1,3 @@
  line1
 -line2
-+modifiedline2
++modified  line2
  line3
 "#
         );

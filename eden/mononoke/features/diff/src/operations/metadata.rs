@@ -32,7 +32,6 @@ use crate::types::MetadataLinesCount;
 use crate::types::Repo;
 use crate::utils::content::get_file_info_from_changeset_path;
 use crate::utils::content::get_lfs_pointer;
-use crate::utils::whitespace::strip_horizontal_whitespace;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
 
@@ -286,13 +285,17 @@ fn diff_files(
     ignore_whitespace: bool,
 ) -> MetadataLinesCount {
     let old_content = if ignore_whitespace {
-        strip_horizontal_whitespace(&old_text_file.file_content)
+        Bytes::from(xdiff::strip_horizontal_whitespace(
+            &old_text_file.file_content,
+        ))
     } else {
         old_text_file.file_content.clone()
     };
 
     let new_content = if ignore_whitespace {
-        strip_horizontal_whitespace(&new_text_file.file_content)
+        Bytes::from(xdiff::strip_horizontal_whitespace(
+            &new_text_file.file_content,
+        ))
     } else {
         new_text_file.file_content.clone()
     };

@@ -16,7 +16,6 @@ use crate::types::HunkData;
 use crate::types::Repo;
 use crate::utils::content::LoadResult;
 use crate::utils::content::load_content;
-use crate::utils::whitespace::strip_horizontal_whitespace;
 
 /// Compute diff hunks between two inputs.
 ///
@@ -70,8 +69,8 @@ pub async fn hunks(
 
     // Only strip whitespace if NOT binary and ignore_whitespace is enabled
     if !any_binary && ignore_whitespace {
-        base_content = strip_horizontal_whitespace(&base_content);
-        other_content = strip_horizontal_whitespace(&other_content);
+        base_content = Bytes::from(xdiff::strip_horizontal_whitespace(&base_content));
+        other_content = Bytes::from(xdiff::strip_horizontal_whitespace(&other_content));
     }
 
     let hunks = mononoke::spawn_blocking(move || xdiff::diff_hunks(&base_content, &other_content))
