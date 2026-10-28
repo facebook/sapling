@@ -159,7 +159,7 @@ void eden_get_file_content(benchmark::State& state) {
               result.blob())) {
         const auto& blobOrError = *result.blob();
         if (blobOrError.getType() == ScmBlobOrError::Type::blob) {
-          const auto& blobData = blobOrError.get_blob();
+          const auto& blobData = blobOrError.blob().value();
           if (!blobData.empty()) {
             hasError = false;
           }
@@ -244,7 +244,7 @@ void eden_get_file_content_concurrent(benchmark::State& state) {
                 result.blob())) {
           const auto& blobOrError = *result.blob();
           if (blobOrError.getType() == ScmBlobOrError::Type::blob) {
-            const auto& blobData = blobOrError.get_blob();
+            const auto& blobData = blobOrError.blob().value();
             if (!blobData.empty()) {
               hasError = false;
             }
