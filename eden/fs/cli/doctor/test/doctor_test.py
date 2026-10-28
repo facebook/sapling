@@ -1818,15 +1818,16 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
             lambda p: os.lstat(p).st_mode,
         )
 
-        self.assertEqual(
-            f"""<yellow>- Found problem:<reset>
-{Path("p/a")} has an unexpected file type: known to EdenFS as a symlink, but is a directory on disk
-Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
-
-""",
+        self.assertRegex(
             output.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+.* has an unexpected file type: known to EdenFS as a directory, but is a symlink on disk
+Fixing mismatched files/directories in .*...<red>error<reset>
+Failed to fix or verify fix for problem MaterializedInodesHaveDifferentModeOnDisk: RemediationError: Failed check for MaterializedInodesHaveDifferentModeOnDisk failed:
+Path .* is a symlink on disk but directory in eden
+(.|\n)*""",
         )
-        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+        self.assert_results(fixer, num_problems=1, num_failed_fixes=1)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
     def test_materialized_directory_that_is_a_file_on_disk(
@@ -1850,14 +1851,18 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
         ]
 
         tracker = ProblemCollector(instance)
-        with self.assertRaises(NotADirectoryError):
-            check_materialized_are_accessible(
-                tracker,
-                typing.cast(EdenInstance, instance),
-                checkout,
-                lambda p: os.lstat(p).st_mode,
-            )
-        self.assertEqual(tracker.problems, [])
+        check_materialized_are_accessible(
+            tracker,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
+        )
+        self.assertEqual(
+            [problem.description() for problem in tracker.problems],
+            [
+                f"{Path('f')} has an unexpected file type: known to EdenFS as a directory, but is a file on disk"
+            ],
+        )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
     def test_materialized_different_mode_fixer_fail(

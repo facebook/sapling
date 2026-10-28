@@ -686,15 +686,19 @@ def check_materialized_are_accessible(
             continue
 
         if not stat.S_ISDIR(mode):
-            mismatched_mode[path] = (stat.S_IFDIR, mode)
+            mismatched_mode[path] = (mode, stat.S_IFDIR)
 
         # A None missing_path_names avoids the listdir and missing inodes check
         missing_path_names = None
         # We will ignore special '.eden' checkout path
         if materialized_name != ".eden":
-            missing_path_names = set()
-            for filename in os.listdir(osPath):
-                missing_path_names.add(filename if case_sensitive else filename.lower())
+            try:
+                missing_path_names = {
+                    filename if case_sensitive else filename.lower()
+                    for filename in os.listdir(osPath)
+                }
+            except NotADirectoryError:
+                missing_path_names = None
         visited_path_names = set()
 
         for dirent in materialized_dir.entries:
