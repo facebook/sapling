@@ -12,10 +12,10 @@ use anyhow::Result;
 use hgrc_parser::format::format_config_item;
 use hgrc_parser::format::validate_config_item_name;
 
+use crate::rungit::BareGit;
 use crate::rungit::GitCmd;
-use crate::rungit::GlobalGit;
 
-impl GlobalGit {
+impl BareGit {
     /// Translate Git config to Sapling config. Includes remotes, and username.
     /// Return (system-user-level-config, repo-level-config).
     pub fn translate_git_config(&self) -> Result<(String, String)> {

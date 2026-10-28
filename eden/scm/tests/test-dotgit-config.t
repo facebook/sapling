@@ -40,3 +40,11 @@ Scp-like URL is translated to ssh URL:
   $ git remote add myfork foo@bar:baz/repo1.git
   $ sl paths myfork
   ssh://foo@bar/baz/repo1.git
+
+Config is translated from the target checkout, not the current directory:
+
+  $ git config extensions.worktreeConfig true
+  $ git worktree add -q --detach $TESTTMP/linked
+  $ git -C $TESTTMP/linked config --worktree user.name Linked
+  $ sl -R $TESTTMP/linked config ui.username
+  Linked <foo@example.com>
