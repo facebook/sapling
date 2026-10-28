@@ -550,6 +550,7 @@ def _cmd_file(args: argparse.Namespace) -> int:
         daemon_package=args.daemon_package,
         dry_run=not args.file,
         skip_replay=args.skip_replay,
+        max_new=args.max_new,
     )
     try:
         code, lines = filing.file_findings(
@@ -730,8 +731,8 @@ def _main(argv: list[str]) -> int:
         "file",
         help="file a campaign's findings as subtasks of the findings parent task",
         description="Dry run unless --file: reads the parent's subtasks and writes"
-        " FINDINGS/filing.json. --file replays each new or regressed key once and"
-        " creates its subtask only when the replay reproduces the key.",
+        " FINDINGS/filing.json. --file replays each new key once and creates its"
+        " subtask only when the replay reproduces the key.",
     )
     filer.add_argument("--target", required=True, choices=_registry())
     filer.add_argument(
@@ -751,6 +752,12 @@ def _main(argv: list[str]) -> int:
     mode.add_argument("--file", action="store_true", help="create and comment")
     filer.add_argument(
         "--skip-replay", action="store_true", help="file new keys without a replay"
+    )
+    filer.add_argument(
+        "--max-new",
+        type=int,
+        default=None,
+        help="with --file, file nothing when more new keys than this would be created",
     )
     filer.add_argument(
         "--act-as-crewmate",

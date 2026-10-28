@@ -66,8 +66,10 @@ class FakeTasks:
     calls: list[tuple[str, str]] = field(default_factory=list)
     created: list[TaskDraft] = field(default_factory=list)
 
-    def add(self, number: str, description: str, closed: bool = False) -> None:
-        self.records[number] = TaskRecord(number, description, closed)
+    def add(
+        self, number: str, description: str, closed: bool = False, owner: str = "owner"
+    ) -> None:
+        self.records[number] = TaskRecord(number, description, closed, owner)
 
     def subtasks(self, parent: str) -> list[str]:
         self.calls.append(("subtasks", parent))
@@ -347,6 +349,38 @@ class FilingTest(unittest.TestCase):
         file(directory, closed, FILE)
         self.assertEqual([("comment", "T401"), ("comment", "T404")], closed.writes())
 
+    def test_only_the_filing_owners_carriers_get_a_comment(self) -> None:
+        directory = write_findings(self.root, [entry()])
+        tasks = FakeTasks()
+        tasks.add("T405", block(), owner="teammate")
+        tasks.add("T406", block())
+        _code, lines, _document = file(directory, tasks, FILE)
+        self.assertEqual([("comment", "T406")], tasks.writes())
+        self.assertEqual(
+            f"DUPLICATE {TORN_KEY} T406: carried by T405 (open), T406 (open);"
+            " not commented on T405 (owned by teammate); commented on T406",
+            lines[0],
+        )
+
+        theirs = FakeTasks()
+        theirs.add("T405", block(), owner="teammate")
+        code, _lines, _document = file(directory, theirs, FILE)
+        self.assertEqual((0, [], []), (code, theirs.writes(), theirs.created))
+
+    def test_more_new_keys_than_max_new_files_nothing(self) -> None:
+        directory = write_findings(self.root, [entry(), entry(THRIFT)])
+        tasks = FakeTasks()
+        capped = replace(FILE, max_new=1)
+        code, lines, document = file(directory, tasks, capped, refuse_replay)
+        self.assertEqual(1, code)
+        self.assertEqual([], tasks.writes())
+        self.assertEqual("GATE FAIL max-new: 2 new keys, more than 1", lines[0])
+        self.assertEqual(["max-new: 2 new keys, more than 1"], document["gates"])
+        self.assertEqual(["NEW", "NEW"], [d["action"] for d in document["decisions"]])
+
+        file(directory, tasks, replace(FILE, max_new=2), REPRODUCED)
+        self.assertEqual(2, len(tasks.created))
+
     def test_one_sighting_comment_per_subtask_key_and_daemon_source_commit(
         self,
     ) -> None:
@@ -512,6 +546,7 @@ _META_OUTPUT: dict[tuple[str, str], Any] = {
         "subtasks": "T1, T2",
         "description": "d",
         "completed": "N/A",
+        "owner": "someone",
     },
     ("tasks.task", "create"): {"number": "T3"},
     ("tasks.comment", "list"): [{"text": "c"}],
@@ -532,7 +567,7 @@ class MetaTasksTest(unittest.TestCase):
 
         with mock.patch.object(subprocess, "run", run):
             self.assertEqual(["T1", "T2"], tasks.subtasks("T100"))
-            self.assertEqual(TaskRecord("T1", "d", False), tasks.task("T1"))
+            self.assertEqual(TaskRecord("T1", "d", False, "someone"), tasks.task("T1"))
             self.assertEqual(["c"], tasks.comments("T1"))
             self.assertEqual(
                 "T3", tasks.create(TaskDraft("t", "d", "owner", "T100", "tag"))

@@ -13,7 +13,9 @@ subtasks already say about it:
   creates a subtask only when the replay reproduces the key.
 - DUPLICATE: some subtask carries it, open or closed. Filing comments on
   every open carrier, or on every closed one when none is open, at most once
-  per subtask, key, and daemon source commit. Nothing is reopened.
+  per subtask, key, and daemon source commit, and only on carriers the filing
+  owner owns; another owner's carrier is named, not commented on. Nothing is
+  reopened.
 - SKIPPED: a replay that did not reproduce the key, and routed or
   unclassified findings; nothing is written for them.
 
@@ -27,7 +29,8 @@ Nothing is read from or written to the tasks when a gate fails: the
 findings must be judged by the current checker, and every check line
 `findings` recorded (campaign health, daemon provenance on every seed, each
 red control) must be a PASS. A dry run reads the tasks and writes only
-`filing.json` beside `findings.json`. A write that fails is recorded on its
+`filing.json` beside `findings.json`. With `max_new`, a run that would create
+more subtasks than that files nothing. A write that fails is recorded on its
 decision, and the rest still run. Every task access goes through `Tasks`.
 """
 
@@ -88,6 +91,7 @@ class TaskRecord:
     number: str
     description: str
     closed: bool
+    owner: str
 
 
 @dataclass(frozen=True)
@@ -113,7 +117,7 @@ class Tasks(Protocol):
         ...
 
     def task(self, number: str) -> TaskRecord:
-        """Return one task's description and whether it is closed."""
+        """Return one task's description, whether it is closed, and its owner."""
         ...
 
     def comments(self, number: str) -> list[str]:
@@ -175,7 +179,7 @@ class MetaTasks:
                 "tasks.task",
                 "describe",
                 f"--task={number}",
-                "--columns=description,completed",
+                "--columns=description,completed,owner",
             ]
         )
         completed = found.get("completed") if type(found) is dict else None
@@ -183,7 +187,10 @@ class MetaTasks:
             raise TasksError(f"{number} completed is {completed!r}, not text")
         # `completed` is "N/A" while the task is open, else its close time.
         return TaskRecord(
-            number, str(found.get("description") or ""), completed != "N/A"
+            number,
+            str(found.get("description") or ""),
+            completed != "N/A",
+            str(found.get("owner") or ""),
         )
 
     def comments(self, number: str) -> list[str]:
@@ -332,6 +339,7 @@ class Options:
     daemon_package: str | None = None
     dry_run: bool = True
     skip_replay: bool = False
+    max_new: int | None = None
 
 
 @dataclass(frozen=True)
@@ -483,16 +491,17 @@ def decide(entry: Row, subtasks: Subtasks, tasks: Tasks, context: _Context) -> D
         return Decision(SKIPPED, key, "no daemon source commit to dedup sightings")
     opened = tuple(n for n, t in carriers if not t.closed)
     targets = opened or tuple(n for n, _t in carriers)
+    owners = {n: t.owner for n, t in carriers}
+    mine = tuple(n for n in targets if owners[n] == context.options.owner)
     marker = _sighting_marker(key, source_commit)
-    pending = tuple(
-        n for n in targets if not any(marker in c for c in tasks.comments(n))
-    )
+    pending = tuple(n for n in mine if not any(marker in c for c in tasks.comments(n)))
     state = ", ".join(f"{n} ({'closed' if t.closed else 'open'})" for n, t in carriers)
+    others = ", ".join(f"{n} (owned by {owners[n]})" for n in targets if n not in mine)
     return Decision(
         DUPLICATE,
         key,
-        f"carried by {state}",
-        targets,
+        f"carried by {state}" + (f"; not commented on {others}" if others else ""),
+        mine,
         comment=_sighting(entry, marker, context) if pending else None,
         comment_on=pending,
     )
@@ -602,6 +611,18 @@ def file_findings(
     decisions = [
         decide(entry, subtasks, tasks, context) for entry in document["findings"]
     ]
+    new = sum(d.action == NEW for d in decisions)
+    if not options.dry_run and options.max_new is not None and new > options.max_new:
+        cap = f"max-new: {new} new keys, more than {options.max_new}"
+        decisions += _unkeyed(document)
+        path = _write(
+            findings_dir, document, options, [cap], decisions, subtasks.malformed
+        )
+        return 1, [
+            f"GATE FAIL {cap}",
+            *(d.line(True) for d in decisions),
+            f"filing: nothing filed; wrote {path}",
+        ]
     if not options.dry_run:
         decisions = [act(d, tasks, replay, findings_dir) for d in decisions]
     decisions += _unkeyed(document)
