@@ -37,7 +37,14 @@ use futures::stream::BoxStream;
 use itertools::Itertools;
 use serde::Serialize;
 use spawn_ext::CommandExt;
-use util::lock::unsanitize_lock_name;
+use util::lock::sanitize_lock_name;
+
+fn tracked_state_for_lock_name(states: &[String], lock_name: &str) -> Option<String> {
+    states
+        .iter()
+        .find(|state| sanitize_lock_name(state) == lock_name)
+        .cloned()
+}
 
 pub(crate) static SCUBA_CLIENT: LazyLock<QueueingScubaLogger> =
     LazyLock::new(|| QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000));
@@ -356,8 +363,7 @@ impl StreamingChangesClient {
         if let ChangeNotification::StateChange(state_change) = change {
             match state_change {
                 StateChangeNotification::StateEntered(entered) => {
-                    let state_name = unsanitize_lock_name(&entered.name);
-                    if states.contains(&state_name) {
+                    if let Some(state_name) = tracked_state_for_lock_name(states, &entered.name) {
                         return Some(ChangeEvent {
                             event_type: StateChange::Entered,
                             state: state_name,
@@ -366,8 +372,7 @@ impl StreamingChangesClient {
                     }
                 }
                 StateChangeNotification::StateLeft(left) => {
-                    let state_name = unsanitize_lock_name(&left.name);
-                    if states.contains(&state_name) {
+                    if let Some(state_name) = tracked_state_for_lock_name(states, &left.name) {
                         return Some(ChangeEvent {
                             event_type: StateChange::Left,
                             state: state_name,
@@ -925,8 +930,15 @@ mod tests {
             changes_since.clone(),
         );
 
-        assert_eq!(result, vec![Changes::ChangesSince(changes_since)]);
-        assert!(asserted_states.is_empty());
+        assert_eq!(
+            result,
+            vec![Changes::ChangeEvent(ChangeEvent {
+                event_type: StateChange::Entered,
+                state: "my_state".to_string(),
+                position: journal_pos.clone(),
+            })]
+        );
+        assert_eq!(asserted_states, HashSet::from(["my_state".to_string()]));
         Ok(())
     }
 

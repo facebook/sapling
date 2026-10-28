@@ -448,22 +448,16 @@ class NotifyTest(testcase.EdenRepoTest):
         await self.wait_for_state("my_state")
         event = await self.wait_for_next_event(subscription)
         self.assertIsNotNone(event)
-        # The Entered event for "my_state" is not recognized: the notification
-        # name "my_state" is mapped back to "my.state", which is not tracked, so
-        # the raw state change is passed through as an ordinary change.
-        self.assertNotIn("event_type", event, msg=f"event: {event}")
-        self.assertIn(
-            {"StateChange": {"StateEntered": {"name": "my_state"}}},
-            event["changes"],
-            msg=f"event: {event}",
-        )
+        self.assertEqual(event["event_type"], "Entered", msg=f"event: {event}")
+        self.assertEqual(event["state"], "my_state", msg=f"event: {event}")
 
-        # Kill the state holder. The wrapper never saw the state as asserted,
-        # so its timer check does not run and no Left event is ever reported.
+        # Kill the state holder; the timer check reports the state as left.
         state_process.terminate()
         await state_process.wait()
-        event = await self.wait_for_next_event(subscription, attempt=3)
-        self.assertIsNone(event, msg=f"event: {event}")
+        event = await self.wait_for_next_event(subscription)
+        self.assertIsNotNone(event)
+        self.assertEqual(event["event_type"], "Left", msg=f"event: {event}")
+        self.assertEqual(event["state"], "my_state", msg=f"event: {event}")
 
     async def test_debug_subscribe_with_multiple_states(self) -> None:
         subscription = await self.subscribe_with_states(["hello", "goodbye"])
