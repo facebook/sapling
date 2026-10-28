@@ -140,6 +140,33 @@ Attempted and failed to fix problem StaleMountsFound
             fixer, num_problems=1, num_fixed_problems=0, num_failed_fixes=1
         )
 
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_fix_with_an_unknown_status_mount(
+        self, mock_get_sudo_perms: MagicMock
+    ) -> None:
+        mock_get_sudo_perms.return_value = True
+        self.mount_table.add_stale_mount("/mnt/stale1")
+        self.mount_table.add_mount("/mnt/eio")
+        self.mount_table.fail_access("/mnt/eio/.eden", errno.EIO)
+
+        fixer, out = self.run_check(dry_run=False)
+        self.assertEqual(
+            """\
+<yellow>- Found problem:<reset>
+Found 1 stale edenfs mount:
+  /mnt/stale1
+Unmounting 1 stale edenfs mount...<red>error<reset>
+Attempted and failed to fix problem StaleMountsFound
+
+""",
+            out,
+        )
+        self.assert_results(
+            fixer, num_problems=1, num_fixed_problems=0, num_failed_fixes=1
+        )
+        self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
     def test_dry_run_prints_stale_mounts_and_does_not_unmount(self) -> None:
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
