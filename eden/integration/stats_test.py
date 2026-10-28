@@ -8,7 +8,6 @@
 
 import logging
 import os
-import subprocess
 import sys
 import time
 import typing
@@ -84,26 +83,18 @@ class GenericStatsTest(testcase.EdenRepoTest):
         # A full restart starts the daemon's counters again from zero.
         self.eden.restart()
 
-        # The later snapshot is smaller than the earlier one. Instead of
-        # reporting what happened since the restart, the delta wraps around
-        # (an opt build has no overflow checks) or the command panics with
-        # "attempt to subtract with overflow" (the Windows and macOS CI
-        # builds check for overflow).
-        result = self.eden.run_unchecked(
+        # The later snapshot is smaller than the earlier one; the delta
+        # saturates at zero instead of wrapping around or panicking.
+        output = self.eden.run_cmd(
             "debug",
             "counters",
             "finalize",
             "--snapshot-path",
             snapshot,
             env=rust_env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
         )
-        output = result.stdout.decode() + result.stderr.decode()
-        self.assertTrue(
-            "1844674407" in output or "attempt to subtract with overflow" in output,
-            msg=f"output: {output}",
-        )
+        self.assertNotIn("1844674407", output, msg=f"output: {output}")
+        self.assertNotIn("lookup", output, msg=f"output: {output}")
 
     def test_writing_untracked_file_bumps_write_counter(self) -> None:
         counters_before = self.get_counters()

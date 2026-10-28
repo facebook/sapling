@@ -52,17 +52,19 @@ impl Sub for FilesystemTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            syscall_open: self.syscall_open - rhs.syscall_open,
-            syscall_read: self.syscall_read - rhs.syscall_read,
-            syscall_readdir: self.syscall_readdir - rhs.syscall_readdir,
-            syscall_readdirplus: self.syscall_readdirplus - rhs.syscall_readdirplus,
-            syscall_write: self.syscall_write - rhs.syscall_write,
-            syscall_statfs: self.syscall_statfs - rhs.syscall_statfs,
-            syscall_getattr: self.syscall_getattr - rhs.syscall_getattr,
-            syscall_setattr: self.syscall_setattr - rhs.syscall_setattr,
-            syscall_lookup: self.syscall_lookup - rhs.syscall_lookup,
-            syscall_access: self.syscall_access - rhs.syscall_access,
-            syscall_mkdir: self.syscall_mkdir - rhs.syscall_mkdir,
+            syscall_open: self.syscall_open.saturating_sub(rhs.syscall_open),
+            syscall_read: self.syscall_read.saturating_sub(rhs.syscall_read),
+            syscall_readdir: self.syscall_readdir.saturating_sub(rhs.syscall_readdir),
+            syscall_readdirplus: self
+                .syscall_readdirplus
+                .saturating_sub(rhs.syscall_readdirplus),
+            syscall_write: self.syscall_write.saturating_sub(rhs.syscall_write),
+            syscall_statfs: self.syscall_statfs.saturating_sub(rhs.syscall_statfs),
+            syscall_getattr: self.syscall_getattr.saturating_sub(rhs.syscall_getattr),
+            syscall_setattr: self.syscall_setattr.saturating_sub(rhs.syscall_setattr),
+            syscall_lookup: self.syscall_lookup.saturating_sub(rhs.syscall_lookup),
+            syscall_access: self.syscall_access.saturating_sub(rhs.syscall_access),
+            syscall_mkdir: self.syscall_mkdir.saturating_sub(rhs.syscall_mkdir),
         }
     }
 }
@@ -96,9 +98,13 @@ impl Sub for EdenApiBackendTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            edenapi_fetches_blobs: self.edenapi_fetches_blobs - rhs.edenapi_fetches_blobs,
-            edenapi_fetches_trees: self.edenapi_fetches_trees - rhs.edenapi_fetches_trees,
-            edenapi_requests: self.edenapi_requests - rhs.edenapi_requests,
+            edenapi_fetches_blobs: self
+                .edenapi_fetches_blobs
+                .saturating_sub(rhs.edenapi_fetches_blobs),
+            edenapi_fetches_trees: self
+                .edenapi_fetches_trees
+                .saturating_sub(rhs.edenapi_fetches_trees),
+            edenapi_requests: self.edenapi_requests.saturating_sub(rhs.edenapi_requests),
         }
     }
 }
@@ -119,8 +125,8 @@ impl Sub for LfsBackendTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            lfs_fetches_blobs: self.lfs_fetches_blobs - rhs.lfs_fetches_blobs,
-            lfs_requests: self.lfs_requests - rhs.lfs_requests,
+            lfs_fetches_blobs: self.lfs_fetches_blobs.saturating_sub(rhs.lfs_fetches_blobs),
+            lfs_requests: self.lfs_requests.saturating_sub(rhs.lfs_requests),
         }
     }
 }
@@ -213,10 +219,10 @@ impl Sub for SaplingCacheTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            blobs_hits: self.blobs_hits - rhs.blobs_hits,
-            blobs_misses: self.blobs_misses - rhs.blobs_misses,
-            trees_hits: self.trees_hits - rhs.trees_hits,
-            trees_misses: self.trees_misses - rhs.trees_misses,
+            blobs_hits: self.blobs_hits.saturating_sub(rhs.blobs_hits),
+            blobs_misses: self.blobs_misses.saturating_sub(rhs.blobs_misses),
+            trees_hits: self.trees_hits.saturating_sub(rhs.trees_hits),
+            trees_misses: self.trees_misses.saturating_sub(rhs.trees_misses),
         }
     }
 }
@@ -234,8 +240,8 @@ impl Sub for SaplingLFSCacheTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            blobs_hits: self.blobs_hits - rhs.blobs_hits,
-            blobs_misses: self.blobs_misses - rhs.blobs_misses,
+            blobs_hits: self.blobs_hits.saturating_sub(rhs.blobs_hits),
+            blobs_misses: self.blobs_misses.saturating_sub(rhs.blobs_misses),
         }
     }
 }
@@ -255,10 +261,10 @@ impl Sub for InMemoryCacheTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            blobs_hits: self.blobs_hits - rhs.blobs_hits,
-            blobs_misses: self.blobs_misses - rhs.blobs_misses,
-            trees_hits: self.trees_hits - rhs.trees_hits,
-            trees_misses: self.trees_misses - rhs.trees_misses,
+            blobs_hits: self.blobs_hits.saturating_sub(rhs.blobs_hits),
+            blobs_misses: self.blobs_misses.saturating_sub(rhs.blobs_misses),
+            trees_hits: self.trees_hits.saturating_sub(rhs.trees_hits),
+            trees_misses: self.trees_misses.saturating_sub(rhs.trees_misses),
         }
     }
 }
@@ -363,15 +369,21 @@ impl Sub for FileMetadataFetchTelemetry {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            fetched_from_inmemory_cache: self.fetched_from_inmemory_cache
-                - rhs.fetched_from_inmemory_cache,
-            fetched_from_backing_store: self.fetched_from_backing_store
-                - rhs.fetched_from_backing_store,
-            fetched_from_backing_store_cached: self.fetched_from_backing_store_cached
-                - rhs.fetched_from_backing_store_cached,
-            fetched_from_backing_store_computed: self.fetched_from_backing_store_computed
-                - rhs.fetched_from_backing_store_computed,
-            fetched_from_remote: self.fetched_from_remote - rhs.fetched_from_remote,
+            fetched_from_inmemory_cache: self
+                .fetched_from_inmemory_cache
+                .saturating_sub(rhs.fetched_from_inmemory_cache),
+            fetched_from_backing_store: self
+                .fetched_from_backing_store
+                .saturating_sub(rhs.fetched_from_backing_store),
+            fetched_from_backing_store_cached: self
+                .fetched_from_backing_store_cached
+                .saturating_sub(rhs.fetched_from_backing_store_cached),
+            fetched_from_backing_store_computed: self
+                .fetched_from_backing_store_computed
+                .saturating_sub(rhs.fetched_from_backing_store_computed),
+            fetched_from_remote: self
+                .fetched_from_remote
+                .saturating_sub(rhs.fetched_from_remote),
         }
     }
 }
@@ -392,11 +404,13 @@ impl Sub for FileMetadataPrefetchTelemetry {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            prefetch_backing_store_cached: self.prefetch_backing_store_cached
-                - rhs.prefetch_backing_store_cached,
-            prefetch_backing_store_computed: self.prefetch_backing_store_computed
-                - rhs.prefetch_backing_store_computed,
-            prefetch_remote: self.prefetch_remote - rhs.prefetch_remote,
+            prefetch_backing_store_cached: self
+                .prefetch_backing_store_cached
+                .saturating_sub(rhs.prefetch_backing_store_cached),
+            prefetch_backing_store_computed: self
+                .prefetch_backing_store_computed
+                .saturating_sub(rhs.prefetch_backing_store_computed),
+            prefetch_remote: self.prefetch_remote.saturating_sub(rhs.prefetch_remote),
         }
     }
 }
@@ -433,10 +447,12 @@ impl Sub for TreeMetadataTelemetry {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            fetched_from_inmemory_cache: self.fetched_from_inmemory_cache
-                - rhs.fetched_from_inmemory_cache,
-            fetched_from_backing_store: self.fetched_from_backing_store
-                - rhs.fetched_from_backing_store,
+            fetched_from_inmemory_cache: self
+                .fetched_from_inmemory_cache
+                .saturating_sub(rhs.fetched_from_inmemory_cache),
+            fetched_from_backing_store: self
+                .fetched_from_backing_store
+                .saturating_sub(rhs.fetched_from_backing_store),
         }
     }
 }
@@ -664,20 +680,32 @@ impl Sub for CrawlingScore {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            remote_blob_fetches: self.remote_blob_fetches - rhs.remote_blob_fetches,
-            remote_tree_fetches: self.remote_tree_fetches - rhs.remote_tree_fetches,
-            remote_blob_prefetches: self.remote_blob_prefetches - rhs.remote_blob_prefetches,
-            remote_tree_prefetches: self.remote_tree_prefetches - rhs.remote_tree_prefetches,
-            local_cache_blob_fetch_hits: self.local_cache_blob_fetch_hits
-                - rhs.local_cache_blob_fetch_hits,
-            local_cache_tree_fetch_hits: self.local_cache_tree_fetch_hits
-                - rhs.local_cache_tree_fetch_hits,
-            local_cache_blob_prefetch_hits: self.local_cache_blob_prefetch_hits
-                - rhs.local_cache_blob_prefetch_hits,
-            local_cache_tree_prefetch_hits: self.local_cache_tree_prefetch_hits
-                - rhs.local_cache_tree_prefetch_hits,
-            fs_open_plus_read: self.fs_open_plus_read - rhs.fs_open_plus_read,
-            fs_readdir: self.fs_readdir - rhs.fs_readdir,
+            remote_blob_fetches: self
+                .remote_blob_fetches
+                .saturating_sub(rhs.remote_blob_fetches),
+            remote_tree_fetches: self
+                .remote_tree_fetches
+                .saturating_sub(rhs.remote_tree_fetches),
+            remote_blob_prefetches: self
+                .remote_blob_prefetches
+                .saturating_sub(rhs.remote_blob_prefetches),
+            remote_tree_prefetches: self
+                .remote_tree_prefetches
+                .saturating_sub(rhs.remote_tree_prefetches),
+            local_cache_blob_fetch_hits: self
+                .local_cache_blob_fetch_hits
+                .saturating_sub(rhs.local_cache_blob_fetch_hits),
+            local_cache_tree_fetch_hits: self
+                .local_cache_tree_fetch_hits
+                .saturating_sub(rhs.local_cache_tree_fetch_hits),
+            local_cache_blob_prefetch_hits: self
+                .local_cache_blob_prefetch_hits
+                .saturating_sub(rhs.local_cache_blob_prefetch_hits),
+            local_cache_tree_prefetch_hits: self
+                .local_cache_tree_prefetch_hits
+                .saturating_sub(rhs.local_cache_tree_prefetch_hits),
+            fs_open_plus_read: self.fs_open_plus_read.saturating_sub(rhs.fs_open_plus_read),
+            fs_readdir: self.fs_readdir.saturating_sub(rhs.fs_readdir),
         }
     }
 }
@@ -1126,31 +1154,16 @@ mod tests {
         assert_eq!(crawling_score(5) - crawling_score(2), crawling_score(3));
     }
 
-    #[cfg(debug_assertions)]
     #[test]
-    #[should_panic(expected = "attempt to subtract with overflow")]
-    fn test_filesystem_delta_across_a_daemon_restart_panics() {
-        let _ = filesystem_counters(2) - filesystem_counters(5);
+    fn test_filesystem_delta_across_a_daemon_restart() {
+        assert_eq!(
+            filesystem_counters(2) - filesystem_counters(5),
+            filesystem_counters(0)
+        );
     }
 
-    #[cfg(not(debug_assertions))]
     #[test]
-    fn test_filesystem_delta_across_a_daemon_restart_wraps() {
-        let delta = filesystem_counters(2) - filesystem_counters(5);
-        assert_eq!(delta.syscall_read, u64::MAX - 2);
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    #[should_panic(expected = "attempt to subtract with overflow")]
-    fn test_crawling_score_delta_across_a_daemon_restart_panics() {
-        let _ = crawling_score(2) - crawling_score(5);
-    }
-
-    #[cfg(not(debug_assertions))]
-    #[test]
-    fn test_crawling_score_delta_across_a_daemon_restart_wraps() {
-        let delta = crawling_score(2) - crawling_score(5);
-        assert_eq!(delta.fs_readdir, u64::MAX - 2);
+    fn test_crawling_score_delta_across_a_daemon_restart() {
+        assert_eq!(crawling_score(2) - crawling_score(5), crawling_score(0));
     }
 }
