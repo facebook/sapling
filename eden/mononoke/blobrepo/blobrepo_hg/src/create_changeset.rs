@@ -354,7 +354,7 @@ impl CreateChangeset {
                         bonsai_cs.subtree_sources().collect(),
                     )
                     .await
-                    .context("While inserting into changeset table")?;
+                    .context("While inserting into commit graph")?;
 
                 // update bonsai mapping
                 let bcs_id = bonsai_cs.get_changeset_id();

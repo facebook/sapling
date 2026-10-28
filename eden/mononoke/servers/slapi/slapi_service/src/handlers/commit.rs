@@ -1555,7 +1555,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                     commit_graph_writer
                         .add_many(&bs_ctx, graph_entries)
                         .await
-                        .context("While inserting into changeset table")?;
+                        .context("While inserting into commit graph")?;
                 }
                 Err(_empty) => {
                     // No changesets -- both put_futs and graph_entries are derived
