@@ -6,8 +6,7 @@
 add_fbthrift_library(
   eden_overlay_thrift
   overlay.thrift
-  LANGUAGES cpp py
-  PY_NAMESPACE facebook.eden.overlay
+  LANGUAGES cpp
 )
 
 if (EDEN_HAVE_THRIFT_PYTHON)

@@ -6,8 +6,7 @@
 add_fbthrift_library(
   eden_config_thrift
   eden_config.thrift
-  LANGUAGES cpp py
-  PY_NAMESPACE facebook.eden.eden_config
+  LANGUAGES cpp
 )
 
 if (EDEN_HAVE_THRIFT_PYTHON)

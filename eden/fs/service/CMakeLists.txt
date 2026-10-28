@@ -6,8 +6,7 @@
 add_fbthrift_library(
   eden_service_thrift
   eden.thrift
-  LANGUAGES cpp py
-  PY_NAMESPACE facebook.eden
+  LANGUAGES cpp
   SERVICES
     EdenService
   DEPENDS
