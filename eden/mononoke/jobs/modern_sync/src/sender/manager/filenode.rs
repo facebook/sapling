@@ -134,6 +134,11 @@ impl Manager for FilenodeManager {
                                             "Contents error received. Winding down files sender."
                                         ));
                                     }
+                                    Err(e) => {
+                                        encountered_error.get_or_insert(anyhow::anyhow!(
+                                            "Error waiting for contents: {e:#}"
+                                        ));
+                                    }
                                     _ => (),
                                 }
                                 let elapsed = start.elapsed().as_secs();
