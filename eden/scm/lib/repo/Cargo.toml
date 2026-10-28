@@ -15,7 +15,7 @@ name = "repo"
 [dependencies]
 anyhow = "1.0.104"
 fail = { version = "0.5.1", features = ["failpoints"] }
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 sapling-agentdetect = { version = "0.1.0", path = "../agentdetect" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
@@ -23,7 +23,7 @@ sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-commits = { version = "0.1.0", path = "../commits" }
 sapling-commits-trait = { version = "0.1.0", path = "../commits/trait" }
 sapling-configloader = { version = "0.1.0", path = "../config/loader" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-constructors = { version = "0.1.0", path = "../constructors", default-features = false }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }
@@ -43,12 +43,12 @@ sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-repourl = { version = "0.1.0", path = "url" }
 sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
 sapling-revsets = { version = "0.1.0", path = "../revsets" }
-sapling-rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }
+sapling-rewrite-macros = { version = "0.2.0", path = "../util/rewrite-macros" }
 sapling-sparse = { version = "0.1.0", path = "../sparse" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 sapling-win32-8dot3 = { version = "0.1.0", path = "../util/win32-8dot3" }
 sapling-workingcopy = { version = "0.1.0", path = "../workingcopy", optional = true }
 thiserror = "2.0.21"

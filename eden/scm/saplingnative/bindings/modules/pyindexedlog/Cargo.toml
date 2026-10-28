@@ -9,4 +9,4 @@ edition = "2024"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pybytes = { version = "0.1.0", path = "../pybytes" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-sapling-indexedlog = { version = "0.1.0", path = "../../../../lib/indexedlog" }
+sapling-indexedlog = { version = "0.2.0", path = "../../../../lib/indexedlog" }

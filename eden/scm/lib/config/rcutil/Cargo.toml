@@ -13,9 +13,9 @@ license = "MIT"
 name = "rcutil"
 
 [dependencies]
-sapling-atomicfile = { version = "0.1.0", path = "../../atomicfile" }
+sapling-atomicfile = { version = "0.2.0", path = "../../atomicfile" }
 sapling-hgrc-parser = { version = "0.1.0", path = "../hgrc-parser" }
-sapling-util = { version = "0.1.0", path = "../../util" }
+sapling-util = { version = "0.2.0", path = "../../util" }
 thiserror = "2.0.21"
 
 [dev-dependencies]

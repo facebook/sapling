@@ -14,11 +14,11 @@ name = "repolock"
 
 [dependencies]
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 thiserror = "2.0.21"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 

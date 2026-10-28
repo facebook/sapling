@@ -5,18 +5,7 @@ oncall("sapling")
 sl_rust_library(
     name = "tracing-backtrace",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "lib": {"name": "tracing-backtrace"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-tracing-backtrace",
-                "repository": "https://github.com/facebook/sapling",
-            },
-        },
-    },
+    autocargo = {},
     crate_root = "src/lib.rs",
     test_deps = [],
     deps = [

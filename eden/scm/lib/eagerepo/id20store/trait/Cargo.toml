@@ -15,5 +15,5 @@ name = "id20store_trait"
 
 [dependencies]
 sapling-format-util = { version = "0.1.0", path = "../../../util/format-util" }
-sapling-minibytes = { version = "0.1.0", path = "../../../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../../../minibytes" }
 sapling-types = { version = "0.1.0", path = "../../../types" }

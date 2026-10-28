@@ -8,13 +8,8 @@ sl_rust_library(
     autocargo = {
         "cargo_toml_config": {
             "features": {"default": []},
-            "lib": {"name": "metrics"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-metrics",
-                "repository": "https://github.com/facebook/sapling",
+                "description": "In-memory counters and gauges with optional external sinks.",
             },
         },
     },

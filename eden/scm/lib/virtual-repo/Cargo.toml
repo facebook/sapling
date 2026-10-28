@@ -16,11 +16,11 @@ name = "virtual_repo"
 [dependencies]
 anyhow = "1.0.104"
 async-trait = "0.1.92"
-sapling-dag = { version = "0.1.0", path = "../dag" }
+sapling-dag = { version = "0.2.0", path = "../dag" }
 sapling-eagerepo-trait = { version = "0.1.0", path = "../eagerepo/trait" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-virtual-tree = { version = "0.1.0", path = "virtual-tree" }

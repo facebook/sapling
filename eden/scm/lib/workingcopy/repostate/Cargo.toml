@@ -15,10 +15,10 @@ name = "repostate"
 [dependencies]
 anyhow = "1.0.104"
 byteorder = "1.5"
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 sapling-identity = { version = "0.1.0", path = "../../identity" }
 sapling-types = { version = "0.1.0", path = "../../types" }
-sapling-util = { version = "0.1.0", path = "../../util" }
+sapling-util = { version = "0.2.0", path = "../../util" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 
 [dev-dependencies]

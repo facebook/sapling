@@ -40,7 +40,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
 restricted_paths = { version = "0.1.0", path = "../repo_attributes/restricted_paths" }
-sapling-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
+sapling-dag-types = { version = "0.2.0", path = "../../scm/lib/dag/dag-types" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sapling-revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

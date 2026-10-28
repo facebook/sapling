@@ -24,14 +24,6 @@ sl_rust_library(
                 ],
                 "default": [],
             },
-            "lib": {"name": "sparse"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-sparse",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     crate_root = "src/lib.rs",
@@ -51,16 +43,6 @@ sl_rust_library(
     name = "sparse-async",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_toml_config": {
-            "lib": {"name": "sparse"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-sparse",
-                "repository": "https://github.com/facebook/sapling",
-            },
-        },
         "ignore_rule": True,
     },
     crate = "sparse",

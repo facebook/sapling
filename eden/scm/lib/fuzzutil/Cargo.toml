@@ -14,5 +14,5 @@ license = "MIT"
 name = "fuzzutil"
 
 [dependencies]
-sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
+sapling-indexedlog = { version = "0.2.0", path = "../indexedlog" }
 tempfile = "3.27.0"

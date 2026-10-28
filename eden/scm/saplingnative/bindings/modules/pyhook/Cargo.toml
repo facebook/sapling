@@ -15,5 +15,5 @@ pyio = { version = "0.1.0", path = "../pyio" }
 pyrepo = { version = "0.1.0", path = "../pyrepo" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-repo = { version = "0.1.0", path = "../../../../lib/repo" }
-sapling-util = { version = "0.1.0", path = "../../../../lib/util" }
+sapling-util = { version = "0.2.0", path = "../../../../lib/util" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

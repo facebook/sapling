@@ -3,6 +3,7 @@
 [package]
 name = "sapling-sampling-profiler-example"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Example for the sampling-profiler library."
 homepage = "https://sapling-scm.com/"

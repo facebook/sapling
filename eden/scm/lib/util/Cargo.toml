@@ -2,7 +2,7 @@
 
 [package]
 name = "sapling-util"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Misc utilities used by Sapling."
@@ -18,12 +18,12 @@ anyhow = "1.0.104"
 bitflags = { version = "2.13.2", features = ["serde", "std"], default-features = false }
 dirs = "7.0"
 fn-error-context = "0.2"
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 rand = "0.10.3"
-sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
-sapling-lazystr = { version = "0.1.0", path = "../lazystr" }
+sapling-atomicfile = { version = "0.2.0", path = "../atomicfile" }
+sapling-lazystr = { version = "0.2.0", path = "../lazystr" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
-sapling-rewrite-macros = { version = "0.1.0", path = "rewrite-macros" }
+sapling-rewrite-macros = { version = "0.2.0", path = "rewrite-macros" }
 shellexpand = "2.1.2"
 thiserror = "2.0.21"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

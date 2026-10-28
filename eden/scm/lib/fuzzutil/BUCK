@@ -7,14 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "fuzzutil"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "Shared helpers for the Sapling on-disk format fuzz targets.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-fuzzutil",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

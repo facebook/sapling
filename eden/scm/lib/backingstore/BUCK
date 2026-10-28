@@ -74,14 +74,6 @@ sl_rust_library(
                 "cas": [],
                 "fb": ["sapling-configloader/fb"],
             },
-            "lib": {"name": "backingstore"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-backingstore",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     cpp_deps = [

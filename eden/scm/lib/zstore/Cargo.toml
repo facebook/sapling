@@ -15,9 +15,9 @@ name = "zstore"
 [dependencies]
 lru-cache = "0.1.2"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
-sapling-mincode = { version = "0.1.0", path = "../mincode" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
+sapling-indexedlog = { version = "0.2.0", path = "../indexedlog" }
+sapling-mincode = { version = "0.2.0", path = "../mincode" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes", features = ["frombytes"] }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-zstdelta = { version = "0.1.0", path = "../zstdelta" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }

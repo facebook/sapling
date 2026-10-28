@@ -3,7 +3,11 @@
 [package]
 name = "sapling-cpython-ext"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
+license = "MIT"
 
 [lib]
 name = "cpython_ext"
@@ -16,7 +20,7 @@ parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 python3-sys = "0.7.2"
 sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 thiserror = "2.0.21"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -5,18 +5,7 @@ oncall("sapling")
 sl_rust_library(
     name = "network-doctor",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "lib": {"name": "network-doctor"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-network-doctor",
-                "repository": "https://github.com/facebook/sapling",
-            },
-        },
-    },
+    autocargo = {},
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [
         "fbsource//third-party/rust:http",

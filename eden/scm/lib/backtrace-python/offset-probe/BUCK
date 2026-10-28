@@ -12,10 +12,6 @@ rust_python_library(
         "cargo_toml_config": {
             "package": {
                 "description": "Attmpt to obtain raw offsets used to extract Python frames. Intended to be used at build time.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-backtrace-python-offset-probe",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

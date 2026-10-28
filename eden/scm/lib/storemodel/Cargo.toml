@@ -18,12 +18,12 @@ async-trait = "0.1.92"
 blob = { version = "0.1.0", path = "../blob" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "../repo/repo-minimal-info" }
 sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../types" }

@@ -28,7 +28,7 @@ hostname = "0.4.2"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 regex = { version = "1.13.1", optional = true }
 sapling-config-remote-loader = { version = "0.1.0", path = "../remote-loader" }
-sapling-configmodel = { version = "0.1.0", path = "../model" }
+sapling-configmodel = { version = "0.2.0", path = "../model" }
 sapling-configset = { version = "0.1.0", path = "../set" }
 sapling-gitcompat = { version = "0.1.0", path = "../../gitcompat" }
 sapling-hgplain = { version = "0.1.0", path = "../../util/hgplain" }
@@ -36,7 +36,7 @@ sapling-hgtime = { version = "0.1.0", path = "../../hgtime", optional = true }
 sapling-http-client = { version = "0.1.0", path = "../../http-client", optional = true }
 sapling-identity = { version = "0.1.0", path = "../../identity" }
 sapling-metrics = { version = "0.1.0", path = "../../metrics" }
-sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../../minibytes" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal-info" }
 sapling-repourl = { version = "0.1.0", path = "../../repo/url" }
 sapling-sampling = { version = "0.1.0", path = "../../sampling" }
@@ -44,7 +44,7 @@ sapling-spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }
 sapling-staticconfig = { version = "0.1.0", path = "../static" }
 sapling-types = { version = "0.1.0", path = "../../types", optional = true }
 sapling-unionconfig = { version = "0.1.0", path = "../union" }
-sapling-util = { version = "0.1.0", path = "../../util" }
+sapling-util = { version = "0.2.0", path = "../../util" }
 sapling-version = { version = "0.1.0", path = "../../version" }
 serde = { version = "1.0.229", features = ["derive", "rc"], optional = true }
 serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"], optional = true }

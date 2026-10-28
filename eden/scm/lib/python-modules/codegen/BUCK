@@ -9,6 +9,11 @@ rust_python_library(
         "src/lib.rs",
         "src/pycompile.py",
     ],
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {"name": "codegen"},
+        },
+    },
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/zstdelta:zstdelta",

@@ -27,13 +27,9 @@ sl_rust_library(
                     "//eden/scm/lib/python-modules/codegen:codegen",
                 ],
             },
-            "lib": {"name": "python-modules"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
                 "license": "GPL-2.0-only",
                 "name": "python-modules",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

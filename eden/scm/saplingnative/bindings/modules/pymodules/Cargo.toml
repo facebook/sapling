@@ -9,5 +9,5 @@ edition = "2024"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pybytes = { version = "0.1.0", path = "../pybytes" }
 python-modules = { version = "0.1.0", path = "../../../../lib/python-modules" }
-sapling-minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../../../../lib/minibytes" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -8,7 +8,7 @@ edition = "2024"
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-sapling-mincode = { version = "0.1.0", path = "../../../../lib/mincode" }
+sapling-mincode = { version = "0.2.0", path = "../../../../lib/mincode" }
 serde_cbor = "0.11.2"
 serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 toml = { version = "1.1.8", features = ["preserve_order"] }

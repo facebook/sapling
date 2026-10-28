@@ -28,13 +28,9 @@ sl_rust_library(
                     "sapling-async-runtime",
                 ],
             },
-            "lib": {"name": "cmdworktree"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
                 "license": "GPL-2.0-only",
                 "name": "cmdworktree",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

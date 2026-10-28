@@ -7,14 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "sysutil"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "System utilities used by Sapling.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-sysutil",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

@@ -2,7 +2,7 @@
 
 [package]
 name = "sapling-mincode"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["David Tolnay <dtolnay@gmail.com>", "Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Bincode-like serialization with VLQ encoded integers."
@@ -16,7 +16,7 @@ name = "mincode"
 
 [dependencies]
 byteorder = "1.5"
-sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
+sapling-vlqencoding = { version = "0.2.0", path = "../vlqencoding" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 
 [dev-dependencies]

@@ -15,5 +15,5 @@ name = "termlogger"
 [dependencies]
 sapling-identity = { version = "0.1.0", path = "../../../identity" }
 sapling-io = { version = "0.1.0", path = "../.." }
-sapling-lazystr = { version = "0.1.0", path = "../../../lazystr" }
+sapling-lazystr = { version = "0.2.0", path = "../../../lazystr" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

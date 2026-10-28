@@ -32,7 +32,7 @@ sl_rust_library(
             "package": {
                 "authors": [
                     "Mark Juggurnauth-Thomas <markbt@efaref.net>",
-                    "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
+                    "Meta Source Control Team <sourcecontrol-dev@meta.com>",
                 ],
                 "categories": [
                     "command-line-utilities",

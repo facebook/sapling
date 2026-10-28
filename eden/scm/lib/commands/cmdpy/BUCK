@@ -21,6 +21,7 @@ rust_python_library(
                 "default": [],
                 "fb": [],
             },
+            "package": {"name": "cmdpy"},
         },
     },
     crate_root = "src/lib.rs",

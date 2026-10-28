@@ -25,5 +25,5 @@ sapling-manifest-tree = { version = "0.1.0", path = "../../../../lib/manifest-tr
 sapling-repo = { version = "0.1.0", path = "../../../../lib/repo" }
 sapling-repolock = { version = "0.1.0", path = "../../../../lib/repolock" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
-sapling-util = { version = "0.1.0", path = "../../../../lib/util" }
+sapling-util = { version = "0.2.0", path = "../../../../lib/util" }
 sapling-workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }

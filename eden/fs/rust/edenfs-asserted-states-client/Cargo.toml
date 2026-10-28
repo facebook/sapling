@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.104"
 fs-err = { version = "3.3.2", features = ["tokio"] }
-sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
+sapling-util = { version = "0.2.0", path = "../../../scm/lib/util" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 thiserror = "2.0.21"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

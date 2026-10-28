@@ -12,6 +12,9 @@ def _set_default(obj, *keys):
     return obj
 
 _RUST_DEP_OVERRIDES = {
+    "fs-err": {
+        "features": [],
+    },
     "smallvec": {
         "default-features": False,
         "features": [],
@@ -23,6 +26,45 @@ _RUST_DEP_OVERRIDES = {
         "rev": None,
     },
 }
+
+_RUST_PACKAGE_DEFAULTS = {
+    "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+    "homepage": "https://sapling-scm.com/",
+    "license": "MIT",
+    "repository": "https://github.com/facebook/sapling",
+}
+
+_RUST_PACKAGE_VERSIONS = {
+    crate: "0.2.0"
+    for crate in [
+        "sapling-atomicfile",
+        "sapling-configmodel",
+        "sapling-dag",
+        "sapling-dag-types",
+        "sapling-drawdag",
+        "sapling-indexedlog",
+        "sapling-lazystr",
+        "sapling-mincode",
+        "sapling-minibytes",
+        "sapling-nonblocking",
+        "sapling-renderdag",
+        "sapling-rewrite-macros",
+        "sapling-tree-pattern-match",
+        "sapling-util",
+        "sapling-vlqencoding",
+    ]
+}
+_RUST_PACKAGE_VERSIONS.update({
+    crate: "0.1.0"
+    for crate in [
+        "sapling-btrfs",
+        "sapling-metrics",
+        "sapling-pathmatcher",
+        "sapling-pathmatcher-types",
+        "sapling-try-once-lock",
+        "sapling-types",
+    ]
+})
 
 def debugcas_enabled():
     """Whether `sl.debugcas` adds `debugcas`, which links the C++ CAS client."""
@@ -56,8 +98,38 @@ def _minimal_third_party_rust_overrides(deps):
             overrides[crate] = dict(override)
     return overrides
 
-def _autocargo_overrides(**kwargs):
-    """Avoid inheriting monorepo-wide features or git urls that are unnecessary in Sapling.
+def sl_autocargo_metadata(autocargo, lib_name_hint = None):
+    """Apply shared publication defaults to an autocargo attribute.
+
+    Package names default to sapling-<lib.name>; explicit names take precedence.
+    lib_name_hint supplies the library name when lib.name is not configured.
+    Defaults apply to Sapling's lib packages with autocargo configured.
+    Vendored crates retain their upstream metadata.
+    """
+    package_path = native.package_name()
+    if autocargo == None or not package_path.startswith("eden/scm/lib/") or "/third-party/" in package_path:
+        return autocargo
+    cargo_config = (autocargo or {}).get("cargo_toml_config") or {}
+    package = cargo_config.get("package") or {}
+    name = package.get("name")
+    if name == None:
+        lib_name = (cargo_config.get("lib") or {}).get("name") or lib_name_hint
+        if lib_name != None:
+            name = "sapling-" + lib_name.replace("_", "-")
+    if name == None:
+        return autocargo
+    result = dict(autocargo)
+    package = _set_default(result, "cargo_toml_config", "package")
+    package.setdefault("name", name)
+    for key, value in _RUST_PACKAGE_DEFAULTS.items():
+        package.setdefault(key, value)
+    version = _RUST_PACKAGE_VERSIONS.get(name)
+    if version != None:
+        package.setdefault("version", version)
+    return result
+
+def _autocargo_overrides(lib_name_hint = None, **kwargs):
+    """Apply shared package metadata and avoid unnecessary monorepo-wide features or git urls.
 
     For examples, turns generated Cargo.toml:
 
@@ -69,7 +141,7 @@ def _autocargo_overrides(**kwargs):
         smallvec = { version = "1.15.2", default-features = false }
         termwiz = { version = "0.23.3", default-features = false }
     """
-    autocargo = kwargs.get("autocargo")
+    autocargo = sl_autocargo_metadata(kwargs.get("autocargo"), lib_name_hint)
     if autocargo != None and autocargo.get("ignore_rule"):
         return autocargo
 
@@ -141,7 +213,7 @@ def _add_extra_buck_dependency(autocargo, dep_kind, dep):
         extra[dep_kind] = deps + [dep]
 
 def sl_rust_library(**kwargs):
-    autocargo = _autocargo_overrides(**kwargs)
+    autocargo = _autocargo_overrides(lib_name_hint = kwargs.get("crate") or kwargs.get("name"), **kwargs)
     if autocargo != None:
         kwargs["autocargo"] = autocargo
     # avoid nightly features

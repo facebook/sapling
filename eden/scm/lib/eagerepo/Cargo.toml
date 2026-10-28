@@ -21,7 +21,7 @@ futures = { version = "0.3.34", features = ["async-await", "compat"] }
 http = "1.5.0"
 manifest-augmented-tree = { version = "0.1.0", path = "../manifest-augmented-tree" }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-sapling-dag = { version = "0.1.0", path = "../dag" }
+sapling-dag = { version = "0.2.0", path = "../dag" }
 sapling-eagerepo-trait = { version = "0.1.0", path = "trait" }
 sapling-edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
@@ -32,9 +32,9 @@ sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-mutationstore = { version = "0.1.0", path = "../mutationstore" }
-sapling-nonblocking = { version = "0.1.0", path = "../nonblocking" }
+sapling-nonblocking = { version = "0.2.0", path = "../nonblocking" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }

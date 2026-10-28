@@ -18,13 +18,8 @@ sl_rust_library(
                     "//eden/scm/lib/minibench:minibench",
                 ],
             },
-            "lib": {"name": "slex"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
                 "name": "slex",
-                "repository": "https://github.com/facebook/sapling",
             },
         }
     },

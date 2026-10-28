@@ -7,13 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "pathmatcher-types"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-pathmatcher-types",
-                "repository": "https://github.com/facebook/sapling",
+                "description": "Interfaces and combinators for matching repository files and directories.",
             },
         },
     },

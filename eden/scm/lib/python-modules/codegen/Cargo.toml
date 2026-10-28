@@ -3,7 +3,11 @@
 [package]
 name = "codegen"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
+license = "MIT"
 
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }

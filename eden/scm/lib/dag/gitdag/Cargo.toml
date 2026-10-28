@@ -14,11 +14,11 @@ name = "gitdag"
 
 [dependencies]
 anyhow = "1.0.104"
-fs-err = { version = "3.3.2", features = ["tokio"] }
-sapling-dag = { version = "0.1.0", path = ".." }
+fs-err = "3.3.2"
+sapling-dag = { version = "0.2.0", path = ".." }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }
 sapling-gitstore = { version = "0.1.0", path = "../../gitstore" }
-sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
-sapling-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
+sapling-minibytes = { version = "0.2.0", path = "../../minibytes" }
+sapling-nonblocking = { version = "0.2.0", path = "../../nonblocking" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

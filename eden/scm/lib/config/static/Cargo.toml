@@ -14,5 +14,5 @@ name = "staticconfig"
 
 [dependencies]
 phf = { version = "0.11", features = ["macros"] }
-sapling-configmodel = { version = "0.1.0", path = "../model" }
+sapling-configmodel = { version = "0.2.0", path = "../model" }
 sapling-staticconfig_macros = { version = "0.1.0", path = "macros" }

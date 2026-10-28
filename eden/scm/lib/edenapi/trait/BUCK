@@ -7,13 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "edenapi_trait"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
                 "name": "sapling-edenapi_trait",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

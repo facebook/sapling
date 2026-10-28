@@ -7,14 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "tree-pattern-match"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "Pattern match for tree structures.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-tree-pattern-match",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

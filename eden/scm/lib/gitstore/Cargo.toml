@@ -20,9 +20,9 @@ harness = false
 anyhow = "1.0.104"
 async-trait = "0.1.92"
 blob = { version = "0.1.0", path = "../blob" }
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 git2 = "0.20.4"
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }

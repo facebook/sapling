@@ -7,14 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "dev-logger"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "Print or examine tracing output in unit tests.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-dev-logger",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

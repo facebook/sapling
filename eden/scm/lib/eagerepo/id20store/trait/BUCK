@@ -7,14 +7,8 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "id20store-trait"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "Abstraction used by Id20Store.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-id20store-trait",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

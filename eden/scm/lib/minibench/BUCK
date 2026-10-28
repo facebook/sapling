@@ -7,15 +7,9 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "lib": {"name": "minibench"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "autoexamples": False,
                 "description": "Minimal benchmark library.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-minibench",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

@@ -16,12 +16,12 @@ name = "filters"
 anyhow = "1.0.104"
 blake3 = { version = "=1.8.6", features = ["mmap", "rayon", "traits-preview"] }
 derivative = "2.2"
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
-sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
-sapling-mincode = { version = "0.1.0", path = "../mincode" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
+sapling-indexedlog = { version = "0.2.0", path = "../indexedlog" }
+sapling-mincode = { version = "0.2.0", path = "../mincode" }
 sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 

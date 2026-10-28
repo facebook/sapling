@@ -8,14 +8,6 @@ sl_rust_library(
     autocargo = {
         "cargo_toml_config": {
             "features": {"fb": ["sapling-identity/fb"]},
-            "lib": {"name": "edenfs-client"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-edenfs-client",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     features = ["fb"],

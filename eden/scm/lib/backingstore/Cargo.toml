@@ -30,7 +30,7 @@ sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-http-client = { version = "0.1.0", path = "../http-client" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
-sapling-indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
+sapling-indexedlog = { version = "0.2.0", path = "../indexedlog", features = ["configurable"] }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }

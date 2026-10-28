@@ -21,9 +21,9 @@ dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
 flume = "0.11.1"
 sapling-fsinfo = { version = "0.1.0", path = "../fsinfo" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 slex = { version = "0.1.0", path = "../slex" }
 thiserror = "2.0.21"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }

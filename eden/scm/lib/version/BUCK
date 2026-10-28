@@ -22,14 +22,6 @@ sl_rust_library(
     autocargo = {
         "cargo_toml_config": {
             "features": {"generated": []},
-            "lib": {"name": "version"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-version",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     crate = "version",

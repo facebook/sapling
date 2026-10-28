@@ -10,7 +10,7 @@ cpython = { version = "0.7.2", features = ["python3-sys"], default-features = fa
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 python3-sys = "0.7.2"
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-sapling-mincode = { version = "0.1.0", path = "../../../../lib/mincode" }
+sapling-mincode = { version = "0.2.0", path = "../../../../lib/mincode" }
 sapling-tracing-collector = { version = "0.1.0", path = "../../../../lib/tracing-collector" }
 sapling-tracing-reload-states = { version = "0.1.0", path = "../../../../lib/tracing-reload/tracing-reload-states" }
 sapling-tracing-runtime-callsite = { version = "0.1.0", path = "../../../../lib/tracing-runtime-callsite" }

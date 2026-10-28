@@ -9,4 +9,4 @@ edition = "2024"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pyio = { version = "0.1.0", path = "../pyio" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-sapling-vlqencoding = { version = "0.1.0", path = "../../../../lib/vlqencoding" }
+sapling-vlqencoding = { version = "0.2.0", path = "../../../../lib/vlqencoding" }

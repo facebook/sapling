@@ -16,11 +16,11 @@ name = "workingcopy"
 anyhow = "1.0.104"
 bitflags = { version = "2.13.2", features = ["serde", "std"], default-features = false }
 crossbeam = "0.8.5"
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 regex = "1.13.1"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model", features = ["convert-path"] }
+sapling-configmodel = { version = "0.2.0", path = "../config/model", features = ["convert-path"] }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
@@ -44,7 +44,7 @@ sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 sapling-vfs = { version = "0.1.0", path = "../vfs" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

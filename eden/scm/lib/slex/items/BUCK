@@ -15,13 +15,8 @@ sl_rust_library(
                     },
                 },
             },
-            "lib": {"name": "slex-items"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
                 "name": "slex-items",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

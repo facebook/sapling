@@ -17,13 +17,8 @@ sl_rust_library(
         },
         "cargo_toml_config": {
             "dependencies_override": {"build-dependencies": {"cxx-build": {"optional": False}}},
-            "lib": {"name": "edenfs_ffi"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
                 "name": "sapling-edenfs_ffi",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

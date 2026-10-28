@@ -14,5 +14,5 @@ name = "agentdetect"
 
 [dependencies]
 anyhow = "1.0.104"
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -20,14 +20,14 @@ crossbeam = "0.8.5"
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 itertools = "0.15.0"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
-sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../../config/model" }
 sapling-edenapi = { version = "0.1.0", path = ".." }
 sapling-edenapi_types = { version = "0.1.0", path = "../types" }
-sapling-indexedlog = { version = "0.1.0", path = "../../indexedlog" }
-sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
+sapling-indexedlog = { version = "0.2.0", path = "../../indexedlog" }
+sapling-minibytes = { version = "0.2.0", path = "../../minibytes" }
 sapling-revisionstore = { version = "0.1.0", path = "../../revisionstore" }
 sapling-types = { version = "0.1.0", path = "../../types" }
-sapling-util = { version = "0.1.0", path = "../../util" }
+sapling-util = { version = "0.2.0", path = "../../util" }
 sapling-vfs = { version = "0.1.0", path = "../../vfs" }
 serde_cbor = "0.11.2"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }

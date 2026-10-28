@@ -12,6 +12,6 @@ license = "MIT"
 [dependencies]
 blake3 = { version = "=1.8.6", features = ["mmap", "rayon", "traits-preview"] }
 bytes = { version = "1.12.1", features = ["serde"] }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sha1 = "0.10.7"

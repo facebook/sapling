@@ -8,14 +8,6 @@ sl_rust_library(
     autocargo = {
         "cargo_toml_config": {
             "dependencies_override": {"dependencies": {"sapling-minibytes": {"features": ["frombytes"]}}},
-            "lib": {"name": "zstore"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-zstore",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     crate_root = "src/lib.rs",

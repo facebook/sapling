@@ -15,14 +15,6 @@ sl_rust_library(
             ],
             # Cargo bench deps.
             "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
-            "lib": {"name": "blackbox"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-blackbox",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     crate_root = "src/lib.rs",

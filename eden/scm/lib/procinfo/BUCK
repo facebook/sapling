@@ -10,14 +10,6 @@ sl_rust_library(
         "cargo_toml_config": {
             # Cargo build.rs dep (not used by Buck).
             "extra_buck_dependencies": {"target": {"'cfg(target_os = \"macos\")'": {"build-dependencies": ["fbsource//third-party/rust:cc"]}}},
-            "lib": {"name": "procinfo"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-procinfo",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     crate_root = "src/lib.rs",

@@ -14,14 +14,14 @@ anyhow = "1.0.104"
 cmdpy = { version = "0.1.0", path = "../../cmdpy" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 fail = { version = "0.5.1", features = ["failpoints"] }
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 regex = "1.13.1"
 sapling-async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
 sapling-atexit = { version = "0.1.0", path = "../../../util/atexit" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-clone = { version = "0.1.0", path = "../../../clone" }
 sapling-configloader = { version = "0.1.0", path = "../../../config/loader" }
-sapling-configmodel = { version = "0.1.0", path = "../../../config/model", features = ["convert-path", "convert-regex"] }
+sapling-configmodel = { version = "0.2.0", path = "../../../config/model", features = ["convert-path", "convert-regex"] }
 sapling-eagerepo = { version = "0.1.0", path = "../../../eagerepo" }
 sapling-exchange = { version = "0.1.0", path = "../../../exchange" }
 sapling-filters = { version = "0.1.0", path = "../../../filters" }
@@ -32,7 +32,7 @@ sapling-migration = { version = "0.1.0", path = "../../../migration" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-repourl = { version = "0.1.0", path = "../../../repo/url" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
-sapling-util = { version = "0.1.0", path = "../../../util" }
+sapling-util = { version = "0.2.0", path = "../../../util" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.8"
 

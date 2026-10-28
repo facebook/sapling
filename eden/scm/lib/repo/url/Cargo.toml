@@ -16,6 +16,6 @@ name = "repourl"
 anyhow = "1.0.104"
 fn-error-context = "0.2"
 percent-encoding = "2.1"
-sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../../config/model" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.8"

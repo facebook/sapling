@@ -16,7 +16,7 @@ name = "hg_http"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-auth = { version = "0.1.0", path = "../auth" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-http-client = { version = "0.1.0", path = "../http-client" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }

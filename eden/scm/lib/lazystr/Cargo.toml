@@ -2,7 +2,7 @@
 
 [package]
 name = "sapling-lazystr"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Thin abstraction for maybe lazily generated str."

@@ -14,7 +14,7 @@ name = "unionconfig"
 
 [dependencies]
 indexmap = { version = "2.14.2", features = ["arbitrary", "rayon", "serde"] }
-sapling-configmodel = { version = "0.1.0", path = "../model" }
+sapling-configmodel = { version = "0.2.0", path = "../model" }
 
 [dev-dependencies]
 sapling-staticconfig = { version = "0.1.0", path = "../static" }

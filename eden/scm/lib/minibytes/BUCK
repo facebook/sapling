@@ -1,11 +1,12 @@
 load("@fbsource//tools/build_defs:fb_xplat_rust_library.bzl", "fb_xplat_rust_library")
+load("//eden/scm:targets.bzl", "sl_autocargo_metadata")
 
 oncall("sapling")
 
 fb_xplat_rust_library(
     name = "minibytes",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
+    autocargo = sl_autocargo_metadata({
         "cargo_toml_config": {
             "features": {
                 "default": [
@@ -19,15 +20,10 @@ fb_xplat_rust_library(
             },
             "lib": {"name": "minibytes"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "Shared reference-counted bytes and str with zero-copy slicing support.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-minibytes",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
-    },
+    }),
     crate_root = "src/lib.rs",
     features = [
         "frombytes",

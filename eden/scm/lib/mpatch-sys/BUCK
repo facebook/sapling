@@ -8,14 +8,6 @@ sl_rust_library(
     autocargo = {
         "cargo_toml_config": {
             "extra_buck_dependencies": {"build-dependencies": ["fbsource//third-party/rust:cc"]},
-            "lib": {"name": "mpatch-sys"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-mpatch-sys",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     crate_root = "src/lib.rs",

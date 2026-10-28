@@ -46,7 +46,7 @@ sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 sapling-edenapi = { version = "0.1.0", path = "../../../scm/lib/edenapi" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
-sapling-minibytes = { version = "0.1.0", path = "../../../scm/lib/minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../../../scm/lib/minibytes" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../../cmdlib/sharding_ext" }
 slapi_service = { version = "0.1.0", path = "../../servers/slapi/slapi_service" }

@@ -3,7 +3,7 @@
 [package]
 name = "sapling-streampager"
 version = "0.12.0"
-authors = ["Mark Juggurnauth-Thomas <markbt@efaref.net>", "Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+authors = ["Mark Juggurnauth-Thomas <markbt@efaref.net>", "Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "streampager is a pager for command output or large files"
 license = "MIT"

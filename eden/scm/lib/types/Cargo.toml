@@ -5,6 +5,7 @@ name = "sapling-types"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
+description = "Common hash, path, and revision metadata types used by Sapling."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
@@ -21,8 +22,8 @@ quickcheck = { version = "1.1", optional = true }
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.10.3", optional = true }
 ref-cast = "1.0.27"
-sapling-util = { version = "0.1.0", path = "../util" }
-sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
+sapling-util = { version = "0.2.0", path = "../util" }
+sapling-vlqencoding = { version = "0.2.0", path = "../vlqencoding" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0.229"

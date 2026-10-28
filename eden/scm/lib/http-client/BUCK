@@ -17,14 +17,6 @@ sl_rust_library(
                     },
                 },
             },
-            "lib": {"name": "http-client"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-http-client",
-                "repository": "https://github.com/facebook/sapling",
-            },
         },
     },
     test_deps = [

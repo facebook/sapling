@@ -7,4 +7,4 @@ edition = "2024"
 
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
-sapling-drawdag = { version = "0.1.0", path = "../../../../lib/drawdag" }
+sapling-drawdag = { version = "0.2.0", path = "../../../../lib/drawdag" }

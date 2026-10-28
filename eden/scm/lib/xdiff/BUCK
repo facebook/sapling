@@ -7,18 +7,7 @@ oncall("sapling")
 sl_rust_library(
     name = "xdiff",
     srcs = glob(["src/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "lib": {"name": "xdiff"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-xdiff",
-                "repository": "https://github.com/facebook/sapling",
-            },
-        },
-    },
+    autocargo = {},
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/util/bytescan:bytescan",

@@ -25,13 +25,8 @@ sl_rust_library(
                 ],
                 "sl_oss": [],
             },
-            "lib": {"name": "remote-loader"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
                 "name": "sapling-config-remote-loader",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

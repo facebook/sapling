@@ -2,7 +2,7 @@
 
 [package]
 name = "sapling-rewrite-macros"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Proc macros to rewrite code used by Sapling."
@@ -19,7 +19,7 @@ proc-macro = true
 [dependencies]
 proc-macro2 = { version = "1.0.107", features = ["span-locations"] }
 quote = "1.0.47"
-sapling-tree-pattern-match = { version = "0.1.0", path = "tree-pattern-match" }
+sapling-tree-pattern-match = { version = "0.2.0", path = "tree-pattern-match" }
 
 [dev-dependencies]
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

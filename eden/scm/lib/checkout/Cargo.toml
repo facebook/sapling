@@ -21,16 +21,16 @@ parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 redacted = { version = "0.1.0", path = "../util/redacted" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-atexit = { version = "0.1.0", path = "../util/atexit" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-context = { version = "0.1.0", path = "../context" }
-sapling-dag = { version = "0.1.0", path = "../dag" }
+sapling-dag = { version = "0.2.0", path = "../dag" }
 sapling-distributed-tracing = { version = "0.1.0", path = "../distributed-tracing" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics", optional = true }
 sapling-hook = { version = "0.1.0", path = "../hook" }
 sapling-manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
@@ -40,7 +40,7 @@ sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 sapling-vfs = { version = "0.1.0", path = "../vfs" }
 sapling-workingcopy = { version = "0.1.0", path = "../workingcopy" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }

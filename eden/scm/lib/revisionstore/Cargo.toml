@@ -19,7 +19,7 @@ blob = { version = "0.1.0", path = "../blob" }
 byteorder = "1.5"
 flume = "0.11.1"
 fn-error-context = "0.2"
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 http = "1.5.0"
 lfs_protocol = { version = "0.1.0", path = "../../../mononoke/common/lfs_protocol" }
@@ -34,7 +34,7 @@ redacted = { version = "0.1.0", path = "../util/redacted" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-bytescan = { version = "0.1.0", path = "../util/bytescan" }
 sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
@@ -43,21 +43,21 @@ sapling-hg-http = { version = "0.1.0", path = "../hg-http" }
 sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 sapling-hgtime = { version = "0.1.0", path = "../hgtime" }
 sapling-http-client = { version = "0.1.0", path = "../http-client" }
-sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
+sapling-indexedlog = { version = "0.2.0", path = "../indexedlog" }
 sapling-lz4-pyframe = { version = "0.1.0", path = "../lz4-pyframe" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
-sapling-mincode = { version = "0.1.0", path = "../mincode" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
+sapling-mincode = { version = "0.2.0", path = "../mincode" }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes", features = ["frombytes"] }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-revisionstore_types = { version = "0.1.0", path = "types" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-util = { version = "0.1.0", path = "../util" }
+sapling-util = { version = "0.2.0", path = "../util" }
 sapling-version = { version = "0.1.0", path = "../version" }
-sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
+sapling-vlqencoding = { version = "0.2.0", path = "../vlqencoding" }
 serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_derive = "1.0.229"
 serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }

@@ -19,12 +19,7 @@ sl_rust_library(
                 },
             },
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "Generate source control trees on demand for testing purpose.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-virtual-tree",
-                "repository": "https://github.com/facebook/sapling",
             },
             "profile": {
                 "release": {

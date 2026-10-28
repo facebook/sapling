@@ -10,4 +10,4 @@ cpython = { version = "0.7.2", features = ["python3-sys"], default-features = fa
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-status = { version = "0.1.0", path = "../../../../lib/status" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
-sapling-util = { version = "0.1.0", path = "../../../../lib/util" }
+sapling-util = { version = "0.2.0", path = "../../../../lib/util" }

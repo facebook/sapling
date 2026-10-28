@@ -5,6 +5,7 @@ name = "sapling-pathmatcher-types"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
+description = "Interfaces and combinators for matching repository files and directories."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"

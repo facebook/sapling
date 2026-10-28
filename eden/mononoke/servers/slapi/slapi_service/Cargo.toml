@@ -61,7 +61,7 @@ repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_ident
 restricted_paths = { version = "0.1.0", path = "../../../repo_attributes/restricted_paths" }
 sapling-cats-constants = { version = "0.1.0", path = "../../../../scm/lib/cats/constants" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
-sapling-dag-types = { version = "0.1.0", path = "../../../../scm/lib/dag/dag-types" }
+sapling-dag-types = { version = "0.2.0", path = "../../../../scm/lib/dag/dag-types" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../../../scm/lib/edenapi/types" }
 sapling-revisionstore_types = { version = "0.1.0", path = "../../../../scm/lib/revisionstore/types" }
 sapling-types = { version = "0.1.0", path = "../../../../scm/lib/types" }

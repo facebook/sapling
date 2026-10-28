@@ -15,16 +15,16 @@ name = "commits"
 [dependencies]
 anyhow = "1.0.104"
 async-trait = "0.1.92"
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
 sapling-commits-trait = { version = "0.1.0", path = "trait" }
-sapling-dag = { version = "0.1.0", path = "../dag", features = ["indexedlog-backend"] }
+sapling-dag = { version = "0.2.0", path = "../dag", features = ["indexedlog-backend"] }
 sapling-eagerepo-trait = { version = "0.1.0", path = "../eagerepo/trait" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-id20store = { version = "0.1.0", path = "../eagerepo/id20store" }
-sapling-minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
+sapling-minibytes = { version = "0.2.0", path = "../minibytes", features = ["frombytes"] }
 sapling-revlogindex = { version = "0.1.0", path = "../revlogindex" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-streams = { version = "0.1.0", path = "../streams" }
@@ -32,5 +32,5 @@ sapling-types = { version = "0.1.0", path = "../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-sapling-nonblocking = { version = "0.1.0", path = "../nonblocking" }
+sapling-nonblocking = { version = "0.2.0", path = "../nonblocking" }
 tempfile = "3.27.0"

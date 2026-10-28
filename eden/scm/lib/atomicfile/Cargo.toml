@@ -2,7 +2,7 @@
 
 [package]
 name = "sapling-atomicfile"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Atomically write a file with retries."
@@ -14,6 +14,6 @@ license = "MIT"
 name = "atomicfile"
 
 [dependencies]
-fs-err = { version = "3.3.2", features = ["tokio"] }
+fs-err = "3.3.2"
 tempfile = "3.27.0"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

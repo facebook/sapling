@@ -2,7 +2,7 @@
 
 [package]
 name = "sapling-renderdag"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2024"
 description = "Render a DAG into ASCII or Unicode text."
@@ -18,7 +18,7 @@ bitflags = { version = "2.13.2", features = ["serde", "std"], default-features =
 serde = { version = "1.0.229", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
-sapling-drawdag = { version = "0.1.0", path = "../drawdag" }
+sapling-drawdag = { version = "0.2.0", path = "../drawdag" }
 unicode-width = "0.2.2"
 
 [features]

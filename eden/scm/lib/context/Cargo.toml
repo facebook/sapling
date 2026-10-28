@@ -13,7 +13,7 @@ license = "MIT"
 name = "context"
 
 [dependencies]
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.2.0", path = "../config/model" }
 sapling-io = { version = "0.1.0", path = "../io" }
 sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
 sapling-types = { version = "0.1.0", path = "../types" }

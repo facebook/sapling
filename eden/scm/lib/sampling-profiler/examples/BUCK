@@ -9,10 +9,7 @@ sl_rust_binary(
         "cargo_toml_config": {
             "package": {
                 "description": "Example for the sampling-profiler library.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
                 "name": "sapling-sampling-profiler-example",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

@@ -18,13 +18,9 @@ sl_rust_library(
                 },
             },
             "features": {"eden": ["sapling-clone/eden"]},
-            "lib": {"name": "cmdclone"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
                 "license": "GPL-2.0-only",
                 "name": "cmdclone",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

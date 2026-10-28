@@ -11,11 +11,6 @@ rust_python_library(
                 "default": [],
                 "python": ["cpython"],
             },
-            "lib": {"name": "cliparser"},
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-                "name": "sapling-cliparser",
-            },
         },
     },
     features = [

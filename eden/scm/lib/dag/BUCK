@@ -30,14 +30,8 @@ sl_rust_library(
                 ],
                 "render": ["sapling-renderdag"],
             },
-            "lib": {"name": "dag"},
             "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "description": "An implementation of a DAG used for source control.",
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-dag",
-                "repository": "https://github.com/facebook/sapling",
             },
         },
     },
@@ -85,19 +79,7 @@ sl_rust_library(
 sl_rust_library(
     name = "dag-lite",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "lib": {"name": "dag"},
-            "package": {
-                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-                "homepage": "https://sapling-scm.com/",
-                "license": "MIT",
-                "name": "sapling-dag",
-                "repository": "https://github.com/facebook/sapling",
-            },
-        },
-        "ignore_rule": True,
-    },
+    autocargo = {"ignore_rule": True},
     crate = "dag",
     crate_root = "src/lib.rs",
     features = [
