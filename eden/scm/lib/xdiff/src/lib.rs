@@ -205,10 +205,29 @@ pub fn edit_cost(a: &[u8], b: &[u8], max_edit_cost: u64) -> u64 {
     ret as _
 }
 
+/// Remove spaces, tabs and carriage returns from `text`, keeping newlines.
+///
+/// This is the comparison used when `ignore_whitespace` is set. Line `n` of the
+/// result is line `n` of `text`.
+pub fn strip_horizontal_whitespace(text: &[u8]) -> Vec<u8> {
+    text.iter()
+        .copied()
+        .filter(|b| !is_horizontal_whitespace(b))
+        .collect()
+}
+
+fn is_horizontal_whitespace(b: &u8) -> bool {
+    matches!(b, b' ' | b'\t' | b'\r')
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HeaderlessDiffOpts {
     /// Number of context lines
     pub context: usize,
+    /// Find changed lines by comparing the texts without spaces, tabs and
+    /// carriage returns, but print the original lines. Context lines come from
+    /// the old text.
+    pub ignore_whitespace: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -226,6 +245,9 @@ pub struct DiffOpts {
     /// Number of context lines
     pub context: usize,
     pub copy_info: CopyInfo,
+    /// Same as `HeaderlessDiffOpts::ignore_whitespace`, applied only when every
+    /// present side is inline, non-binary content.
+    pub ignore_whitespace: bool,
 }
 
 const MISSING_NEWLINE_MARKER: &[u8] = b"\\ No newline at end of file\n";
@@ -414,9 +436,30 @@ where
     let mut old_lines: Vec<_> = old_text.split(|c| c == &b'\n').collect();
     let mut new_lines: Vec<_> = new_text.split(|c| c == &b'\n').collect();
 
-    // No trailing newline in empty files is expected, for any other file a warning is displayed.
-    let old_has_trailing_newline = old_text.is_empty() || old_text.last() == Some(&b'\n');
-    let new_has_trailing_newline = new_text.is_empty() || new_text.last() == Some(&b'\n');
+    // With whitespace ignored, the changed lines, the line counts and the
+    // missing-newline markers come from the stripped texts, while the printed
+    // lines come from the original texts. Stripping keeps every newline, so line
+    // n of a stripped text is line n of the original. The one exception is a
+    // final line without a newline that holds only whitespace: it disappears when
+    // stripped, and the `pop` below drops it from the original lines as well.
+    let (hunks, old_has_trailing_newline, new_has_trailing_newline) = {
+        let stripped = opts.ignore_whitespace.then(|| {
+            (
+                strip_horizontal_whitespace(old_text),
+                strip_horizontal_whitespace(new_text),
+            )
+        });
+        let (old_compared, new_compared) = match &stripped {
+            Some((old, new)) => (old.as_slice(), new.as_slice()),
+            None => (old_text, new_text),
+        };
+        // No trailing newline in empty files is expected, for any other file a warning is displayed.
+        (
+            diff_hunks(old_compared, new_compared),
+            old_compared.is_empty() || old_compared.last() == Some(&b'\n'),
+            new_compared.is_empty() || new_compared.last() == Some(&b'\n'),
+        )
+    };
 
     // The last empty line traditionally doesn't count as line. Not having it is a case for warnings.
     if old_has_trailing_newline {
@@ -425,7 +468,6 @@ where
     if new_has_trailing_newline {
         new_lines.pop();
     }
-    let hunks = diff_hunks(old_text, new_text);
 
     if hunks.is_empty() {
         return seed;
@@ -504,21 +546,31 @@ where
 ///
 /// Hopefully we'll be able to refactor this API to use (currently unstable) Rust generators.
 /// The only available public API now is `diff_unified` which just returns a `vec<u8>`.
-fn gen_diff_unified_headerless_entire_file<T, F, S>(prefix: u8, text: &T, seed: S, reduce: F) -> S
+fn gen_diff_unified_headerless_entire_file<T, F, S>(
+    prefix: u8,
+    text: &T,
+    ignore_whitespace: bool,
+    seed: S,
+    reduce: F,
+) -> S
 where
     T: AsRef<[u8]>,
     F: Fn(S, &[u8]) -> S,
 {
     let mut state = DiffState::new(seed, reduce);
     let text = text.as_ref();
-    let missing_newline = !text.is_empty() && !text.ends_with(b"\n");
-    let text_to_split = if missing_newline || text.is_empty() {
-        text
+    // As in `gen_diff_unified_headerless`, the line count and the missing-newline
+    // marker come from the stripped text and the printed lines from the original.
+    let stripped = ignore_whitespace.then(|| strip_horizontal_whitespace(text));
+    let compared = stripped.as_deref().unwrap_or(text);
+    let missing_newline = !compared.is_empty() && !compared.ends_with(b"\n");
+    let compared_to_split = if missing_newline || compared.is_empty() {
+        compared
     } else {
-        &text[0..text.len() - 1]
+        &compared[0..compared.len() - 1]
     };
-    let start = if text.is_empty() { 0 } else { 1 };
-    let count = bytescan::count_newlines(text_to_split) + 1;
+    let start = if compared.is_empty() { 0 } else { 1 };
+    let count = bytescan::count_newlines(compared_to_split) + 1;
     state.emit(
         format!(
             "@@ -{},{} +{},{} @@\n",
@@ -529,7 +581,7 @@ where
         )
         .as_bytes(),
     );
-    text_to_split.split(|c| c == &b'\n').for_each(|line| {
+    text.split(|c| c == &b'\n').take(count).for_each(|line| {
         state.emit(&[prefix]);
         state.emit(line);
         state.emit(b"\n");
@@ -606,8 +658,11 @@ impl<C: AsRef<[u8]>> FileContent<C> {
         }
     }
 
-    fn is_empty(&self) -> bool {
+    fn is_empty(&self, ignore_whitespace: bool) -> bool {
         match self {
+            FileContent::Inline(c) if ignore_whitespace => {
+                c.as_ref().iter().all(is_horizontal_whitespace)
+            }
             FileContent::Inline(c) => c.as_ref().is_empty(),
             _ => false,
         }
@@ -697,14 +752,28 @@ where
     }
 }
 
-fn file_is_empty<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+fn file_is_empty<P, C>(file: &Option<DiffFile<P, C>>, ignore_whitespace: bool) -> bool
 where
     P: AsRef<[u8]>,
     C: AsRef<[u8]>,
 {
     match file {
-        Some(file) => file.contents.is_empty(),
+        Some(file) => file.contents.is_empty(ignore_whitespace),
         None => false,
+    }
+}
+
+fn same_contents<C>(old: &FileContent<C>, new: &FileContent<C>, ignore_whitespace: bool) -> bool
+where
+    C: AsRef<[u8]> + PartialEq,
+{
+    match (old, new) {
+        (FileContent::Inline(old), FileContent::Inline(new)) if ignore_whitespace => old
+            .as_ref()
+            .iter()
+            .filter(|b| !is_horizontal_whitespace(b))
+            .eq(new.as_ref().iter().filter(|b| !is_horizontal_whitespace(b))),
+        _ => old == new,
     }
 }
 
@@ -752,10 +821,17 @@ where
         return state.collect();
     }
 
+    // LFS pointers, submodules, omitted and binary contents keep their usual
+    // output, so whitespace is ignored only when every present side is text.
+    let ignore_whitespace = diff_opts.ignore_whitespace
+        && [&old_file, &new_file].into_iter().flatten().all(|file| {
+            matches!(&file.contents, FileContent::Inline(c) if !bytescan::is_binary(c.as_ref()))
+        });
+
     // When the files have no content differences and no metadata differences the output should be empty.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
         if old_file.file_type == new_file.file_type && diff_opts.copy_info == CopyInfo::None {
-            if old_file.contents == new_file.contents {
+            if same_contents(&old_file.contents, &new_file.contents, ignore_whitespace) {
                 return state.collect();
             }
         }
@@ -815,7 +891,7 @@ where
     // When the files have no differences we shouldn't print any further
     // headers - those are reserved for changed files.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
-        if old_file.contents == new_file.contents {
+        if same_contents(&old_file.contents, &new_file.contents, ignore_whitespace) {
             return state.collect();
         }
     }
@@ -853,12 +929,12 @@ where
     }
 
     // Don't print anything else when adding an empty file.
-    if old_file.is_none() && file_is_empty(&new_file) {
+    if old_file.is_none() && file_is_empty(&new_file, ignore_whitespace) {
         return state.collect();
     }
 
     // Don't print anything else when removing an empty file.
-    if file_is_empty(&old_file) && new_file.is_none() {
+    if file_is_empty(&old_file, ignore_whitespace) && new_file.is_none() {
         return state.collect();
     }
 
@@ -901,6 +977,7 @@ where
             // Typical case, we need to call actual diff function to get the diff.
             let opts = HeaderlessDiffOpts {
                 context: diff_opts.context,
+                ignore_whitespace,
             };
             gen_diff_unified_headerless(old_file, new_file, opts, seed, reduce)
         }
@@ -917,6 +994,7 @@ where
             // Both files use Git LFS pointers, we diff the pointer.
             let opts = HeaderlessDiffOpts {
                 context: diff_opts.context,
+                ignore_whitespace: false,
             };
             gen_diff_unified_headerless(
                 old_git_lfs_pointer,
@@ -934,7 +1012,7 @@ where
             None,
         ) => {
             // File with Git LFS pointer was removed
-            gen_diff_unified_headerless_entire_file(b'-', old_git_lfs_pointer, seed, reduce)
+            gen_diff_unified_headerless_entire_file(b'-', old_git_lfs_pointer, false, seed, reduce)
         }
         (
             None,
@@ -944,15 +1022,15 @@ where
             }),
         ) => {
             // File with Git LFS pointer was added
-            gen_diff_unified_headerless_entire_file(b'+', new_git_lfs_pointer, seed, reduce)
+            gen_diff_unified_headerless_entire_file(b'+', new_git_lfs_pointer, false, seed, reduce)
         }
         (Some(FileContent::Inline(old_file)), None) => {
             // Degenerated case of all-minus diff.
-            gen_diff_unified_headerless_entire_file(b'-', old_file, seed, reduce)
+            gen_diff_unified_headerless_entire_file(b'-', old_file, ignore_whitespace, seed, reduce)
         }
         (None, Some(FileContent::Inline(new_file))) => {
             // Degenerated case of all-plus diff.
-            gen_diff_unified_headerless_entire_file(b'+', new_file, seed, reduce)
+            gen_diff_unified_headerless_entire_file(b'+', new_file, ignore_whitespace, seed, reduce)
         }
         _ => {
             // There's nothing to diff.
@@ -1027,7 +1105,14 @@ d
 e
 z"#;
         assert_eq!(
-            diff_unified_headerless(&a, &b, HeaderlessDiffOpts { context: 10 }),
+            diff_unified_headerless(
+                &a,
+                &b,
+                HeaderlessDiffOpts {
+                    context: 10,
+                    ignore_whitespace: false,
+                }
+            ),
             r"@@ -1,4 +1,5 @@
  a
 -b
@@ -1071,6 +1156,7 @@ z"#;
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/y
@@ -1110,6 +1196,7 @@ d
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1147,6 +1234,7 @@ d
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1192,6 +1280,7 @@ consectetur
                 DiffOpts {
                     context: 0,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1232,6 +1321,7 @@ consectetur
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1276,6 +1366,7 @@ Binary file x has changed
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1303,6 +1394,7 @@ Binary file x has changed
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1327,6 +1419,7 @@ new file mode 100644
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1356,6 +1449,7 @@ deleted file mode 100644
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1377,6 +1471,7 @@ Binary file x has changed
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1398,6 +1493,7 @@ new file mode 100644
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1549,6 +1645,7 @@ deleted file mode 100644
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1582,6 +1679,7 @@ new file mode 160000
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1614,6 +1712,7 @@ new file mode 160000
                 DiffOpts {
                     context: 10,
                     copy_info: CopyInfo::None,
+                    ignore_whitespace: false,
                 }
             )),
             r"diff --git a/x b/x
@@ -1629,6 +1728,253 @@ new file mode 100755
 @@ -0,0 +1,1 @@
 +a
 "
+        );
+    }
+
+    fn headerless_ignoring_whitespace(old: &[u8], new: &[u8], context: usize) -> Vec<u8> {
+        diff_unified_headerless(
+            &old,
+            &new,
+            HeaderlessDiffOpts {
+                context,
+                ignore_whitespace: true,
+            },
+        )
+    }
+
+    fn headerless_ignoring_whitespace_str(old: &str, new: &str, context: usize) -> String {
+        String::from_utf8(headerless_ignoring_whitespace(
+            old.as_bytes(),
+            new.as_bytes(),
+            context,
+        ))
+        .unwrap()
+    }
+
+    fn unified_ignoring_whitespace(old: Option<&str>, new: Option<&str>) -> String {
+        let file = |contents| DiffFile {
+            contents: FileContent::Inline(contents),
+            path: "x",
+            file_type: FileType::Regular,
+        };
+        String::from_utf8(diff_unified(
+            old.map(file),
+            new.map(file),
+            DiffOpts {
+                context: 3,
+                copy_info: CopyInfo::None,
+                ignore_whitespace: true,
+            },
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_ignore_whitespace_keeps_original_text() {
+        // Stripped, "a a" vs "ab" is "aa" vs "ab": a real change, shown as written.
+        assert_eq!(
+            headerless_ignoring_whitespace_str("a a\n", "ab\n", 3),
+            concat!("@@ -1,1 +1,1 @@\n", "-a a\n", "+ab\n")
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_only_change_is_empty() {
+        assert_eq!(
+            headerless_ignoring_whitespace_str("a b\n\tc\n", "ab\n  c\n", 3),
+            ""
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_context_comes_from_old_text() {
+        assert_eq!(
+            headerless_ignoring_whitespace_str("a\n  b\nc\n", "a\n    b\nC\n", 3),
+            concat!("@@ -1,3 +1,3 @@\n", " a\n", "   b\n", "-c\n", "+C\n")
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_multiple_hunks_and_empty_ranges() {
+        assert_eq!(
+            headerless_ignoring_whitespace_str(
+                "one\n two\nthree\nfour\nfive\nsix\n",
+                "one\nthree\nfour\nfive\nsix\n seven\n",
+                0
+            ),
+            concat!(
+                "@@ -2,1 +1,0 @@\n",
+                "- two\n",
+                "@@ -6,0 +6,1 @@\n",
+                "+ seven\n",
+            )
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_missing_newline_marker() {
+        assert_eq!(
+            headerless_ignoring_whitespace_str("x\ny  \n", "x\nz  ", 1),
+            concat!(
+                "@@ -1,2 +1,2 @@\n",
+                " x\n",
+                "-y  \n",
+                "+z  \n",
+                "\\ No newline at end of file\n",
+            )
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_keeps_carriage_returns() {
+        assert_eq!(
+            headerless_ignoring_whitespace_str("a\r\nb\r\n", "a\r\nc\r\n", 1),
+            concat!("@@ -1,2 +1,2 @@\n", " a\r\n", "-b\r\n", "+c\r\n")
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_drops_whitespace_only_last_line() {
+        // A final "  " without a newline strips to nothing, so it is neither
+        // printed nor reported as a missing newline.
+        assert_eq!(
+            headerless_ignoring_whitespace_str("a\nb\n  ", "a\nc\n", 1),
+            concat!("@@ -1,2 +1,2 @@\n", " a\n", "-b\n", "+c\n")
+        );
+        assert_eq!(
+            headerless_ignoring_whitespace_str("   ", "x\n", 3),
+            concat!("@@ -0,0 +1,1 @@\n", "+x\n")
+        );
+    }
+
+    #[test]
+    fn test_ignore_whitespace_non_utf8_content() {
+        assert_eq!(
+            headerless_ignoring_whitespace(b"\xff x\n", b"\xff y\n", 3),
+            b"@@ -1,1 +1,1 @@\n-\xff x\n+\xff y\n".to_vec()
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_only_change_is_empty() {
+        assert_eq!(
+            unified_ignoring_whitespace(Some("a b\n\tc\n"), Some("ab\n  c\n")),
+            ""
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_keeps_original_text() {
+        let old = "line1\nline2\nline3\n";
+        let new = "line1\nmodified  line2\nline3\n";
+        let hunks = concat!(
+            "@@ -1,3 +1,3 @@\n",
+            " line1\n",
+            "-line2\n",
+            "+modified  line2\n",
+            " line3\n",
+        );
+        assert_eq!(
+            unified_ignoring_whitespace(Some(old), Some(new)),
+            format!(
+                concat!("diff --git a/x b/x\n", "--- a/x\n", "+++ b/x\n", "{}"),
+                hunks
+            )
+        );
+        assert_eq!(headerless_ignoring_whitespace_str(old, new, 3), hunks);
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_file_addition() {
+        // The final "  " without a newline is dropped, as in the headerless diff.
+        let new = "a b\n\tc\n  ";
+        let hunks = concat!("@@ -0,0 +1,2 @@\n", "+a b\n", "+\tc\n");
+        assert_eq!(
+            unified_ignoring_whitespace(None, Some(new)),
+            format!(
+                concat!(
+                    "diff --git a/x b/x\n",
+                    "new file mode 100644\n",
+                    "--- /dev/null\n",
+                    "+++ b/x\n",
+                    "{}",
+                ),
+                hunks
+            )
+        );
+        assert_eq!(headerless_ignoring_whitespace_str("", new, 3), hunks);
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_file_removal() {
+        let old = "a\n b";
+        let hunks = concat!(
+            "@@ -1,2 +0,0 @@\n",
+            "-a\n",
+            "- b\n",
+            "\\ No newline at end of file\n",
+        );
+        assert_eq!(
+            unified_ignoring_whitespace(Some(old), None),
+            format!(
+                concat!(
+                    "diff --git a/x b/x\n",
+                    "deleted file mode 100644\n",
+                    "--- a/x\n",
+                    "+++ /dev/null\n",
+                    "{}",
+                ),
+                hunks
+            )
+        );
+        assert_eq!(headerless_ignoring_whitespace_str(old, "", 3), hunks);
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_adding_whitespace_only_file() {
+        assert_eq!(
+            unified_ignoring_whitespace(None, Some(" \t ")),
+            concat!("diff --git a/x b/x\n", "new file mode 100644\n")
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_skips_binary() {
+        assert_eq!(
+            unified_ignoring_whitespace(Some("binary\0 x"), Some("binary\0  x")),
+            concat!("diff --git a/x b/x\n", "Binary file x has changed\n")
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_ignore_whitespace_skips_git_lfs_pointers() {
+        let pointer = |size: &str| DiffFile {
+            contents: FileContent::<Vec<u8>>::Omitted {
+                content_hash: "hash".to_string(),
+                git_lfs_pointer: Some(format!("oid sha256:hash\nsize {size}\n")),
+            },
+            path: "x",
+            file_type: FileType::Regular,
+        };
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(pointer("1")),
+                Some(pointer(" 1")),
+                DiffOpts {
+                    context: 3,
+                    copy_info: CopyInfo::None,
+                    ignore_whitespace: true,
+                }
+            )),
+            concat!(
+                "diff --git a/x b/x\n",
+                "--- a/x\n",
+                "+++ b/x\n",
+                "@@ -1,2 +1,2 @@\n",
+                " oid sha256:hash\n",
+                "-size 1\n",
+                "+size  1\n",
+            )
         );
     }
 }

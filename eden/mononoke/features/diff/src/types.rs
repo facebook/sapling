@@ -207,7 +207,8 @@ impl From<HeaderlessDiffOpts> for xdiff::HeaderlessDiffOpts {
     fn from(opts: HeaderlessDiffOpts) -> Self {
         xdiff::HeaderlessDiffOpts {
             context: opts.context,
-            // Note: xdiff doesn't support ignore_whitespace, so we handle it at the content loading level
+            // The headerless operation strips whitespace from the inputs itself.
+            ignore_whitespace: false,
         }
     }
 }
@@ -264,6 +265,8 @@ impl From<UnifiedDiffOpts> for xdiff::DiffOpts {
         xdiff::DiffOpts {
             context: opts.context,
             copy_info: opts.copy_info.into(),
+            // The unified operation strips whitespace from the inputs itself.
+            ignore_whitespace: false,
         }
     }
 }

@@ -108,6 +108,7 @@ fn main() -> Result<(), std::io::Error> {
         DiffOpts {
             context: opt.unified,
             copy_info,
+            ignore_whitespace: false,
         },
     );
 
