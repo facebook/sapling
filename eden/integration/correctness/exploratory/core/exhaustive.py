@@ -95,11 +95,7 @@ def _read(state: dict[Cell, Value], problem: Problem, cell: Cell) -> Value:
 def _accepts(
     expect: Any, cells: Any, state: dict[Cell, Value], problem: Problem
 ) -> bool:
-    values = [_read(state, problem, cell) for cell in cells]
-    for row in expect.rows:
-        if all(atom.matches(value) for atom, value in zip(row, values)):
-            return True
-    return False
+    return expect.holds(tuple(_read(state, problem, cell) for cell in cells))
 
 
 def _step(

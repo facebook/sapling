@@ -5,8 +5,7 @@
 
 """The checkout conflict count: a Thrift checkout's reported conflict count is one the
 contract per-path states allow. Complements the conflict-count rows of the corpus
-family `checkout`: these tests pin the weighted-subset count against brute force, the
-measured conflict table, when the count is decided directly and when the engine
+family `checkout`: these tests pin the measured conflict table, when the count is decided directly and when the engine
 decides it, racing writes and checkouts, FORCE counting, and the recorded live count.
 """
 
@@ -14,8 +13,6 @@ from __future__ import annotations
 
 import itertools
 import random
-import sys
-import tracemalloc
 import unittest
 from typing import Any
 
@@ -57,56 +54,6 @@ from eden.integration.correctness.exploratory.test.corpus.author import (
 
 
 class ConflictCountTest(unittest.TestCase):
-    def test_weighted_subsets_match_brute_force(self) -> None:
-        for weights in ([1, 1, 1], [1, 2, 3, 1], [5, 1, 1, 2], []):
-            for total in (-1, 0, 1, 2, 5, 7):
-                with self.subTest(weights=weights, total=total):
-                    brute = {
-                        frozenset(i for i, keep in enumerate(mask) if keep)
-                        for mask in itertools.product(
-                            (False, True), repeat=len(weights)
-                        )
-                        if sum(w for w, keep in zip(weights, mask) if keep) == total
-                    }
-                    found = list(contracts_model._subsets(weights, total))
-                    self.assertEqual(len(found), len(set(found)))
-                    self.assertEqual(brute, set(found))
-                    self.assertEqual(
-                        len(brute), contracts_checkout._subset_count(weights, total)
-                    )
-
-    def test_unreachable_count_allocates_no_table(self) -> None:
-        """A count above the paths' total weight is impossible: no table is built."""
-        tracemalloc.start()
-        try:
-            self.assertEqual(0, contracts_checkout._subset_count([1, 2, 1, 1], 10**6))
-            peak = tracemalloc.get_traced_memory()[1]
-        finally:
-            tracemalloc.stop()
-        self.assertLess(peak, 64 * 1024)
-
-    def test_subset_search_stops_when_the_rest_cannot_reach_the_count(self) -> None:
-        """k conflicts over k unit-weight paths have one answer and one search path.
-
-        The profiler sees a generator frame on its first call and on each
-        resume, so the count is linear in k, not the 2**k subsets.
-        """
-        calls = 0
-
-        def count(frame: Any, event: str, _arg: Any) -> None:
-            nonlocal calls
-            if event == "call" and frame.f_code.co_name == "grow":
-                calls += 1
-
-        weights = [1] * 16
-        sys.setprofile(count)
-        try:
-            found = list(contracts_model._subsets(weights, len(weights)))
-        finally:
-            sys.setprofile(None)
-        self.assertEqual([frozenset(range(len(weights)))], found)
-        self.assertLessEqual(calls, 4 * (len(weights) + 1))
-
     def test_conflict_states_follow_the_measured_table(self) -> None:
         """Which local states each mode reports, per path shape."""
         file_a = contracts_model._Entry(

@@ -407,12 +407,67 @@ def of_class(classes: Iterable[str]) -> Atom:
 
 
 @dataclass(frozen=True)
-class Expect:
-    """A disjunction of rows; each row conjoins one atom per cell."""
+class Count:
+    """A weighted count: the cells holding `value` contribute exactly `total`.
 
-    rows: tuple[tuple[Atom, ...], ...]
+    A cell holding `value` contributes some amount in its `(low, high)`
+    weight, inclusively; any other cell contributes nothing. The amounts a
+    fixed set of cells can contribute are every integer between their low
+    and high sums, so one assignment is checked in time linear in the cells.
+    """
+
+    value: Value
+    weights: tuple[tuple[int, int], ...]
+    total: int
 
     def __post_init__(self) -> None:
+        _require(isinstance(self.value, Value), "a count's value is not a Value")
+        _require(
+            type(self.weights) is tuple
+            and bool(self.weights)
+            and all(
+                type(weight) is tuple
+                and len(weight) == 2
+                and all(type(bound) is int for bound in weight)
+                and 0 <= weight[0] <= weight[1]
+                for weight in self.weights
+            ),
+            "count weights are (low, high) pairs with 0 <= low <= high",
+        )
+        _require(type(self.total) is int, "a count's total is an int")
+
+    def holds(self, values: tuple[Value, ...]) -> bool:
+        """Return whether the cells holding `value` can contribute `total`."""
+        low = high = 0
+        for (lo, hi), value in zip(self.weights, values):
+            if value == self.value:
+                low += lo
+                high += hi
+        return low <= self.total <= high
+
+    def document(self) -> dict[str, Any]:
+        """Return the canonical JSON document of this count."""
+        return {
+            "value": self.value.document(),
+            "weights": [list(weight) for weight in self.weights],
+            "total": self.total,
+        }
+
+
+@dataclass(frozen=True)
+class Expect:
+    """A disjunction of rows, each conjoining one atom per cell, or a `count`."""
+
+    rows: tuple[tuple[Atom, ...], ...] = ()
+    count: Count | None = None
+
+    def __post_init__(self) -> None:
+        if self.count is not None:
+            _require(
+                isinstance(self.count, Count) and self.rows == (),
+                "a count expectation has no rows",
+            )
+            return
         _require(
             type(self.rows) is tuple and bool(self.rows),
             "an expectation needs at least one row",
@@ -428,19 +483,25 @@ class Expect:
 
     @property
     def width(self) -> int:
-        """Return how many cells each row constrains."""
+        """Return how many cells the expectation constrains."""
+        if self.count is not None:
+            return len(self.count.weights)
         return len(self.rows[0])
 
     def holds(self, values: tuple[Value, ...]) -> bool:
-        """Return whether some row accepts the visible values, in cell order."""
+        """Return whether the visible values, in cell order, are accepted."""
         _require(len(values) == self.width, "expectation width mismatch")
+        if self.count is not None:
+            return self.count.holds(values)
         return any(
             all(atom.matches(value) for atom, value in zip(row, values))
             for row in self.rows
         )
 
-    def document(self) -> list[list[dict[str, Any]]]:
+    def document(self) -> list[list[dict[str, Any]]] | dict[str, Any]:
         """Return the canonical JSON document of this expectation."""
+        if self.count is not None:
+            return {"count": self.count.document()}
         return [[atom.document() for atom in row] for row in self.rows]
 
 

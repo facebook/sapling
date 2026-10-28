@@ -34,7 +34,8 @@ Pipeline for one `Problem`:
    unguarded writer surely overwrites; a transfer contributes only the
    values its source can ever hold in the component) — a reader no
    candidate row can satisfy decides the component unsatisfiable without
-   search.
+   search, and so does a count (`effects.Count`) whose total lies outside
+   what its cells must and may contribute (`_tally_readable`).
 4. Finite choice without search: a component with no observation and no
    requirement is satisfied by dropping every indeterminate group. Every
    other component, however small, goes to the frontier search below.
@@ -42,7 +43,8 @@ Pipeline for one `Problem`:
    memoizing failed states by (remaining nodes, values of cells a
    remaining node reads). Each sound reduction is documented where it is
    applied: dominating moves (forced placements, dead indeterminate
-   groups), forward checking of every required check, persistent sets
+   groups), forward checking of every required check (a count by the
+   bounds its cells' values and remaining writers allow), persistent sets
    seeded at the earliest deadlines, and restarts with new candidate
    orders on a Luby schedule that keep every failed state.
 
@@ -86,6 +88,7 @@ from .effects import (
     Atom,
     Cell,
     constraint_id,
+    Count,
     EffectGroup,
     EffectKind,
     Exclusive,
@@ -454,6 +457,26 @@ def _holds(rows: _Rows, values: Sequence[Value]) -> bool:
     return False
 
 
+@dataclass(frozen=True)
+class _Tally:
+    """A compiled count: (state index, low, high) per dynamic cell, and the
+    low and high weight of the static cells that hold the counted value."""
+
+    entries: tuple[tuple[int, int, int], ...]
+    value: Value
+    low: int
+    high: int
+    total: int
+
+    def holds(self, values: Sequence[Value]) -> bool:
+        low, high = self.low, self.high
+        for index, lo, hi in self.entries:
+            if values[index] == self.value:
+                low += lo
+                high += hi
+        return low <= self.total <= high
+
+
 @dataclass
 class _Writer:
     """One group's write of one state cell, for candidate propagation."""
@@ -464,6 +487,7 @@ class _Writer:
     value: Value | None  # None: copies the transfer source `source`
     guarded: bool
     source: int = -1
+    guard: _Rows | None = None
 
 
 @dataclass
@@ -477,6 +501,7 @@ class _Local:
     var: int  # local outcome variable, -1 for observations
     input: int  # observation input index, -1 for groups
     rows: _Rows = ()  # observation expectation
+    tally: _Tally | None = None  # observation count, instead of rows
     reads: list[tuple[Cell, ...]] = field(default_factory=list)
     effects: list[tuple[int | None, Value | None, int | None, _Rows | None]] = field(
         default_factory=list
@@ -545,7 +570,10 @@ class _Component:
             if node in observations:
                 obs = observations[node]
                 local = _Local(node, lo, hi, True, -1, self.input_index[node])
-                local.rows = self._compile(obs.cells, obs.expect)
+                if obs.expect.count is not None:
+                    local.tally = self._tally(obs.cells, obs.expect.count)
+                else:
+                    local.rows = self._compile(obs.cells, obs.expect)
                 local.reads.append(obs.cells)
             else:
                 group = model.groups[node]
@@ -574,11 +602,19 @@ class _Component:
                             value if source is None else None,
                             guard is not None,
                             -1 if source is None else source,
+                            guard,
                         )
                     )
                 if source is not None:
                     self.writers.setdefault(source, []).append(
-                        _Writer(i, local.lo, local.hi, ABSENT, guard is not None)
+                        _Writer(
+                            i,
+                            local.lo,
+                            local.hi,
+                            ABSENT,
+                            guard is not None,
+                            guard=guard,
+                        )
                     )
         for writers in self.writers.values():
             writers.sort(key=lambda w: (w.lo, w.node))
@@ -637,6 +673,19 @@ class _Component:
             for r, row in enumerate(expect.rows)
             if alive[r]
         )
+
+    def _tally(self, cells: tuple[Cell, ...], count: Count) -> _Tally:
+        """Compile a count; static cells fold into its constant weights."""
+        entries, low, high = [], 0, 0
+        for cell, (lo, hi) in zip(cells, count.weights):
+            index = self.state_index.get(cell)
+            if index is not None:
+                entries.append((index, lo, hi))
+            elif self._initial[cell] == count.value:
+                low += lo
+                high += hi
+            _bump(self._counters, "work")
+        return _Tally(tuple(entries), count.value, low, high, count.total)
 
     def _compile_group(
         self, local: _Local, group: EffectGroup, relevant: set[Cell] | None
@@ -719,6 +768,8 @@ class _Masks:
                 for row in x.rows:
                     for index, _atom in row:
                         reads |= 1 << index
+                for index, _lo, _hi in x.tally.entries if x.tally else ():
+                    reads |= 1 << index
             for dest, _value, source, guard in x.effects:
                 if dest is not None:
                     writes |= 1 << dest
@@ -759,6 +810,8 @@ class _Masks:
             cost += len(c.cells)
         self.fixers = [self._fixers(c, i) for i in range(len(nodes))]
         cost += sum(len(rows) for tables in self.fixers for _inp, rows in tables)
+        self.tallies = [self._tally_writers(c, i) for i in range(len(nodes))]
+        cost += sum(len(entries) for entries in self.tallies)
         self.readers = readers
         # check_cells[i] / check_writers[i]: every cell node i's checks read,
         # and every writer (fixer or overwriter) those checks consult; a
@@ -773,6 +826,9 @@ class _Masks:
                         self.check_writers[i] |= mask
                         for _lo, w in overwrites:
                             self.check_writers[i] |= 1 << w
+            for index, _lo, _hi, matching, other in self.tallies[i]:
+                self.check_cells[i] |= 1 << index
+                self.check_writers[i] |= matching | other
         self.var_nodes = [0] * len(c.var_names)
         # cell_vars[k]: outcome variables with a group writing cell k.
         self.cell_vars = [0] * len(c.cells)
@@ -801,6 +857,29 @@ class _Masks:
         return (1 << bisect_right(self._starts, time)) - 1
 
     @staticmethod
+    def _tally_writers(c: _Component, i: int) -> list[tuple[int, int, int, int, int]]:
+        """Return (cell, low, high, writers that may write the counted value,
+        writers that may write another) per dynamic cell of node `i`'s count,
+        over writers that may precede it."""
+        x = c.nodes[i]
+        if x.tally is None:
+            return []
+        found = []
+        for index, lo, hi in x.tally.entries:
+            matching = other = 0
+            for w in c.writers.get(index, ()):
+                if w.node == i or w.lo > x.hi:
+                    continue
+                values = (w.value,) if w.value is not None else c.reach[w.source]
+                for value in values:
+                    if value == x.tally.value:
+                        matching |= 1 << w.node
+                    else:
+                        other |= 1 << w.node
+            found.append((index, lo, hi, matching, other))
+        return found
+
+    @staticmethod
     def _fixers(c: _Component, i: int) -> list[tuple[int, list[list[_Fixer]]]]:
         """Return (input, rows) per expectation node `i` must satisfy.
 
@@ -810,7 +889,7 @@ class _Masks:
         """
         x = c.nodes[i]
         tables: list[tuple[int, _Rows]] = (
-            [(x.input, x.rows)]
+            ([] if x.tally else [(x.input, x.rows)])
             if x.observation
             else [(inp, rows) for inp, rows, _c in x.requires]
         )
@@ -868,7 +947,9 @@ class _Decider:
         self.high = 0
         # Whether a reader can be satisfied depends only on the groups and
         # the variables Exclusive drops, never on the other active inputs.
-        self._readable_cache: dict[tuple[int, int, frozenset[int]], bool] = {}
+        self._readable_cache: dict[
+            tuple[int, int | tuple[int, int], frozenset[int]], bool
+        ] = {}
         self._static: _Masks | None = None
 
     def _count(self, phase: str, key: str, units: int = 1) -> None:
@@ -926,13 +1007,25 @@ class _Decider:
         hi: float,
         dropped: set[int],
         meter: _Meter,
+        guarded: bool = False,
     ) -> tuple[list[Value], int]:
-        """Return the values `reader` may see in `cell` and the writer count."""
+        """Return the values `reader` may see in `cell` and the writer count.
+
+        With `guarded`, a writer whose guard no value it may read satisfies
+        writes nothing.
+        """
         c = self.c
         writers = [
             w
-            for w in c.writers.get(cell, ())
-            if w.node != reader and w.lo <= hi and c.nodes[w.node].var not in dropped
+            for k, w in enumerate(c.writers.get(cell, ()))
+            if w.node != reader
+            and w.lo <= hi
+            and c.nodes[w.node].var not in dropped
+            and not (
+                guarded
+                and w.guard is not None
+                and not self._readable(w.guard, w.node, (cell, k), dropped, meter)
+            )
         ]
         meter.spend(1 + len(writers))
         if len(writers) > self.budgets.max_candidates:
@@ -963,11 +1056,15 @@ class _Decider:
         self,
         rows: _Rows,
         reader: int,
-        slot: int,
+        slot: int | tuple[int, int],
         dropped: set[int],
         meter: _Meter,
     ) -> bool:
-        """Return whether some row can hold on values the reader may see (cached)."""
+        """Return whether some row can hold on values the reader may see (cached).
+
+        `slot` names the rows: -1 for an observation, a requirement's input,
+        or (cell, writer position) for the guard of a write.
+        """
         key = (reader, slot, frozenset(dropped))
         meter.spend()
         if key not in self._readable_cache:
@@ -1020,7 +1117,11 @@ class _Decider:
         if forced is None:
             return False, None
         for i, n in enumerate(c.nodes):
-            if n.observation and n.input in active:
+            if n.observation and n.input in active and n.tally is not None:
+                if not self._tally_readable(n.tally, i, active, dropped, meter):
+                    self._count("propagation", "zero_candidate")
+                    return False, forced
+            elif n.observation and n.input in active:
                 if not self._readable(n.rows, i, -1, dropped, meter):
                     self._count("propagation", "zero_candidate")
                     return False, forced
@@ -1035,6 +1136,75 @@ class _Decider:
             self._count("propagation", "final_value_conflict")
             return False, forced
         return True, forced
+
+    def _tally_readable(
+        self,
+        tally: _Tally,
+        reader: int,
+        active: set[int],
+        dropped: set[int],
+        meter: _Meter,
+    ) -> bool:
+        """Return whether a count's total lies between what its cells must and
+        may contribute when `reader` reads them.
+
+        A cell may hold the counted value when one of the values it may hold
+        (`_possible`, skipping writers whose guard cannot hold) is it. It
+        must when that is its only value, or when an acked writer of it
+        that precedes `reader` (by precedence or window) has a guard that
+        surely holds and no writer may write another value.
+        """
+        c = self.c
+        node = c.nodes[reader]
+        preceding = {a for inp, a, b in c.edges if inp in active and b == reader}
+        low, high = tally.low, tally.high
+        for index, lo, hi in tally.entries:
+            values, count = self._possible(
+                index, reader, node.lo, node.hi, dropped, meter, guarded=True
+            )
+            self._count("propagation", "candidates", count)
+            if tally.value not in values:
+                continue
+            high += hi
+            writers = [
+                w
+                for w in c.writers.get(index, ())
+                if w.node != reader
+                and w.lo <= node.hi
+                and c.nodes[w.node].var not in dropped
+            ]
+            meter.spend(1 + len(writers))
+            if len(values) == 1 or (
+                all(w.value == tally.value for w in writers)
+                and any(
+                    c.var_acked[c.nodes[w.node].var]
+                    and (w.node in preceding or w.hi < node.lo)
+                    and (
+                        w.guard is None or self._surely(w.guard, w.node, dropped, meter)
+                    )
+                    for w in writers
+                )
+            ):
+                low += lo
+        return low <= tally.total <= high
+
+    def _surely(
+        self, rows: _Rows, reader: int, dropped: set[int], meter: _Meter
+    ) -> bool:
+        """Return whether some row holds on every value the reader may see."""
+        node = self.c.nodes[reader]
+        return any(
+            all(
+                all(
+                    atom.matches(value)
+                    for value in self._possible(
+                        index, reader, node.lo, node.hi, dropped, meter
+                    )[0]
+                )
+                for index, atom in row
+            )
+            for row in rows
+        )
 
     def _final_value_conflict(
         self, active: set[int], dropped: set[int], meter: _Meter
@@ -1162,6 +1332,7 @@ class _Decider:
             for i in range(n)
             if obs_active[i] or (not nodes[i].observation and reqs[i])
         ]
+        tallied = [i for i in range(n) if obs_active[i] and nodes[i].tally]
         State = tuple[int, int, int, tuple[Value, ...]]
         summaries: dict[tuple[int, int], tuple[int, int, float, int]] = {}
 
@@ -1249,7 +1420,7 @@ class _Decider:
                     return None
                 drops |= 1 << nodes[y].var
             if x.observation:
-                if not _holds(x.rows, values):
+                if not (x.tally.holds(values) if x.tally else _holds(x.rows, values)):
                     return None
                 return placed | 1 << i, dropped | drops, committed, values, drops
             for rows in reqs[i]:
@@ -1372,6 +1543,26 @@ class _Decider:
                     if not any(all(possible(entry) for entry in row) for row in rows):
                         self._count("search", "pruned")
                         return True
+            for i in tallied:
+                if not required >> i & 1 or not (
+                    masks.check_cells[i] & changed_cells
+                    or masks.check_writers[i] & changed_nodes
+                ):
+                    continue
+                tally = nodes[i].tally
+                assert tally is not None
+                low, high = tally.low, tally.high
+                for index, lo, hi, matching, other in masks.tallies[i]:
+                    if values[index] == tally.value:
+                        high += hi
+                        if not other & remaining:
+                            low += lo
+                    elif matching & remaining:
+                        high += hi
+                meter.spend(1 + len(masks.tallies[i]))
+                if not low <= tally.total <= high:
+                    self._count("search", "pruned")
+                    return True
             return False
 
         def key(state: State) -> Any:

@@ -233,8 +233,8 @@ CHECKOUT_PROPERTY = PropertyDef(
     ),
     not_evaluated_reasons={
         COUNT_UNMODELED: "A conflict count the contracts cannot judge: a path outside "
-        "the contract set may conflict, a relevant path's conflict typing is not "
-        "modeled, or too many conflict sets match",
+        "the contract set may conflict, or a relevant path's conflict typing is "
+        "not modeled",
     },
     consumes=CONSUMES,
 )

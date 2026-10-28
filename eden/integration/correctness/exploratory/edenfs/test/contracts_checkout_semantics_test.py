@@ -19,6 +19,7 @@ from typing import Any
 
 from eden.integration.correctness.exploratory.core.effects import (
     ABSENT,
+    Cell,
     Exclusive,
     ObligationRef,
     Status,
@@ -31,6 +32,8 @@ from eden.integration.correctness.exploratory.core.test.testing import ev
 from eden.integration.correctness.exploratory.edenfs.contracts.checkout import (
     conflict_paths,
     CONTRACT_RULES,
+    count_judgment,
+    CountJudgment,
     IN_PROGRESS_RULE,
     resolution,
 )
@@ -40,6 +43,7 @@ from eden.integration.correctness.exploratory.edenfs.contracts.model import (
     DIR,
     EdenPinned,
     file_value,
+    mode_cell,
     mode_value,
     path_cell,
     Resolution,
@@ -738,3 +742,186 @@ class SlGotoTwoPhaseTest(unittest.TestCase):
         re-created (an unlink before the visit blocks instead)."""
         spec, events = self._race(action_payload("unlink", path=R0), {"path": R0})
         self.assertTrue(is_explained(spec, events, (read_obs("g", R0, ABSENT, 5, 6),)))
+
+
+class ExtraEntries(EdenPinned):
+    """The fixture plus `extra`: each path's value at the revisions that hold it,
+    absent at the others; the run starts at each path's TIP value."""
+
+    def __init__(self, spec: RunSpec, extra: dict[str, dict[int, Value]]) -> None:
+        super().__init__(EdenPinned.for_spec(spec).fixture)
+        self.extra = extra
+
+    def committed(self, path: str, revision: int) -> Value:
+        if path not in self.extra:
+            return super().committed(path, revision)
+        return self.extra[path].get(revision, ABSENT)
+
+    def committed_mode(self, path: str, revision: int) -> Value:
+        if path not in self.extra:
+            return super().committed_mode(path, revision)
+        value = self.committed(path, revision)
+        return ABSENT if value == ABSENT else mode_value(value == DIR)
+
+    def initial(self, cell: Cell) -> Value:
+        if cell.key in self.extra and cell == path_cell(cell.key):
+            return self.committed(cell.key, self.initial_revision)
+        if cell.key in self.extra and cell == mode_cell(cell.key):
+            return self.committed_mode(cell.key, self.initial_revision)
+        return super().initial(cell)
+
+
+# A directory revision 2 removes, holding one file.
+REMOVED_DIR = "tree/n"
+KEPT = "tree/n/f.dat"
+REMOVED_TREE: dict[str, dict[int, Value]] = {
+    REMOVED_DIR: {TIP: DIR},
+    KEPT: {TIP: file_value(b"f")},
+}
+
+
+class DirectoryNotEmptyCountTest(unittest.TestCase):
+    """A Thrift checkout's count includes one DIRECTORY_NOT_EMPTY per directory
+    the destination removes or retypes while NORMAL keeps a path below it
+    (`TreeInode::finalizeDirectoryRemoval`)."""
+
+    def _history(
+        self, op: dict[str, Any], done: dict[str, Any], *, mode: str = "normal"
+    ) -> tuple[RunSpec, list[Event]]:
+        spec = run_spec(
+            {"x": op, "c": checkout_op(2, mode=mode)},
+            [{"id": "a", "actions": ["x", "c"]}],
+            registers=(R0, R1, op["path"]),
+        )
+        return spec, [
+            ev("invoke", "x", 1.0),
+            ev("ok", "x", 2.0, **done),
+            ev("invoke", "c", 3.0),
+        ]
+
+    def _write(self, path: str = KEPT, **kwargs: Any) -> tuple[RunSpec, list[Event]]:
+        return self._history(
+            action_payload("write", path=path, value_id="w"),
+            {"bytes_written": 64},
+            **kwargs,
+        )
+
+    def _judged(
+        self,
+        history: tuple[RunSpec, list[Event]],
+        tree: dict[str, dict[int, Value]],
+        counts: range,
+    ) -> dict[int, bool]:
+        """Return, per recorded count, whether it has an explanation."""
+        spec, events = history
+        pinned = ExtraEntries(spec, tree)
+        found = {}
+        for count in counts:
+            recorded = [
+                *events,
+                ev("ok", "c", 4.0, revision=2, **{**THRIFT_OK, "conflicts": count}),
+            ]
+            facts = HistoryFacts.build(spec, recorded, VOCAB_TARGET)
+            self.assertIsNone(count_judgment(spec, facts, pinned, "c").gap)
+            sink = contract_sink(spec, recorded, pinned)
+            found[count] = engine_explains(
+                pinned, sink.groups, sink.observations, sink.constraints
+            )
+        return found
+
+    def test_a_kept_child_adds_its_removed_directory(self) -> None:
+        """MODIFIED_REMOVED for the dirty child plus DIRECTORY_NOT_EMPTY for its
+        directory; a count without the directory has no explanation."""
+        self.assertEqual(
+            {1: False, 2: True, 3: False},
+            self._judged(self._write(), REMOVED_TREE, range(1, 4)),
+        )
+
+    def test_a_removed_directory_left_empty_is_not_reported(self) -> None:
+        """A clean child is removed with its directory (0); an unlinked one is
+        MISSING_REMOVED alone (1)."""
+        clean = self._history(action_payload("getattr", path=KEPT), {"size": 1})
+        unlinked = self._history(action_payload("unlink", path=KEPT), {"path": KEPT})
+        for history, expected in (
+            (clean, {0: True, 1: False}),
+            (unlinked, {0: False, 1: True, 2: False}),
+        ):
+            with self.subTest(op=history[0].action("x").kind):
+                self.assertEqual(
+                    expected, self._judged(history, REMOVED_TREE, range(len(expected)))
+                )
+
+    def test_nested_removed_directories_each_count_once(self) -> None:
+        """The kept child keeps `tree/n/d`, which keeps `tree/n`: both are reported."""
+        nested = {
+            REMOVED_DIR: {TIP: DIR},
+            "tree/n/d": {TIP: DIR},
+            "tree/n/d/f.dat": {TIP: file_value(b"f")},
+        }
+        self.assertEqual(
+            {2: False, 3: True, 4: False},
+            self._judged(self._write("tree/n/d/f.dat"), nested, range(2, 5)),
+        )
+
+    def test_a_directory_turned_into_a_file_counts_like_a_removed_one(self) -> None:
+        retyped = {**REMOVED_TREE, REMOVED_DIR: {TIP: DIR, 2: file_value(b"n")}}
+        self.assertEqual(
+            {1: False, 2: True, 3: False},
+            self._judged(self._write(), retyped, range(1, 4)),
+        )
+
+    def test_force_removes_the_kept_child_and_its_directory(self) -> None:
+        self.assertEqual(
+            {0: False, 1: True, 2: False},
+            self._judged(self._write(mode="force"), REMOVED_TREE, range(3)),
+        )
+
+    def test_an_untracked_child_leaves_the_count_unjudged(self) -> None:
+        """A path neither revision holds may keep the directory: no count is derived."""
+        spec, events = self._write("tree/n/u.dat")
+        recorded = [*events, ev("ok", "c", 4.0, revision=2, **THRIFT_OK)]
+        gap = count_judgment(
+            spec,
+            HistoryFacts.build(spec, recorded, VOCAB_TARGET),
+            ExtraEntries(spec, {**REMOVED_TREE, "tree/n/u.dat": {}}),
+            "c",
+        ).gap
+        self.assertIsNotNone(gap)
+        self.assertIn("tree/n/u.dat", gap or "")
+
+    def test_a_class_representative_below_a_removed_directory_bounds_the_count(
+        self,
+    ) -> None:
+        """Starting dirt on indexes 2 (`tree/a0/r3`) and 99 (`tree/a1/r3`) gives
+        one dirty representative of weight 2, kept below removed directories:
+        EdenFS reports 2 MODIFIED_REMOVED and 2 DIRECTORY_NOT_EMPTY. Members'
+        directories are not enumerated, so the other member may add 0 or 1."""
+        spec = run_spec(
+            {"s": action_payload("status", channel="thrift"), "c": checkout_op(2)},
+            [{"id": "a", "actions": ["s", "c"]}],
+            file_count=200,
+            scatter_dirty=100,
+        )
+        pinned = EdenPinned.for_spec(spec)
+        found = {}
+        for count in range(2, 6):
+            events = [
+                ev("invoke", "s", 1.0),
+                ev("ok", "s", 2.0, status=[], parent="n"),
+                ev("invoke", "c", 3.0),
+                ev("ok", "c", 4.0, revision=2, **{**THRIFT_OK, "conflicts": count}),
+            ]
+            facts = HistoryFacts.build(spec, events, VOCAB_TARGET)
+            self.assertEqual(
+                CountJudgment(None, 2), count_judgment(spec, facts, pinned, "c")
+            )
+            sink = contract_sink(spec, events, pinned)
+            (observation,) = [o for o in sink.observations if o.id == "o:c:conflicts"]
+            self.assertEqual(
+                ("k0/tree/a0/r3/00002.dat", "k0/tree/a0/r3"),
+                tuple(cell.key for cell in observation.cells),
+            )
+            found[count] = engine_explains(
+                pinned, sink.groups, sink.observations, sink.constraints
+            )
+        self.assertEqual({2: False, 3: True, 4: True, 5: False}, found)

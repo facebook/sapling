@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import itertools
 import json
 import math
 import re
@@ -22,6 +23,7 @@ from eden.integration.correctness.exploratory.core.effects import (
     Before,
     Cell,
     constraint_id,
+    Count,
     Domain,
     Effect,
     EffectGroup,
@@ -305,6 +307,32 @@ class ExpectationTest(unittest.TestCase):
         _rejects(self, "class atom has the wrong operands", lambda: of_class(()))
         _rejects(self, "bad atom class", lambda: of_class({"File"}))
         _rejects(self, "must be frozensets", lambda: Atom(AtomOp.IN, _bad({_FILE})))
+
+    def test_counts_match_brute_force(self) -> None:
+        """A count holds exactly when per-cell amounts within the set cells'
+        weights reach the total."""
+        weights = ((1, 1), (2, 2), (0, 3), (1, 2))
+        for values in itertools.product((_FILE, ABSENT), repeat=len(weights)):
+            reachable = {0}
+            for (low, high), value in zip(weights, values):
+                if value == _FILE:
+                    reachable = {
+                        total + amount
+                        for total in reachable
+                        for amount in range(low, high + 1)
+                    }
+            for total in range(-1, 10):
+                with self.subTest(values=values, total=total):
+                    expect = Expect(count=Count(_FILE, weights, total))
+                    self.assertEqual(total in reachable, expect.holds(values))
+        self.assertEqual(4, Expect(count=Count(_FILE, weights, 0)).width)
+        _rejects(
+            self,
+            "a count expectation has no rows",
+            lambda: Expect(((ANY,),), Count(_FILE, ((1, 1),), 1)),
+        )
+        _rejects(self, "0 <= low <= high", lambda: Count(_FILE, ((2, 1),), 1))
+        _rejects(self, "0 <= low <= high", lambda: Count(_FILE, (), 0))
 
     def test_expectations_and_observations_validate(self) -> None:
         expect = Expect(((eq(_FILE), ANY), (eq(ABSENT), eq(ABSENT))))

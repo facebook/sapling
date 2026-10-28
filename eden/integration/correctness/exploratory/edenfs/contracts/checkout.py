@@ -42,10 +42,15 @@ checkout's completion, after every marking group, requires the marked
 paths' weight to equal the recorded count (`count_inputs`). A write,
 chmod, or unlink of a counted path is ordered by the engine against that
 group: counted when it lands before the visit (kept by NORMAL, reset by
-FORCE), not counted after it. A count whose
+FORCE), not counted after it. A directory the destination removes or
+turns into a non-directory is counted once more (DIRECTORY_NOT_EMPTY)
+when NORMAL keeps a conflicting path below it: that path's group marks
+the directory too (`_nonempty_markers`); a class representative there
+weighs a range (`_CountPlan`). A count whose
 relevant paths include a type change, a path created with its parent
-directory, or a directory the run moves is not derived: how EdenFS
-types conflicts for those is not modeled (`_untyped`).
+directory, a directory the run moves, or, below a removed directory, a
+path neither revision holds is not derived: how EdenFS types conflicts
+for those is not modeled (`_untyped`).
 
 The `interrupted` cell names the checkout EdenFS holds interrupted. A
 checkout's parent group, which only a checkout past the guard has, sets
@@ -137,6 +142,7 @@ from eden.integration.correctness.exploratory.core.effects import (
     Atom,
     Before,
     Cell,
+    Count,
     Effect,
     EffectGroup,
     EffectKind,
@@ -242,7 +248,6 @@ from .model import (
     _single,
     _stderr_first_line,
     _Structure,
-    _subsets,
     _unmarked,
     _Values,
     blocked_cell,
@@ -315,11 +320,6 @@ CONTRACT_RULES = frozenset(
         INTERRUPTED_REFUSAL_RULE,
     }
 )
-
-
-# The most rows a conflict-count observation may enumerate; a wider one is
-# not derived (`conflict_count_gap`).
-MAX_COUNT_ROWS = 2048
 
 
 CHECKOUT_IN_PROGRESS = "CHECKOUT_IN_PROGRESS"
@@ -1265,7 +1265,7 @@ def _path_group(ctx: _Context, checkout: _Checkout, path: str) -> Iterator[Effec
     effects.append(_produce(visited, YES, action, guard))
     marker = _conflict_marker(ctx, checkout, path)
     if marker is not None:
-        effects.append(marker)
+        effects += [marker, *_nonempty_markers(ctx, checkout, path).values()]
     yield _group(
         checkout.action,
         checkout.status,
@@ -1566,6 +1566,10 @@ def _untyped(ctx: _Context, checkout: _Checkout, path: str) -> bool:
     its parent directory, or for a directory the run moves away. A checkout whose count could include such a path is
     not judged (`conflict_count_gap`). A directory every revision keeps
     and nothing moves (a listed or mkdir parent) is never a conflict.
+
+    Below a directory the checkout removes (`_lost_ancestors`), a path
+    neither revision holds is not modeled either: the walk never visits
+    it, so it alone may keep the directory (DIRECTORY_NOT_EMPTY).
     """
     target = _entry(ctx.pinned, path, checkout.target)
     sources = [_entry(ctx.pinned, path, rev) for rev in ctx.candidates]
@@ -1575,7 +1579,7 @@ def _untyped(ctx: _Context, checkout: _Checkout, path: str) -> bool:
         return True
     if _created_with_parent(ctx, checkout, path):
         return True
-    return any(
+    if any(
         ancestor in ctx.relevant_set
         and any(
             _retypes(
@@ -1585,7 +1589,64 @@ def _untyped(ctx: _Context, checkout: _Checkout, path: str) -> bool:
             for rev in ctx.candidates
         )
         for ancestor in _ancestors(path)
+    ):
+        return True
+    return any(
+        source.value == ABSENT
+        and any(
+            ctx.pinned.committed(a, rev) == DIR
+            for a in _lost_ancestors(ctx, checkout, path)
+        )
+        for rev, source in zip(ctx.candidates, sources)
     )
+
+
+def _lost_ancestors(ctx: _Context, checkout: _Checkout, path: str) -> list[str]:
+    """Return the paths above `path` the destination holds as no directory: a
+    source holding one as a directory has the checkout remove or retype it."""
+    return [
+        ancestor
+        for ancestor in _ancestors(path)
+        if ctx.pinned.committed(ancestor, checkout.target) != DIR
+    ]
+
+
+def _nonempty_markers(
+    ctx: _Context, checkout: _Checkout, path: str
+) -> dict[str, Effect]:
+    """Return the DIRECTORY_NOT_EMPTY markers `path` sets, by directory.
+
+    NORMAL keeps a conflicting path that is present, so every directory
+    above it that the destination removes or turns into a non-directory
+    stays, and EdenFS reports each such directory once, at every nesting
+    level (`TreeInode::finalizeDirectoryRemoval`: `tryRemoveChild` fails
+    on a non-empty directory). The marker is the directory's `conflict`
+    cell, set in the path's apply group when the path is present and
+    differs from a source the directory is removed from (the destination
+    lacks the path). FORCE removes every conflicting path, so it keeps none.
+    `path` carries a conflict marker (`_conflict_marker`).
+    """
+    if checkout.force:
+        return {}
+    markers: dict[str, Effect] = {}
+    for directory in _lost_ancestors(ctx, checkout, path):
+
+        def select(
+            revision: int, source: _Entry, _target: _Entry, directory: str = directory
+        ) -> list[_Local]:
+            if ctx.pinned.committed(directory, revision) != DIR:
+                return []
+            return _complement([source.local(), _ABSENT_LOCAL])
+
+        built = _by_source(ctx, checkout, path, select)
+        if built is not None:
+            markers[directory] = _produce(
+                conflict_cell(checkout.key, directory),
+                YES,
+                checkout.action.id,
+                Guard(*built),
+            )
+    return markers
 
 
 def _tracks_parent(ctx: _Context, path: str) -> bool:
@@ -1675,24 +1736,21 @@ def _counting(ctx: _Context, action: Action, status: Status) -> bool:
     )
 
 
-def _subset_count(weights: list[int], total: int) -> int:
-    """Return how many subsets of `weights` sum to `total`."""
-    if total < 0 or total > sum(weights):
-        return 0
-    ways = [1] + [0] * total
-    for weight in weights:
-        for reached in range(total, weight - 1, -1):
-            ways[reached] += ways[reached - weight]
-    return ways[total]
-
-
 @dataclass(frozen=True)
 class _CountPlan:
-    """One counted checkout's marker paths, their weights, its recorded count,
-    and the relevant paths whose conflict typing is not modeled (`_untyped`)."""
+    """One counted checkout's marker paths, their `(low, high)` weights, its
+    recorded count, and the relevant paths whose conflict typing is not
+    modeled (`_untyped`).
+
+    A path weighs its class size. A class representative below removed
+    directories marks its own (`_nonempty_markers`), and each other member
+    may add one DIRECTORY_NOT_EMPTY per level, or none when it shares a
+    directory already counted: members share its presence at every
+    revision, so each lies below as many removed directories, and their
+    directories are not enumerated."""
 
     paths: tuple[str, ...]
-    weights: tuple[int, ...]
+    weights: tuple[tuple[int, int], ...]
     count: int
     untyped: tuple[str, ...]
 
@@ -1710,12 +1768,18 @@ def _count_plan(ctx: _Context, action: Action) -> _CountPlan:
         counting=True,
     )
     paths, weights, untyped = [], [], []
+    directories: set[str] = set()
     for path in ctx.relevant:
         if _untyped(ctx, checkout, path):
             untyped.append(path)
         elif _conflict_marker(ctx, checkout, path) is not None:
+            nonempty = _nonempty_markers(ctx, checkout, path)
+            weight = ctx.weights.get(path, 1)
             paths.append(path)
-            weights.append(ctx.weights.get(path, 1))
+            weights.append((weight, weight + (weight - 1) * len(nonempty)))
+            directories.update(nonempty)
+    paths += sorted(directories)
+    weights += [(1, 1)] * len(directories)
     return _CountPlan(tuple(paths), tuple(weights), count, tuple(untyped))
 
 
@@ -1730,11 +1794,9 @@ def conflict_count_gap(ctx: _Context, action: Action) -> str | None:
     if plan.untyped:
         return (
             f"conflict typing is not modeled for {plan.untyped[0]} (a type change, "
-            "a path created with its parent directory, or a directory the run moves)"
+            "a path created with its parent directory, a directory the run moves, "
+            "or an untracked path below a directory the checkout removes)"
         )
-    rows = _subset_count(list(plan.weights), plan.count)
-    if rows > MAX_COUNT_ROWS:
-        return f"{rows} conflict sets match the count, more than {MAX_COUNT_ROWS}"
     return None
 
 
@@ -1776,8 +1838,8 @@ def count_inputs(
     `groups` are every contract group of the run. The observation reads
     every marker at the checkout's completion, after all of its per-path
     groups (one `Before` each, since the count is reported only once the
-    walk ends), and expects a marker set whose weight (class
-    representatives weigh their class size) equals the recorded count.
+    walk ends), and counts the set markers (`Count`: class representatives
+    weigh their class size, or a range, `_CountPlan`) to the recorded count.
     A checkout with no marker has no input (`count_judgment`).
     """
     recorded = ctx.facts.action(action.id)
@@ -1795,15 +1857,11 @@ def count_inputs(
         return ()
     key = ctx.checkout_keys[action.id]
     cells = tuple(conflict_cell(key, path) for path in plan.paths)
-    rows = tuple(
-        tuple(eq(YES) if index in picked else eq(ABSENT) for index in range(len(cells)))
-        for picked in _subsets(list(plan.weights), plan.count)
-    )
     observation = Observation(
         id=f"o:{action.id}:conflicts",
         action=action.id,
         cells=cells,
-        expect=Expect(rows or ((NEVER, *(ANY for _ in cells[1:])),)),
+        expect=Expect(count=Count(YES, plan.weights, plan.count)),
         window=Window(recorded.completed, recorded.completed),
         channel="thrift",
         obligations=(ref,),

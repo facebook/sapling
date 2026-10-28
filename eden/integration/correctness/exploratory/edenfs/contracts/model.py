@@ -828,26 +828,6 @@ def _dirt_outside(ctx: _Context) -> bool:
     )
 
 
-def _subsets(weights: list[int], total: int) -> Iterator[frozenset[int]]:
-    """Yield the index sets of `weights` that sum to `total`."""
-
-    rest = [sum(weights[index:]) for index in range(len(weights) + 1)]
-
-    def grow(
-        start: int, reached: int, picked: tuple[int, ...]
-    ) -> Iterator[frozenset[int]]:
-        if reached == total:
-            yield frozenset(picked)
-            return
-        for index in range(start, len(weights)):
-            if reached + rest[index] < total:
-                return
-            if reached + weights[index] <= total:
-                yield from grow(index + 1, reached + weights[index], (*picked, index))
-
-    yield from grow(0, 0, ())
-
-
 def _parent_path(path: str) -> str:
     parent = str(PurePosixPath(normalize_path(path) or ".").parent)
     return normalize_path(parent)

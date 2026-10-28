@@ -15,7 +15,6 @@ every writer, per-component budget shares, and the groups a proof names.
 from __future__ import annotations
 
 import dataclasses
-import itertools
 import math
 import unittest
 
@@ -27,14 +26,17 @@ from eden.integration.correctness.exploratory.core.effects import (
     Before,
     Cell,
     constraint_id,
+    Count,
     eq,
     Exclusive,
     Expect,
     Guard,
     ObligationRef,
+    Observation,
     PRIMARY,
     Supersedes,
     Value,
+    Window,
 )
 from eden.integration.correctness.exploratory.core.property import (
     ObligationStatus,
@@ -135,11 +137,15 @@ def _counted(paths: int, extra: int = 0, *, ordered: bool = True) -> Problem:
         if ordered:
             orderings.append(Before(f"g{i}", "count", COUNT))
     total = (paths + 1) // 2 + extra
-    rows = tuple(
-        tuple(eq(MARK) if k in pick else eq(ABSENT) for k in range(paths))
-        for pick in itertools.combinations(range(paths), total)
+    count = Observation(
+        "count",
+        "count",
+        markers,
+        Expect(count=Count(MARK, tuple((1, 1) for _ in markers), total)),
+        Window(2, 2),
+        "thrift",
+        (COUNT,),
     )
-    count = observe("count", 2, 2, markers, rows, COUNT)
     return make_problem(groups, [*reads, count], orderings, initial)
 
 
@@ -780,6 +786,18 @@ class TerminalObservationTest(unittest.TestCase):
                     if not extra:
                         assert solution.witness is not None
                         self.assertTrue(explains(problem, solution.witness))
+
+    def test_counts_outside_their_bounds_are_refuted_by_propagation(self) -> None:
+        """One conflict too many exceeds what the dirty paths' markers may add;
+        one too few is below what the acked groups ordered before the count
+        surely mark. Propagation refutes both trials that hold the count and
+        its orderings, so explaining either costs little work."""
+        for extra in (1, -1):
+            with self.subTest(extra=extra):
+                solution = solver.solve(_counted(8, extra))
+                self.assertEqual(VIOLATED, _status(solution, COUNT))
+                self.assertGreater(solution.phases["propagation"]["zero_candidate"], 0)
+                self.assertLess(solution.phases["explanation"]["work"], 100_000)
 
     def test_matches_the_reference(self) -> None:
         for ordered in (True, False):

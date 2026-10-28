@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 import math
 import random
 import unittest
@@ -23,6 +22,7 @@ from eden.integration.correctness.exploratory.core.effects import (
     Atom,
     Before,
     Cell,
+    Count,
     Effect,
     EffectGroup,
     EffectKind,
@@ -949,15 +949,18 @@ def counted_problem(seed: int, base: Problem) -> Problem | None:
         )
         markers.append(marker)
         orderings.append(Before(g.id, "count", ref))
-    total = rng.randrange(0, len(markers) + 2)
-    if len({m.side for m in markers}) > 1 or total > len(markers):
+    weights = tuple(rng.choice(((1, 1), (2, 2), (1, 2), (0, 1))) for _ in markers)
+    total = rng.randrange(0, sum(high for _low, high in weights) + 2)
+    if len({m.side for m in markers}) > 1 or total > sum(h for _l, h in weights):
         return None
-    rows = tuple(
-        tuple(eq(COUNT_MARK) if k in pick else eq(ABSENT) for k in range(len(markers)))
-        for pick in itertools.combinations(range(len(markers)), total)
-    )
     count = Observation(
-        "count", "count", tuple(markers), Expect(rows), Window(hi, hi), "thrift", (ref,)
+        "count",
+        "count",
+        tuple(markers),
+        Expect(count=Count(COUNT_MARK, weights, total)),
+        Window(hi, hi),
+        "thrift",
+        (ref,),
     )
     initial = base.initial
 
