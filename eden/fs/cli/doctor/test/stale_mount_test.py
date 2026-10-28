@@ -155,15 +155,12 @@ Attempted and failed to fix problem StaleMountsFound
 <yellow>- Found problem:<reset>
 Found 1 stale edenfs mount:
   /mnt/stale1
-Unmounting 1 stale edenfs mount...<red>error<reset>
-Attempted and failed to fix problem StaleMountsFound
+Unmounting 1 stale edenfs mount...<green>fixed<reset>
 
 """,
             out,
         )
-        self.assert_results(
-            fixer, num_problems=1, num_fixed_problems=0, num_failed_fixes=1
-        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
