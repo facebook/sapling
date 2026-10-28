@@ -106,6 +106,9 @@ impl AddScubaParams for thrift::RepoFoldCommitsParams {
             scuba.add("param_mutation_op", mutation_info.op.as_str());
             scuba.add("param_mutation_user", mutation_info.user.as_str());
         }
+        if self.keep_folded_commits {
+            scuba.add("param_keep_folded_commits", true);
+        }
     }
 }
 

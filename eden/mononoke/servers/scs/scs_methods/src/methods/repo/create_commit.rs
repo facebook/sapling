@@ -543,6 +543,13 @@ impl SourceControlServiceImpl {
             .repo_for_service(ctx.clone(), &repo, params.service_identity.clone())
             .await?;
 
+        if params.keep_folded_commits && params.mutation_info.is_some() {
+            return Err(scs_errors::invalid_request(
+                "keep_folded_commits cannot be combined with mutation_info",
+            )
+            .into());
+        }
+
         let checks = CreateChangesetChecks::from_request(&params.checks)?;
         repo.enforce_create_commit_check_bypass(&checks).await?;
 
@@ -588,7 +595,9 @@ impl SourceControlServiceImpl {
             .collect()
             .await;
 
-        if repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG {
+        if !params.keep_folded_commits
+            && repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG
+        {
             let (op, user) = match &params.mutation_info {
                 Some(info) => (info.op.clone(), info.user.clone()),
                 None => (

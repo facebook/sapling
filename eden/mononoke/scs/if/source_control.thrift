@@ -2511,6 +2511,11 @@ struct RepoFoldCommitsParams {
   /// Optional: Checks to perform on the commit.
   /// If not provided, all checks are performed in CHECK mode.
   8: CreateCommitChecks checks;
+
+  /// Leave the folded commits in place, like `--keep`: no mutation is
+  /// recorded, so the new commit doesn't replace them. Cannot be combined
+  /// with `mutation_info`.
+  9: bool keep_folded_commits;
 }
 
 struct RepoFoldCommitsResponse {
