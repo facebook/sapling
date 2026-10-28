@@ -65,6 +65,7 @@ python_binary(
 python_binary(
     name = "get_free_socket",
     srcs = ["get_free_socket.py"],
+    enable_lazy_imports = False,  # TODO(T292869876): re-enable Lifeguard once import time no longer regresses
     main_module = "eden.mononoke.tests.integration.get_free_socket",
 )
 
