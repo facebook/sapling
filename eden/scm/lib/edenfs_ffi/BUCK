@@ -60,7 +60,7 @@ cpp_library(
     undefined_symbols = True,
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
+        "fbsource//xplat/folly/futures:core",
         ":edenfs_ffi@header",  # @manual
-        "//folly/futures:core",
     ],
 )

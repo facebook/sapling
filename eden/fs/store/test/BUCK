@@ -26,6 +26,7 @@ cpp_unittest(
         "fbsource//xplat/folly/coro:task",
         "fbsource//xplat/folly/coro:timeout",
         "fbsource//xplat/folly/executors:cpu_thread_pool_executor",
+        "fbsource//xplat/folly/executors:global_executor",
         "fbsource//xplat/folly/executors:manual_executor",
         "fbsource//xplat/folly/io:iobuf",
         "fbsource//xplat/folly/test:test_utils",
@@ -49,7 +50,6 @@ cpp_unittest(
         "//eden/fs/testharness:fake_filter",
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_util",
-        "//folly/executors:global_executor",
     ],
 )
 
@@ -73,6 +73,7 @@ cpp_unittest(
         "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/re2:re2",
         "fbsource//xplat/folly/coro:gtest_helpers",
+        "fbsource//xplat/folly/executors:global_executor",
         "fbsource//xplat/folly/executors:manual_executor",
         "fbsource//xplat/folly/logging:logging",
         "fbsource//xplat/folly/test:test_utils",
@@ -96,7 +97,6 @@ cpp_unittest(
         "//eden/fs/utils:source_location",
         "//eden/fs/utils:static_assert",
         "//fb303:service_data",
-        "//folly/executors:global_executor",
     ],
 )
 

@@ -57,12 +57,12 @@ cpp_library(
         "ovr_config//os:linux",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly:utility",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/lang:hint",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/xdr:xdr",
-        "//folly:range",
-        "//folly:utility",
-        "//folly/io:iobuf",
-        "//folly/lang:hint",
     ],
 )
 
@@ -77,11 +77,11 @@ cpp_lionhead_harness(
     ftest_name = ("NfsXdr", "rpc_call_message"),
     metadata = edenfs_metadata,
     deps = [
+        "fbsource//xplat/folly:range",
         "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
         ":nfs_xdr_decode",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly:range",
     ],
 )
 
@@ -96,11 +96,11 @@ cpp_lionhead_harness(
     ftest_name = ("NfsXdr", "lookup_args"),
     metadata = edenfs_metadata,
     deps = [
+        "fbsource//xplat/folly:range",
         "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
         ":nfs_xdr_decode",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly:range",
     ],
 )
 
@@ -115,11 +115,11 @@ cpp_lionhead_harness(
     ftest_name = ("NfsXdr", "create_args"),
     metadata = edenfs_metadata,
     deps = [
+        "fbsource//xplat/folly:range",
         "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
         ":nfs_xdr_decode",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly:range",
     ],
 )
 
@@ -134,11 +134,11 @@ cpp_lionhead_harness(
     ftest_name = ("NfsXdr", "nfs3_args"),
     metadata = edenfs_metadata,
     deps = [
+        "fbsource//xplat/folly:range",
         "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
         ":nfs_xdr_decode",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly:range",
     ],
 )
 
@@ -151,10 +151,10 @@ cpp_unittest(
     network_access = network_access_utils.none(),
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/io:iobuf",
         ":nfs_xdr_decode",
         "//eden/fs/nfs:nfsd_rpc",
         "//eden/fs/nfs/rpc:rpc",
-        "//folly:range",
-        "//folly/io:iobuf",
     ],
 )

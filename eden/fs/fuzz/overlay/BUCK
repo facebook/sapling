@@ -44,18 +44,18 @@ cpp_library(
         "ovr_config//os:linux",
     ],
     deps = [
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly:scope_guard",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:path",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:file_util",
-        "//folly:scope_guard",
     ],
     exported_deps = [
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/testing:test_util",
         "//eden/fs/inodes:inode_number",
-        "//folly:range",
-        "//folly/testing:test_util",
     ],
 )
 
@@ -71,9 +71,9 @@ cpp_lionhead_harness(
     ftest_name = ("OverlayFsCatalog", "load_overlay_dir_file"),
     metadata = edenfs_metadata,
     deps = [
+        "fbsource//xplat/folly:range",
         "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
         ":overlay_file_fuzz_fixture",
-        "//folly:range",
     ],
 )
 
@@ -101,9 +101,9 @@ cpp_lionhead_harness(
     ftest_name = ("OverlayFsCatalog", "load_overlay_dir_payload"),
     metadata = edenfs_metadata,
     deps = [
+        "fbsource//xplat/folly:range",
         "fbsource//xplat/security/lionhead/utils/lib_ftest:lib",
         ":overlay_file_fuzz_fixture",
-        "//folly:range",
     ],
 )
 
@@ -115,13 +115,13 @@ cpp_binary(
     ],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "fbsource//xplat/folly:file_util",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/init:init",
         ":overlay_file_fuzz_fixture",
         "//eden/common/utils:path",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:file_util",
-        "//folly:range",
-        "//folly/init:init",
         "//thrift/lib/cpp2/protocol:protocol",
     ],
 )
@@ -135,10 +135,10 @@ cpp_unittest(
     network_access = network_access_utils.none(),
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly:range",
         ":overlay_file_fuzz_fixture",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
-        "//folly:range",
         "//thrift/lib/cpp2/protocol:protocol",
     ],
 )

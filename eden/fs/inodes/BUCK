@@ -151,6 +151,7 @@ cpp_library(
         "fbsource//xplat/folly:random",
         "fbsource//xplat/folly:scope_guard",
         "fbsource//xplat/folly:string",
+        "fbsource//xplat/folly:try",
         "fbsource//xplat/folly:unit",
         "fbsource//xplat/folly/chrono:conv",
         "fbsource//xplat/folly/coro:current_executor",
@@ -197,7 +198,6 @@ cpp_library(
         "//eden/fs/utils:linux_kernel_version",
         "//eden/fs/utils:nfs_socket",
         "//eden/scm/lib/util/sigbus-memops:sigbus_memops",
-        "//folly:try",
         "//thrift/lib/cpp2/protocol:protocol",
     ] + select({
         "DEFAULT": [],

@@ -29,16 +29,19 @@ cpp_library(
     headers = glob(["include/**/*.h"]),
     undefined_symbols = True,
     deps = [
+        "fbsource//xplat/folly:cpp_attributes",
+        "fbsource//xplat/folly:try",
+        "fbsource//xplat/folly/io:iobuf",
+        "fbsource//xplat/folly/json:dynamic",
+        "fbsource//xplat/folly/logging:logging",
         "//eden/common/telemetry:log_info",
         "//eden/fs/telemetry:structured_logger",
-        "//folly:cpp_attributes",
-        "//folly:try",
-        "//folly/io:iobuf",
-        "//folly/json:dynamic",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
+        "fbsource//xplat/folly:range",
+        "fbsource//xplat/folly/container:fbvector",
+        "fbsource//xplat/folly/futures:core",
         ":backingstore@header",  # @manual
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:path",
@@ -47,9 +50,6 @@ cpp_library(
         "//eden/fs/model:model-fwd",
         "//eden/fs/store:context",  # @manual - used in ffi.rs via CXX bridge
         "//eden/fs/store/sl:sapling_object_id",
-        "//folly:range",
-        "//folly/container:fbvector",
-        "//folly/futures:core",
     ],
 )
 
@@ -149,6 +149,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
+        "fbsource//xplat/folly/testing:test_util",
         ":backingstore",  # @manual
         ":sapling_native_backingstore",
         "//eden/common/telemetry:log_info",
@@ -159,6 +160,5 @@ cpp_unittest(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:xplat_keys",
         "//eden/fs/telemetry:xplat_logger",
-        "//folly/testing:test_util",
     ],
 )
