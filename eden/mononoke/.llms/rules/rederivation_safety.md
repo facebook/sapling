@@ -1,7 +1,10 @@
 ---
-oncalls: ['scm_server_infra']
-apply_to_regex: 'eden/mononoke/.*\.rs$'
-apply_to_content: 'rederiv|backfill|Rederivation|blobstore.*put.*behaviour|OverwriteAndLog|cache.mode|derive_bulk|AlwaysRederive|manifold.weak.consistency'
+name: rederivation-safety
+metadata:
+  oncalls: ['scm_server_infra']
+  strict: true
+  apply_to_path: 'eden/mononoke/.*\.rs$'
+  apply_to_content: 'rederiv|backfill|Rederivation|blobstore.*put.*behaviour|OverwriteAndLog|cache.mode|derive_bulk|AlwaysRederive|manifold.weak.consistency'
 ---
 
 # Rederivation and Backfilling Safety
