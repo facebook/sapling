@@ -27,15 +27,21 @@ import {
   comparisonStringKey,
   labelForComparison,
 } from 'shared/Comparison';
-import {group, notEmpty} from 'shared/utils';
+import {group, notEmpty, nullthrows} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
+import {AddOperation} from '../operations/AddOperation';
+import {useRunOperation} from '../operationsState';
 import platform from '../platform';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
-import {latestHeadCommit, latestUncommittedChangesData} from '../serverAPIState';
+import {
+  latestHeadCommit,
+  latestUncommittedChanges,
+  latestUncommittedChangesData,
+} from '../serverAPIState';
 import {themeState} from '../theme';
 import {copyAndShowToast} from '../toast';
 import {GeneratedStatus} from '../types';
@@ -117,6 +123,44 @@ const comparisonTargetIsCurrentAtom = atomFamilyWeak((comparison: Comparison) =>
   }),
 );
 
+/**
+ * Untracked files are never in a comparison's diff, so their focused diff view would be empty.
+ * Reads the status last reported by the server rather than the optimistic one, so the notice
+ * stays up until tracking the file has finished.
+ */
+const focusedFileIsUntrackedAtom = atomFamilyWeak((path: string) =>
+  atom(
+    get =>
+      path !== '' &&
+      get(latestUncommittedChanges).some(file => file.path === path && file.status === '?'),
+  ),
+);
+
+function UntrackedFileNotice({path, onTracked}: {path: string; onTracked: () => unknown}) {
+  const runOperation = useRunOperation();
+  const [isTracking, setIsTracking] = useState(false);
+  return (
+    <EmptyState>
+      <T>This file is untracked</T>
+      <Subtle>
+        <T>Track it to see its changes here and include it in a commit.</T>
+      </Subtle>
+      <Button
+        data-testid="comparison-track-untracked-file"
+        disabled={isTracking}
+        onClick={async () => {
+          setIsTracking(true);
+          await runOperation(new AddOperation(path));
+          setIsTracking(false);
+          onTracked();
+        }}>
+        <Icon icon={isTracking ? 'loading' : 'add'} slot="start" />
+        <T>Track file</T>
+      </Button>
+    </EmptyState>
+  );
+}
+
 type LineRangeKey = string;
 export function keyForLineRange(param: {path: string; comparison: Comparison}): LineRangeKey {
   return `${param.path}:${comparisonStringKey(param.comparison)}`;
@@ -137,7 +181,12 @@ export default function ComparisonView({
   dismiss?: () => void;
   focusedFile?: string;
 }) {
-  const compared = useAtomValue(currentComparisonData(comparison));
+  const [compared, reloadComparison] = useAtom(currentComparisonData(comparison));
+  const focusedFileIsUntracked = useAtomValue(
+    focusedFileIsUntrackedAtom(
+      focusedFile != null && comparisonIsAgainstHead(comparison) ? focusedFile : '',
+    ),
+  );
 
   const displayMode = useComparisonDisplayMode();
 
@@ -159,6 +208,8 @@ export default function ComparisonView({
   } else if (compared.state === 'hasError') {
     const error = compared.error instanceof Error ? compared.error : new Error(`${compared.error}`);
     content = <ErrorNotice error={error} title={t('Unable to load comparison')} />;
+  } else if (focusedFileIsUntracked) {
+    content = <UntrackedFileNotice path={nullthrows(focusedFile)} onTracked={reloadComparison} />;
   } else if (data?.value && data.value.length === 0) {
     content =
       comparison.type === ComparisonType.SinceLastCodeReviewSubmit ? (

@@ -18,6 +18,7 @@ import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';
 import {
   COMMIT,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   openCommitInfoSidebar,
   resetTestMessages,
   simulateCommits,
@@ -239,6 +240,71 @@ describe('ComparisonView', () => {
     expect(inComparisonView().getByText('- modified')).toBeInTheDocument();
     closeComparisonView();
     expect(screen.queryByText('- modified')).not.toBeInTheDocument();
+    unmountNow();
+  });
+
+  it('explains that an untracked file must be tracked to show its diff, and tracks it', async () => {
+    act(() => {
+      simulateUncommittedChangedFiles({
+        value: [
+          {path: 'src/file1.txt', status: 'M'},
+          {path: 'untracked.txt', status: '?'},
+        ],
+      });
+    });
+    await act(async () => {
+      // the file is listed in both the smartlog and the commit info sidebar
+      const row = screen.getAllByTestId('changed-file-untracked.txt')[0];
+      fireEvent.click(within(row).getByTestId('file-open-diff-button'));
+      await nextTick();
+    });
+    await waitFor(
+      () =>
+        expectMessageSentToServer({
+          type: 'requestComparison',
+          comparison: {type: ComparisonType.UncommittedChanges},
+          ignoreWhitespace: true,
+        }),
+      {timeout: 10_000},
+    );
+    await act(async () => {
+      simulateMessageFromServer({
+        type: 'comparison',
+        comparison: {type: ComparisonType.UncommittedChanges},
+        data: {diff: {value: UNCOMMITTED_CHANGES_DIFF}},
+        ignoreWhitespace: true,
+      });
+      await nextTick();
+    });
+    expect(inComparisonView().getByText('This file is untracked')).toBeInTheDocument();
+
+    resetTestMessages();
+    act(() => {
+      fireEvent.click(inComparisonView().getByTestId('comparison-track-untracked-file'));
+    });
+    const message = await waitFor(() =>
+      nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+    );
+    expect(message.operation.args).toEqual([
+      'add',
+      {type: 'repo-relative-file', path: 'untracked.txt'},
+    ]);
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        id: message.operation.id,
+        kind: 'exit',
+        exitCode: 0,
+        timestamp: 1234,
+      });
+    });
+    await waitFor(() =>
+      expectMessageSentToServer({
+        type: 'requestComparison',
+        comparison: {type: ComparisonType.UncommittedChanges},
+        ignoreWhitespace: true,
+      }),
+    );
     unmountNow();
   });
 
