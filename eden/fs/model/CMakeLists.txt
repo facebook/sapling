@@ -7,4 +7,6 @@ include(generated_targets.cmake)
 eden_add_directory_library(eden_model)
 
 add_subdirectory(git)
-add_subdirectory(test)
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

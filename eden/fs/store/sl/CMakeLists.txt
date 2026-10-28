@@ -6,6 +6,6 @@
 include(generated_targets.cmake)
 eden_add_directory_library(eden_store_hg)
 
-if (NOT WIN32)
+if (BUILD_TESTS AND NOT WIN32)
  add_subdirectory(test)
 endif()

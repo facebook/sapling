@@ -8,6 +8,6 @@ eden_add_directory_library(eden_fuse_privhelper)
 
 add_subdirectory(priority)
 
-if(NOT WIN32)
+if(BUILD_TESTS AND NOT WIN32)
   add_subdirectory(test)
 endif()

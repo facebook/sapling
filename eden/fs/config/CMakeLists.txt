@@ -13,4 +13,6 @@ add_fbthrift_library(
 include(generated_targets.cmake)
 eden_add_directory_library(eden_config)
 
-add_subdirectory(test)
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

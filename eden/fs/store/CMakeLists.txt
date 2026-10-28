@@ -15,4 +15,6 @@ else()
   add_library(eden_fs_store_git INTERFACE)
 endif()
 
-add_subdirectory(test)
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

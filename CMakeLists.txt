@@ -115,6 +115,7 @@ set(ENABLE_EDENSCM AUTO CACHE STRING "Enable support for Eden SCM repositories")
 set_property(CACHE ENABLE_EDENSCM PROPERTY STRINGS AUTO ON OFF)
 set(ENABLE_GIT AUTO CACHE STRING "Enable support for Git repositories")
 set_property(CACHE ENABLE_GIT PROPERTY STRINGS AUTO ON OFF)
+option(BUILD_TESTS "If enabled, compile the tests." OFF)
 
 include(FBCompilerSettings)
 include(EdenCompilerSettings)
@@ -135,11 +136,13 @@ set_property(
   "FOLLY_XLOG_STRIP_PREFIXES=\"${CMAKE_SOURCE_DIR}:${CMAKE_BINARY_DIR}\""
 )
 add_subdirectory(eden/fs)
-add_subdirectory(eden/integration)
 add_subdirectory(eden/scm)
 add_subdirectory(eden/scm/lib)
-add_subdirectory(eden/test_support)
 add_subdirectory(eden/scm/exec/eden_apfs_mount_helper)
+if(BUILD_TESTS)
+  add_subdirectory(eden/integration)
+  add_subdirectory(eden/test_support)
+endif()
 
 if(WIN32)
   # On Windows our Python binaries are compiled into executables which depend

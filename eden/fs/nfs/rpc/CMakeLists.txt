@@ -6,4 +6,6 @@
 include(generated_targets.cmake)
 eden_add_directory_library(eden_nfs_rpc_server)
 
-add_subdirectory(test)
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
