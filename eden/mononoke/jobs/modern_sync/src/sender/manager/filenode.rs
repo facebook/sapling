@@ -85,8 +85,7 @@ impl FilenodeManager {
                         batch_size,
                         start.elapsed().as_millis(),
                     );
-                    STATS::synced_filenodes
-                        .add_value(batch_filenodes.len() as i64, (reponame.to_owned(),));
+                    STATS::synced_filenodes.add_value(batch_size, (reponame.to_owned(),));
                 }
             }
 
