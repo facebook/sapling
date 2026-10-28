@@ -1435,7 +1435,9 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogtreeauxstore::TreeAuxStore;
+    use crate::scmstore::fetch::KeyFetchError;
     use crate::scmstore::tree::TreeStore;
+    use crate::scmstore::tree::types::StoreTree;
     use crate::scmstore::tree::types::TreeAttributes;
 
     fn make_data_store(tempdir: &TempDir) -> Arc<IndexedLogHgIdDataStore> {
@@ -1744,8 +1746,14 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_cas_tree_hash_mismatch_is_not_cached() -> Result<()> {
+    /// Fetches a CAS tree whose content does not hash to its claimed Hg ID,
+    /// requested under `path`. Returns the fetch results and the tree cache.
+    fn fetch_mismatched_cas_tree(
+        path: RepoPathBuf,
+    ) -> Result<(
+        Vec<std::result::Result<(Key, StoreTree), KeyFetchError>>,
+        Arc<IndexedLogHgIdDataStore>,
+    )> {
         let content = Bytes::new();
         let actual_id = crate::trait_impls::sha1_digest(
             &InsertOpts {
@@ -1764,7 +1772,7 @@ mod tests {
         let serialized_tree = Bytes::from(format!("v1 {claimed_id} - - -\n"));
         let augmented_tree = AugmentedTree::try_deserialize(serialized_tree.as_ref())?;
         let digest = augmented_tree.compute_content_addressed_digest()?;
-        let key = Key::new(RepoPathBuf::from_string("dir".to_string())?, claimed_id);
+        let key = Key::new(path, claimed_id);
 
         let cache_dir = TempDir::new()?;
         let tree_cache = make_data_store(&cache_dir);
@@ -1792,7 +1800,7 @@ mod tests {
         store.tree_aux_store = Some(tree_aux_store);
         store.cas_manager = Some(Arc::new(CasFetchManager::builder(cas_client).build()));
 
-        let results: Vec<_> = store
+        let results = store
             .fetch_batch(
                 FetchContext::new(FetchMode::AllowRemote),
                 std::iter::once(key),
@@ -1800,6 +1808,13 @@ mod tests {
             )
             .into_iter()
             .collect();
+        Ok((results, tree_cache))
+    }
+
+    #[test]
+    fn test_cas_tree_hash_mismatch_is_not_cached() -> Result<()> {
+        let (results, tree_cache) =
+            fetch_mismatched_cas_tree(RepoPathBuf::from_string("dir".to_string())?)?;
         assert_eq!(
             results.len(),
             1,
@@ -1812,6 +1827,30 @@ mod tests {
         assert!(
             tree_cache.to_keys().is_empty(),
             "the invalid CAS tree should not be cached"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_cas_tree_hash_mismatch_with_empty_path_is_not_cached() -> Result<()> {
+        // EdenFS requests every tree with an empty path.
+        let (results, tree_cache) = fetch_mismatched_cas_tree(RepoPathBuf::new())?;
+        assert_eq!(
+            results.len(),
+            1,
+            "the requested key should produce a result"
+        );
+        // FIXME: a hash mismatch on an empty path is treated as a possible hybrid
+        // manifest, so the content is accepted and cached.
+        assert!(
+            results[0].is_ok(),
+            "the CAS tree with mismatched content is accepted"
+        );
+        assert_eq!(
+            tree_cache.to_keys().len(),
+            1,
+            "the invalid CAS tree is cached"
         );
 
         Ok(())
