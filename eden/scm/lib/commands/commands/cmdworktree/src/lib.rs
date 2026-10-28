@@ -57,26 +57,27 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
     if !ctx.opts.rev.is_empty() && subcmd != "add" {
         abort!("--rev can only be used with 'worktree add'");
     }
-    let runner: fn(&ReqCtx<WorktreeOpts>, &Repo, &WorkingCopy) -> Result<u8> = match subcmd {
-        "list" | "ls" => {
-            let worktrees = Worktrees::open(repo, repo.config().as_ref())?;
-            return list::run(&ctx, repo, &worktrees);
+    let worktrees = || Worktrees::open(repo, repo.config().as_ref());
+    let require_eden = || -> Result<()> {
+        if !repo.requirements.contains("eden") {
+            abort!("worktree commands require an EdenFS-backed repository");
         }
-        "label" => {
-            let worktrees = Worktrees::open(repo, repo.config().as_ref())?;
-            return label::run(&ctx, repo, &worktrees);
+        Ok(())
+    };
+    match subcmd {
+        "list" | "ls" => list::run(&ctx, repo, &worktrees()?),
+        "label" => label::run(&ctx, repo, &worktrees()?),
+        "add" => {
+            require_eden()?;
+            add::run(&ctx, repo, wc, &worktrees()?)
         }
-        "add" => add::run,
-        "remove" | "rm" => remove::run,
+        "remove" | "rm" => {
+            require_eden()?;
+            remove::run(&ctx, repo, wc)
+        }
         "" => abort!("you need to specify a subcommand (run with --help to see a list)"),
         other => abort!("unknown worktree subcommand '{}'", other),
-    };
-
-    if !repo.requirements.contains("eden") {
-        abort!("worktree commands require an EdenFS-backed repository");
     }
-
-    runner(&ctx, repo, wc)
 }
 
 pub(crate) struct CurrentGroup {

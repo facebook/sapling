@@ -28,17 +28,12 @@ use slex::Work as SlexWork;
 use slex::WorkOptions;
 use spawn_ext::CommandExt;
 use workingcopy::workingcopy::WorkingCopy;
-use worktree::Group;
 use worktree::Reservation;
-use worktree::WorktreeEntry;
+use worktree::Worktrees;
 use worktree::check_dest_not_in_repo;
-use worktree::group_id_for_main_path;
-use worktree::load_registry;
 use worktree::new_reservation_id;
-use worktree::with_registry_lock;
 use worktree::with_reservations;
 use worktree::with_worktree_path_op_lock;
-use worktree::write_worktree_name_marker;
 
 use crate::WorktreeOpts;
 use crate::checkout::AddSource;
@@ -159,7 +154,12 @@ impl Drop for SlotReservation {
     }
 }
 
-pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
+pub(crate) fn run(
+    ctx: &ReqCtx<WorktreeOpts>,
+    repo: &Repo,
+    wc: &WorkingCopy,
+    worktrees: &Worktrees,
+) -> Result<u8> {
     let logger = ctx.logger();
 
     if ctx.opts.snapshot && !ctx.opts.rev.is_empty() {
@@ -208,25 +208,15 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
 
     check_dest_not_in_repo(&dest)?;
 
-    let shared_store_path = repo.store_path().to_path_buf();
-    let registry = load_registry(&shared_store_path)?;
-    if registry.find_group_for_path(&dest).is_some() {
-        abort!(
-            "destination path '{}' is already registered as a worktree",
-            dest.display()
-        );
-    }
-    let group_main_path = resolve_group_for_main_path(&registry, &canonical_repo_path);
+    let shared_store_path = worktrees.shared_store_path();
+    let (group_main_path, linked) = worktrees.check_add(&dest)?;
 
     // Fast-fail if worktree limit is already reached (re-checked inside lock).
-    if max_count > 0 {
-        let linked = count_linked_worktrees(&registry, &group_main_path);
-        if linked >= max_count as usize {
-            abort!(
-                "{}",
-                worktree_limit_reached_message(repo, max_count, linked)
-            );
-        }
+    if max_count > 0 && linked >= max_count as usize {
+        abort!(
+            "{}",
+            worktree_limit_reached_message(repo, max_count, linked)
+        );
     }
 
     let source = AddSource::new(repo)?;
@@ -303,11 +293,9 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         let reservation_ttl_seconds = crate::reservation_ttl_seconds(repo)?;
         with_reservations(&shared_store_path, |registry, reservations| {
             reservations.prune_stale(reservation_ttl_seconds);
-            // Linked worktrees plus every in-flight reservation for this group;
-            // each is a distinct slot. Our own reservation is inserted only after
-            // this check, so it is not counted here.
-            let in_use = count_linked_worktrees(registry, &group_main_path)
-                + reservations.count_for_group(&group_main_path);
+            // Our own reservation is inserted only after this check, so it is not
+            // counted here.
+            let in_use = worktrees.occupied_slots(registry, reservations, &group_main_path)?;
             if in_use >= max_count as usize {
                 abort!(
                     "{}",
@@ -346,65 +334,23 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> 
         })
     })?;
 
-    with_registry_lock(&shared_store_path, |registry| {
-        if registry.find_group_for_path(&dest).is_some() {
-            // The clone already materialized the checkout, so hint at cleanup
-            // mirroring the eden_clone failure path (this is nearly unreachable:
-            // same-dest adds serialize on the dest path lock and abort at the
-            // dest.exists() check above before cloning).
+    let label = (!ctx.opts.label.is_empty()).then_some(ctx.opts.label.as_str());
+    let marker_error = worktrees
+        .register(&group_main_path, &dest, label)
+        .inspect_err(|_| {
             logger.warn(format!(
                 "worktree add left a checkout at {} that could not be registered; \
                  try running `eden rm {}` to recover",
                 dest.display(),
                 dest.display()
             ));
-            abort!(
-                "destination path '{}' is already registered as a worktree",
-                dest.display()
-            );
-        }
-
-        let group_id = resolve_group_id_for_main_path(registry, &group_main_path);
-        let grp = registry
-            .groups
-            .entry(group_id.clone())
-            .or_insert_with(|| Group::new(group_main_path.clone()));
-
-        // The limit was enforced at reservation time; deliberately no re-check
-        // here — re-checking after the clone is exactly what could strand this
-        // checkout on disk unregistered.
-        grp.worktrees.insert(
-            dest.clone(),
-            WorktreeEntry {
-                added: chrono::Utc::now().to_rfc3339(),
-                label: if ctx.opts.label.is_empty() {
-                    None
-                } else {
-                    Some(ctx.opts.label.clone())
-                },
-            },
-        );
-
-        // Mirror the registry label into the worktree dotdir so external
-        // tools (e.g. `scm-prompt.sh`) can show the worktree's name in the
-        // prompt without consulting the registry. Done under the same
-        // registry lock as the insert so the two stay in sync. Best-effort:
-        // the registry is the source of truth, so a marker-write failure
-        // (permissions, disk full) only costs prompt accuracy.
-        if let Err(e) = write_worktree_name_marker(
-            &dest,
-            &dest.join(repo.ident().dot_dir()),
-            (!ctx.opts.label.is_empty()).then_some(ctx.opts.label.as_str()),
-        ) {
-            logger.warn(format!(
-                "failed to write worktree-name marker for {}: {:#}",
-                dest.display(),
-                e
-            ));
-        }
-
-        Ok(())
-    })?;
+        })?;
+    if let Some(error) = marker_error {
+        logger.warn(format!(
+            "failed to write worktree-name marker for {}: {error:#}",
+            dest.display()
+        ));
+    }
     // The reserved slot (if any) is now a registered worktree; release it promptly
     // so it is not double-counted. `Drop` is a backstop if this early-returns.
     if let Some(reservation) = reservation.as_mut() {
@@ -477,35 +423,6 @@ fn restore_snapshot_legacy(
     sapling_snapshot_checkout(&sl_bin, dest, &id).context("restoring snapshot")?;
 
     Ok(())
-}
-
-fn resolve_group_for_main_path(
-    registry: &worktree::Registry,
-    canonical_repo_path: &Path,
-) -> PathBuf {
-    registry
-        .find_group_for_path(canonical_repo_path)
-        .and_then(|group_id| {
-            registry
-                .groups
-                .get(&group_id)
-                .map(|group| group.main.clone())
-        })
-        .unwrap_or_else(|| canonical_repo_path.to_path_buf())
-}
-
-fn resolve_group_id_for_main_path(registry: &worktree::Registry, group_main_path: &Path) -> String {
-    registry
-        .find_group_for_path(group_main_path)
-        .unwrap_or_else(|| group_id_for_main_path(group_main_path))
-}
-
-fn count_linked_worktrees(registry: &worktree::Registry, group_main_path: &Path) -> usize {
-    registry
-        .find_group_for_path(group_main_path)
-        .and_then(|group_id| registry.groups.get(&group_id))
-        .map(Group::linked_worktree_count)
-        .unwrap_or(0)
 }
 
 /// Runs the `worktree.path-generator` command and returns the generated path.
@@ -796,35 +713,4 @@ fn update_dest_treestate(dest: &Path, status: &status::Status) -> anyhow::Result
 
     ts.flush()?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_resolve_group_id_for_main_path_reuses_legacy_group_id() {
-        let mut registry = worktree::Registry::new();
-        let main = PathBuf::from("/tmp/main");
-        let linked = PathBuf::from("/tmp/linked");
-        let legacy_group_id = "legacy-random-group-id".to_string();
-
-        let mut group = Group::new(main.clone());
-        group.worktrees.insert(
-            linked.clone(),
-            WorktreeEntry {
-                added: "2025-01-01T00:00:00Z".to_string(),
-                label: None,
-            },
-        );
-        registry.groups.insert(legacy_group_id.clone(), group);
-
-        let group_main = resolve_group_for_main_path(&registry, &linked);
-
-        assert_eq!(group_main, main);
-        assert_eq!(
-            resolve_group_id_for_main_path(&registry, &group_main),
-            legacy_group_id
-        );
-    }
 }

@@ -19,9 +19,15 @@ use gitcompat::RepoGit;
 use identity::Identity;
 use repo_minimal_info::RepoMinimalInfo;
 
+use crate::Group;
+use crate::Registry;
+use crate::Reservations;
 use crate::WORKTREE_NAME_FILE;
+use crate::WorktreeEntry;
 use crate::dissolve_group;
 use crate::dissolve_group_if_empty;
+use crate::group_id_for_main_path;
+use crate::load_registry;
 use crate::with_registry_lock;
 use crate::write_worktree_name_marker;
 
@@ -51,6 +57,8 @@ struct EdenBackend {
 
 struct GitBackend {
     repo_path: PathBuf,
+    /// `$GIT_COMMON_DIR/sl/store`, which holds the worktree operation locks.
+    shared_store_path: PathBuf,
     git: RepoGit,
     ident: Identity,
 }
@@ -128,6 +136,47 @@ impl EdenBackend {
             )
         })
     }
+
+    fn check_add(&self, dest: &Path) -> Result<(PathBuf, usize)> {
+        let registry = load_registry(&self.shared_store_path)?;
+        check_unregistered(&registry, dest)?;
+        let main =
+            resolve_group_for_main_path(&registry, &canonicalize_or_original(&self.repo_path));
+        let linked = count_linked_worktrees(&registry, &main);
+        Ok((main, linked))
+    }
+
+    fn register(
+        &self,
+        main: &Path,
+        dest: &Path,
+        label: Option<&str>,
+    ) -> Result<Option<anyhow::Error>> {
+        with_registry_lock(&self.shared_store_path, |registry| {
+            check_unregistered(registry, dest)?;
+            let group_id = resolve_group_id_for_main_path(registry, main);
+            // The limit was enforced at reservation time; deliberately no re-check
+            // here, since re-checking after the clone is exactly what could strand
+            // this checkout on disk unregistered.
+            registry
+                .groups
+                .entry(group_id)
+                .or_insert_with(|| Group::new(main.to_owned()))
+                .worktrees
+                .insert(
+                    dest.to_owned(),
+                    WorktreeEntry {
+                        added: chrono::Utc::now().to_rfc3339(),
+                        label: label.map(str::to_owned),
+                    },
+                );
+            // Written under the registry lock, as in `set_label`.
+            Ok(
+                write_worktree_name_marker(dest, &self.ident.resolve_full_dot_dir(dest), label)
+                    .err(),
+            )
+        })
+    }
 }
 
 impl GitBackend {
@@ -182,6 +231,7 @@ impl Worktrees {
             }
             WorktreeBackend::Git(GitBackend {
                 repo_path: repo.path.clone(),
+                shared_store_path: repo.store_path.clone(),
                 git: RepoGit::from_root_and_config(repo.path.clone(), config),
                 ident: repo.ident,
             })
@@ -217,6 +267,59 @@ impl Worktrees {
             WorktreeBackend::Git(backend) => backend.set_label(target, label).map(|()| None),
         }
     }
+
+    /// Directory holding the registry, reservations, and operation locks.
+    pub fn shared_store_path(&self) -> PathBuf {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.shared_store_path.clone(),
+            WorktreeBackend::Git(backend) => backend.shared_store_path.clone(),
+        }
+    }
+
+    /// Reject registered destinations and return the group's main checkout and
+    /// linked-worktree count from one snapshot. The count excludes reservations;
+    /// enforce limits with `occupied_slots` under the reservation lock.
+    pub fn check_add(&self, dest: &Path) -> Result<(PathBuf, usize)> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.check_add(dest),
+            WorktreeBackend::Git(_) => git_add_unsupported(),
+        }
+    }
+
+    /// Count linked checkouts of `main` plus `reservations`. To enforce a limit,
+    /// call this inside [`crate::with_reservations`] after pruning expired
+    /// reservations.
+    pub fn occupied_slots(
+        &self,
+        registry: &Registry,
+        reservations: &Reservations,
+        main: &Path,
+    ) -> Result<usize> {
+        match &self.backend {
+            WorktreeBackend::Eden(_) => {
+                Ok(count_linked_worktrees(registry, main) + reservations.count_for_group(main))
+            }
+            WorktreeBackend::Git(_) => git_add_unsupported(),
+        }
+    }
+
+    /// Record a newly created checkout. As with `set_label`, `Ok(Some(error))`
+    /// means only the marker could not be written.
+    pub fn register(
+        &self,
+        main: &Path,
+        dest: &Path,
+        label: Option<&str>,
+    ) -> Result<Option<anyhow::Error>> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.register(main, dest, label),
+            WorktreeBackend::Git(_) => git_add_unsupported(),
+        }
+    }
+}
+
+fn git_add_unsupported<T>() -> Result<T> {
+    anyhow::bail!("worktree add is not supported in Git repositories")
 }
 
 /// Git labels live in each checkout's admin directory, which Git keeps attached
@@ -259,4 +362,71 @@ fn canonicalize_or_original(path: &Path) -> PathBuf {
     util::path::canonicalize_best_effort(path)
         .map(util::path::strip_unc_prefix)
         .unwrap_or_else(|_| path.to_owned())
+}
+
+fn check_unregistered(registry: &Registry, dest: &Path) -> Result<()> {
+    if registry.find_group_for_path(dest).is_some() {
+        anyhow::bail!(
+            "destination path '{}' is already registered as a worktree",
+            dest.display()
+        );
+    }
+    Ok(())
+}
+
+fn resolve_group_for_main_path(registry: &Registry, canonical_repo_path: &Path) -> PathBuf {
+    registry
+        .find_group_for_path(canonical_repo_path)
+        .and_then(|group_id| {
+            registry
+                .groups
+                .get(&group_id)
+                .map(|group| group.main.clone())
+        })
+        .unwrap_or_else(|| canonical_repo_path.to_path_buf())
+}
+
+fn resolve_group_id_for_main_path(registry: &Registry, group_main_path: &Path) -> String {
+    registry
+        .find_group_for_path(group_main_path)
+        .unwrap_or_else(|| group_id_for_main_path(group_main_path))
+}
+
+fn count_linked_worktrees(registry: &Registry, group_main_path: &Path) -> usize {
+    registry
+        .find_group_for_path(group_main_path)
+        .and_then(|group_id| registry.groups.get(&group_id))
+        .map(Group::linked_worktree_count)
+        .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_group_id_for_main_path_reuses_legacy_group_id() {
+        let mut registry = Registry::new();
+        let main = PathBuf::from("/tmp/main");
+        let linked = PathBuf::from("/tmp/linked");
+        let legacy_group_id = "legacy-random-group-id".to_string();
+
+        let mut group = Group::new(main.clone());
+        group.worktrees.insert(
+            linked.clone(),
+            WorktreeEntry {
+                added: "2025-01-01T00:00:00Z".to_string(),
+                label: None,
+            },
+        );
+        registry.groups.insert(legacy_group_id.clone(), group);
+
+        let group_main = resolve_group_for_main_path(&registry, &linked);
+
+        assert_eq!(group_main, main);
+        assert_eq!(
+            resolve_group_id_for_main_path(&registry, &group_main),
+            legacy_group_id
+        );
+    }
 }

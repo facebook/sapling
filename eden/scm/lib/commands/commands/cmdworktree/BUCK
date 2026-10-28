@@ -37,7 +37,6 @@ sl_rust_library(
     features = ["fb"],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:serde",
         "//eden/scm/lib/clidispatch:clidispatch",

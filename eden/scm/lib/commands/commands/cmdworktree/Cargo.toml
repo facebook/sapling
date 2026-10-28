@@ -11,7 +11,6 @@ license = "GPL-2.0-only"
 
 [dependencies]
 anyhow = "1.0.104"
-chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 edenfs-core = { version = "0.1.0", path = "../../../../../fs/cli_rs/edenfs-core", optional = true }
 edenfs-remove = { version = "0.1.0", path = "../../../../../fs/cli_rs/edenfs-remove", optional = true }
