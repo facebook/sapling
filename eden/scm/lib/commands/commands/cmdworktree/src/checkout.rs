@@ -61,12 +61,15 @@ impl<'a> Checkouts<'a> {
         }
     }
 
-    /// Remove one checkout. The caller holds its path lock. Returns false if the
-    /// checkout was already missing on disk.
-    pub(crate) fn remove(&self, logger: &TermLogger, path: &Path) -> Result<bool> {
+    /// Remove one checkout. The caller holds its path lock. Returns false if an
+    /// EdenFS checkout was already missing on disk.
+    pub(crate) fn remove(&self, logger: &TermLogger, path: &Path, force: bool) -> Result<bool> {
         match self {
             Self::Eden(eden) => eden.remove(logger, path),
-            Self::Git(_) => anyhow::bail!("worktree remove is not supported in Git repositories"),
+            Self::Git(git) => {
+                git.remove(path, force)?;
+                Ok(true)
+            }
         }
     }
 
@@ -74,9 +77,7 @@ impl<'a> Checkouts<'a> {
     pub(crate) fn has_changes(&self, ctx: &ReqCtx<WorktreeOpts>, path: &Path) -> Result<bool> {
         match self {
             Self::Eden(eden) => eden.has_changes(ctx, path),
-            Self::Git(_) => anyhow::bail!(
-                "checking for modified or untracked files is not supported in Git repositories"
-            ),
+            Self::Git(git) => git.has_changes(path),
         }
     }
 

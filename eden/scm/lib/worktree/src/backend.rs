@@ -286,20 +286,67 @@ impl GitBackend {
         Ok((main, linked))
     }
 
-    fn occupied_slots(&self, reservations: &Reservations, main: &Path) -> Result<usize> {
-        // Git lists a new checkout before its reservation is released; count it once.
-        let linked = self
+    fn main(&self) -> Result<PathBuf> {
+        let main = self
+            .git
+            .list_worktrees()?
+            .into_iter()
+            .find(|worktree| worktree.is_main)
+            .context("Git did not report a main worktree")?;
+        Ok(canonicalize_or_original(&main.path))
+    }
+
+    fn linked_worktrees(&self) -> Result<Vec<PathBuf>> {
+        Ok(self
             .git
             .list_worktrees()?
             .into_iter()
             .filter(|worktree| !worktree.is_main)
-            .map(|worktree| canonicalize_or_original(&worktree.path));
+            .map(|worktree| canonicalize_or_original(&worktree.path))
+            .collect())
+    }
+
+    fn occupied_slots(&self, reservations: &Reservations, main: &Path) -> Result<usize> {
+        // Git lists a new checkout before its reservation is released; count it once.
         let reserved = reservations
             .reservations
             .values()
             .filter(|reservation| reservation.group_main == main)
             .map(|reservation| reservation.dest.clone());
-        Ok(linked.chain(reserved).collect::<BTreeSet<_>>().len())
+        Ok(self
+            .linked_worktrees()?
+            .into_iter()
+            .chain(reserved)
+            .collect::<BTreeSet<_>>()
+            .len())
+    }
+
+    fn validate_removal(&self, target: &Path) -> Result<()> {
+        let listed: Vec<_> = self
+            .git
+            .list_worktrees()?
+            .into_iter()
+            .map(|worktree| (canonicalize_or_original(&worktree.path), worktree.is_main))
+            .collect();
+        if let Some((_, is_main)) = listed.iter().find(|(path, _)| path == target) {
+            if *is_main {
+                anyhow::bail!("cannot remove the main worktree");
+            }
+            return Ok(());
+        }
+        // Linked checkouts may be nested inside the main one.
+        if let Some((parent, _)) = listed
+            .iter()
+            .filter(|(path, _)| target.starts_with(path))
+            .max_by_key(|(path, _)| path.components().count())
+        {
+            anyhow::bail!(
+                "{} is not the root of checkout {}, not removing",
+                target.display(),
+                parent.display()
+            );
+        }
+        anyhow::bail!("{} is not in this worktree group", target.display())
     }
 }
 
@@ -415,7 +462,7 @@ impl Worktrees {
     pub fn main_for_remove(&self) -> Result<Option<PathBuf>> {
         match &self.backend {
             WorktreeBackend::Eden(backend) => backend.main_for_remove(),
-            WorktreeBackend::Git(_) => git_remove_unsupported(),
+            WorktreeBackend::Git(backend) => backend.main().map(Some),
         }
     }
 
@@ -423,7 +470,7 @@ impl Worktrees {
     pub fn linked_worktrees(&self, main: &Path) -> Result<Vec<PathBuf>> {
         match &self.backend {
             WorktreeBackend::Eden(backend) => backend.linked_worktrees(main),
-            WorktreeBackend::Git(_) => git_remove_unsupported(),
+            WorktreeBackend::Git(backend) => backend.linked_worktrees(),
         }
     }
 
@@ -431,7 +478,7 @@ impl Worktrees {
     pub fn validate_removal(&self, main: &Path, target: &Path) -> Result<()> {
         match &self.backend {
             WorktreeBackend::Eden(backend) => backend.validate_removal(main, target),
-            WorktreeBackend::Git(_) => git_remove_unsupported(),
+            WorktreeBackend::Git(backend) => backend.validate_removal(target),
         }
     }
 
@@ -440,7 +487,8 @@ impl Worktrees {
     pub fn forget_removed(&self, main: &Path, target: &Path) -> Result<()> {
         match &self.backend {
             WorktreeBackend::Eden(backend) => backend.forget_removed(main, target),
-            WorktreeBackend::Git(_) => git_remove_unsupported(),
+            // `git worktree remove` already deleted the admin directory holding the label.
+            WorktreeBackend::Git(_) => Ok(()),
         }
     }
 
@@ -451,10 +499,6 @@ impl Worktrees {
             WorktreeBackend::Git(backend) => Some(&backend.git),
         }
     }
-}
-
-fn git_remove_unsupported<T>() -> Result<T> {
-    anyhow::bail!("worktree remove is not supported in Git repositories")
 }
 
 /// Git labels live in each checkout's admin directory, which Git keeps attached

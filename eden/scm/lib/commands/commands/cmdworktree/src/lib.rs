@@ -59,20 +59,11 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
         abort!("--rev can only be used with 'worktree add'");
     }
     let worktrees = || Worktrees::open(repo, repo.config().as_ref());
-    let require_eden = || -> Result<()> {
-        if !repo.requirements.contains("eden") {
-            abort!("worktree commands require an EdenFS-backed repository");
-        }
-        Ok(())
-    };
     match subcmd {
         "list" | "ls" => list::run(&ctx, repo, &worktrees()?),
         "label" => label::run(&ctx, repo, &worktrees()?),
         "add" => add::run(&ctx, repo, wc, &worktrees()?),
-        "remove" | "rm" => {
-            require_eden()?;
-            remove::run(&ctx, repo, &worktrees()?)
-        }
+        "remove" | "rm" => remove::run(&ctx, repo, &worktrees()?),
         "" => abort!("you need to specify a subcommand (run with --help to see a list)"),
         other => abort!("unknown worktree subcommand '{}'", other),
     }
@@ -96,8 +87,8 @@ pub fn aliases() -> &'static str {
 pub fn doc() -> &'static str {
     r#"manage multiple linked worktrees sharing the same repository
 
-    worktree groups allow multiple EdenFS-backed working copies to share
-    the same backing store. One worktree is designated as the main worktree,
+    worktree groups allow multiple EdenFS-backed or native Git working copies
+    to share the same repository. One worktree is designated as the main worktree,
     and additional linked worktrees can be created, listed, labeled, and
     removed.
 
@@ -122,8 +113,10 @@ pub fn doc() -> &'static str {
       worktree.git-enabled=true                Enable worktree commands in native Git repositories
       worktree.direct-eden-removal=false       Remove EdenFS checkouts via edenfsctl instead of in-process (default: true)
 
-    Git repositories support `list`, `label`, and detached `add`. The `remove`
-    subcommand and `add --snapshot` require an EdenFS-backed repository."#
+    In native Git repositories, `add` creates a detached checkout and `remove`
+    refuses locked worktrees, as Git does, even with `--force`. Worktrees
+    created directly with Git are also supported. The `--snapshot` option
+    requires EdenFS."#
 }
 
 pub fn synopsis() -> Option<&'static str> {

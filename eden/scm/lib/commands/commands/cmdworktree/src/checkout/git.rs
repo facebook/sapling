@@ -15,7 +15,7 @@ use types::HgId;
 
 use super::resolve_target;
 
-/// Creates detached checkouts with `git worktree add`.
+/// Creates and removes checkouts with `git worktree`.
 #[derive(Clone, Copy)]
 pub(crate) struct GitCheckouts<'a> {
     repo: &'a Repo,
@@ -40,6 +40,16 @@ impl<'a> GitCheckouts<'a> {
             checkouts: self,
             target,
         })
+    }
+
+    pub(super) fn remove(&self, path: &Path, force: bool) -> Result<()> {
+        Ok(self.git.remove_worktree(path, force)?)
+    }
+
+    /// Uses `git status`, because Sapling may not have run in a checkout
+    /// created with Git yet.
+    pub(super) fn has_changes(&self, path: &Path) -> Result<bool> {
+        Ok(self.git.worktree_has_changes(path)?)
     }
 }
 

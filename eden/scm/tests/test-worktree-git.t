@@ -130,13 +130,12 @@ The common dir can be a bare repo without a working copy.
   $ test ! -e ../bare.git/sl/dirstate
   $ cd ../linked
 
-Add creates a detached checkout; remove still requires EdenFS.
+Add creates a detached checkout that remove deletes.
 
   $ sl worktree add $TESTTMP/another
   created linked worktree at $TESTTMP/another
-  $ sl worktree remove $TESTTMP/another
-  abort: worktree commands require an EdenFS-backed repository
-  [255]
+  $ sl worktree remove $TESTTMP/another -y
+  removed $TESTTMP/another
 
 Git support can be disabled independently from EdenFS worktrees.
 

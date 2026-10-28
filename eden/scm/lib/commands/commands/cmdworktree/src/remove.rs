@@ -117,7 +117,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, worktrees: &Worktrees
                 )
             })
             .and_then(|()| {
-                if !checkouts.remove(&logger, target)? {
+                if !checkouts.remove(&logger, target, ctx.opts.force)? {
                     logger.warn(format!(
                         "eden checkout {} not found on disk, continuing to remove from registry",
                         target.display()

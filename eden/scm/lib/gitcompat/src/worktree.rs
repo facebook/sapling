@@ -36,6 +36,29 @@ impl RepoGit {
         Ok(())
     }
 
+    /// Remove a linked checkout. Unless `force` is set, Git refuses if it has
+    /// local changes. Git refuses a locked checkout either way.
+    pub fn remove_worktree(&self, path: &Path, force: bool) -> io::Result<()> {
+        let args: &[&str] = if force {
+            &["remove", "--force", "--"]
+        } else {
+            &["remove", "--"]
+        };
+        self.git_cmd("worktree", args).arg(path).checked_output()?;
+        Ok(())
+    }
+
+    /// Whether the checkout at `path` has modified or untracked files.
+    pub fn worktree_has_changes(&self, path: &Path) -> io::Result<bool> {
+        let output = self
+            .parent
+            .parent
+            .git_cmd("status", &["--porcelain"])
+            .current_dir(path)
+            .checked_output()?;
+        Ok(!output.stdout.is_empty())
+    }
+
     /// List the worktrees registered with Git.
     pub fn list_worktrees(&self) -> io::Result<Vec<GitWorktree>> {
         let output = self.call("worktree", &["list", "--porcelain", "-z"])?;

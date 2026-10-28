@@ -27,5 +27,5 @@ all worktree subcommands require an EdenFS-backed or native Git repo
   [255]
 
   $ sl worktree remove $TESTTMP/linked -y
-  abort: worktree commands require an EdenFS-backed repository
+  abort: worktree commands require an EdenFS-backed repository or a native Git repository
   [255]
