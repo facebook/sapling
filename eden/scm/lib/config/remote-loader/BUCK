@@ -12,11 +12,8 @@ sl_rust_library(
                 "fb": [
                     "sapling-types",
                     "sapling-io",
-                    "sapling-http-client",
-                    "anyhow",
                     "base64",
                     "filetime",
-                    "serde",
                     "serde_urlencoded",
                     "sha2",
                     "tracing",

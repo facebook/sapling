@@ -13,14 +13,14 @@ license = "MIT"
 name = "remote_loader"
 
 [dependencies]
-anyhow = { version = "1.0.104", optional = true }
+anyhow = "1.0.104"
 base64 = { version = "0.23.1", features = ["alloc"], optional = true }
 filetime = { version = "0.2.29", optional = true }
-sapling-http-client = { version = "0.1.0", path = "../../http-client", optional = true }
+sapling-http-client = { version = "0.1.0", path = "../../http-client" }
 sapling-io = { version = "0.1.0", path = "../../io", optional = true }
 sapling-types = { version = "0.1.0", path = "../../types", optional = true }
 sapling-util = { version = "0.2.0", path = "../../util" }
-serde = { version = "1.0.229", features = ["derive", "rc"], optional = true }
+serde = { version = "1.0.229", features = ["derive", "rc"] }
 serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }
@@ -30,5 +30,5 @@ zstd = { version = "0.14.3", features = ["experimental", "zstdmt"], optional = t
 
 [features]
 default = []
-fb = ["anyhow", "base64", "filetime", "sapling-http-client", "sapling-io", "sapling-types", "serde", "serde_urlencoded", "sha2", "tracing", "url", "zstd"]
+fb = ["base64", "filetime", "sapling-io", "sapling-types", "serde_urlencoded", "sha2", "tracing", "url", "zstd"]
 sl_oss = []

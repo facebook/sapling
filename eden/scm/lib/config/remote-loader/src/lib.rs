@@ -7,6 +7,8 @@
 
 #[cfg(feature = "fb")]
 mod fb;
+#[cfg(not(feature = "fb"))]
+mod oss;
 #[cfg(feature = "fb")]
 pub use fb::remote_loader::get_remote_configs;
 #[cfg(feature = "fb")]
@@ -15,3 +17,9 @@ pub use fb::remote_loader::maybe_set_http_cat_header;
 pub use fb::remote_loader::read_local_config;
 #[cfg(feature = "fb")]
 pub use fb::remote_loader::should_fetch_configs;
+#[cfg(not(feature = "fb"))]
+pub use oss::get_remote_configs;
+#[cfg(not(feature = "fb"))]
+pub use oss::read_local_config;
+#[cfg(not(feature = "fb"))]
+pub use oss::should_fetch_configs;
