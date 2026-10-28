@@ -6,6 +6,8 @@ rust_library(
     name = "preloaded_commit_graph_storage",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",

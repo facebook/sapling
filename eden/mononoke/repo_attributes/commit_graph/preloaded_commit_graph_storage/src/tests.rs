@@ -23,9 +23,15 @@ use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
+use futures::FutureExt;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::with_just_knobs_async;
+use maplit::hashmap;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
@@ -68,18 +74,24 @@ impl PreloadedCommitGraphStorage {
     }
 }
 
-/// Records the changesets it is asked to prefetch.
-struct PrefetchRecordingStorage {
+/// Records the changesets it is asked to fetch in batches and to prefetch.
+struct RecordingStorage {
     inner: Arc<dyn CommitGraphStorage>,
+    fetched: Mutex<Vec<ChangesetId>>,
     prefetched: Mutex<Vec<ChangesetId>>,
 }
 
-impl PrefetchRecordingStorage {
+impl RecordingStorage {
     fn new(inner: Arc<dyn CommitGraphStorage>) -> Self {
         Self {
             inner,
+            fetched: Mutex::new(Vec::new()),
             prefetched: Mutex::new(Vec::new()),
         }
+    }
+
+    fn fetched(&self) -> Vec<ChangesetId> {
+        self.fetched.lock().unwrap().clone()
     }
 
     fn prefetched(&self) -> Vec<ChangesetId> {
@@ -88,7 +100,7 @@ impl PrefetchRecordingStorage {
 }
 
 #[async_trait]
-impl CommitGraphStorage for PrefetchRecordingStorage {
+impl CommitGraphStorage for RecordingStorage {
     fn repo_identity(&self) -> &ArcRepoIdentity {
         self.inner.repo_identity()
     }
@@ -119,6 +131,7 @@ impl CommitGraphStorage for PrefetchRecordingStorage {
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
+        self.fetched.lock().unwrap().extend_from_slice(cs_ids);
         self.inner.fetch_many_edges(ctx, cs_ids, prefetch).await
     }
 
@@ -297,7 +310,7 @@ async fn test_preloaded_prefetch_forwarding(fb: FacebookInit) -> Result<()> {
                 .await?,
         );
     }
-    let recording_storage = Arc::new(PrefetchRecordingStorage::new(underlying_storage));
+    let recording_storage = Arc::new(RecordingStorage::new(underlying_storage));
     let preloaded_storage =
         PreloadedCommitGraphStorage::from_edges(edges_vec, recording_storage.clone())?;
 
@@ -317,4 +330,76 @@ async fn test_preloaded_prefetch_forwarding(fb: FacebookInit) -> Result<()> {
     assert_eq!(recording_storage.prefetched(), vec![name_cs_id("F")]);
 
     Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_preloaded_batch_prefetch(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let underlying_storage = Arc::new(InMemoryCommitGraphStorage::new(test_repo_identity()));
+    // Every commit on the main line merges in an unrelated two-commit
+    // branch, so lowering a frontier below each merge adds a changeset
+    // above the target.
+    let _ = from_dag(
+        &ctx,
+        r"
+                A-B-C-D-E-F
+                 / / / / /
+              L-G / / / /
+               M-H / / /
+                N-I / /
+                 O-J /
+                  P-K
+        ",
+        underlying_storage.clone(),
+    )
+    .await?;
+
+    let mut edges_vec = Vec::new();
+    for name in [
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+    ] {
+        edges_vec.push(
+            underlying_storage
+                .fetch_edges(&ctx, name_cs_id(name))
+                .await?,
+        );
+    }
+    let persistent_storage = Arc::new(RecordingStorage::new(underlying_storage));
+    let preloaded_storage = Arc::new(RecordingStorage::new(
+        PreloadedCommitGraphStorage::from_edges(edges_vec, persistent_storage.clone())?,
+    ));
+    let graph = CommitGraph::new(preloaded_storage.clone());
+
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:commit_graph_pull_optimizations".to_string() => KnobVal::Bool(true),
+            "scm/mononoke:commit_graph_prefetch_step_limit".to_string() => KnobVal::Int(4),
+        }),
+        async {
+            assert!(
+                graph
+                    .is_ancestor(&ctx, name_cs_id("A"), name_cs_id("F"))
+                    .await?
+            );
+            // Lowering F to A's generation fetches F, E, D, C and B one
+            // step at a time and then G, H, I, J and K in one step: 10
+            // changesets.  Batch prefetching E and K, D and J, C and I,
+            // and B and H as each merge adds its branch to the frontier
+            // fetches 8 more through the same call, copying their edges
+            // out of the preloaded map for a result nobody reads.
+            // FIXME: the batch should only warm caches, and the preloaded
+            // storage has none to warm for these changesets.
+            assert_eq!(
+                ctx.perf_counters()
+                    .get_counter(PerfCounterType::CommitGraphBatchPrefetchScanned),
+                8
+            );
+            assert_eq!(preloaded_storage.fetched().len(), 18);
+            assert_eq!(preloaded_storage.prefetched(), vec![]);
+            assert_eq!(persistent_storage.prefetched(), vec![]);
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
 }
