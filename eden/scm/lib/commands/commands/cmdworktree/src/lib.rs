@@ -11,7 +11,6 @@ mod label;
 mod list;
 mod remove;
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use clidispatch::ReqCtx;
@@ -20,7 +19,6 @@ use cmdutil::ConfigExt;
 use cmdutil::FormatterOpts;
 use cmdutil::Result;
 use cmdutil::define_flags;
-use fs_err as fs;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 use worktree::Worktrees;
@@ -70,16 +68,11 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
         "add" => add::run(&ctx, repo, wc, &worktrees()?),
         "remove" | "rm" => {
             require_eden()?;
-            remove::run(&ctx, repo, wc)
+            remove::run(&ctx, repo, &worktrees()?)
         }
         "" => abort!("you need to specify a subcommand (run with --help to see a list)"),
         other => abort!("unknown worktree subcommand '{}'", other),
     }
-}
-
-pub(crate) struct CurrentGroup {
-    pub(crate) shared_store_path: PathBuf,
-    pub(crate) group_id: String,
 }
 
 /// Read the configured slot-reservation TTL in seconds. Reservations older than
@@ -91,26 +84,6 @@ pub(crate) fn reservation_ttl_seconds(repo: &Repo) -> Result<i64> {
         Duration::from_secs(worktree::DEFAULT_RESERVATION_TTL_SECONDS as u64)
     })?;
     Ok(ttl.as_secs() as i64)
-}
-
-/// The worktree group the current checkout belongs to, if any.
-pub(crate) fn find_group(repo: &Repo) -> Result<Option<CurrentGroup>> {
-    let shared_store_path = repo.store_path();
-    let registry = worktree::load_registry(shared_store_path)?;
-    let current = util::path::strip_unc_prefix(fs::canonicalize(repo.path())?);
-    Ok(registry
-        .find_group_for_path(&current)
-        .map(|group_id| CurrentGroup {
-            shared_store_path: shared_store_path.to_path_buf(),
-            group_id,
-        }))
-}
-
-pub(crate) fn require_group(repo: &Repo) -> Result<CurrentGroup> {
-    match find_group(repo)? {
-        Some(group) => Ok(group),
-        None => abort!("this worktree is not part of a group"),
-    }
 }
 
 pub fn aliases() -> &'static str {

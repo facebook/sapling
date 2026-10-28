@@ -178,6 +178,66 @@ impl EdenBackend {
             )
         })
     }
+
+    fn main_for_remove(&self) -> Result<Option<PathBuf>> {
+        let registry = load_registry(&self.shared_store_path)?;
+        Ok(
+            find_group(&registry, &canonicalize_or_original(&self.repo_path))
+                .map(|group| group.main.clone()),
+        )
+    }
+
+    fn linked_worktrees(&self, main: &Path) -> Result<Vec<PathBuf>> {
+        let registry = load_registry(&self.shared_store_path)?;
+        Ok(find_group(&registry, main)
+            .map(|group| {
+                group
+                    .worktrees
+                    .keys()
+                    .filter(|path| *path != main)
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    fn validate_removal(&self, main: &Path, target: &Path) -> Result<()> {
+        let registry = load_registry(&self.shared_store_path)?;
+        let members = find_group(&registry, main).map(|group| &group.worktrees);
+        if members.is_some_and(|members| members.contains_key(target)) {
+            if target == main {
+                anyhow::bail!("cannot remove a main worktree with linked worktrees");
+            }
+            return Ok(());
+        }
+        if let Some(parent) = members
+            .into_iter()
+            .flat_map(|members| members.keys())
+            .find(|path| target.starts_with(path))
+        {
+            anyhow::bail!(
+                "{} is not the root of checkout {}, not removing",
+                target.display(),
+                parent.display()
+            );
+        }
+        anyhow::bail!(
+            "{} is not in this worktree group, use `eden rm` instead",
+            target.display()
+        )
+    }
+
+    fn forget_removed(&self, main: &Path, target: &Path) -> Result<()> {
+        with_registry_lock(&self.shared_store_path, |registry| {
+            if let Some(group_id) = registry.find_group_for_path(main)
+                && let Some(group) = registry.groups.get_mut(&group_id)
+            {
+                group.worktrees.remove(target);
+                dissolve_group_if_empty(registry, &group_id);
+            }
+            Ok(())
+        })
+    }
 }
 
 impl GitBackend {
@@ -350,6 +410,40 @@ impl Worktrees {
         }
     }
 
+    /// Main checkout of the invoking checkout's group, or `None` if it has no
+    /// linked worktrees.
+    pub fn main_for_remove(&self) -> Result<Option<PathBuf>> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.main_for_remove(),
+            WorktreeBackend::Git(_) => git_remove_unsupported(),
+        }
+    }
+
+    /// Linked checkouts in `main`'s group.
+    pub fn linked_worktrees(&self, main: &Path) -> Result<Vec<PathBuf>> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.linked_worktrees(main),
+            WorktreeBackend::Git(_) => git_remove_unsupported(),
+        }
+    }
+
+    /// Check that `target` is the root of a linked checkout in `main`'s group.
+    pub fn validate_removal(&self, main: &Path, target: &Path) -> Result<()> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.validate_removal(main, target),
+            WorktreeBackend::Git(_) => git_remove_unsupported(),
+        }
+    }
+
+    /// Forget `target` after its checkout has been removed. The caller holds its
+    /// path lock.
+    pub fn forget_removed(&self, main: &Path, target: &Path) -> Result<()> {
+        match &self.backend {
+            WorktreeBackend::Eden(backend) => backend.forget_removed(main, target),
+            WorktreeBackend::Git(_) => git_remove_unsupported(),
+        }
+    }
+
     /// The Git repository, if this is a native Git checkout.
     pub fn git(&self) -> Option<&RepoGit> {
         match &self.backend {
@@ -357,6 +451,10 @@ impl Worktrees {
             WorktreeBackend::Git(backend) => Some(&backend.git),
         }
     }
+}
+
+fn git_remove_unsupported<T>() -> Result<T> {
+    anyhow::bail!("worktree remove is not supported in Git repositories")
 }
 
 /// Git labels live in each checkout's admin directory, which Git keeps attached
@@ -409,6 +507,12 @@ fn check_unregistered(registry: &Registry, dest: &Path) -> Result<()> {
         );
     }
     Ok(())
+}
+
+fn find_group<'a>(registry: &'a Registry, member: &Path) -> Option<&'a Group> {
+    registry
+        .find_group_for_path(member)
+        .and_then(|group_id| registry.groups.get(&group_id))
 }
 
 fn resolve_group_for_main_path(registry: &Registry, canonical_repo_path: &Path) -> PathBuf {

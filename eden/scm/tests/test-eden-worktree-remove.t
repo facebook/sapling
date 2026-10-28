@@ -134,6 +134,7 @@ test worktree remove - multiple paths preserves partial progress after eden remo
   $ sl worktree remove $TESTTMP/multipath_ok $TESTTMP/multipath_z_fail -y
   removed $TESTTMP/multipath_ok
   failed to remove $TESTTMP/multipath_z_fail: eden remove failed for $TESTTMP/multipath_z_fail: injected eden remove failure for $TESTTMP/multipath_z_fail
+  removed 1 of 2 worktrees; 1 failed
   abort: eden remove failed for $TESTTMP/multipath_z_fail: injected eden remove failure for $TESTTMP/multipath_z_fail
   [255]
   $ test -d $TESTTMP/multipath_ok
@@ -157,6 +158,27 @@ test worktree remove - duplicate paths are deduplicated
   [1]
 
 #if no-windows
+test worktree remove - the invoking checkout is removed last
+(Windows cannot delete a directory that is a process's working directory.)
+
+  $ sl worktree add $TESTTMP/self_a
+  created linked worktree at $TESTTMP/self_a
+  $ sl worktree add $TESTTMP/self_b
+  created linked worktree at $TESTTMP/self_b
+  $ cd $TESTTMP/self_a
+  $ sl worktree remove $TESTTMP/self_a $TESTTMP/self_b -y
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/self_b
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/self_a
+  $ cd $TESTTMP/myrepo
+  $ test -d $TESTTMP/self_a
+  [1]
+  $ test -d $TESTTMP/self_b
+  [1]
+
 test worktree remove - direct removal reports skipped backing cleanup
 
   $ sl worktree add $TESTTMP/direct_missing_config
@@ -230,9 +252,9 @@ test worktree remove --all
   $ sl worktree remove --all -y
   Unmounting checkout...
   Deleting EdenFS checkout state...
+  removed $TESTTMP/linked1
   Unmounting checkout...
   Deleting EdenFS checkout state...
-  removed $TESTTMP/linked1
   removed $TESTTMP/linked2
 
 test worktree remove - group dissolved after all linked removed
@@ -283,6 +305,7 @@ test worktree remove --all preserves partial progress after eden remove failure
   $ sl worktree remove --all -y
   failed to remove $TESTTMP/remove_all_fail: eden remove failed for $TESTTMP/remove_all_fail: injected eden remove failure for $TESTTMP/remove_all_fail
   removed $TESTTMP/remove_all_ok
+  removed 1 of 2 worktrees; 1 failed
   abort: eden remove failed for $TESTTMP/remove_all_fail: injected eden remove failure for $TESTTMP/remove_all_fail
   [255]
   $ test -d $TESTTMP/remove_all_fail

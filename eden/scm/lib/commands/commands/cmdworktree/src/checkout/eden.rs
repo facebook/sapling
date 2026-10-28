@@ -63,6 +63,14 @@ impl<'a> EdenCheckouts<'a> {
             clone_filters,
         })
     }
+
+    pub(super) fn remove(&self, logger: &TermLogger, path: &Path) -> Result<bool> {
+        if !path.exists() {
+            return Ok(false);
+        }
+        run_eden_remove(logger, self.repo, path)?;
+        Ok(true)
+    }
 }
 
 impl<'a> AddSource<'a> {
@@ -92,14 +100,6 @@ impl PreparedAdd<'_> {
         }
         Ok(())
     }
-}
-
-pub(super) fn remove_checkout(logger: &TermLogger, repo: &Repo, path: &Path) -> Result<bool> {
-    if !path.exists() {
-        return Ok(false);
-    }
-    run_eden_remove(logger, repo, path)?;
-    Ok(true)
 }
 
 fn run_eden_remove(logger: &TermLogger, repo: &Repo, path: &Path) -> Result<()> {

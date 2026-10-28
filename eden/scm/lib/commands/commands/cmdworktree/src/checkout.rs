@@ -58,6 +58,15 @@ impl<'a> Checkouts<'a> {
         }
     }
 
+    /// Remove one checkout. The caller holds its path lock. Returns false if the
+    /// checkout was already missing on disk.
+    pub(crate) fn remove(&self, logger: &TermLogger, path: &Path) -> Result<bool> {
+        match self {
+            Self::Eden(eden) => eden.remove(logger, path),
+            Self::Git(_) => anyhow::bail!("worktree remove is not supported in Git repositories"),
+        }
+    }
+
     pub(crate) fn add_source(&self) -> Result<AddSource<'a>> {
         match self {
             Self::Eden(eden) => Ok(AddSource::Eden(eden.add_source()?)),
@@ -84,12 +93,6 @@ impl PreparedAdd<'_> {
             Self::Git(prepared) => prepared.create(dest),
         }
     }
-}
-
-/// Remove one checkout. The caller holds its path lock. Returns false if the
-/// checkout was already missing on disk.
-pub(crate) fn remove_checkout(logger: &TermLogger, repo: &Repo, path: &Path) -> Result<bool> {
-    eden::remove_checkout(logger, repo, path)
 }
 
 fn resolve_target(repo: &Repo, requested_target: Option<HgId>) -> Result<Option<HgId>> {
