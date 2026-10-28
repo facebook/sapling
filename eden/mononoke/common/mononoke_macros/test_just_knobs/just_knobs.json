@@ -36,7 +36,6 @@
     "scm/mononoke:disable_commit_graph_prefetch": false,
     "scm/mononoke:commit_graph_pull_optimizations": true,
     "scm/mononoke:commit_graph_disable_subtree_source_fallback": true,
-    "scm/mononoke:commitcloud_bulk_inserts": true,
     "scm/mononoke:commitcloud_manager_access": true,
     "scm/mononoke:commitcloud_read_head_author_date": true,
     "scm/mononoke:commitcloud_write_head_author_date": true,

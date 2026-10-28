@@ -19,7 +19,6 @@ use crate::SqlCommitCloud;
 use crate::sql::heads_ops::DeleteArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
-use crate::sql::ops::InsertMany;
 
 #[allow(clippy::ptr_arg)]
 pub fn heads_from_list(s: &Vec<String>) -> anyhow::Result<Vec<WorkspaceHead>> {
@@ -62,36 +61,18 @@ pub async fn update_heads(
         .await?;
     }
     if !new_heads.is_empty() {
-        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
-            let heads: Vec<WorkspaceHead> = new_heads
-                .into_iter()
-                .map(|commit| WorkspaceHead {
-                    commit,
-                    author_date: head_author_dates.get(&commit).copied(),
-                })
-                .collect();
-            txn = InsertMany::<WorkspaceHead>::insert_many(
+        for head in new_heads {
+            txn = Insert::<WorkspaceHead>::insert(
                 sql_commit_cloud,
                 txn,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
-                heads,
+                WorkspaceHead {
+                    commit: head,
+                    author_date: head_author_dates.get(&head).copied(),
+                },
             )
             .await?;
-        } else {
-            for head in new_heads {
-                txn = Insert::<WorkspaceHead>::insert(
-                    sql_commit_cloud,
-                    txn,
-                    cc_ctx.reponame.clone(),
-                    cc_ctx.workspace.clone(),
-                    WorkspaceHead {
-                        commit: head,
-                        author_date: head_author_dates.get(&head).copied(),
-                    },
-                )
-                .await?;
-            }
         }
     }
 

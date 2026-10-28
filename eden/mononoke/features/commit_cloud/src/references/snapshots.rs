@@ -14,7 +14,6 @@ use crate::CommitCloudContext;
 use crate::SqlCommitCloud;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
-use crate::sql::ops::InsertMany;
 use crate::sql::snapshots_ops::DeleteArgs;
 
 pub async fn update_snapshots(
@@ -38,30 +37,15 @@ pub async fn update_snapshots(
         .await?;
     }
     if !new_snapshots.is_empty() {
-        if justknobs::eval("scm/mononoke:commitcloud_bulk_inserts", None, None) {
-            let snapshots: Vec<WorkspaceSnapshot> = new_snapshots
-                .into_iter()
-                .map(|commit| WorkspaceSnapshot { commit })
-                .collect();
-            txn = InsertMany::<WorkspaceSnapshot>::insert_many(
+        for snapshot in new_snapshots {
+            txn = Insert::<WorkspaceSnapshot>::insert(
                 sql_commit_cloud,
                 txn,
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
-                snapshots,
+                WorkspaceSnapshot { commit: snapshot },
             )
             .await?;
-        } else {
-            for snapshot in new_snapshots {
-                txn = Insert::<WorkspaceSnapshot>::insert(
-                    sql_commit_cloud,
-                    txn,
-                    cc_ctx.reponame.clone(),
-                    cc_ctx.workspace.clone(),
-                    WorkspaceSnapshot { commit: snapshot },
-                )
-                .await?;
-            }
         }
     }
 

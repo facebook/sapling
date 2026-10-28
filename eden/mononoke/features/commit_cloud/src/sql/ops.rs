@@ -66,17 +66,6 @@ pub trait Insert<T = Self> {
 }
 
 #[async_trait]
-pub trait InsertMany<T = Self> {
-    async fn insert_many(
-        &self,
-        txn: Transaction,
-        reponame: String,
-        workspace: String,
-        data: Vec<T>,
-    ) -> anyhow::Result<Transaction>;
-}
-
-#[async_trait]
 pub trait Update<T = Self> {
     type UpdateArgs;
     async fn update(
