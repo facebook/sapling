@@ -84,27 +84,22 @@ pub fn build<R: Send + Sync + Clone + 'static>(
                 config.get().allocation_backends.contains(&backend.0),
                 "RIM backend must use workload allocations"
             );
-            let cost_resource = if rim_regional_resources {
+            let cpu_resource = if rim_regional_resources {
                 let region = FbWhoAmI::get()
                     .context("Reading CPU capacity region")?
                     .region_datacenter_prefix
                     .clone()
                     .filter(|region| !region.is_empty())
                     .context("Regional resources require a serving region")?;
-                format!("cost_{region}")
+                format!("cpu_{region}")
             } else {
-                "cost".to_owned()
+                "cpu".to_owned()
             };
-            crate::utils::rim_rate_limiter::request_requirements(
-                &config.get(),
-                None,
-                &cost_resource,
-            )?;
             crate::utils::rim_rate_limiter::init(backend);
             Ok(crate::utils::rim_rate_limiter::RimRateLimiter {
                 backend,
                 config,
-                cost_resource,
+                cpu_resource,
             })
         })
         .transpose()?;

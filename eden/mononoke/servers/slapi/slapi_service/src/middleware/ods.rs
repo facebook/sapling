@@ -76,6 +76,7 @@ define_stats! {
     requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
     total_requests: timeseries(Rate, Sum),
     processed_requests: timeseries(Rate, Sum),
+    processed_cpu_us: timeseries(Rate, Sum),
     processed_files: timeseries(Rate, Sum),
     processed_trees: timeseries(Rate, Sum),
     response_bytes_sent: dynamic_quantile_stat("{}.response_bytes_sent", (method: String); Average, Sum, Count; P 50, P 75, P 95, P 99; Duration::from_secs(60), Duration::from_secs(600), Duration::from_secs(3600)),
@@ -241,6 +242,8 @@ pub(crate) fn record_processed_work(state: &mut State, ctx: CoreContext) {
         callbacks.add(move |_| {
             let counters = ctx.perf_counters();
             STATS::processed_requests.add_value(1);
+            STATS::processed_cpu_us
+                .add_value(counters.get_counter(PerfCounterType::CpuTimeNs) / 1000);
             STATS::processed_files.add_value(counters.get_counter(PerfCounterType::EdenapiFiles));
             STATS::processed_trees.add_value(
                 counters.get_counter(PerfCounterType::EdenapiTrees)

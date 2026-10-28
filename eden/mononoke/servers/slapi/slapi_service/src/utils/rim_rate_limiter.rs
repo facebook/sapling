@@ -12,7 +12,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::ensure;
 use backend_if::RimBackend;
@@ -50,7 +49,7 @@ pub(crate) type WorkloadConfig = ConfigHandle<RimWorkloadConfig>;
 pub(crate) struct RimRateLimiter {
     pub backend: RimBackend,
     pub config: WorkloadConfig,
-    pub cost_resource: String,
+    pub cpu_resource: String,
 }
 
 pub(crate) fn workload_config(store: &ConfigStore) -> Result<WorkloadConfig> {
@@ -85,33 +84,6 @@ fn metadata_field(metadata: &Metadata, field: RimMetadataField) -> Option<String
     value
         .filter(|value| !value.is_empty())
         .map(|value| format!("{prefix}:{value}"))
-}
-
-#[derive(Clone, Copy)]
-pub(crate) enum FetchResource {
-    Files,
-    Trees,
-}
-
-pub(crate) fn request_requirements(
-    config: &RimWorkloadConfig,
-    fetches: Option<(FetchResource, u32)>,
-    cost_resource: &str,
-) -> Result<HashMap<String, f64>> {
-    let cost = config
-        .request_cost
-        .as_ref()
-        .context("Missing RIM request cost")?;
-    let fetch_cost = match fetches {
-        Some((FetchResource::Files, count)) => f64::from(cost.file) * f64::from(count),
-        Some((FetchResource::Trees, count)) => f64::from(cost.tree) * f64::from(count),
-        None => 0.0,
-    };
-    Ok([(
-        cost_resource.to_owned(),
-        f64::from(cost.request) + fetch_cost,
-    )]
-    .into())
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -258,7 +230,7 @@ fn report_admission(
     Ok(())
 }
 
-pub(crate) async fn report_request(
+pub(crate) fn report_request(
     ctx: &CoreContext,
     tenancy_path: &[String],
     rim_backend: RimBackend,
@@ -277,45 +249,18 @@ pub(crate) async fn report_request(
         STATS::admission_report_errors.add_value(1);
         log("RIM admission report failed", error.to_string());
     }
-    if rejected {
-        return;
-    }
-
-    match timeout(
-        RIM_ACQUIRE_TIMEOUT,
-        RimThinClient::report(rim_backend, tenancy_path.to_vec(), usage.clone()),
-    )
-    .await
-    {
-        Ok(Ok(result)) if !result.success() => {
-            log("RIM report non-success", format!("{:?}", result.status()));
-        }
-        Ok(Ok(_)) => {}
-        Ok(Err(e)) => {
-            log("RIM report error", e.to_string());
-        }
-        Err(_) => {
-            log(
-                "RIM report timeout",
-                format!("timeout after {RIM_ACQUIRE_TIMEOUT:?}"),
-            );
-        }
-    }
 }
 
-pub(crate) fn record_storage_reads(
+pub(crate) fn record_usage(
     state: &mut State,
     ctx: CoreContext,
     backend: RimBackend,
     tenancy_path: Vec<String>,
+    cpu_resource: String,
 ) {
     if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
         callbacks.add(move |_| {
-            let usage = [(
-                STORAGE_READS_RESOURCE.to_owned(),
-                ctx.perf_counters().get_counter(PerfCounterType::BlobGets) as f64,
-            )]
-            .into();
+            let usage = completed_usage(&ctx, &cpu_resource);
             let result = RimThinClient::sync_report(backend, tenancy_path.clone(), usage);
             let error = match result {
                 Ok(result) if result.success() => return,
@@ -325,9 +270,24 @@ pub(crate) fn record_storage_reads(
             let mut scuba = ctx.scuba().clone();
             scuba.add("rim_tenancy_path", tenancy_path.join("/"));
             scuba.add("rim_backend", backend.0);
-            scuba.log_with_msg("RIM storage usage report failed", error);
+            scuba.log_with_msg("RIM usage report failed", error);
         });
     }
+}
+
+fn completed_usage(ctx: &CoreContext, cpu_resource: &str) -> HashMap<String, f64> {
+    let counters = ctx.perf_counters();
+    [
+        (
+            cpu_resource.to_owned(),
+            counters.get_counter(PerfCounterType::CpuTimeNs) as f64 / 1000.0,
+        ),
+        (
+            STORAGE_READS_RESOURCE.to_owned(),
+            counters.get_counter(PerfCounterType::BlobGets) as f64,
+        ),
+    ]
+    .into()
 }
 
 #[cfg(test)]
@@ -344,14 +304,11 @@ mod tests {
     use mononoke_macros::mononoke;
     use permission_checker::MononokeIdentity;
     use rate_limiting_config::RimMetadataField;
-    use rate_limiting_config::RimRequestCost;
     use rate_limiting_config::RimWorkloadConfig;
 
-    use super::FetchResource;
     use super::RimDecision;
     use super::WORKLOAD_CONFIG_PATH;
     use super::request_attribution;
-    use super::request_requirements;
     use super::unit_decision;
     use super::workload_config;
 
@@ -498,11 +455,7 @@ mod tests {
         let mut handle = None;
         for (version, named) in [(1, false), (2, true), (3, false)] {
             let config = RimWorkloadConfig {
-                request_cost: Some(RimRequestCost {
-                    request: version as i32,
-                    file: 2,
-                    tree: 1,
-                }),
+                request_cost: None,
                 allocation_backends: Default::default(),
                 unit_of_work: Default::default(),
                 named_workloads: if named {
@@ -519,10 +472,6 @@ mod tests {
             source.insert_to_refresh(WORKLOAD_CONFIG_PATH.to_owned());
             let handle = handle.get_or_insert_with(|| workload_config(&store).unwrap());
             store.force_update_configs();
-            assert_eq!(
-                request_requirements(&handle.get(), None, "cost").unwrap(),
-                [("cost".to_owned(), version as f64)].into(),
-            );
             assert_eq!(
                 request_attribution(&Metadata::default(), &handle.get()).0,
                 [
@@ -548,32 +497,23 @@ mod tests {
         }
     }
 
-    #[mononoke::test]
-    fn request_cost_accounts_for_batches() {
-        let mut config = RimWorkloadConfig {
-            request_cost: Some(RimRequestCost {
-                request: 14,
-                file: 2,
-                tree: 1,
-            }),
-            ..Default::default()
-        };
-        for resource in ["cost", "cost_ldc"] {
-            for (fetches, expected) in [
-                (None, 14.0),
-                (Some((FetchResource::Files, 0)), 14.0),
-                (Some((FetchResource::Files, 4000)), 8014.0),
-                (Some((FetchResource::Trees, 4000)), 4014.0),
-                (Some((FetchResource::Files, u32::MAX)), 8589934604.0),
-            ] {
-                assert_eq!(
-                    request_requirements(&config, fetches, resource).unwrap(),
-                    [(resource.to_owned(), expected)].into(),
-                );
-            }
-        }
-        config.request_cost = None;
-        assert!(request_requirements(&config, None, "cost").is_err());
+    #[mononoke::fbinit_test]
+    fn usage_reads_completed_counters_in_cpu_microseconds(fb: fbinit::FacebookInit) {
+        let ctx = context::CoreContext::test_mock(fb);
+        let before = super::completed_usage(&ctx, "cpu_ldc");
+        assert_eq!(before["cpu_ldc"], 0.0);
+        ctx.perf_counters()
+            .add_to_counter(context::PerfCounterType::CpuTimeNs, 1_234_567);
+        ctx.perf_counters()
+            .add_to_counter(context::PerfCounterType::BlobGets, 7);
+        assert_eq!(
+            super::completed_usage(&ctx, "cpu_ldc"),
+            [
+                ("cpu_ldc".to_owned(), 1234.567),
+                ("storage_reads".to_owned(), 7.0)
+            ]
+            .into(),
+        );
     }
 
     #[mononoke::test]

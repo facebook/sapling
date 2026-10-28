@@ -100,7 +100,7 @@ struct MononokeServerArgs {
     /// RIM workload backend ID for EdenAPI rate limiting
     #[clap(long)]
     rim_backend: Option<i32>,
-    /// Charge cost_<region> in rim_backend using the configured request costs.
+    /// Report measured CPU microseconds to cpu_<region> in rim_backend.
     #[clap(long, requires = "rim_backend")]
     rim_regional_resources: bool,
     /// Mark this instance as a shadow tier. Shadow tiers never forward

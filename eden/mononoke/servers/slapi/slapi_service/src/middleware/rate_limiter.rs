@@ -13,10 +13,6 @@ use anyhow::anyhow;
 #[cfg(fbcode_build)]
 use backend_if::RimBackend;
 use context::CoreContext;
-#[cfg(fbcode_build)]
-use edenapi_types::file::FILE_COUNT_HEADER;
-#[cfg(fbcode_build)]
-use edenapi_types::tree::TREE_COUNT_HEADER;
 use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -26,18 +22,12 @@ use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::build_error_response_in_place;
-#[cfg(fbcode_build)]
-use http::HeaderMap;
-#[cfg(fbcode_build)]
-use http::Method;
 use http::Response;
 use http::StatusCode;
 use http::Uri;
 
 use crate::handlers::JsonErrorFormatter;
 use crate::middleware::ods::record_processed_work;
-#[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::FetchResource;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::RimDecision;
 #[cfg(fbcode_build)]
@@ -47,13 +37,11 @@ use crate::utils::rim_rate_limiter::STORAGE_READS_RESOURCE;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::check_rate_limit;
 #[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::record_storage_reads;
+use crate::utils::rim_rate_limiter::record_usage;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::report_request;
 #[cfg(fbcode_build)]
 use crate::utils::rim_rate_limiter::request_attribution;
-#[cfg(fbcode_build)]
-use crate::utils::rim_rate_limiter::request_requirements;
 
 #[cfg(fbcode_build)]
 const RIM_ENFORCE_JK: &str = "scm/mononoke:slapi_rim_enforce";
@@ -91,7 +79,7 @@ async fn apply_rim_decision(
         check_rate_limit(ctx, tenancy_path, rim_backend, requirements, selection_key).await;
     let rejected = decision == RimDecision::Reject && justknobs::eval(RIM_ENFORCE_JK, None, None);
     if decision != RimDecision::FailOpen {
-        report_request(ctx, tenancy_path, rim_backend, requirements, rejected).await;
+        report_request(ctx, tenancy_path, rim_backend, requirements, rejected);
     }
     match decision {
         RimDecision::Allow => None,
@@ -159,51 +147,31 @@ impl Middleware for ThrottleMiddleware {
         {
             let config = rim.config.get();
             let (path, selection_key) = request_attribution(metadata.metadata(), &config);
-            // Missing fetch headers charge only the base request cost.
-            let fetches = (Method::borrow_from(state) == Method::POST)
-                .then(|| {
-                    // The API prefix is stripped; the encoded repo is one path segment.
-                    let (_, endpoint) = Uri::borrow_from(state)
-                        .path()
-                        .strip_prefix('/')?
-                        .split_once('/')?;
-                    let (header, resource) = match endpoint {
-                        "files2" => (FILE_COUNT_HEADER, FetchResource::Files),
-                        "trees" => (TREE_COUNT_HEADER, FetchResource::Trees),
-                        _ => return None,
-                    };
-                    let count = HeaderMap::borrow_from(state)
-                        .get(header)?
-                        .to_str()
-                        .ok()?
-                        .parse::<u32>()
-                        .ok()?;
-                    Some((resource, count))
-                })
-                .flatten();
-            match request_requirements(&config, fetches, &rim.cost_resource) {
-                Ok(mut requirements) => {
-                    // The quantity is reported after execution; acquire selects the resource.
-                    requirements.insert(STORAGE_READS_RESOURCE.to_owned(), 0.0);
-                    if let Some(response) = apply_rim_decision(
-                        state,
-                        &ctx,
-                        &path,
-                        rim.backend,
-                        &requirements,
-                        selection_key.as_deref(),
-                    )
-                    .await
-                    {
-                        return Some(response);
-                    }
-                    record_storage_reads(state, ctx.clone(), rim.backend, path);
-                }
-                Err(error) => {
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.log_with_msg("RIM request cost unavailable", error.to_string());
-                }
+            // With demand_equals_usage=false, acquire selects resources; completion reports usage.
+            let requirements = [
+                (rim.cpu_resource.clone(), 0.0),
+                (STORAGE_READS_RESOURCE.to_owned(), 0.0),
+            ]
+            .into();
+            if let Some(response) = apply_rim_decision(
+                state,
+                &ctx,
+                &path,
+                rim.backend,
+                &requirements,
+                selection_key.as_deref(),
+            )
+            .await
+            {
+                return Some(response);
             }
+            record_usage(
+                state,
+                ctx.clone(),
+                rim.backend,
+                path,
+                rim.cpu_resource.clone(),
+            );
         }
 
         record_processed_work(state, ctx);
