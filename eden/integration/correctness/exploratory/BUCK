@@ -1,6 +1,5 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
-load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
@@ -256,7 +255,13 @@ python_unittest(
     name = "core_solver_scale_slow_test",
     srcs = ["core/test/solver_scale_slow_test.py"],
     compatible_with = ["ovr_config//os:linux"],
-    labels = [tpx_labels.long_running] + ci.labels(ci.remove(ci.diff, ci.land)),
+    labels = [tpx_labels.long_running]
+    + ci.labels(
+        ci.remove(
+            ci.diff,
+            ci.land,
+        ),
+    ),
     network_access = network_access_utils.none(),
     deps = [
         ":engine_problems",
@@ -1170,7 +1175,12 @@ python_unittest(
     name = "edenfs_namespace_checkout_slow_test",
     srcs = ["edenfs/test/namespace_checkout_slow_test.py"],
     compatible_with = ["ovr_config//os:linux"],
-    labels = ci.labels(ci.remove(ci.diff, ci.land)),
+    labels = ci.labels(
+        ci.remove(
+            ci.diff,
+            ci.land,
+        ),
+    ),
     network_access = network_access_utils.none(),
     deps = [
         ":edenfs_recorded_count",
@@ -1310,7 +1320,7 @@ python_unittest(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "backends_live_test",
     srcs = ["edenfs/test/backends_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1333,7 +1343,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "reference_live_test",
     srcs = ["edenfs/test/reference_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1355,7 +1365,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "edenfs_red_control_live_test",
     srcs = ["edenfs/test/red_control_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1372,7 +1382,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "edenfs_namespace_live_test",
     srcs = ["edenfs/test/namespace_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1389,7 +1399,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "edenfs_metadata_live_test",
     srcs = ["edenfs/test/metadata_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1407,7 +1417,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "environment_test",
     srcs = ["edenfs/test/environment_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1435,7 +1445,7 @@ python_library(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "environment_live_test",
     srcs = ["edenfs/test/environment_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1487,7 +1497,7 @@ python_library(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "backends_process_test",
     srcs = ["edenfs/test/backends_process_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1504,7 +1514,7 @@ python_integration_test(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "backends_scm_test",
     srcs = ["edenfs/test/backends_scm_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1543,7 +1553,7 @@ python_library(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "fault_validation_test",
     srcs = ["test/fault_validation_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -1563,7 +1573,7 @@ python_integration_test(
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 # runner deadline and the harness cleanup before tpx stops the test.
-python_integration_test(
+python_unittest(
     name = "fault_live_test",
     srcs = ["test/fault_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -2182,7 +2192,7 @@ python_library(
     ],
 )
 
-python_integration_test(
+python_unittest(
     name = "decks_test",
     srcs = ["test/decks_test.py"],
     compatible_with = ["ovr_config//os:linux"],
@@ -2192,7 +2202,9 @@ python_integration_test(
         "decks/*.json",
         "test/deck_histories/*.history.jsonl",
     ])
-    + ["ci/release-decks.json"],
+    + [
+        "ci/release-decks.json",
+    ],
     deps = [
         ":containment",
         ":core_checker",
@@ -2209,7 +2221,7 @@ python_integration_test(
 
 # `long_running` (100-minute tpx timeout tier): a hang must reach the RunSpec's own
 # runner deadline and the harness cleanup before tpx stops the test.
-python_integration_test(
+python_unittest(
     name = "decks_live_test",
     srcs = ["test/decks_live_test.py"],
     # Exploratory MVP runs FUSE on Linux.
@@ -2274,7 +2286,13 @@ python_unittest(
     name = "legal_batch_slow_test",
     srcs = ["test/legal_batch_slow_test.py"],
     compatible_with = ["ovr_config//os:linux"],
-    labels = [tpx_labels.long_running] + ci.labels(ci.remove(ci.diff, ci.land)),
+    labels = [tpx_labels.long_running]
+    + ci.labels(
+        ci.remove(
+            ci.diff,
+            ci.land,
+        ),
+    ),
     network_access = network_access_utils.none(),
     deps = [
         ":planted_counts",
