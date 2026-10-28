@@ -87,6 +87,9 @@ class InterruptExitTest(unittest.TestCase):
     def test_an_untraced_ctrl_c_exits_130_at_once(self) -> None:
         self.assert_exits_130("finish", traced=False, low=0.0, high=0.5)
 
+    def test_startup_is_not_part_of_the_interrupt_exit_bound(self) -> None:
+        self.assert_exits_130("slow_setup", traced=False, low=0.0, high=0.5)
+
     def test_a_finisher_that_cannot_start_exits_130(self) -> None:
         self.assert_exits_130("start_failure", traced=True, low=0.0, high=0.5)
 

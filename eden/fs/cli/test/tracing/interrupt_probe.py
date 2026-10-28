@@ -19,6 +19,11 @@ def started() -> None:
         f.write(repr(time.monotonic()))
 
 
+def interrupt(*_: object) -> None:
+    started()
+    raise KeyboardInterrupt
+
+
 def park(*_: object) -> int:
     started()
     time.sleep(60)
@@ -45,6 +50,9 @@ def main() -> None:
     faults = {
         "finish": contextlib.nullcontext(),
         "ctrl_c": contextlib.nullcontext(),
+        "slow_setup": patch.object(
+            edenfsctl.agent_tracing, "trace", side_effect=lambda: time.sleep(1)
+        ),
         "start_failure": patch.object(
             threading.Thread, "start", side_effect=RuntimeError("no thread")
         ),
@@ -64,12 +72,10 @@ def main() -> None:
             patch.object(
                 edenfsctl,
                 "asyncio_run",
-                side_effect=park if parks else KeyboardInterrupt,
+                side_effect=park if parks else interrupt,
             ),
             fault,
         ):
-            if not parks:
-                started()
             edenfsctl.zipapp_main()
     finally:
         os._exit(99)
