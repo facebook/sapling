@@ -12,6 +12,7 @@ use std::time::Instant;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::bail;
 use async_runtime::stream_to_iter;
 use blob::Blob;
 use cas_client::CasDigest;
@@ -20,6 +21,7 @@ use cas_client::CasFetchManager;
 use cas_client::CasFetchOutcome;
 use edenapi::Response;
 use edenapi_types::TreeEntry;
+use format_util::hg_sha1_digest;
 use futures::StreamExt;
 use manifest_augmented_tree::AugmentedTree;
 use manifest_augmented_tree::AugmentedTreeWithDigest;
@@ -58,19 +60,43 @@ const FILE_AUX_BATCH_THRESHOLD: usize = 1000;
 const TREE_AUX_BATCH_THRESHOLD: usize = 1000;
 const TREE_BATCH_THRESHOLD: usize = 100;
 
-fn cas_tree_entry(content: Blob, digest: CasDigest) -> Result<TreeEntry> {
+fn cas_tree_entry(content: Blob, digest: CasDigest, verify_hash: bool) -> Result<TreeEntry> {
     let augmented_tree = match content {
         Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
         #[cfg(fbcode_build)]
         Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
     }
     .context("deserializing CAS augmented tree")?;
-    TreeEntry::try_from(AugmentedTreeWithDigest {
+    let hg_node_id = augmented_tree.hg_node_id;
+    let computed_hg_node_id = augmented_tree.computed_hg_node_id;
+    let p1 = augmented_tree.p1.unwrap_or(NULL_ID);
+    let p2 = augmented_tree.p2.unwrap_or(NULL_ID);
+
+    let entry = TreeEntry::try_from(AugmentedTreeWithDigest {
         augmented_manifest_id: digest.hash,
         augmented_manifest_size: digest.size,
         augmented_tree,
     })
-    .context("converting CAS augmented tree")
+    .context("converting CAS augmented tree")?;
+
+    // The augmented tree carries the real content hash as `computed_hg_node_id`
+    // when it differs from `hg_node_id` (hybrid manifests), so the check does
+    // not depend on the requested path the way `TreeEntry::data_checked` does.
+    if verify_hash {
+        let data = entry
+            .data_unchecked()
+            .ok_or_else(|| anyhow!("CAS augmented tree produced no content"))?;
+        let computed = hg_sha1_digest(&data, &p1, &p2);
+        if computed != hg_node_id && Some(computed) != computed_hg_node_id {
+            bail!(
+                "CAS tree content hashes to {computed}, expected {hg_node_id}{}",
+                computed_hg_node_id
+                    .map(|id| format!(" or {id}"))
+                    .unwrap_or_default()
+            );
+        }
+    }
+    Ok(entry)
 }
 
 pub struct FetchState<'a> {
@@ -335,7 +361,7 @@ impl<'a> FetchState<'a> {
                     }
                 };
 
-                let mut entry = match cas_tree_entry(content, digest) {
+                let mut entry = match cas_tree_entry(content, digest, verify_hash) {
                     Ok(entry) => entry,
                     Err(error) => {
                         healthy = false;
