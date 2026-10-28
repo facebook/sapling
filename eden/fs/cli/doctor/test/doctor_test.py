@@ -1771,6 +1771,95 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_directory_that_is_a_symlink_on_disk(
+        self, mock_debugInodeStatus: MagicMock
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount: Path = checkout.path
+
+        os.makedirs(mount / "p")
+        os.makedirs(mount / "real")
+        os.symlink(mount / "real", mount / "p" / "a")
+
+        mock_debugInodeStatus.return_value = [
+            TreeInodeDebugInfo(
+                inodeNumber=1,
+                path=b"p",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[
+                    TreeInodeEntryDebugInfo(
+                        name=b"a",
+                        inodeNumber=2,
+                        mode=stat.S_IFDIR,
+                        loaded=True,
+                        materialized=True,
+                        hash=b"dcba",
+                    ),
+                ],
+                refcount=1,
+            ),
+            TreeInodeDebugInfo(
+                inodeNumber=2,
+                path=b"p/a",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[],
+                refcount=1,
+            ),
+        ]
+
+        fixer, output = self.create_fixer(dry_run=False)
+        check_materialized_are_accessible(
+            fixer,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
+        )
+
+        self.assertEqual(
+            f"""<yellow>- Found problem:<reset>
+{Path("p/a")} has an unexpected file type: known to EdenFS as a symlink, but is a directory on disk
+Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
+
+""",
+            output.getvalue(),
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_directory_that_is_a_file_on_disk(
+        self, mock_debugInodeStatus: MagicMock
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount: Path = checkout.path
+
+        (mount / "f").touch()
+
+        mock_debugInodeStatus.return_value = [
+            TreeInodeDebugInfo(
+                inodeNumber=1,
+                path=b"f",
+                materialized=True,
+                treeHash=b"abcd",
+                entries=[],
+                refcount=1,
+            ),
+        ]
+
+        tracker = ProblemCollector(instance)
+        with self.assertRaises(NotADirectoryError):
+            check_materialized_are_accessible(
+                tracker,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                lambda p: os.lstat(p).st_mode,
+            )
+        self.assertEqual(tracker.problems, [])
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
     def test_materialized_different_mode_fixer_fail(
         self, mock_debugInodeStatus: MagicMock
     ) -> None:
