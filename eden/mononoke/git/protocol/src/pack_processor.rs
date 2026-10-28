@@ -51,12 +51,52 @@ use scuba_ext::FutureStatsScubaExt;
 use sha1::Digest;
 use sha1::Sha1;
 use tempfile::Builder;
+use weight_observer::WeightGuard;
 use weight_observer::WeightObserver;
 
 use crate::PACKFILE_SUFFIX;
 
 const MAX_ALLOWED_DEPTH: u8 = 30;
 type ObjectMap = HashMap<ObjectId, ObjectContent>;
+
+struct DecodeWeight {
+    observer: Option<Arc<dyn WeightObserver>>,
+    weight: AtomicUsize,
+}
+
+impl DecodeWeight {
+    fn new(observer: Option<Arc<dyn WeightObserver>>) -> Self {
+        Self {
+            observer,
+            weight: AtomicUsize::new(0),
+        }
+    }
+
+    fn add(&self, weight: usize) {
+        if let Some(observer) = &self.observer {
+            self.weight.fetch_add(weight, Ordering::Relaxed);
+            observer.on_weight_added(weight);
+        }
+    }
+
+    fn into_guard(mut self) -> WeightGuard {
+        WeightGuard {
+            observer: self.observer.take(),
+            weight: self.weight.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Drop for DecodeWeight {
+    fn drop(&mut self) {
+        if let Some(observer) = &self.observer {
+            let weight = self.weight.load(Ordering::Relaxed);
+            if weight > 0 {
+                observer.on_weight_removed(weight);
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 enum PackEntry {
@@ -200,21 +240,22 @@ async fn fetch_prereq_objects(
 
 /// Method responsible for parsing the packfile provided as part of push, verifying its correctness
 /// and returning an object map containing all the objects present in packfile mapped to their IDs
-/// Returns the parsed object map and the total tracked weight (bytes) that
-/// has been reported via `weight_observer.on_weight_added`. The caller is
-/// responsible for calling `on_weight_removed` with this value when the
-/// objects are no longer held in memory.
+/// Returns the parsed objects and their memory-accounting guard. Keep the guard
+/// alive for as long as the objects are held in memory.
 pub async fn parse_pack(
     pack_bytes: &[u8],
     ctx: &CoreContext,
     blobstore: Arc<RepoBlobstore>,
     concurrency: usize,
     weight_observer: Option<Arc<dyn WeightObserver>>,
-) -> Result<(FxHashMap<ObjectId, ObjectContent>, usize)> {
+) -> Result<(FxHashMap<ObjectId, ObjectContent>, WeightGuard)> {
     // If the packfile is empty, return an empty object map. This can happen when the push only has ref create/update
     // pointing to existing commit or just ref deletes
     if pack_bytes.is_empty() {
-        return Ok((FxHashMap::default(), 0));
+        return Ok((
+            FxHashMap::default(),
+            DecodeWeight::new(weight_observer).into_guard(),
+        ));
     }
     let mut raw_file = Builder::new()
         .suffix(PACKFILE_SUFFIX)
@@ -237,8 +278,7 @@ pub async fn parse_pack(
 fn process_pack_entries(
     pack_file: &data::File,
     entries: PackEntries,
-    weight_observer: &Option<Arc<dyn WeightObserver>>,
-    cumulative_weight: &AtomicUsize,
+    weight: &DecodeWeight,
 ) -> Result<PackEntries> {
     let (pending_entries, prereq_objects) = entries.into_pending_and_processed();
     let output_entries = pending_entries
@@ -258,10 +298,7 @@ fn process_pack_entries(
                     let object_size = outcome.object_size as usize;
                     // Track weight as objects are decoded — uses the object_size
                     // already computed by decode_entry, zero extra cost.
-                    if let Some(observer) = weight_observer {
-                        observer.on_weight_added(object_size);
-                        cumulative_weight.fetch_add(object_size, Ordering::Relaxed);
-                    }
+                    weight.add(object_size);
                     let object_bytes =
                         Bytes::from(git_object_bytes(output, outcome.kind, object_size));
                     let mut hasher = Sha1::new();
@@ -297,7 +334,7 @@ async fn parse_stored_pack(
     blobstore: Arc<RepoBlobstore>,
     concurrency: usize,
     weight_observer: Option<Arc<dyn WeightObserver>>,
-) -> Result<(FxHashMap<ObjectId, ObjectContent>, usize)> {
+) -> Result<(FxHashMap<ObjectId, ObjectContent>, WeightGuard)> {
     let pack_file = Arc::new(File::at(pack_path, Kind::Sha1).with_context(|| {
         format!(
             "Error while opening packfile for push at {}",
@@ -344,41 +381,18 @@ async fn parse_stored_pack(
         move || {
             let mut pack_entries =
                 PackEntries::from_pending_and_processed(pending_entries, prereq_objects);
-            let cumulative_weight = AtomicUsize::new(0);
-
-            // Helper to remove all tracked weight from the observer on error.
-            let cleanup_weight =
-                |cumulative: &AtomicUsize, observer: &Option<Arc<dyn WeightObserver>>| {
-                    let w = cumulative.load(Ordering::Relaxed);
-                    if let Some(observer) = observer {
-                        observer.on_weight_removed(w);
-                    }
-                };
-
+            let weight = DecodeWeight::new(weight_observer);
             let mut counter = 0;
             while !pack_entries.is_processed() {
                 if counter > MAX_ALLOWED_DEPTH {
-                    cleanup_weight(&cumulative_weight, &weight_observer);
                     anyhow::bail!(
                         "Maximum allowed depth reached while processing packfile entries"
                     );
                 }
                 counter += 1;
-                match process_pack_entries(
-                    &pack_file,
-                    pack_entries,
-                    &weight_observer,
-                    &cumulative_weight,
-                ) {
-                    Ok(entries) => pack_entries = entries,
-                    Err(e) => {
-                        cleanup_weight(&cumulative_weight, &weight_observer);
-                        return Err(e);
-                    }
-                }
+                pack_entries = process_pack_entries(&pack_file, pack_entries, &weight)?;
             }
-            let tracked_weight = cumulative_weight.load(Ordering::Relaxed);
-            Ok((pack_entries.into_processed()?, tracked_weight))
+            Ok((pack_entries.into_processed()?, weight.into_guard()))
         }
     })
     .try_timed()
@@ -389,3 +403,6 @@ async fn parse_stored_pack(
         "Push".to_string(),
     )
 }
+
+#[cfg(test)]
+mod tests;
