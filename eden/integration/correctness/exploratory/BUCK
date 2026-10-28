@@ -1824,6 +1824,33 @@ python_library(
     ],
 )
 
+# Files findings as subtasks of the findings parent task; every task read and
+# write is one `meta` CLI subprocess behind `filing.Tasks`.
+python_library(
+    name = "filing",
+    srcs = ["filing.py"],
+    deps = [
+        ":core_checker",
+        ":target",
+        ":tasking",
+    ],
+)
+
+python_unittest(
+    name = "filing_test",
+    srcs = ["test/filing_test.py"],
+    compatible_with = ["ovr_config//os:linux"],
+    network_access = network_access_utils.none(),
+    deps = [
+        ":cli_fixtures",
+        ":containment",
+        ":core_checker",
+        ":fake_target",
+        ":filing",
+        ":tasking",
+    ],
+)
+
 # The one place the CLI names its targets.
 python_library(
     name = "targets",
@@ -1847,6 +1874,7 @@ python_library(
         ":campaign",
         ":core_checker",
         ":core_containment",
+        ":filing",
         ":generate",
         ":sites",
         ":target",

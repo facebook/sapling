@@ -1070,16 +1070,24 @@ def _verdict_keys(run_dir: Path, target: Target) -> tuple[str, list[str]]:
     return verdict.kind, [o.task_key for o in keyed(verdict, target).occurrences]
 
 
+@dataclass(frozen=True)
+class Replayed:
+    """One replay: the printed comparison and each run's task keys."""
+
+    lines: tuple[str, ...]
+    original: frozenset[str]
+    replayed: frozenset[str]
+
+
 def replay(
     run_dir: Path,
     artifacts: Path,
     target: Target,
     run: Callable[[RunSpec, Path], None],
-) -> list[str]:
+) -> Replayed:
     """Re-run `run_dir`'s exact RunSpec into `artifacts` once and compare task keys.
 
-    A person reads the comparison: nothing votes, and nothing is written
-    outside `artifacts`.
+    Nothing votes, and nothing is written outside `artifacts`.
     """
     spec = from_json((run_dir / "run-spec.json").read_text(encoding="utf-8"), target)
     run(spec, artifacts)
@@ -1095,7 +1103,7 @@ def replay(
             else "replay only"
         )
         lines.append(f"KEY {key}: {where}")
-    return lines
+    return Replayed(tuple(lines), frozenset(before), frozenset(after))
 
 
 def _obligations_of(run: RunRecord, subjects: Sequence[str]) -> list[dict[str, Any]]:
@@ -1215,9 +1223,10 @@ def write_findings(
     """Report a campaign's findings under `out_dir` and return the printed lines.
 
     Writes `findings.json` (every product-actionable error set with, per run,
-    its RunSpec, replay command, verdict, and violated obligations; routed
-    harness and reference subjects; execution findings; red-control
-    outcomes) and one `finding-NN.md` per key. Nothing outside `out_dir`
+    its RunSpec, replay command, verdict, daemon, and violated obligations;
+    routed harness and reference subjects; execution findings; red-control
+    outcomes; the printed `checks` lines, which `filing` gates on) and one
+    `finding-NN.md` per key. Nothing outside `out_dir`
     changes and no store is contacted.
     """
     report, rows = load_campaign(report_path, artifact_dir)
@@ -1238,6 +1247,7 @@ def write_findings(
             for name, rules in target_control_rules(target).items()
             if name not in supplied
         ]
+    checks = check_lines(report, runs, controls)
     keys = _collect(runs)
     documents = {key: evidence.document for key, evidence in keys.items()}
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1259,6 +1269,7 @@ def write_findings(
         "identity_digest": current_identity(target),
         "semantic_digest": semantic_digest(target),
         "controls": {c.control: dict(c.per_rule) for c in controls or ()},
+        "checks": checks,
         "findings": entries,
         "routed": [
             {
@@ -1294,7 +1305,7 @@ def write_findings(
     }
     write_document(out_dir / FINDINGS_NAME, document)
     return [
-        *check_lines(report, runs, controls),
+        *checks,
         *(
             f"FINDING {' + '.join(e['rules'])} [{e['task_key']}]"
             f" seeds {[r['seed'] for r in e['runs']]}: {e['runs'][0]['replay']}"
@@ -1322,6 +1333,7 @@ FINDINGS_KEYS = (
     "identity_digest",
     "semantic_digest",
     "controls",
+    "checks",
     "findings",
     "routed",
     "execution",

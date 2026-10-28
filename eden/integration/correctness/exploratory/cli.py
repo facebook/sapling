@@ -6,7 +6,8 @@
 """Command line for exploratory runs.
 
 Verbs: validate, check, generate, run, explore, campaign, red-controls,
-findings, replay, release-summary, and emit; `<verb> --help` describes each.
+findings, replay, file, release-summary, and emit; `<verb> --help` describes
+each.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
-from eden.integration.correctness.exploratory import advisory, findings
+from eden.integration.correctness.exploratory import advisory, filing, findings
 from eden.integration.correctness.exploratory.core import containment, jsonio
 from eden.integration.correctness.exploratory.core.campaign import (
     admitted_strata,
@@ -516,8 +517,8 @@ def _cmd_findings(
     return int(any(line.startswith("FAIL ") for line in lines))
 
 
-def _cmd_replay(target_name: str, run: str, artifacts: str) -> int:
-    """Re-run one run directory's exact RunSpec once and print both runs' task keys."""
+def _replay(target_name: str, run: Path, artifacts: Path) -> findings.Replayed:
+    """Re-run one run directory's exact RunSpec into `artifacts` and compare its task keys."""
     target = _registry()[target_name]
     provenance, _degradation = _campaign_provenance(target_name)
 
@@ -525,13 +526,44 @@ def _cmd_replay(target_name: str, run: str, artifacts: str) -> int:
         containment.run_exploration(spec, str(directory), target=target)
         _write_admission(directory, RunPurpose.REPLAY, None, provenance, None)
 
+    return findings.replay(run, artifacts, target, runner)
+
+
+def _cmd_replay(target_name: str, run: str, artifacts: str) -> int:
+    """Re-run one run directory's exact RunSpec once and print both runs' task keys."""
     try:
-        lines = findings.replay(Path(run), Path(artifacts), target, runner)
+        replayed = _replay(target_name, Path(run), Path(artifacts))
     except (OSError, SpecError, ValueError) as error:
         print(f"replay: refused: {error}", file=sys.stderr)
         return 2
+    print("\n".join(replayed.lines))
+    return int(bool(replayed.original - replayed.replayed))
+
+
+def _cmd_file(args: argparse.Namespace) -> int:
+    """Gate and classify a campaign's findings against the parent's subtasks; file unless a dry run."""
+    options = filing.Options(
+        parent=args.parent,
+        owner=args.owner,
+        tag=args.tag,
+        artifacts_url=args.artifacts_url,
+        daemon_package=args.daemon_package,
+        dry_run=not args.file,
+        skip_replay=args.skip_replay,
+    )
+    try:
+        code, lines = filing.file_findings(
+            Path(args.findings),
+            _registry()[args.target],
+            filing.MetaTasks(args.act_as_crewmate),
+            options,
+            lambda run, artifacts: _replay(args.target, run, artifacts),
+        )
+    except (OSError, SpecError, ValueError, filing.TasksError) as error:
+        print(f"file: refused: {error}", file=sys.stderr)
+        return 2
     print("\n".join(lines))
-    return int(any(line.endswith(": original only") for line in lines))
+    return code
 
 
 def _cmd_emit(report_path: str, findings_path: str | None) -> int:
@@ -694,6 +726,38 @@ def _main(argv: list[str]) -> int:
     replayer.add_argument("--target", required=True, choices=_registry())
     replayer.add_argument("--run", required=True, help="run directory to replay")
     replayer.add_argument("--artifacts", required=True, help="new artifact dir")
+    filer = verbs.add_parser(
+        "file",
+        help="file a campaign's findings as subtasks of the findings parent task",
+        description="Dry run unless --file: reads the parent's subtasks and writes"
+        " FINDINGS/filing.json. --file replays each new or regressed key once and"
+        " creates its subtask only when the replay reproduces the key.",
+    )
+    filer.add_argument("--target", required=True, choices=_registry())
+    filer.add_argument(
+        "--findings", required=True, help="findings dir that `findings` wrote"
+    )
+    filer.add_argument("--parent", default=filing.FINDINGS_PARENT)
+    filer.add_argument("--owner", required=True, help="owner of created subtasks")
+    filer.add_argument("--tag", default=filing.DEFAULT_TAG)
+    filer.add_argument(
+        "--artifacts-url", default=None, help="where the campaign's artifacts live"
+    )
+    filer.add_argument(
+        "--daemon-package", default=None, help="the daemon's package, e.g. NAME:UUID"
+    )
+    mode = filer.add_mutually_exclusive_group()
+    mode.add_argument("--dry-run", action="store_true", help="the default")
+    mode.add_argument("--file", action="store_true", help="create and comment")
+    filer.add_argument(
+        "--skip-replay", action="store_true", help="file new keys without a replay"
+    )
+    filer.add_argument(
+        "--act-as-crewmate",
+        default=None,
+        metavar="FBID",
+        help="run every task read and write as this crewmate (`meta --act-as-crewmate`)",
+    )
     summary = verbs.add_parser("release-summary", help="lanes from deck verdicts")
     summary.add_argument("--target", required=True, choices=_registry())
     summary.add_argument("--artifacts", required=True, help="advisory artifact dir")
@@ -715,6 +779,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return _cmd_emit(args.report, args.findings)
     if args.verb == "replay":
         return _cmd_replay(args.target, args.run, args.artifacts)
+    if args.verb == "file":
+        return _cmd_file(args)
     if args.verb == "release-summary":
         target = _registry()[args.target]
         summary = advisory.release_summary(
