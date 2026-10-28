@@ -1,7 +1,10 @@
 ---
-oncalls: ['source_control']
-apply_to_regex: 'eden/mononoke/servers/scs/.*\.rs$'
-apply_to_content: 'use |facet|restricted_paths|commit_graph|blobstore|repo_derived_data|repo_blobstore|repo_identity|phases|bookmarks|pushrebase'
+name: scs-api-layering
+metadata:
+  oncalls: ['source_control']
+  strict: true
+  apply_to_path: 'eden/mononoke/servers/scs/.*\.rs$'
+  apply_to_content: 'use |facet|restricted_paths|commit_graph|blobstore|repo_derived_data|repo_blobstore|repo_identity|phases|bookmarks|pushrebase'
 ---
 
 # SCS Must Use mononoke_api, Not Facets Directly
