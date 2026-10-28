@@ -14,8 +14,8 @@
 #include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/portability/GTestProd.h>
 #include <folly/synchronization/CallOnce.h>
-#include <gtest/gtest_prod.h>
 #include <stdlib.h>
 #include <array>
 #include <atomic>
@@ -806,11 +806,15 @@ class FuseChannel final : public FsChannel {
   };
 
   friend struct fmt::formatter<facebook::eden::FuseChannel::InvalidationEntry>;
-  FRIEND_TEST(FuseChannelTest, formatting_inode);
-  FRIEND_TEST(FuseChannelTest, formatting_dir);
-  FRIEND_TEST(FuseChannelTest, formatting_unknown);
-  FRIEND_TEST(FuseChannelTest, zeroInvalidationThreadsUsesOneWorker);
-  FRIEND_TEST(FuseChannelTest, excessiveInvalidationThreadsAreCapped);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, formatting_inode);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, formatting_dir);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, formatting_unknown);
+  FOLLY_GTEST_FRIEND_TEST(
+      FuseChannelTest,
+      zeroInvalidationThreadsUsesOneWorker);
+  FOLLY_GTEST_FRIEND_TEST(
+      FuseChannelTest,
+      excessiveInvalidationThreadsAreCapped);
   /**
    * Private destructor.
    *

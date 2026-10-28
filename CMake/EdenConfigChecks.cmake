@@ -41,10 +41,12 @@ include_directories(${WANGLE_INCLUDE_DIR})
 find_package(FBThrift CONFIG REQUIRED COMPONENTS cpp2 py)
 include_directories(${FBTHRIFT_INCLUDE_DIR})
 
-find_package(GMock MODULE REQUIRED)
-include_directories(${GMOCK_INCLUDEDIR} ${LIBGMOCK_INCLUDE_DIR})
-include(GoogleTest)
-enable_testing()
+if (BUILD_TESTS)
+  find_package(GMock MODULE REQUIRED)
+  include_directories(${GMOCK_INCLUDEDIR} ${LIBGMOCK_INCLUDE_DIR})
+  include(GoogleTest)
+  enable_testing()
+endif()
 
 find_package(OpenSSL MODULE REQUIRED)
 
@@ -74,8 +76,6 @@ find_package(gflags CONFIG REQUIRED)
 
 find_package(BLAKE3 REQUIRED CONFIG)
 include_directories(${BLAKE3_INCLUDE_DIR})
-
-find_package(python-psutil REQUIRED)
 
 # The Python CLI uses thrift-python, which getdeps only builds on Linux, and
 # the thrift-python modules that fb303 builds with FB303_THRIFT_PYTHON.
@@ -112,6 +112,10 @@ if (eden_no_python_cli)
   message(STATUS ${eden_no_python_cli})
 else()
   set(EDEN_HAVE_THRIFT_PYTHON ON)
+endif()
+
+if (BUILD_TESTS)
+  find_package(python-psutil REQUIRED)
 endif()
 
 # pexpect is used by some of the integration tests.

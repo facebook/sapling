@@ -91,9 +91,9 @@ cpp_library(
         "//eden/fs/utils:filter_utils",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_prod_headers",
         "fbsource//xplat/folly/coro:task",
         "fbsource//xplat/folly/coro/safe:now_task",
+        "fbsource//xplat/folly/portability:gtest_prod",
         ":backing_store_interface",
         "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
@@ -128,7 +128,6 @@ cpp_library(
         "//eden/fs/utils:eden_error",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_prod_headers",
         "fbsource//xplat/folly:cancellation_token",
         "fbsource//xplat/folly:executor",
         "fbsource//xplat/folly:intrusive_list",
@@ -143,6 +142,7 @@ cpp_library(
         "fbsource//xplat/folly/futures:core",
         "fbsource//xplat/folly/futures:shared_promise",
         "fbsource//xplat/folly/logging:logging",
+        "fbsource//xplat/folly/portability:gtest_prod",
         "fbsource//xplat/folly/synchronization:distributed_mutex",
         ":backing_store_interface",
         ":context",

@@ -66,12 +66,12 @@ eden_add_library(eden_fs_store_sl_sapling_backing_store
     fmt::fmt
     sigbus_memops
   EXPORTED_DEPS
-    ${LIBGMOCK_LIBRARIES}
     Folly::folly_coro_safe_now_task
     Folly::folly_coro_task
     Folly::folly_exception_wrapper
     Folly::folly_expected
     Folly::folly_function
+    Folly::folly_portability_gtest_prod
     Folly::folly_range
     Folly::folly_synchronized
     backingstore

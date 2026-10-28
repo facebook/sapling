@@ -28,7 +28,7 @@
 #include <folly/Synchronized.h>
 #include <folly/synchronization/CallOnce.h>
 
-#include <gtest/gtest_prod.h>
+#include <folly/portability/GTestProd.h>
 
 #include "eden/fs/fuse/DevFuseTransport.h"
 #include "eden/fs/fuse/FuseFeatures.h"
@@ -98,12 +98,16 @@ class IoUringFuseTransport final : public FuseTransport {
 
  private:
 #if EDEN_HAVE_FUSE_IO_URING
-  FRIEND_TEST(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy);
-  FRIEND_TEST(FuseChannelTest, ioUringCqeErrorPolicy);
-  FRIEND_TEST(FuseChannelTest, ioUringDisableIoWaitAppliesNoIoWait);
-  FRIEND_TEST(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait);
-  FRIEND_TEST(FuseChannelTest, ioUringStopWakeupBeforeEventFdPublished);
-  FRIEND_TEST(FuseChannelTest, ioUringRequestStopWakeupBeforeRingPoolPublished);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, ioUringSubmitAndWaitErrorPolicy);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, ioUringCqeErrorPolicy);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, ioUringDisableIoWaitAppliesNoIoWait);
+  FOLLY_GTEST_FRIEND_TEST(FuseChannelTest, ioUringDefaultDoesNotDisableIoWait);
+  FOLLY_GTEST_FRIEND_TEST(
+      FuseChannelTest,
+      ioUringStopWakeupBeforeEventFdPublished);
+  FOLLY_GTEST_FRIEND_TEST(
+      FuseChannelTest,
+      ioUringRequestStopWakeupBeforeRingPoolPublished);
 
   struct RingPool;
 

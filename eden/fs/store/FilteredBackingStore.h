@@ -9,7 +9,7 @@
 
 #include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
-#include <gtest/gtest_prod.h>
+#include <folly/portability/GTestProd.h>
 
 #include "eden/common/utils/PathMap.h"
 #include "eden/common/utils/RefPtr.h"
@@ -139,27 +139,37 @@ class FilteredBackingStore
   // filterId
   std::unique_ptr<Filter> filter_;
 
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       FakeSubstringFilteredBackingStoreTest,
       testCompareBlobObjectsById);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       FakeSubstringFilteredBackingStoreTest,
       testCompareTreeObjectsById);
-  FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFI);
-  FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFINullFilter);
-  FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(SaplingFilteredBackingStoreTest, testMercurialFFI);
+  FOLLY_GTEST_FRIEND_TEST(
+      SaplingFilteredBackingStoreTest,
+      testMercurialFFINullFilter);
+  FOLLY_GTEST_FRIEND_TEST(
+      SaplingFilteredBackingStoreTest,
+      testMercurialFFIInvalidFOID);
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingFilteredBackingStoreTest,
       walkDetectorAcceptsRawAndFilteredIds);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getNonExistent);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getBlob);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, co_getBlobAuxData);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getTree);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getRootTree);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
+      FakeSubstringFilteredBackingStoreTest,
+      getNonExistent);
+  FOLLY_GTEST_FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getBlob);
+  FOLLY_GTEST_FRIEND_TEST(
+      FakeSubstringFilteredBackingStoreTest,
+      co_getBlobAuxData);
+  FOLLY_GTEST_FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getTree);
+  FOLLY_GTEST_FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, getRootTree);
+  FOLLY_GTEST_FRIEND_TEST(
       FakeSubstringFilteredBackingStoreTest,
       restrictedTreePreservedAfterFiltering);
-  FRIEND_TEST(FakeSubstringFilteredBackingStoreTest, treeEntryHasAclPreserved);
+  FOLLY_GTEST_FRIEND_TEST(
+      FakeSubstringFilteredBackingStoreTest,
+      treeEntryHasAclPreserved);
 
   folly::coro::now_task<GetRootTreeResult> co_getRootTree(
       const RootId& rootId,

@@ -28,6 +28,7 @@ eden_add_library(eden_fs_inodes_fscatalog_fsinodecatalog
   EXPORTED_DEPS
     Folly::folly_container_evicting_cache_map
     Folly::folly_file
+    Folly::folly_portability_gtest_prod
     Folly::folly_range
     Folly::folly_synchronized
     eden_fs_inodes_file_content_store

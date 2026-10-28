@@ -34,9 +34,6 @@ cpp_library(
     }),
     exported_deps = [
         "fbsource//third-party/fmt:fmt",
-        "fbsource//third-party/googletest:gtest",
-        "fbsource//third-party/googletest:gtest_headers",
-        "fbsource//third-party/googletest:gtest_prod_headers",
         "fbsource//xplat/folly:cancellation_token",
         "fbsource//xplat/folly:file",
         "fbsource//xplat/folly:function",
@@ -46,6 +43,7 @@ cpp_library(
         "fbsource//xplat/folly:synchronized",
         "fbsource//xplat/folly/container:f14_hash",
         "fbsource//xplat/folly/futures:core",
+        "fbsource//xplat/folly/portability:gtest_prod",
         "fbsource//xplat/folly/synchronization:call_once",
         "//eden/common/os:os",
         "//eden/common/telemetry:telemetry",

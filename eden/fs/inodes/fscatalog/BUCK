@@ -34,11 +34,11 @@ cpp_library(
         "//thrift/lib/cpp2/protocol:protocol",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest_prod_headers",
         "fbsource//xplat/folly:file",
         "fbsource//xplat/folly:range",
         "fbsource//xplat/folly:synchronized",
         "fbsource//xplat/folly/container:evicting_cache_map",
+        "fbsource//xplat/folly/portability:gtest_prod",
         "//eden/common/utils:path",
         "//eden/fs/inodes:file_content_store",
         "//eden/fs/inodes:inode_catalog",

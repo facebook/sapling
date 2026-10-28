@@ -11,7 +11,7 @@
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
-#include <gtest/gtest_prod.h>
+#include <folly/portability/GTestProd.h>
 #include <algorithm>
 #include <array>
 #include <map>
@@ -308,7 +308,7 @@ class FsFileContentStore : public FileContentStore {
   static constexpr size_t kMaxDecimalInodeNumberLength = 20;
 
  private:
-  FRIEND_TEST(OverlayFilePathTest, getFilePath);
+  FOLLY_GTEST_FRIEND_TEST(OverlayFilePathTest, getFilePath);
   friend class RawOverlayTest;
   friend class FsInodeCatalog;
 

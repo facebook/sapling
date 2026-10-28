@@ -82,9 +82,6 @@ cpp_library(
         "//eden/fs/utils:static_assert",
     ],
     exported_deps = [
-        "fbsource//third-party/googletest:gtest",
-        "fbsource//third-party/googletest:gtest_headers",
-        "fbsource//third-party/googletest:gtest_prod_headers",
         "fbsource//xplat/folly:exception_wrapper",
         "fbsource//xplat/folly:expected",
         "fbsource//xplat/folly:function",
@@ -92,6 +89,7 @@ cpp_library(
         "fbsource//xplat/folly:synchronized",
         "fbsource//xplat/folly/coro:task",
         "fbsource//xplat/folly/coro/safe:now_task",
+        "fbsource//xplat/folly/portability:gtest_prod",
         ":sapling_backing_store_options",
         ":sapling_import_request_queue",
         "//eden/common/telemetry:telemetry",

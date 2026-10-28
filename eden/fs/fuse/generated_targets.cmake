@@ -33,13 +33,13 @@ eden_add_library(eden_fs_fuse
     eden_fs_utils_static_assert
     eden_fs_utils_thread
   EXPORTED_DEPS
-    ${LIBGMOCK_LIBRARIES}
     Folly::folly_cancellation_token
     Folly::folly_container_f14_hash
     Folly::folly_file
     Folly::folly_function
     Folly::folly_futures_core
     Folly::folly_portability
+    Folly::folly_portability_gtest_prod
     Folly::folly_range
     Folly::folly_shared_mutex
     Folly::folly_synchronization_call_once

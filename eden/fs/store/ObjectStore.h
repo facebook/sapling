@@ -16,7 +16,7 @@
 #include <unordered_map>
 
 #include <folly/logging/xlog.h>
-#include <gtest/gtest_prod.h>
+#include <folly/portability/GTestProd.h>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/RefPtr.h"
@@ -460,12 +460,14 @@ class ObjectStore : public IObjectStore,
   }
 
  private:
-  FRIEND_TEST(ObjectStoreTest, caching_policies_anything);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_no_caching);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_blob);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_trees);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_blob_aux_data);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_trees_and_blob_aux_data);
+  FOLLY_GTEST_FRIEND_TEST(ObjectStoreTest, caching_policies_anything);
+  FOLLY_GTEST_FRIEND_TEST(ObjectStoreTest, caching_policies_no_caching);
+  FOLLY_GTEST_FRIEND_TEST(ObjectStoreTest, caching_policies_blob);
+  FOLLY_GTEST_FRIEND_TEST(ObjectStoreTest, caching_policies_trees);
+  FOLLY_GTEST_FRIEND_TEST(ObjectStoreTest, caching_policies_blob_aux_data);
+  FOLLY_GTEST_FRIEND_TEST(
+      ObjectStoreTest,
+      caching_policies_trees_and_blob_aux_data);
   // Forbidden constructor. Use create().
   ObjectStore(
       std::shared_ptr<BackingStore> backingStore,

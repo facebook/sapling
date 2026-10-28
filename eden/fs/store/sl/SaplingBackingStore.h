@@ -14,7 +14,7 @@
 #include <folly/Synchronized.h>
 #include <folly/coro/Task.h>
 #include <folly/coro/safe/NowTask.h>
-#include <gtest/gtest_prod.h>
+#include <folly/portability/GTestProd.h>
 #include <sys/types.h>
 #include <atomic>
 #include <memory>
@@ -343,45 +343,47 @@ class SaplingBackingStore final
   folly::Expected<sapling::HgCacheStats, std::string> getCacheStats() const;
 
  private:
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       cachingPolicyConstruction);
-  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getTree);
-  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
-  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
-  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getTree);
+  FOLLY_GTEST_FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
+  FOLLY_GTEST_FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
+  FOLLY_GTEST_FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       dropAllPendingRequestsWithAuxRequestsQueued);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       dropAllPendingRequestsThenRefetchAuxData);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       sameRequestsDifferentFetchCause);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       prefetchBlobsWithDuplicates);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       prefetchBlobsWithDuplicatesResolvesAllCallbacks);
-  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
+      SaplingBackingStoreWithFaultInjectorTest,
+      getTreeBatch);
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,
       getTreeBatch);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       getTreeBatchConvertsPermissionDeniedToRestrictedTree);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
       getTreeEnqueueFutureChainCanBePausedAndResumed);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
       coGetTreeEnqueueCoroutineKeepsObjectAlive);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
       blobFetchCheckpointsAreReachable);
-  FRIEND_TEST(
+  FOLLY_GTEST_FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorTest,
       coGetRootTreeFaultInjection);
   friend class EdenServiceHandler;

@@ -61,6 +61,7 @@ eden_add_library(eden_fs_store_filtered_backing_store
   EXPORTED_DEPS
     Folly::folly_coro_safe_now_task
     Folly::folly_coro_task
+    Folly::folly_portability_gtest_prod
     eden_fs_store_backing_store_interface
     eden_fs_store_filter_filtered_object_id
     eden_fs_store_filter_filters
@@ -105,6 +106,7 @@ eden_add_library(eden_fs_store
     Folly::folly_intrusive_list
     Folly::folly_logging_logging
     Folly::folly_map_util
+    Folly::folly_portability_gtest_prod
     Folly::folly_range
     Folly::folly_small_vector
     Folly::folly_synchronization_distributed_mutex

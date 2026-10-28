@@ -9,7 +9,6 @@
 
 #include <folly/File.h>
 #include <folly/Range.h>
-#include <gtest/gtest_prod.h>
 #include <optional>
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
