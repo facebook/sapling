@@ -80,7 +80,8 @@
   padding-block: 5px;
   font-style: italic;
   margin: 0;
-  display: flex;
+  display: block;
+  overflow-wrap: anywhere;
 }
 .rendered-markup blockquote > p {
   margin: 0;
