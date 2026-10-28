@@ -115,6 +115,9 @@ if sys.platform == "win32":
         "hg.debug_get_parents.DebugGetParentsTest": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTest": True,
         "hg.diff_test.DiffTest": True,
+        # The fake watchman is a shell script and `eden doctor` stops at the
+        # elevated-process check on the Windows runners.
+        "hg.doctor_test.DoctorTest": ["test_doctor_watchman_error_reply"],
         "hg.grep_test.GrepTest": [
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",

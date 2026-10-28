@@ -773,6 +773,24 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    def test_watchman_error_response(self, mock_watchman: MagicMock) -> None:
+        edenfs_path = "/path/to/eden-mount"
+        mock_watchman.side_effect = [{"error": "watch-project timed out"}]
+        fixer, out = self.create_fixer(dry_run=True)
+        watchman_info = check_watchman.WatchmanCheckInfo({edenfs_path})
+        check_watchman.check_active_mount(fixer, edenfs_path, watchman_info)
+        mock_watchman.assert_has_calls([call(["watch-project", edenfs_path])])
+        self.assertIn(
+            "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
+            '"None" instead of "eden"',
+            out.getvalue(),
+        )
+        self.assertIn(
+            "Would fix watchman watch for /path/to/eden-mount", out.getvalue()
+        )
+        self.assert_results(fixer, num_problems=1)
+
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.
     def test_dry_run_identifies_inotify_watcher_issue(self, mock_watchman) -> None:
         fixer, out = self._test_watchman_watcher_check(
