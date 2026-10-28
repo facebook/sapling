@@ -382,6 +382,61 @@ class NotifyTest(testcase.EdenRepoTest):
                 msg=f"changes: {changes}",
             )
 
+    async def test_debug_subscribe_with_state_asserted_before_start(self) -> None:
+        # Assert the state first, then start the subscription with it deferred.
+        self.mkdir(".edenfs-notifications-state")
+        self.mkdir(".edenfs-notifications-state/hello")
+        state_process = await self.enter_state("hello")
+        await self.wait_for_state("hello")
+
+        subscription = await self.subscribe_with_states(["hello"])
+        event = await self.wait_for_next_event(subscription)
+        self.assertIsNotNone(event)
+        self.assertListEqual(event["changes"], [])
+
+        added_hello2 = {
+            "SmallChange": {
+                "Added": {
+                    "file_type": "Regular",
+                    "path": [104, 101, 108, 108, 111, 50],
+                }
+            }
+        }
+        self.write_file("hello2", "test")
+        time.sleep(1)
+
+        # Collect everything delivered while the state is still asserted.
+        changes_before_left = []
+        event = await self.wait_for_next_event(subscription, attempt=1)
+        while event is not None:
+            self.assertNotIn("event_type", event, msg=f"event: {event}")
+            changes_before_left.extend(event["changes"])
+            event = await self.wait_for_next_event(subscription, attempt=1)
+
+        # Exit the state; the stream reports it.
+        state_process.terminate()
+        event = await self.wait_for_next_event(subscription)
+        self.assertIsNotNone(event)
+        self.assertEqual(event["event_type"], "Left", msg=f"event: {event}")
+        self.assertEqual(event["state"], "hello", msg=f"event: {event}")
+
+        changes_after_left = []
+        event = await self.wait_for_next_event(subscription, attempt=1)
+        while event is not None:
+            if "changes" in event:
+                changes_after_left.extend(event["changes"])
+            event = await self.wait_for_next_event(subscription, attempt=1)
+
+        # The state was asserted before the stream started, so the change made
+        # while it was asserted is delivered at once instead of being deferred
+        # until the state is left.
+        self.assertIn(
+            added_hello2, changes_before_left, msg=f"changes: {changes_before_left}"
+        )
+        self.assertNotIn(
+            added_hello2, changes_after_left, msg=f"changes: {changes_after_left}"
+        )
+
     async def test_debug_subscribe_with_multiple_states(self) -> None:
         subscription = await self.subscribe_with_states(["hello", "goodbye"])
         event = await self.wait_for_next_event(subscription)

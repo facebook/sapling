@@ -821,6 +821,76 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_deferral_when_a_state_is_asserted_before_the_stream_starts() -> anyhow::Result<()>
+    {
+        let bytify = |str: &str| str.as_bytes().to_vec();
+        let mount_point = std::env::temp_dir().join("test_mount_deferral_seed");
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
+        let state = "hg.update".to_string();
+        let _guard = client.enter_state(&state)?;
+        let states = vec![state.clone()];
+        let known_asserted_states = HashSet::from([state.clone()]);
+
+        let position = JournalPosition {
+            mount_generation: 0,
+            sequence_number: 1,
+            snapshot_hash: vec![],
+        };
+        let file_added = |name: &str| ChangesSinceV2Result {
+            to_position: position.clone(),
+            changes: vec![ChangeNotification::SmallChange(
+                SmallChangeNotification::Added(Added {
+                    file_type: Dtype::Regular,
+                    path: bytify(name),
+                }),
+            )],
+        };
+        let state_left = ChangesSinceV2Result {
+            to_position: position.clone(),
+            changes: vec![ChangeNotification::StateChange(
+                StateChangeNotification::StateLeft(StateLeft {
+                    name: "hg_update".into(),
+                }),
+            )],
+        };
+        let inner = stream::iter(vec![
+            Ok(file_added("file1.txt")),
+            Ok(state_left),
+            Ok(file_added("file2.txt")),
+        ])
+        .boxed();
+
+        let output: Vec<Changes> = client
+            .stream_changes_since_with_deferral(inner, &states, Some(&known_asserted_states))
+            .await?
+            .map(|result| result.unwrap())
+            .collect()
+            .await;
+        let rendered: Vec<String> = output
+            .iter()
+            .map(|changes| match changes {
+                Changes::ChangeEvent(event) => match event.event_type {
+                    StateChange::Entered => format!("entered {}", event.state),
+                    StateChange::Left => format!("left {}", event.state),
+                },
+                Changes::ChangesSince(changes_since) => changes_since
+                    .changes
+                    .iter()
+                    .map(|change| match change {
+                        ChangeNotification::SmallChange(SmallChangeNotification::Added(added)) => {
+                            String::from_utf8_lossy(&added.path).into_owned()
+                        }
+                        other => format!("{other:?}"),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(","),
+            })
+            .collect();
+        assert_eq!(rendered, vec!["file1.txt", "left hg.update", "file2.txt"]);
+        Ok(())
+    }
+
     #[test]
     fn test_insert_change_events() -> anyhow::Result<()> {
         let bytify = |str: &str| str.as_bytes().to_vec();
