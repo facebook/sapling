@@ -11,6 +11,7 @@ use std::io::BufRead;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clidispatch::ReqCtx;
 use clidispatch::abort;
 use cmdutil::Result;
@@ -103,6 +104,9 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, worktrees: &Worktrees
         let result = worktrees
             .validate_removal(&main, target)
             .and_then(|()| {
+                if !ctx.opts.force {
+                    ensure_clean(ctx, &checkouts, target)?;
+                }
                 pre_hooks.run_hooks(
                     Some(repo),
                     false,
@@ -149,8 +153,28 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, worktrees: &Worktrees
     Ok(0)
 }
 
+/// Refuse to remove a checkout with modified or untracked files.
+fn ensure_clean(ctx: &ReqCtx<WorktreeOpts>, checkouts: &Checkouts, target: &Path) -> Result<()> {
+    if !target.exists() {
+        return Ok(());
+    }
+    let has_changes = checkouts.has_changes(ctx, target).with_context(|| {
+        format!(
+            "cannot check {} for modified or untracked files, use --force to remove it anyway",
+            target.display()
+        )
+    })?;
+    if has_changes {
+        anyhow::bail!(
+            "{} contains modified or untracked files, use --force to remove it",
+            target.display()
+        );
+    }
+    Ok(())
+}
+
 fn confirm_remove(ctx: &ReqCtx<WorktreeOpts>, paths: &[&Path]) -> Result<()> {
-    if ctx.global_opts().noninteractive {
+    if ctx.global_opts().noninteractive || ctx.opts.force {
         return Ok(());
     }
 

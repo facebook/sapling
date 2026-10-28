@@ -40,6 +40,9 @@ define_flags! {
         /// remove all linked worktrees (for 'remove')
         all: bool,
 
+        /// remove worktrees even if they have modified or untracked files, without prompting (for 'remove')
+        force: bool,
+
         /// remove the label instead of setting it (for 'label')
         remove: bool,
 
@@ -102,7 +105,7 @@ pub fn doc() -> &'static str {
 
       list [-Tjson]                                     List all worktrees in the group
       add [PATH] [-r REV] [--label TEXT] [--snapshot]   Create a new linked worktree
-      remove PATH [PATH...] [--all] [-y]                Remove linked worktree(s)
+      remove PATH [PATH...] [--all] [--force] [-y]      Remove linked worktree(s)
       label [PATH] TEXT [--remove]                      Set or remove a worktree label
 
     If PATH is omitted from `add`, `worktree.path-generator` is used to

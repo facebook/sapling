@@ -12,11 +12,14 @@ mod git;
 
 use std::path::Path;
 
+use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
 use cmdutil::Result;
 use repo::repo::Repo;
 use types::HgId;
 use worktree::Worktrees;
+
+use crate::WorktreeOpts;
 
 /// Creates and removes checkouts with EdenFS or Git, whichever backs the repo.
 pub(crate) enum Checkouts<'a> {
@@ -64,6 +67,16 @@ impl<'a> Checkouts<'a> {
         match self {
             Self::Eden(eden) => eden.remove(logger, path),
             Self::Git(_) => anyhow::bail!("worktree remove is not supported in Git repositories"),
+        }
+    }
+
+    /// Whether the checkout at `path` has modified or untracked files.
+    pub(crate) fn has_changes(&self, ctx: &ReqCtx<WorktreeOpts>, path: &Path) -> Result<bool> {
+        match self {
+            Self::Eden(eden) => eden.has_changes(ctx, path),
+            Self::Git(_) => anyhow::bail!(
+                "checking for modified or untracked files is not supported in Git repositories"
+            ),
         }
     }
 

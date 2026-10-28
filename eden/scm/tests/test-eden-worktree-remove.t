@@ -54,7 +54,7 @@ test worktree remove - basic remove cleans redirection backing storage with read
   $ chmod a-w $TESTTMP/linked_from_subdir/bind1/contents
   $ test -f "$bind_backing1/contents"
 #endif
-  $ sl worktree remove $TESTTMP/linked_from_subdir -y
+  $ sl worktree remove $TESTTMP/linked_from_subdir -y --force
   Unmounting redirections... (no-windows !)
   Deleting redirection backing storage: *bind1... (glob) (linux !)
   Deleting redirection backing storage: *scratch... (glob) (no-windows !)
@@ -208,7 +208,7 @@ test worktree remove - direct removal empties backing when a redirection can't b
   $ echo contents > "$backing/nested/contents"
   $ chmod a-w "$backing/nested/contents"
   $ chmod a-w $TESTTMP/direct_stuck_redirection
-  $ sl worktree remove $TESTTMP/direct_stuck_redirection -y > $TESTTMP/stuck-remove.log 2>&1
+  $ sl worktree remove $TESTTMP/direct_stuck_redirection -y --force > $TESTTMP/stuck-remove.log 2>&1
   $ python -c 'import pathlib, sys; log = pathlib.Path(sys.argv[-1]).read_text(); print("Error unmounting redirections for" in log and "failed to unmount redirection scratch" in log)' $TESTTMP/stuck-remove.log
   True
   $ test -d $TESTTMP/direct_stuck_redirection
@@ -228,7 +228,7 @@ test worktree remove - direct removal deletes read-only directories in backing s
   $ mkdir "$backing/out"
   $ echo contents > "$backing/out/contents"
   $ chmod a-w "$backing/out"
-  $ sl worktree remove $TESTTMP/direct_read_only_dirs -y
+  $ sl worktree remove $TESTTMP/direct_read_only_dirs -y --force
   Unmounting redirections...
   Deleting redirection backing storage: *scratch... (glob)
   Unmounting checkout...
@@ -384,3 +384,38 @@ test worktree remove - pre-worktree-remove hook does not fire when user declines
   abort: running non-interactively, use -y instead
   [255]
   $ test -d $TESTTMP/pre_hook_decline
+
+test worktree remove - modified or untracked files require --force
+
+  $ sl worktree add $TESTTMP/dirty_modified
+  created linked worktree at $TESTTMP/dirty_modified
+  $ sl worktree add $TESTTMP/dirty_untracked
+  created linked worktree at $TESTTMP/dirty_untracked
+  $ echo modified > $TESTTMP/dirty_modified/file.txt
+  $ touch $TESTTMP/dirty_untracked/untracked.txt
+  $ sl worktree remove $TESTTMP/dirty_modified -y
+  abort: $TESTTMP/dirty_modified contains modified or untracked files, use --force to remove it
+  [255]
+  $ sl worktree remove --all -y
+  failed to remove $TESTTMP/dirty_modified: $TESTTMP/dirty_modified contains modified or untracked files, use --force to remove it
+  failed to remove $TESTTMP/dirty_untracked: $TESTTMP/dirty_untracked contains modified or untracked files, use --force to remove it
+  HOOK_FIRED
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/pre_hook_decline
+  removed 1 of 3 worktrees; 2 failed
+  abort: $TESTTMP/dirty_modified contains modified or untracked files, use --force to remove it
+  [255]
+  $ test -f $TESTTMP/dirty_untracked/untracked.txt
+
+--force also skips the confirmation prompt
+
+  $ sl worktree remove --all --force
+  HOOK_FIRED
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/dirty_modified
+  HOOK_FIRED
+  Unmounting checkout...
+  Deleting EdenFS checkout state...
+  removed $TESTTMP/dirty_untracked

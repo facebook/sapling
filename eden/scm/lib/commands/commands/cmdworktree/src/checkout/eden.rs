@@ -7,7 +7,9 @@
 
 use std::collections::HashSet;
 use std::path::Path;
+use std::sync::Arc;
 
+use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
 use cmdutil::ConfigExt;
 use cmdutil::Result;
@@ -18,6 +20,7 @@ use types::HgId;
 #[cfg(feature = "fb")]
 use super::direct::run_direct_eden_remove;
 use super::resolve_target;
+use crate::WorktreeOpts;
 
 /// Creates checkouts with `eden clone` and removes them like `eden rm`.
 pub(crate) struct EdenCheckouts<'a> {
@@ -70,6 +73,14 @@ impl<'a> EdenCheckouts<'a> {
         }
         run_eden_remove(logger, self.repo, path)?;
         Ok(true)
+    }
+
+    pub(super) fn has_changes(&self, ctx: &ReqCtx<WorktreeOpts>, path: &Path) -> Result<bool> {
+        let repo = Repo::load(path, &[])?;
+        let wc = repo.working_copy()?;
+        let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
+        let status = wc.read().status(&ctx.core, matcher, false)?;
+        Ok(status.dirty() || status.unknown().next().is_some())
     }
 }
 
