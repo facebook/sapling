@@ -95,7 +95,7 @@ pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, worktrees: &Worktrees
         }
     }
 
-    let checkouts = Checkouts::new(repo, worktrees);
+    let checkouts = Checkouts::new(repo, worktrees)?;
     let pre_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "pre-worktree-remove");
     let multi_target = ctx.opts.all || targets.len() > 1;
     let mut remove_error = None;

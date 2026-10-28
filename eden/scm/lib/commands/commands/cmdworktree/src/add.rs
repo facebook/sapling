@@ -161,7 +161,7 @@ pub(crate) fn run(
     worktrees: &Worktrees,
 ) -> Result<u8> {
     let logger = ctx.logger();
-    let checkouts = Checkouts::new(repo, worktrees);
+    let checkouts = Checkouts::new(repo, worktrees)?;
 
     if ctx.opts.snapshot && !checkouts.supports_snapshot() {
         abort!("--snapshot is not supported for Git worktrees");

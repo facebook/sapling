@@ -13,10 +13,15 @@ sl_rust_library(
                     "edenfs-core": {"optional": True},
                     "edenfs-remove": {"optional": True},
                     "sapling-async-runtime": {"optional": True},
+                    "sapling-edenfs-client": {"optional": True},
                 },
             },
             "features": {
                 "default": [],
+                "eden": [
+                    "sapling-clone/eden",
+                    "sapling-edenfs-client",
+                ],
                 "fb": [
                     "edenfs-core",
                     "edenfs-remove",
@@ -34,7 +39,10 @@ sl_rust_library(
         },
     },
     crate_root = "src/lib.rs",
-    features = ["fb"],
+    features = [
+        "eden",
+        "fb",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
