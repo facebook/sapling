@@ -10,6 +10,7 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
+    link_style = "static_pic",
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
