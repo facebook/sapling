@@ -36,7 +36,7 @@ use worktree::with_reservations;
 use worktree::with_worktree_path_op_lock;
 
 use crate::WorktreeOpts;
-use crate::checkout::AddSource;
+use crate::checkout::Checkouts;
 
 fn current_sl_binary() -> OsString {
     std::env::current_exe()
@@ -161,6 +161,7 @@ pub(crate) fn run(
     worktrees: &Worktrees,
 ) -> Result<u8> {
     let logger = ctx.logger();
+    let checkouts = Checkouts::new(repo);
 
     if ctx.opts.snapshot && !ctx.opts.rev.is_empty() {
         abort!("cannot use --rev with --snapshot");
@@ -219,7 +220,7 @@ pub(crate) fn run(
         );
     }
 
-    let source = AddSource::new(repo)?;
+    let source = checkouts.add_source()?;
 
     let pre_hooks = hook::Hooks::from_config(repo.config(), ctx.io(), "pre-worktree-add");
     pre_hooks.run_hooks(
