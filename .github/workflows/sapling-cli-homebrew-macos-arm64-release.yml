@@ -7,7 +7,7 @@ on:
     - test-release-*
 jobs:
   build:
-    runs-on: macos-15-xlarge
+    runs-on: macos-15
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6
