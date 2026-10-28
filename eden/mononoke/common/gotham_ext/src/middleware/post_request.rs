@@ -14,6 +14,7 @@ use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use futures::Future;
 use futures::future;
+use futures::future::BoxFuture;
 use futures::prelude::*;
 use futures_stats::StreamStats;
 use gotham::helpers::http::Body;
@@ -123,15 +124,28 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
         let pending_in_band_errors = PendingInBandErrors::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
-            mononoke::spawn_task(callbacks.run(
-                config,
-                start_time,
-                meta,
-                stream_stats,
-                hostname_future,
-                pending_in_band_errors,
+            state.put(PostResponseTask(
+                callbacks
+                    .run(
+                        config,
+                        start_time,
+                        meta,
+                        stream_stats,
+                        hostname_future,
+                        pending_in_band_errors,
+                    )
+                    .boxed(),
             ));
         }
+    }
+}
+
+#[derive(StateData)]
+pub(crate) struct PostResponseTask(BoxFuture<'static, ()>);
+
+impl PostResponseTask {
+    pub(crate) fn spawn(self) {
+        mononoke::spawn_task(self.0);
     }
 }
 

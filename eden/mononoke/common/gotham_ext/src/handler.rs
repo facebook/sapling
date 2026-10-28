@@ -31,7 +31,7 @@ use tower_service::Service;
 use crate::middleware::Middleware;
 use crate::middleware::artillery::ArtilleryTracingEnabled;
 use crate::middleware::artillery::artillery_http_tracing_enabled;
-use crate::middleware::artillery::has_artillery_trace_header;
+use crate::middleware::post_request::PostResponseTask;
 use crate::socket_data::TlsSocketData;
 
 #[derive(StateData, Clone, PartialEq, Copy, Debug)]
@@ -112,7 +112,6 @@ impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
     fn handle(self, mut state: State) -> Pin<Box<HandlerFuture>> {
         let tracing_enabled = artillery_http_tracing_enabled();
         state.put(ArtilleryTracingEnabled(tracing_enabled));
-        let trace_request = tracing_enabled && has_artillery_trace_header(&state);
 
         let fut = async move {
             // On request, middleware is called in order, then called the other way around on
@@ -142,14 +141,18 @@ impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
                 m.outbound(&mut state, &mut response).await;
             }
 
-            Ok((state, response))
+            (state, response)
         };
 
-        if trace_request {
-            request_context_ext::with_fresh_request_context(fut).boxed()
-        } else {
-            fut.boxed()
+        let fut = request_context_ext::with_fresh_request_context(fut);
+        async move {
+            let (mut state, response) = fut.await;
+            if let Some(task) = state.try_take::<PostResponseTask>() {
+                task.spawn();
+            }
+            Ok((state, response))
         }
+        .boxed()
     }
 }
 
@@ -397,5 +400,99 @@ mod test {
         let res = server.client().get("http://host/").perform()?;
         assert_eq!(res.status(), StatusCode::NOT_FOUND);
         Ok(())
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn post_response_waits_for_final_handler_cpu(fb: fbinit::FacebookInit) {
+        use std::hint::black_box;
+        use std::sync::atomic::AtomicI64;
+        use std::sync::atomic::Ordering;
+        use std::time::Duration;
+
+        use context::CoreContext;
+        use context::PerfCounterType;
+        use futures::channel::oneshot;
+
+        use crate::middleware::PostResponseCallbacks;
+        use crate::middleware::PostResponseMiddleware;
+        use crate::middleware::request_context::RequestContext;
+        use crate::response::EmptyBody;
+        use crate::response::TryIntoResponse;
+
+        struct CpuHandler {
+            ctx: CoreContext,
+            reported: oneshot::Sender<i64>,
+        }
+
+        impl Handler for CpuHandler {
+            fn handle(self, mut state: State) -> Pin<Box<HandlerFuture>> {
+                self.ctx.track_cpu_time();
+                state.put(RequestContext {
+                    ctx: self.ctx.clone(),
+                });
+                state.borrow_mut::<PostResponseCallbacks>().add(move |_| {
+                    let _ = self.reported.send(
+                        self.ctx
+                            .perf_counters()
+                            .get_counter(PerfCounterType::CpuTimeNs),
+                    );
+                });
+                let response = EmptyBody::new().try_into_response(&mut state).unwrap();
+                future::ready(Ok((state, response))).boxed()
+            }
+        }
+
+        struct FinalCpuWork {
+            before: Arc<AtomicI64>,
+        }
+
+        #[async_trait::async_trait]
+        impl Middleware for FinalCpuWork {
+            async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+                tokio::task::yield_now().await;
+                self.before.store(
+                    state
+                        .borrow::<RequestContext>()
+                        .ctx
+                        .perf_counters()
+                        .get_counter(PerfCounterType::CpuTimeNs),
+                    Ordering::Relaxed,
+                );
+                let mut value = 1u64;
+                for _ in 0..100_000 {
+                    value = black_box(value.wrapping_mul(6364136223846793005).wrapping_add(1));
+                }
+            }
+        }
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let ctx = CoreContext::new(fb);
+            let before = Arc::new(AtomicI64::new(0));
+            let (reported, receiver) = oneshot::channel();
+            let handler = MononokeHttpHandler::builder()
+                .add(FinalCpuWork {
+                    before: before.clone(),
+                })
+                .add(PostResponseMiddleware::default())
+                .build(CpuHandler { ctx, reported });
+            let state = State::from_request(
+                Request::new(Body::default()),
+                "127.0.0.1:0".parse().unwrap(),
+            );
+            assert!(handler.handle(state).await.is_ok());
+            let cpu = tokio::time::timeout(Duration::from_secs(5), receiver)
+                .await
+                .unwrap()
+                .unwrap();
+            assert!(
+                cpu > before.load(Ordering::Relaxed),
+                "final poll CPU was missing"
+            );
+        });
     }
 }

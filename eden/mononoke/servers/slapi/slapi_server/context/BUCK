@@ -1,3 +1,5 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
@@ -6,7 +8,20 @@ oncall("scm_server_infra")
 rust_library(
     name = "context",
     srcs = glob(["src/**/*.rs"]),
-    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
+    cpp_deps = [] if rust_oss.is_oss_build() else [":cpu_time"],
+    cxx_bridge = None if rust_oss.is_oss_build() else "src/facebook/cpu_time.rs",
+    test_deps = [
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ]
+    + (
+        []
+        if rust_oss.is_oss_build()
+        else [
+            "fbsource//third-party/rust:futures",
+            "fbsource//third-party/rust:tokio",
+            "//eden/mononoke/common/rust/request_context_ext:request_context_ext",
+        ]
+    ),
     deps = [
         "fbsource//third-party/rust:governor",
         "//common/rust/shed/fbinit:fbinit",
@@ -19,6 +34,22 @@ rust_library(
         "//eden/mononoke/common/session_id:session_id",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
+)
+
+cpp_library(
+    name = "cpu_time",
+    srcs = [] if rust_oss.is_oss_build() else ["src/facebook/cpu_time.cpp"],
+    headers = [] if rust_oss.is_oss_build() else ["src/facebook/cpu_time.h"],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    deps = []
+    if rust_oss.is_oss_build()
+    else [
+        "fbsource//xplat/folly/io/async:request_context",
+        ":context@header",
+        "//common/time:time_core",
+    ],
+    exported_deps = [] if rust_oss.is_oss_build() else ["fbsource//third-party/rust:cxx-core"],
 )
 
 rust_binary(

@@ -16,6 +16,7 @@ use futures::task::Context;
 use futures::task::Poll;
 use pin_project::pin_project;
 use pin_project::pinned_drop;
+use request_context_ext::CapturedRequestContext;
 
 use super::error_meta::ErrorMeta;
 use super::error_meta::ErrorMetaProvider;
@@ -41,6 +42,7 @@ pub struct SignalStream<S: ErrorMetaProvider<Error>> {
     stream: S,
     sender: Option<Sender<BodyMeta>>,
     size_sent: u64,
+    request_context: Option<CapturedRequestContext>,
 }
 
 impl<S> SignalStream<S>
@@ -52,6 +54,7 @@ where
             stream,
             sender: Some(sender),
             size_sent: 0,
+            request_context: CapturedRequestContext::capture(),
         }
     }
 }
@@ -66,7 +69,12 @@ where
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
 
-        let poll = ready!(this.stream.as_mut().poll_next(ctx));
+        let poll = ready!(match this.request_context {
+            Some(request_context) => {
+                request_context.run(|| this.stream.as_mut().poll_next(ctx))
+            }
+            None => this.stream.as_mut().poll_next(ctx),
+        });
 
         match poll {
             // We have an item: increment the amount of data we sent.
@@ -103,6 +111,47 @@ where
         let _ = sender.send(BodyMeta {
             bytes_sent,
             error_meta,
+        });
+    }
+}
+
+#[cfg(all(test, fbcode_build))]
+mod tests {
+    use std::hint::black_box;
+
+    use context::CoreContext;
+    use context::PerfCounterType;
+    use fbinit::FacebookInit;
+    use futures::StreamExt;
+    use futures::channel::oneshot;
+    use mononoke_macros::mononoke;
+    use request_context_ext::with_fresh_request_context;
+
+    use super::*;
+    use crate::response::ResponseTryStreamExt;
+
+    #[mononoke::fbinit_test]
+    fn charges_stream_cpu_before_signalling_completion(fb: FacebookInit) {
+        let ctx = CoreContext::new(fb);
+        let (sender, receiver) = oneshot::channel();
+        let stream = futures::executor::block_on(with_fresh_request_context(async {
+            ctx.track_cpu_time();
+            let stream = futures::stream::once(async {
+                let mut value = 1u64;
+                for _ in 0..100_000 {
+                    value = black_box(value.wrapping_mul(6364136223846793005).wrapping_add(1));
+                }
+                Ok::<_, Error>(Bytes::from_static(b"file contents"))
+            });
+            SignalStream::new(stream.capture_first_err(), sender)
+        }));
+        let before = ctx.perf_counters().get_counter(PerfCounterType::CpuTimeNs);
+        futures::executor::block_on(async {
+            futures::pin_mut!(stream);
+            assert_eq!(stream.next().await.unwrap(), "file contents");
+            assert!(stream.next().await.is_none());
+            assert_eq!(receiver.await.unwrap().bytes_sent, 13);
+            assert!(ctx.perf_counters().get_counter(PerfCounterType::CpuTimeNs) > before);
         });
     }
 }

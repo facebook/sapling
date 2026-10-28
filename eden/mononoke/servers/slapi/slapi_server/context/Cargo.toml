@@ -15,6 +15,7 @@ doc = false
 [dependencies]
 async_limiter = { version = "0.1.0", path = "../../../../common/async_limiter" }
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
+cxx = "1.0.194"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 governor = "0.10.4"
 metadata = { version = "0.1.0", path = "../../../../common/metadata" }
@@ -25,3 +26,8 @@ scribe_ext = { version = "0.1.0", path = "../../../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../../../common/scuba_ext" }
 session_id = { version = "0.1.0", path = "../../../../common/session_id" }
 sql_query_telemetry = { version = "0.1.0", path = "../../../../common/rust/sql_ext/sql_query_telemetry" }
+
+[dev-dependencies]
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
+request_context_ext = { version = "0.1.0", path = "../../../../common/rust/request_context_ext" }
+tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }

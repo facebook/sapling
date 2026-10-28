@@ -17,6 +17,9 @@ pub use crate::session::SessionContainer;
 pub use crate::session::SessionContainerBuilder;
 
 mod core;
+#[cfg(fbcode_build)]
+#[path = "facebook/cpu_time.rs"]
+mod cpu_time;
 mod logging;
 mod perf_counters;
 mod perf_counters_stack;

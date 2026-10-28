@@ -83,6 +83,7 @@ impl Middleware for RequestContextMiddleware {
 
         let scuba = (*self.scuba).clone().with_seq("seq");
         let ctx = session.new_context(scuba);
+        ctx.track_cpu_time();
 
         state.put(RequestContext::new(ctx).await);
 

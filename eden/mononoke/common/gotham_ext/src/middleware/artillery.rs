@@ -40,11 +40,6 @@ pub(crate) fn artillery_http_tracing_enabled() -> bool {
     )
 }
 
-pub(crate) fn has_artillery_trace_header(state: &State) -> bool {
-    HeaderMap::try_borrow_from(state)
-        .is_some_and(|headers| headers.contains_key(ARTILLERY_TRACE_IDS_HEADER))
-}
-
 #[derive(StateData)]
 pub(crate) struct ArtilleryTracingEnabled(pub(crate) bool);
 

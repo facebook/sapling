@@ -130,6 +130,13 @@ impl CoreContext {
         self.logging.perf_counters()
     }
 
+    /// Charge CPU executed in the current Folly request context, including
+    /// inherited task contexts, to this request's perf counters.
+    pub fn track_cpu_time(&self) {
+        #[cfg(fbcode_build)]
+        crate::cpu_time::track_cpu_time(self.perf_counters().clone());
+    }
+
     pub fn metadata(&self) -> &Metadata {
         self.session.metadata()
     }

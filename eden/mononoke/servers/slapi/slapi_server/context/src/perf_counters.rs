@@ -50,6 +50,7 @@ macro_rules! define_perf_counters {
 
 define_perf_counters! {
     enum PerfCounterType {
+        CpuTimeNs,
         BlobGets,
         BlobGetsNotFound,
         BlobGetsAccessWait,
@@ -171,7 +172,8 @@ impl PerfCounterType {
         use PerfCounterType::*;
 
         match self {
-            BlobGets
+            CpuTimeNs
+            | BlobGets
             | BlobGetsNotFound
             | BlobGetsAccessWait
             | BlobGetsShardAccessWait
