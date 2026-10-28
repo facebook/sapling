@@ -4,7 +4,7 @@ sidebar_position: 39
 
 ## split | spl
 <!--
-  @generated SignedSource<<fa0db9f9a570d3f38bbf26c2ae510f96>>
+  @generated SignedSource<<36b7eb31a531e6c2ddea4f93655f4c76>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -18,6 +18,8 @@ the second commit, and so on.
 
 Operates on the current revision by default. Use `--rev` to split a given
 commit instead.
+
+Each new commit starts with the original commit message in your editor.
 
 ## arguments
 | shortname | fullname | default | description |

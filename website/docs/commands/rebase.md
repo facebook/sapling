@@ -4,7 +4,7 @@ sidebar_position: 30
 
 ## rebase
 <!--
-  @generated SignedSource<<ffecc697ec9f203d3a4e272b418092b7>>
+  @generated SignedSource<<abcf473e7cdd59a2dbd0730c558c644d>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -136,6 +136,16 @@ It will also print a configurable warning:
 ```
 [rebase]
 experimental.inmemorywarning = Using experimental in-memory rebase
+```
+
+If the destination is based on older versions of commits that the
+rebased commits are based on, rebase warns that their newer changes will
+be lost (agents abort instead). Set `warn`, `prompt` or `abort` to
+choose the behavior; any other value disables the check:
+
+```
+[rebase]
+obsolete-dest-mode = warn
 ```
 
 Returns 0 on success (also when nothing to rebase), 1 if there are

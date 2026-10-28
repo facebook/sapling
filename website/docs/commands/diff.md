@@ -4,7 +4,7 @@ sidebar_position: 12
 
 ## diff | d
 <!--
-  @generated SignedSource<<3a470989dda553d2db2e45a59c29eddc>>
+  @generated SignedSource<<74efe3a2f3dea5531281727929c09ce1>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -25,9 +25,7 @@ By default, diffs are shown using the unified diff format. Specify `-g`
 to generate diffs in the git extended diff format. For more information,
 see `sl help diffs`.
 
-`--from-path` and `--to-path` allow diffing between directories.
-Files outside `--from-path` in the left side are ignored. See
-`sl help directorybranching` for more information.
+To compare directories, use `sl subtree diff`.
 
 `sl diff` might generate unexpected results during merges because it
 defaults to comparing against your working copy&#x27;s first parent commit
