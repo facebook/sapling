@@ -382,20 +382,25 @@ async fn test_preloaded_batch_prefetch(fb: FacebookInit) -> Result<()> {
                     .await?
             );
             // Lowering F to A's generation fetches F, E, D, C and B one
-            // step at a time and then G, H, I, J and K in one step: 10
-            // changesets.  Batch prefetching E and K, D and J, C and I,
-            // and B and H as each merge adds its branch to the frontier
-            // fetches 8 more through the same call, copying their edges
-            // out of the preloaded map for a result nobody reads.
-            // FIXME: the batch should only warm caches, and the preloaded
-            // storage has none to warm for these changesets.
+            // step at a time and then G, H, I, J and K in one step.  E and
+            // K, D and J, C and I, and B and H are batch prefetched as each
+            // merge adds its branch to the frontier, which only warms
+            // caches: every one of them is preloaded, so none reaches the
+            // persistent storage.
             assert_eq!(
                 ctx.perf_counters()
                     .get_counter(PerfCounterType::CommitGraphBatchPrefetchScanned),
                 8
             );
-            assert_eq!(preloaded_storage.fetched().len(), 18);
-            assert_eq!(preloaded_storage.prefetched(), vec![]);
+            assert_eq!(preloaded_storage.fetched().len(), 10);
+            let mut prefetched = preloaded_storage.prefetched();
+            prefetched.sort();
+            let mut expected: Vec<_> = ["B", "C", "D", "E", "H", "I", "J", "K"]
+                .into_iter()
+                .map(name_cs_id)
+                .collect();
+            expected.sort();
+            assert_eq!(prefetched, expected);
             assert_eq!(persistent_storage.prefetched(), vec![]);
             Ok(())
         }

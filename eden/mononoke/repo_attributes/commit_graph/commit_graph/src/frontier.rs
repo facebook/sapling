@@ -223,13 +223,19 @@ impl<E: EdgeType> CommitGraphOps<E> {
         incremental: bool,
     ) -> Result<()> {
         let linear_steps = p1_linear_prefetch_steps();
-        let prefetch_from = |generation: Generation| {
+        let prefetch_target = |generation: Generation| {
             if incremental && generation.value() - target_generation.value() <= linear_steps {
-                Prefetch::for_p1_linear_traversal()
+                PrefetchTarget::LinearAncestors {
+                    generation: FIRST_GENERATION,
+                    steps: linear_steps,
+                }
             } else {
-                Prefetch::for_exact_skip_tree_traversal(target_generation)
+                PrefetchTarget::ExactSkipTreeAncestors {
+                    generation: target_generation,
+                }
             }
         };
+        let prefetch_from = |generation: Generation| Prefetch::Hint(prefetch_target(generation));
 
         let batch_prefetch = justknobs::eval(
             "scm/mononoke:commit_graph_pull_optimizations",
@@ -270,7 +276,9 @@ impl<E: EdgeType> CommitGraphOps<E> {
             // the ones not prefetched this way before, all at once.  Below a
             // merge of unrelated histories the frontier holds many changesets
             // at different generations, and lowering them one generation at
-            // a time would otherwise miss the cache once for each.
+            // a time would otherwise miss the cache once for each.  Only the
+            // caches are warmed: the edges themselves are fetched by the
+            // steps that pop them.
             if batch_prefetch {
                 if above_target > 1 && above_target > above_target_before {
                     // Changesets popped since they were added have been
@@ -290,7 +298,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                     );
                     if !cs_ids.is_empty() {
                         self.storage
-                            .fetch_many_edges(ctx, &cs_ids, prefetch_from(generation))
+                            .prefetch_many_edges(ctx, &cs_ids, prefetch_target(generation))
                             .await?;
                     }
                 }
