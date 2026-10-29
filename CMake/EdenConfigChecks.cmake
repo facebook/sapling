@@ -62,7 +62,7 @@ set(EDEN_RUST_THRIFT_ENV
 )
 
 if (BUILD_TESTS)
-  find_package(GMock MODULE REQUIRED)
+  fb_find_or_fetch_gmock()
   include_directories(${GMOCK_INCLUDEDIR} ${LIBGMOCK_INCLUDE_DIR})
   include(GoogleTest)
   enable_testing()
@@ -148,8 +148,14 @@ else()
   set(EDEN_HAVE_THRIFT_PYTHON ON)
 endif()
 
-if (BUILD_TESTS)
+# The integration tests drive the Python CLI, so they need thrift-python too.
+if (BUILD_TESTS AND EDEN_HAVE_THRIFT_PYTHON)
+  set(EDEN_BUILD_INTEGRATION_TESTS ON)
   find_package(python-psutil REQUIRED)
+elseif (BUILD_TESTS)
+  message(STATUS
+    "The Python CLI isn't built, so neither are the integration tests, which "
+    "drive it")
 endif()
 
 # pexpect is used by some of the integration tests.
