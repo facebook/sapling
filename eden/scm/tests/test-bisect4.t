@@ -118,6 +118,7 @@ Two branches with different lengths:
   Graph:
     o    Y: initial bad
     ├─╮
+    ╷ ╷
     o ╷  B15: #1 good
     ╷ ╷
     ╷ o  A08: #2 bad
@@ -128,6 +129,7 @@ Two branches with different lengths:
     ╷ ╷
     ╷ o  A04: #3 good
     ╭─╯
+    ╷
     o  X: initial good
   Steps:
     #1  choose B15, 31 remaining, marked as good
@@ -143,6 +145,7 @@ Two branches with different lengths:
   Graph:
     o    Y: initial bad
     ├─╮
+    ╷ ╷
     o ╷  B15: #1 bad
     ╷ ╷
     o ╷  B07: #2 bad
@@ -153,6 +156,7 @@ Two branches with different lengths:
     ╷ ╷
     o ╷  B03: #3 good
     ├─╯
+    ╷
     o  X: initial good
   Steps:
     #1  choose B15, 31 remaining, marked as bad
@@ -178,6 +182,7 @@ Two branches with different lengths:
     ╷ ╷
     o ╷  A08: #2 good
     ├─╯
+    ╷
     o  X: initial good
   Steps:
     #1  choose B15, 31 remaining, marked as good
@@ -193,6 +198,7 @@ Two branches with different lengths:
   Graph:
     o    Y: initial good
     ├─╮
+    ╷ ╷
     o ╷  B15: #1 good
     ╷ ╷
     o ╷  B07: #2 good

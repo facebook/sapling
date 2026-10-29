@@ -4249,6 +4249,7 @@
   $ sl log --graph -T '{graphwidth}' -r '0|2|4|5'
   o    5
   ├─╮
+  │ ╷
   o ╷  5
   │ ╷
   │ o  5

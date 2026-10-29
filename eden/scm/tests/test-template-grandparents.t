@@ -47,6 +47,7 @@ Test log --graph which doesn't involve subdag computation.
   │ ╷
   o ╷  c parents: [b] grandparents: [a]
   ├─╯
+  ╷
   o  a parents: [] grandparents: []
 
   >>> assert 'computing subdag' not in _

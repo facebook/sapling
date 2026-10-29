@@ -24,17 +24,17 @@ With simplify-grandparents disabled:
   $ sl smartlog -T '{desc} {bookmarks}' --config extensions.smartlog=
   o    E v3
   ├─╮
+  ╷ ╷
   ╷ o  B v2
   ╭─╯
   o  A v1
-  
   $ sl log -Gr 'bookmark()' -T '{desc} {bookmarks}'
   o    E v3
   ├─╮
+  ╷ ╷
   ╷ o  B v2
   ╭─╯
   o  A v1
-  
 With simplify-grandparents enabled:
 
   $ setconfig log.simplify-grandparents=1

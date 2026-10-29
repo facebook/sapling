@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use super::ancestry_lines;
 use crate::pipeline::types::GraphRowShape;
 use crate::pipeline::types::LinkLine;
 use crate::pipeline::types::NodeLine;
@@ -168,39 +169,49 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
             }
         }
 
-        let mut base_pad_line = String::new();
-        for (i, entry) in line.ancestry_line.iter().enumerate() {
-            base_pad_line.push_str(match entry {
-                PadLine::Parent => {
-                    if i > 0 {
-                        " | "
-                    } else {
-                        "| "
-                    }
-                }
-                PadLine::Ancestor => {
-                    if i > 0 {
-                        " . "
-                    } else {
-                        ". "
-                    }
-                }
-                PadLine::Blank => {
-                    if i > 0 {
-                        "   "
-                    } else {
-                        "  "
-                    }
-                }
-            });
+        for (kind, columns) in ancestry_lines(line) {
+            lines.push(render_pad_line(columns, kind));
         }
-        lines.push(PrefixLine {
-            parts: vec![PrefixLinePart::Text(base_pad_line)],
-            kind: PrefixLineKind::PostAncestry,
-        });
 
         lines
     }
+}
+
+fn render_pad_line(line: impl IntoIterator<Item = PadLine>, kind: PrefixLineKind) -> PrefixLine {
+    PrefixLine {
+        parts: vec![PrefixLinePart::Text(render_pad_text(line))],
+        kind,
+    }
+}
+
+fn render_pad_text(line: impl IntoIterator<Item = PadLine>) -> String {
+    let mut out = String::new();
+    for (i, entry) in line.into_iter().enumerate() {
+        out.push_str(match entry {
+            PadLine::Parent => {
+                if i > 0 {
+                    " | "
+                } else {
+                    "| "
+                }
+            }
+            PadLine::Ancestor => {
+                if i > 0 {
+                    " . "
+                } else {
+                    ". "
+                }
+            }
+            PadLine::Blank => {
+                if i > 0 {
+                    "   "
+                } else {
+                    "  "
+                }
+            }
+        });
+    }
+    out
 }
 
 fn push_text(line: &mut PrefixLine, text: &str) {

@@ -7,6 +7,7 @@
 
 use std::marker::PhantomData;
 
+use super::ancestry_lines;
 use crate::pipeline::types::GraphRowShape;
 use crate::pipeline::types::LinkLine;
 use crate::pipeline::types::NodeLine;
@@ -242,14 +243,9 @@ impl<G: BoxDrawingGlyphSet, N> PrefixLineRenderer<N> for BoxDrawingPrefixLineRen
             }
         }
 
-        let mut base_pad_line = String::new();
-        for entry in line.ancestry_line.iter() {
-            base_pad_line.push_str(glyphs[pad_line_to_glyph(*entry)]);
+        for (kind, columns) in ancestry_lines(line) {
+            lines.push(render_pad_line(glyphs, columns, kind));
         }
-        lines.push(PrefixLine {
-            parts: vec![PrefixLinePart::Text(base_pad_line)],
-            kind: PrefixLineKind::PostAncestry,
-        });
 
         lines
     }
@@ -266,6 +262,28 @@ where
 
 fn push_text(line: &mut PrefixLine, text: &str) {
     line.parts.push(PrefixLinePart::Text(text.to_owned()));
+}
+
+fn render_pad_line(
+    glyphs: &[&str; glyph::COUNT],
+    line: impl IntoIterator<Item = PadLine>,
+    kind: PrefixLineKind,
+) -> PrefixLine {
+    PrefixLine {
+        parts: vec![PrefixLinePart::Text(render_pad_text(glyphs, line))],
+        kind,
+    }
+}
+
+fn render_pad_text(
+    glyphs: &[&str; glyph::COUNT],
+    line: impl IntoIterator<Item = PadLine>,
+) -> String {
+    let mut out = String::new();
+    for entry in line {
+        out.push_str(glyphs[pad_line_to_glyph(entry)]);
+    }
+    out
 }
 
 fn pad_line_to_glyph(line: PadLine) -> usize {

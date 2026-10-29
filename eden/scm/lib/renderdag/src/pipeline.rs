@@ -160,4 +160,54 @@ mod tests {
             o  B"#,
         );
     }
+
+    #[test]
+    fn test_ancestry_with_single_line_message() {
+        use crate::render::Ancestor;
+
+        // Show the ancestry marker even when there are no message lines to pad.
+        for dash_style in [DashStyle::Once, DashStyle::Persistent] {
+            let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
+                options.min_row_height = 0;
+                options.graph_row_shape_style.dash_style = dash_style;
+            });
+            let mut out = renderer.next_text("A", vec![Ancestor::Ancestor("B")], "o", "A");
+            out.push_str(&renderer.next_text("B", vec![], "o", "B"));
+            let rendered = indent(&out);
+            assert_eq!(
+                rendered,
+                r#"
+            o  A
+            ╷
+            o  B"#,
+            );
+        }
+    }
+    #[test]
+    fn test_dash_style_once_with_long_message() {
+        use crate::render::Ancestor;
+
+        // Extra message lines use parent padding after the one-shot ancestry marker.
+        let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
+            options.min_row_height = 0;
+            options.graph_row_shape_style.dash_style = DashStyle::Once;
+        });
+        let mut out = renderer.next_text(
+            "A",
+            vec![Ancestor::Ancestor("B")],
+            "o",
+            "A\nmessage 1\nmessage 2\nmessage 3",
+        );
+        out.push_str(&renderer.next_text("B", vec![], "o", "B"));
+        let rendered = indent(&out);
+        assert_eq!(
+            rendered,
+            r#"
+            o  A
+            ╷  message 1
+            │  message 2
+            │  message 3
+            o  B"#,
+        );
+    }
 }

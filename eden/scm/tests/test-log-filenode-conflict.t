@@ -168,6 +168,7 @@ Create a repo with one file X. Delete and recreate a few times.
   log via G:
   o    G
   ├─╮
+  ╷ ╷
   o ╷  C
   │ ╷
   │ o  D
@@ -175,7 +176,6 @@ Create a repo with one file X. Delete and recreate a few times.
   o │  B
   ├─╯
   o  A
-  
 (incorrect: D, E disappeared in "log via E" and "log via G"; F disappeared in "log via G")
 
 With "--removed", it is slightly better.
@@ -183,6 +183,7 @@ With "--removed", it is slightly better.
   $ sl log -fr "desc(G)" X -T '{desc}\n' -G --removed
   o    G
   ├─╮
+  ╷ ╷
   o ╷  C
   │ ╷
   │ o  D
@@ -190,7 +191,6 @@ With "--removed", it is slightly better.
   o │  B
   ├─╯
   o  A
-  
   $ sl push -q -r tip --to book --create
 
 Try again in a shallow repo:
@@ -219,6 +219,7 @@ Try again in a shallow repo:
   log via G:
   @    G
   ├─╮
+  ╷ ╷
   o ╷  D
   │ ╷
   │ o  C
@@ -226,7 +227,6 @@ Try again in a shallow repo:
   │ o  B
   ├─╯
   o  A
-  
 (incorrect: E disappeared in "log via E" and "log via G"; F disappeared in "log via G")
 
 "--removed" does not change things.
@@ -234,6 +234,7 @@ Try again in a shallow repo:
   $ sl log -fr "desc(G)" X -T '{desc}\n' -G --removed
   @    G
   ├─╮
+  ╷ ╷
   o ╷  D
   │ ╷
   │ o  C
@@ -241,6 +242,5 @@ Try again in a shallow repo:
   │ o  B
   ├─╯
   o  A
-  
 
 # trailing whitespace

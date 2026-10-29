@@ -2523,8 +2523,10 @@
   > EOF
   $ sl log -G -r 'file("a")' -m -T '{rev} {desc}'
   @  36 (36) buggy merge: identical parents
+  ╷
   o    32 (32) expand
   ├─╮
+  │ ╷
   o ╷  31 (31) expand
   ├─╮
   o │    30 (30) expand

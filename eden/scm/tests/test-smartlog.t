@@ -341,8 +341,10 @@ Limit by threshold
   ╷
   ╷ o  a60fccdcd9e9  a
   ╭─╯
+  ╷
   ╷ o  2dc09a01254d  r3
   ╭─╯
+  ╷
   o  66f7d451a68b master r1
   │
   ~

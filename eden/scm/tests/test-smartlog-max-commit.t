@@ -33,12 +33,16 @@ With max-commit-threshold and collapse-obsolete:
   ╷
   ╷ o  C4
   ╭─╯
+  ╷
   ╷ o  c5
   ╭─╯
+  ╷
   ╷ o  E4
   ╭─╯
+  ╷
   ╷ o  e5
   ╭─╯
+  ╷
   o  C
   │
   ~
@@ -68,8 +72,10 @@ With a root commit:
   ╷
   ╷ o  C4
   ╭─╯
+  ╷
   ╷ o  E4
   ╭─╯
+  ╷
   o  C
   │
   ~
@@ -81,8 +87,10 @@ With a root commit:
   ╷
   ╷ o  C4
   ╭─╯
+  ╷
   ╷ o  E4
   ╭─╯
+  ╷
   o  C
   │
   ~

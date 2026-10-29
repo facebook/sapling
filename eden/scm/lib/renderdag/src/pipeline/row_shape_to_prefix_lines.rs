@@ -8,3 +8,31 @@
 pub mod ascii;
 pub mod ascii_large;
 pub mod box_drawing;
+
+use crate::pipeline::types::DashStyle;
+use crate::pipeline::types::GraphRowShape;
+use crate::pipeline::types::PadLine;
+use crate::pipeline::types::PrefixLineKind;
+
+fn ancestry_lines<N>(
+    row: &GraphRowShape<N>,
+) -> impl Iterator<Item = (PrefixLineKind, impl Iterator<Item = PadLine> + '_)> + '_ {
+    [
+        row.has_indirect_ancestor()
+            .then_some(PrefixLineKind::Ancestry),
+        Some(PrefixLineKind::PostAncestry),
+    ]
+    .into_iter()
+    .flatten()
+    .map(move |kind| {
+        let solid = kind == PrefixLineKind::PostAncestry && row.style.dash_style == DashStyle::Once;
+        let columns = row.ancestry_line.iter().copied().map(move |pad| {
+            if solid && pad == PadLine::Ancestor {
+                PadLine::Parent
+            } else {
+                pad
+            }
+        });
+        (kind, columns)
+    })
+}
