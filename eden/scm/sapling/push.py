@@ -261,6 +261,11 @@ def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None
     # that is to be landed.
     # It's guaranteed there is only one base for a linear stack of draft nodes
     base = repo.dageval(lambda: parents(roots(stack_nodes))).last()
+    if base is None:
+        raise error.Abort(
+            _("cannot pushrebase: the root commit of the stack has no parent commit"),
+            hint=_("rebase the stack onto %s first") % remote_bookmark,
+        )
     pushvars = parse_pushvars(opargs.get("pushvars"))
 
     ui.status(
