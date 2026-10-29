@@ -85,20 +85,30 @@ pub use errors::DagError as Error;
 pub type Result<T> = std::result::Result<T, Error>;
 
 // Re-export
+#[cfg(feature = "failpoints")]
+#[doc(hidden)]
+pub use fail::fail_point;
 #[cfg(feature = "indexedlog-backend")]
 pub use indexedlog::Repair;
 pub use nonblocking;
 
+#[cfg(feature = "failpoints")]
 #[macro_export]
 macro_rules! failpoint {
     ($name:literal) => {
-        ::fail::fail_point!($name, |_| {
+        $crate::fail_point!($name, |_| {
             let msg = format!("failpoint injected by FAILPOINTS: {}", $name);
             Err($crate::errors::DagError::from(
                 $crate::errors::BackendError::Generic(msg),
             ))
         })
     };
+}
+
+#[cfg(not(feature = "failpoints"))]
+#[macro_export]
+macro_rules! failpoint {
+    ($name:literal) => {{}};
 }
 
 /// Whether running inside a test.
@@ -108,3 +118,17 @@ pub(crate) fn is_testing() -> bool {
 
 #[cfg(test)]
 dev_logger::init!();
+
+#[test]
+fn test_failpoint_feature() {
+    #[cfg(feature = "failpoints")]
+    let _scenario = fail::FailScenario::setup();
+    #[cfg(feature = "failpoints")]
+    fail::cfg("dag-test-failpoint", "return").unwrap();
+
+    let result = (|| -> Result<()> {
+        crate::failpoint!("dag-test-failpoint");
+        Ok(())
+    })();
+    assert_eq!(result.is_err(), cfg!(feature = "failpoints"));
+}

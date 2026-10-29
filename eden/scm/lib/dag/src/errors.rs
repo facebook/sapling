@@ -108,6 +108,7 @@ pub trait NotFoundError {
 
 impl NotFoundError for Id {
     fn not_found_error(&self) -> DagError {
+        #[cfg(feature = "failpoints")]
         ::fail::fail_point!("dag-not-found-id");
         DagError::IdNotFound(self.clone())
     }
@@ -115,6 +116,7 @@ impl NotFoundError for Id {
 
 impl NotFoundError for Vertex {
     fn not_found_error(&self) -> DagError {
+        #[cfg(feature = "failpoints")]
         ::fail::fail_point!("dag-not-found-vertex");
         DagError::VertexNotFound(self.clone())
     }
