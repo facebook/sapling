@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(all(test, fbcode_build))]
+#[path = "facebook/bookmark_batches.rs"]
+mod bookmark_batches;
 #[cfg(fbcode_build)]
 #[path = "facebook/bookmark_notifications.rs"]
 mod bookmark_notifications;
