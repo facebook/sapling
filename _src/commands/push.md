@@ -4,7 +4,7 @@ sidebar_position: 29
 
 ## push
 <!--
-  @generated SignedSource<<b20ff74f4539b716c0b405ee188fcf33>>
+  @generated SignedSource<<f5c3e4d09d824705e7a77c69c156fba4>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -23,6 +23,14 @@ To add a named remote destination, see `sl path --add`.
 the remote repository. Defaults to the current commit.
 
 Add `--create` to create the remote bookmark if it doesn&#x27;t already exist.
+
+Add `--no-rebase` to move the remote bookmark to exactly the pushed
+commit instead of rebasing the commit onto the remote bookmark, which
+`--rebase` (the default) does. The move must be a fast-forward unless
+`-f/--force` is given or the `NON_FAST_FORWARD=true` push var is set.
+`--rebase` and `--no-rebase` require `--to`. Git pushes never
+rebase, so `--no-rebase` changes nothing for Git repos and `--rebase`
+is an error.
 
 The `-f/--force` flag allows non-fast-forward pushes.
 
