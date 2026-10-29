@@ -4,4 +4,3 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_nfs_testharness_xdr_test_utils)

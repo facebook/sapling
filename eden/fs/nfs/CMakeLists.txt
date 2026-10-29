@@ -4,8 +4,6 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_nfs_nfsd_rpc)
-eden_add_directory_library(eden_nfs_utils)
 
 add_subdirectory(portmap)
 add_subdirectory(rpc)

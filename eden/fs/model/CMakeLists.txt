@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_model)
 
 add_subdirectory(git)
 if(BUILD_TESTS)

@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_store_hg)
 
 if (BUILD_TESTS AND NOT WIN32)
  add_subdirectory(test)

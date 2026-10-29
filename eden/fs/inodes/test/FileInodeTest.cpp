@@ -46,7 +46,7 @@ struct fmt::formatter<timespec> {
   }
 
   template <typename FormatContext>
-  auto format(const timespec& ts, FormatContext& ctx) {
+  auto format(const timespec& ts, FormatContext& ctx) const {
     return fmt::format_to(ctx.out(), "{}.{:09d}", ts.tv_sec, ts.tv_nsec);
   }
 };
@@ -60,7 +60,7 @@ struct fmt::formatter<std::chrono::system_clock::time_point> {
   template <typename FormatContext>
   auto format(
       const std::chrono::system_clock::time_point& tp,
-      FormatContext& ctx) {
+      FormatContext& ctx) const {
     auto duration = tp.time_since_epoch();
     auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
     auto nsecs =

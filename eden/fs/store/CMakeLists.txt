@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_store)
 
 add_subdirectory(sl)
 add_subdirectory(filter)

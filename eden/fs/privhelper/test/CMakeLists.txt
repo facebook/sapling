@@ -3,22 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-add_executable(
-  eden_fuse_privhelper_test
-    PrivHelperTest.cpp
-    PrivHelperTestServer.cpp
-)
-target_link_libraries(
-  eden_fuse_privhelper_test
-  PUBLIC
-    Boost::filesystem
-    eden_fuse_privhelper
-    edencommon::edencommon_utils
-    eden_testharness
-    Folly::folly_test_util
-    ${LIBGMOCK_LIBRARIES}
-)
-gtest_discover_tests(eden_fuse_privhelper_test)
+include(generated_targets.cmake)
 
 add_executable(drop_privs DropPrivs.cpp)
 target_link_libraries(drop_privs eden_fuse_privhelper Folly::folly)

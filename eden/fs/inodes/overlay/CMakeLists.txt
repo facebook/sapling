@@ -18,4 +18,3 @@ if (EDEN_HAVE_THRIFT_PYTHON)
 endif()
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_overlay_checker)

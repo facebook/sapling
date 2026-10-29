@@ -10,3 +10,7 @@ add_fbthrift_cpp_library(
 
 include(generated_targets.cmake)
 eden_add_directory_library(eden_takeover)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

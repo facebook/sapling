@@ -4,4 +4,5 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_testharness)
+
+add_subdirectory(test)

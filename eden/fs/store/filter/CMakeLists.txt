@@ -4,4 +4,7 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
-eden_add_directory_library(eden_store_filter)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

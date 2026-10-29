@@ -4,3 +4,7 @@
 # GNU General Public License version 2.
 
 include(generated_targets.cmake)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
