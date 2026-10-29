@@ -20,7 +20,7 @@ crossfire = "3.1.20"
 curl = { version = "0.4.51", features = ["http2", "static-ssl"] }
 curl-sys = "0.4.87"
 flume = "0.11.1"
-futures = { version = "0.3.34", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "std"], default-features = false }
 http = "1.5.0"
 lru-cache = "0.1.2"
 maplit = "1.0"
@@ -46,5 +46,6 @@ url = "2.5.8"
 [dev-dependencies]
 assert_matches = "1.5"
 crossbeam = "0.8.5"
+futures = { version = "0.3.34", features = ["executor"], default-features = false }
 mockito = "1.7.2"
 zstd = { version = "0.14.3", features = ["experimental", "zstdmt"] }

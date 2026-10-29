@@ -16,12 +16,16 @@ sl_rust_library(
                         ],
                     },
                 },
+                "dev-dependencies": {
+                    "futures": {"features": ["executor"]},
+                },
             },
         },
     },
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:mockito",
         "fbsource//third-party/rust:zstd",
     ],

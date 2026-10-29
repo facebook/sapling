@@ -17,7 +17,7 @@ anyhow = "1.0.104"
 async-trait = "0.1.92"
 blake3 = { version = "=1.8.6", features = ["mmap", "rayon", "traits-preview"] }
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
-futures = { version = "0.3.34", features = ["async-await", "compat"] }
+futures = { version = "0.3.34", features = ["async-await", "std"], default-features = false }
 hashbrown = "0.17.1"
 itertools = "0.15.0"
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }

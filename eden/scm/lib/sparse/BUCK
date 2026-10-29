@@ -7,6 +7,11 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "futures": {"features": ["std", "async-await", "executor"]},
+                },
+            },
             # Cargo feature-gated deps ("async" feature not enabled in Buck).
             "extra_buck_dependencies": {
                 "dependencies": [

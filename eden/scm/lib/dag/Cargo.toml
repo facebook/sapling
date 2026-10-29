@@ -20,8 +20,8 @@ async-trait = "0.1.92"
 bitflags = { version = "2.13.2", features = ["serde", "std"], default-features = false }
 byteorder = "1.5"
 fail = { version = "0.5.1", features = ["failpoints"] }
-futures = { version = "0.3.34", features = ["async-await", "compat"] }
-indexmap = { version = "2.14.2", features = ["arbitrary", "rayon", "serde"] }
+futures = { version = "0.3.34", features = ["async-await", "std"], default-features = false }
+indexmap = "2.14.2"
 rand = "0.10.3"
 sapling-dag-types = { version = "0.2.0", path = "dag-types", default-features = false }
 sapling-drawdag = { version = "0.2.0", path = "../drawdag" }

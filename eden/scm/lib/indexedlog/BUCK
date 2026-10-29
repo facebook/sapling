@@ -22,6 +22,17 @@ sl_rust_library(
                     "name": "log",
                 },
             ],
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-minibytes": {
+                        "default-features": False,
+                        "features": ["frommmap"],
+                    },
+                    "twox-hash": {
+                        "features": ["std", "xxhash32", "xxhash64"],
+                    },
+                },
+            },
             # Cargo bench deps.
             "extra_buck_dependencies": {
                 "dev-dependencies": [

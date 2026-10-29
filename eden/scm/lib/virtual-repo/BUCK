@@ -10,6 +10,11 @@ sl_rust_library(
     ]),
     autocargo = {
         "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "twox-hash": {"features": ["std", "xxhash3_64"]},
+                },
+            },
             "package": {
                 "autobenches": False,
                 "description": "Generate source control repo data on demand for testing purpose.",

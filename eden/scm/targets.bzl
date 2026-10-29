@@ -15,6 +15,13 @@ _RUST_DEP_OVERRIDES = {
     "fs-err": {
         "features": [],
     },
+    "futures": {
+        "default-features": False,
+        "features": ["std", "async-await"],
+    },
+    "indexmap": {
+        "features": [],
+    },
     "smallvec": {
         "default-features": False,
         "features": [],
@@ -24,6 +31,10 @@ _RUST_DEP_OVERRIDES = {
         "features": [],
         "git": None,
         "rev": None,
+    },
+    "twox-hash": {
+        "default-features": False,
+        "features": ["std", "xxhash64"],
     },
 }
 
@@ -145,13 +156,17 @@ def _autocargo_overrides(lib_name_hint = None, **kwargs):
     if autocargo != None and autocargo.get("ignore_rule"):
         return autocargo
 
+    cargo_config = (autocargo or {}).get("cargo_toml_config") or {}
+    extra_deps = cargo_config.get("extra_buck_dependencies") or {}
     dependencies = _minimal_third_party_rust_overrides([
         kwargs.get("deps"),
         kwargs.get("named_deps"),
+        extra_deps.get("dependencies"),
     ])
     dev_dependencies = _minimal_third_party_rust_overrides([
         kwargs.get("test_deps"),
         kwargs.get("test_named_deps"),
+        extra_deps.get("dev-dependencies"),
     ])
     if not dependencies and not dev_dependencies:
         return autocargo

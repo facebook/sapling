@@ -27,4 +27,4 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-virtual-tree = { version = "0.1.0", path = "virtual-tree" }
 sapling-zstdelta = { version = "0.1.0", path = "../zstdelta" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-twox-hash = "2.1.5"
+twox-hash = { version = "2.1.5", features = ["std", "xxhash3_64"], default-features = false }

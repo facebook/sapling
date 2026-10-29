@@ -26,7 +26,7 @@ sapling-vlqencoding = { version = "0.2.0", path = "../vlqencoding" }
 sha2 = "0.10.6"
 thiserror = "2.0.21"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-twox-hash = "2.1.5"
+twox-hash = { version = "2.1.5", features = ["std", "xxhash64"], default-features = false }
 uuid = { version = "1.28.0", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
 
 [dev-dependencies]

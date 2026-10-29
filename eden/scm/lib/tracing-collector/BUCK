@@ -5,7 +5,15 @@ oncall("sapling")
 sl_rust_library(
     name = "tracing-collector",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "indexmap": {"features": ["serde"]},
+                },
+            },
+        },
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:indexmap",
