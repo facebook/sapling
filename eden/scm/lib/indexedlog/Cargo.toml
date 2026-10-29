@@ -60,7 +60,6 @@ libc = "0.2.186"
 sapling-btrfs = { version = "0.1.0", path = "../util/btrfs", optional = true }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
-sapling-fsinfo = { version = "0.1.0", path = "../fsinfo" }
 tempfile = "3.27.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -1382,6 +1382,25 @@ mod tests {
 
     use super::*;
 
+    #[cfg(all(target_os = "linux", feature = "btrfs"))]
+    fn is_btrfs(path: &Path) -> bool {
+        use std::ffi::CString;
+        use std::io::Error;
+        use std::mem::zeroed;
+
+        let path = CString::new(path.as_os_str().as_encoded_bytes()).unwrap();
+        // SAFETY: statfs is a C struct with integer fields and arrays.
+        let mut stat: libc::statfs = unsafe { zeroed() };
+        // SAFETY: path is NUL-terminated and stat points to writable storage.
+        assert_eq!(
+            unsafe { libc::statfs(path.as_ptr(), &mut stat) },
+            0,
+            "statfs: {}",
+            Error::last_os_error()
+        );
+        stat.f_type == libc::BTRFS_SUPER_MAGIC
+    }
+
     #[test]
     fn test_open() {
         let dir = tempdir().unwrap();
@@ -2444,7 +2463,7 @@ Reset latest to 2"#
     fn test_btrfs_rotate() {
         let dir = tempdir().unwrap();
 
-        if fsinfo::fstype(dir.path()).unwrap() != fsinfo::FsType::BTRFS {
+        if !is_btrfs(dir.path()) {
             eprintln!(
                 "skipping test_btrfs_rotate: {:?} is not a btrfs filesystem",
                 dir.path()
@@ -2496,7 +2515,7 @@ Reset latest to 2"#
     fn test_disk_usage_reports_physical_size_on_btrfs() {
         let dir = tempdir().unwrap();
 
-        if fsinfo::fstype(dir.path()).unwrap() != fsinfo::FsType::BTRFS {
+        if !is_btrfs(dir.path()) {
             eprintln!(
                 "skipping test_disk_usage_reports_physical_size_on_btrfs: {:?} is not a btrfs filesystem",
                 dir.path()
