@@ -49,6 +49,7 @@ pub use self::types::PrefixLineRenderer;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::indent;
 
     #[test]
     fn test_graph_text_renderer_example() {
@@ -123,6 +124,40 @@ mod tests {
         assert_eq!(
             row.post_ancestry_line(),
             vec![PadLine::Parent, PadLine::Parent, PadLine::Blank],
+        );
+    }
+
+    #[test]
+    fn test_dash_style_once() {
+        use crate::render::Ancestor;
+
+        let render = |dash_style| {
+            let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
+                options.graph_row_shape_style.dash_style = dash_style;
+            });
+            let mut out = renderer.next_text("A", vec![Ancestor::Ancestor("B")], "o", "A");
+            out.push_str(&renderer.next_text("C", vec![], "o", "C"));
+            out.push_str(&renderer.next_text("B", vec![], "o", "B"));
+            indent(&out)
+        };
+
+        assert_eq!(
+            render(DashStyle::Persistent),
+            r#"
+            o  A
+            ╷
+            ╷ o  C
+            ╷
+            o  B"#,
+        );
+        assert_eq!(
+            render(DashStyle::Once),
+            r#"
+            o  A
+            ╷
+            │ o  C
+            │
+            o  B"#,
         );
     }
 }

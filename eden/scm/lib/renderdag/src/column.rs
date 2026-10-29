@@ -52,6 +52,12 @@ where
             _ => {}
         }
     }
+
+    fn convert_ancestor_to_parent(&mut self) {
+        if let Column::Ancestor(node) = self {
+            *self = Column::Parent(node.clone());
+        }
+    }
 }
 
 pub(crate) trait ColumnsExt<N> {
@@ -59,6 +65,7 @@ pub(crate) trait ColumnsExt<N> {
     fn find_empty(&self, index: usize) -> Option<usize>;
     fn first_empty(&self) -> Option<usize>;
     fn new_empty(&mut self) -> usize;
+    fn convert_ancestor_to_parent(&mut self);
     fn reset(&mut self);
 }
 
@@ -94,6 +101,12 @@ where
     fn new_empty(&mut self) -> usize {
         self.push(Column::Empty);
         self.len() - 1
+    }
+
+    fn convert_ancestor_to_parent(&mut self) {
+        for column in self.iter_mut() {
+            column.convert_ancestor_to_parent();
+        }
     }
 
     fn reset(&mut self) {

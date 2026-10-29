@@ -11,6 +11,7 @@ use std::ops::Range;
 use crate::column::Column;
 use crate::column::ColumnsExt;
 use crate::pipeline::types::Ancestor;
+use crate::pipeline::types::DashStyle;
 use crate::pipeline::types::GraphRowShape;
 use crate::pipeline::types::GraphRowShapeOptions;
 use crate::pipeline::types::LinkLine;
@@ -325,6 +326,9 @@ where
             }
         }
 
+        if self.options.graph_row_shape_style.dash_style == DashStyle::Once {
+            self.columns.convert_ancestor_to_parent();
+        }
         self.columns.reset();
         self.previous_node_column = Some(column);
 
