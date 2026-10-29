@@ -809,7 +809,11 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openFolder'; path: AbsolutePath}
   | {type: 'platform/changeTitle'; title: string}
   | {type: 'platform/confirm'; message: string; details?: string | undefined}
-  | {type: 'platform/subscribeToAvailableCwds'}
+  | {
+      type: 'platform/subscribeToAvailableCwds';
+      /** Other folders to offer, from hosts that know them, such as the VS Code Agents Window. */
+      cwds?: Array<AbsolutePath>;
+    }
   | {type: 'platform/subscribeToUnsavedFiles'}
   | {type: 'platform/saveAllUnsavedFiles'}
   | {type: 'platform/setPersistedState'; key: string; data?: string}
