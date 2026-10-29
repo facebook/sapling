@@ -31,6 +31,11 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
     fn next_prefix_lines(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let mut lines = Vec::new();
 
+        lines.push(render_pad_line(
+            line.pre_node_line(),
+            PrefixLineKind::PreNode,
+        ));
+
         // Render the nodeline
         let mut node_line = PrefixLine {
             parts: Vec::new(),
@@ -55,6 +60,11 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
             }
         }
         lines.push(node_line);
+
+        lines.push(render_pad_line(
+            line.post_node_line(),
+            PrefixLineKind::PostNode,
+        ));
 
         // Render the link line
         if let Some(link_row) = line.link_line.as_ref() {

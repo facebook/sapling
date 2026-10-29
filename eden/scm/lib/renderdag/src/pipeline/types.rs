@@ -61,7 +61,7 @@ pub enum DashStyle {
 }
 
 /// Where link-line padding is placed relative to the node line.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum LinkLinePlacement {
     /// Link lines are at the top.
@@ -72,6 +72,7 @@ pub enum LinkLinePlacement {
     ///   │ │
     ///   │ │
     /// ```
+    #[default]
     Top,
 
     /// Link lines are at the bottom.

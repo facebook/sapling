@@ -162,6 +162,74 @@ mod tests {
     }
 
     #[test]
+    fn test_node_padding_prefixes() {
+        use crate::pipeline::types::PrefixLinePart;
+        use crate::render::Ancestor;
+
+        let render = |link_line_placement, dash_style| {
+            let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
+                options.graph_row_shape_style.link_line_placement = link_line_placement;
+                options.graph_row_shape_style.dash_style = dash_style;
+            });
+            renderer.reserve("A");
+            renderer.reserve("B");
+            let lines = renderer.next_prefix_lines(
+                "F",
+                vec![
+                    Ancestor::Parent("A"),
+                    Ancestor::Ancestor("B"),
+                    Ancestor::Anonymous,
+                ],
+            );
+            indent(
+                &lines
+                    .iter()
+                    .map(|line| {
+                        let text: String = line
+                            .parts
+                            .iter()
+                            .map(|part| match part {
+                                PrefixLinePart::Text(text) => text.as_str(),
+                                PrefixLinePart::NodeGlyph => "o",
+                            })
+                            .collect();
+                        format!("    {:<6}  {:?}", text.trim_end(), line.kind)
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            )
+        };
+
+        // Placement changes message layout, so both styles expose the same prefixes.
+        for placement in [LinkLinePlacement::Top, LinkLinePlacement::Bottom] {
+            assert_eq!(
+                render(placement, DashStyle::Persistent),
+                r#"
+                        PreNode
+                    o   Node
+                    │   PostNode
+                ╭─┬─┤   Link
+                │ ╷ │   Term
+                │ ╷ ~   Term
+                │ ╷     Ancestry
+                │ ╷     PostAncestry"#,
+            );
+            assert_eq!(
+                render(placement, DashStyle::Once),
+                r#"
+                        PreNode
+                    o   Node
+                    │   PostNode
+                ╭─┬─┤   Link
+                │ ╷ │   Term
+                │ ╷ ~   Term
+                │ ╷     Ancestry
+                │ │     PostAncestry"#,
+            );
+        }
+    }
+
+    #[test]
     fn test_ancestry_with_single_line_message() {
         use crate::render::Ancestor;
 

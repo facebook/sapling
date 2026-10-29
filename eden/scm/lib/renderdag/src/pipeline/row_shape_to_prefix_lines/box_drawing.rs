@@ -120,6 +120,12 @@ impl<G: BoxDrawingGlyphSet, N> PrefixLineRenderer<N> for BoxDrawingPrefixLineRen
         let glyphs = G::GLYPHS;
         let mut lines = Vec::new();
 
+        lines.push(render_pad_line(
+            glyphs,
+            line.pre_node_line(),
+            PrefixLineKind::PreNode,
+        ));
+
         // Render the nodeline
         let mut node_line = PrefixLine {
             parts: Vec::new(),
@@ -139,6 +145,12 @@ impl<G: BoxDrawingGlyphSet, N> PrefixLineRenderer<N> for BoxDrawingPrefixLineRen
             }
         }
         lines.push(node_line);
+
+        lines.push(render_pad_line(
+            glyphs,
+            line.post_node_line(),
+            PrefixLineKind::PostNode,
+        ));
 
         // Render the link line
         #[allow(clippy::if_same_then_else)]

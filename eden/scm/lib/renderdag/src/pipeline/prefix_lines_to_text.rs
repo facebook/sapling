@@ -7,6 +7,7 @@
 
 use crate::output::OutputRendererState;
 use crate::pad::pad_lines;
+use crate::pipeline::types::LinkLinePlacement;
 use crate::pipeline::types::PrefixLine;
 use crate::pipeline::types::PrefixLineKind;
 use crate::pipeline::types::PrefixLinePart;
@@ -18,12 +19,19 @@ use crate::pipeline::types::PrefixLinePart;
 #[derive(Default)]
 pub struct PrefixLinesToText {
     state: OutputRendererState,
+    link_line_placement: LinkLinePlacement,
 }
 
 impl PrefixLinesToText {
     /// Create a renderer with empty output state.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Choose where link-line padding is placed. Defaults to `Top`.
+    pub fn with_link_line_placement(mut self, placement: LinkLinePlacement) -> Self {
+        self.link_line_placement = placement;
+        self
     }
 
     /// Render the next row of prefix lines into a `String`.
@@ -64,6 +72,13 @@ impl PrefixLinesToText {
         self.state.begin_row(out, separator_line);
 
         for prefix_line in prefix_lines {
+            // Text starts at the node; Top places extra message lines after the links.
+            if prefix_line.kind == PrefixLineKind::PreNode
+                || (prefix_line.kind == PrefixLineKind::PostNode
+                    && self.link_line_placement == LinkLinePlacement::Top)
+            {
+                continue;
+            }
             if prefix_line.kind.is_repeatable() {
                 repeatable_line = Some(prefix_line);
                 continue;
