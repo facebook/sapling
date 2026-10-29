@@ -14,9 +14,23 @@ Break the undo log
 
   $ cat > a.py << EOF
   > import os
+  > from sapling import error, revlog, vfs
+  > opener = vfs.vfs('.sl/undolog')
+  > log = revlog.revlog(opener, 'index.i')
+  > lastrev = len(log) - 1
+  > assert log._inline and log.length(lastrev) > 0
+  > log.revision(lastrev)
   > with open('.sl/undolog/index.i', 'rb+') as f:
-  >     f.seek(-10, os.SEEK_END)
-  >     f.write(b"x")
+  >     f.seek(-1, os.SEEK_END)
+  >     byte = f.read(1)
+  >     f.seek(-1, os.SEEK_CUR)
+  >     f.write(bytes([byte[0] ^ 1]))
+  > try:
+  >     revlog.revlog(opener, 'index.i').revision(lastrev)
+  > except error.RevlogError:
+  >     pass
+  > else:
+  >     raise AssertionError('undo log was not corrupted')
   > EOF
 
   $ sl debugpython a.py
