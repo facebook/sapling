@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -31,6 +32,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_macros::mononoke;
+use mononoke_types::BlobstoreKey;
 use mononoke_types::NonRootMPath;
 use mononoke_types::content_manifest::ContentManifestEntry;
 use mononoke_types::hash::Blake3;
@@ -38,8 +40,11 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use redactedblobstore::RedactedBlobs;
+use redactedblobstore::RedactedMetadata;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
+use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
@@ -502,6 +507,80 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
         .expect("file exists");
     let metadata = file.metadata().await?;
     assert_eq!(metadata, expected_metadata);
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn file_metadata_of_redacted_content(fb: FacebookInit) -> Result<(), Error> {
+    // What it tests: file metadata read through the API for a file whose content is redacted.
+    // Expected: the first line is not returned, the rest of the metadata is unchanged, and
+    // the metadata of an unredacted file still has its first line.
+    let ctx = CoreContext::test_mock(fb);
+    let mut factory = TestRepoFactory::new(fb)?;
+    let repo: Repo = factory.build().await?;
+    let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("redacted", "redacted first line\nsecond line\n")
+        .add_file("visible", "visible first line\nsecond line\n")
+        .commit()
+        .await?;
+
+    let file_metadata = |repo: Repo, path: &'static str| {
+        let ctx = ctx.clone();
+        async move {
+            let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
+            let repo = mononoke
+                .repo(ctx, "test")
+                .await?
+                .expect("repo exists")
+                .build()
+                .await?;
+            let cs = repo.changeset(cs_id).await?.expect("changeset exists");
+            let file = cs
+                .path_with_content(path)
+                .await?
+                .file()
+                .await?
+                .expect("file exists");
+            anyhow::Ok(file.metadata().await?)
+        }
+    };
+
+    let unredacted_metadata = file_metadata(repo, "redacted").await?;
+    assert_eq!(
+        unredacted_metadata.first_line.as_deref(),
+        Some("redacted first line"),
+        "the first line should be returned before the content is redacted"
+    );
+
+    let redacted_repo: Repo = factory
+        .redacted(Some(RedactedBlobs::FromHashMapForTests(Arc::new(
+            hashmap! {
+                unredacted_metadata.content_id.blobstore_key() => RedactedMetadata {
+                    task: "T12345".to_string(),
+                    log_only: false,
+                },
+            },
+        ))))
+        .build()
+        .await?;
+
+    let redacted_metadata = file_metadata(redacted_repo.clone(), "redacted").await?;
+    assert_eq!(
+        redacted_metadata,
+        FileMetadata {
+            first_line: None,
+            ..unredacted_metadata
+        },
+        "only the first line should be removed from the metadata of redacted content"
+    );
+
+    let visible_metadata = file_metadata(redacted_repo, "visible").await?;
+    assert_eq!(
+        visible_metadata.first_line.as_deref(),
+        Some("visible first line"),
+        "the metadata of unredacted content should keep its first line"
+    );
 
     Ok(())
 }
