@@ -6,6 +6,7 @@
  */
 
 use super::ancestry_lines;
+use crate::pipeline::types::DashStyle;
 use crate::pipeline::types::GraphRowShape;
 use crate::pipeline::types::LinkLine;
 use crate::pipeline::types::NodeLine;
@@ -30,8 +31,13 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
     /// Convert the next graph row shape into prefix lines.
     fn next_prefix_lines(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let mut lines = Vec::new();
+        let (ancestor, ancestor_line) = match line.style.dash_style {
+            DashStyle::Persistent => ('.', ". "),
+            DashStyle::Once => (':', ": "),
+        };
 
         lines.push(render_pad_line(
+            ancestor_line,
             line.pre_node_line(),
             PrefixLineKind::PreNode,
         ));
@@ -55,13 +61,19 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
                         .push(PrefixLinePart::Text(String::from(" ")));
                 }
                 NodeLine::Parent => push_text(&mut node_line, if i > 0 { " | " } else { "| " }),
-                NodeLine::Ancestor => push_text(&mut node_line, if i > 0 { " . " } else { ". " }),
+                NodeLine::Ancestor => {
+                    if i > 0 {
+                        push_text(&mut node_line, " ");
+                    }
+                    push_text(&mut node_line, ancestor_line);
+                }
                 NodeLine::Blank => push_text(&mut node_line, if i > 0 { "   " } else { "  " }),
             }
         }
         lines.push(node_line);
 
         lines.push(render_pad_line(
+            ancestor_line,
             line.post_node_line(),
             PrefixLineKind::PostNode,
         ));
@@ -90,7 +102,7 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
                 if cur.intersects(LinkLine::VERT_PARENT) {
                     top_link_line.push('|');
                 } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
-                    top_link_line.push('.');
+                    top_link_line.push(ancestor);
                 } else if cur.intersects(LinkLine::ANY_MERGE) {
                     top_link_line.push(' ');
                 } else if cur.intersects(LinkLine::HORIZ_PARENT) {
@@ -129,7 +141,7 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
                 if cur.intersects(LinkLine::VERT_PARENT) {
                     bot_link_line.push('|');
                 } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
-                    bot_link_line.push('.');
+                    bot_link_line.push(ancestor);
                 } else {
                     bot_link_line.push(' ');
                 }
@@ -167,7 +179,7 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
                     } else {
                         term_line.push_str(match line.ancestry_line[i] {
                             PadLine::Parent => "| ",
-                            PadLine::Ancestor => ". ",
+                            PadLine::Ancestor => ancestor_line,
                             PadLine::Blank => "  ",
                         });
                     }
@@ -180,45 +192,34 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
         }
 
         for (kind, columns) in ancestry_lines(line) {
-            lines.push(render_pad_line(columns, kind));
+            lines.push(render_pad_line(ancestor_line, columns, kind));
         }
 
         lines
     }
 }
 
-fn render_pad_line(line: impl IntoIterator<Item = PadLine>, kind: PrefixLineKind) -> PrefixLine {
+fn render_pad_line(
+    ancestor: &str,
+    line: impl IntoIterator<Item = PadLine>,
+    kind: PrefixLineKind,
+) -> PrefixLine {
     PrefixLine {
-        parts: vec![PrefixLinePart::Text(render_pad_text(line))],
+        parts: vec![PrefixLinePart::Text(render_pad_text(ancestor, line))],
         kind,
     }
 }
 
-fn render_pad_text(line: impl IntoIterator<Item = PadLine>) -> String {
+fn render_pad_text(ancestor: &str, line: impl IntoIterator<Item = PadLine>) -> String {
     let mut out = String::new();
     for (i, entry) in line.into_iter().enumerate() {
+        if i > 0 {
+            out.push(' ');
+        }
         out.push_str(match entry {
-            PadLine::Parent => {
-                if i > 0 {
-                    " | "
-                } else {
-                    "| "
-                }
-            }
-            PadLine::Ancestor => {
-                if i > 0 {
-                    " . "
-                } else {
-                    ". "
-                }
-            }
-            PadLine::Blank => {
-                if i > 0 {
-                    "   "
-                } else {
-                    "  "
-                }
-            }
+            PadLine::Parent => "| ",
+            PadLine::Ancestor => ancestor,
+            PadLine::Blank => "  ",
         });
     }
     out

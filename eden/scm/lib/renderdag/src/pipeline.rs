@@ -154,7 +154,7 @@ mod tests {
             render(DashStyle::Once),
             r#"
             o  A
-            ╷
+            ┆
             │ o  C
             │
             o  B"#,
@@ -221,9 +221,9 @@ mod tests {
                     o   Node
                     │   PostNode
                 ╭─┬─┤   Link
-                │ ╷ │   Term
-                │ ╷ ~   Term
-                │ ╷     Ancestry
+                │ ┆ │   Term
+                │ ┆ ~   Term
+                │ ┆     Ancestry
                 │ │     PostAncestry"#,
             );
         }
@@ -234,22 +234,29 @@ mod tests {
         use crate::render::Ancestor;
 
         // Show the ancestry marker even when there are no message lines to pad.
-        for dash_style in [DashStyle::Once, DashStyle::Persistent] {
+        let render = |dash_style| {
             let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
                 options.min_row_height = 0;
                 options.graph_row_shape_style.dash_style = dash_style;
             });
             let mut out = renderer.next_text("A", vec![Ancestor::Ancestor("B")], "o", "A");
             out.push_str(&renderer.next_text("B", vec![], "o", "B"));
-            let rendered = indent(&out);
-            assert_eq!(
-                rendered,
-                r#"
+            indent(&out)
+        };
+        assert_eq!(
+            render(DashStyle::Once),
+            r#"
+            o  A
+            ┆
+            o  B"#,
+        );
+        assert_eq!(
+            render(DashStyle::Persistent),
+            r#"
             o  A
             ╷
             o  B"#,
-            );
-        }
+        );
     }
     #[test]
     fn test_dash_style_once_with_long_message() {
@@ -272,7 +279,7 @@ mod tests {
             rendered,
             r#"
             o  A
-            ╷  message 1
+            ┆  message 1
             │  message 2
             │  message 3
             o  B"#,
@@ -418,14 +425,14 @@ mod tests {
             o  A
             │  message 1
             │  message 2
-            ╷  message 3
+            ┆  message 3
             o  B"#,
         );
         assert_eq!(
             render("A", 0),
             r#"
             o  A
-            ╷
+            ┆
             o  B"#,
         );
         assert_eq!(
@@ -435,7 +442,67 @@ mod tests {
             │
             │
             │
-            ╷
+            ┆
+            o  B"#,
+        );
+    }
+
+    #[test]
+    fn test_once_glyphs() {
+        use row_shape_to_prefix_lines::box_drawing::BoxDrawingGlyphSet;
+        use row_shape_to_prefix_lines::box_drawing::Curved;
+        use row_shape_to_prefix_lines::box_drawing::Square;
+
+        use crate::render::Ancestor;
+
+        enum Colon {}
+        impl BoxDrawingGlyphSet for Colon {
+            const GLYPHS: &'static [&'static str; 15] = &{
+                let mut glyphs = *Curved::GLYPHS;
+                glyphs[14] = ": ";
+                glyphs
+            };
+        }
+
+        let render = |prefix_renderer: Box<dyn PrefixLineRenderer<&str> + Send + Sync>| {
+            let mut renderer =
+                GraphTextRenderer::with_prefix_lines(prefix_renderer).configure(|options| {
+                    options.min_row_height = 0;
+                    options.graph_row_shape_style.dash_style = DashStyle::Once;
+                });
+            let mut out = renderer.next_text(
+                "A",
+                vec![Ancestor::Ancestor("B")],
+                "o",
+                "A\nmessage 1\nmessage 2",
+            );
+            out.push_str(&renderer.next_text("B", vec![], "o", "B"));
+            indent(&out)
+        };
+        for ascii in [Box::new(Ascii) as Box<_>, Box::new(AsciiLarge) as Box<_>] {
+            assert_eq!(
+                render(ascii),
+                r#"
+            o  A
+            :  message 1
+            |  message 2
+            o  B"#,
+            );
+        }
+        assert_eq!(
+            render(Box::new(BoxDrawing::<Square>::new())),
+            r#"
+            o  A
+            ┆  message 1
+            │  message 2
+            o  B"#,
+        );
+        assert_eq!(
+            render(Box::new(BoxDrawing::<Colon>::new())),
+            r#"
+            o  A
+            :  message 1
+            │  message 2
             o  B"#,
         );
     }

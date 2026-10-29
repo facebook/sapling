@@ -6,6 +6,7 @@
  */
 
 use super::ancestry_lines;
+use crate::pipeline::types::DashStyle;
 use crate::pipeline::types::GraphRowShape;
 use crate::pipeline::types::LinkLine;
 use crate::pipeline::types::NodeLine;
@@ -30,8 +31,13 @@ impl<N> PrefixLineRenderer<N> for AsciiPrefixLineRenderer {
     /// Convert the next graph row shape into prefix lines.
     fn next_prefix_lines(&mut self, line: &GraphRowShape<N>) -> Vec<PrefixLine> {
         let mut lines = Vec::new();
+        let (ancestor, ancestor_line) = match line.style.dash_style {
+            DashStyle::Persistent => ('.', ". "),
+            DashStyle::Once => (':', ": "),
+        };
 
         lines.push(render_pad_line(
+            ancestor_line,
             line.pre_node_line(),
             PrefixLineKind::PreNode,
         ));
@@ -50,13 +56,14 @@ impl<N> PrefixLineRenderer<N> for AsciiPrefixLineRenderer {
                         .push(PrefixLinePart::Text(String::from(" ")));
                 }
                 NodeLine::Parent => push_text(&mut node_line, "| "),
-                NodeLine::Ancestor => push_text(&mut node_line, ". "),
+                NodeLine::Ancestor => push_text(&mut node_line, ancestor_line),
                 NodeLine::Blank => push_text(&mut node_line, "  "),
             }
         }
         lines.push(node_line);
 
         lines.push(render_pad_line(
+            ancestor_line,
             line.post_node_line(),
             PrefixLineKind::PostNode,
         ));
@@ -90,7 +97,7 @@ impl<N> PrefixLineRenderer<N> for AsciiPrefixLineRenderer {
                     } else if cur.intersects(LinkLine::VERT_PARENT) {
                         link_line.push('|');
                     } else {
-                        link_line.push('.');
+                        link_line.push(ancestor);
                     }
                 } else if cur.intersects(LinkLine::ANY_MERGE) && any_horizontal {
                     link_line.push('\'');
@@ -136,7 +143,7 @@ impl<N> PrefixLineRenderer<N> for AsciiPrefixLineRenderer {
                     } else {
                         term_line.push_str(match line.ancestry_line[i] {
                             PadLine::Parent => "| ",
-                            PadLine::Ancestor => ". ",
+                            PadLine::Ancestor => ancestor_line,
                             PadLine::Blank => "  ",
                         });
                     }
@@ -149,26 +156,30 @@ impl<N> PrefixLineRenderer<N> for AsciiPrefixLineRenderer {
         }
 
         for (kind, columns) in ancestry_lines(line) {
-            lines.push(render_pad_line(columns, kind));
+            lines.push(render_pad_line(ancestor_line, columns, kind));
         }
 
         lines
     }
 }
 
-fn render_pad_line(line: impl IntoIterator<Item = PadLine>, kind: PrefixLineKind) -> PrefixLine {
+fn render_pad_line(
+    ancestor: &str,
+    line: impl IntoIterator<Item = PadLine>,
+    kind: PrefixLineKind,
+) -> PrefixLine {
     PrefixLine {
-        parts: vec![PrefixLinePart::Text(render_pad_text(line))],
+        parts: vec![PrefixLinePart::Text(render_pad_text(ancestor, line))],
         kind,
     }
 }
 
-fn render_pad_text(line: impl IntoIterator<Item = PadLine>) -> String {
+fn render_pad_text(ancestor: &str, line: impl IntoIterator<Item = PadLine>) -> String {
     let mut out = String::new();
     for entry in line {
         out.push_str(match entry {
             PadLine::Parent => "| ",
-            PadLine::Ancestor => ". ",
+            PadLine::Ancestor => ancestor,
             PadLine::Blank => "  ",
         });
     }
