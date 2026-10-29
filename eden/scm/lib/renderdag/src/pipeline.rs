@@ -278,4 +278,165 @@ mod tests {
             o  B"#,
         );
     }
+
+    #[test]
+    fn test_placements() {
+        use crate::render::Ancestor;
+
+        let mut renderer = GraphTextRenderer::<&str>::default();
+        renderer.reserve("A");
+        renderer.reserve("B");
+        let prefixes = renderer.next_prefix_lines(
+            "F",
+            vec![
+                Ancestor::Parent("A"),
+                Ancestor::Ancestor("B"),
+                Ancestor::Anonymous,
+            ],
+        );
+        // Reuse the same prefixes; only the text stage chooses message placement.
+        let render = |placement| {
+            let mut text = PrefixLinesToText::new().with_link_line_placement(placement);
+            let out = text.next_text(
+                prefixes.clone(),
+                false,
+                "o",
+                "F\nmessage 1\nmessage 2\nmessage 3\nmessage 4\nmessage 5\nmessage 6",
+                0,
+            );
+            indent(&out)
+        };
+        assert_eq!(
+            render(LinkLinePlacement::Top),
+            r#"
+                o  F
+            ╭─┬─┤  message 1
+            │ ╷ │  message 2
+            │ ╷ ~  message 3
+            │ ╷    message 4
+            │ ╷    message 5
+            │ ╷    message 6"#,
+        );
+        assert_eq!(
+            render(LinkLinePlacement::Bottom),
+            r#"
+                o  F
+                │  message 1
+                │  message 2
+            ╭─┬─┤  message 3
+            │ ╷ │  message 4
+            │ ╷ ~  message 5
+            │ ╷    message 6"#,
+        );
+    }
+
+    #[test]
+    fn test_bottom_terminations() {
+        use crate::render::Ancestor;
+
+        let render = |placement, message| {
+            let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
+                options.min_row_height = 0;
+                options.graph_row_shape_style.link_line_placement = placement;
+            });
+            renderer.reserve("A");
+            renderer.reserve("B");
+            let mut out = renderer.next_text(
+                "F",
+                vec![
+                    Ancestor::Parent("A"),
+                    Ancestor::Parent("B"),
+                    Ancestor::Anonymous,
+                ],
+                "o",
+                message,
+            );
+            out.push_str(&renderer.next_text("A", vec![], "o", "A"));
+            out.push_str(&renderer.next_text("B", vec![], "o", "B"));
+            indent(&out)
+        };
+        let long = "F\nmessage 1\nmessage 2\nmessage 3\nmessage 4\nmessage 5";
+        assert_eq!(
+            render(LinkLinePlacement::Top, long),
+            r#"
+                o  F
+            ╭─┬─┤  message 1
+            │ │ │  message 2
+            │ │ ~  message 3
+            │ │    message 4
+            │ │    message 5
+            o │  A
+              o  B"#,
+        );
+        // Padding before Link does not replace continuation after the anonymous termination.
+        assert_eq!(
+            render(LinkLinePlacement::Bottom, long),
+            r#"
+                o  F
+                │  message 1
+                │  message 2
+            ╭─┬─┤  message 3
+            │ │ │  message 4
+            │ │ ~  message 5
+            │ │
+            o │  A
+              o  B"#,
+        );
+        assert_eq!(
+            render(LinkLinePlacement::Bottom, "F"),
+            r#"
+                o  F
+            ╭─┬─┤
+            │ │ │
+            │ │ ~
+            │ │
+            o │  A
+              o  B"#,
+        );
+    }
+
+    #[test]
+    fn test_bottom_without_link_line() {
+        use crate::render::Ancestor;
+
+        let render = |message, min_row_height| {
+            let mut renderer = GraphTextRenderer::<&str>::default().configure(|options| {
+                options.min_row_height = min_row_height;
+                options.graph_row_shape_style = GraphRowShapeStyle {
+                    dash_style: DashStyle::Once,
+                    link_line_placement: LinkLinePlacement::Bottom,
+                };
+            });
+            let mut out = renderer.next_text("A", vec![Ancestor::Ancestor("B")], "o", message);
+            out.push_str(&renderer.next_text("B", vec![], "o", "B"));
+            indent(&out)
+        };
+        // The ancestry marker stays at the bottom even when no connecting Link line is needed.
+        assert_eq!(
+            render("A\nmessage 1\nmessage 2\nmessage 3", 0),
+            r#"
+            o  A
+            │  message 1
+            │  message 2
+            ╷  message 3
+            o  B"#,
+        );
+        assert_eq!(
+            render("A", 0),
+            r#"
+            o  A
+            ╷
+            o  B"#,
+        );
+        assert_eq!(
+            render("A", 5),
+            r#"
+            o  A
+            │
+            │
+            │
+            ╷
+            o  B"#,
+        );
+    }
 }

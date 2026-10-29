@@ -66,17 +66,39 @@ impl PrefixLinesToText {
         min_row_height: usize,
     ) {
         let mut message_lines = pad_lines(message.lines(), min_row_height);
+        let extra_message_lines = if self.link_line_placement == LinkLinePlacement::Bottom {
+            let fixed_lines = prefix_lines
+                .iter()
+                .filter(|line| !line.kind.is_repeatable())
+                .count();
+            message
+                .lines()
+                .count()
+                .max(min_row_height)
+                .saturating_sub(fixed_lines)
+        } else {
+            0
+        };
         let mut repeatable_line = None;
         let mut has_term_row = false;
 
         self.state.begin_row(out, separator_line);
 
         for prefix_line in prefix_lines {
-            // Text starts at the node; Top places extra message lines after the links.
-            if prefix_line.kind == PrefixLineKind::PreNode
-                || (prefix_line.kind == PrefixLineKind::PostNode
-                    && self.link_line_placement == LinkLinePlacement::Top)
-            {
+            // Text starts at the node; extra message lines precede links only for Bottom.
+            if prefix_line.kind == PrefixLineKind::PreNode {
+                continue;
+            }
+            if prefix_line.kind == PrefixLineKind::PostNode {
+                if extra_message_lines > 0 {
+                    let base_line = render_prefix_line(&prefix_line, glyph);
+                    // Reserve message lines for the mandatory Link, Term, and Ancestry lines.
+                    self.state.push_pad_lines(
+                        out,
+                        &base_line,
+                        message_lines.by_ref().take(extra_message_lines),
+                    );
+                }
                 continue;
             }
             if prefix_line.kind.is_repeatable() {
