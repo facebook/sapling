@@ -6,6 +6,9 @@
  */
 
 #[cfg(fbcode_build)]
+#[path = "facebook/bookmark_notifications.rs"]
+mod bookmark_notifications;
+#[cfg(fbcode_build)]
 #[path = "facebook/event_router_coordinator_stats.rs"]
 mod event_router_coordinator_stats;
 #[cfg(test)]
@@ -1643,24 +1646,14 @@ impl BookmarksCoordinator {
     }
 
     #[cfg(fbcode_build)]
-    async fn update_from_notification(
+    async fn update_inline_from_notification(
         &mut self,
         ctx: &CoreContext,
         notification: BookmarkEventNotification,
     ) -> Result<(), Error> {
-        if notification.repo_id != self.repo.repo_identity().id().id() {
-            return Err(anyhow!(
-                "bookmark notification for repository ID {} was routed to repository ID {:?}",
-                notification.repo_id,
-                self.repo.repo_identity().id(),
-            ));
-        }
-        let ParsedBookmarkEventNotification {
-            key,
-            log_id,
-            from_changeset_id: _from_changeset_id,
-            to_changeset_id: _to_changeset_id,
-        } = notification.try_into()?;
+        let notification = self.parse_notification(notification)?;
+        let key = notification.key.clone();
+        let log_id = notification.log_id;
 
         if let Some(handle) = self.updaters_handles.remove(&key) {
             handle
@@ -1673,51 +1666,20 @@ impl BookmarksCoordinator {
         let cached_log_id = self
             .bookmarks
             .with_read(|bookmarks| bookmarks.get(&key).and_then(BookmarkState::log_id));
-        if cached_log_id.is_some_and(|cached_log_id| log_id <= cached_log_id) {
-            tracing::info!(
-                repo = %self.repo.repo_identity().name(),
-                bookmark = %key,
-                notification_log_id = ?log_id,
-                cached_log_id = ?cached_log_id,
-                "Skipped stale or duplicate EventRouter warm bookmark cache notification"
-            );
+        let Some(notification) = self.update_from_notification(notification) else {
             return Ok(());
-        }
-
-        let prefix = BookmarkPrefix::new(key.name().as_str())?;
-        let mut bookmarks = self.repo.bookmarks().list(
-            ctx.clone(),
-            Freshness::MostRecent,
-            &prefix,
-            &[*key.category()],
-            BookmarkKind::ALL_PUBLISHING,
-            &BookmarkPagination::FromStart,
-            1,
-        );
-        let current_bookmark = bookmarks
-            .try_next()
-            .await
-            .with_context(|| format!("reading current bookmark {key}"))?
-            .filter(|(bookmark, _)| bookmark.key() == &key);
-
-        let notification_outcome = match current_bookmark {
-            Some((bookmark, changeset_id)) => {
-                warm_bookmark_from_notification(ctx, &key, changeset_id, log_id, &self.warmers)
-                    .await?;
-                let mut state = BookmarkState::from_warmers(*bookmark.kind(), &self.warmers);
-                state.set_all_tracked(changeset_id);
-                state.set_log_id(log_id);
-                self.bookmarks.with_write(|bookmarks| {
-                    bookmarks.insert(key.clone(), state);
-                });
-                "updated"
-            }
-            None => {
-                self.bookmarks
-                    .with_write(|bookmarks| bookmarks.remove(&key));
-                "deleted"
-            }
         };
+
+        let state = self
+            .repo
+            .warm_from_notification(ctx, &notification, &self.warmers)
+            .await?;
+        let notification_outcome = if state.is_some() {
+            "updated"
+        } else {
+            "deleted"
+        };
+        bookmark_notifications::update_cached_bookmark(&self.bookmarks, &notification, state);
         tracing::info!(
             repo = %self.repo.repo_identity().name(),
             bookmark = %key,
@@ -1866,7 +1828,7 @@ impl BookmarksCoordinator {
                     let ctx = ctx.with_mutated_scuba(|scuba| scuba.with_seq("seq"));
                     let res = match pending_update.take() {
                         Some(EventRouterCoordinatorUpdate::Notification(notification)) => {
-                            match self.update_from_notification(&ctx, notification).await {
+                            match self.update_inline_from_notification(&ctx, notification).await {
                                 Ok(()) => {
                                     STATS::event_router_notification_processed_count.add_value(
                                         1,
@@ -2426,7 +2388,7 @@ mod tests {
             ..Default::default()
         };
         coordinator
-            .update_from_notification(&ctx, notification)
+            .update_inline_from_notification(&ctx, notification)
             .await?;
 
         let master_key = BookmarkKey::new("master")?;
@@ -2453,7 +2415,7 @@ mod tests {
             .await?;
         let create_log_id = bookmark_log_id(&ctx, &repo, "created").await?;
         coordinator
-            .update_from_notification(
+            .update_inline_from_notification(
                 &ctx,
                 BookmarkEventNotification {
                     repo_id: repo.repo_identity().id().id(),
@@ -2484,7 +2446,7 @@ mod tests {
         bookmark(&ctx, &repo, "master").delete().await?;
         let delete_log_id = bookmark_log_id(&ctx, &repo, "master").await?;
         coordinator
-            .update_from_notification(
+            .update_inline_from_notification(
                 &ctx,
                 BookmarkEventNotification {
                     repo_id: repo.repo_identity().id().id(),
