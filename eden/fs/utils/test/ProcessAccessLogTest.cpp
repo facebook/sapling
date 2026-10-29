@@ -7,6 +7,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <thread>
 #include <utility>
 
 #include "eden/common/utils/ProcessInfoCache.h"
@@ -16,6 +17,7 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Key;
+using ::testing::UnorderedElementsAre;
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
@@ -49,4 +51,26 @@ TEST(ProcessAccessLog, accessAddsProcessToProcessInfoCache) {
   auto log = ProcessAccessLog{processInfoCache};
   log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelOther);
   EXPECT_THAT(processInfoCache->getAllProcessInfos(), Contains(Key(Eq(pid))));
+}
+
+// Pins the current behavior: the first log a thread records into owns that
+// thread's bucket for good, so `second` never sees pids 2 and 3 and the
+// counts land in `first` instead. The fix flips these expectations.
+TEST(ProcessAccessLog, oneThreadRecordingIntoTwoLogs) {
+  auto processInfoCache = std::make_shared<ProcessInfoCache>();
+  auto first = std::make_unique<ProcessAccessLog>(processInfoCache);
+  auto second = std::make_unique<ProcessAccessLog>(processInfoCache);
+
+  std::thread worker([&] {
+    first->recordAccess(1, ProcessAccessLog::AccessType::FsChannelRead);
+    second->recordAccess(2, ProcessAccessLog::AccessType::FsChannelRead);
+    EXPECT_THAT(
+        first->getAccessCounts(10s), UnorderedElementsAre(Key(1), Key(2)));
+    EXPECT_THAT(second->getAccessCounts(10s), ElementsAre());
+
+    first.reset();
+    second->recordAccess(3, ProcessAccessLog::AccessType::FsChannelRead);
+    EXPECT_THAT(second->getAccessCounts(10s), ElementsAre());
+  });
+  worker.join();
 }
