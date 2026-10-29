@@ -249,7 +249,7 @@ where
             node_line: row.node_line,
             link_line: row.link_line,
             term_line: row.term_line,
-            pad_lines: row.pad_lines,
+            pad_lines: row.ancestry_line,
             separator_line: row.separator_line,
         }
     }

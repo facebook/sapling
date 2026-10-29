@@ -232,7 +232,7 @@ impl<G: BoxDrawingGlyphSet, N> PrefixLineRenderer<N> for BoxDrawingPrefixLineRen
                     if *term {
                         term_line.push_str(term_str);
                     } else {
-                        term_line.push_str(glyphs[pad_line_to_glyph(line.pad_lines[i])]);
+                        term_line.push_str(glyphs[pad_line_to_glyph(line.ancestry_line[i])]);
                     }
                 }
                 lines.push(PrefixLine {
@@ -243,7 +243,7 @@ impl<G: BoxDrawingGlyphSet, N> PrefixLineRenderer<N> for BoxDrawingPrefixLineRen
         }
 
         let mut base_pad_line = String::new();
-        for entry in line.pad_lines.iter() {
+        for entry in line.ancestry_line.iter() {
             base_pad_line.push_str(glyphs[pad_line_to_glyph(*entry)]);
         }
         lines.push(PrefixLine {

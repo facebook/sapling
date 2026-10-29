@@ -154,7 +154,7 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
                     if *term {
                         term_line.push_str(term_str);
                     } else {
-                        term_line.push_str(match line.pad_lines[i] {
+                        term_line.push_str(match line.ancestry_line[i] {
                             PadLine::Parent => "| ",
                             PadLine::Ancestor => ". ",
                             PadLine::Blank => "  ",
@@ -169,7 +169,7 @@ impl<N> PrefixLineRenderer<N> for AsciiLargePrefixLineRenderer {
         }
 
         let mut base_pad_line = String::new();
-        for (i, entry) in line.pad_lines.iter().enumerate() {
+        for (i, entry) in line.ancestry_line.iter().enumerate() {
             base_pad_line.push_str(match entry {
                 PadLine::Parent => {
                     if i > 0 {

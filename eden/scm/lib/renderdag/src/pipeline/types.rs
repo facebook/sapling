@@ -90,8 +90,8 @@ pub struct GraphRowShape<N> {
     /// columns should be rendered using the row's padding columns.
     pub term_line: Option<Vec<bool>>,
 
-    /// Abstract columns for repeatable padding below this row.
-    pub pad_lines: Vec<PadLine>,
+    /// Abstract columns for ancestry continuation below this row.
+    pub ancestry_line: Vec<PadLine>,
 }
 
 /// A left-side graph prefix line before message text is attached.

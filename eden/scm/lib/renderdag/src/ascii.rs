@@ -85,7 +85,7 @@ where
             link_line: line.link_line,
             link_line_from_node: None,
             term_line: line.term_line,
-            pad_lines: line.pad_lines,
+            ancestry_line: line.pad_lines,
         };
         let prefix_lines = self.prefix_lines.next_prefix_lines(&row_shape);
         self.text.next_text(

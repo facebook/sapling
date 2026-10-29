@@ -152,7 +152,7 @@ where
         let mut term_line: Vec<_> = self.columns.iter().map(|_| false).collect();
         let mut need_term_line = false;
 
-        let mut pad_lines: Vec<_> = self.columns.iter().map(column_to_pad_line).collect();
+        let mut ancestry_line: Vec<_> = self.columns.iter().map(column_to_pad_line).collect();
 
         let mut parent_columns = BTreeMap::new();
         for parent in parents.iter() {
@@ -172,7 +172,7 @@ where
 
             parent_columns.insert(self.columns.len(), parent);
             node_line.push(NodeLine::Blank);
-            pad_lines.push(PadLine::Blank);
+            ancestry_line.push(PadLine::Blank);
             link_line.push(LinkLine::default());
             link_line_from_node.push(LinkLine::default());
             term_line.push(false);
@@ -232,7 +232,7 @@ where
                     link_line[parent_column] = value;
                     link_line_from_node[parent_column] |= value;
                     need_link_line = true;
-                    pad_lines[parent_column] = PadLine::Blank;
+                    ancestry_line[parent_column] = PadLine::Blank;
                 }
             }
         }
@@ -286,7 +286,7 @@ where
 
             #[allow(clippy::comparison_chain)]
             for (&index, parent) in parent_columns.iter() {
-                pad_lines[index] = column_to_pad_line(&self.columns[index]);
+                ancestry_line[index] = column_to_pad_line(&self.columns[index]);
                 if index < column {
                     link_both(
                         &mut link_line,
@@ -339,7 +339,7 @@ where
             link_line: Some(link_line).filter(|_| need_link_line),
             link_line_from_node: Some(link_line_from_node).filter(|_| need_link_line),
             term_line: Some(term_line).filter(|_| need_term_line),
-            pad_lines,
+            ancestry_line,
             separator_line,
         }
     }
