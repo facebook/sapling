@@ -13,6 +13,78 @@ pub use crate::render::LinkLine;
 pub use crate::render::NodeLine;
 pub use crate::render::PadLine;
 
+/// Style choices that affect graph row shapes and prefix-line placement.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
+pub struct GraphRowShapeStyle {
+    /// How long indirect-ancestor dash lines remain in ancestor style.
+    pub dash_style: DashStyle,
+
+    /// Where link-related padding lines are placed around the node line.
+    pub link_line_placement: LinkLinePlacement,
+}
+
+impl Default for GraphRowShapeStyle {
+    fn default() -> Self {
+        Self {
+            dash_style: DashStyle::Persistent,
+            link_line_placement: LinkLinePlacement::Top,
+        }
+    }
+}
+
+/// How indirect-ancestor dash lines continue across rows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
+pub enum DashStyle {
+    /// Keep ancestor lines in ancestor style until the branch disappears.
+    ///
+    /// ```plain
+    ///   o
+    ///   ╷
+    ///   ╷
+    ///   ╷
+    ///   o
+    /// ```
+    Persistent,
+
+    /// Render ancestor style at most once per branch, then continue as parent.
+    ///
+    /// ```plain
+    ///   o
+    ///   ┆
+    ///   │
+    ///   │
+    ///   o
+    /// ```
+    Once,
+}
+
+/// Where link-line padding is placed relative to the node line.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
+pub enum LinkLinePlacement {
+    /// Link lines are at the top.
+    ///
+    /// ```plain
+    ///   o
+    ///   ├─╮
+    ///   │ │
+    ///   │ │
+    /// ```
+    Top,
+
+    /// Link lines are at the bottom.
+    ///
+    /// ```plain
+    ///   o
+    ///   │
+    ///   │
+    ///   ├─╮
+    /// ```
+    Bottom,
+}
+
 /// Options that affect the graph row shape produced from the input node stream.
 ///
 /// These options belong to the first pipeline stage. They may affect column
@@ -57,6 +129,9 @@ pub struct GraphRowShape<N> {
 
     /// True if this row needs a blank separator before its graph lines.
     pub separator_line: bool,
+
+    /// Style used to produce this row shape.
+    pub style: GraphRowShapeStyle,
 
     /// True if this node is a head (no children, uses a new column).
     pub is_head: bool,

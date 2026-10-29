@@ -41,6 +41,9 @@ pub use self::prefix_lines_to_text::PrefixLinesToText;
 pub use self::row_shape_to_prefix_lines::ascii::AsciiPrefixLineRenderer as Ascii;
 pub use self::row_shape_to_prefix_lines::ascii_large::AsciiLargePrefixLineRenderer as AsciiLarge;
 pub use self::row_shape_to_prefix_lines::box_drawing::BoxDrawingPrefixLineRenderer as BoxDrawing;
+pub use self::types::DashStyle;
+pub use self::types::GraphRowShapeStyle;
+pub use self::types::LinkLinePlacement;
 pub use self::types::PrefixLineRenderer;
 
 #[cfg(test)]
@@ -81,6 +84,7 @@ mod tests {
             node: "A",
             merge: false,
             separator_line: false,
+            style: Default::default(),
             is_head: true,
             is_root: false,
             node_column: 0,

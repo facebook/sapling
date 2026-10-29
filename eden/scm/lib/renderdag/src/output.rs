@@ -19,6 +19,7 @@ pub(crate) const DEFAULT_MIN_ROW_HEIGHT: usize = 2;
 pub struct OutputRendererOptions {
     pub min_row_height: usize,
     pub stagger_consecutive_disconnected_nodes: bool,
+    pub graph_row_shape_style: crate::pipeline::types::GraphRowShapeStyle,
 }
 
 /// Common stateful string line output utilities shared by ASCII and box-drawing
@@ -103,6 +104,7 @@ impl Default for OutputRendererOptions {
         Self {
             min_row_height: DEFAULT_MIN_ROW_HEIGHT,
             stagger_consecutive_disconnected_nodes: false,
+            graph_row_shape_style: Default::default(),
         }
     }
 }

@@ -333,6 +333,7 @@ where
             merge,
             is_head,
             is_root,
+            style: self.options.graph_row_shape_style,
             node_column: column,
             parent_columns: parent_columns.keys().copied().collect(),
             node_line,

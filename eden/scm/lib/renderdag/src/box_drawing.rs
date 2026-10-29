@@ -106,6 +106,7 @@ where
             node: line.node,
             merge: line.merge,
             separator_line,
+            style: Default::default(),
             is_head: false,
             is_root: false,
             node_column: 0,
