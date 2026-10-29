@@ -32,7 +32,8 @@ rust_library(
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
-    ],
+    ]
+    + ([] if rust_oss.is_oss_build() else ["//eden/mononoke/features/repo_update_logger:repo_update_logger"]),
     deps = (
         [
             "fbsource//third-party/rust:anyhow",

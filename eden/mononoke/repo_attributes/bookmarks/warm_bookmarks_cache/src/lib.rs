@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(all(test, fbcode_build))]
+#[cfg(fbcode_build)]
 #[path = "facebook/bookmark_batches.rs"]
 mod bookmark_batches;
 #[cfg(fbcode_build)]
 #[path = "facebook/bookmark_notifications.rs"]
 mod bookmark_notifications;
+#[cfg(fbcode_build)]
+#[path = "facebook/event_router_batching.rs"]
+mod event_router_batching;
 #[cfg(fbcode_build)]
 #[path = "facebook/event_router_coordinator_stats.rs"]
 mod event_router_coordinator_stats;
@@ -1810,6 +1813,29 @@ impl BookmarksCoordinator {
         notify_sync_start: Arc<Notify>,
         notify_sync_complete: Arc<Notify>,
     ) {
+        let repo_name = self.repo.repo_identity().name().to_owned();
+        let batch_settings = justknobs::eval(
+            "scm/mononoke:wbc_event_router_executor",
+            Some(&repo_name),
+            Some(&repo_name),
+        )
+        .then(|| {
+            let concurrency = justknobs::get(
+                "scm/mononoke:wbc_event_router_batch_concurrency",
+                Some(&repo_name),
+            )
+            .clamp(1, 1024) as usize;
+            let max_pending_bookmarks = justknobs::get(
+                "scm/mononoke:wbc_event_router_max_pending_bookmarks",
+                Some(&repo_name),
+            )
+            .max(1) as usize;
+            let delay = Duration::from_millis(justknobs::get_as::<u64>(
+                "scm/mononoke:warm_bookmark_cache_poll_interval_ms",
+                None,
+            ));
+            (concurrency, max_pending_bookmarks, delay)
+        });
         let span = tracing::info_span!(
             "wbc",
             repo = %self.repo.repo_identity().name(),
@@ -1825,6 +1851,12 @@ impl BookmarksCoordinator {
                 );
             let mut bookmark_event_notification_subscriber = None;
             let infinite_loop = async {
+                if let Some(settings) = batch_settings {
+                    self.run_event_router_batches(
+                        &ctx, (&notify_sync_start, &notify_sync_complete), settings,
+                    ).await;
+                    return;
+                }
                 let mut sync_started = false;
                 let mut pending_update = None;
                 loop {
@@ -2316,6 +2348,7 @@ mod tests {
         FilestoreConfig,
     );
 
+    #[cfg(fbcode_build)]
     async fn bookmark_log_id(
         ctx: &CoreContext,
         repo: &Repo,
