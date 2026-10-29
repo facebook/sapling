@@ -1600,6 +1600,22 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::StorageConfigExistsParams,
         ) -> Result<thrift::StorageConfigExistsResponse, service::StorageConfigExistsExn>;
 
+        async fn create_org_storage_config(
+            params: thrift::CreateOrgStorageConfigParams,
+        ) -> Result<thrift::CreateOrgStorageConfigToken, service::CreateOrgStorageConfigExn>;
+
+        async fn delete_org_storage_config(
+            params: thrift::DeleteOrgStorageConfigParams,
+        ) -> Result<thrift::DeleteOrgStorageConfigToken, service::DeleteOrgStorageConfigExn>;
+
+        async fn org_storage_config_poll(
+            params: thrift::OrgStorageConfigPollParams,
+        ) -> Result<thrift::OrgStorageConfigPollResponse, service::OrgStorageConfigPollExn>;
+
+        async fn org_storage_config(
+            params: thrift::OrgStorageConfigParams,
+        ) -> Result<thrift::OrgStorageConfigResponse, service::OrgStorageConfigExn>;
+
         async fn repo_info(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoInfoParams,

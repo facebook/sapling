@@ -42,6 +42,28 @@ impl AddScubaParams for thrift::ListReposParams {}
 
 impl AddScubaParams for thrift::RepoExistsParams {}
 impl AddScubaParams for thrift::StorageConfigExistsParams {}
+impl AddScubaParams for thrift::CreateOrgStorageConfigParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("org_slug", self.org.clone());
+        scuba.add("manifold_bucket", self.manifold_bucket.clone());
+        scuba.add("xdb_shard", self.xdb_shard.clone());
+    }
+}
+impl AddScubaParams for thrift::DeleteOrgStorageConfigParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("org_slug", self.org.clone());
+    }
+}
+impl AddScubaParams for thrift::OrgStorageConfigPollParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("mutation_id", self.mutation_id);
+    }
+}
+impl AddScubaParams for thrift::OrgStorageConfigParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("org_slug", self.org.clone());
+    }
+}
 
 impl AddScubaParams for thrift::RepoCreateCommitParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {

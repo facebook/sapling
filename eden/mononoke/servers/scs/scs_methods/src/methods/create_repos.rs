@@ -81,7 +81,7 @@ use tracing::warn;
 
 use crate::source_control_impl::SourceControlServiceImpl;
 
-const DIFF_AUTHOR: &str = "scm_server_infra";
+pub(crate) const DIFF_AUTHOR: &str = "scm_server_infra";
 const REPO_SPEC_THRIFT_TYPE: &str = "RepoSpec";
 const REPO_SPEC_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
 /// JustKnob gating the attach-to-in-flight-mutation idempotency path in
@@ -105,7 +105,7 @@ const STORAGE_CONFIG_JK: &str = "scm/mononoke:create_repos_storage_config_enable
 /// Org engines are named `org_<slug>`: one the repo portal landed for one
 /// org's own bucket and shard. A repo's engine is decided by its org, never by
 /// the caller.
-const ORG_STORAGE_PREFIX: &str = "org_";
+pub(crate) const ORG_STORAGE_PREFIX: &str = "org_";
 
 /// The engine one batch is created on, decided before anything is reserved:
 /// `None` is the template engine for every repo.
@@ -2529,7 +2529,7 @@ async fn cleanup_repos(
 }
 
 #[cfg(fbcode_build)]
-async fn initiate_land_for_mutation(
+pub(crate) async fn initiate_land_for_mutation(
     ctx: CoreContext,
     configo_client: ConfigoServiceClient,
     mutation_id: i64,

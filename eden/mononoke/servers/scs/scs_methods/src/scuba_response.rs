@@ -22,6 +22,10 @@ impl AddScubaResponse for Vec<thrift::Repo> {}
 
 impl AddScubaResponse for thrift::RepoExistsResponse {}
 impl AddScubaResponse for thrift::StorageConfigExistsResponse {}
+impl AddScubaResponse for thrift::CreateOrgStorageConfigToken {}
+impl AddScubaResponse for thrift::DeleteOrgStorageConfigToken {}
+impl AddScubaResponse for thrift::OrgStorageConfigPollResponse {}
+impl AddScubaResponse for thrift::OrgStorageConfigResponse {}
 
 impl AddScubaResponse for thrift::RepoInfo {}
 

@@ -934,6 +934,70 @@ struct StorageConfigExistsParams {
   1: string name;
 }
 
+/// One org's own storage, as `create_org_storage_config` lands it.
+struct CreateOrgStorageConfigParams {
+  /// Repo portal org slug; the engine is named `org_<org>` and the data file
+  /// `scm/mononoke/repos/org_storage/<org>.json`. Lowercase letters, digits,
+  /// `_` and `-`; no dots.
+  1: string org;
+  /// Manifold bucket the org owns. Never one of Source Control's own.
+  2: string manifold_bucket;
+  /// XDB shard the org owns (`xdb.<name>`), empty or Mononoke-only. Never
+  /// one of Source Control's own.
+  3: string xdb_shard;
+}
+
+struct CreateOrgStorageConfigToken {
+  /// Configo mutation adding the file; unset when the file was already at
+  /// HEAD with the same content.
+  1: optional i64 mutation_id;
+  /// The file was already at HEAD with the same content; nothing was landed.
+  2: bool already_landed;
+}
+
+struct DeleteOrgStorageConfigParams {
+  1: string org;
+}
+
+struct DeleteOrgStorageConfigToken {
+  /// Configo mutation removing the file; unset when there was no file.
+  1: optional i64 mutation_id;
+  /// No file was at HEAD; nothing was landed.
+  2: bool already_absent;
+}
+
+enum OrgStorageConfigMutationState {
+  UNKNOWN = 0,
+  IN_PROGRESS = 1,
+  LANDED = 2,
+  FAILED = 3,
+  ABORTED = 4,
+}
+
+struct OrgStorageConfigPollParams {
+  1: i64 mutation_id;
+}
+
+struct OrgStorageConfigPollResponse {
+  1: OrgStorageConfigMutationState state;
+  /// Configo's error text when FAILED or ABORTED.
+  2: optional string message;
+}
+
+struct OrgStorageConfigParams {
+  1: string org;
+}
+
+/// The org -> storage engine mapping as this task has it loaded.
+struct OrgStorageConfigResponse {
+  /// `org_<org>` when the engine is in the answering task's storage map;
+  /// unset when it is not (not landed, or not yet loaded here).
+  1: optional string storage_config;
+  /// Configerator version of the tier manifest the answering task last
+  /// loaded; unset when configs do not come from configerator.
+  2: optional string manifest_version;
+}
+
 struct StorageConfigExistsResponse {
   /// Whether the answering task has the engine loaded.
   1: bool exists;
@@ -3639,6 +3703,59 @@ service SourceControlService {
   /// answer from one task does not prove the whole tier has reloaded.
   StorageConfigExistsResponse storage_config_exists(
     1: StorageConfigExistsParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Land the storage engine data file for an org's own bucket and shard
+  /// (`scm/mononoke/repos/org_storage/<org>.json`), from which configerator
+  /// builds the `org_<org>` engine and lists the shard in the Mononoke schema
+  /// domains. Idempotent: a file already at HEAD with the same content lands
+  /// nothing; one with different content is refused (`ORG_STORAGE_CONFLICT`)
+  /// rather than overwritten. Stateless: poll the token with
+  /// `org_storage_config_poll`, then wait for `org_storage_config` to answer
+  /// on the tier before creating repos on the engine. Landing an engine needs
+  /// membership of `repo_portal_storage_setters` (the repo portal's identity)
+  /// or Source Control admin; creating repos on it afterwards does not, the
+  /// engine follows from the org.
+  CreateOrgStorageConfigToken create_org_storage_config(
+    1: CreateOrgStorageConfigParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Remove an org's storage engine data file. Refused while any repo names
+  /// the engine: a source-of-truth row under `<org>/` in any state, or a
+  /// loaded repo config with that `storage_config`. Same caller gate as
+  /// `create_org_storage_config`.
+  DeleteOrgStorageConfigToken delete_org_storage_config(
+    1: DeleteOrgStorageConfigParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Progress of a mutation from `create_org_storage_config` or
+  /// `delete_org_storage_config`. Initiates the land once the mutation is
+  /// prepared; never cleans anything up on failure, since there is no
+  /// reservation to free.
+  OrgStorageConfigPollResponse org_storage_config_poll(
+    1: OrgStorageConfigPollParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// The storage engine an org's repos are created on, as the answering task
+  /// has it loaded. Global like `repo_exists`; any task answers for itself.
+  OrgStorageConfigResponse org_storage_config(
+    1: OrgStorageConfigParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

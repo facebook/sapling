@@ -37,6 +37,7 @@ rust_library(
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
