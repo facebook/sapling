@@ -13,6 +13,9 @@ use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::AtomicU64;
 
+#[cfg(all(unix, feature = "sigbus-handler"))]
+pub use crate::sigbus::register_sigbus_handler;
+
 static UMASK: LazyLock<u32> = LazyLock::new(|| {
     #[cfg(unix)]
     unsafe {
@@ -131,69 +134,4 @@ pub fn set_deterministic_metadata(flag: bool) {
 
 pub(crate) fn get_deterministic_metadata() -> bool {
     DETERMINISTIC_METADATA.load(atomic::Ordering::Acquire)
-}
-
-/// Configure various settings based on a `Config`.
-#[cfg(feature = "configurable")]
-pub fn configure(config: &dyn configmodel::Config) -> configmodel::Result<()> {
-    use configmodel::ConfigExt;
-    use configmodel::convert::ByteCount;
-
-    if cfg!(unix) {
-        let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;
-        if chmod_file >= 0 {
-            CHMOD_FILE.store(chmod_file, atomic::Ordering::Release);
-        }
-
-        let chmod_dir = config.get_or("permissions", "chmod-dir", || -1)?;
-        if chmod_dir >= 0 {
-            CHMOD_DIR.store(chmod_dir, atomic::Ordering::Release);
-        }
-
-        let use_symlink_atomic_write: bool =
-            config.get_or_default("format", "use-symlink-atomic-write")?;
-        SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, atomic::Ordering::Release);
-
-        #[cfg(all(unix, feature = "sigbus-handler"))]
-        {
-            let use_sigbus_handler: bool =
-                config.get_or_default("unsafe", "indexedlog-zerofill-mmap-sigbus")?;
-            if use_sigbus_handler {
-                crate::sigbus::register_sigbus_handler();
-            }
-        }
-    }
-
-    if let Some(max_chain_len) =
-        config.get_opt::<u32>("storage", "indexedlog-max-index-checksum-chain-len")?
-    {
-        INDEX_CHECKSUM_MAX_CHAIN_LEN.store(max_chain_len, atomic::Ordering::Release);
-    }
-
-    if let Some(enabled) = config.get_opt::<bool>("storage", "indexedlog-index-verified-cache")? {
-        INDEX_VERIFIED_CACHE.store(enabled, atomic::Ordering::Release);
-    }
-
-    if let Some(value) =
-        config.get_opt::<usize>("storage", "indexedlog-weak-buffer-gc-threshold")?
-    {
-        WEAK_BUFFER_GC_THRESHOLD.store(value, atomic::Ordering::Release);
-    }
-
-    if let Some(threshold) =
-        config.get_opt::<ByteCount>("storage", "indexedlog-page-out-threshold")?
-    {
-        set_page_out_threshold(threshold.value() as _);
-    }
-
-    if let Some(timeout_secs) =
-        config.get_opt::<u64>("storage", "indexedlog-lag-flush-timeout-secs")?
-    {
-        set_index_lag_flush_timeout_secs(timeout_secs);
-    }
-
-    let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
-    set_global_fsync(fsync);
-
-    Ok(())
 }

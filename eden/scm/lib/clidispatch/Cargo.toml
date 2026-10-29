@@ -29,7 +29,7 @@ sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-hgtime = { version = "0.1.0", path = "../hgtime" }
 sapling-hook = { version = "0.1.0", path = "../hook" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
-sapling-indexedlog = { version = "0.2.0", path = "../indexedlog", features = ["configurable"] }
+sapling-indexedlog-config = { version = "0.1.0", path = "../indexedlog/config" }
 sapling-io = { version = "0.1.0", path = "../io" }
 sapling-network-doctor = { version = "0.1.0", path = "../doctor/network" }
 sapling-repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }

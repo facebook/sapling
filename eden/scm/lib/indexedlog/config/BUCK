@@ -1,0 +1,24 @@
+load("//eden/scm:targets.bzl", "sl_rust_library")
+
+oncall("sapling")
+
+sl_rust_library(
+    name = "indexedlog-config",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "sigbus-handler": ["sapling-indexedlog/sigbus-handler"],
+            },
+            "package": {
+                "description": "Configure indexedlog using Sapling configuration.",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["sigbus-handler"],
+    deps = [
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/indexedlog:indexedlog",
+    ],
+)

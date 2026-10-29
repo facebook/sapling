@@ -219,7 +219,7 @@ impl BackingStore {
         );
 
         // Apply indexed log configs, which can affect edenfs behavior.
-        indexedlog::config::configure(&config)?;
+        indexedlog_config::configure(&config)?;
 
         let repo = Repo::load_with_config(root, config)?;
         let filestore = repo.file_store()?;

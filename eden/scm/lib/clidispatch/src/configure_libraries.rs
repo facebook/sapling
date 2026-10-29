@@ -36,7 +36,7 @@ use crate::dispatch::Result;
 impl Dispatcher {
     pub(crate) fn configure_libraries(&self, io: &IO) -> Result<()> {
         let config = self.config();
-        indexedlog::config::configure(config)?;
+        indexedlog_config::configure(config)?;
         if let Some(limit) = config.get_opt::<usize>("dag", "idmap-cache-flush-limit")? {
             dag::config::set_idmap_cache_flush_limit(limit);
         }

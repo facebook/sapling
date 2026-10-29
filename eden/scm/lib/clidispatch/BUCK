@@ -9,7 +9,6 @@ sl_rust_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "sapling-indexedlog": {"features": ["configurable"]},
                     "sapling-repo": {"features": ["wdir"]},
                     "sapling-thrift-types": {"optional": True},
                 },
@@ -48,7 +47,7 @@ sl_rust_library(
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/hook:hook",
         "//eden/scm/lib/identity:identity",
-        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/indexedlog/config:indexedlog-config",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/io/term/logger:termlogger",
         "//eden/scm/lib/io/term/style:termstyle",

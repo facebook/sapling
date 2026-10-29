@@ -65,7 +65,6 @@ sl_rust_library(
             "dependencies_override": {
                 "dependencies": {
                     "sapling-constructors": {"default-features": False},
-                    "sapling-indexedlog": {"features": ["configurable"]},
                     "sapling-repo": {"features": ["wdir"]},
                 },
             },
@@ -119,6 +118,7 @@ sl_rust_library(
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/indexedlog/config:indexedlog-config",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/metrics:metrics",

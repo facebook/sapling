@@ -31,7 +31,6 @@ sl_rust_library(
             },
             "features": {
                 "btrfs": ["sapling-btrfs"],
-                "configurable": ["sapling-configmodel"],
                 "metrics": ["sapling-metrics"],
                 "sigbus-handler": [],
             },
@@ -43,7 +42,6 @@ sl_rust_library(
     crate_root = "src/lib.rs",
     features = [
         "btrfs",
-        "configurable",
         "sigbus-handler",
         "metrics",
     ],
@@ -65,7 +63,6 @@ sl_rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:twox-hash",
         "//eden/scm/lib/atomicfile:atomicfile",
-        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/util/try-once-lock:try-once-lock",

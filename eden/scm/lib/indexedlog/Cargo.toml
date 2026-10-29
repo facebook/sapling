@@ -38,7 +38,6 @@ byteorder = "1.5"
 memmap2 = "0.9.11"
 rand = "0.10.3"
 sapling-atomicfile = { version = "0.2.0", path = "../atomicfile" }
-sapling-configmodel = { version = "0.2.0", path = "../config/model", optional = true }
 sapling-metrics = { version = "0.1.0", path = "../metrics", optional = true }
 sapling-minibytes = { version = "0.2.0", path = "../minibytes" }
 sapling-try-once-lock = { version = "0.1.0", path = "../util/try-once-lock" }
@@ -74,6 +73,5 @@ winapi = { version = "0.3", features = ["everything", "std"] }
 
 [features]
 btrfs = ["sapling-btrfs"]
-configurable = ["sapling-configmodel"]
 metrics = ["sapling-metrics"]
 sigbus-handler = []
