@@ -7,6 +7,7 @@
 
 //! A simple store implementation to access a local git repo's odb.
 
+use std::collections::HashMap;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Read;
@@ -95,10 +96,46 @@ impl From<ObjectType> for git2::ObjectType {
 impl GitStore {
     /// `open` a Git bare repo at `git_dir`. Gain access to its odb (object database).
     pub fn open(git_dir: &Path, config: &dyn Config) -> Result<Self> {
-        let git_repo = git2::Repository::open(git_dir)?;
-        let odb = git_repo.odb()?;
-
         let mut git = BareGit::from_git_dir_and_config(git_dir.to_owned(), config);
+        let git_repo = match git2::Repository::open(git_dir) {
+            Ok(repo) => repo,
+            Err(err) if err.message() == "unsupported extension name extensions.partialclone" => {
+                // git-repo still sets extensions.partialClone on every filtered fetch,
+                // causing libgit2 to reject the repo. Git 2.24+ maintains partial clone
+                // settings under remote.<name>.promisor. Without that setting for the remote
+                // named by extensions.partialClone, the extension might still be the only
+                // partial clone marker.
+                //
+                // GitStore uses libgit2 for local objects and git fetch for missing objects.
+                // Removing the extension preserves partial clone support. A later repo sync
+                // can restore it, so this cleanup must run again on affected opens.
+                // See https://gerrit-review.googlesource.com/c/git-repo/+/528541
+                let output = git.call(
+                    "config",
+                    &[
+                        "--null",
+                        "--get-regexp",
+                        r"^(extensions\.partialclone|remote\..*\.promisor)$",
+                    ],
+                )?;
+                // --null uses "key\nvalue\0"; valueless settings are just "key\0".
+                let configs = std::str::from_utf8(&output.stdout)?
+                    .split_terminator('\0')
+                    .map(|entry| entry.split_once('\n').unwrap_or((entry, "")))
+                    .collect::<HashMap<_, _>>();
+                configs
+                    .get("extensions.partialclone")
+                    .and_then(|remote| configs.get(format!("remote.{remote}.promisor").as_str()))
+                    .ok_or(err)?;
+                git.run(
+                    "config",
+                    &["--local", "--unset-all", "extensions.partialclone"],
+                )?;
+                git2::Repository::open(git_dir)?
+            }
+            Err(err) => return Err(err.into()),
+        };
+        let odb = git_repo.odb()?;
 
         // Git's negotiation algorithm works on commit reference level and can add significant
         // overhead if we simply want to fetch trees or blobs.
