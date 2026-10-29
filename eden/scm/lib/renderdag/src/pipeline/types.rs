@@ -42,6 +42,18 @@ pub struct GraphRowShape<N> {
     /// True if this row needs a blank separator before its graph lines.
     pub separator_line: bool,
 
+    /// True if this node is a head (no children, uses a new column).
+    pub is_head: bool,
+
+    /// True if this node has no parents.
+    pub is_root: bool,
+
+    /// The column containing the node glyph.
+    pub node_column: usize,
+
+    /// The columns occupied by this node's parents.
+    pub parent_columns: Vec<usize>,
+
     /// Abstract columns for the line containing the node.
     pub node_line: Vec<NodeLine>,
 

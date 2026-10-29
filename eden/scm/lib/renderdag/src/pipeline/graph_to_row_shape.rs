@@ -134,6 +134,9 @@ where
     pub fn next_row_shape(&mut self, node: N, parents: Vec<Ancestor<N>>) -> GraphRowShape<N> {
         let existing_column = self.columns.find(&node);
         let column = existing_column.unwrap_or_else(|| self.find_column_for_unallocated_node());
+        let is_head = existing_column
+            .is_none_or(|index| matches!(self.columns.get(index), Some(Column::Reserved(_))));
+        let is_root = parents.is_empty();
         self.columns[column] = Column::Empty;
 
         let merge = parents.len() > 1;
@@ -273,6 +276,10 @@ where
         GraphRowShape {
             node,
             merge,
+            is_head,
+            is_root,
+            node_column: column,
+            parent_columns: parent_columns.keys().copied().collect(),
             node_line,
             link_line: Some(link_line).filter(|_| need_link_line),
             term_line: Some(term_line).filter(|_| need_term_line),
