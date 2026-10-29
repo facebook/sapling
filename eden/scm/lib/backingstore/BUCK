@@ -78,6 +78,7 @@ sl_rust_library(
                     "edenfs-telemetry": {"path": "../../../fs/rust/edenfs-telemetry"},
                 },
             },
+            "package": {"autobenches": False},
         },
     },
     cpp_deps = [

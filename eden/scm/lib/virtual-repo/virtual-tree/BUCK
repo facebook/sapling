@@ -19,6 +19,7 @@ sl_rust_library(
                 },
             },
             "package": {
+                "autobenches": False,
                 "description": "Generate source control trees on demand for testing purpose.",
             },
             "profile": {

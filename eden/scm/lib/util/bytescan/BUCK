@@ -8,6 +8,7 @@ sl_rust_library(
     autocargo = {
         "cargo_toml_config": {
             "package": {
+                "autobenches": False,
                 "description": "SIMD-accelerated byte scans for binary detection and line counting.",
             },
         },
