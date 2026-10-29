@@ -342,7 +342,7 @@ class GlobNodeImpl {
     TaskTraceBlock block{"GlobNodeImpl::evaluateImpl"};
     context->throwIfCanceled();
     const GlobPathBuilder pathBuilder;
-    std::vector<std::pair<PathComponentPiece, GlobNodeImpl*>> recurse;
+    std::vector<std::pair<PathComponent, GlobNodeImpl*>> recurse;
     std::vector<folly::coro::Task<void>> tasks;
     std::vector<ObjectId> localFileBlobsToPrefetch;
     std::vector<GlobResult> localGlobResults;
@@ -514,9 +514,9 @@ class GlobNodeImpl {
                fileBlobsToPrefetch,
                globResult,
                &originRootId,
-               &root,
-               name = item.first]() mutable -> folly::coro::Task<void> {
-                auto dir = co_await root.co_getOrLoadChildTree(name, context);
+               &root]() mutable -> folly::coro::Task<void> {
+                auto dir = co_await root.co_getOrLoadChildTree(
+                    candidateName.basename(), context);
                 auto childResultDir =
                     makeChildResultDir(resultDir, candidateName.basename());
                 co_await node->evaluateImpl<ROOT, ROOTPtr>(

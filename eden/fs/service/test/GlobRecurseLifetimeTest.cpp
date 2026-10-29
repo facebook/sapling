@@ -40,26 +40,15 @@ constexpr auto kTimeout = 60s;
 /*
  * GlobNodeImpl::evaluateImpl collects the materialized subdirectories it must
  * recurse into while holding the parent's contents lock, then builds a task
- * per entry after releasing it. Those saved names are PathComponentPieces
- * pointing into the parent's PathMap key storage, which any concurrent insert
- * can relocate -- PathMap derives from folly::fbvector and documents that
- * insert and erase invalidate iterators.
+ * per entry after releasing it. Those saved names used to be
+ * PathComponentPieces pointing into the parent's PathMap key storage, which
+ * any concurrent insert can relocate -- PathMap derives from folly::fbvector
+ * and documents that insert and erase invalidate iterators.
  *
  * The fault point sits exactly in that window, so this reproduces the read of
  * a freed name deterministically rather than racing for it.
- *
- * DISABLED_ until the next diff in this stack lands, because against the
- * current code there is no outcome in which this test can pass. It drives
- * the glob into reading a freed name, which is undefined behavior: under
- * @mode/dev-asan the process aborts inside that read, so no assertion is
- * ever reached and the whole binary fails, and under @mode/dev the read
- * returns whatever now occupies the freed bytes, so any assertion over it
- * is nondeterministic. The next diff makes the behavior defined and drops
- * the prefix.
  */
-TEST(
-    GlobRecurseLifetimeTest,
-    DISABLED_deferredRecurseNameSurvivesEntryMapGrowth) {
+TEST(GlobRecurseLifetimeTest, deferredRecurseNameSurvivesEntryMapGrowth) {
   FakeTreeBuilder builder;
   builder.setFile("foo/bar/file.txt", "contents");
   builder.setFile("other/bar/file.txt", "contents");
