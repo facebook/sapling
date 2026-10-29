@@ -9,6 +9,7 @@ description = "Append-only on-disk storage with integrity checks and radix tree 
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "indexedlog"

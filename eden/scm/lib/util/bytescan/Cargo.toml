@@ -9,6 +9,7 @@ description = "SIMD-accelerated byte scans for binary detection and line countin
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 autobenches = false
 
 [lib]

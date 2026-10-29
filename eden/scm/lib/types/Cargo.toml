@@ -9,6 +9,7 @@ description = "Common hash, path, and revision metadata types used by Sapling."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "types"

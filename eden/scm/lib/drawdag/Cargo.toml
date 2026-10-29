@@ -9,6 +9,7 @@ description = "Parse an ASCII DAG into graph edges."
 homepage = "https://sapling-scm.com/docs/dev/internals/drawdag"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "drawdag"

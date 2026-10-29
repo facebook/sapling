@@ -9,6 +9,7 @@ description = "VLQ encoding (https://en.wikipedia.org/wiki/Variable-length_quant
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "vlqencoding"

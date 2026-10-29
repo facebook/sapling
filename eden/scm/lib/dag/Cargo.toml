@@ -9,6 +9,7 @@ description = "An implementation of a DAG used for source control."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 autobenches = false
 
 [lib]

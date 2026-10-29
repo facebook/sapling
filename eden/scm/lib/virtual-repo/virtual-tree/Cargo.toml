@@ -9,6 +9,7 @@ description = "Generate source control trees on demand for testing purpose."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 autobenches = false
 
 [lib]

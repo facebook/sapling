@@ -134,6 +134,9 @@ def sl_autocargo_metadata(autocargo, lib_name_hint = None):
     package.setdefault("name", name)
     for key, value in _RUST_PACKAGE_DEFAULTS.items():
         package.setdefault(key, value)
+    # Cargo's include list takes precedence over exclude.
+    if "include" not in package:
+        package.setdefault("exclude", ["BUCK"])
     version = _RUST_PACKAGE_VERSIONS.get(name)
     if version != None:
         package.setdefault("version", version)

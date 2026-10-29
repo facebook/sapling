@@ -9,6 +9,7 @@ description = "Sampling profiler based on libunwind."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 autoexamples = false
 
 [lib]

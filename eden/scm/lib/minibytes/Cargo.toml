@@ -9,6 +9,7 @@ description = "Shared reference-counted bytes and str with zero-copy slicing sup
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "minibytes"

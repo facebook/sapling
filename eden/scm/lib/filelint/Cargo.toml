@@ -9,6 +9,7 @@ description = "Format repository files across commits."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
+exclude = ["BUCK"]
 
 [dependencies]
 anyhow = "1.0.104"

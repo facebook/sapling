@@ -9,6 +9,7 @@ description = "Thin abstraction for maybe lazily generated str."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "lazystr"

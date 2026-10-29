@@ -9,6 +9,7 @@ description = "Example for the sampling-profiler library."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [[bin]]
 name = "sampling_profiler_example"

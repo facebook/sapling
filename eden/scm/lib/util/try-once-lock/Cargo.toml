@@ -9,6 +9,7 @@ description = "Fallible initialization for std::sync::OnceLock."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "try_once_lock"

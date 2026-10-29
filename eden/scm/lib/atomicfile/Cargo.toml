@@ -9,6 +9,7 @@ description = "Atomically write a file with retries."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "atomicfile"

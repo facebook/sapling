@@ -9,6 +9,7 @@ description = "Configure indexedlog using Sapling configuration."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "indexedlog_config"

@@ -9,6 +9,7 @@ description = "global profiler for sapling."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 autoexamples = false
 
 [lib]

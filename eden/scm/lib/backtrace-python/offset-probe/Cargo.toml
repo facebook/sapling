@@ -9,6 +9,7 @@ description = "Attmpt to obtain raw offsets used to extract Python frames. Inten
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "backtrace_python_offset_probe"

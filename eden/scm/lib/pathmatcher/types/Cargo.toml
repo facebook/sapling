@@ -9,6 +9,7 @@ description = "Interfaces and combinators for matching repository files and dire
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "pathmatcher_types"

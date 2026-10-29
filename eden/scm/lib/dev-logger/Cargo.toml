@@ -9,6 +9,7 @@ description = "Print or examine tracing output in unit tests."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "dev_logger"

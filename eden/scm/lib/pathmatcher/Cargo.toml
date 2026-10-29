@@ -9,6 +9,7 @@ description = "Match repository files and directories using paths, globs, and re
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
+exclude = ["BUCK"]
 
 [lib]
 name = "pathmatcher"
