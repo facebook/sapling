@@ -152,6 +152,7 @@ endif()
 if (BUILD_TESTS AND EDEN_HAVE_THRIFT_PYTHON)
   set(EDEN_BUILD_INTEGRATION_TESTS ON)
   find_package(python-psutil REQUIRED)
+  find_package(python-parameterized REQUIRED)
 elseif (BUILD_TESTS)
   message(STATUS
     "The Python CLI isn't built, so neither are the integration tests, which "

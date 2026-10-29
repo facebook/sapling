@@ -20,7 +20,6 @@ add_fb_python_library(
   DEPENDS
     edenfsctl.real.main_lib
     eden_py
-    eden_service_thrift_py
     eden_test_support
     ${INTEGRATION_LIB_DEPENDENCIES}
 )
