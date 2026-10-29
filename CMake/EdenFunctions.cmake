@@ -45,6 +45,11 @@ function(eden_add_test name)
     ${name} PRIVATE ${ARG_DEPS} Folly::folly_test_main ${LIBGMOCK_LIBRARIES}
   )
   if(ARG_ENVIRONMENT)
+    # Before CMake 4.4, gtest_discover_tests() splits a list value in PROPERTIES
+    # into more name-value pairs, so the test would get only the first variable.
+    if(CMAKE_VERSION VERSION_LESS 4.4)
+      string(REPLACE ";" "\\;" ARG_ENVIRONMENT "${ARG_ENVIRONMENT}")
+    endif()
     gtest_discover_tests(${name} PROPERTIES ENVIRONMENT "${ARG_ENVIRONMENT}")
   else()
     gtest_discover_tests(${name})

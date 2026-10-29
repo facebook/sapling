@@ -66,6 +66,40 @@ if (BUILD_TESTS)
   include_directories(${GMOCK_INCLUDEDIR} ${LIBGMOCK_INCLUDE_DIR})
   include(GoogleTest)
   enable_testing()
+  # The tests that run Sapling's hg get it as EDEN_HG_BINARY. Like
+  # eden/fs/testharness/HgBinary.cpp, prefer hg.real to hg in each directory.
+  # Mercurial, which is hg on GitHub's runners, can't stand in for it.
+  function(eden_is_sapling_hg result candidate)
+    execute_process(
+      COMMAND "${candidate}" --version
+      OUTPUT_VARIABLE version
+      ERROR_QUIET
+    )
+    if (NOT "${version}" MATCHES "^Sapling ")
+      set(${result} FALSE PARENT_SCOPE)
+    endif()
+  endfunction()
+  if (CMAKE_VERSION VERSION_LESS 3.25)
+    # Without VALIDATOR, a Mercurial found first ends the search. Don't cache
+    # it, so that a later configure searches again.
+    find_program(EDEN_HG_BINARY NAMES hg.real hg NAMES_PER_DIR)
+    set(is_sapling TRUE)
+    if (EDEN_HG_BINARY)
+      eden_is_sapling_hg(is_sapling "${EDEN_HG_BINARY}")
+    endif()
+    if (NOT is_sapling)
+      unset(EDEN_HG_BINARY CACHE)
+      set(EDEN_HG_BINARY "")
+    endif()
+  else()
+    find_program(
+      EDEN_HG_BINARY NAMES hg.real hg NAMES_PER_DIR VALIDATOR eden_is_sapling_hg
+    )
+  endif()
+  if (NOT EDEN_HG_BINARY)
+    message(STATUS "Sapling's hg not found, so the tests that run it are not built")
+    set(EDEN_HG_BINARY "")
+  endif()
 endif()
 
 find_package(OpenSSL MODULE REQUIRED)
