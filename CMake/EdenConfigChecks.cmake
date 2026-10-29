@@ -91,10 +91,24 @@ include_directories(${RE2_INCLUDE_DIR})
 fb_find_or_fetch(edencommon)
 
 # The following packages ship with their own CMake configuration files
-find_package(cpptoml CONFIG REQUIRED)
+find_package(cpptoml CONFIG QUIET)
+if (NOT cpptoml_FOUND)
+  # cpptoml asks for CMake 3.1, which leaves CMP0077 unset, so its option()s
+  # would clear these settings, and which CMake 4 refuses.
+  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
+  set(CPPTOML_BUILD_EXAMPLES OFF)
+  set(ENABLE_LIBCXX OFF)
+  fb_fetch_from_manifest(cpptoml cpptoml)
+  unset(CMAKE_POLICY_VERSION_MINIMUM)
+  unset(CMAKE_POLICY_DEFAULT_CMP0077)
+endif()
 find_package(gflags CONFIG REQUIRED)
 
-find_package(BLAKE3 REQUIRED CONFIG)
+find_package(BLAKE3 CONFIG QUIET)
+if (NOT BLAKE3_FOUND)
+  fb_fetch_from_manifest(BLAKE3 blake3)
+endif()
 include_directories(${BLAKE3_INCLUDE_DIR})
 
 # The Python CLI uses thrift-python, which getdeps only builds on Linux, and

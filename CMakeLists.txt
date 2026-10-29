@@ -16,6 +16,10 @@ if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
 cmake_policy(SET CMP0079 NEW)
+# URL downloads timestamp extracted files at extraction time.
+if (POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
 
 # Project information
 project("eden" LANGUAGES CXX C)
