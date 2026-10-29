@@ -7,14 +7,18 @@
 
 #pragma once
 
+#include <folly/io/async/Liburing.h>
+
 #ifdef __linux__
 #include "eden/fs/third-party/fuse_kernel_linux.h" // @manual
 #endif
 
 // Compile Eden's FUSE-over-io_uring transport on Linux when the FUSE protocol
 // header provides the capability bit and the extended init flags used to
-// negotiate it. Runtime negotiation still gates whether a mount uses it.
-#if defined(__linux__) && defined(FUSE_OVER_IO_URING) && defined(FUSE_INIT_EXT)
+// negotiate it, and folly has io_uring support, whose liburing requirement the
+// transport shares. Runtime negotiation still gates whether a mount uses it.
+#if defined(__linux__) && defined(FUSE_OVER_IO_URING) && \
+    defined(FUSE_INIT_EXT) && FOLLY_HAS_LIBURING
 #define EDEN_HAVE_FUSE_IO_URING 1
 #else
 #define EDEN_HAVE_FUSE_IO_URING 0

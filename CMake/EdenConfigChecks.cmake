@@ -10,12 +10,6 @@ set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-find_package(gflags CONFIG REQUIRED)
-include_directories(${GFLAGS_INCLUDE_DIR})
-
-find_package(Glog REQUIRED)
-include_directories(${GLOG_INCLUDE_DIR})
-
 # We need to probe for libevent because the current stable version
 # of libevent doesn't publish the -L libdir in its exported interface
 # which means that folly simply exports `event` to us, leaving us
@@ -24,13 +18,19 @@ include_directories(${GLOG_INCLUDE_DIR})
 # linker.
 find_package(Libevent CONFIG QUIET)
 
-find_package(fmt CONFIG REQUIRED)
-
+# The Boost that folly fetches has only the libraries that folly links.
+# TODO(T295360504): remove Boost from eden and edencommon.
+list(APPEND BOOST_INCLUDE_LIBRARIES filesystem)
 fb_find_or_fetch(folly)
 include_directories(${FOLLY_INCLUDE_DIR})
 
-# After folly, so that a Boost that folly fetched satisfies this.
+# After folly, so that what folly fetched satisfies these.
 find_package(Boost 1.69.0 REQUIRED COMPONENTS filesystem)
+find_package(gflags CONFIG REQUIRED)
+include_directories(${GFLAGS_INCLUDE_DIR})
+find_package(Glog REQUIRED)
+include_directories(${GLOG_INCLUDE_DIR})
+find_package(fmt CONFIG REQUIRED)
 
 fb_find_or_fetch(fizz)
 include_directories(${FIZZ_INCLUDE_DIR})

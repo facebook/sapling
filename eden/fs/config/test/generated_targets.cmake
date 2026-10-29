@@ -20,7 +20,7 @@ eden_add_test(eden_fs_config_test
     TomlConfigTest.cpp
   DEPS
     ${LIBGMOCK_LIBRARIES}
-    Boost::boost
+    Boost::headers
     Folly::folly_file
     Folly::folly_file_util
     Folly::folly_range

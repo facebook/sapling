@@ -69,7 +69,7 @@ eden_add_library(eden_fs_privhelper_server
     PrivHelperServerSanityCheck.cpp
     RestartSentinel.cpp
   DEPS
-    Boost::boost
+    Boost::headers
     Folly::folly_conv
     Folly::folly_exception
     Folly::folly_expected

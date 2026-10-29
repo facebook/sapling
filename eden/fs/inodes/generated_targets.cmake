@@ -105,8 +105,8 @@ eden_add_library(eden_fs_inodes
   DEPS
     ${GFLAGS_LIBRARIES}
     ${RE2_LIBRARY}
-    Boost::boost
     Boost::filesystem
+    Boost::headers
     FBThrift::thriftcpp2
     Folly::folly_chrono_conv
     Folly::folly_coro_current_executor

@@ -16,7 +16,7 @@ eden_add_library(eden_fs_fuse
     PollHandle.cpp
   DEPS
     ${RE2_LIBRARY}
-    Boost::boost
+    Boost::headers
     Folly::folly_exception
     Folly::folly_executors_global_executor
     Folly::folly_logging_logging
@@ -38,6 +38,7 @@ eden_add_library(eden_fs_fuse
     Folly::folly_file
     Folly::folly_function
     Folly::folly_futures_core
+    Folly::folly_io_async_liburing
     Folly::folly_portability
     Folly::folly_portability_gtest_prod
     Folly::folly_range

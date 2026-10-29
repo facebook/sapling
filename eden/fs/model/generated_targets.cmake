@@ -12,7 +12,7 @@ eden_add_library(eden_fs_model
     Tree.cpp
     TreeEntry.cpp
   DEPS
-    Boost::boost
+    Boost::headers
     Folly::folly_conv
     Folly::folly_logging_logging
     Folly::folly_memory_malloc
