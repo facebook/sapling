@@ -925,6 +925,20 @@ struct RepoExistsParams {
   1: string repo_name;
 }
 
+struct StorageConfigExistsParams {
+  /// Storage engine name as it appears in the tier's storage map.
+  1: string name;
+}
+
+struct StorageConfigExistsResponse {
+  /// Whether the answering task has the engine loaded.
+  1: bool exists;
+  /// Configerator version of the tier manifest the answering task last
+  /// loaded, so a caller can compare it with the mutation that added the
+  /// engine. Unset when the task does not load configs from configerator.
+  2: optional string manifest_version;
+}
+
 struct RepoResolveBookmarkParams {
   /// The bookmark name to look up.
   1: string bookmark_name;
@@ -2168,6 +2182,15 @@ struct RepoCreationRequest {
   8: optional OrgAclParams org_acl;
   /// The repo mirrors a GitHub repo. Implies `readonly`.
   9: optional GithubMirrorParams github_mirror;
+  /// The storage engine a repo is created on is decided by its org, not by
+  /// this field: `<slug>/...` goes on `org_<slug>` when that engine is in the
+  /// tier's storage map (landed by `create_org_storage_config`), on the
+  /// default git template's engine otherwise. When set, this is an assertion
+  /// of that engine (the repo portal sends the engine it believes the org
+  /// has); a value that is not what the org maps to is refused
+  /// (`STORAGE_CONFIG_REFUSED:org`). Every repo in a batch must land on the
+  /// same engine (`STORAGE_CONFIG_REFUSED:batch`).
+  10: optional string storage_config;
 }
 
 struct CreateReposParams {
@@ -3597,6 +3620,22 @@ service SourceControlService {
   /// in service routing before reaching a server. Answered from the tier-wide
   /// repo list, so any task can answer for any repo.
   RepoExistsResponse repo_exists(1: RepoExistsParams params) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Check whether a storage engine is loaded on the answering task.
+  ///
+  /// Global like `repo_exists`, and answered from the tier's storage map
+  /// alone (no repo, blobstore or database access). Exists so that whoever
+  /// lands a new engine can wait for Mononoke to pick it up before creating
+  /// repos on it, instead of the first `create_repos` discovering it through
+  /// `STORAGE_CONFIG_UNKNOWN`. Any task answers for itself only; a positive
+  /// answer from one task does not prove the whole tier has reloaded.
+  StorageConfigExistsResponse storage_config_exists(
+    1: StorageConfigExistsParams params,
+  ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,

@@ -21,6 +21,7 @@ impl AddScubaResponse for i64 {}
 impl AddScubaResponse for Vec<thrift::Repo> {}
 
 impl AddScubaResponse for thrift::RepoExistsResponse {}
+impl AddScubaResponse for thrift::StorageConfigExistsResponse {}
 
 impl AddScubaResponse for thrift::RepoInfo {}
 

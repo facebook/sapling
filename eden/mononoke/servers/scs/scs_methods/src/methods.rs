@@ -110,6 +110,23 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    pub(crate) async fn storage_config_exists(
+        &self,
+        _ctx: CoreContext,
+        params: thrift::StorageConfigExistsParams,
+    ) -> Result<thrift::StorageConfigExistsResponse, scs_errors::ServiceError> {
+        let exists = self
+            .configs
+            .storage_configs()
+            .storage
+            .contains_key(&params.name);
+        Ok(thrift::StorageConfigExistsResponse {
+            exists,
+            manifest_version: self.configs.manifest_version(),
+            ..Default::default()
+        })
+    }
 }
 
 #[cfg(test)]

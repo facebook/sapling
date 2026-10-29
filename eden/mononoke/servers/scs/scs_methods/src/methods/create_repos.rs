@@ -52,6 +52,7 @@ use infrasec_authorization_service::CommitChangeSpecificationRequest;
 use infrasec_authorization_service_srclients::make_AuthorizationService_srclient;
 use infrasec_authorization_service_srclients::thrift::ChangeSpecification;
 use infrasec_authorization_service_srclients::thrift::errors::AsNoConfigExistsException;
+use itertools::Itertools;
 use metaconfig_parser::configerator_repo_spec_handle;
 use mononoke_api::MononokeError;
 use mononoke_api::RepositoryId;
@@ -67,6 +68,7 @@ use repo_spec_writer::append_to_repo_index;
 use repo_spec_writer::make_repo_spec_file_path;
 use repo_spec_writer::tier_list_for_repo_spec;
 use repos::RawCommitIdentityScheme;
+use repos::RawRepoConfig;
 use repos::RepoSpec;
 use repos::TShirtSize;
 use source_control as thrift;
@@ -96,6 +98,189 @@ const WRITE_DEFAULT_BRANCH_SYMREF_JK: &str =
 /// Sequence vs the old `MAX(repo_id) + 1` ceiling. Turning this off reinstates
 /// the reuse behind S709055, so it buys diagnosis time, not a resting state.
 const ALLOCATE_FROM_SEQUENCE_JK: &str = "scm/mononoke:create_repos_allocate_from_id_sequence";
+/// Kill switch for creating repos on org storage engines. Off refuses a
+/// dedicated org's creates, never a silent fall back to the template engine:
+/// a repo created on the wrong storage cannot be moved.
+const STORAGE_CONFIG_JK: &str = "scm/mononoke:create_repos_storage_config_enabled";
+/// Org engines are named `org_<slug>`: one the repo portal landed for one
+/// org's own bucket and shard. A repo's engine is decided by its org, never by
+/// the caller.
+const ORG_STORAGE_PREFIX: &str = "org_";
+
+/// The engine one batch is created on, decided before anything is reserved:
+/// `None` is the template engine for every repo.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct BatchStorage(Option<String>);
+
+impl BatchStorage {
+    fn name(&self) -> Option<&str> {
+        self.0.as_deref()
+    }
+}
+
+/// The org a repo name belongs to: its first path segment. A bare name has no
+/// org and always goes on the template engine.
+fn org_of(repo_name: &str) -> Option<&str> {
+    repo_name.split_once('/').map(|(slug, _rest)| slug)
+}
+
+/// The org -> engine mapping is the loaded storage map: `org_<slug>` present
+/// means every repo under `<slug>/` is created on it, absent means the
+/// template. `create_org_storage_config` is what adds an entry, so no
+/// caller can put a repo on storage its org does not own, and no repo of a
+/// dedicated org can land on the template.
+fn org_engine_of(
+    repo_name: &str,
+    storage_configs: &metaconfig_parser::StorageConfigs,
+) -> Option<String> {
+    let engine = format!("{ORG_STORAGE_PREFIX}{}", org_of(repo_name)?);
+    storage_configs
+        .storage
+        .contains_key(&engine)
+        .then_some(engine)
+}
+
+/// Decides the batch's engine from the orgs of its repo names, and checks a
+/// `storage_config` a request names against it: the field is an assertion
+/// (the portal sends the engine it believes the org has, so a stale portal
+/// row is refused rather than silently corrected), never a choice. One
+/// engine per batch, since the batch shares one symref store and one RepoSpec
+/// template. Request errors, so the retry loop reports them instead of
+/// retrying.
+fn derive_batch_storage(
+    repos: &[thrift::RepoCreationRequest],
+    storage_configs: &metaconfig_parser::StorageConfigs,
+) -> Result<BatchStorage, scs_errors::ServiceError> {
+    let derived = repos
+        .iter()
+        .map(|request| {
+            (
+                request.repo_name.as_str(),
+                org_engine_of(&request.repo_name, storage_configs),
+            )
+        })
+        .collect::<Vec<_>>();
+    let engines: HashSet<Option<&str>> = derived
+        .iter()
+        .map(|(_name, engine)| engine.as_deref())
+        .collect();
+    if engines.len() > 1 {
+        return Err(scs_errors::invalid_request(format!(
+            "STORAGE_CONFIG_REFUSED:batch: every repo in a batch must be created on the same \
+             storage engine; this batch mixes {}",
+            derived
+                .iter()
+                .map(|(name, engine)| format!(
+                    "{name} ({})",
+                    engine.as_deref().unwrap_or("template")
+                ))
+                .join(", "),
+        ))
+        .into());
+    }
+    let batch = engines.into_iter().next().flatten().map(str::to_string);
+    for (request, (_name, engine)) in repos.iter().zip(derived.iter()) {
+        let Some(named) = request.storage_config.as_deref() else {
+            continue;
+        };
+        if Some(named) != engine.as_deref() {
+            return Err(scs_errors::invalid_request(format!(
+                "STORAGE_CONFIG_REFUSED:org: '{}' asked for storage_config '{named}', but its org \
+                 maps to {}; the engine is decided by the org, not the request",
+                request.repo_name,
+                engine
+                    .as_deref()
+                    .map(|e| format!("'{e}'"))
+                    .unwrap_or_else(|| "the template engine".to_string()),
+            ))
+            .into());
+        }
+    }
+    Ok(BatchStorage(batch))
+}
+
+/// The database every repo config of a tier shares, whatever its engine: the
+/// git source-of-truth row and the repo-id sequence live there, and the git
+/// server reads them through the repo's own engine while `create_repos`
+/// writes them on the service's connection. An engine pointing `production`
+/// elsewhere would make a repo whose creation this service can never see.
+fn production_db_of(config: &metaconfig_types::StorageConfig) -> Option<String> {
+    match &config.metadata {
+        metaconfig_types::MetadataDatabaseConfig::Remote(remote) => {
+            Some(remote.production.db_address.clone())
+        }
+        metaconfig_types::MetadataDatabaseConfig::OssRemote(remote) => Some(format!(
+            "{}:{}/{}",
+            remote.production.host, remote.production.port, remote.production.database
+        )),
+        metaconfig_types::MetadataDatabaseConfig::Local(local) => {
+            Some(local.path.to_string_lossy().into_owned())
+        }
+    }
+}
+
+/// An org engine must share the template's `production` database.
+fn check_storage_config_production(
+    name: &str,
+    template_name: &str,
+    storage_configs: &metaconfig_parser::StorageConfigs,
+) -> Result<(), scs_errors::ServiceError> {
+    let requested = storage_configs.storage.get(name).ok_or_else(|| {
+        scs_errors::ServiceError::from(scs_errors::internal_error(format!(
+            "Storage config '{name}' was derived from the loaded map and is now missing"
+        )))
+    })?;
+    let template = storage_configs.storage.get(template_name).ok_or_else(|| {
+        scs_errors::ServiceError::from(scs_errors::internal_error(format!(
+            "Storage config '{template_name}' named by {DEFAULT_GIT_REPO_SPEC_PATH} is not loaded"
+        )))
+    })?;
+    if production_db_of(requested) != production_db_of(template) {
+        return Err(scs_errors::invalid_request(format!(
+            "STORAGE_CONFIG_REFUSED:production: storage engine '{name}' does not use the same \
+             production database as '{template_name}'"
+        ))
+        .into());
+    }
+    Ok(())
+}
+
+/// Everything about the batch's storage engine that is decided before
+/// reservation. The knob refuses a dedicated org's creates outright while
+/// off: a repo created on the wrong storage cannot be moved, so there is no
+/// silent fall back to the template.
+fn validate_storage_configs(
+    repos: &[thrift::RepoCreationRequest],
+    configs: &MononokeConfigs,
+) -> Result<BatchStorage, scs_errors::ServiceError> {
+    let storage_configs = configs.storage_configs();
+    let storage = derive_batch_storage(repos, &storage_configs)?;
+    let Some(name) = storage.name() else {
+        return Ok(storage);
+    };
+    if !justknobs::eval(STORAGE_CONFIG_JK, None, None) {
+        return Err(scs_errors::invalid_request(format!(
+            "STORAGE_CONFIG_DISABLED: creating repos on org storage engines is switched off \
+             ({STORAGE_CONFIG_JK}); '{name}' is this batch's engine"
+        ))
+        .into());
+    }
+    let template_name = default_git_storage_name(configs)?;
+    check_storage_config_production(name, &template_name, &storage_configs)?;
+    Ok(storage)
+}
+
+/// The batch's engine written onto every request, so everything downstream
+/// (RepoSpec, symrefs, the source-of-truth row) reads one value.
+fn with_batch_storage(
+    mut params: thrift::CreateReposParams,
+    storage: &BatchStorage,
+) -> thrift::CreateReposParams {
+    for request in &mut params.repos {
+        request.storage_config = storage.0.clone();
+    }
+    params
+}
 
 /// Group granting the elevated batch tier, one step below Source Control's own.
 /// Membership is the whole mechanism:
@@ -288,6 +473,9 @@ struct SymrefStoreFactory {
     fb: FacebookInit,
     configs: Arc<MononokeConfigs>,
     mysql_options: MysqlOptions,
+    /// The batch's engine when a request named one; the template's otherwise.
+    /// A symref lives on the engine the repo will read it from.
+    storage: BatchStorage,
     /// Storage-name/config resolution and SQL connection setup happen once
     /// per factory (one factory per request); per-repo stores share the
     /// connections.
@@ -361,19 +549,24 @@ fn template_storage_name(template: &RepoSpec) -> Result<String, scs_errors::Serv
         })
 }
 
-/// Open a metadata store against that storage config. `store_name` names the
-/// store in the error text; without it two callers opening different stores
-/// against the same config produce the same message.
-async fn open_default_git_metadata_store<T>(
+/// Open a metadata store against the named storage config, or the template's
+/// when none is named. `store_name` names the store in the error text;
+/// without it two callers opening different stores against the same config
+/// produce the same message.
+async fn open_git_metadata_store<T>(
     fb: FacebookInit,
     configs: &MononokeConfigs,
     mysql_options: &MysqlOptions,
+    storage: &BatchStorage,
     store_name: &str,
 ) -> Result<T, scs_errors::ServiceError>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let storage_name = default_git_storage_name(configs)?;
+    let storage_name = match storage.name() {
+        Some(name) => name.to_string(),
+        None => default_git_storage_name(configs)?,
+    };
     let storage_configs = configs.storage_configs();
     let storage_config = storage_configs.storage.get(&storage_name).ok_or_else(|| {
         scs_errors::ServiceError::from(scs_errors::internal_error(format!(
@@ -393,10 +586,11 @@ impl SymrefStoreFactory {
     async fn shared_builder(&self) -> Result<&SqlGitSymbolicRefsBuilder, scs_errors::ServiceError> {
         self.builder
             .get_or_try_init(|| {
-                open_default_git_metadata_store(
+                open_git_metadata_store(
                     self.fb,
                     &self.configs,
                     &self.mysql_options,
+                    &self.storage,
                     "symref",
                 )
             })
@@ -1527,6 +1721,18 @@ fn make_repo_spec(
         // The only rule left in Rust is the additive AOSP tier on top of the
         // template's list (see repo_spec_writer::tier_list_for_repo_spec).
         tiers: tier_list_for_repo_spec(&template.tiers, &request.repo_name),
+        // Request-owned when set: the storage engine, inside the template's
+        // repo_config, which is otherwise copied whole.
+        repo_config: match &request.storage_config {
+            Some(storage_config) => template
+                .repo_config
+                .clone()
+                .map(|repo_config| RawRepoConfig {
+                    storage_config: Some(storage_config.clone()),
+                    ..repo_config
+                }),
+            None => template.repo_config.clone(),
+        },
         // Template-owned: everything else. This tail is the ownership rule.
         ..template.clone()
     })
@@ -1805,6 +2011,9 @@ async fn create_repos_in_mononoke(
             let mut scuba = ctx.scuba().clone();
             scuba.add("action", "create_repos_mutation_prepared");
             scuba.add("param_repos", reserved_repo_names);
+            if let Some(name) = symref_store_factory.storage.name() {
+                scuba.add("storage_config", name);
+            }
             scuba.log_with_msg("create_repos prepared a repo creation mutation", None);
 
             retry(
@@ -1903,11 +2112,12 @@ async fn create_repos_in_mononoke(
 }
 
 impl SourceControlServiceImpl {
-    fn symref_store_factory(&self) -> SymrefStoreFactory {
+    fn symref_store_factory(&self, storage: BatchStorage) -> SymrefStoreFactory {
         SymrefStoreFactory {
             fb: self.fb,
             configs: self.configs.clone(),
             mysql_options: self.mysql_options.clone(),
+            storage,
             builder: Arc::new(OnceCell::new()),
         }
     }
@@ -1942,6 +2152,8 @@ impl SourceControlServiceImpl {
         }
 
         let write_default_branch_symrefs_enabled = validate_default_branches(&params.repos)?;
+        let storage = validate_storage_configs(&params.repos, &self.configs)?;
+        let params = with_batch_storage(params, &storage);
 
         ensure_acls_allow_repo_creation(ctx.clone(), &params.repos, self.acl_provider.as_ref())
             .await?;
@@ -1949,7 +2161,7 @@ impl SourceControlServiceImpl {
         let mutation_id = create_repos_in_mononoke(
             ctx,
             self.git_source_of_truth_config.clone(),
-            self.symref_store_factory(),
+            self.symref_store_factory(storage),
             &params,
             &self.configs,
             write_default_branch_symrefs_enabled,
@@ -1973,7 +2185,9 @@ impl SourceControlServiceImpl {
         }
 
         let mutation_id = token.mutation_id.unwrap();
-        let symref_store_factory = self.symref_store_factory();
+        // The poll host has only the mutation id; until the source-of-truth
+        // row records the engine, cleanup opens the template's store.
+        let symref_store_factory = self.symref_store_factory(BatchStorage(None));
         let mutation_state;
         let status = match poll_mutation_id(
             ctx,

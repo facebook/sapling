@@ -17,6 +17,225 @@ use sql_construct::SqlConstruct;
 
 use super::*;
 
+fn request_error(err: scs_errors::ServiceError) -> String {
+    match err {
+        scs_errors::ServiceError::Request(e) => e.reason,
+        other => panic!("expected a request error, got {other:?}"),
+    }
+}
+
+fn storage_request(repo_name: &str, storage_config: Option<&str>) -> thrift::RepoCreationRequest {
+    thrift::RepoCreationRequest {
+        repo_name: repo_name.to_string(),
+        size_bucket: RepoSizeBucket::SMALL,
+        storage_config: storage_config.map(str::to_string),
+        ..Default::default()
+    }
+}
+
+// The engine is decided by the org: `<slug>/...` goes on `org_<slug>` when
+// the storage map has it, on the template otherwise, whoever the caller is.
+#[mononoke::test]
+fn test_storage_is_derived_from_the_org() {
+    let configs = storage_configs(&[("template", "/db"), ("org_wearables", "/db")]);
+    assert_eq!(
+        derive_batch_storage(&[storage_request("other/a", None)], &configs).unwrap(),
+        BatchStorage(None),
+        "an org without an engine is on the template"
+    );
+    assert_eq!(
+        derive_batch_storage(&[storage_request("bare", None)], &configs).unwrap(),
+        BatchStorage(None),
+        "a bare name has no org"
+    );
+    assert_eq!(
+        derive_batch_storage(
+            &[
+                storage_request("wearables/a", None),
+                storage_request("wearables/b", Some("org_wearables")),
+            ],
+            &configs
+        )
+        .unwrap(),
+        BatchStorage(Some("org_wearables".to_string())),
+        "the org's engine, named or not"
+    );
+}
+
+#[mononoke::test]
+fn test_storage_refuses_batches_spanning_engines() {
+    let configs = storage_configs(&[("template", "/db"), ("org_wearables", "/db")]);
+    let reason = request_error(
+        derive_batch_storage(
+            &[
+                storage_request("wearables/a", None),
+                storage_request("other/b", None),
+            ],
+            &configs,
+        )
+        .unwrap_err(),
+    );
+    assert!(
+        reason.starts_with("STORAGE_CONFIG_REFUSED:batch"),
+        "{reason}"
+    );
+    assert!(reason.contains("other/b (template)"), "{reason}");
+}
+
+// A named engine is an assertion: it must be what the org maps to.
+#[mononoke::test]
+fn test_named_storage_must_match_the_orgs_engine() {
+    let configs = storage_configs(&[
+        ("template", "/db"),
+        ("org_wearables", "/db"),
+        ("org_other", "/db"),
+    ]);
+    for (name, named, expect) in [
+        ("wearables/a", "org_other", "'org_wearables'"),
+        ("plain/a", "org_wearables", "the template engine"),
+        ("wearables/a", "template", "'org_wearables'"),
+        ("bare", "org_wearables", "the template engine"),
+    ] {
+        let reason = request_error(
+            derive_batch_storage(&[storage_request(name, Some(named))], &configs).unwrap_err(),
+        );
+        assert!(
+            reason.starts_with("STORAGE_CONFIG_REFUSED:org"),
+            "{name} naming {named}: {reason}"
+        );
+        assert!(reason.contains(expect), "{name} naming {named}: {reason}");
+    }
+}
+
+fn local_storage(path: &str) -> metaconfig_types::StorageConfig {
+    metaconfig_types::StorageConfig {
+        blobstore: metaconfig_types::BlobConfig::Disabled,
+        metadata: metaconfig_types::MetadataDatabaseConfig::Local(
+            metaconfig_types::LocalDatabaseConfig { path: path.into() },
+        ),
+        ephemeral_blobstore: None,
+        mutable_blobstore: metaconfig_types::BlobConfig::Disabled,
+    }
+}
+
+fn storage_configs(engines: &[(&str, &str)]) -> metaconfig_parser::StorageConfigs {
+    metaconfig_parser::StorageConfigs {
+        storage: engines
+            .iter()
+            .map(|(name, production)| (name.to_string(), local_storage(production)))
+            .collect(),
+    }
+}
+
+// The production shape: every engine of the tier is Remote and the
+// production database is the one field compared.
+fn remote_storage(production: &str, others: &str) -> metaconfig_types::StorageConfig {
+    let db = |address: &str| metaconfig_types::RemoteDatabaseConfig {
+        db_address: address.to_string(),
+    };
+    metaconfig_types::StorageConfig {
+        blobstore: metaconfig_types::BlobConfig::Disabled,
+        metadata: metaconfig_types::MetadataDatabaseConfig::Remote(
+            metaconfig_types::RemoteMetadataDatabaseConfig {
+                production: db(production),
+                commit_graph: db(others),
+                bookmarks: db(others),
+                bonsai_hg_mapping: db(others),
+                filenodes: metaconfig_types::ShardableRemoteDatabaseConfig::Unsharded(db(others)),
+                mutation: db(others),
+                sparse_profiles: db(others),
+                bonsai_blob_mapping: None,
+                deletion_log: None,
+                commit_cloud: None,
+                git_bundle_metadata: None,
+                repo_metadata: None,
+                restricted_paths: None,
+                commit_derived_data_mapping: None,
+                repo_manifest_mapping: None,
+            },
+        ),
+        ephemeral_blobstore: None,
+        mutable_blobstore: metaconfig_types::BlobConfig::Disabled,
+    }
+}
+
+#[mononoke::test]
+fn test_storage_config_production_check_reads_the_remote_production_db() {
+    let configs = metaconfig_parser::StorageConfigs {
+        storage: [
+            (
+                "template".to_string(),
+                remote_storage("xdb.mononoke_production", "xdb.mononoke_bookmarks"),
+            ),
+            (
+                "org_same".to_string(),
+                remote_storage("xdb.mononoke_production", "xdb.org_shard"),
+            ),
+            (
+                "org_other".to_string(),
+                remote_storage("xdb.org_shard", "xdb.org_shard"),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    };
+    check_storage_config_production("org_same", "template", &configs).unwrap();
+    let reason = request_error(
+        check_storage_config_production("org_other", "template", &configs).unwrap_err(),
+    );
+    assert!(
+        reason.starts_with("STORAGE_CONFIG_REFUSED:production"),
+        "{reason}"
+    );
+}
+
+#[mononoke::test]
+fn test_storage_config_must_share_production() {
+    let configs = storage_configs(&[
+        ("template", "/db/production"),
+        ("org_same", "/db/production"),
+        ("org_other", "/db/elsewhere"),
+    ]);
+    check_storage_config_production("org_same", "template", &configs).unwrap();
+
+    // The engine came from the loaded map a moment ago; its absence now is
+    // the service's problem, not the caller's.
+    let err = check_storage_config_production("org_missing", "template", &configs).unwrap_err();
+    assert!(reason_of_internal(err).contains("'org_missing'"));
+
+    let reason = request_error(
+        check_storage_config_production("org_other", "template", &configs).unwrap_err(),
+    );
+    assert!(
+        reason.starts_with("STORAGE_CONFIG_REFUSED:production"),
+        "{reason}"
+    );
+
+    // A template that is not loaded is the service's problem, not the caller's.
+    let err = check_storage_config_production("org_same", "gone", &configs).unwrap_err();
+    assert!(reason_of_internal(err).contains("'gone'"));
+}
+
+fn reason_of_internal(err: scs_errors::ServiceError) -> String {
+    reason(err)
+}
+
+#[mononoke::test]
+fn test_make_repo_spec_takes_the_storage_engine_from_the_request() {
+    let request = storage_request("org/my-repo", Some("org_org"));
+    let spec = make_repo_spec(&(RepositoryId::new(7), request), &template()).unwrap();
+    let repo_config = spec.repo_config.expect("the template carries one");
+    assert_eq!(repo_config.storage_config.as_deref(), Some("org_org"));
+    // Only the engine changed inside repo_config.
+    assert_eq!(
+        RawRepoConfig {
+            storage_config: template().repo_config.unwrap().storage_config,
+            ..repo_config
+        },
+        template().repo_config.unwrap()
+    );
+}
+
 /// The template this method embeds into every new repo. Pinned here so a
 /// rename in repo_spec_writer cannot silently repoint create_repos.
 #[mononoke::test]

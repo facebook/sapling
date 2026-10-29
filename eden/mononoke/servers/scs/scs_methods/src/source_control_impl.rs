@@ -1596,6 +1596,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoExistsParams,
         ) -> Result<thrift::RepoExistsResponse, service::RepoExistsExn>;
 
+        async fn storage_config_exists(
+            params: thrift::StorageConfigExistsParams,
+        ) -> Result<thrift::StorageConfigExistsResponse, service::StorageConfigExistsExn>;
+
         async fn repo_info(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoInfoParams,

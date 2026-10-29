@@ -268,6 +268,16 @@ impl MononokeConfigs {
         self.maybe_manifest_handle.as_ref().map(|h| h.get())
     }
 
+    /// Configerator version of the tier manifest this task last loaded, when
+    /// configs come from configerator. Lets a caller tell "this task is at
+    /// or past my change" from "this task is stale".
+    pub fn manifest_version(&self) -> Option<String> {
+        self.maybe_manifest_handle
+            .as_ref()
+            .and_then(|h| h.get_with_version().1)
+            .map(|info| info.version)
+    }
+
     /// The tier name (derived from the configerator config path), if split-
     /// loading is enabled. The reconcile controller needs it to parse `RepoSpec`s.
     pub fn tier_name(&self) -> Option<&str> {
