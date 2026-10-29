@@ -26,6 +26,7 @@ sl_rust_library(
                 ],
                 "indexedlog-backend": [
                     "sapling-indexedlog",
+                    "sapling-mincode",
                     "tempfile",
                 ],
                 "render": ["sapling-renderdag"],
@@ -48,6 +49,7 @@ sl_rust_library(
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/dev-logger:dev-logger",
         "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/renderdag:renderdag",
     ],
     deps = [

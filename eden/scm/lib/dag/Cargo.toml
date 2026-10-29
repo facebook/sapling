@@ -26,7 +26,7 @@ rand = "0.10.3"
 sapling-dag-types = { version = "0.2.0", path = "dag-types", default-features = false }
 sapling-drawdag = { version = "0.2.0", path = "../drawdag" }
 sapling-indexedlog = { version = "0.2.0", path = "../indexedlog", optional = true }
-sapling-mincode = { version = "0.2.0", path = "../mincode" }
+sapling-mincode = { version = "0.2.0", path = "../mincode", optional = true }
 sapling-minibytes = { version = "0.2.0", path = "../minibytes", default-features = false }
 sapling-nonblocking = { version = "0.2.0", path = "../nonblocking" }
 sapling-renderdag = { version = "0.2.0", path = "../renderdag", optional = true }
@@ -41,11 +41,12 @@ ctor = "1.0.13"
 quickcheck = "1.1"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-indexedlog = { version = "0.2.0", path = "../indexedlog" }
+sapling-mincode = { version = "0.2.0", path = "../mincode" }
 sapling-renderdag = { version = "0.2.0", path = "../renderdag" }
 tempfile = "3.27.0"
 tokio = { version = "1.53.2", features = ["full", "test-util", "tracing"] }
 
 [features]
 default = ["indexedlog-backend", "render"]
-indexedlog-backend = ["sapling-indexedlog", "tempfile"]
+indexedlog-backend = ["sapling-indexedlog", "sapling-mincode", "tempfile"]
 render = ["sapling-renderdag"]
