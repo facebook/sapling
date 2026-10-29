@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS `git_repositories_source_of_truth` (
   `repo_id` INTEGER NOT NULL,
   `repo_name` VARCHAR(255) NOT NULL,
   `source_of_truth` VARCHAR(20) NOT NULL DEFAULT ('locked') REFERENCES `source_of_truth_type` (`source_of_truth`),
-  `mutation_id` INTEGER DEFAULT NULL
+  `mutation_id` INTEGER DEFAULT NULL,
+  `storage_config` VARCHAR(255) DEFAULT NULL
 );
 
 -- Allocates repo ids. Nothing ever deletes from this table, so the counter only

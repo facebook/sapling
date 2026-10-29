@@ -49,10 +49,17 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()>;
 
+    /// One row per repo; `storage_config` is the engine a `create_repos`
+    /// request named, None for the template's.
     async fn insert_repos(
         &self,
         _ctx: &CoreContext,
-        _repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+        _repos: &[(
+            RepositoryId,
+            RepositoryName,
+            GitSourceOfTruth,
+            Option<String>,
+        )],
     ) -> Result<()>;
 
     async fn update_source_of_truth_by_repo_names(
@@ -194,7 +201,12 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
     async fn insert_repos(
         &self,
         _ctx: &CoreContext,
-        _repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+        _repos: &[(
+            RepositoryId,
+            RepositoryName,
+            GitSourceOfTruth,
+            Option<String>,
+        )],
     ) -> Result<()> {
         Ok(())
     }
@@ -366,6 +378,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
                 repo_name,
                 source_of_truth,
                 mutation_id: None,
+                storage_config: None,
             },
         );
         Ok(())
@@ -374,11 +387,16 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
     async fn insert_repos(
         &self,
         _ctx: &CoreContext,
-        repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+        repos: &[(
+            RepositoryId,
+            RepositoryName,
+            GitSourceOfTruth,
+            Option<String>,
+        )],
     ) -> Result<()> {
         let mut map = self.entries.lock().expect("poisoned lock");
         if map.values().any(|config_entry| {
-            for (repo_id, repo_name, _) in repos {
+            for (repo_id, repo_name, _, _) in repos {
                 if repo_id == &config_entry.repo_id || repo_name == &config_entry.repo_name {
                     return true;
                 }
@@ -387,7 +405,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         }) {
             anyhow::bail!("Attempting to insert duplicate entry");
         }
-        for (repo_id, repo_name, source_of_truth) in repos {
+        for (repo_id, repo_name, source_of_truth, storage_config) in repos {
             map.insert(
                 repo_name.to_owned(),
                 GitSourceOfTruthConfigEntry {
@@ -396,6 +414,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
                     repo_name: repo_name.clone(),
                     source_of_truth: *source_of_truth,
                     mutation_id: None,
+                    storage_config: storage_config.clone(),
                 },
             );
         }

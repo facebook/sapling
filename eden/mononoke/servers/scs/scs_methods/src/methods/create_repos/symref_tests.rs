@@ -29,6 +29,7 @@ impl SymrefStoreProvider for TestSymrefStoreProvider {
     async fn repo_store(
         &self,
         repo_id: RepositoryId,
+        _storage_config: Option<&str>,
     ) -> Result<Arc<dyn GitSymbolicRefs>, scs_errors::ServiceError> {
         self.stores.get(&repo_id).cloned().ok_or_else(|| {
             scs_errors::internal_error(format!("no test symref store for repo {repo_id}")).into()
@@ -327,11 +328,13 @@ async fn poll_cleanup_deletes_symrefs_and_sot_rows(fb: FacebookInit) -> Result<(
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             ),
             (
                 RepositoryId::new(2),
                 RepositoryName("repo/b".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             ),
         ],
     )
@@ -402,6 +405,7 @@ async fn poll_cleanup_with_unseeded_symref_store_succeeds(fb: FacebookInit) -> R
             RepositoryId::new(1),
             RepositoryName("repo/a".to_string()),
             GitSourceOfTruth::Reserved,
+            None,
         )],
     )
     .await?;
@@ -439,6 +443,98 @@ async fn poll_cleanup_with_unseeded_symref_store_succeeds(fb: FacebookInit) -> R
     Ok(())
 }
 
+/// Records which engine each store was asked for, so a test can prove the
+/// cleanup opens the store the row names rather than the template's.
+struct RecordingSymrefStoreProvider {
+    inner: TestSymrefStoreProvider,
+    asked: std::sync::Mutex<Vec<(RepositoryId, Option<String>)>>,
+}
+
+#[async_trait::async_trait]
+impl SymrefStoreProvider for RecordingSymrefStoreProvider {
+    async fn repo_store(
+        &self,
+        repo_id: RepositoryId,
+        storage_config: Option<&str>,
+    ) -> Result<Arc<dyn GitSymbolicRefs>, scs_errors::ServiceError> {
+        self.asked
+            .lock()
+            .unwrap()
+            .push((repo_id, storage_config.map(str::to_string)));
+        self.inner.repo_store(repo_id, storage_config).await
+    }
+}
+
+// An org repo's HEAD symref lives on the org shard. The write asks for the
+// batch's engine; the poll-path cleanup, which has only the rows, asks for
+// the engine each row recorded at reservation.
+#[mononoke::fbinit_test]
+async fn symref_stores_are_opened_on_the_rows_engine(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let sot = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+    sot.insert_repos(
+        &ctx,
+        &[
+            (
+                RepositoryId::new(1),
+                RepositoryName("org/a".to_string()),
+                GitSourceOfTruth::Reserved,
+                Some("org_org".to_string()),
+            ),
+            (
+                RepositoryId::new(2),
+                RepositoryName("plain/b".to_string()),
+                GitSourceOfTruth::Reserved,
+                None,
+            ),
+        ],
+    )
+    .await?;
+    sot.update_mutation_id_by_repo_names_for_reserved_repos(
+        &ctx,
+        &[
+            RepositoryName("org/a".to_string()),
+            RepositoryName("plain/b".to_string()),
+        ],
+        9,
+    )
+    .await?;
+    let stores = RecordingSymrefStoreProvider {
+        inner: TestSymrefStoreProvider {
+            stores: HashMap::from([
+                (RepositoryId::new(1), sqlite_store(RepositoryId::new(1))?),
+                (RepositoryId::new(2), sqlite_store(RepositoryId::new(2))?),
+            ]),
+        },
+        asked: std::sync::Mutex::new(Vec::new()),
+    };
+
+    let mut request = request_with_branch("org/a", Some("main"));
+    request.storage_config = Some("org_org".to_string());
+    write_default_branch_symrefs(&ctx, &stores, &[(RepositoryId::new(1), request)], true)
+        .await
+        .expect("the write should succeed");
+    assert_eq!(
+        stores.asked.lock().unwrap().as_slice(),
+        &[(RepositoryId::new(1), Some("org_org".to_string()))]
+    );
+
+    stores.asked.lock().unwrap().clear();
+    delete_head_symrefs_for_mutation_id(ctx.clone(), &sot, &stores, 9)
+        .await
+        .expect("the cleanup should succeed");
+    let mut asked = stores.asked.lock().unwrap().clone();
+    asked.sort_by_key(|(repo_id, _)| repo_id.id());
+    assert_eq!(
+        asked,
+        vec![
+            (RepositoryId::new(1), Some("org_org".to_string())),
+            (RepositoryId::new(2), None),
+        ]
+    );
+    Ok(())
+}
+
 #[mononoke::fbinit_test]
 async fn prepare_failure_cleanup_deletes_symrefs_and_sot_rows(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -451,6 +547,7 @@ async fn prepare_failure_cleanup_deletes_symrefs_and_sot_rows(fb: FacebookInit) 
             RepositoryId::new(1),
             RepositoryName("repo/a".to_string()),
             GitSourceOfTruth::Reserved,
+            None,
         )],
     )
     .await?;
@@ -501,6 +598,7 @@ async fn poll_cleanup_failed_symref_delete_keeps_sot_rows(fb: FacebookInit) -> R
             RepositoryId::new(1),
             RepositoryName("repo/a".to_string()),
             GitSourceOfTruth::Reserved,
+            None,
         )],
     )
     .await?;
@@ -554,6 +652,7 @@ async fn prepare_failure_cleanup_failed_symref_delete_keeps_sot_rows(
             RepositoryId::new(1),
             RepositoryName("repo/a".to_string()),
             GitSourceOfTruth::Reserved,
+            None,
         )],
     )
     .await?;

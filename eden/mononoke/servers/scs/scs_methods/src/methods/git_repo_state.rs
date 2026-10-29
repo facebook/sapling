@@ -56,6 +56,9 @@ async fn git_repo_state_impl(
         })
         .map_err(scs_errors::internal_error)?;
 
+    let storage_config = entry
+        .as_ref()
+        .and_then(|entry| entry.storage_config.clone());
     let (state, mutation_id) = match entry {
         None => (thrift::GitRepoState::UNKNOWN, None),
         Some(entry) => match entry.source_of_truth {
@@ -101,6 +104,7 @@ async fn git_repo_state_impl(
     Ok(thrift::GitRepoStateResponse {
         state,
         mutation_id,
+        storage_config,
         ..Default::default()
     })
 }

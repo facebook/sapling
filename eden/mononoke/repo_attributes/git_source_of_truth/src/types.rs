@@ -128,4 +128,9 @@ pub struct GitSourceOfTruthConfigEntry {
     pub repo_name: RepositoryName,
     pub source_of_truth: GitSourceOfTruth,
     pub mutation_id: Option<i64>,
+    /// Storage engine the repo was reserved on when a request named one
+    /// (`RepoCreationRequest.storage_config`); None is the template's. Read
+    /// back by whoever cleans up a reservation, so the HEAD symref written at
+    /// reservation is deleted from the shard it was written to.
+    pub storage_config: Option<String>,
 }

@@ -246,6 +246,10 @@ struct GitRepoStateResponse {
   1: GitRepoState state;
   /// Set only when state == IN_PROGRESS; identifies the in-flight create_repos mutation.
   2: optional string mutation_id;
+  /// Storage engine the repo was created on when its `create_repos` request
+  /// named one (`RepoCreationRequest.storage_config`); unset for the
+  /// template's engine and for rows that predate the field.
+  3: optional string storage_config;
 }
 
 struct CommitInfo {

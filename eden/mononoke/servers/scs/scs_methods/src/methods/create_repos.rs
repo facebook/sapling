@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
@@ -75,7 +76,6 @@ use source_control as thrift;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use thrift::RepoSizeBucket;
-use tokio::sync::OnceCell;
 use tracing::info;
 use tracing::warn;
 
@@ -116,6 +116,15 @@ impl BatchStorage {
     fn name(&self) -> Option<&str> {
         self.0.as_deref()
     }
+}
+
+/// The batch's engine after validation has passed: every request carries
+/// the same value, so the first one is the batch's.
+fn batch_storage_name(params: &thrift::CreateReposParams) -> Option<&str> {
+    params
+        .repos
+        .first()
+        .and_then(|request| request.storage_config.as_deref())
 }
 
 /// The org a repo name belongs to: its first path segment. A bare name has no
@@ -460,11 +469,16 @@ async fn write_default_branch_symref(
     Ok(())
 }
 
+/// A symref lives on the engine the repo will read it from: the one its
+/// `create_repos` request named, or the template's. The engine travels with
+/// the row (`GitSourceOfTruthConfigEntry::storage_config`), so a cleanup on
+/// another host opens the same store the reservation wrote to.
 #[async_trait::async_trait]
 trait SymrefStoreProvider: Send + Sync {
     async fn repo_store(
         &self,
         repo_id: RepositoryId,
+        storage_config: Option<&str>,
     ) -> Result<Arc<dyn GitSymbolicRefs>, scs_errors::ServiceError>;
 }
 
@@ -473,13 +487,10 @@ struct SymrefStoreFactory {
     fb: FacebookInit,
     configs: Arc<MononokeConfigs>,
     mysql_options: MysqlOptions,
-    /// The batch's engine when a request named one; the template's otherwise.
-    /// A symref lives on the engine the repo will read it from.
-    storage: BatchStorage,
-    /// Storage-name/config resolution and SQL connection setup happen once
-    /// per factory (one factory per request); per-repo stores share the
-    /// connections.
-    builder: Arc<OnceCell<SqlGitSymbolicRefsBuilder>>,
+    /// One builder per engine, opened on first use; per-repo stores on the
+    /// same engine share its connections. Keyed by the engine name, with the
+    /// template's under `None`.
+    builders: Arc<tokio::sync::Mutex<HashMap<Option<String>, SqlGitSymbolicRefsBuilder>>>,
 }
 
 /// The storage config a repo id will get once it has one. Every store
@@ -557,13 +568,13 @@ async fn open_git_metadata_store<T>(
     fb: FacebookInit,
     configs: &MononokeConfigs,
     mysql_options: &MysqlOptions,
-    storage: &BatchStorage,
+    storage: Option<&str>,
     store_name: &str,
 ) -> Result<T, scs_errors::ServiceError>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let storage_name = match storage.name() {
+    let storage_name = match storage {
         Some(name) => name.to_string(),
         None => default_git_storage_name(configs)?,
     };
@@ -583,18 +594,25 @@ where
 }
 
 impl SymrefStoreFactory {
-    async fn shared_builder(&self) -> Result<&SqlGitSymbolicRefsBuilder, scs_errors::ServiceError> {
-        self.builder
-            .get_or_try_init(|| {
-                open_git_metadata_store(
-                    self.fb,
-                    &self.configs,
-                    &self.mysql_options,
-                    &self.storage,
-                    "symref",
-                )
-            })
-            .await
+    async fn builder_for(
+        &self,
+        storage_config: Option<&str>,
+    ) -> Result<SqlGitSymbolicRefsBuilder, scs_errors::ServiceError> {
+        let key = storage_config.map(str::to_string);
+        let mut builders = self.builders.lock().await;
+        if let Some(builder) = builders.get(&key) {
+            return Ok(builder.clone());
+        }
+        let builder: SqlGitSymbolicRefsBuilder = open_git_metadata_store(
+            self.fb,
+            &self.configs,
+            &self.mysql_options,
+            storage_config,
+            "symref",
+        )
+        .await?;
+        builders.insert(key, builder.clone());
+        Ok(builder)
     }
 }
 
@@ -603,9 +621,10 @@ impl SymrefStoreProvider for SymrefStoreFactory {
     async fn repo_store(
         &self,
         repo_id: RepositoryId,
+        storage_config: Option<&str>,
     ) -> Result<Arc<dyn GitSymbolicRefs>, scs_errors::ServiceError> {
-        let builder = self.shared_builder().await?;
-        Ok(Arc::new(builder.clone().build(repo_id)))
+        let builder = self.builder_for(storage_config).await?;
+        Ok(Arc::new(builder.build(repo_id)))
     }
 }
 
@@ -617,6 +636,11 @@ async fn write_default_branch_symrefs(
     repo_ids_and_requests: &[(RepositoryId, thrift::RepoCreationRequest)],
     enabled: bool,
 ) -> Result<Vec<RepositoryId>, scs_errors::ServiceError> {
+    // Validated before reservation: every request in the batch names the
+    // same engine, so the first one's is the batch's.
+    let storage = repo_ids_and_requests
+        .first()
+        .and_then(|(_repo_id, request)| request.storage_config.clone());
     if !enabled {
         return Ok(Vec::new());
     }
@@ -638,9 +662,14 @@ async fn write_default_branch_symrefs(
         .map(|(repo_id, _branch)| *repo_id)
         .collect::<Vec<_>>();
     stream::iter(targets)
-        .map(|(repo_id, branch)| async move {
-            let store = symref_store_provider.repo_store(repo_id).await?;
-            write_default_branch_symref(ctx, store.as_ref(), &branch).await
+        .map(|(repo_id, branch)| {
+            let storage = storage.clone();
+            async move {
+                let store = symref_store_provider
+                    .repo_store(repo_id, storage.as_deref())
+                    .await?;
+                write_default_branch_symref(ctx, store.as_ref(), &branch).await
+            }
         })
         .buffer_unordered(10)
         .try_collect::<Vec<()>>()
@@ -649,14 +678,17 @@ async fn write_default_branch_symrefs(
     Ok(repo_ids)
 }
 
+/// `repos` pairs each id with the engine its row records.
 async fn delete_head_symrefs(
     ctx: &CoreContext,
     symref_store_provider: &dyn SymrefStoreProvider,
-    repo_ids: &[RepositoryId],
+    repos: &[(RepositoryId, Option<String>)],
 ) -> Result<(), scs_errors::ServiceError> {
-    stream::iter(repo_ids.iter().copied())
-        .map(|repo_id| async move {
-            let store = symref_store_provider.repo_store(repo_id).await?;
+    stream::iter(repos.iter().cloned())
+        .map(|(repo_id, storage_config)| async move {
+            let store = symref_store_provider
+                .repo_store(repo_id, storage_config.as_deref())
+                .await?;
             store
                 .delete_symrefs(ctx, vec![HEAD_SYMREF.to_string()])
                 .await
@@ -679,10 +711,17 @@ async fn cleanup_reserved_repos_after_failure(
     symref_repo_ids: &[RepositoryId],
     params: &thrift::CreateReposParams,
 ) -> Result<(), scs_errors::ServiceError> {
+    // The rows were written by this call from a validated batch, so the
+    // batch's engine is theirs.
+    let storage = batch_storage_name(params).map(str::to_string);
+    let symref_repos = symref_repo_ids
+        .iter()
+        .map(|repo_id| (*repo_id, storage.clone()))
+        .collect::<Vec<_>>();
     // Symref deletes go before the SoT deletes so a failure leaves the rows
     // Reserved and retryable; same retry shape as the poll-path cleanup.
     retry(
-        |_| delete_head_symrefs(ctx, symref_store_provider, symref_repo_ids),
+        |_| delete_head_symrefs(ctx, symref_store_provider, &symref_repos),
         Duration::from_millis(1_000),
     )
     .binary_exponential_backoff()
@@ -1478,6 +1517,7 @@ async fn reserve_repos_ids(
                         id.clone(),
                         RepositoryName(request.repo_name.clone()),
                         GitSourceOfTruth::Reserved,
+                        request.storage_config.clone(),
                     )
                 })
                 .collect::<Vec<_>>(),
@@ -1609,7 +1649,36 @@ async fn reserve_repos_ids(
                         return Err(scs_errors::invalid_request(details.join("\n")).into());
                     }
 
-                    // Every row is `Reserved`. Decide based on stamping.
+                    // Every row is `Reserved`. The in-flight rows carry the
+                    // engine they were reserved on; attaching a request that
+                    // names a different one would land its repos on the
+                    // other engine and report success.
+                    let engine_mismatches = lookups
+                        .iter()
+                        .zip(repo_ids_and_requests.iter())
+                        .filter_map(|(lookup, (_id, request))| match lookup {
+                            Ok(Some(entry)) if entry.storage_config != request.storage_config => {
+                                Some(format!(
+                                    "Repo '{}': in flight on engine {}, this request named {}",
+                                    request.repo_name,
+                                    entry.storage_config.as_deref().unwrap_or("<template>"),
+                                    request.storage_config.as_deref().unwrap_or("<template>"),
+                                ))
+                            }
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>();
+                    if !engine_mismatches.is_empty() {
+                        return Err(scs_errors::invalid_request(format!(
+                            "STORAGE_CONFIG_REFUSED:inflight: a creation of these repos is already \
+                             in progress on a different storage engine; wait for it or let it be \
+                             cleaned up.\n{}",
+                            engine_mismatches.join("\n")
+                        ))
+                        .into());
+                    }
+
+                    // Decide based on stamping.
                     if all_reserved_entries.iter().any(Option::is_none) {
                         return Err(scs_errors::invalid_request(format!(
                             "Repo creation is already in progress but not yet trackable \
@@ -2011,7 +2080,7 @@ async fn create_repos_in_mononoke(
             let mut scuba = ctx.scuba().clone();
             scuba.add("action", "create_repos_mutation_prepared");
             scuba.add("param_repos", reserved_repo_names);
-            if let Some(name) = symref_store_factory.storage.name() {
+            if let Some(name) = batch_storage_name(params) {
                 scuba.add("storage_config", name);
             }
             scuba.log_with_msg("create_repos prepared a repo creation mutation", None);
@@ -2112,13 +2181,12 @@ async fn create_repos_in_mononoke(
 }
 
 impl SourceControlServiceImpl {
-    fn symref_store_factory(&self, storage: BatchStorage) -> SymrefStoreFactory {
+    fn symref_store_factory(&self) -> SymrefStoreFactory {
         SymrefStoreFactory {
             fb: self.fb,
             configs: self.configs.clone(),
             mysql_options: self.mysql_options.clone(),
-            storage,
-            builder: Arc::new(OnceCell::new()),
+            builders: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         }
     }
 
@@ -2161,7 +2229,7 @@ impl SourceControlServiceImpl {
         let mutation_id = create_repos_in_mononoke(
             ctx,
             self.git_source_of_truth_config.clone(),
-            self.symref_store_factory(storage),
+            self.symref_store_factory(),
             &params,
             &self.configs,
             write_default_branch_symrefs_enabled,
@@ -2185,9 +2253,7 @@ impl SourceControlServiceImpl {
         }
 
         let mutation_id = token.mutation_id.unwrap();
-        // The poll host has only the mutation id; until the source-of-truth
-        // row records the engine, cleanup opens the template's store.
-        let symref_store_factory = self.symref_store_factory(BatchStorage(None));
+        let symref_store_factory = self.symref_store_factory();
         let mutation_state;
         let status = match poll_mutation_id(
             ctx,
@@ -2413,14 +2479,14 @@ async fn delete_head_symrefs_for_mutation_id(
     symref_store_provider: &dyn SymrefStoreProvider,
     mutation_id: i64,
 ) -> Result<(), scs_errors::ServiceError> {
-    let reserved_repo_ids = git_source_of_truth_config
+    let reserved_repos = git_source_of_truth_config
         .get_reserved_by_mutation_id(&ctx, mutation_id)
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
         .into_iter()
-        .map(|entry| entry.repo_id)
+        .map(|entry| (entry.repo_id, entry.storage_config))
         .collect::<Vec<_>>();
-    delete_head_symrefs(&ctx, symref_store_provider, &reserved_repo_ids).await
+    delete_head_symrefs(&ctx, symref_store_provider, &reserved_repos).await
 }
 
 /// Two concurrent pollers can both run this; a stalled one could delete a fresh HEAD row

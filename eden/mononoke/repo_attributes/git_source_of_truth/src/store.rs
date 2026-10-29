@@ -35,12 +35,14 @@ mononoke_queries! {
         RepositoryName,
         GitSourceOfTruth,
         Option<i64>,
+        Option<String>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
             source_of_truth,
-            mutation_id
+            mutation_id,
+            storage_config
          FROM git_repositories_source_of_truth
          WHERE id = {id}"
     }
@@ -51,12 +53,14 @@ mononoke_queries! {
         RepositoryName,
         GitSourceOfTruth,
         Option<i64>,
+        Option<String>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
             source_of_truth,
-            mutation_id
+            mutation_id,
+            storage_config
          FROM git_repositories_source_of_truth
          WHERE repo_name = {repo_name}"
     }
@@ -98,12 +102,14 @@ mononoke_queries! {
         RepositoryName,
         GitSourceOfTruth,
         Option<i64>,
+        Option<String>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
             source_of_truth,
-            mutation_id
+            mutation_id,
+            storage_config
          FROM git_repositories_source_of_truth
          WHERE source_of_truth = {source_of_truth}"
     }
@@ -117,12 +123,14 @@ mononoke_queries! {
         RepositoryName,
         GitSourceOfTruth,
         Option<i64>,
+        Option<String>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
             source_of_truth,
-            mutation_id
+            mutation_id,
+            storage_config
          FROM git_repositories_source_of_truth
          WHERE source_of_truth = {source_of_truth} AND mutation_id = {mutation_id}"
     }
@@ -133,12 +141,14 @@ mononoke_queries! {
         RepositoryName,
         GitSourceOfTruth,
         Option<i64>,
+        Option<String>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
             source_of_truth,
-            mutation_id
+            mutation_id,
+            storage_config
          FROM git_repositories_source_of_truth"
     }
 
@@ -149,10 +159,10 @@ mononoke_queries! {
     }
 
     write InsertRepos(
-        values: (repo_id: RepositoryId, repo_name: RepositoryName, source_of_truth: GitSourceOfTruth)
+        values: (repo_id: RepositoryId, repo_name: RepositoryName, source_of_truth: GitSourceOfTruth, storage_config: Option<String>)
     ) {
         none,
-        "INSERT INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES {values}"
+        "INSERT INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth, storage_config) VALUES {values}"
     }
 
     write UpdateSourceOfTruthByRepoNames(
@@ -238,15 +248,17 @@ fn row_to_entry(
         RepositoryName,
         GitSourceOfTruth,
         Option<i64>,
+        Option<String>,
     ),
 ) -> GitSourceOfTruthConfigEntry {
-    let (id, repo_id, repo_name, source_of_truth, mutation_id) = row;
+    let (id, repo_id, repo_name, source_of_truth, mutation_id, storage_config) = row;
     GitSourceOfTruthConfigEntry {
         id,
         repo_id,
         repo_name,
         source_of_truth,
         mutation_id,
+        storage_config,
     }
 }
 
@@ -335,9 +347,17 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
     async fn insert_repos(
         &self,
         ctx: &CoreContext,
-        repos: &[(RepositoryId, RepositoryName, GitSourceOfTruth)],
+        repos: &[(
+            RepositoryId,
+            RepositoryName,
+            GitSourceOfTruth,
+            Option<String>,
+        )],
     ) -> Result<()> {
-        let repos_refs = repos.iter().map(|(a, b, c)| (a, b, c)).collect::<Vec<_>>();
+        let repos_refs = repos
+            .iter()
+            .map(|(a, b, c, d)| (a, b, c, d))
+            .collect::<Vec<_>>();
         InsertRepos::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
@@ -691,16 +711,19 @@ mod test {
                     RepositoryId::new(1),
                     RepositoryName("test1".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("test2".to_string()),
                     GitSourceOfTruth::Metagit,
+                    None,
                 ),
                 (
                     RepositoryId::new(3),
                     RepositoryName("test3".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
             ],
         )
@@ -749,11 +772,13 @@ mod test {
                         RepositoryId::new(2),
                         RepositoryName("test2_renamed".to_string()),
                         GitSourceOfTruth::Mononoke,
+                        None,
                     ),
                     (
                         RepositoryId::new(4),
                         RepositoryName("test4".to_string()),
                         GitSourceOfTruth::Metagit,
+                        None,
                     ),
                 ],
             )
@@ -771,6 +796,7 @@ mod test {
                     RepositoryId::new(4),
                     RepositoryName("test2".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 )],
             )
             .await;
@@ -787,11 +813,13 @@ mod test {
                     RepositoryId::new(4),
                     RepositoryName("test4".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
                 (
                     RepositoryId::new(5),
                     RepositoryName("test5".to_string()),
                     GitSourceOfTruth::Metagit,
+                    None,
                 ),
             ],
         )
@@ -837,21 +865,25 @@ mod test {
                     RepositoryId::new(1),
                     RepositoryName("test1".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("test2".to_string()),
                     GitSourceOfTruth::Metagit,
+                    None,
                 ),
                 (
                     RepositoryId::new(3),
                     RepositoryName("test3".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
                 (
                     RepositoryId::new(4),
                     RepositoryName("test4".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
             ],
         )
@@ -1013,6 +1045,67 @@ mod test {
         Ok(())
     }
 
+    // The engine a reservation names travels with the row through every
+    // read, so a cleanup on another host opens the store the symref is on.
+    #[mononoke::fbinit_test]
+    async fn test_storage_config_round_trips(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let push = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+        push.insert_repos(
+            &ctx,
+            &[
+                (
+                    RepositoryId::new(1),
+                    RepositoryName("org/a".to_string()),
+                    GitSourceOfTruth::Reserved,
+                    Some("org_org".to_string()),
+                ),
+                (
+                    RepositoryId::new(2),
+                    RepositoryName("plain/b".to_string()),
+                    GitSourceOfTruth::Reserved,
+                    None,
+                ),
+            ],
+        )
+        .await?;
+        push.update_mutation_id_by_repo_names_for_reserved_repos(
+            &ctx,
+            &[
+                RepositoryName("org/a".to_string()),
+                RepositoryName("plain/b".to_string()),
+            ],
+            7,
+        )
+        .await?;
+
+        let by_name = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("org/a".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?
+            .unwrap();
+        assert_eq!(by_name.storage_config.as_deref(), Some("org_org"));
+
+        let mut reserved = push.get_reserved_by_mutation_id(&ctx, 7).await?;
+        reserved.sort_by_key(|entry| entry.repo_id.id());
+        assert_eq!(
+            reserved
+                .iter()
+                .map(|entry| entry.storage_config.as_deref())
+                .collect::<Vec<_>>(),
+            vec![Some("org_org"), None]
+        );
+        assert_eq!(
+            push.get_reserved(&ctx).await?.len(),
+            2,
+            "every row read carries the column"
+        );
+        Ok(())
+    }
+
     #[mononoke::fbinit_test]
     async fn test_insert_repos_with_mutation_id(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
@@ -1026,6 +1119,7 @@ mod test {
                 RepositoryId::new(1),
                 RepositoryName("test1".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -1080,16 +1174,19 @@ mod test {
                     RepositoryId::new(1),
                     RepositoryName("reserved_a".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("reserved_b".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(3),
                     RepositoryName("already_mononoke".to_string()),
                     GitSourceOfTruth::Mononoke,
+                    None,
                 ),
             ],
         )
@@ -1139,26 +1236,31 @@ mod test {
                     RepositoryId::new(1),
                     RepositoryName("reserved_wanted_a".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("reserved_wanted_b".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(3),
                     RepositoryName("reserved_other_mutation".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(4),
                     RepositoryName("reserved_unstamped".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(5),
                     RepositoryName("landed_same_mutation".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
             ],
         )
@@ -1237,16 +1339,19 @@ mod test {
                     RepositoryId::new(1),
                     RepositoryName("unstamped".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("stamped".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(3),
                     RepositoryName("landed".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
             ],
         )
@@ -1370,6 +1475,7 @@ mod test {
                     *id,
                     RepositoryName(format!("doomed{i}")),
                     GitSourceOfTruth::Reserved,
+                    None,
                 )
             })
             .collect::<Vec<_>>();
@@ -1378,7 +1484,7 @@ mod test {
             &ctx,
             &repos
                 .iter()
-                .map(|(_, name, _)| name.clone())
+                .map(|(_, name, _, _)| name.clone())
                 .collect::<Vec<_>>(),
         )
         .await?;

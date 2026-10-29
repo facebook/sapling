@@ -48,6 +48,7 @@ async fn stamp_count_mismatch_fails_creation(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -68,6 +69,7 @@ async fn stamp_count_mismatch_fails_creation(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(2),
                 RepositoryName("repo/b".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -92,11 +94,13 @@ async fn lost_ack_restamp_confirm_read(fb: FacebookInit) -> Result<()> {
                     RepositoryId::new(1),
                     RepositoryName("repo/a".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("repo/b".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
             ],
         )
@@ -178,6 +182,7 @@ async fn attach_happy_path(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -215,6 +220,72 @@ async fn attach_happy_path(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+// The in-flight rows were reserved on one engine; a duplicate request
+// naming another must not attach, or its repos would land on the first.
+#[mononoke::fbinit_test]
+async fn attach_refuses_a_different_engine(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let config = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?.build();
+    config.seed_repo_id_sequence(&ctx, 100_902).await?;
+    config
+        .insert_repos(
+            &ctx,
+            &[(
+                RepositoryId::new(1),
+                RepositoryName("org/a".to_string()),
+                GitSourceOfTruth::Reserved,
+                Some("org_org".to_string()),
+            )],
+        )
+        .await?;
+    config
+        .update_mutation_id_by_repo_names_for_reserved_repos(
+            &ctx,
+            &[RepositoryName("org/a".to_string())],
+            4242,
+        )
+        .await?;
+
+    with_just_knobs_async(
+        JustKnobsInMemory::new(HashMap::from([
+            (ATTACH_JK.to_string(), KnobVal::Bool(true)),
+            (ALLOCATE_FROM_SEQUENCE_JK.to_string(), KnobVal::Bool(true)),
+        ])),
+        async {
+            // Same engine attaches.
+            let mut params = params_for(&["org/a"]);
+            params.repos[0].storage_config = Some("org_org".to_string());
+            let outcome = reserve_repos_ids(ctx.clone(), &config, &params)
+                .await
+                .expect("same engine should attach");
+            assert!(matches!(
+                outcome,
+                ReserveOutcome::AttachedToInflight { mutation_id: 4242 }
+            ));
+
+            // The template engine (unset) does not.
+            let params = params_for(&["org/a"]);
+            let err = reserve_repos_ids(ctx.clone(), &config, &params)
+                .await
+                .expect_err("a different engine must not attach");
+            match err {
+                scs_errors::ServiceError::Request(e) => {
+                    assert!(
+                        e.reason.starts_with("STORAGE_CONFIG_REFUSED:inflight"),
+                        "{}",
+                        e.reason
+                    );
+                }
+                other => panic!("expected a request error, got {other:?}"),
+            }
+            anyhow::Ok(())
+        }
+        .boxed(),
+    )
+    .await?;
+    Ok(())
+}
+
 #[mononoke::fbinit_test]
 async fn null_mutation_window(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -228,6 +299,7 @@ async fn null_mutation_window(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -273,6 +345,7 @@ async fn split_brain_guard(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -328,11 +401,13 @@ async fn mixed_batch(fb: FacebookInit) -> Result<()> {
                     RepositoryId::new(1),
                     RepositoryName("repo/a".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("repo/b".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
             ],
         )
@@ -393,6 +468,7 @@ async fn jk_off(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
@@ -442,11 +518,13 @@ async fn attach_happy_path_multi_repo(fb: FacebookInit) -> Result<()> {
                     RepositoryId::new(1),
                     RepositoryName("repo/a".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
                 (
                     RepositoryId::new(2),
                     RepositoryName("repo/b".to_string()),
                     GitSourceOfTruth::Reserved,
+                    None,
                 ),
             ],
         )
@@ -506,6 +584,7 @@ async fn attach_lookup_none(fb: FacebookInit) -> Result<()> {
                 RepositoryId::new(1),
                 RepositoryName("repo/a".to_string()),
                 GitSourceOfTruth::Reserved,
+                None,
             )],
         )
         .await?;
