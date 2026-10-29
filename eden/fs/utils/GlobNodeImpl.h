@@ -117,6 +117,12 @@ class GlobNodeImpl {
       throw std::runtime_error("impossible to get here");
     }
 
+    /** entryShouldLoadChildTree() is always false for a raw Tree, so the
+     * deferred-recursion list this fault guards is always empty here. */
+    folly::coro::now_task<folly::Unit> co_checkDeferredRecurseFault() {
+      co_return folly::unit;
+    }
+
     bool entryShouldLoadChildTree(const TreeEntry*) {
       return false;
     }
@@ -490,7 +496,13 @@ class GlobNodeImpl {
           std::make_move_iterator(localFileBlobsToPrefetch.end()));
     }
 
-    // Recursively load child inodes and evaluate matches
+    // Recursively load child inodes and evaluate matches.
+    //
+    // `recurse` was filled while the contents lock was held and is consumed
+    // here, after it was released. Tests use this fault to mutate the
+    // directory in that window, which relocates its entry map's key storage.
+    co_await root.co_checkDeferredRecurseFault();
+
     for (auto& item : recurse) {
       tasks.emplace_back(
           folly::coro::co_invoke(

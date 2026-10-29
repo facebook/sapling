@@ -9,7 +9,10 @@
 #include <eden/fs/inodes/InodePtrFwd.h>
 #include <iomanip>
 #include <iostream>
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/TaskTrace.h"
@@ -72,6 +75,17 @@ struct TreeInodePtrRoot {
       PathComponentPiece name,
       const ObjectFetchContextPtr& context) {
     co_return co_await root->co_getOrLoadChildTree(name, context);
+  }
+
+  /** Fault point covering the window between the contents lock being
+   * released and the deferred recursion consuming the child names it saved
+   * while holding it. Disabled fault injection makes this a predicted
+   * branch on a bool. */
+  folly::coro::now_task<folly::Unit> co_checkDeferredRecurseFault() {
+    co_return co_await root->getMount()
+        ->getServerState()
+        ->getFaultInjector()
+        .co_checkAsync("GlobNodeImpl::evaluateImpl::recurse");
   }
   /** Returns true if we should call co_getOrLoadChildTree() for the given
    * ENTRY.  We only do this if the child is already materialized */

@@ -102,6 +102,29 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "glob_recurse_lifetime_test",
+    srcs = ["GlobRecurseLifetimeTest.cpp"],
+    network_access = network_access_utils.none(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:fault_injector",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/service:thrift_glob_impl",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly/coro:invoke",
+        "//folly/coro:task",
+        "//folly/executors:cpu_thread_pool_executor",
+        "//folly/executors/thread_factory:named_thread_factory",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_unittest(
     name = "pretty_printers_test",
     srcs = ["PrettyPrintersTest.cpp"],
     network_access = network_access_utils.none(),
