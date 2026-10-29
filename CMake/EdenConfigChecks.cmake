@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 include(FindPkgConfig)
+include(FBFetchFromManifest)
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -23,23 +24,42 @@ include_directories(${GLOG_INCLUDE_DIR})
 # linker.
 find_package(Libevent CONFIG QUIET)
 
-find_package(Boost 1.69.0 REQUIRED COMPONENTS filesystem)
-
 find_package(fmt CONFIG REQUIRED)
-find_package(folly CONFIG REQUIRED)
+
+fb_find_or_fetch(folly)
 include_directories(${FOLLY_INCLUDE_DIR})
 
-find_package(fb303 CONFIG REQUIRED)
-include_directories(${FB303_INCLUDE_DIR})
+# After folly, so that a Boost that folly fetched satisfies this.
+find_package(Boost 1.69.0 REQUIRED COMPONENTS filesystem)
 
-find_package(fizz CONFIG REQUIRED)
+fb_find_or_fetch(fizz)
 include_directories(${FIZZ_INCLUDE_DIR})
 
-find_package(wangle CONFIG REQUIRED)
+fb_find_or_fetch(wangle)
 include_directories(${WANGLE_INCLUDE_DIR})
 
-find_package(FBThrift CONFIG REQUIRED COMPONENTS cpp2 py)
+fb_find_or_fetch(FBThrift)
 include_directories(${FBTHRIFT_INCLUDE_DIR})
+
+# The Python CLI uses fb303's thrift-python modules, which, like thrift-python,
+# getdeps only builds on Linux.
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(FB303_THRIFT_PYTHON ON)
+endif()
+fb_find_or_fetch(fb303)
+include_directories(${FB303_INCLUDE_DIR})
+
+# The thrift crates' build scripts run THRIFT, or thrift1 found on getdeps'
+# PATH, which finds .thrift includes through getdeps' THRIFT_INCLUDE_PATH.
+if (WIN32)
+  set(eden_thrift_path_separator "$<SEMICOLON>")
+else()
+  set(eden_thrift_path_separator ":")
+endif()
+set(EDEN_RUST_THRIFT_ENV
+  "THRIFT=$<TARGET_FILE:FBThrift::thrift>"
+  "THRIFT_INCLUDE_PATH=$<JOIN:${FBTHRIFT_INCLUDE_DIR}$<SEMICOLON>$<TARGET_PROPERTY:fb303::fb303_thrift_cpp.thrift_includes,INTERFACE_INCLUDE_DIRECTORIES>,${eden_thrift_path_separator}>"
+)
 
 if (BUILD_TESTS)
   find_package(GMock MODULE REQUIRED)
@@ -68,7 +88,7 @@ endif()
 find_package(Re2 MODULE REQUIRED)
 include_directories(${RE2_INCLUDE_DIR})
 
-find_package(edencommon CONFIG REQUIRED)
+fb_find_or_fetch(edencommon)
 
 # The following packages ship with their own CMake configuration files
 find_package(cpptoml CONFIG REQUIRED)

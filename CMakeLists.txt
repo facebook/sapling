@@ -85,11 +85,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake"
   "${CMAKE_CURRENT_SOURCE_DIR}/build/fbcode_builder/CMake"
   ${CMAKE_MODULE_PATH})
 
-include_directories(
-  ${CMAKE_SOURCE_DIR}
-  ${CMAKE_BINARY_DIR}
-)
-
 if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/osxfuse")
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/external/osxfuse/common")
 else()
@@ -124,6 +119,13 @@ option(BUILD_TESTS "If enabled, compile the tests." OFF)
 include(FBCompilerSettings)
 include(EdenCompilerSettings)
 include(EdenConfigChecks)
+# After EdenConfigChecks, so that the projects it fetches don't search eden's
+# tree, which can have its own copy of eden/common.
+include_directories(
+  BEFORE
+  ${CMAKE_SOURCE_DIR}
+  ${CMAKE_BINARY_DIR}
+)
 include(EdenFunctions)
 include(FBPythonBinary)
 include(FBThriftLibrary)

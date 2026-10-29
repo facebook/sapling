@@ -11,7 +11,8 @@ rust_static_library(
   CRATE edenfs_staticlib
   PACKAGE edenfs-staticlib
   USE_CXX_INCLUDE
-  ${features})
+  ${features}
+  ENV ${EDEN_RUST_THRIFT_ENV})
 
 install_rust_static_library(
   rust_edenfs_staticlib
