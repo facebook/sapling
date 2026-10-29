@@ -12,7 +12,14 @@ rust_static_library(
   PACKAGE edenfs-staticlib
   USE_CXX_INCLUDE
   ${features}
-  ENV ${EDEN_RUST_THRIFT_ENV})
+  ENV ${EDEN_RUST_THRIFT_ENV}
+  # The blake3 crate assembles BLAKE3's SIMD code under the same symbol names as
+  # the C library that eden's C++ links, and defines more of them. With the C
+  # library after the Rust one, the linker never takes both copies of a symbol.
+  # The curl crate needs libcurl from the final link, except on Windows, where
+  # it builds its own copy.
+  LINK_LIBRARIES backingstore_iobuf BLAKE3::blake3
+    $<TARGET_NAME_IF_EXISTS:CURL::libcurl>)
 
 install_rust_static_library(
   rust_edenfs_staticlib
