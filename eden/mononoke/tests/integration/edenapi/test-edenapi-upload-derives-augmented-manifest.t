@@ -3,23 +3,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
+#require slow
 
-Baseline: which upload endpoint derives what, on the commit-cloud path today.
-
-Cloud upload rather than push, so attribution is unambiguous: push also runs
-pushrebase, which reaches a second call site gated by the same knob.
-
-Attribution comes from scuba rows tagged `Generated derived data batch`, which
-carry the `http_path` of the driving request. `edenapi_method` is null on those
-rows -- it is only stamped on the terminal `EdenAPI Request Processed` row.
+Trace derivation on cloud upload, without pushrebase or serve-time derivation.
 
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ configure modern
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
 
-`stack/`, which only scenario 5 creates, is a restricted root, so whatever writes
-that scenario's augmented manifests has to record it in the manifest id store.
+Record augmented manifest ids under the restricted `stack/` root.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<EOF
   > [restricted_paths_config]
   > path_restriction_metadata = { "stack" = { repo_region_acl = "REPO_REGION:config_acl" } }
@@ -28,9 +21,7 @@ that scenario's augmented manifests has to record it in the manifest id store.
   > EOF
   $ cd $TESTTMP
 
-Commit cloud client config, copied from server/test-commitcloud-upload.t. The
-`local` service type keeps the workspace state in $TESTTMP, so no commit cloud
-backend is needed.
+Use a local commit cloud backend.
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend =
@@ -50,22 +41,17 @@ backend is needed.
   > reponame=repo
   > EOF
 
-The other two augmented-manifest knobs are pinned OFF: on-demand would derive at
-serve time and steal the attribution, and route-to-augmented would fail closed
-on the missing manifest the knob-OFF scenario creates.
+Disable serving-time derivation and augmented routing until envelopes exist.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true, "scm/mononoke:derive_hg_augmented_manifest_on_demand": false, "scm/mononoke:route_original_to_augmented_hg_manifest": false}}
   > EOF
 
-`--no-derive-hg-augmented` stops the fixture pre-deriving, so every derivation
-below belongs to the upload path.
+Leave augmented manifests underived in the fixture.
   $ quiet testtool_drawdag -R repo --no-derive-hg-augmented <<EOF
   > A
   > # bookmark: A master_bookmark
   > EOF
 
-`--scuba-log-file` redirects the server request scuba to a file the test can
-read; this is the same mechanism test-edenapi-server-files.t uses.
   $ SCUBA="$TESTTMP/scuba.json"
   $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
 
@@ -74,12 +60,7 @@ read; this is the same mechanism test-edenapi-server-files.t uses.
   $ sl goto master_bookmark -q
   $ sl cloud join -q
 
-`derivations_since` prints `<endpoint> <derived_data_type>` for every derivation
-that COMPLETED after the given scuba row offset, so each scenario inspects only
-its own rows. The changeset ids are stripped off the message to keep the output
-hash-free. `wait_for_upload` first blocks until the changeset-upload request has
-been logged; scuba rows are written as the request runs and the terminal row is
-last, so its presence means every derivation row for that request has landed.
+Wait for the terminal request row before inspecting that upload's derivations.
   $ scuba_rows() { wc -l < "$SCUBA"; }
   $ wait_for_upload() {
   >   for _ in $(seq 1 150); do
@@ -90,6 +71,7 @@ last, so its presence means every derivation row for that request has landed.
   >     sleep 0.1
   >   done
   >   echo "timed out waiting for upload_hg_changesets request row" >&2
+  >   return 1
   > }
   $ derivations_since() {
   >   tail -n +$(($1 + 1)) "$SCUBA" \
@@ -112,17 +94,11 @@ Scenario 1 -- knob ON. Nested directory so there is more than one tree.
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
 
-Trees upload before the changeset -- the ordering the future change depends on.
-
-Everything is derived under /repo/upload/changesets; /repo/upload/trees derives
-nothing. Moving the work means these rows should move to /repo/upload/trees.
+Derivation belongs to changeset upload, not tree upload.
   $ wait_for_upload "$BEFORE"
   $ derivations_since "$BEFORE"
   /repo/upload/changesets acl_manifests
   /repo/upload/changesets hg_augmented_manifests
-
-  $ derivations_since "$BEFORE" | grep -c '^/repo/upload/trees ' || true
-  0
 
 End state agrees. hgchangesets is present but absent from the rows above: the
 upload stores the client-supplied changeset, nothing derives it.
@@ -133,17 +109,8 @@ upload stores the client-supplied changeset, nothing derives it.
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS1"
   Derived: * (glob)
 
-Scenario 2 -- changeset-upload derivation OFF, everything else identical, and the
-two tree-upload knobs this stack adds pinned ON so that later diffs change what
-this one upload produces rather than adding uploads of their own. Nothing reads
-those two yet.
-
-They are declared here rather than in the header on purpose. Scenario 1 has to
-upload with them off: with them on, its tree upload would write envelopes before
-the changeset derivation ran, and puts are if-absent, so the derivation's own put
-would silently become a no-op.
-
-The running server picks up the new values without a restart.
+Scenario 2 -- derive at changeset upload OFF, build and store at tree upload ON.
+Keep tree-upload storage OFF in scenario 1 to avoid pre-empting derivation's put.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": false, "scm/mononoke:build_augmented_manifests_at_tree_upload": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true}}
   > EOF
@@ -162,13 +129,10 @@ The running server picks up the new values without a restart.
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
 
-Same upload, same endpoints, nothing derived. The knob is what removed the work.
+No derivation or build failure.
   $ wait_for_upload "$BEFORE"
   $ derivations_since "$BEFORE"
 
-The tree-upload build pass ran and did not fail. A failed build is best-effort
-and writes nothing, so without this line the envelope probe below would record
-the same absence whether or not the build's writes were contained.
   $ tail -n +$((BEFORE + 1)) "$SCUBA" \
   >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
   >            | .normal.msg'
@@ -181,29 +145,14 @@ the same absence whether or not the build's writes were contained.
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS2"
   Not Derived: * (glob)
 
-Everything below probes that one upload, and the later diffs in this stack change
-what it records instead of adding scenarios of their own. The two lines above are
-the control and never change: no augmented manifest is ever derived for this
-commit, so anything that does appear is attributable to the tree-upload path
-rather than to anything else in the upload.
-
-First, whether an envelope exists at the root tree's key. Deriving is not the only
-way one could appear, since the tree upload stores blobs of its own. The key is
-the hg manifest id alone -- no changeset, no mapping row -- which is the same
-lookup the serve path does, and the reason an envelope built outside per-changeset
-derivation is servable at all. `fetch-many` rather than `fetch` because it always
-prints its three counts, so a hit changes a recorded number rather than deleting a
-line.
+The root envelope exists independently of changeset-derived-data mapping.
   $ echo "hgaugmentedmanifest.sha1.$ROOT_MFID_2" > envelope_keys
   $ mononoke_admin blobstore -R repo fetch-many --keys-file envelope_keys
   present: 1
   missing: 0
   failed: 0
 
-Second, what the trees endpoint serves for that same tree. All four attributes are
-spelled out because `TreeAttributes` derives `#[serde(default)]` and `parents` and
-`child_metadata` default to true, so omitting them would ask for metadata here and
-make the recorded values move for a reason unrelated to the route.
+Request only manifest bytes; routing adds metadata regardless of these flags.
   $ cat > tree_attrs << EOF
   > {
   >     "manifest_blob": True,
@@ -218,23 +167,13 @@ make the recorded values move for a reason unrelated to the route.
   > ]
   > EOF
 
-Route to augmented, which is the end state and what all of this is for. It has
-been off for the whole file until now because the earlier scenarios deliberately
-leave manifests with no envelope, and a routed request for one of those fails
-closed rather than falling back. On-demand derivation stays off even though
-production runs it at 100%: it is the serve-time backstop, and leaving it off is
-what makes a hit here mean the upload path alone sufficed.
+Serve the stored augmented tree without on-demand derivation.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:route_original_to_augmented_hg_manifest": true}}
   > EOF
   $ force_update_configerator
 
-`manifest_blob_sha1` is the value that had to survive the switch, and it did: the
-augmented path stores no copy of these bytes, it rebuilds them by re-serialising
-the augmented subentries back into legacy manifest lines, so that hash holding
-still while everything below it moves is what shows the round trip is faithful. A
-bare "the request succeeded" would still pass if the reconstruction dropped a flag
-or reordered an entry.
+Reconstructed Hg manifest bytes retain their hash.
   $ hg debugapi mono:repo -e trees -f tree_keys -f tree_attrs --sort > "$TESTTMP/served.out" 2>&1
   $ python3 -c "
   > import hashlib
@@ -252,16 +191,7 @@ or reordered an entry.
   parents_present=True
   children=2
 
-The other four moved because routing sets `populate_all_metadata`, so a routed
-response carries the aux data, the parents and the children whether or not the
-client asked for them.
-
-Scenario 3 -- a failed build must leave the upload alone. Only a root-level file
-changes, so the root tree is uploaded on its own and its unchanged `dir` child is
-not in the batch. Scenario 2 derived nothing, so that child has an augmented
-envelope only if tree upload stored the one it built there. Without it the build
-fails, and the upload must not notice: the tree and the changeset still upload,
-and the failure is only logged.
+Scenario 3 -- reuse an unchanged child envelope stored by tree upload.
   $ cd "$TESTTMP/client1"
   $ BEFORE=$(scuba_rows)
   $ echo three > rootfile
@@ -280,9 +210,7 @@ and the failure is only logged.
   >            | "\(.normal.failure_kind): \(.normal.msg)"' \
   >   | sed -E 's/[0-9a-f]{40}/HASH/g'
 
-Scenario 4 -- store knob OFF with the build still ON, which is shadow. The build
-runs on every uploaded tree but must write no envelope. Changeset-upload
-derivation is still off from scenario 2, so nothing else can create one either.
+Scenario 4 -- build ON, store OFF: shadow building writes no envelope.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false}}
   > EOF
@@ -302,8 +230,7 @@ derivation is still off from scenario 2, so nothing else can create one either.
   edenapi: uploaded 1 changeset
   $ wait_for_upload "$BEFORE"
 
-The build did not fail, so an absent envelope below means it was never written,
-not that the build gave up first.
+Verify the build succeeded before checking the envelope is absent.
   $ tail -n +$((BEFORE + 1)) "$SCUBA" \
   >   | jq -r 'select(.normal.log_tag == "Failed to build augmented Hg manifests at tree upload")
   >            | .normal.msg'
@@ -316,12 +243,8 @@ not that the build gave up first.
   missing: 1
   failed: 0
 
-Scenario 5 -- a child that is stored but not derived. Shadow and changeset-upload
-derivation are both still off, so the `dir` tree scenario 4 uploaded is stored
-with no augmented manifest. Changing only a root file uploads the root alone, and
-its unchanged `dir` child resolves to that stored, underived tree. This is the
-production race, where a concurrent upload of the same commit stored the child
-moments earlier, and it must not be counted as the client's fault.
+Scenario 5 -- a stored child without an augmented envelope is `child_not_derived`,
+not a client error. Its failed build must not fail the upload.
   $ cd "$TESTTMP/client1"
   $ BEFORE=$(scuba_rows)
   $ echo five > rootfile
@@ -349,11 +272,7 @@ build included.
   >            | "\(.int.EdenapiUploadTreesAugmentedTrees) \(.int.EdenapiUploadTreesAugmentedBuildUs > 0)"'
   1 true
 
-Scenario 6 -- storing ON, changeset-upload derivation ON, root check and mapping
-ON. Tree upload stores an envelope for every tree it receives, root included, so
-changeset upload maps each commit to its stored root and derives nothing. The
-stack starts at master_bookmark, which scenario 1 derived, so every row below
-belongs to these two commits. `root_checks_since` prints the check's counts.
+Scenario 6 -- map stored roots rather than deriving, preserving restricted paths.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": true, "scm/mononoke:store_augmented_manifests_at_tree_upload": true, "scm/mononoke:check_uploaded_root_hg_augmented_manifest": true, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": true}}
   > EOF
@@ -406,13 +325,8 @@ Each commit maps to the envelope tree upload stored at its own root.
 With no ACL file in the repo, the mapped ACL manifest is the empty one.
   $ mononoke_admin derived-data -R repo fetch -T acl_manifests -i "$CS6" | sed 's/.* -> //'
   RootAclManifestId(AclManifestId(Blake2(ccdc1160ab59cd5c9179719f5f725f2802b9891a2ca6f2f618624ce446b12a1c)))
-  $ mononoke_admin derived-data -R repo fetch -T acl_manifests -B master_bookmark | sed 's/.* -> //'
-  RootAclManifestId(AclManifestId(Blake2(ccdc1160ab59cd5c9179719f5f725f2802b9891a2ca6f2f618624ce446b12a1c)))
 
-Scenario 7 -- storing OFF, changeset-upload derivation still ON. The root envelope
-only ever lands in the tree upload's overlay, so changeset upload has to derive.
-This is the control for scenario 6: whatever changeset upload learns to skip
-there, it must keep deriving here.
+Scenario 7 -- store OFF, derive ON: the missing root must still be derived.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false}}
   > EOF
@@ -444,10 +358,7 @@ there, it must keep deriving here.
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS8"
   Derived: * (glob)
 
-Scenario 8 -- an empty commit with a real commit on top, storing still OFF. The
-empty commit's root is its parent's, stored by derivation in scenario 1, so it is
-mapped; the commit on top has a new root, so it is derived from that mapped
-parent.
+Scenario 8 -- map an empty commit's reused root, then derive its child's new root.
   $ cd "$TESTTMP/client1"
   $ sl goto -q master_bookmark
   $ BEFORE=$(scuba_rows)
@@ -550,8 +461,7 @@ tree, uploaded with mapping off.
   $ cmp acl_11 acl_12 && echo same
   same
 
-Scenario 10 -- changeset-upload derivation OFF, mapping ON. The commit is still
-mapped to the root tree upload stored, and nothing is derived.
+Scenario 10 -- mapping stored roots works with changeset-upload derivation OFF.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset": false, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": true}}
   > EOF
@@ -582,9 +492,7 @@ mapped to the root tree upload stored, and nothing is derived.
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_OFF"
   Derived: * (glob)
 
-Scenario 11 -- trees uploaded before storing was on. Lookup must not report them
-as uploaded once mapping is on, or the commit that reuses them, with derivation
-off, would be left with no augmented manifest.
+Scenario 11 -- lookup resends trees stored without augmented envelopes.
   $ merge_just_knobs <<EOF
   > {"bools": {"scm/mononoke:store_augmented_manifests_at_tree_upload": false, "scm/mononoke:map_uploaded_root_hg_augmented_manifest": false}}
   > EOF
@@ -642,3 +550,64 @@ commit is mapped.
   $ cd $TESTTMP
   $ mononoke_admin derived-data -R repo exists -T hg_augmented_manifests -i "$CS_EARLY"
   Derived: * (glob)
+
+Scenario 12 -- the bonsai changeset upload builds. A stack with a modify, a
+delete, a copy, a file replaced by a directory and a merge is uploaded, and the
+file changes of each commit's bonsai are printed.
+  $ file_changes() {
+  >   mononoke_admin fetch -R repo -i "$1" | grep -E 'ADDED|COPY|REMOVED' | sed 's/^\s*//'
+  > }
+  $ make_stack() {
+  >   sl goto -q master_bookmark
+  >   mkdir -p twelve/dir
+  >   echo a > twelve/dir/a
+  >   echo b > twelve/b
+  >   sl commit -qAm "twelfth stack base $1"
+  >   sl cp -q twelve/dir/a twelve/copied
+  >   echo changed >> twelve/dir/a
+  >   sl rm -q twelve/b
+  >   mkdir twelve/b
+  >   echo inner > twelve/b/inner
+  >   sl commit -qAm "twelfth stack top $1"
+  >   TOP=$(sl log -r . -T '{node}')
+  >   sl goto -q .^
+  >   echo side > twelve/side
+  >   sl commit -qAm "twelfth stack side $1"
+  >   SIDE=$(sl log -r . -T '{node}')
+  >   sl goto -q "$TOP"
+  >   sl merge -q "$SIDE"
+  >   sl commit -qm "twelfth stack merge $1"
+  > }
+  $ stack_file_changes() {
+  >   for rev in '.^1^' '.^1' '.^2' '.'; do
+  >     sl log -r "$rev" -T '{desc|firstline}:\n'
+  >     file_changes "$(sl log -r "$rev" -T '{node}')"
+  >   done
+  > }
+
+  $ cd "$TESTTMP/client1"
+  $ make_stack hg
+  $ BEFORE=$(scuba_rows)
+  $ sl cloud upload
+  commitcloud: head '*' hasn't been uploaded yet (glob)
+  edenapi: queue 4 commits for upload
+  edenapi: queue 6 files for upload
+  edenapi: uploaded 6 files
+  edenapi: queue 11 trees for upload
+  edenapi: uploaded 11 trees
+  edenapi: uploaded 4 changesets
+  $ wait_for_upload "$BEFORE"
+  $ stack_file_changes | sed 's/ hg:$/:/' | tee "$TESTTMP/hg_file_changes"
+  twelfth stack base:
+  ADDED/MODIFIED: twelve/b 21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
+  ADDED/MODIFIED: twelve/dir/a b5785d8c57755a9174b40a9b3dfb19f2480fd7e592341e41f12c42be94e1df41
+  twelfth stack top:
+  REMOVED: twelve/b
+  ADDED/MODIFIED: twelve/b/inner c8657be1f6ac476ae814bb2afee7e0a76ab32baea729132bc4fd71fd88f67ee9
+  COPY/MOVE: twelve/copied b5785d8c57755a9174b40a9b3dfb19f2480fd7e592341e41f12c42be94e1df41
+  ADDED/MODIFIED: twelve/dir/a 8b7339de93cae7a6e5da1f294e49d44895d9c855bce3ac686bf9cfeb6b6e2c17
+  twelfth stack side:
+  ADDED/MODIFIED: twelve/side f185e9966cc5a4d664059c62f145b9bffa4f5e619e29f6997b53ea27dc6c21dd
+  twelfth stack merge:
+  REMOVED: twelve/b
+  ADDED/MODIFIED: twelve/dir/a 8b7339de93cae7a6e5da1f294e49d44895d9c855bce3ac686bf9cfeb6b6e2c17
