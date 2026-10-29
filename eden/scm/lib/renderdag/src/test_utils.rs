@@ -139,6 +139,10 @@ pub(crate) fn render_string_with_order(
         out.push_str(&row);
     }
 
+    indent(&out)
+}
+
+pub(crate) fn indent(out: &str) -> String {
     format!(
         "\n{}",
         out.trim_end()
