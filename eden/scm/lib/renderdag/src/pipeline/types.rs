@@ -25,6 +25,22 @@ pub type GraphRowShapeOptions = crate::OutputRendererOptions;
 /// This is the output of the graph-to-rows stage. It captures the node's
 /// current column, the edge shape around it, and any row-level facts needed by
 /// later stages. It intentionally does not contain glyphs or message text.
+///
+/// Example of different type of lines, depending on the rendering style,
+/// certain lines can be skipped or repeated:
+///
+/// ```plain
+///   │                            // pre_node_line() (optional, repeatable)
+///   │                            // pre_node_line()
+///   o      F                     // node_line (mandory, once)
+///   │      very long message 0   // post_node_line() (optional, repeatable)
+///   │      very long message 0   // post_node_line()
+///   ├─┬─╮  very long message 1   // link_line (mandory, once)
+///   │ │ ~  very long message 2   // term_line (mandory, once)
+///   : │    very long message 3   // ancestry_line (mandory, once or repeatable)
+///   │ │    very long message 4   // post_ancestry_line() (optional, repeatable)
+///   │ │    very long message 5   // post_ancestry_line()
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 // This is `Serialize` so non-text environment (e.g. via wasm) can get
 // the rich data (than just ambiguous text characters) to render more
@@ -92,6 +108,58 @@ pub struct GraphRowShape<N> {
 
     /// Abstract columns for ancestry continuation below this row.
     pub ancestry_line: Vec<PadLine>,
+}
+
+// See `GraphRowShape` docstring for what the lines mean.
+impl<N> GraphRowShape<N> {
+    /// True if the ancestry line contains an indirect ancestor edge.
+    pub fn has_indirect_ancestor(&self) -> bool {
+        self.ancestry_line
+            .iter()
+            .any(|line| *line == PadLine::Ancestor)
+    }
+
+    /// Derive the repeatable padding line before the node line.
+    pub fn pre_node_line(&self) -> Vec<PadLine> {
+        self.node_line
+            .iter()
+            .map(|line| node_to_pad_line(*line, self.is_head))
+            .collect()
+    }
+
+    /// Derive the repeatable padding line after the node line.
+    pub fn post_node_line(&self) -> Vec<PadLine> {
+        self.node_line
+            .iter()
+            .map(|line| node_to_pad_line(*line, self.is_root))
+            .collect()
+    }
+
+    /// Derive the repeatable padding line after the ancestry line.
+    pub fn post_ancestry_line(&self) -> Vec<PadLine> {
+        self.ancestry_line
+            .iter()
+            .map(|line| match line {
+                PadLine::Ancestor => PadLine::Parent,
+                other => *other,
+            })
+            .collect()
+    }
+}
+
+fn node_to_pad_line(line: NodeLine, use_blank_for_node: bool) -> PadLine {
+    match line {
+        NodeLine::Blank => PadLine::Blank,
+        NodeLine::Ancestor => PadLine::Ancestor,
+        NodeLine::Parent => PadLine::Parent,
+        NodeLine::Node => {
+            if use_blank_for_node {
+                PadLine::Blank
+            } else {
+                PadLine::Parent
+            }
+        }
+    }
 }
 
 /// A left-side graph prefix line before message text is attached.

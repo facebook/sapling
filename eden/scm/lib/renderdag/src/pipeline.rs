@@ -70,4 +70,55 @@ mod tests {
             let _ = GraphTextRenderer::<&'static str>::with_prefix_lines(prefix_lines);
         }
     }
+
+    #[test]
+    fn test_row_shape_derived_padding_lines() {
+        use crate::pipeline::types::GraphRowShape;
+        use crate::render::NodeLine;
+        use crate::render::PadLine;
+
+        let row = GraphRowShape {
+            node: "A",
+            merge: false,
+            separator_line: false,
+            is_head: true,
+            is_root: false,
+            node_column: 0,
+            parent_columns: vec![1],
+            node_line: vec![
+                NodeLine::Node,
+                NodeLine::Parent,
+                NodeLine::Ancestor,
+                NodeLine::Blank,
+            ],
+            link_line: None,
+            link_line_from_node: None,
+            term_line: None,
+            ancestry_line: vec![PadLine::Ancestor, PadLine::Parent, PadLine::Blank],
+        };
+
+        assert!(row.has_indirect_ancestor());
+        assert_eq!(
+            row.pre_node_line(),
+            vec![
+                PadLine::Blank,
+                PadLine::Parent,
+                PadLine::Ancestor,
+                PadLine::Blank,
+            ],
+        );
+        assert_eq!(
+            row.post_node_line(),
+            vec![
+                PadLine::Parent,
+                PadLine::Parent,
+                PadLine::Ancestor,
+                PadLine::Blank,
+            ],
+        );
+        assert_eq!(
+            row.post_ancestry_line(),
+            vec![PadLine::Parent, PadLine::Parent, PadLine::Blank],
+        );
+    }
 }
