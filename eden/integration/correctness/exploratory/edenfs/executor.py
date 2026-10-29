@@ -23,7 +23,7 @@ import time
 from collections.abc import Callable
 from typing import Protocol
 
-from eden.integration.correctness.exploratory.core.history import OK
+from eden.integration.correctness.exploratory.core.history import FAIL, OK
 from eden.integration.correctness.exploratory.core.runspec import Action, RunSpec
 from eden.integration.correctness.exploratory.core.scheduler import BackendResult
 from eden.integration.correctness.exploratory.edenfs.actions import (
@@ -244,9 +244,10 @@ class SharedExecutor:
     def _status(self, action: Action) -> BackendResult:
         """Report one sl status plus its ``sl diff --stat`` file set for the two Sapling observers (status and diff).
 
-        A nonzero exit of either process fails the probe with that
-        process's `returncode`, `stdout`, and `stderr`; the contracts read a
-        failed status's `returncode` and `stderr`.
+        A nonzero exit of `sl status` fails the probe with its `returncode`,
+        `stdout`, and `stderr`, which the contracts read. A failed `sl diff`
+        fails it with a `reason` alone (its output in the text): no exit
+        status, so the contracts leave it untyped (`_guard_refusal`).
         """
         args = ["status", "--print0"]
         revision = action.payload.get("revision")
@@ -260,7 +261,9 @@ class SharedExecutor:
             action, ["diff", "--stat", "tree"], primary=False, started=started
         )
         if diff.returncode != 0:
-            return failed_process("diff", diff)
+            return BackendResult(
+                FAIL, {"reason": failed_process("diff", diff).facts["reason"]}
+            )
         return BackendResult(
             OK,
             {

@@ -417,6 +417,29 @@ os._exit(0)
                 )
                 self.assertIsNone(env.processes.lookup(action.id))
 
+    def test_a_failed_diff_step_carries_no_exit_status(self) -> None:
+        """`sl status` succeeds and `sl diff` exits 255 (a path removed while it
+        reads): the failure has a reason and no `returncode`, so the contracts
+        leave it untyped (`checkout._guard_refusal`)."""
+        action = Action(
+            id="s1",
+            kind="status",
+            deadline=DEADLINE_OPERATION,
+            payload={"channel": "sl"},
+        )
+        sl = _CannedSl(
+            f"M {REGISTERS[0]}\0",
+            "abort: No such file or directory: tree/registers/r1.reg",
+            returncodes=(0, 255),
+        )
+        with mock.patch.object(subprocess, "Popen", side_effect=sl):
+            result = LiveBackend(_NativeEnv(), _native_spec(action))(action)
+        self.assertEqual(FAIL, result.outcome)
+        self.assertEqual(
+            {"reason": "diff: abort: No such file or directory: tree/registers/r1.reg"},
+            result.facts,
+        )
+
     def test_status_revision_uses_authored_node(self) -> None:
         action = Action(
             id="s1",
