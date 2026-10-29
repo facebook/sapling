@@ -1410,6 +1410,11 @@ Rebuilt index "c""#
     };
     append_many_entries();
     corrupt(index_file, -1_000_000);
+    // Invalidate cached verification after modifying a complete chunk.
+    let cache_path = path.join(format!("{index_file}.verified"));
+    if cache_path.is_symlink() || cache_path.exists() {
+        fs::remove_file(cache_path).unwrap();
+    }
     verify_corrupted();
     assert_eq!(
         repair(),
