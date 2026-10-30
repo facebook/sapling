@@ -9,6 +9,11 @@ use std::task::Poll;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use blobstore::Loadable;
+use bonsai_p4_mapping::AddP4MappingErrorKind;
+use bookmarks::Bookmarks;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::StreamExt;
@@ -17,21 +22,37 @@ use futures::stream::BoxStream;
 use metaconfig_types::FilestoreParams;
 use mononoke_macros::mononoke;
 use mononoke_types::P4ChangelistId;
+use mononoke_types_mocks::changesetid::ONES_CSID;
 use p4_types::Action;
 use p4_types::FileRevision;
 use p4_types::Integration;
 use p4_types::IntegrationHow;
 use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use test_repo_factory::TestRepoFactory;
+use unodes::RootUnodeManifestId;
 
 use super::*;
 
 #[facet::container]
 struct TestRepo {
     #[facet]
-    repo_blobstore: RepoBlobstore,
+    bonsai_p4_mapping: dyn BonsaiP4Mapping,
+    #[facet]
+    bookmarks: dyn Bookmarks,
+    #[facet]
+    commit_graph: CommitGraph,
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
     #[facet]
     filestore_config: FilestoreConfig,
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 fn chunks(chunks: &[&[u8]]) -> impl Stream<Item = Result<Bytes>> + Send + use<> {
@@ -518,5 +539,171 @@ async fn test_failure_names_the_changelist(fb: FacebookInit) -> Result<()> {
         format!("{error:#}").contains("building changelist 8: unexpected describe of 8"),
         "{error:?}"
     );
+    Ok(())
+}
+
+const DEPOT: &str = "//test1/";
+
+async fn bookmark_target(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    bookmark: &BookmarkKey,
+) -> Result<Option<ChangesetId>> {
+    repo.bookmarks()
+        .get(ctx.clone(), bookmark, Freshness::MostRecent)
+        .await
+}
+
+async fn mapped(ctx: &CoreContext, repo: &TestRepo, change: u64) -> Result<Option<ChangesetId>> {
+    repo.bonsai_p4_mapping
+        .get_bonsai_from_p4_changelist_id(ctx, P4ChangelistId::new(change))
+        .await
+}
+
+#[mononoke::fbinit_test]
+async fn test_import_moves_the_bookmark_and_maps_each_changelist(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let derive = [DerivableType::Fsnodes];
+
+    let imported = import_changelists(
+        &ctx,
+        &repo,
+        &two_changelists(),
+        DEPOT,
+        &master,
+        &[7, 9],
+        &derive,
+    )
+    .await?;
+
+    let built = build_changesets(&ctx, &repo, &two_changelists(), DEPOT, None, &[7, 9]).await?;
+    let expected: Vec<_> = built
+        .iter()
+        .map(|(change, changeset)| (*change, changeset.get_changeset_id()))
+        .collect();
+    assert_eq!(expected, imported);
+    assert_eq!(
+        Some(imported[1].1),
+        bookmark_target(&ctx, &repo, &master).await?
+    );
+    for (change, cs_id) in imported {
+        assert_eq!(Some(cs_id), mapped(&ctx, &repo, change).await?);
+        assert_eq!(
+            Some(P4ChangelistId::new(change)),
+            repo.bonsai_p4_mapping
+                .get_p4_changelist_id_from_bonsai(&ctx, cs_id)
+                .await?
+        );
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_next_batch_continues_from_the_bookmark(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let source = two_changelists();
+
+    let first = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[7], &[]).await?;
+    let second = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[9], &[]).await?;
+
+    let head = second[0].1.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(vec![first[0].1], head.parents().collect::<Vec<_>>());
+    assert_eq!(
+        Some(second[0].1),
+        bookmark_target(&ctx, &repo, &master).await?
+    );
+    Ok(())
+}
+
+/// The mapping and the bookmark commit together: a mapping conflict leaves neither.
+#[mononoke::fbinit_test]
+async fn test_failed_mapping_write_leaves_the_bookmark(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let elsewhere = BonsaiP4MappingEntry::new(ONES_CSID, P4ChangelistId::new(9));
+    repo.bonsai_p4_mapping
+        .bulk_import(&ctx, &[elsewhere])
+        .await?;
+
+    let error = import_changelists(
+        &ctx,
+        &repo,
+        &two_changelists(),
+        DEPOT,
+        &master,
+        &[7, 9],
+        &[],
+    )
+    .await
+    .unwrap_err();
+
+    assert!(
+        matches!(
+            error.downcast_ref(),
+            Some(AddP4MappingErrorKind::Conflict {
+                conflicting: 1,
+                total: 2
+            })
+        ),
+        "{error:?}"
+    );
+    assert_eq!(None, bookmark_target(&ctx, &repo, &master).await?);
+    assert_eq!(None, mapped(&ctx, &repo, 7).await?);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_changelist_without_files_is_an_empty_commit(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let source = FakeSource::default().with_changelist(5, &[]);
+
+    let imported = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[5], &[]).await?;
+
+    let changeset = imported[0].1.load(&ctx, repo.repo_blobstore()).await?;
+    assert_eq!(0, changeset.file_changes().count());
+    assert_eq!(Some(imported[0].1), mapped(&ctx, &repo, 5).await?);
+    Ok(())
+}
+
+/// Deriving a type the repo doesn't enable would fail the batch after it is saved.
+#[mononoke::fbinit_test]
+async fn test_types_the_repo_does_not_enable_are_not_derived(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = TestRepoFactory::new(fb)?
+        .with_config_override(|config| {
+            if let Some(active) = config.derived_data_config.get_active_config_mut() {
+                active.types.remove(&DerivableType::Fsnodes);
+            }
+        })
+        .build()
+        .await?;
+    let master = BookmarkKey::new("master")?;
+    let derive = [DerivableType::Fsnodes, DerivableType::Unodes];
+
+    let imported = import_changelists(
+        &ctx,
+        &repo,
+        &two_changelists(),
+        DEPOT,
+        &master,
+        &[7, 9],
+        &derive,
+    )
+    .await?;
+
+    let head = imported[1].1;
+    let unodes = repo
+        .repo_derived_data()
+        .fetch_derived::<RootUnodeManifestId>(&ctx, head)
+        .await?;
+    assert!(unodes.is_some());
+    assert_eq!(Some(head), bookmark_target(&ctx, &repo, &master).await?);
     Ok(())
 }

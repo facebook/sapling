@@ -9,26 +9,45 @@
 
 use std::collections::HashMap;
 use std::pin::pin;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
+use bonsai_p4_mapping::BonsaiP4Mapping;
+use bonsai_p4_mapping::BonsaiP4MappingArc;
+use bonsai_p4_mapping::BonsaiP4MappingEntry;
+use bookmarks::BookmarkKey;
+use bookmarks::BookmarkTransactionError;
+use bookmarks::BookmarkTransactionHook;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
+use bookmarks::Freshness;
 use bytes::Bytes;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
+use futures::FutureExt;
 use futures::Stream;
 use futures::TryStreamExt;
 use futures::stream;
+use import_common::BackfillDerivation;
+use import_common::save_and_derive_batch;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::DerivableType;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use mononoke_types::P4ChangelistId;
 use p4_transform::CopySource;
 use p4_types::ChangeSource;
 use p4_types::Changelist;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 
 /// Stores a file revision's content in the repo's filestore. `size` is the size
 /// Perforce reports for the revision: content of any other length is rejected.
@@ -213,6 +232,91 @@ pub async fn build_changesets(
         changesets.push((change, changeset));
     }
     Ok(changesets)
+}
+
+/// Imports `changes`, in order, onto `bookmark` (created by the first import), deriving
+/// the types in `derive` that the repo has enabled, and returns their changesets.
+///
+/// A changelist has no parent field, unlike a git commit: its parent is whatever the
+/// bookmark points at, so the bookmark is the only record of where the import is. That is
+/// why the bookmark and the mapping move in one transaction, with a compare-and-swap: if
+/// they disagreed, or another import had moved the bookmark, the next changelist would get
+/// the wrong parent and every later commit would build on the wrong history.
+pub async fn import_changelists(
+    ctx: &CoreContext,
+    repo: &(
+         impl BookmarksRef
+         + BonsaiP4MappingArc
+         + CommitGraphRef
+         + CommitGraphWriterRef
+         + FilestoreConfigRef
+         + RepoBlobstoreRef
+         + RepoDerivedDataRef
+         + RepoIdentityRef
+         + Send
+         + Sync
+     ),
+    source: &impl ChangeSource,
+    depot_root: &str,
+    bookmark: &BookmarkKey,
+    changes: &[u64],
+    derive: &[DerivableType],
+) -> Result<Vec<(u64, ChangesetId)>> {
+    let Some(&last) = changes.last() else {
+        return Ok(Vec::new());
+    };
+    let old = repo
+        .bookmarks()
+        .get(ctx.clone(), bookmark, Freshness::MostRecent)
+        .await?;
+    let (imported, changesets): (Vec<_>, Vec<_>) =
+        build_changesets(ctx, repo, source, depot_root, old, changes)
+            .await?
+            .into_iter()
+            .map(|(change, changeset)| ((change, changeset.get_changeset_id()), changeset))
+            .unzip();
+    let derive = BackfillDerivation::OnlySpecificTypes(derive.to_vec())
+        .types(&repo.repo_derived_data().active_config().types);
+    save_and_derive_batch(ctx, repo, changesets, &derive).await?;
+
+    let &(_, new) = imported.last().context("built no changesets")?;
+    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+    match old {
+        None => txn.create(bookmark, new, BookmarkUpdateReason::Blobimport)?,
+        Some(old) => txn.update(bookmark, new, old, BookmarkUpdateReason::Blobimport)?,
+    }
+    let mapping = mapping_txn_hook(repo.bonsai_p4_mapping_arc(), &imported);
+    // Hooks run before the bookmark's compare-and-swap, so a concurrent import of the same
+    // changelists fails as a mapping `Conflict` rather than here. Both roll back everything.
+    ensure!(
+        txn.commit_with_hooks(vec![mapping]).await?.is_some(),
+        "{bookmark} moved while importing changelists {}..={last}",
+        changes[0]
+    );
+    Ok(imported)
+}
+
+/// Writes the batch's mapping in the bookmark move's transaction, so the bookmark never
+/// points at a changeset whose changelist isn't mapped, nor the reverse.
+fn mapping_txn_hook(
+    mapping: Arc<dyn BonsaiP4Mapping>,
+    imported: &[(u64, ChangesetId)],
+) -> BookmarkTransactionHook {
+    let entries: Arc<[_]> = imported
+        .iter()
+        .map(|&(change, cs_id)| BonsaiP4MappingEntry::new(cs_id, P4ChangelistId::new(change)))
+        .collect();
+    Arc::new(move |ctx, txn| {
+        let mapping = mapping.clone();
+        let entries = entries.clone();
+        async move {
+            mapping
+                .bulk_import_in_transaction(&ctx, &entries, txn)
+                .await
+                .map_err(|error| BookmarkTransactionError::Other(error.into()))
+        }
+        .boxed()
+    })
 }
 
 #[cfg(test)]
