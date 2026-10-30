@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::task::Poll;
+
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::stream;
@@ -125,5 +127,140 @@ async fn test_same_content_gets_the_same_content_id(fb: FacebookInit) -> Result<
     let (second, _) = upload_and_fetch(&ctx, &repo, &[b"same ", b"bytes"]).await?;
 
     assert_eq!(first.content_id, second.content_id);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_symlink_is_stored_without_the_trailing_newline(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let metadata = upload_file_content(
+        &ctx,
+        &repo,
+        FileType::Symlink,
+        19,
+        chunks(&[b"UPPERCASE-", b"TEST.TXT\n"]),
+    )
+    .await?;
+    let fetched = filestore::fetch_concat(repo.repo_blobstore(), &ctx, metadata.content_id).await?;
+
+    assert_eq!(&b"UPPERCASE-TEST.TXT"[..], fetched);
+    assert_eq!(18, metadata.total_size);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_symlink_without_trailing_newline_is_rejected(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let error = upload_file_content(&ctx, &repo, FileType::Symlink, 6, chunks(&[b"target"]))
+        .await
+        .unwrap_err();
+
+    assert!(
+        format!("{error:#}").contains("does not end with a newline"),
+        "{error:?}"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_symlink_with_two_trailing_newlines_is_rejected(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let error = upload_file_content(&ctx, &repo, FileType::Symlink, 8, chunks(&[b"target\n\n"]))
+        .await
+        .unwrap_err();
+
+    assert!(
+        format!("{error:#}").contains("more than one newline"),
+        "{error:?}"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_symlink_shorter_than_size_is_rejected(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let error = upload_file_content(&ctx, &repo, FileType::Symlink, 8, chunks(&[b"target\n"]))
+        .await
+        .unwrap_err();
+
+    assert!(
+        format!("{error:#}").contains("symlink content is 7 bytes but Perforce reports 8"),
+        "{error:?}"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_symlink_longer_than_size_is_rejected(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let error = upload_file_content(
+        &ctx,
+        &repo,
+        FileType::Symlink,
+        6,
+        chunks(&[b"targ", b"et\n", b"never read"]),
+    )
+    .await
+    .unwrap_err();
+
+    assert!(
+        format!("{error:#}").contains("longer than Perforce reports (6 bytes)"),
+        "{error:?}"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_symlink_over_64_kib_is_rejected_before_reading(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let unreadable =
+        stream::poll_fn(|_| -> Poll<Option<Result<Bytes>>> { panic!("content was read") });
+
+    let error = upload_file_content(&ctx, &repo, FileType::Symlink, 64 * 1024 + 1, unreadable)
+        .await
+        .unwrap_err();
+
+    assert!(
+        format!("{error:#}").contains("symlink of 65537 bytes is larger than we support"),
+        "{error:?}"
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_regular_file_keeps_its_trailing_newline(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let metadata =
+        upload_file_content(&ctx, &repo, FileType::Regular, 7, chunks(&[b"target\n"])).await?;
+    let fetched = filestore::fetch_concat(repo.repo_blobstore(), &ctx, metadata.content_id).await?;
+
+    assert_eq!(&b"target\n"[..], fetched);
+    assert_eq!(7, metadata.total_size);
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_regular_file_of_the_wrong_size_is_rejected(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let error = upload_file_content(&ctx, &repo, FileType::Regular, 6, chunks(&[b"target\n"]))
+        .await
+        .unwrap_err();
+
+    assert!(format!("{error:#}").contains("Invalid size"), "{error:?}");
     Ok(())
 }
