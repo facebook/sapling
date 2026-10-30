@@ -232,7 +232,10 @@ class SaplingProcesses:
                 raise self._failure(CLOSED, f"{key} was killed by cleanup")
             if timed_out:
                 raise self._failure(
-                    REFERENCE_TIMEOUT, f"{key} ran past {timeout:.1f}s: {left}"
+                    # pyrefly: ignore[invalid-argument]
+                    REFERENCE_TIMEOUT,
+                    # pyrefly: ignore[invalid-argument]
+                    f"{key} ran past {timeout:.1f}s: {left}",
                 )
             if left:
                 raise self._failure(
