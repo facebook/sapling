@@ -594,7 +594,13 @@ fn count_linked_worktrees(registry: &Registry, group_main_path: &Path) -> usize 
 
 #[cfg(test)]
 mod tests {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    use util::lock::PathLock;
+
     use super::*;
+    use crate::save_registry;
 
     #[test]
     fn test_resolve_group_id_for_main_path_reuses_legacy_group_id() {
@@ -620,5 +626,40 @@ mod tests {
             resolve_group_id_for_main_path(&registry, &group_main),
             legacy_group_id
         );
+    }
+
+    #[test]
+    fn test_list_while_registry_locked() {
+        let store_dir = tempfile::tempdir().unwrap();
+        let checkouts_dir = tempfile::tempdir().unwrap();
+        let main_path = checkouts_dir.path().join("main");
+        std::fs::create_dir(&main_path).unwrap();
+        let main_path =
+            util::path::strip_unc_prefix(util::path::canonicalize_best_effort(&main_path).unwrap());
+
+        let mut registry = Registry::new();
+        registry
+            .groups
+            .insert("test-group-id".to_string(), Group::new(main_path.clone()));
+        save_registry(store_dir.path(), &registry).unwrap();
+
+        let backend = EdenBackend {
+            repo_path: main_path,
+            shared_store_path: store_dir.path().to_path_buf(),
+            ident: identity::default(),
+        };
+
+        // Another worktree command holds the registry lock.
+        let lock = PathLock::exclusive(store_dir.path().join("worktrees.lock")).unwrap();
+
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(backend.list().map(|listed| listed.len()));
+        });
+
+        // FIXME: listing waits for the registry lock.
+        assert!(rx.recv_timeout(Duration::from_millis(500)).is_err());
+        drop(lock);
+        assert_eq!(rx.recv().unwrap().unwrap(), 1);
     }
 }
