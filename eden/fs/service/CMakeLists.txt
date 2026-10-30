@@ -13,6 +13,8 @@ add_fbthrift_library(
     eden_config_thrift
     fb303::fb303_thrift
 )
+# eden.thrift's GlobPath adapter includes edencommon's PathFuncs.h.
+target_link_libraries(eden_service_thrift_cpp PUBLIC edencommon::edencommon_utils)
 
 if (EDEN_HAVE_THRIFT_PYTHON)
   add_fbthrift_python_library(
