@@ -27,6 +27,7 @@ use bookmarks::Freshness;
 use bytes::Bytes;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
@@ -36,8 +37,12 @@ use futures::TryStreamExt;
 use futures::stream;
 use import_common::BackfillDerivation;
 use import_common::save_and_derive_batch;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::ContentManifestId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::DerivableType;
 use mononoke_types::FileType;
@@ -159,13 +164,14 @@ pub async fn upload_changelist_contents(
 }
 
 /// The source paths of the revisions in `changelist` that were copied into the depot at
-/// `depot_root`, keyed by depot path as `p4_transform::changeset` takes them. One
-/// `integrations` call covers all of them.
+/// `depot_root`, keyed by depot path as `p4_transform::changeset` takes them, and the
+/// number of copies with several sources, which get none. One `integrations` call covers
+/// all of them.
 async fn copy_sources(
     source: &impl ChangeSource,
     depot_root: &str,
     changelist: &Changelist,
-) -> Result<HashMap<String, NonRootMPath>> {
+) -> Result<(HashMap<String, NonRootMPath>, usize)> {
     let mut revisions = Vec::new();
     for revision in &changelist.files {
         if !p4_transform::can_have_copy_source(revision.action)
@@ -181,58 +187,168 @@ async fn copy_sources(
         source.integrations(&revisions).await?
     };
     let mut copy_sources = HashMap::new();
+    let mut ambiguous = 0;
     for revision in revisions {
         let integrations = integrations
             .get(&revision.depot_path)
             .with_context(|| format!("no integration records for {}", revision.depot_path))?;
-        if let CopySource::From(path) =
-            p4_transform::copy_source(depot_root, revision, integrations)?
-        {
-            copy_sources.insert(revision.depot_path.clone(), path);
+        match p4_transform::copy_source(depot_root, revision, integrations)? {
+            CopySource::From(path) => {
+                copy_sources.insert(revision.depot_path.clone(), path);
+            }
+            CopySource::Ambiguous => ambiguous += 1,
+            CopySource::NotACopy | CopySource::OtherDepot => {}
         }
     }
-    Ok(copy_sources)
+    Ok((copy_sources, ambiguous))
+}
+
+/// A changelist's changeset, with the number of copies it imported without `copy_from`.
+#[derive(Debug)]
+pub struct BuiltChangeset {
+    pub change: u64,
+    pub changeset: BonsaiChangeset,
+    /// The source isn't a file in the parent.
+    pub dropped_copy_sources: usize,
+    /// Several sources, so none is used.
+    pub ambiguous_copy_sources: usize,
+}
+
+/// The root content manifest of `base`, if any of `paths` isn't answered by `built` and
+/// has to be looked up there. Derived once for all of a changelist's copy sources.
+async fn base_root_for<'a>(
+    ctx: &CoreContext,
+    repo: &impl RepoDerivedDataRef,
+    base: Option<ChangesetId>,
+    built: &[BuiltChangeset],
+    mut paths: impl Iterator<Item = &'a NonRootMPath>,
+) -> Result<Option<ContentManifestId>> {
+    let Some(base) = base else {
+        return Ok(None);
+    };
+    if paths.all(|path| file_after(built.iter().map(|b| &b.changeset), path).is_some()) {
+        return Ok(None);
+    }
+    // Locally: `derive` would go to the derived data service where the repo has one.
+    let root = repo
+        .repo_derived_data()
+        .manager()
+        .derive_locally::<RootContentManifestId>(ctx, base, None)
+        .await?
+        .into_content_manifest_id();
+    Ok(Some(root))
+}
+
+/// The content and type of the file at `path` in the last of `built`, which is on top of
+/// the saved base with root content manifest `base_root`, or `None` if it isn't a file
+/// there. `built` isn't saved, so its own changes answer before the base's tree.
+async fn file_in_parent(
+    ctx: &CoreContext,
+    repo: &impl RepoBlobstoreRef,
+    base_root: Option<ContentManifestId>,
+    built: &[BuiltChangeset],
+    path: &NonRootMPath,
+) -> Result<Option<(ContentId, FileType)>> {
+    if let Some(file) = file_after(built.iter().map(|b| &b.changeset), path) {
+        return Ok(file);
+    }
+    let Some(base_root) = base_root else {
+        return Ok(None);
+    };
+    let entry = base_root
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            path.clone().into(),
+        )
+        .await?;
+    Ok(match entry {
+        Some(Entry::Leaf(file)) => Some((file.content_id, file.file_type)),
+        _ => None,
+    })
+}
+
+/// The content and type of the file at `path` after `changesets`, applied in order
+/// (`Some(None)` if it isn't a file), or `None` if none of them touches it.
+fn file_after<'a>(
+    changesets: impl DoubleEndedIterator<Item = &'a BonsaiChangeset>,
+    path: &NonRootMPath,
+) -> Option<Option<(ContentId, FileType)>> {
+    changesets.rev().find_map(|changeset| {
+        let mut file = None;
+        for (changed, change) in changeset.file_changes() {
+            if changed == path {
+                return Some(change.simplify().map(|c| (c.content_id(), c.file_type())));
+            }
+            // A file added above the path replaces its directory; one below makes it one.
+            if change.is_changed() && changed.is_related_to(path) {
+                file = Some(None);
+            }
+        }
+        file
+    })
 }
 
 async fn build_changeset(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
+    repo: &(impl RepoBlobstoreRef + RepoDerivedDataRef + FilestoreConfigRef),
     source: &impl ChangeSource,
     depot_root: &str,
-    parent: Option<ChangesetId>,
+    base: Option<ChangesetId>,
+    built: &[BuiltChangeset],
     change: u64,
-) -> Result<BonsaiChangeset> {
+) -> Result<BuiltChangeset> {
     let changelist = source.describe(change).await?;
     let contents = upload_changelist_contents(ctx, repo, source, depot_root, &changelist).await?;
-    let copy_sources = copy_sources(source, depot_root, &changelist).await?;
-    Ok(p4_transform::changeset(
-        depot_root,
-        &changelist,
-        parent,
-        &contents,
-        &copy_sources,
-    )?)
+    let (mut copy_sources, ambiguous_copy_sources) =
+        copy_sources(source, depot_root, &changelist).await?;
+    // Mononoke doesn't check that copy_from exists in the parent, but derived data and
+    // blame would follow it anyway.
+    let base_root = base_root_for(ctx, repo, base, built, copy_sources.values()).await?;
+    let mut missing = Vec::new();
+    for (target, copy_source) in &copy_sources {
+        if file_in_parent(ctx, repo, base_root, built, copy_source)
+            .await?
+            .is_none()
+        {
+            missing.push(target.clone());
+        }
+    }
+    for target in &missing {
+        copy_sources.remove(target);
+    }
+    let parent = built
+        .last()
+        .map(|b| b.changeset.get_changeset_id())
+        .or(base);
+    let changeset =
+        p4_transform::changeset(depot_root, &changelist, parent, &contents, &copy_sources)?;
+    Ok(BuiltChangeset {
+        change,
+        changeset,
+        dropped_copy_sources: missing.len(),
+        ambiguous_copy_sources,
+    })
 }
 
-/// Each of `changes`, in order, with its changeset, each on top of the one before and the
-/// first on top of `parent`. Their contents are stored; the changesets themselves are not.
+/// The changesets for `changes`, in order, each on top of the one before and the first on
+/// top of `base`. Their contents are stored; the changesets themselves are not.
 pub async fn build_changesets(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
+    repo: &(impl RepoBlobstoreRef + RepoDerivedDataRef + FilestoreConfigRef),
     source: &impl ChangeSource,
     depot_root: &str,
-    mut parent: Option<ChangesetId>,
+    base: Option<ChangesetId>,
     changes: &[u64],
-) -> Result<Vec<(u64, BonsaiChangeset)>> {
-    let mut changesets = Vec::with_capacity(changes.len());
+) -> Result<Vec<BuiltChangeset>> {
+    let mut built = Vec::with_capacity(changes.len());
     for &change in changes {
-        let changeset = build_changeset(ctx, repo, source, depot_root, parent, change)
+        let changeset = build_changeset(ctx, repo, source, depot_root, base, &built, change)
             .await
             .with_context(|| format!("building changelist {change}"))?;
-        parent = Some(changeset.get_changeset_id());
-        changesets.push((change, changeset));
+        built.push(changeset);
     }
-    Ok(changesets)
+    Ok(built)
 }
 
 /// The bookmark's changeset and the changelist it was imported from, or `None` before
@@ -312,7 +428,12 @@ pub async fn import_changelists(
         build_changesets(ctx, repo, source, depot_root, old, changes)
             .await?
             .into_iter()
-            .map(|(change, changeset)| ((change, changeset.get_changeset_id()), changeset))
+            .map(|built| {
+                (
+                    (built.change, built.changeset.get_changeset_id()),
+                    built.changeset,
+                )
+            })
             .unzip();
     let derive = BackfillDerivation::OnlySpecificTypes(derive.to_vec())
         .types(&repo.repo_derived_data().active_config().types);

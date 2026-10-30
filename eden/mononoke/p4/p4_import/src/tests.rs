@@ -20,8 +20,12 @@ use futures::stream;
 use futures::stream::BoxStream;
 use metaconfig_types::FilestoreParams;
 use mononoke_macros::mononoke;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::FileChange;
+use mononoke_types::GitLfs;
 use mononoke_types::P4ChangelistId;
 use mononoke_types_mocks::changesetid::ONES_CSID;
+use mononoke_types_mocks::contentid::ONES_CTID;
 use p4_types::Action;
 use p4_types::FileRevision;
 use p4_types::Integration;
@@ -488,12 +492,15 @@ async fn test_changelists_build_a_linear_history(fb: FacebookInit) -> Result<()>
     let ctx = CoreContext::test_mock(fb);
     let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
 
-    let changesets =
+    let built =
         build_changesets(&ctx, &repo, &two_changelists(), "//test1/", None, &[7, 9]).await?;
 
-    let [(7, first), (9, second)] = &changesets[..] else {
-        panic!("changelists 7 and 9 expected: {changesets:?}");
+    let [first, second] = &built[..] else {
+        panic!("two changesets expected: {built:?}");
     };
+    assert_eq!((7, 9), (first.change, second.change));
+    assert_eq!(0, second.dropped_copy_sources);
+    let (first, second) = (&first.changeset, &second.changeset);
     let first_id = first.get_changeset_id();
     assert_eq!(0, first.parents().count());
     assert_eq!(vec![first_id], second.parents().collect::<Vec<_>>());
@@ -541,6 +548,158 @@ async fn test_failure_names_the_changelist(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// A changeset adding (`true`) or deleting (`false`) each path.
+fn changeset_of(changes: &[(&str, bool)]) -> BonsaiChangeset {
+    let change = |added| match added {
+        true => FileChange::tracked(ONES_CTID, FileType::Regular, 1, None, GitLfs::FullContent),
+        false => FileChange::Deletion,
+    };
+    BonsaiChangesetMut {
+        file_changes: changes
+            .iter()
+            .map(|&(p, added)| (path(p), change(added)))
+            .collect(),
+        ..Default::default()
+    }
+    .freeze()
+    .unwrap()
+}
+
+#[mononoke::test]
+fn test_file_replacing_a_directory_or_becoming_one_is_not_a_file() {
+    let history = [
+        changeset_of(&[("a/b", true), ("d", true)]),
+        changeset_of(&[("a", true), ("d/e", true)]),
+    ];
+
+    let regular = Some(Some((ONES_CTID, FileType::Regular)));
+    assert_eq!(Some(None), file_after(history.iter(), &path("a/b")));
+    assert_eq!(regular, file_after(history.iter(), &path("a")));
+    assert_eq!(Some(None), file_after(history[..1].iter(), &path("a")));
+    assert_eq!(Some(None), file_after(history.iter(), &path("d")));
+    assert_eq!(None, file_after(history.iter(), &path("c")));
+}
+
+#[mononoke::fbinit_test]
+async fn test_saved_parent_gives_the_file_content_and_type(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let imported = import_changelists(
+        &ctx,
+        &repo,
+        &two_changelists(),
+        DEPOT,
+        &master,
+        &[7, 9],
+        &[],
+    )
+    .await?;
+    let base = Some(imported[1].1);
+    let head = imported[1].1.load(&ctx, repo.repo_blobstore()).await?;
+    let a = head
+        .file_changes()
+        .find_map(|(p, change)| (*p == path("a.txt")).then(|| change.content_id()))
+        .flatten();
+
+    let paths = [path("a.txt"), path("gone.txt")];
+    let base_root = base_root_for(&ctx, &repo, base, &[], paths.iter()).await?;
+    assert!(base_root.is_some());
+    let no_copies = base_root_for(&ctx, &repo, base, &[], std::iter::empty()).await?;
+    assert_eq!(None, no_copies);
+
+    let file = file_in_parent(&ctx, &repo, base_root, &[], &paths[0]).await?;
+    let gone = file_in_parent(&ctx, &repo, base_root, &[], &paths[1]).await?;
+
+    assert_eq!(a.map(|id| (id, FileType::Regular)), file);
+    assert_eq!(None, gone);
+    Ok(())
+}
+
+/// `c.txt` branched from `source` on top of `two_changelists`.
+fn branch_after_two_changelists(source: &str) -> FakeSource {
+    two_changelists()
+        .with_changelist(11, &[("//test1/c.txt", 1, Action::Branch, Some(b"x\n"))])
+        .with_branch("//test1/c.txt", source)
+}
+
+async fn copy_from_of_c(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    base: Option<ChangesetId>,
+    changes: &[u64],
+    source: &str,
+) -> Result<(Option<(NonRootMPath, ChangesetId)>, usize)> {
+    let source = branch_after_two_changelists(source);
+    let built = build_changesets(ctx, repo, &source, "//test1/", base, changes).await?;
+    let last = built.last().unwrap();
+    let copy_from = files(ctx, repo, &last.changeset).await?[0].2.clone();
+    Ok((copy_from, last.dropped_copy_sources))
+}
+
+#[mononoke::fbinit_test]
+async fn test_copy_source_must_be_a_file_in_the_unsaved_parent(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let (copy_from, dropped) =
+        copy_from_of_c(&ctx, &repo, None, &[7, 9, 11], "//test1/b.txt").await?;
+    assert!(copy_from.is_some_and(|(path, _)| path == self::path("b.txt")));
+    assert_eq!(0, dropped);
+    for missing in ["//test1/gone.txt", "//test1/never.txt"] {
+        let (copy_from, dropped) = copy_from_of_c(&ctx, &repo, None, &[7, 9, 11], missing).await?;
+        assert_eq!((None, 1), (copy_from, dropped), "{missing}");
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_copy_source_must_be_a_file_in_the_saved_parent(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let source = two_changelists();
+    let imported = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[7, 9], &[]).await?;
+    let base = Some(imported[1].1);
+
+    let (copy_from, dropped) = copy_from_of_c(&ctx, &repo, base, &[11], "//test1/a.txt").await?;
+    assert_eq!(
+        (Some((path("a.txt"), imported[1].1)), 0),
+        (copy_from, dropped)
+    );
+    let (copy_from, dropped) = copy_from_of_c(&ctx, &repo, base, &[11], "//test1/gone.txt").await?;
+    assert_eq!((None, 1), (copy_from, dropped));
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_copy_with_several_sources_is_counted_as_ambiguous(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let mut source = branch_after_two_changelists("//test1/a.txt");
+    let branch_from = |file: &str| Integration {
+        how: IntegrationHow::BranchFrom,
+        file: file.to_owned(),
+        start_rev: None,
+        end_rev: 1,
+    };
+    source.integrations.insert(
+        "//test1/c.txt#1".to_owned(),
+        vec![branch_from("//test1/a.txt"), branch_from("//test1/b.txt")],
+    );
+
+    let built = build_changesets(&ctx, &repo, &source, DEPOT, None, &[7, 9, 11]).await?;
+
+    let last = built.last().unwrap();
+    assert_eq!(None, files(&ctx, &repo, &last.changeset).await?[0].2);
+    assert_eq!(
+        (1, 0),
+        (last.ambiguous_copy_sources, last.dropped_copy_sources)
+    );
+    assert_eq!(0, built[1].ambiguous_copy_sources);
+    Ok(())
+}
+
 const DEPOT: &str = "//test1/";
 
 async fn bookmark_target(
@@ -580,7 +739,7 @@ async fn test_import_moves_the_bookmark_and_maps_each_changelist(fb: FacebookIni
     let built = build_changesets(&ctx, &repo, &two_changelists(), DEPOT, None, &[7, 9]).await?;
     let expected: Vec<_> = built
         .iter()
-        .map(|(change, changeset)| (*change, changeset.get_changeset_id()))
+        .map(|built| (built.change, built.changeset.get_changeset_id()))
         .collect();
     assert_eq!(expected, imported);
     assert_eq!(
