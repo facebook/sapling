@@ -617,6 +617,8 @@ fn test_file_revs_key_is_not_a_changelist_id_key() {
         assert!(!key.starts_with("p4-"), "{key}");
     }
     assert!(FILE_REVS_EXTRA.starts_with("p4-"));
+    assert!(DESCRIPTION_BYTES_EXTRA.starts_with("p4-"));
+    assert_ne!(FILE_REVS_EXTRA, DESCRIPTION_BYTES_EXTRA);
 }
 
 #[mononoke::test]
@@ -625,6 +627,78 @@ fn test_path_with_a_newline_is_an_error() {
     let result = changeset(DEPOT, &changelist, None, &HashMap::new(), &HashMap::new());
     assert!(
         matches!(&result, Err(TransformError::NewlineInPath(path)) if path == "a\nb"),
+        "{result:?}"
+    );
+}
+
+const NOT_UTF8: [&[u8]; 7] = [
+    // @lint-ignore SPELL
+    b"caf\xe9 na\xefve \xa3 sterling\n",
+    b"literal \xef\xbf\xbd then \xff inserted",
+    b"\xef\xbf\xbd\xff\xfe\xef\xbf\xbd",
+    b"truncated emoji \xf0\x9f\x98",
+    b"\xe2\x28\xa1 lone continuation",
+    b"\x80",
+    b"crlf\r\n\x93quoted\x94\r\n",
+];
+
+fn with_description(original: &[u8]) -> Changelist {
+    let mut changelist = changelist(vec![revision("//test1/a.txt", Action::Delete)]);
+    changelist.description = String::from_utf8_lossy(original).into_owned();
+    changelist.description_bytes = Some(original.to_vec());
+    changelist
+}
+
+#[mononoke::test]
+fn test_non_utf8_description_stores_its_original_bytes() {
+    for original in NOT_UTF8 {
+        let changelist = with_description(original);
+        let bcs = changeset(DEPOT, &changelist, None, &HashMap::new(), &HashMap::new()).unwrap();
+        assert_eq!(
+            Some(original),
+            extra(&bcs, DESCRIPTION_BYTES_EXTRA),
+            "{original:?}"
+        );
+        assert_eq!(changelist.description, bcs.message());
+    }
+}
+
+#[mononoke::test]
+fn test_utf8_description_stores_no_bytes() {
+    let utf8: [&[u8]; 3] = [b"", b"plain", b"literal \xef\xbf\xbd only"];
+    for original in utf8 {
+        let bcs = changeset(
+            DEPOT,
+            &with_description(original),
+            None,
+            &HashMap::new(),
+            &HashMap::new(),
+        )
+        .unwrap();
+        assert_eq!(None, extra(&bcs, DESCRIPTION_BYTES_EXTRA), "{original:?}");
+    }
+    let without_bytes = changelist(vec![revision("//test1/a.txt", Action::Delete)]);
+    let bcs = changeset(
+        DEPOT,
+        &without_bytes,
+        None,
+        &HashMap::new(),
+        &HashMap::new(),
+    )
+    .unwrap();
+    assert_eq!(None, extra(&bcs, DESCRIPTION_BYTES_EXTRA));
+}
+
+#[mononoke::test]
+fn test_description_that_is_not_from_its_bytes_is_an_error() {
+    let mut changelist = changelist(vec![revision("//test1/a.txt", Action::Delete)]);
+    changelist.description_bytes = Some(NOT_UTF8[0].to_vec());
+    let result = changeset(DEPOT, &changelist, None, &HashMap::new(), &HashMap::new());
+    assert!(
+        matches!(
+            result,
+            Err(TransformError::DescriptionMismatch { changelist: 42 })
+        ),
         "{result:?}"
     );
 }

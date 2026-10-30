@@ -44,6 +44,8 @@ pub enum TransformError {
     NewlineInAuthor { changelist: u64, user: String },
     #[error("{0:?} contains a newline")]
     NewlineInPath(String),
+    #[error("changelist {changelist}'s description doesn't decode from its original bytes")]
+    DescriptionMismatch { changelist: u64 },
     #[error("changelist {changelist} is not a valid changeset")]
     InvalidChangeset {
         changelist: u64,
@@ -57,6 +59,10 @@ pub enum TransformError {
 /// too, including those Bonsai drops because a file replaced their directory. `p4-` keeps
 /// the transform's extras apart from the `convert_*` changelist id ones.
 pub const FILE_REVS_EXTRA: &str = "p4-file-revs";
+
+/// For a description that isn't UTF-8, its original bytes; the message is their
+/// `String::from_utf8_lossy` decoding.
+pub const DESCRIPTION_BYTES_EXTRA: &str = "p4-description-bytes";
 
 /// Builds the commit for one changelist: author, date and message from the changelist,
 /// parent `parent`, and a file change for each of its files under `depot_root`
@@ -110,6 +116,18 @@ pub fn changeset(
     bonsai
         .hg_extra
         .insert(FILE_REVS_EXTRA.to_owned(), file_revs(revisions)?);
+    if let Some(original) = &changelist.description_bytes {
+        if String::from_utf8_lossy(original) != changelist.description {
+            return Err(TransformError::DescriptionMismatch {
+                changelist: changelist.number,
+            });
+        }
+        if std::str::from_utf8(original).is_err() {
+            bonsai
+                .hg_extra
+                .insert(DESCRIPTION_BYTES_EXTRA.to_owned(), original.clone());
+        }
+    }
     bonsai.freeze().map_err(invalid)
 }
 
