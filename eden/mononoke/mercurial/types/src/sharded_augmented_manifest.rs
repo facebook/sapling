@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::io::Write;
 use std::str::FromStr;
 
@@ -28,14 +29,21 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
 use futures_watchdog::WatchdogExt;
+use manifest::BonsaiDiffFileChange;
+use manifest::Diff;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestLeaf;
+use manifest::ManifestOps;
 use manifest::TrieMapOps;
+use manifest::bonsai_diff;
+use manifest::bonsai_diff_sharded;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
+use mononoke_types::MPath;
 use mononoke_types::MononokeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::ThriftConvert;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::Blake3;
@@ -50,6 +58,8 @@ use smallvec::SmallVec;
 
 use crate::FileType;
 use crate::HgAugmentedManifestId;
+use crate::HgFileNodeId;
+use crate::HgManifestId;
 use crate::HgNodeHash;
 use crate::HgParents;
 use crate::MPathElement;
@@ -57,6 +67,7 @@ use crate::MononokeHgError;
 use crate::NULL_HASH;
 use crate::Type;
 use crate::blobs::MononokeHgBlobError;
+use crate::blobs::hg_manifests_read_from_augmented;
 use crate::thrift;
 
 const MAX_BUFFERED_ENTRIES: usize = 500;
@@ -723,6 +734,199 @@ impl Storable for HgAugmentedManifestEnvelope {
     }
 }
 
+impl HgAugmentedFileLeafNode {
+    /// The leaf of the Hg manifest entry for this file.
+    pub fn hg_leaf(&self) -> (FileType, HgFileNodeId) {
+        (self.file_type, HgFileNodeId::new(self.filenode))
+    }
+}
+
+/// The Hg manifest entry that an augmented manifest entry describes: the same
+/// tree id, or the same file type and filenode.
+pub fn hg_entry_from_augmented(
+    entry: Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode>,
+) -> Entry<HgManifestId, (FileType, HgFileNodeId)> {
+    entry
+        .map_tree(|id| HgManifestId::new(id.into_nodehash()))
+        .map_leaf(|leaf| leaf.hg_leaf())
+}
+
+/// The Hg manifest diff that an augmented manifest diff describes.
+pub fn hg_diff_from_augmented(
+    diff: Diff<Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode>>,
+) -> Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>> {
+    match diff {
+        Diff::Added(path, entry) => Diff::Added(path, hg_entry_from_augmented(entry)),
+        Diff::Removed(path, entry) => Diff::Removed(path, hg_entry_from_augmented(entry)),
+        Diff::Changed(path, old, new) => Diff::Changed(
+            path,
+            hg_entry_from_augmented(old),
+            hg_entry_from_augmented(new),
+        ),
+    }
+}
+
+// The functions below replace the `ManifestOps` method of the same name, or
+// `bonsai_diff`, on an Hg manifest id for readers moving off Hg manifests. With
+// `scm/mononoke:hgmanifest_read_from_augmented` on for `repo_name`, they read
+// the augmented manifest stored under the same id, never fall back to the Hg
+// manifest, and return the Hg entries it describes. The null manifest id has no
+// augmented manifest; it reads as an empty tree, as it does from Hg manifests.
+
+/// Every entry of the manifest `mf_id`, including its root, as Hg entries.
+pub fn list_all_hg_entries<B: KeyedBlobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    repo_name: &str,
+    mf_id: HgManifestId,
+) -> BoxStream<'static, Result<(MPath, Entry<HgManifestId, (FileType, HgFileNodeId)>)>> {
+    if !hg_manifests_read_from_augmented(repo_name) {
+        return mf_id.list_all_entries(ctx.clone(), blobstore);
+    }
+    if mf_id.into_nodehash() == NULL_HASH {
+        return stream::once(future::ok((MPath::ROOT, Entry::Tree(mf_id)))).boxed();
+    }
+    list_all_augmented_entries(ctx, blobstore, mf_id)
+}
+
+/// Every file of the manifest `mf_id`, as Hg leaves.
+pub fn list_hg_leaf_entries<B: KeyedBlobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    repo_name: &str,
+    mf_id: HgManifestId,
+) -> BoxStream<'static, Result<(NonRootMPath, (FileType, HgFileNodeId))>> {
+    if !hg_manifests_read_from_augmented(repo_name) {
+        return mf_id.list_leaf_entries(ctx.clone(), blobstore);
+    }
+    if mf_id.into_nodehash() == NULL_HASH {
+        return stream::empty().boxed();
+    }
+    HgAugmentedManifestId::from(mf_id)
+        .list_leaf_entries(ctx.clone(), blobstore)
+        .map_ok(|(path, leaf)| (path, leaf.hg_leaf()))
+        .boxed()
+}
+
+/// The diff from manifest `old` to manifest `new`, as Hg entries.
+pub fn hg_manifest_diff<B: KeyedBlobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    repo_name: &str,
+    old: HgManifestId,
+    new: HgManifestId,
+) -> BoxStream<'static, Result<Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>>> {
+    if !hg_manifests_read_from_augmented(repo_name) {
+        return old.diff(ctx.clone(), blobstore, new);
+    }
+    // Like the Hg diff, a diff against the null manifest changes the root and
+    // adds or removes every other entry of the other side.
+    match (
+        old.into_nodehash() == NULL_HASH,
+        new.into_nodehash() == NULL_HASH,
+    ) {
+        (true, true) => stream::empty().boxed(),
+        (true, false) => list_all_augmented_entries(ctx, blobstore, new)
+            .map_ok(move |(path, entry)| {
+                if path.is_root() {
+                    Diff::Changed(path, Entry::Tree(old), entry)
+                } else {
+                    Diff::Added(path, entry)
+                }
+            })
+            .boxed(),
+        (false, true) => list_all_augmented_entries(ctx, blobstore, old)
+            .map_ok(move |(path, entry)| {
+                if path.is_root() {
+                    Diff::Changed(path, entry, Entry::Tree(new))
+                } else {
+                    Diff::Removed(path, entry)
+                }
+            })
+            .boxed(),
+        (false, false) => HgAugmentedManifestId::from(old)
+            .diff(ctx.clone(), blobstore, HgAugmentedManifestId::from(new))
+            .map_ok(hg_diff_from_augmented)
+            .boxed(),
+    }
+}
+
+/// The entry at `path` in the manifest `mf_id`, as an Hg entry.
+pub async fn find_hg_entry<B: KeyedBlobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    repo_name: &str,
+    mf_id: HgManifestId,
+    path: MPath,
+) -> Result<Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>> {
+    if !hg_manifests_read_from_augmented(repo_name) {
+        return mf_id.find_entry(ctx.clone(), blobstore, path).await;
+    }
+    if mf_id.into_nodehash() == NULL_HASH {
+        return Ok(path.is_root().then_some(Entry::Tree(mf_id)));
+    }
+    Ok(HgAugmentedManifestId::from(mf_id)
+        .find_entry(ctx.clone(), blobstore, path)
+        .await?
+        .map(hg_entry_from_augmented))
+}
+
+/// The Bonsai changes of the manifest `mf_id` against `parents`, with Hg
+/// leaves. From augmented manifests, the diff skips the shards of each
+/// directory that are the same in `mf_id` and a parent without loading them.
+pub fn hg_manifest_bonsai_diff<B: KeyedBlobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    repo_name: &str,
+    mf_id: HgManifestId,
+    parents: HashSet<HgManifestId>,
+) -> BoxStream<'static, Result<BonsaiDiffFileChange<(FileType, HgFileNodeId)>>> {
+    if !hg_manifests_read_from_augmented(repo_name) {
+        return bonsai_diff(ctx.clone(), blobstore, mf_id, parents).boxed();
+    }
+    // A null parent is an empty tree, so it adds nothing to the other parents.
+    let parents: HashSet<HgAugmentedManifestId> = parents
+        .into_iter()
+        .filter(|id| id.into_nodehash() != NULL_HASH)
+        .map(HgAugmentedManifestId::from)
+        .collect();
+    if mf_id.into_nodehash() != NULL_HASH {
+        return bonsai_diff_sharded(
+            ctx.clone(),
+            blobstore,
+            HgAugmentedManifestId::from(mf_id),
+            parents,
+        )
+        .map_ok(|change| change.map_leaf(|leaf| leaf.hg_leaf()))
+        .boxed();
+    }
+    // An empty tree deletes every file of every parent, once per path.
+    let mut deleted = HashSet::new();
+    let ctx = ctx.clone();
+    stream::iter(parents)
+        .map(move |parent| parent.list_leaf_entries(ctx.clone(), blobstore.clone()))
+        .flatten()
+        .try_filter_map(move |(path, _)| {
+            future::ok(
+                deleted
+                    .insert(path.clone())
+                    .then(|| BonsaiDiffFileChange::Deleted(path)),
+            )
+        })
+        .boxed()
+}
+
+fn list_all_augmented_entries<B: KeyedBlobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    mf_id: HgManifestId,
+) -> BoxStream<'static, Result<(MPath, Entry<HgManifestId, (FileType, HgFileNodeId)>)>> {
+    HgAugmentedManifestId::from(mf_id)
+        .list_all_entries(ctx.clone(), blobstore)
+        .map_ok(|(path, entry)| (path, hg_entry_from_augmented(entry)))
+        .boxed()
+}
+
 fn convert_hg_augmented_manifest_entry(
     entry: HgAugmentedManifestEntry,
 ) -> Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode> {
@@ -1048,5 +1252,66 @@ mod sharded_augmented_manifest_tests {
         assert!(AugmentedTree::try_deserialize(Cursor::new(bytes)).is_ok());
 
         Ok(())
+    }
+
+    fn file_leaf(file_type: FileType, filenode: HgNodeHash) -> HgAugmentedFileLeafNode {
+        HgAugmentedFileLeafNode {
+            file_type,
+            filenode,
+            content_blake3: blake3_ones(),
+            content_sha1: sha1_twos(),
+            total_size: 10,
+            file_header_metadata: None,
+        }
+    }
+
+    #[mononoke::test]
+    fn test_hg_entry_from_augmented() {
+        assert_eq!(
+            hg_entry_from_augmented(Entry::Leaf(file_leaf(FileType::Executable, hash_ones()))),
+            Entry::Leaf((FileType::Executable, HgFileNodeId::new(hash_ones()))),
+            "a file keeps its file type and filenode",
+        );
+        assert_eq!(
+            hg_entry_from_augmented(Entry::Tree(HgAugmentedManifestId::new(hash_twos()))),
+            Entry::Tree(HgManifestId::new(hash_twos())),
+            "a directory keeps its tree id",
+        );
+    }
+
+    #[mononoke::test]
+    fn test_hg_diff_from_augmented() {
+        let tree = |hash| Entry::Tree(HgAugmentedManifestId::new(hash));
+        let hg_tree = |hash| Entry::Tree(HgManifestId::new(hash));
+        let path = MPath::new("dir").unwrap();
+        assert_eq!(
+            hg_diff_from_augmented(Diff::Changed(
+                path.clone(),
+                tree(hash_ones()),
+                tree(hash_twos())
+            )),
+            Diff::Changed(path.clone(), hg_tree(hash_ones()), hg_tree(hash_twos())),
+        );
+        assert_eq!(
+            hg_diff_from_augmented(Diff::Added(path.clone(), tree(hash_ones()))),
+            Diff::Added(path.clone(), hg_tree(hash_ones())),
+        );
+        assert_eq!(
+            hg_diff_from_augmented(Diff::Removed(path.clone(), tree(hash_ones()))),
+            Diff::Removed(path, hg_tree(hash_ones())),
+        );
+    }
+
+    #[mononoke::test]
+    fn test_augmented_leaf_reuses_by_filenode() {
+        let leaf = file_leaf(FileType::Regular, hash_ones());
+        assert!(
+            leaf.reuses(&file_leaf(FileType::Executable, hash_ones())),
+            "same filenode reuses, like the Hg leaf",
+        );
+        assert!(
+            !leaf.reuses(&file_leaf(FileType::Regular, hash_twos())),
+            "a different filenode does not reuse",
+        );
     }
 }

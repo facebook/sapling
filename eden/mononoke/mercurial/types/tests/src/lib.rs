@@ -35,6 +35,8 @@ use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use quickcheck::quickcheck;
 
+mod augmented_reads;
+
 #[mononoke::test]
 fn nodehash_option() {
     assert_eq!(NULL_HASH.into_option(), None);

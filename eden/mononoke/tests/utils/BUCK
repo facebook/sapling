@@ -14,7 +14,12 @@ python_binary(
 rust_library(
     name = "tests_utils",
     srcs = glob(["src/**/*.rs"]),
-    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
@@ -24,6 +29,7 @@ rust_library(
         "fbsource//third-party/rust:rand_distr",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:samplingblob",
         "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
         "//eden/mononoke/features/changesets_creation:changesets_creation",
         "//eden/mononoke/manifest:manifest",
