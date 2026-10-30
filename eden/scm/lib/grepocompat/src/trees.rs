@@ -25,16 +25,16 @@ use types::RepoPathBuf;
 
 use crate::path::GrepoPathTranslator;
 
-pub(crate) const REPO_XML_PATH: &str = "static/static.xml";
-
 /// Parse .repo manifest xml files and synthesizes repo projects as trees.
 /// TODO: linkfile and copyfile support
+///
+/// `repo_xml_path` is the path of the repo manifest XML in `manifest`.
 pub fn synthesize_grepo_projects(
     tree_store: &Arc<dyn TreeStore>,
     file_store: &Arc<dyn FileStore>,
+    repo_xml_path: &RepoPath,
     manifest: &TreeManifest,
 ) -> Result<TreeManifest> {
-    let repo_xml_path: &RepoPath = REPO_XML_PATH.try_into()?;
     let metadata = match manifest.get(repo_xml_path)? {
         Some(FsNodeMetadata::File(metadata)) => metadata,
         _ => anyhow::bail!("repo manifest xml not found at {repo_xml_path} in tree"),
@@ -69,12 +69,13 @@ pub fn synthesize_grepo_projects(
 pub fn synthesize_grepo_projects_batch(
     tree_store: &Arc<dyn TreeStore>,
     file_store: &Arc<dyn FileStore>,
+    repo_xml_path: &RepoPath,
     manifests: Vec<TreeManifest>,
 ) -> Result<Vec<Result<TreeManifest>>> {
-    prefetch_grepo_project_inputs(file_store, &manifests)?;
+    prefetch_grepo_project_inputs(file_store, repo_xml_path, &manifests)?;
     Ok(manifests
         .iter()
-        .map(|manifest| synthesize_grepo_projects(tree_store, file_store, manifest))
+        .map(|manifest| synthesize_grepo_projects(tree_store, file_store, repo_xml_path, manifest))
         .collect())
 }
 
@@ -83,13 +84,13 @@ pub fn synthesize_grepo_projects_batch(
 /// All manifests must use the same tree store.
 fn prefetch_grepo_project_inputs(
     file_store: &Arc<dyn FileStore>,
+    repo_xml_path: &RepoPath,
     manifests: &[TreeManifest],
 ) -> Result<()> {
     if manifests.is_empty() {
         return Ok(());
     }
 
-    let repo_xml_path: &RepoPath = REPO_XML_PATH.try_into()?;
     let components = repo_xml_path
         .components()
         .map(|component| component.to_owned())
@@ -148,6 +149,8 @@ mod tests {
     use types::testutil::repo_path_buf;
 
     use super::*;
+
+    const REPO_XML_PATH: &str = "static/static.xml";
 
     #[derive(Clone)]
     struct RecordingFileStore {
@@ -250,9 +253,14 @@ mod tests {
         let file_store: Arc<dyn FileStore> = recording_store.clone();
         let tree_store: Arc<dyn TreeStore> = store;
 
-        let synthesized = synthesize_grepo_projects_batch(&tree_store, &file_store, manifests)?
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
+        let synthesized = synthesize_grepo_projects_batch(
+            &tree_store,
+            &file_store,
+            repo_path(REPO_XML_PATH),
+            manifests,
+        )?
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(synthesized.len(), 2);
         assert_eq!(
@@ -298,7 +306,12 @@ mod tests {
         let file_store: Arc<dyn FileStore> = recording_store.clone();
         let tree_store: Arc<dyn TreeStore> = store;
 
-        let synthesized = synthesize_grepo_projects_batch(&tree_store, &file_store, manifests)?;
+        let synthesized = synthesize_grepo_projects_batch(
+            &tree_store,
+            &file_store,
+            repo_path(REPO_XML_PATH),
+            manifests,
+        )?;
 
         assert_eq!(synthesized.len(), 2);
         assert!(

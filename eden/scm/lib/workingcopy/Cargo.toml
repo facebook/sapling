@@ -26,6 +26,7 @@ sapling-context = { version = "0.1.0", path = "../context" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
+sapling-grepocompat = { version = "0.1.0", path = "../grepocompat" }
 sapling-grepomanifest = { version = "0.1.0", path = "../grepomanifest" }
 sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-hgtime = { version = "0.1.0", path = "../hgtime" }

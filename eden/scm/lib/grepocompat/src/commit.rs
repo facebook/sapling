@@ -32,8 +32,6 @@ use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::trees::REPO_XML_PATH;
-
 /// Write new project revisions into the repo manifest XML.
 ///
 /// Sapling only changes project revisions. The repo tool adds and removes
@@ -41,6 +39,7 @@ use crate::trees::REPO_XML_PATH;
 ///
 /// - `file_store`: the store for the XML file. The function reads the old XML
 ///   from it and writes the new XML to it.
+/// - `repo_xml_path`: the path of the XML in `manifest_repo_tree`.
 /// - `manifest_repo_tree`: the tree of the manifests repo (`.repo/manifests`).
 ///   It is not the synthesized tree of projects. The function writes the new
 ///   XML into this tree.
@@ -53,6 +52,7 @@ use crate::trees::REPO_XML_PATH;
 /// - A project has no `path`, and a different project has the same `name`.
 pub fn apply_project_changes(
     file_store: &Arc<dyn FileStore>,
+    repo_xml_path: &RepoPath,
     manifest_repo_tree: &mut TreeManifest,
     changes: &[(RepoPathBuf, HgId)],
 ) -> Result<()> {
@@ -60,7 +60,6 @@ pub fn apply_project_changes(
         return Ok(());
     }
 
-    let repo_xml_path: &RepoPath = REPO_XML_PATH.try_into()?;
     let metadata = match manifest_repo_tree.get(repo_xml_path)? {
         Some(FsNodeMetadata::File(metadata)) => metadata,
         _ => bail!("repo manifest xml not found at {repo_xml_path} in tree"),
@@ -149,6 +148,8 @@ mod tests {
 
     use super::*;
 
+    const REPO_XML_PATH: &str = "static/static.xml";
+
     fn make_manifest(store: &Arc<TestStore>, xml: &str) -> Result<TreeManifest> {
         let xml_hgid = store.insert_data(
             InsertOpts {
@@ -185,7 +186,12 @@ mod tests {
             .iter()
             .map(|(path, revision)| (repo_path_buf(path), *revision))
             .collect::<Vec<_>>();
-        apply_project_changes(&file_store, &mut manifest, &changes)?;
+        apply_project_changes(
+            &file_store,
+            REPO_XML_PATH.try_into()?,
+            &mut manifest,
+            &changes,
+        )?;
         read_xml(store, &manifest)
     }
 
@@ -262,6 +268,7 @@ mod tests {
 
         let error = apply_project_changes(
             &file_store,
+            REPO_XML_PATH.try_into()?,
             &mut manifest,
             &[(repo_path_buf("vendor/a"), hgid("b1"))],
         )

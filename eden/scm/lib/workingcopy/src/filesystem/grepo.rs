@@ -11,8 +11,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use configmodel::Config;
-use configmodel::ConfigExt;
 use context::CoreContext;
+use grepocompat::MANIFESTS_DIR;
+use grepocompat::repo_xml_path;
 use grepomanifest::parse::parse_manifest;
 use grepomanifest::schema::Project;
 use manifest::FileType;
@@ -63,10 +64,8 @@ impl GrepoFileSystem {
 }
 
 pub(crate) fn grepo_manifest_path(vfs: &VFS, config: &dyn Config) -> Result<PathBuf> {
-    let path = config.get_or("grepo", "manifestpath", || {
-        ".repo/manifests/default.xml".to_string()
-    })?;
-    Ok(vfs.join(path.as_str().try_into()?))
+    let manifests_dir: &RepoPath = MANIFESTS_DIR.try_into()?;
+    Ok(vfs.join(&manifests_dir.join(repo_xml_path(config)?)))
 }
 
 /// Parse `.repo/manifests` from the working copy.

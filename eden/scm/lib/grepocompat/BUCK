@@ -11,6 +11,7 @@ sl_rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
         "//eden/scm/lib/blob:blob",
+        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/gitcompat:gitcompat",
         "//eden/scm/lib/grepomanifest:grepomanifest",
         "//eden/scm/lib/identity:identity",

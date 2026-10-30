@@ -8,7 +8,7 @@ the clone. If HGTEST_GREPO_SOURCE_URL is not set, the test is skipped.
 
   $ . $TESTDIR/git.sh
   $ enable smartlog
-  $ setconfig grepo.manifestpath=.repo/manifests/static/static.xml
+  $ setconfig grepo.manifestpath=static/static.xml
 
 Set up two project repos and a manifest repo for `repo init` to fetch:
 

@@ -46,6 +46,7 @@ sl_rust_library(
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/gitcompat:gitcompat",
+        "//eden/scm/lib/grepocompat:grepocompat",
         "//eden/scm/lib/grepomanifest:grepomanifest",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/identity:identity",

@@ -2,7 +2,7 @@
 
   $ . $TESTDIR/git.sh
   $ enable smartlog
-  $ setconfig grepo.manifestpath=.repo/manifests/static/static.xml
+  $ setconfig grepo.manifestpath=static/static.xml
   $ setconfig experimental.pathhistory-treemanifest=true
 
 Set up small project repos to simulate repos managed by the repo tool.
@@ -146,6 +146,16 @@ clean status and diff
     bump vendor/a/sub/c
   files:
     vendor/a/sub/c
+
+`grepo.manifestpath` is the path of the repo manifest XML in the manifests repo.
+The manifests repo has no `default.xml`, so Sapling cannot read the tree of `.`:
+
+  $ sl files -r . --config grepo.manifestpath=default.xml
+  abort: synthesizing tree for root * (glob)
+  
+  Caused by:
+      repo manifest xml not found at default.xml in tree
+  [255]
 
 modified outer project is reported by status
   $ cd vendor/a
