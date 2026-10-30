@@ -3,12 +3,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# As for backingstore, the crate builds into rust_edenfs_staticlib.
 rust_cxx_bridge(
   edenfs_ffi
   "src/lib.rs"
   LIBS
   fmt::fmt
   Folly::folly
+  CXX_VERSION_DIR
+  "${PROJECT_SOURCE_DIR}/eden/fs/rust/edenfs-staticlib"
 )
 
 file(GLOB C_API_SRCS "src/*.cpp")
