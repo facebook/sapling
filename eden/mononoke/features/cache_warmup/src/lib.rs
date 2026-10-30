@@ -27,11 +27,11 @@ use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use manifest::Entry;
-use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::RepoPath;
+use mercurial_types::sharded_augmented_manifest::list_all_hg_entries;
 use metaconfig_types::CacheWarmupParams;
 use microwave::SnapshotLocation;
 use mononoke_macros::mononoke;
@@ -128,9 +128,13 @@ async fn blobstore_and_filenodes_warmup(
     )
     .await?;
 
-    let null_linknodes = cs
-        .manifestid()
-        .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+    let entries = list_all_hg_entries(
+        ctx,
+        repo.repo_blobstore().clone(),
+        repo.repo_identity().name(),
+        cs.manifestid(),
+    );
+    let null_linknodes = entries
         .try_filter_map(|(path, entry)| {
             let item = match entry {
                 Entry::Leaf(_) => None,
@@ -309,4 +313,155 @@ pub async fn cache_warmup<T: Into<CacheWarmupRequest>>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
+    use fbinit::FacebookInit;
+    use filenodes::Filenodes;
+    use filestore::FilestoreConfig;
+    use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use maplit::hashmap;
+    use memblob::Memblob;
+    use mercurial_derivation::RootHgAugmentedManifestId;
+    use mutable_blobstore::MutableRepoBlobstore;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
+    use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
+    use tests_utils::hg_manifest_reads::HgManifestReadBlocker;
+
+    use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        dyn Filenodes,
+        FilestoreConfig,
+        MutableRepoBlobstore,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+    );
+
+    /// Hg changesets are derived without their augmented manifests, so that
+    /// deriving one never reads Hg manifests.
+    fn knobs(read_from_augmented: bool) -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(read_from_augmented),
+            "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+        })
+    }
+
+    /// A repo whose Hg manifest reads fail once the blocker is armed, and a
+    /// commit with an hg changeset and filenodes but no augmented manifest.
+    async fn repo_with_blocked_hg_manifests(
+        ctx: &CoreContext,
+    ) -> Result<
+        (
+            TestRepo,
+            Arc<HgManifestReadBlocker>,
+            ChangesetId,
+            HgChangesetId,
+        ),
+        Error,
+    > {
+        let (blobstore, blocker) = HgManifestReadBlocker::wrap(Memblob::default());
+        let repo: TestRepo = TestRepoFactory::new(ctx.fb)?
+            .with_blobstore(blobstore)
+            .build()
+            .await?;
+        let cs_id = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("a", "a")
+            .add_file("dir/b", "b")
+            .commit()
+            .await?;
+        let hg_cs_id = with_just_knobs_async(
+            knobs(false),
+            async {
+                let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
+                repo.repo_derived_data()
+                    .derive::<FilenodesOnlyPublic>(ctx, cs_id, DerivationPriority::LOW)
+                    .await?;
+                anyhow::Ok(hg_cs_id)
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok((repo, blocker, cs_id, hg_cs_id))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_warmup_reads_from_augmented(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, cs_id, hg_cs_id) = repo_with_blocked_hg_manifests(&ctx).await?;
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+
+        // When: Hg manifests can no longer be read.
+        blocker.arm();
+
+        // Then: the warmup walks the augmented manifest instead.
+        with_just_knobs_async(
+            knobs(true),
+            blobstore_and_filenodes_warmup(&ctx, &repo, cs_id, hg_cs_id).boxed(),
+        )
+        .await?;
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifest is still read.
+        let knob_off = with_just_knobs_async(
+            knobs(false),
+            blobstore_and_filenodes_warmup(&ctx, &repo, cs_id, hg_cs_id).boxed(),
+        )
+        .await;
+        assert!(
+            knob_off.is_err(),
+            "the knob off reads the blocked Hg manifest"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_warmup_missing_augmented(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, cs_id, hg_cs_id) = repo_with_blocked_hg_manifests(&ctx).await?;
+        blocker.arm();
+
+        let err = with_just_knobs_async(
+            knobs(true),
+            blobstore_and_filenodes_warmup(&ctx, &repo, cs_id, hg_cs_id).boxed(),
+        )
+        .await
+        .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
+    }
 }

@@ -38,11 +38,14 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgPreloadedAugmentedManifest;
+use mercurial_types::sharded_augmented_manifest::hg_manifest_diff;
+use mercurial_types::sharded_augmented_manifest::list_all_hg_entries;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::MononokeDigest;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_identity::RepoIdentityRef;
 use restricted_paths::ManifestType;
 use restricted_paths::RestrictedManifestId;
 use restricted_paths::RestrictedPathsRef;
@@ -235,7 +238,8 @@ define_stats! {
     uploaded_changesets_recursive: timeseries(Rate, Sum),
 }
 
-pub trait Repo = BonsaiHgMappingRef + RepoBlobstoreArc + RestrictedPathsRef + Send + Sync;
+pub trait Repo =
+    BonsaiHgMappingRef + RepoBlobstoreArc + RepoIdentityRef + RestrictedPathsRef + Send + Sync;
 
 pub struct CasChangesetsUploader<Client>
 where
@@ -279,9 +283,6 @@ where
 
     /// Upload a given Changeset to a CAS backend.
     /// The implementation assumes that if hg manifest is derived, then augmented manifest is also derived.
-    /// The current implementation is based on the diffing of the hg manifests, rather than hg augmented manifests,
-    /// but it is a good starting point, and the result of the diff will be identical.
-    /// We will switch over to diff the augmented manifests once we have them, since we can have the digests strait away to pass to the uploads.
     ///
     /// Trees under restricted paths are never uploaded; files under them are.
     pub async fn upload_single_changeset<'a>(
@@ -325,17 +326,21 @@ where
                 let (parent_hg_cs, hg_cs) = try_join!(parent_hg_cs, hg_cs)
                     .map_err(|e| CasChangesetUploaderError::Error(e.into()))?;
 
-                parent_hg_cs
-                    .manifestid()
-                    .diff(ctx.clone(), repo.repo_blobstore_arc(), hg_cs.manifestid())
-                    .map_ok(move |diff| match diff {
-                        Diff::Added(path, entry) => Some((path, entry)),
-                        Diff::Removed(..) => None,
-                        Diff::Changed(path, _, entry) => Some((path, entry)),
-                    })
-                    .try_filter_map(future::ok)
-                    .map_err(CasChangesetUploaderError::DiffChangesetFailed)
-                    .boxed()
+                hg_manifest_diff(
+                    ctx,
+                    repo.repo_blobstore_arc(),
+                    repo.repo_identity().name(),
+                    parent_hg_cs.manifestid(),
+                    hg_cs.manifestid(),
+                )
+                .map_ok(move |diff| match diff {
+                    Diff::Added(path, entry) => Some((path, entry)),
+                    Diff::Removed(..) => None,
+                    Diff::Changed(path, _, entry) => Some((path, entry)),
+                })
+                .try_filter_map(future::ok)
+                .map_err(CasChangesetUploaderError::DiffChangesetFailed)
+                .boxed()
             }
 
             (None, None) => {
@@ -343,11 +348,14 @@ where
                     .load(ctx, &repo.repo_blobstore())
                     .await
                     .map_err(|e| CasChangesetUploaderError::Error(e.into()))?;
-                hg_cs
-                    .manifestid()
-                    .list_all_entries(ctx.clone(), repo.repo_blobstore_arc())
-                    .map_err(CasChangesetUploaderError::DiffChangesetFailed)
-                    .boxed()
+                list_all_hg_entries(
+                    ctx,
+                    repo.repo_blobstore_arc(),
+                    repo.repo_identity().name(),
+                    hg_cs.manifestid(),
+                )
+                .map_err(CasChangesetUploaderError::DiffChangesetFailed)
+                .boxed()
             }
         }
         .try_collect::<Vec<_>>()
@@ -821,5 +829,178 @@ where
             .is_augmented_tree_uploaded(ctx, repo.repo_blobstore(), &hg_root_augmented_manifest_id)
             .await
             .map_err(CasChangesetUploaderError::Error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use cas_client::DummyCasClient;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
+    use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use maplit::hashmap;
+    use memblob::Memblob;
+    use mercurial_derivation::DeriveHgChangeset;
+    use mercurial_derivation::RootHgAugmentedManifestId;
+    use mononoke_macros::mononoke;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
+    use restricted_paths::RestrictedPaths;
+    use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
+    use tests_utils::hg_manifest_reads::HgManifestReadBlocker;
+
+    use super::*;
+
+    #[facet::container]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        RestrictedPaths,
+    );
+
+    /// Hg changesets are derived without their augmented manifests, so that
+    /// deriving one never reads Hg manifests.
+    fn knobs(read_from_augmented: bool) -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(read_from_augmented),
+            "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+        })
+    }
+
+    struct Fixture {
+        repo: TestRepo,
+        blocker: Arc<HgManifestReadBlocker>,
+        root: ChangesetId,
+        child: ChangesetId,
+    }
+
+    /// A root commit and a child that changes a file and adds a directory,
+    /// with hg changesets but no augmented manifests. Hg manifest reads fail
+    /// once the blocker is armed.
+    async fn fixture(ctx: &CoreContext) -> Result<Fixture> {
+        let (blobstore, blocker) = HgManifestReadBlocker::wrap(Memblob::default());
+        let repo: TestRepo = TestRepoFactory::new(ctx.fb)?
+            .with_blobstore(blobstore)
+            .build()
+            .await?;
+        let root = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("a", "a")
+            .add_file("dir/b", "b")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(ctx, &repo, vec![root])
+            .add_file("dir/b", "b2")
+            .add_file("new/c", "c")
+            .commit()
+            .await?;
+        for cs_id in [root, child] {
+            with_just_knobs_async(knobs(false), repo.derive_hg_changeset(ctx, cs_id).boxed())
+                .await?;
+        }
+        Ok(Fixture {
+            repo,
+            blocker,
+            root,
+            child,
+        })
+    }
+
+    /// The upload counts of the child, which is diffed with its parent, and of
+    /// the root, which has no parent so all its entries are listed. Each goes
+    /// into an empty CAS store.
+    async fn uploads(ctx: &CoreContext, f: &Fixture) -> Result<Vec<String>> {
+        let mut uploads = Vec::new();
+        for cs_id in [f.child, f.root] {
+            let store = tempfile::tempdir()?;
+            let uploader = CasChangesetsUploader::new(DummyCasClient::new_with_storage_path(
+                ctx.clone(),
+                "repo",
+                store.path(),
+            )?);
+            let stats = uploader
+                .upload_single_changeset(
+                    ctx,
+                    &f.repo,
+                    &cs_id,
+                    UploadPolicy::All,
+                    PriorLookupPolicy::All,
+                )
+                .await?;
+            uploads.push(stats.to_string());
+        }
+        Ok(uploads)
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_uploads_read_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = fixture(&ctx).await?;
+        for cs_id in [f.root, f.child] {
+            f.repo
+                .repo_derived_data()
+                .derive::<RootHgAugmentedManifestId>(&ctx, cs_id, DerivationPriority::LOW)
+                .await?;
+        }
+
+        // Given: the uploads when reading Hg manifests.
+        let from_hg = with_just_knobs_async(knobs(false), uploads(&ctx, &f).boxed()).await?;
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: reading augmented manifests uploads the same.
+        let from_augmented = with_just_knobs_async(knobs(true), uploads(&ctx, &f).boxed()).await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifests are still read.
+        let knob_off = with_just_knobs_async(knobs(false), uploads(&ctx, &f).boxed()).await;
+        assert!(
+            knob_off.is_err(),
+            "the knob off reads the blocked Hg manifests"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_uploads_missing_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = fixture(&ctx).await?;
+        f.blocker.arm();
+
+        let err = with_just_knobs_async(knobs(true), uploads(&ctx, &f).boxed())
+            .await
+            .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
     }
 }
