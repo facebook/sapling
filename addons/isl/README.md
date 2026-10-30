@@ -271,6 +271,11 @@ Other entry points do not run this bootstrap. Semantic colors without an equival
 (such as the missing-file hue and error-background wash) keep their existing values. Signal badges
 also retain their existing palette because ISL gives all statuses a single shared foreground token.
 
+Phabricator diff status pills take the host's own pill palette from `--color-status-<hue>-background`
+and `--color-status-<hue>-text`, for the badge colors `gray`, `green`, `orange`, `pink`, `purple`,
+`teal` and `blue`. ISL's yellow pill takes the orange pair and its red pair paints the pink states.
+Without them the pills keep tinted fallbacks matching that palette, not ISL's standard pastel fills.
+
 The host and Sapling-served guest ship separately: an older guest ignores `themeColors`, and an older
 host receives the guest's existing palette fallback until both sides are updated.
 
