@@ -2244,7 +2244,7 @@ mod tests {
                     .collect::<Vec<_>>(),
             );
             assert_eq!(
-                dbg(&dag.parents(set.clone()).unwrap()),
+                dbg(dag.parents(set.clone()).unwrap()),
                 dbg(&expected),
                 "parents of {set:?}"
             );
