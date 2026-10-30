@@ -41,6 +41,7 @@ use mononoke_types::subtree_change::SubtreeCrossRepoMerge;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
 use mononoke_types::subtree_change::SubtreeImport;
 use mononoke_types::subtree_change::SubtreeMerge;
+use pushrebase::PushrebaseConflict;
 use sorted_vector_map::SortedVectorMap;
 use source_control as thrift;
 
@@ -252,6 +253,16 @@ impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
             is_binary: self.is_binary,
             ..Default::default()
         })
+    }
+}
+
+impl IntoResponse<thrift::PushrebaseConflict> for PushrebaseConflict {
+    fn into_response(self) -> thrift::PushrebaseConflict {
+        thrift::PushrebaseConflict {
+            left: self.left.to_string(),
+            right: self.right.to_string(),
+            ..Default::default()
+        }
     }
 }
 
