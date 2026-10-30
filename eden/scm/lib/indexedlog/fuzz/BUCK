@@ -38,6 +38,26 @@ rust_lionhead_harness(
             ],
         ),
     ],
+    autocargo = {
+        "cargo_target_config": {"name": "log_open_lookup"},
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                # Cargo's libfuzzer-sys build script supplies the native runtime.
+                "dependencies": [
+                    (None, "fbsource//third-party/rust:libfuzzer-sys-libfuzzer"),
+                ],
+            },
+            "package": {
+                "license": "MIT",
+                "metadata": {"cargo-fuzz": True},
+                "name": "indexedlog-fuzz",
+                "publish": False,
+                "version": "0.0.0",
+            },
+            "profile": {"release": {"debug": True}},
+            "workspace": {"members": ["."]},
+        },
+    },
     crate_root = "fuzz_targets/log_open_lookup.rs",
     metadata = Metadata(
         exposure = EXTERNAL_USERS,
@@ -70,6 +90,7 @@ rust_lionhead_harness(
             ],
         ),
     ],
+    autocargo = {"cargo_target_config": {"name": "rotate_log_lookup"}},
     crate_root = "fuzz_targets/rotate_log_lookup.rs",
     metadata = Metadata(
         exposure = EXTERNAL_USERS,

@@ -18,6 +18,26 @@ rust_lionhead_harness(
         "fuzz_targets/gca.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {
+        "cargo_target_config": {"name": "gca"},
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                # Cargo's libfuzzer-sys build script supplies the native runtime.
+                "dependencies": [
+                    (None, "fbsource//third-party/rust:libfuzzer-sys-libfuzzer"),
+                ],
+            },
+            "package": {
+                "license": "GPL-2.0-only",
+                "metadata": {"cargo-fuzz": True},
+                "name": "dag-fuzz",
+                "publish": False,
+                "version": "0.0.0",
+            },
+            "profile": {"release": {"debug": True}},
+            "workspace": {"members": ["."]},
+        },
+    },
     crate_root = "fuzz_targets/gca.rs",
     metadata = METADATA,
     deps = [
@@ -31,6 +51,7 @@ rust_lionhead_harness(
         "fuzz_targets/gca_small.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {"cargo_target_config": {"name": "gca_small"}},
     crate_root = "fuzz_targets/gca_small.rs",
     metadata = METADATA,
     deps = [
@@ -44,6 +65,7 @@ rust_lionhead_harness(
         "fuzz_targets/gca_octopus.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {"cargo_target_config": {"name": "gca_octopus"}},
     crate_root = "fuzz_targets/gca_octopus.rs",
     metadata = METADATA,
     deps = [
@@ -57,6 +79,7 @@ rust_lionhead_harness(
         "fuzz_targets/range.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {"cargo_target_config": {"name": "range"}},
     crate_root = "fuzz_targets/range.rs",
     metadata = METADATA,
     deps = [
@@ -70,6 +93,7 @@ rust_lionhead_harness(
         "fuzz_targets/range_medium.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {"cargo_target_config": {"name": "range_medium"}},
     crate_root = "fuzz_targets/range_medium.rs",
     metadata = METADATA,
     deps = [
@@ -83,6 +107,7 @@ rust_lionhead_harness(
         "fuzz_targets/range_small.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {"cargo_target_config": {"name": "range_small"}},
     crate_root = "fuzz_targets/range_small.rs",
     metadata = METADATA,
     deps = [
@@ -96,6 +121,7 @@ rust_lionhead_harness(
         "fuzz_targets/range_octopus.rs",
         "fuzz_targets/tests.rs",
     ],
+    autocargo = {"cargo_target_config": {"name": "range_octopus"}},
     crate_root = "fuzz_targets/range_octopus.rs",
     metadata = METADATA,
     deps = [

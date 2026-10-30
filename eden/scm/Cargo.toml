@@ -335,4 +335,5 @@ members = [
   "saplingnative/conch_parser",
   "saplingnative/pybindings",
 ]
+exclude = ["lib/dag/fuzz", "lib/indexedlog/fuzz"]
 resolver = "2"
