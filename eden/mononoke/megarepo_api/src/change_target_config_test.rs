@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::FutureExt;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use justknobs::test_helpers::with_just_knobs_async;
 use maplit::btreemap;
 use maplit::hashmap;
 use megarepo_config::MononokeMegarepoConfigs;
@@ -20,6 +25,7 @@ use megarepo_mapping::SourceName;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::MononokeRepo;
 use mononoke_macros::mononoke;
+use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
@@ -184,6 +190,116 @@ async fn init_megarepo<R: MononokeRepo>(
         )
         .await?;
 
+    Ok(())
+}
+
+fn knobs(read_from_augmented: bool, create_augmented: bool) -> JustKnobsInMemory {
+    JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(read_from_augmented),
+        "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(create_augmented),
+    })
+}
+
+/// The working copy of the target after the config change of
+/// `test_change_target_config`, made with `knobs` set, and the file changes of
+/// the target's last commit: the merge rebuilt on new parents.
+async fn target_after_config_change(
+    fb: FacebookInit,
+    knobs: JustKnobsInMemory,
+) -> Result<
+    (
+        HashMap<NonRootMPath, (String, FileType)>,
+        Vec<(NonRootMPath, FileChange)>,
+    ),
+    Error,
+> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut test = MegarepoTest::new(&ctx).await?;
+    let first_source_name = SourceName::new("source_1");
+    let target: Target = test.target("target".to_string());
+
+    init_megarepo(&ctx, &mut test).await?;
+
+    let first_source_cs_id = resolve_cs_id(&ctx, &test.repo, first_source_name.0.clone()).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+
+    let version_2 = "version_2".to_string();
+    let third_source_name = SourceName::new("source_3");
+    let third_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
+        .add_file("third", "third")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.repo, third_source_name.to_string())
+        .set_to(third_source_cs_id)
+        .await?;
+    SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version_2.clone())
+        .source_builder(first_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .linkfile("first", "linkfiles/first_in_other_location")
+        .build_source()?
+        .source_builder(third_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .build(&mut test.configs_storage);
+
+    let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
+    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    with_just_knobs_async(
+        knobs,
+        change_target_config
+            .run(
+                &ctx,
+                &target,
+                version_2,
+                target_cs_id,
+                btreemap! {
+                    first_source_name.clone() => first_source_cs_id,
+                    third_source_name.clone() => third_source_cs_id,
+                },
+                None,
+            )
+            .boxed(),
+    )
+    .await?;
+
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+    let wc = list_working_copy_utf8_with_types(&ctx, &test.repo, target_cs_id).await?;
+    let file_changes = target_cs_id
+        .load(&ctx, &test.repo.repo_blobstore())
+        .await?
+        .file_changes()
+        .map(|(path, change)| (path.clone(), change.clone()))
+        .collect();
+    Ok((wc, file_changes))
+}
+
+#[mononoke::fbinit_test]
+async fn test_change_target_config_reads_augmented_manifests(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Given: the target after the config change, with the merge rebuild
+    // diffing Hg manifests.
+    let from_hg = target_after_config_change(fb, knobs(false, true)).await?;
+
+    // When: the rebuild diffs augmented manifests instead, and deriving the hg
+    // changeset of the merge it diffs also creates the merge's augmented
+    // manifest.
+    let from_augmented = target_after_config_change(fb, knobs(true, true)).await?;
+
+    // Then: the target is the same.
+    assert_eq!(from_augmented, from_hg);
+
+    // And: when deriving the hg changeset does not create it, the merge has no
+    // augmented manifest, and the rebuild fails instead of reading Hg
+    // manifests.
+    let err = target_after_config_change(fb, knobs(true, false))
+        .await
+        .expect_err("the merge has no augmented manifest");
+    assert!(
+        format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+        "the error names the missing augmented manifest: {err:#}"
+    );
     Ok(())
 }
 

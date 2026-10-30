@@ -41,7 +41,6 @@ use itertools::EitherOrBoth;
 use itertools::Itertools;
 use manifest::BonsaiDiffFileChange;
 use manifest::ManifestOps;
-use manifest::bonsai_diff;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Source;
 use megarepo_config::SourceRevision;
@@ -53,6 +52,7 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
+use mercurial_types::sharded_augmented_manifest::hg_manifest_bonsai_diff;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
@@ -245,9 +245,10 @@ pub trait MegarepoOp<R> {
 
         let (hg_cs_merge, parent_hg_css) = try_join(hg_cs_merge, parent_hg_css).await?;
 
-        let file_changes = bonsai_diff(
-            ctx.clone(),
+        let file_changes = hg_manifest_bonsai_diff(
+            ctx,
             repo.repo_blobstore().clone(),
+            repo.repo_identity().name(),
             hg_cs_merge,
             parent_hg_css.into_iter().collect(),
         )

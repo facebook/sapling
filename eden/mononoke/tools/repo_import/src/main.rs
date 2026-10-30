@@ -58,11 +58,11 @@ use import_tools::ReuploadCommits;
 use itertools::Itertools;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::NonRootMPath;
+use mercurial_types::sharded_augmented_manifest::list_hg_leaf_entries;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
@@ -659,12 +659,15 @@ async fn get_leaf_entries(
 ) -> Result<HashSet<NonRootMPath>, Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
-    hg_cs
-        .manifestid()
-        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .map_ok(|(path, (_file_type, _filenode_id))| path)
-        .try_collect::<HashSet<_>>()
-        .await
+    list_hg_leaf_entries(
+        ctx,
+        repo.repo_blobstore().clone(),
+        repo.repo_identity().name(),
+        hg_cs.manifestid(),
+    )
+    .map_ok(|(path, (_file_type, _filenode_id))| path)
+    .try_collect::<HashSet<_>>()
+    .await
 }
 
 async fn check_dependent_systems(

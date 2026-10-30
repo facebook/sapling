@@ -21,12 +21,12 @@ use futures::Stream;
 use futures::TryStreamExt;
 use futures::future;
 use itertools::Itertools;
-use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::NonRootMPath;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobEnvelope;
+use mercurial_types::sharded_augmented_manifest::list_hg_leaf_entries;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
@@ -85,42 +85,45 @@ fn get_all_file_moves<'a>(
     hg_cs: HgBlobChangeset,
     path_converter: &'a dyn Mover,
 ) -> impl Stream<Item = Result<FileMove, Error>> + 'a {
-    hg_cs
-        .manifestid()
-        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .try_filter_map(move |(old_path, (file_type, filenode_id))| async move {
-            let maybe_new_path = path_converter.move_path(&old_path).unwrap();
-            if Some(&old_path) == maybe_new_path.as_ref() {
-                // path does not need to be changed, drop from the stream
-                Ok(None)
-            } else {
-                // path needs to be changed (or deleted), keep in the stream
-                Ok(Some((old_path, maybe_new_path, file_type, filenode_id)))
-            }
-        })
-        .map_ok({
-            move |(old_path, maybe_new_path, file_type, filenode_id)| {
-                async move {
-                    let file_envelope = filenode_id.load(ctx, repo.repo_blobstore()).await?;
+    list_hg_leaf_entries(
+        ctx,
+        repo.repo_blobstore().clone(),
+        repo.repo_identity().name(),
+        hg_cs.manifestid(),
+    )
+    .try_filter_map(move |(old_path, (file_type, filenode_id))| async move {
+        let maybe_new_path = path_converter.move_path(&old_path).unwrap();
+        if Some(&old_path) == maybe_new_path.as_ref() {
+            // path does not need to be changed, drop from the stream
+            Ok(None)
+        } else {
+            // path needs to be changed (or deleted), keep in the stream
+            Ok(Some((old_path, maybe_new_path, file_type, filenode_id)))
+        }
+    })
+    .map_ok({
+        move |(old_path, maybe_new_path, file_type, filenode_id)| {
+            async move {
+                let file_envelope = filenode_id.load(ctx, repo.repo_blobstore()).await?;
 
-                    // Note: it is always safe to unwrap here, since
-                    // `HgFileEnvelope::get_size()` always returns `Some()`
-                    // The return type is `Option` to accommodate `HgManifestEnvelope`
-                    // which returns `None`.
-                    let file_size = file_envelope.get_size().unwrap();
+                // Note: it is always safe to unwrap here, since
+                // `HgFileEnvelope::get_size()` always returns `Some()`
+                // The return type is `Option` to accommodate `HgManifestEnvelope`
+                // which returns `None`.
+                let file_size = file_envelope.get_size().unwrap();
 
-                    let file_move = FileMove {
-                        old_path,
-                        maybe_new_path,
-                        file_type,
-                        file_size,
-                        content_id: file_envelope.content_id(),
-                    };
-                    Ok(file_move)
-                }
+                let file_move = FileMove {
+                    old_path,
+                    maybe_new_path,
+                    file_type,
+                    file_size,
+                    content_id: file_envelope.content_id(),
+                };
+                Ok(file_move)
             }
-        })
-        .try_buffer_unordered(BUFFER_SIZE)
+        }
+    })
+    .try_buffer_unordered(BUFFER_SIZE)
 }
 
 pub async fn perform_move<'a>(
@@ -260,12 +263,20 @@ mod test {
     use cloned::cloned;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
     use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use manifest::ManifestOps;
+    use maplit::hashmap;
+    use memblob::Memblob;
+    use mercurial_derivation::RootHgAugmentedManifestId;
     use mercurial_types::HgChangesetId;
     use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
@@ -276,7 +287,12 @@ mod test {
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
     use sorted_vector_map::sorted_vector_map;
+    use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
+    use tests_utils::hg_manifest_reads::HgManifestReadBlocker;
     use tests_utils::resolve_cs_id;
+
+    use crate::working_copy::get_working_copy_paths;
 
     #[facet::container]
     struct TestRepo {
@@ -585,6 +601,141 @@ mod test {
             assert!(prefix.is_prefix_of(leaf));
         }
 
+        Ok(())
+    }
+
+    /// Hg changesets are derived without their augmented manifests, so that
+    /// deriving one never reads Hg manifests.
+    fn read_from_augmented(on: bool) -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(on),
+            "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+        })
+    }
+
+    /// A repo whose Hg manifest reads fail once the blocker is armed, and a
+    /// commit with an hg changeset but no augmented manifest.
+    async fn repo_with_blocked_hg_manifests(
+        ctx: &CoreContext,
+    ) -> Result<(Arc<TestRepo>, Arc<HgManifestReadBlocker>, ChangesetId)> {
+        let (blobstore, blocker) = HgManifestReadBlocker::wrap(Memblob::default());
+        let repo: Arc<TestRepo> = Arc::new(
+            TestRepoFactory::new(ctx.fb)?
+                .with_blobstore(blobstore)
+                .build()
+                .await?,
+        );
+        let cs_id = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("a", "a\n")
+            .add_file("dir/b", "b\n")
+            .add_file_with_type("dir/c", "c\n", FileType::Executable)
+            .commit()
+            .await?;
+        with_just_knobs_async(
+            read_from_augmented(false),
+            repo.derive_hg_changeset(ctx, cs_id).boxed(),
+        )
+        .await?;
+        Ok((repo, blocker, cs_id))
+    }
+
+    type MoveSummary = (NonRootMPath, Option<NonRootMPath>, FileType, u64, ContentId);
+
+    async fn working_copy_and_moves(
+        ctx: &CoreContext,
+        repo: &Arc<TestRepo>,
+        cs_id: ChangesetId,
+    ) -> Result<(Vec<NonRootMPath>, Vec<MoveSummary>)> {
+        let paths = get_working_copy_paths(ctx, repo, cs_id).await?;
+        let hg_cs = repo
+            .derive_hg_changeset(ctx, cs_id)
+            .await?
+            .load(ctx, repo.repo_blobstore())
+            .await?;
+        let mover = TestMover::new(shift_all);
+        let mut moves: Vec<MoveSummary> = get_all_file_moves(ctx, repo, hg_cs, &mover)
+            .map_ok(|m| {
+                (
+                    m.old_path,
+                    m.maybe_new_path,
+                    m.file_type,
+                    m.file_size,
+                    m.content_id,
+                )
+            })
+            .try_collect()
+            .await?;
+        moves.sort();
+        Ok((paths, moves))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_file_moves_read_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, cs_id) = repo_with_blocked_hg_manifests(&ctx).await?;
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+
+        // Given: the working copy and moves read from the Hg manifest.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            working_copy_and_moves(&ctx, &repo, cs_id).boxed(),
+        )
+        .await?;
+        assert_eq!(from_hg.0.len(), 3, "the commit has three files");
+        assert_eq!(from_hg.1.len(), 3, "the mover moves every file");
+
+        // When: Hg manifests can no longer be read.
+        blocker.arm();
+
+        // Then: the augmented manifest gives the same results.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            working_copy_and_moves(&ctx, &repo, cs_id).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifest is still read.
+        let knob_off = with_just_knobs_async(
+            read_from_augmented(false),
+            working_copy_and_moves(&ctx, &repo, cs_id).boxed(),
+        )
+        .await;
+        assert!(
+            knob_off.is_err(),
+            "the knob off reads the blocked Hg manifest"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_file_moves_missing_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, cs_id) = repo_with_blocked_hg_manifests(&ctx).await?;
+        blocker.arm();
+
+        let err = with_just_knobs_async(
+            read_from_augmented(true),
+            working_copy_and_moves(&ctx, &repo, cs_id).boxed(),
+        )
+        .await
+        .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
         Ok(())
     }
 }

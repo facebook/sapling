@@ -29,17 +29,25 @@ mod tests {
     use cross_repo_sync::SubmoduleDeps;
     use cross_repo_sync::create_commit_syncers;
     use cross_repo_sync::unsafe_always_rewrite_sync_commit;
+    use derivation_queue_thrift::DerivationPriority;
     use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
+    use futures::FutureExt;
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
     use git_types::RootGitDeltaManifestV2Id;
     use git_types::RootGitDeltaManifestV3Id;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::hashmap;
+    use memblob::Memblob;
+    use mercurial_derivation::DeriveHgChangeset;
+    use mercurial_derivation::RootHgAugmentedManifestId;
     use mercurial_types::NonRootMPath;
     use metaconfig_parser::RepoConfigs;
     use metaconfig_types::CommitSyncConfig;
@@ -71,6 +79,7 @@ mod tests {
     use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
+    use tests_utils::hg_manifest_reads::HgManifestReadBlocker;
     use tests_utils::list_working_copy_utf8;
 
     use crate::ChangesetArgs;
@@ -86,6 +95,7 @@ mod tests {
     use crate::find_mapping_version;
     use crate::get_large_repo_config_if_pushredirected;
     use crate::get_large_repo_setting;
+    use crate::get_leaf_entries;
     use crate::merge_imported_commit;
     use crate::move_bookmark;
     use crate::push_merge_commit;
@@ -994,6 +1004,105 @@ mod tests {
             Some(CommitSyncConfigVersion("TEST_VERSION2".to_string()))
         );
 
+        Ok(())
+    }
+
+    fn hg_manifest_knobs(read_from_augmented: bool) -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:hgmanifest_read_from_augmented".to_string() => KnobVal::Bool(read_from_augmented),
+            "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+        })
+    }
+
+    /// A repo whose Hg manifest reads fail once the blocker is armed, and a
+    /// commit with an hg changeset but no augmented manifest.
+    async fn repo_with_blocked_hg_manifests(
+        ctx: &CoreContext,
+    ) -> Result<(Repo, Arc<HgManifestReadBlocker>, ChangesetId)> {
+        let (blobstore, blocker) = HgManifestReadBlocker::wrap(Memblob::default());
+        let repo: Repo = TestRepoFactory::new(ctx.fb)?
+            .with_blobstore(blobstore)
+            .build()
+            .await?;
+        let cs_id = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("a", "a")
+            .add_file("dir/b", "b")
+            .commit()
+            .await?;
+        with_just_knobs_async(
+            hg_manifest_knobs(false),
+            repo.derive_hg_changeset(ctx, cs_id).boxed(),
+        )
+        .await?;
+        Ok((repo, blocker, cs_id))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_leaf_entries_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, cs_id) = repo_with_blocked_hg_manifests(&ctx).await?;
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+
+        // Given: the files listed from the Hg manifest.
+        let from_hg = with_just_knobs_async(
+            hg_manifest_knobs(false),
+            get_leaf_entries(&ctx, &repo, cs_id).boxed(),
+        )
+        .await?;
+        assert_eq!(from_hg, [mp("a"), mp("dir/b")].into_iter().collect());
+
+        // When: Hg manifests can no longer be read.
+        blocker.arm();
+
+        // Then: the augmented manifest lists the same files.
+        let from_augmented = with_just_knobs_async(
+            hg_manifest_knobs(true),
+            get_leaf_entries(&ctx, &repo, cs_id).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifest is still read.
+        let knob_off = with_just_knobs_async(
+            hg_manifest_knobs(false),
+            get_leaf_entries(&ctx, &repo, cs_id).boxed(),
+        )
+        .await;
+        assert!(
+            knob_off.is_err(),
+            "the knob off reads the blocked Hg manifest"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_leaf_entries_missing_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, cs_id) = repo_with_blocked_hg_manifests(&ctx).await?;
+        blocker.arm();
+
+        let err = with_just_knobs_async(
+            hg_manifest_knobs(true),
+            get_leaf_entries(&ctx, &repo, cs_id).boxed(),
+        )
+        .await
+        .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
         Ok(())
     }
 }

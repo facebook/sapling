@@ -16,6 +16,7 @@ use manifest::Diff;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::NonRootMPath;
+use mercurial_types::sharded_augmented_manifest::list_hg_leaf_entries;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
 use tracing::info;
@@ -55,12 +56,15 @@ pub async fn get_working_copy_paths(
 
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     info!("Getting working copy contents");
-    let mut paths: Vec<_> = hg_cs
-        .manifestid()
-        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .map_ok(|(path, (_file_type, _filenode_id))| path)
-        .try_collect()
-        .await?;
+    let mut paths: Vec<_> = list_hg_leaf_entries(
+        ctx,
+        repo.repo_blobstore().clone(),
+        repo.repo_identity().name(),
+        hg_cs.manifestid(),
+    )
+    .map_ok(|(path, (_file_type, _filenode_id))| path)
+    .try_collect()
+    .await?;
     paths.sort();
     info!("Done getting working copy contents");
     Ok(paths)
