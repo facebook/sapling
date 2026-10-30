@@ -67,11 +67,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     actions.push(<AutoSplitButton key="auto-split" commit={commit} dismiss={dismiss} />);
   }
 
-  const aiResolveCommentsEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.InlineCommentAIResolve,
-  );
   // For now, only support this in VS Code
-  if (aiResolveCommentsEnabled && commit?.diffId && platform.platformName === 'vscode') {
+  if (commit?.diffId && platform.platformName === 'vscode') {
     actions.push(
       <ResolveCommentsButton
         key="resolve-comments"
