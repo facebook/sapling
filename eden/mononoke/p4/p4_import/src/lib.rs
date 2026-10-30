@@ -20,8 +20,12 @@ use filestore::StoreRequest;
 use futures::Stream;
 use futures::TryStreamExt;
 use futures::stream;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileType;
+use mononoke_types::NonRootMPath;
+use p4_transform::CopySource;
 use p4_types::ChangeSource;
 use p4_types::Changelist;
 use repo_blobstore::RepoBlobstoreRef;
@@ -132,6 +136,83 @@ pub async fn upload_changelist_contents(
         contents.insert(revision.depot_path.clone(), metadata);
     }
     Ok(contents)
+}
+
+/// The source paths of the revisions in `changelist` that were copied into the depot at
+/// `depot_root`, keyed by depot path as `p4_transform::changeset` takes them. One
+/// `integrations` call covers all of them.
+async fn copy_sources(
+    source: &impl ChangeSource,
+    depot_root: &str,
+    changelist: &Changelist,
+) -> Result<HashMap<String, NonRootMPath>> {
+    let mut revisions = Vec::new();
+    for revision in &changelist.files {
+        if !p4_transform::can_have_copy_source(revision.action)
+            || p4_transform::repo_path(depot_root, &revision.depot_path)?.is_none()
+        {
+            continue;
+        }
+        revisions.push(revision);
+    }
+    let integrations = if revisions.is_empty() {
+        HashMap::new()
+    } else {
+        source.integrations(&revisions).await?
+    };
+    let mut copy_sources = HashMap::new();
+    for revision in revisions {
+        let integrations = integrations
+            .get(&revision.depot_path)
+            .with_context(|| format!("no integration records for {}", revision.depot_path))?;
+        if let CopySource::From(path) =
+            p4_transform::copy_source(depot_root, revision, integrations)?
+        {
+            copy_sources.insert(revision.depot_path.clone(), path);
+        }
+    }
+    Ok(copy_sources)
+}
+
+async fn build_changeset(
+    ctx: &CoreContext,
+    repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
+    source: &impl ChangeSource,
+    depot_root: &str,
+    parent: Option<ChangesetId>,
+    change: u64,
+) -> Result<BonsaiChangeset> {
+    let changelist = source.describe(change).await?;
+    let contents = upload_changelist_contents(ctx, repo, source, depot_root, &changelist).await?;
+    let copy_sources = copy_sources(source, depot_root, &changelist).await?;
+    Ok(p4_transform::changeset(
+        depot_root,
+        &changelist,
+        parent,
+        &contents,
+        &copy_sources,
+    )?)
+}
+
+/// Each of `changes`, in order, with its changeset, each on top of the one before and the
+/// first on top of `parent`. Their contents are stored; the changesets themselves are not.
+pub async fn build_changesets(
+    ctx: &CoreContext,
+    repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
+    source: &impl ChangeSource,
+    depot_root: &str,
+    mut parent: Option<ChangesetId>,
+    changes: &[u64],
+) -> Result<Vec<(u64, BonsaiChangeset)>> {
+    let mut changesets = Vec::with_capacity(changes.len());
+    for &change in changes {
+        let changeset = build_changeset(ctx, repo, source, depot_root, parent, change)
+            .await
+            .with_context(|| format!("building changelist {change}"))?;
+        parent = Some(changeset.get_changeset_id());
+        changesets.push((change, changeset));
+    }
+    Ok(changesets)
 }
 
 #[cfg(test)]

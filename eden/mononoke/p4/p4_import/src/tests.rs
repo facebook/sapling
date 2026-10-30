@@ -16,9 +16,11 @@ use futures::stream;
 use futures::stream::BoxStream;
 use metaconfig_types::FilestoreParams;
 use mononoke_macros::mononoke;
+use mononoke_types::P4ChangelistId;
 use p4_types::Action;
 use p4_types::FileRevision;
 use p4_types::Integration;
+use p4_types::IntegrationHow;
 use repo_blobstore::RepoBlobstore;
 use test_repo_factory::TestRepoFactory;
 
@@ -272,22 +274,34 @@ async fn test_regular_file_of_the_wrong_size_is_rejected(fb: FacebookInit) -> Re
     Ok(())
 }
 
-/// Prints only the revisions in `contents`: printing any other fails the test.
+/// Knows only what it is given: anything else fails the test.
+#[derive(Default)]
 struct FakeSource {
+    changelists: HashMap<u64, Changelist>,
+    /// Keyed by `path#rev`.
     contents: HashMap<String, &'static [u8]>,
+    /// Keyed by `path#rev`.
+    integrations: HashMap<String, Vec<Integration>>,
+}
+
+fn key(file: &FileRevision) -> String {
+    format!("{}#{}", file.depot_path, file.revision)
 }
 
 #[async_trait]
 impl ChangeSource for FakeSource {
     async fn describe(&self, change: u64) -> Result<Changelist> {
-        Err(anyhow!("unexpected describe of {change}"))
+        self.changelists
+            .get(&change)
+            .cloned()
+            .ok_or_else(|| anyhow!("unexpected describe of {change}"))
     }
 
     async fn print(&self, file: &FileRevision) -> Result<BoxStream<'static, Result<Bytes>>> {
         let content = self
             .contents
-            .get(&file.depot_path)
-            .ok_or_else(|| anyhow!("unexpected print of {}", file.depot_path))?;
+            .get(&key(file))
+            .ok_or_else(|| anyhow!("unexpected print of {}", key(file)))?;
         Ok(chunks(&[content]).boxed())
     }
 
@@ -295,7 +309,57 @@ impl ChangeSource for FakeSource {
         &self,
         files: &[&FileRevision],
     ) -> Result<HashMap<String, Vec<Integration>>> {
-        Err(anyhow!("unexpected filelog of {files:?}"))
+        files
+            .iter()
+            .map(|file| {
+                let integrations = self.integrations.get(&key(file)).cloned();
+                let integrations =
+                    integrations.ok_or_else(|| anyhow!("unexpected filelog of {}", key(file)))?;
+                Ok((file.depot_path.clone(), integrations))
+            })
+            .collect()
+    }
+}
+
+type FileSpec = (&'static str, u32, Action, Option<&'static [u8]>);
+
+impl FakeSource {
+    fn with_changelist(mut self, number: u64, files: &[FileSpec]) -> Self {
+        let files = files
+            .iter()
+            .map(|&(depot_path, rev, action, content)| {
+                let file = FileRevision {
+                    revision: rev,
+                    size: content.map(|content| content.len() as u64),
+                    ..revision(depot_path, action, "text", None)
+                };
+                if let Some(content) = content {
+                    self.contents.insert(key(&file), content);
+                }
+                file
+            })
+            .collect();
+        let changelist = Changelist {
+            number,
+            user: "alice".to_owned(),
+            time: 1_760_000_000 + number,
+            description: format!("change {number}\n"),
+            files,
+        };
+        self.changelists.insert(number, changelist);
+        self
+    }
+
+    fn with_branch(mut self, target: &str, source: &str) -> Self {
+        let integration = Integration {
+            how: IntegrationHow::BranchFrom,
+            file: source.to_owned(),
+            start_rev: None,
+            end_rev: 1,
+        };
+        self.integrations
+            .insert(format!("{target}#1"), vec![integration]);
+        self
     }
 }
 
@@ -316,10 +380,11 @@ async fn test_changelist_contents_are_stored_by_depot_path(fb: FacebookInit) -> 
     let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
     let source = FakeSource {
         contents: HashMap::from([
-            ("//test1/add.txt".to_owned(), &b"hello\n"[..]),
-            ("//test1/run.sh".to_owned(), &b"#!/bin/sh\n"[..]),
-            ("//test1/link".to_owned(), &b"add.txt\n"[..]),
+            ("//test1/add.txt#1".to_owned(), &b"hello\n"[..]),
+            ("//test1/run.sh#1".to_owned(), &b"#!/bin/sh\n"[..]),
+            ("//test1/link#1".to_owned(), &b"add.txt\n"[..]),
         ]),
+        ..Default::default()
     };
     let changelist = Changelist {
         number: 42,
@@ -352,6 +417,106 @@ async fn test_changelist_contents_are_stored_by_depot_path(fb: FacebookInit) -> 
             ("//test1/run.sh", Bytes::from_static(b"#!/bin/sh\n")),
         ],
         stored
+    );
+    Ok(())
+}
+
+/// An add, an edit, a branch copy and a delete over two changelists.
+fn two_changelists() -> FakeSource {
+    FakeSource::default()
+        .with_changelist(
+            7,
+            &[
+                ("//test1/a.txt", 1, Action::Add, Some(b"one\n")),
+                ("//test1/gone.txt", 1, Action::Add, Some(b"bye\n")),
+            ],
+        )
+        .with_changelist(
+            9,
+            &[
+                ("//test1/a.txt", 2, Action::Edit, Some(b"two\n")),
+                ("//test1/b.txt", 1, Action::Branch, Some(b"one\n")),
+                ("//test1/gone.txt", 2, Action::Delete, None),
+            ],
+        )
+        .with_branch("//test1/b.txt", "//test1/a.txt")
+}
+
+fn path(path: &str) -> NonRootMPath {
+    NonRootMPath::new(path).unwrap()
+}
+
+/// The files `changeset` changes: content for a change, `None` for a deletion.
+async fn files(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    changeset: &BonsaiChangeset,
+) -> Result<Vec<(String, Option<Bytes>, Option<(NonRootMPath, ChangesetId)>)>> {
+    let mut files = Vec::new();
+    for (path, change) in changeset.file_changes() {
+        let content = match change.content_id() {
+            Some(id) => Some(filestore::fetch_concat(repo.repo_blobstore(), ctx, id).await?),
+            None => None,
+        };
+        files.push((path.to_string(), content, change.copy_from().cloned()));
+    }
+    Ok(files)
+}
+
+#[mononoke::fbinit_test]
+async fn test_changelists_build_a_linear_history(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let changesets =
+        build_changesets(&ctx, &repo, &two_changelists(), "//test1/", None, &[7, 9]).await?;
+
+    let [(7, first), (9, second)] = &changesets[..] else {
+        panic!("changelists 7 and 9 expected: {changesets:?}");
+    };
+    let first_id = first.get_changeset_id();
+    assert_eq!(0, first.parents().count());
+    assert_eq!(vec![first_id], second.parents().collect::<Vec<_>>());
+    assert_eq!(P4ChangelistId::new(7), P4ChangelistId::from_bcs(first)?);
+    assert_eq!(P4ChangelistId::new(9), P4ChangelistId::from_bcs(second)?);
+    assert_eq!(
+        vec![
+            ("a.txt".to_owned(), Some(Bytes::from_static(b"one\n")), None),
+            (
+                "gone.txt".to_owned(),
+                Some(Bytes::from_static(b"bye\n")),
+                None
+            ),
+        ],
+        files(&ctx, &repo, first).await?
+    );
+    assert_eq!(
+        vec![
+            ("a.txt".to_owned(), Some(Bytes::from_static(b"two\n")), None),
+            (
+                "b.txt".to_owned(),
+                Some(Bytes::from_static(b"one\n")),
+                Some((path("a.txt"), first_id))
+            ),
+            ("gone.txt".to_owned(), None, None),
+        ],
+        files(&ctx, &repo, second).await?
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_failure_names_the_changelist(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+
+    let error = build_changesets(&ctx, &repo, &two_changelists(), "//test1/", None, &[7, 8])
+        .await
+        .unwrap_err();
+
+    assert!(
+        format!("{error:#}").contains("building changelist 8: unexpected describe of 8"),
+        "{error:?}"
     );
     Ok(())
 }

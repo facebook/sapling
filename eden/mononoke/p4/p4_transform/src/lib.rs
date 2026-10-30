@@ -173,7 +173,7 @@ pub fn copy_source(
 ) -> Result<CopySource, TransformError> {
     // Onto an existing path, copy_from would read as that file being replaced, hiding
     // its own history.
-    if !matches!(revision.action, Action::Branch | Action::MoveAdd) {
+    if !can_have_copy_source(revision.action) {
         return Ok(CopySource::NotACopy);
     }
     let mut sources = integrations.iter().filter(|integration| {
@@ -191,6 +191,12 @@ pub fn copy_source(
         Some(path) => CopySource::From(path),
         None => CopySource::OtherDepot,
     })
+}
+
+/// Whether `copy_source` can give a source for a revision with `action`, so callers fetch
+/// integrations only when they can matter.
+pub fn can_have_copy_source(action: Action) -> bool {
+    matches!(action, Action::Branch | Action::MoveAdd)
 }
 
 /// `depot_path` in the repo for the depot at `depot_root`, or `None` if it is in another
