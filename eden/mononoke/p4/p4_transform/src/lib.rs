@@ -67,7 +67,7 @@ pub fn file_change(
                 .ok_or_else(|| TransformError::MissingContent(revision.depot_path.clone()))?;
             FileChange::tracked(
                 content.content_id,
-                FileType::Regular,
+                file_type(&revision.file_type),
                 content.total_size,
                 None,
                 GitLfs::FullContent,
@@ -79,6 +79,26 @@ pub fn file_change(
         }
     };
     Ok(Some((path, change)))
+}
+
+/// The executable ones among the old type names `p4 help filetypes` lists, like `xtext`
+/// for `text+x`.
+const LEGACY_EXECUTABLE_TYPES: [&str; 10] = [
+    "cxtext", "kxtext", "uxbinary", "xbinary", "xltext", "xtempobj", "xtext", "xunicode", "xutf16",
+    "xutf8",
+];
+
+/// A Perforce type is a base type and modifiers, like `text+kx`. Only `x` makes it
+/// executable (`X` is the archive modifier).
+fn file_type(p4_type: &str) -> FileType {
+    let (base, modifiers) = p4_type.split_once('+').unwrap_or((p4_type, ""));
+    if base == "symlink" {
+        FileType::Symlink
+    } else if modifiers.contains('x') || LEGACY_EXECUTABLE_TYPES.contains(&base) {
+        FileType::Executable
+    } else {
+        FileType::Regular
+    }
 }
 
 /// The characters Perforce stores escaped in depot paths, as `%` and two hex digits,

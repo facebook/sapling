@@ -37,10 +37,14 @@ fn content() -> ContentMetadataV2 {
 }
 
 fn revision(depot_path: &str, action: Action) -> FileRevision {
+    typed_revision(depot_path, action, "text")
+}
+
+fn typed_revision(depot_path: &str, action: Action, file_type: &str) -> FileRevision {
     FileRevision {
         depot_path: depot_path.to_owned(),
         action,
-        file_type: "text".to_owned(),
+        file_type: file_type.to_owned(),
         revision: 1,
         size: None,
         digest: None,
@@ -62,8 +66,8 @@ fn path_of(depot_path: &str) -> String {
     path.to_string()
 }
 
-fn regular() -> FileChange {
-    FileChange::tracked(ONES_CTID, FileType::Regular, 3, None, GitLfs::FullContent)
+fn tracked(file_type: FileType) -> FileChange {
+    FileChange::tracked(ONES_CTID, file_type, 3, None, GitLfs::FullContent)
 }
 
 #[mononoke::test]
@@ -80,7 +84,7 @@ fn test_content_actions_are_changes_with_the_stored_content() {
             .unwrap()
             .unwrap();
         assert_eq!("a.txt", path.to_string(), "{action:?}");
-        assert_eq!(regular(), change, "{action:?}");
+        assert_eq!(tracked(FileType::Regular), change, "{action:?}");
     }
 }
 
@@ -172,5 +176,53 @@ fn test_escape_and_unescape_round_trip() {
     ] {
         assert_eq!(depot_path, escape_path(path), "{path}");
         assert_eq!(path, unescape_path(depot_path), "{depot_path}");
+    }
+}
+
+#[mononoke::test]
+fn test_file_type_reaches_the_file_change() {
+    for (p4_type, file_type) in [
+        ("text+x", FileType::Executable),
+        ("symlink", FileType::Symlink),
+    ] {
+        let revision = typed_revision("//test1/a", Action::Add, p4_type);
+        let (_, change) = file_change(DEPOT, &revision, Some(&content()))
+            .unwrap()
+            .unwrap();
+        assert_eq!(tracked(file_type), change, "{p4_type}");
+    }
+}
+
+#[mononoke::test]
+fn test_file_type_from_base_type_modifiers_and_legacy_names() {
+    for (p4_type, expected) in [
+        ("text", FileType::Regular),
+        ("binary+lF", FileType::Regular),
+        ("text+k", FileType::Regular),
+        ("binary+S10", FileType::Regular),
+        ("binary+X", FileType::Regular),
+        ("unicode", FileType::Regular),
+        ("ktext", FileType::Regular),
+        ("ubinary", FileType::Regular),
+        ("tempobj", FileType::Regular),
+        ("apple", FileType::Regular),
+        ("text+x", FileType::Executable),
+        ("text+kx", FileType::Executable),
+        ("binary+lx", FileType::Executable),
+        ("utf16+xw", FileType::Executable),
+        ("xtext", FileType::Executable),
+        ("xbinary", FileType::Executable),
+        ("kxtext", FileType::Executable),
+        ("cxtext", FileType::Executable),
+        ("xltext", FileType::Executable),
+        ("uxbinary", FileType::Executable),
+        ("xtempobj", FileType::Executable),
+        ("xunicode", FileType::Executable),
+        ("xutf8", FileType::Executable),
+        ("xutf16", FileType::Executable),
+        ("symlink", FileType::Symlink),
+        ("symlink+x", FileType::Symlink),
+    ] {
+        assert_eq!(expected, file_type(p4_type), "{p4_type}");
     }
 }
