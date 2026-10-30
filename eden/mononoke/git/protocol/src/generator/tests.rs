@@ -19,26 +19,45 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
+use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
+use derived_data_manager::BonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use filestore::StoreRequest;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
+use git_types::CGDMDividedChangesets;
+use git_types::DeltaObjectKind;
 use git_types::DummyCgdmChangesetDivider;
 use git_types::GDMV2Entry;
 use git_types::GDMV2ObjectEntry;
 use git_types::GitDeltaManifestEntryOps;
+use git_types::GitDeltaManifestV2;
+use git_types::GitTreeId;
+use git_types::PackfileItem;
+use git_types::RootGitDeltaManifestV2Id;
+use git_types::thrift;
 use git_types::upload_non_blob_git_object;
+use gix_hash::Kind as GitHashKind;
 use gix_hash::ObjectId;
 use gix_object::Kind;
+use gix_pack::data::File as PackFile;
+use gix_pack::data::entry::Header as PackEntryHeader;
+use gix_pack::data::output::Entry as PackEntry;
 use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use mononoke_types::ThriftConvert;
 use mononoke_types_mocks::changesetid::ONES_CSID;
+use mononoke_types_mocks::changesetid::TWOS_CSID;
+use packfile::pack::DeltaForm;
+use packfile::pack::PackfileWriter;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
@@ -48,21 +67,29 @@ use repo_derived_data::RepoDerivedDataArc;
 use rustc_hash::FxHashSet;
 use sha1::Digest;
 use sha1::Sha1;
+use tempfile::NamedTempFile;
 use tokio::sync::Semaphore;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
 
 use super::GDMEntryProvider;
+use super::boundary_client_tree as select_boundary_client_tree;
 use super::boundary_trees_and_blobs;
 use super::packfile_stream_from_changesets;
+use super::tree_and_blob_packfile_stream;
+use super::trees_and_blobs_count;
+use crate::pack_processor::parse_pack;
 use crate::types::ChainBreakingMode;
 use crate::types::DeltaInclusion;
 use crate::types::FetchContainer;
 use crate::types::FetchFilter;
+use crate::types::FetchRequest;
 use crate::types::PackfileConcurrency;
 use crate::types::PackfileItemInclusion;
+use crate::types::RefsSource;
 use crate::types::ShallowCommits;
 use crate::types::ShallowInfoResponse;
+use crate::types::ShallowVariant;
 
 const EVENT_TIMEOUT: Duration = Duration::from_secs(5);
 const CANCELLATION_TIMEOUT: Duration = Duration::from_secs(1);
@@ -85,6 +112,7 @@ async fn fetch_container(fb: FacebookInit) -> Result<FetchContainer> {
         concurrency: PackfileConcurrency::new(1, 1, 1, 1, None),
         packfile_item_inclusion: PackfileItemInclusion::FetchOnly,
         shallow_info: Arc::new(None),
+        boundary_client_tree: None,
         chain_breaking_mode: ChainBreakingMode::None,
         cgdm_changeset_divider: Arc::new(DummyCgdmChangesetDivider),
     })
@@ -648,6 +676,562 @@ async fn boundary_depth_filter_does_not_load_excluded_subtree(fb: FacebookInit) 
         reads.len(),
         2,
         "only boundary commit and root tree are read"
+    );
+    Ok(())
+}
+
+async fn store_boundary_blob(fetch: &FetchContainer, content: &'static [u8]) -> Result<ObjectId> {
+    let content = Bytes::from_static(content);
+    let mut raw = format!("blob {}\0", content.len()).into_bytes();
+    raw.extend_from_slice(&content);
+    let oid = ObjectId::from_bytes_or_panic(&Sha1::digest(&raw));
+    filestore::store(
+        &fetch.blobstore,
+        FilestoreConfig::no_chunking_filestore(),
+        &fetch.ctx,
+        &StoreRequest::new(content.len() as u64),
+        stream::iter([Ok(content)]),
+    )
+    .await?;
+    Ok(oid)
+}
+
+async fn store_boundary_tree(
+    fetch: &FetchContainer,
+    entries: &[(&str, &str, ObjectId)],
+) -> Result<ObjectId> {
+    let mut bytes = Vec::new();
+    for (mode, name, oid) in entries {
+        bytes.extend_from_slice(format!("{mode} {name}\0").as_bytes());
+        bytes.extend_from_slice(oid.as_bytes());
+    }
+    store_object(fetch, "tree", bytes).await
+}
+
+async fn store_boundary_commit(
+    fetch: &FetchContainer,
+    tree: ObjectId,
+    message: &str,
+) -> Result<ObjectId> {
+    store_boundary_commit_with_parents(fetch, tree, &[], message).await
+}
+
+async fn store_boundary_commit_with_parents(
+    fetch: &FetchContainer,
+    tree: ObjectId,
+    parents: &[ObjectId],
+    message: &str,
+) -> Result<ObjectId> {
+    let parents: String = parents
+        .iter()
+        .map(|parent| format!("parent {parent}\n"))
+        .collect();
+    store_object(
+        fetch,
+        "commit",
+        format!(
+            "tree {tree}\n{parents}author Test <test@example.com> 0 +0000\ncommitter Test <test@example.com> 0 +0000\n\n{message}\n"
+        )
+        .into_bytes(),
+    )
+    .await
+}
+
+fn set_boundary_commits(fetch: &mut FetchContainer, boundaries: &[ObjectId], client: &[ObjectId]) {
+    let commits = ShallowCommits {
+        commits: Vec::new(),
+        boundary_commits: boundaries
+            .iter()
+            .map(|oid| (ONES_CSID, *oid).into())
+            .collect(),
+    };
+    fetch.shallow_info = Arc::new(Some(ShallowInfoResponse::new(
+        commits.clone(),
+        commits,
+        client.iter().map(|oid| (ONES_CSID, *oid).into()).collect(),
+    )));
+}
+
+fn boundary_request(fetch: &FetchContainer, haves: &[ObjectId]) -> FetchRequest {
+    FetchRequest {
+        heads: haves.to_vec(),
+        bases: haves.to_vec(),
+        include_out_of_pack_deltas: true,
+        include_annotated_tags: false,
+        offset_delta: true,
+        delta_form: DeltaForm::RefAndOffset,
+        shallow_variant: ShallowVariant::FromClientWithDepth(10),
+        filter: fetch.filter.as_ref().clone(),
+        shallow_info: fetch.shallow_info.as_ref().clone(),
+        concurrency: fetch.concurrency,
+        chain_breaking_mode: fetch.chain_breaking_mode,
+        refs_source: RefsSource::DatabaseMaster,
+    }
+}
+
+async fn boundary_client_tree(
+    fetch: &FetchContainer,
+    haves: &[ObjectId],
+) -> Result<Option<GitTreeId>> {
+    select_boundary_client_tree(fetch, &boundary_request(fetch, haves)).await
+}
+
+async fn assert_boundary_count_and_stream(
+    mut fetch: FetchContainer,
+    expected: &[ObjectId],
+) -> Result<()> {
+    let entries = boundary_trees_and_blobs(fetch.clone()).await?;
+    assert_eq!(
+        entries
+            .into_iter()
+            .map(|entry| entry.oid)
+            .collect::<FxHashSet<_>>(),
+        expected.iter().copied().collect::<FxHashSet<_>>(),
+    );
+    let changesets = CGDMDividedChangesets {
+        groups: Vec::new(),
+        individual_cs_ids: Vec::new(),
+    };
+    let (count, bases) =
+        trees_and_blobs_count(fetch.clone(), changesets.clone(), Vec::new()).await?;
+    assert_eq!(
+        count,
+        expected.len(),
+        "pack header count must use the same boundary selection"
+    );
+    fetch.packfile_item_inclusion = PackfileItemInclusion::Generate;
+    let stream =
+        tree_and_blob_packfile_stream(fetch.clone(), changesets, Arc::new(bases), Vec::new(), None)
+            .await?;
+    let mut writer = PackfileWriter::new(
+        Vec::new(),
+        count.try_into()?,
+        1,
+        DeltaForm::RefAndOffset,
+        None,
+    );
+    timeout(EVENT_TIMEOUT, writer.write(stream)).await??;
+    writer.finish().await?;
+    assert_eq!(writer.num_entries as usize, count);
+    let pack = writer.into_write();
+    assert_eq!(u32::from_be_bytes(pack[8..12].try_into()?) as usize, count);
+    let (decoded, _guard) = parse_pack(&pack, &fetch.ctx, fetch.blobstore, 1, None).await?;
+    assert_eq!(
+        decoded.keys().copied().collect::<FxHashSet<_>>(),
+        expected.iter().copied().collect::<FxHashSet<_>>()
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_same_tree_does_not_load_tree(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let absent_tree = ObjectId::from_hex(b"3333333333333333333333333333333333333333")?;
+    let client = store_boundary_commit(&fetch, absent_tree, "client").await?;
+    let boundary = store_boundary_commit(&fetch, absent_tree, "boundary").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    let reads = observe_reads(&mut fetch, None);
+    assert_boundary_count_and_stream(fetch, &[]).await?;
+    assert!(
+        reads
+            .lock()
+            .expect("read log lock")
+            .iter()
+            .all(|key| !key.contains(&absent_tree.to_string())),
+        "equal root IDs must prune the tree without loading it",
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_keeps_historical_objects_absent_from_client(
+    fb: FacebookInit,
+) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let stable = store_boundary_blob(&fetch, b"stable").await?;
+    let historical = store_boundary_blob(&fetch, b"historical").await?;
+    let client_tree = store_boundary_tree(&fetch, &[("100644", "stable", stable)]).await?;
+    let boundary_tree = store_boundary_tree(
+        &fetch,
+        &[
+            ("100644", "historical", historical),
+            ("100644", "stable", stable),
+        ],
+    )
+    .await?;
+    let client = store_boundary_commit(&fetch, client_tree, "client").await?;
+    let boundary = store_boundary_commit(&fetch, boundary_tree, "boundary").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    assert_boundary_count_and_stream(fetch, &[boundary_tree, historical]).await
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_cold_and_filtered_fetches_keep_legacy_selection(
+    fb: FacebookInit,
+) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let blob = store_boundary_blob(&fetch, b"stable").await?;
+    let tree = store_boundary_tree(&fetch, &[("100644", "stable", blob)]).await?;
+    let client = store_boundary_commit(&fetch, tree, "client").await?;
+    let boundary = store_boundary_commit(&fetch, tree, "boundary").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[]).await?;
+    assert!(fetch.boundary_client_tree.is_none());
+    assert_boundary_count_and_stream(fetch.clone(), &[tree, blob]).await?;
+    fetch.filter = filter(0, u64::MAX);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    assert!(fetch.boundary_client_tree.is_none());
+    assert_boundary_count_and_stream(fetch, &[tree]).await
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_requires_one_matching_shallow_have(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let client = ObjectId::from_hex(b"3333333333333333333333333333333333333333")?;
+    let other = ObjectId::from_hex(b"4444444444444444444444444444444444444444")?;
+    set_boundary_commits(&mut fetch, &[other], &[client]);
+    let reads = observe_reads(&mut fetch, None);
+    for haves in [vec![], vec![other], vec![client, other]] {
+        assert!(boundary_client_tree(&fetch, &haves).await?.is_none());
+    }
+    set_boundary_commits(&mut fetch, &[], &[client]);
+    assert!(boundary_client_tree(&fetch, &[client]).await?.is_none());
+    set_boundary_commits(&mut fetch, &[other], &[]);
+    assert!(boundary_client_tree(&fetch, &[client]).await?.is_none());
+    assert!(reads.lock().expect("read log lock").is_empty());
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_multiple_boundaries_preserves_both_histories(
+    fb: FacebookInit,
+) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let stable = store_boundary_blob(&fetch, b"stable").await?;
+    let left = store_boundary_blob(&fetch, b"left history").await?;
+    let right = store_boundary_blob(&fetch, b"right history").await?;
+    let client_tree = store_boundary_tree(&fetch, &[("100644", "stable", stable)]).await?;
+    let left_tree = store_boundary_tree(
+        &fetch,
+        &[("100644", "left", left), ("100644", "stable", stable)],
+    )
+    .await?;
+    let right_tree = store_boundary_tree(
+        &fetch,
+        &[("100644", "right", right), ("100644", "stable", stable)],
+    )
+    .await?;
+    let client = store_boundary_commit(&fetch, client_tree, "client").await?;
+    let left_commit = store_boundary_commit(&fetch, left_tree, "left boundary").await?;
+    let right_commit = store_boundary_commit(&fetch, right_tree, "right boundary").await?;
+    set_boundary_commits(&mut fetch, &[left_commit, right_commit], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    assert!(fetch.boundary_client_tree.is_none());
+    assert_boundary_count_and_stream(fetch, &[left_tree, left, right_tree, right, stable]).await
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_does_not_walk_client_only_subtrees(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let stable = store_boundary_blob(&fetch, b"stable").await?;
+    let absent_tree = ObjectId::from_hex(b"3333333333333333333333333333333333333333")?;
+    let client_tree = store_boundary_tree(
+        &fetch,
+        &[
+            ("40000", "old-dir", absent_tree),
+            ("100644", "stable", stable),
+        ],
+    )
+    .await?;
+    let boundary_tree = store_boundary_tree(&fetch, &[("100644", "stable", stable)]).await?;
+    let client = store_boundary_commit(&fetch, client_tree, "client").await?;
+    let boundary = store_boundary_commit(&fetch, boundary_tree, "boundary").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    assert_boundary_count_and_stream(fetch, &[boundary_tree]).await
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_mode_change_does_not_resend_identical_blob(
+    fb: FacebookInit,
+) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let blob = store_boundary_blob(&fetch, b"stable").await?;
+    let client_tree = store_boundary_tree(&fetch, &[("100644", "stable", blob)]).await?;
+    let boundary_tree = store_boundary_tree(&fetch, &[("100755", "stable", blob)]).await?;
+    let client = store_boundary_commit(&fetch, client_tree, "client").await?;
+    let boundary = store_boundary_commit(&fetch, boundary_tree, "boundary").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    assert_boundary_count_and_stream(fetch, &[boundary_tree]).await
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_gitlink_does_not_prove_blob_possession(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let blob =
+        store_boundary_blob(&fetch, b"historical blob, not a fetched gitlink target").await?;
+    let client_tree = store_boundary_tree(&fetch, &[("160000", "p", blob)]).await?;
+    let old_tree = store_boundary_tree(&fetch, &[("100644", "p", blob)]).await?;
+    let boundary = store_boundary_commit(&fetch, old_tree, "historical blob").await?;
+    let client =
+        store_boundary_commit_with_parents(&fetch, client_tree, &[boundary], "gitlink tip").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    fetch.boundary_client_tree = boundary_client_tree(&fetch, &[client]).await?;
+    assert_boundary_count_and_stream(fetch, &[old_tree, blob]).await
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_other_request_shapes_do_not_read_client_tree(
+    fb: FacebookInit,
+) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let client = ObjectId::from_hex(b"3333333333333333333333333333333333333333")?;
+    let other = ObjectId::from_hex(b"4444444444444444444444444444444444444444")?;
+    set_boundary_commits(&mut fetch, &[other], &[client]);
+    let reads = observe_reads(&mut fetch, None);
+    for variant in [
+        ShallowVariant::None,
+        ShallowVariant::FromServerWithDepth(10),
+        ShallowVariant::FromServerWithTime(123),
+        ShallowVariant::FromServerExcludingRefs(vec!["main".to_owned()]),
+        ShallowVariant::FromClientWithDepth(0),
+    ] {
+        let mut request = boundary_request(&fetch, &[client]);
+        request.shallow_variant = variant;
+        assert!(
+            select_boundary_client_tree(&fetch, &request)
+                .await?
+                .is_none()
+        );
+    }
+    for heads in [vec![], vec![other], vec![client, other]] {
+        let mut request = boundary_request(&fetch, &[client]);
+        request.heads = heads;
+        assert!(
+            select_boundary_client_tree(&fetch, &request)
+                .await?
+                .is_none()
+        );
+    }
+    for (thin_pack, delta_form) in [
+        (false, DeltaForm::RefAndOffset),
+        (false, DeltaForm::OnlyOffset),
+        (true, DeltaForm::OnlyOffset),
+    ] {
+        let mut request = boundary_request(&fetch, &[client]);
+        request.include_out_of_pack_deltas = thin_pack;
+        request.delta_form = delta_form;
+        assert!(
+            select_boundary_client_tree(&fetch, &request)
+                .await?
+                .is_none()
+        );
+    }
+    set_boundary_commits(&mut fetch, &[other], &[client, other]);
+    assert!(boundary_client_tree(&fetch, &[client]).await?.is_none());
+    set_boundary_commits(&mut fetch, &[other, client], &[client]);
+    assert!(boundary_client_tree(&fetch, &[client]).await?.is_none());
+    assert!(reads.lock().expect("read log lock").is_empty());
+    Ok(())
+}
+
+async fn store_test_delta_manifest(
+    fetch: &FetchContainer,
+    csid: ChangesetId,
+    entries: Vec<(MPath, GDMV2Entry)>,
+) -> Result<()> {
+    let manifest = GitDeltaManifestV2::from_entries(&fetch.ctx, &fetch.blobstore, entries).await?;
+    let id = manifest
+        .into_blob()
+        .store(&fetch.ctx, &fetch.blobstore)
+        .await?;
+    let root = RootGitDeltaManifestV2Id::try_from(BlobstoreBytes::from_bytes(id.into_bytes()))?;
+    root.store_mapping(
+        &fetch.ctx,
+        &fetch.derived_data.manager().derivation_context(None),
+        csid,
+    )
+    .await
+}
+
+fn literal_blob_delta(
+    base: ObjectId,
+    target: ObjectId,
+    base_bytes: &[u8],
+    target_bytes: &[u8],
+) -> Result<GDMV2Entry> {
+    assert!(base_bytes.len() < 128 && !target_bytes.is_empty() && target_bytes.len() < 128);
+    let mut instructions = vec![
+        base_bytes.len() as u8,
+        target_bytes.len() as u8,
+        target_bytes.len() as u8,
+    ];
+    instructions.extend_from_slice(target_bytes);
+    let mut loose = format!("blob {}\0", instructions.len()).into_bytes();
+    loose.extend_from_slice(&instructions);
+    let encoded: PackEntry = PackfileItem::new_base(loose.into())?.try_into()?;
+    let object = |oid, size| GDMV2ObjectEntry {
+        oid,
+        size,
+        kind: DeltaObjectKind::Blob,
+        inlined_bytes: None,
+    };
+    GDMV2Entry::from_thrift(thrift::GDMV2Entry {
+        full_object: object(target, target_bytes.len() as u64).into_thrift(),
+        deltas: vec![thrift::GDMV2DeltaEntry {
+            parent: ONES_CSID.into_thrift(),
+            base_object: object(base, base_bytes.len() as u64).into_thrift(),
+            base_object_path: MPath::new("p")?.into_thrift(),
+            instructions: thrift::GDMV2Instructions {
+                uncompressed_size: instructions.len() as i64,
+                compressed_size: encoded.compressed_data.len() as i64,
+                instruction_bytes: thrift::GDMV2InstructionBytes::inlined(
+                    encoded.compressed_data.into(),
+                ),
+                ..Default::default()
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    })
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_respects_writer_and_thin_pack_with_real_body_delta(
+    fb: FacebookInit,
+) -> Result<()> {
+    const BASE: &[u8] = &[b'a'; 64];
+    const TARGET: &[u8] = &[b'b'; 64];
+    let mut fetch = fetch_container(fb).await?;
+    fetch.delta_inclusion = DeltaInclusion::standard();
+    fetch.packfile_item_inclusion = PackfileItemInclusion::Generate;
+    let base = store_boundary_blob(&fetch, BASE).await?;
+    let target = store_boundary_blob(&fetch, TARGET).await?;
+    let boundary_tree = store_boundary_tree(&fetch, &[("100644", "p", base)]).await?;
+    let intermediate_tree = store_boundary_tree(&fetch, &[("100644", "p", target)]).await?;
+    // A(B) -> I(B') -> H(B): H is already shallow at the client, A is the new boundary.
+    let boundary = store_boundary_commit(&fetch, boundary_tree, "A").await?;
+    let intermediate =
+        store_boundary_commit_with_parents(&fetch, intermediate_tree, &[boundary], "I").await?;
+    let client =
+        store_boundary_commit_with_parents(&fetch, boundary_tree, &[intermediate], "H").await?;
+    set_boundary_commits(&mut fetch, &[boundary], &[client]);
+    Arc::make_mut(&mut fetch.shallow_info)
+        .as_mut()
+        .expect("shallow response")
+        .packfile_commits
+        .commits = vec![(TWOS_CSID, intermediate).into()];
+    let tree_entry = GDMV2Entry {
+        full_object: GDMV2ObjectEntry {
+            oid: intermediate_tree,
+            size: ("100644 p\0".len() + target.as_bytes().len()) as u64,
+            kind: DeltaObjectKind::Tree,
+            inlined_bytes: None,
+        },
+        deltas: vec![],
+    };
+    store_test_delta_manifest(
+        &fetch,
+        TWOS_CSID,
+        vec![
+            (MPath::ROOT, tree_entry),
+            (
+                MPath::new("p")?,
+                literal_blob_delta(base, target, BASE, TARGET)?,
+            ),
+        ],
+    )
+    .await?;
+    let changesets = CGDMDividedChangesets {
+        groups: vec![],
+        individual_cs_ids: vec![TWOS_CSID],
+    };
+    for thin_pack in [false, true] {
+        for delta_form in [DeltaForm::RefAndOffset, DeltaForm::OnlyOffset] {
+            let mut request = boundary_request(&fetch, &[client]);
+            request.include_out_of_pack_deltas = thin_pack;
+            request.delta_form = delta_form;
+            fetch.boundary_client_tree = select_boundary_client_tree(&fetch, &request).await?;
+            let pruned = thin_pack && delta_form == DeltaForm::RefAndOffset;
+            assert_eq!(fetch.boundary_client_tree.is_some(), pruned);
+            let (count, bases) =
+                trees_and_blobs_count(fetch.clone(), changesets.clone(), vec![]).await?;
+            assert_eq!(count, if pruned { 2 } else { 4 });
+            assert_eq!(bases.contains(&base), pruned);
+            let stream = tree_and_blob_packfile_stream(
+                fetch.clone(),
+                changesets.clone(),
+                Arc::new(bases),
+                vec![],
+                None,
+            )
+            .await?;
+            let mut writer =
+                PackfileWriter::new(Vec::new(), count.try_into()?, 1, delta_form, None);
+            timeout(EVENT_TIMEOUT, writer.write(stream)).await??;
+            writer.finish().await?;
+            assert_eq!(writer.num_entries as usize, count);
+            let pack = writer.into_write();
+            assert_eq!(u32::from_be_bytes(pack[8..12].try_into()?) as usize, count);
+            let temp = NamedTempFile::new()?;
+            tokio::fs::write(temp.path(), &pack).await?;
+            let file = PackFile::at(temp.path(), GitHashKind::Sha1)?;
+            let entries = file.streaming_iter()?.collect::<Result<Vec<_>, _>>()?;
+            assert_eq!(entries.len(), count);
+            let (ref_deltas, offset_deltas) =
+                entries
+                    .iter()
+                    .fold((0, 0), |(refs, offsets), entry| match entry.header {
+                        PackEntryHeader::RefDelta { base_id } => {
+                            assert_eq!(base_id, base);
+                            (refs + 1, offsets)
+                        }
+                        PackEntryHeader::OfsDelta { .. } => (refs, offsets + 1),
+                        _ => (refs, offsets),
+                    });
+            assert_eq!(
+                (ref_deltas, offset_deltas),
+                if delta_form == DeltaForm::OnlyOffset {
+                    (0, 1)
+                } else {
+                    (1, 0)
+                }
+            );
+            // The thin pack decodes with only the known client blob. Fallback packs
+            // must decode against an entirely empty store, not the server's store.
+            let receiver = fetch_container(fb).await?;
+            if pruned {
+                store_boundary_blob(&receiver, BASE).await?;
+            }
+            let (decoded, _guard) =
+                parse_pack(&pack, &receiver.ctx, receiver.blobstore, 1, None).await?;
+            assert_eq!(decoded.len(), if pruned { 3 } else { 4 });
+            assert_eq!(
+                decoded[&target].raw().as_ref(),
+                [b"blob 64\0".as_slice(), TARGET].concat()
+            );
+            assert!(decoded.contains_key(&intermediate_tree));
+            assert_eq!(decoded.contains_key(&boundary_tree), !pruned);
+        }
+    }
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn boundary_pruning_propagates_missing_client_commit(fb: FacebookInit) -> Result<()> {
+    let mut fetch = fetch_container(fb).await?;
+    let missing = ObjectId::from_hex(b"3333333333333333333333333333333333333333")?;
+    set_boundary_commits(&mut fetch, &[missing], &[missing]);
+    let error = boundary_client_tree(&fetch, &[missing])
+        .await
+        .expect_err("missing client commit must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("Error fetching client shallow commit")
     );
     Ok(())
 }

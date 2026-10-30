@@ -640,6 +640,7 @@ pub async fn fetch(
                     concurrency(&request_context),
                     shallow_response,
                     request_context.pushvars.bypass_bookmark_cache(),
+                    delta_form,
                 );
                 let request_signature = fetch_request.hash_heads_and_bases();
                 let response_stream = fetch_response(
