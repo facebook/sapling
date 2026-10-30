@@ -88,6 +88,45 @@ TEST(MountInfoTableTest, parsesStatmountMetadata) {
   EXPECT_EQ("user_id=229400", result->mountOptions);
 }
 
+bool listmountSupported() {
+  struct mnt_id_req req{};
+  req.size = MNT_ID_REQ_SIZE_VER0;
+  req.mnt_id = LSMT_ROOT;
+  uint64_t id = 0;
+  return syscall(__NR_listmount, &req, &id, 1, 0) >= 0;
+}
+
+TEST(MountInfoTableTest, skipsMountsUnmountedAfterListing) {
+  if (!listmountSupported()) {
+    GTEST_SKIP() << "listmount(2) is not supported";
+  }
+  // Every mount looks unmounted after listmount returned it.
+  ASSERT_EXIT(
+      ([] {
+        sock_filter filter[] = {
+            BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(seccomp_data, nr)),
+            BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_statmount, 0, 1),
+            BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | ENOENT),
+            BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+        };
+        sock_fprog program{
+            static_cast<unsigned short>(std::size(filter)), filter};
+        if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 ||
+            prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &program) != 0) {
+          _exit(1);
+        }
+        auto mounts = getAllMounts(kAllFields);
+        auto root = getMountInfoForPath("/", kAllFields);
+        _exit(
+            mounts.hasValue() && mounts->empty() && root.hasValue() &&
+                    !root->has_value()
+                ? 0
+                : 2);
+      }()),
+      ::testing::ExitedWithCode(0),
+      "");
+}
+
 TEST(MountInfoTableTest, fallsBackOnlyForUnsupportedOrOversizedResults) {
   // Keep syscall filters in child processes so other tests are unaffected.
   for (const uint32_t error : {ENOSYS, EOPNOTSUPP, EOVERFLOW, EPERM}) {
