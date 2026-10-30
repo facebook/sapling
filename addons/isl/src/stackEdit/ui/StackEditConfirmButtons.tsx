@@ -19,7 +19,6 @@ import {
 } from '../../CommitInfoView/CommitInfoState';
 import {Internal} from '../../Internal';
 import {tracker} from '../../analytics';
-import {useFeatureFlagSync} from '../../featureFlags';
 import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
@@ -122,7 +121,6 @@ export function StackEditConfirmButtons(): React.ReactElement {
   const {commitStack} = stackEdit;
   const repo = useAtomValue(repositoryInfo);
   const repoPath = repo?.repoRoot;
-  const enableDevmateSplit = useFeatureFlagSync(Internal.featureFlags?.DevmateSplitCommit) ?? false;
 
   // Get the commit hash from the start of the split range
   const startCommit = startRev != null ? commitStack.get(startRev) : null;
@@ -173,11 +171,12 @@ export function StackEditConfirmButtons(): React.ReactElement {
   // Show [AI Split] [Undo] [Redo] [Cancel] [Save changes].
   return (
     <>
-      {stackIntention === 'split' &&
-        enableDevmateSplit &&
-        splitCommitHash != null &&
-        Internal.AISplitButton && <Internal.AISplitButton onClick={handleAISplit} />}
-      {enableDevmateSplit && splitCommitHash != null && <div className="stack-edit-spacer" />}
+      {stackIntention === 'split' && splitCommitHash != null && Internal.AISplitButton && (
+        <Internal.AISplitButton onClick={handleAISplit} />
+      )}
+      {Internal.AISplitButton != null && splitCommitHash != null && (
+        <div className="stack-edit-spacer" />
+      )}
       <Tooltip
         component={() =>
           canUndo ? (
