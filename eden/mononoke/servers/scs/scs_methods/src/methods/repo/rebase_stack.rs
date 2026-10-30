@@ -138,18 +138,7 @@ impl SourceControlServiceImpl {
             .await
             .context("failed to resolve onto commit")?
             .ok_or_else(|| scs_errors::commit_not_found(onto.to_string()))?;
-        let merge_resolution = match params.merge_resolution {
-            thrift::RepoRebaseStackMergeResolution::DEFAULT => RebaseStackMergeResolution::Default,
-            thrift::RepoRebaseStackMergeResolution::DISABLED => {
-                RebaseStackMergeResolution::Disabled
-            }
-            other => {
-                return Err(scs_errors::invalid_request(format!(
-                    "unknown merge_resolution {other:?}"
-                ))
-                .into());
-            }
-        };
+        let merge_resolution = RebaseStackMergeResolution::from_request(&params.merge_resolution)?;
 
         let outcome = repo
             .rebase_stack(base.id(), head.id(), onto.id(), merge_resolution)

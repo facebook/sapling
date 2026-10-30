@@ -37,6 +37,7 @@ use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::HgChangesetId;
 use mononoke_api::HgChangesetIdPrefix;
+use mononoke_api::repo::rebase_stack::RebaseStackMergeResolution;
 use mononoke_api::specifiers::GitSha1;
 use mononoke_api::specifiers::GitSha1Prefix;
 use mononoke_api::specifiers::Globalrev;
@@ -448,6 +449,20 @@ impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
     }
 }
 
+impl FromRequest<thrift::RepoRebaseStackMergeResolution> for RebaseStackMergeResolution {
+    fn from_request(
+        merge_resolution: &thrift::RepoRebaseStackMergeResolution,
+    ) -> Result<Self, thrift::RequestError> {
+        match *merge_resolution {
+            thrift::RepoRebaseStackMergeResolution::DEFAULT => Ok(Self::Default),
+            thrift::RepoRebaseStackMergeResolution::DISABLED => Ok(Self::Disabled),
+            other => Err(scs_errors::invalid_request(format!(
+                "unknown merge_resolution {other:?}"
+            ))),
+        }
+    }
+}
+
 impl FromRequest<thrift::DerivedDataType> for DerivableType {
     fn from_request(data_type: &thrift::DerivedDataType) -> Result<Self, thrift::RequestError> {
         DerivableType::from_thrift(*data_type).map_err(scs_errors::invalid_request)
@@ -578,5 +593,28 @@ mod tests {
             let err = <DateTime<FixedOffset>>::from_request(&invalid).unwrap_err();
             assert_eq!(err.kind, thrift::RequestErrorKind::INVALID_REQUEST);
         }
+    }
+
+    /// What it tests: thrift merge resolutions map onto the API's.
+    /// Expected: DEFAULT and DISABLED map to their counterparts; an unknown
+    /// value from a newer client is an invalid request.
+    #[mononoke::test]
+    fn merge_resolution_from_request() {
+        assert!(matches!(
+            RebaseStackMergeResolution::from_request(
+                &thrift::RepoRebaseStackMergeResolution::DEFAULT
+            ),
+            Ok(RebaseStackMergeResolution::Default)
+        ));
+        assert!(matches!(
+            RebaseStackMergeResolution::from_request(
+                &thrift::RepoRebaseStackMergeResolution::DISABLED
+            ),
+            Ok(RebaseStackMergeResolution::Disabled)
+        ));
+        let err =
+            RebaseStackMergeResolution::from_request(&thrift::RepoRebaseStackMergeResolution(7))
+                .unwrap_err();
+        assert_eq!(err.kind, thrift::RequestErrorKind::INVALID_REQUEST);
     }
 }
