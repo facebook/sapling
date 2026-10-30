@@ -15,7 +15,7 @@ use minibench::bench;
 use minibench::elapsed;
 use minibench::measure;
 use rand_chacha::ChaChaRng;
-use rand_chacha::rand_core::RngCore;
+use rand_chacha::rand_core::Rng;
 use rand_chacha::rand_core::SeedableRng;
 use tempfile::tempdir;
 
