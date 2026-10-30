@@ -20,7 +20,6 @@ use cmdutil::FormatterOpts;
 use cmdutil::Result;
 use cmdutil::define_flags;
 use repo::repo::Repo;
-use workingcopy::workingcopy::WorkingCopy;
 use worktree::Worktrees;
 
 define_flags! {
@@ -53,7 +52,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
+pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo) -> Result<u8> {
     let subcmd = ctx.opts.args.first().map(|s| s.as_str()).unwrap_or("");
     if !ctx.opts.rev.is_empty() && subcmd != "add" {
         abort!("--rev can only be used with 'worktree add'");
@@ -62,7 +61,7 @@ pub fn run(ctx: ReqCtx<WorktreeOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
     match subcmd {
         "list" | "ls" => list::run(&ctx, repo, &worktrees()?),
         "label" => label::run(&ctx, repo, &worktrees()?),
-        "add" => add::run(&ctx, repo, wc, &worktrees()?),
+        "add" => add::run(&ctx, repo, &worktrees()?),
         "remove" | "rm" => remove::run(&ctx, repo, &worktrees()?),
         "" => abort!("you need to specify a subcommand (run with --help to see a list)"),
         other => abort!("unknown worktree subcommand '{}'", other),

@@ -27,7 +27,6 @@ use slex::Items;
 use slex::Work as SlexWork;
 use slex::WorkOptions;
 use spawn_ext::CommandExt;
-use workingcopy::workingcopy::WorkingCopy;
 use worktree::Reservation;
 use worktree::Worktrees;
 use worktree::check_dest_not_in_repo;
@@ -154,12 +153,9 @@ impl Drop for SlotReservation {
     }
 }
 
-pub(crate) fn run(
-    ctx: &ReqCtx<WorktreeOpts>,
-    repo: &Repo,
-    wc: &WorkingCopy,
-    worktrees: &Worktrees,
-) -> Result<u8> {
+pub(crate) fn run(ctx: &ReqCtx<WorktreeOpts>, repo: &Repo, worktrees: &Worktrees) -> Result<u8> {
+    let wc = repo.working_copy()?;
+    let wc = wc.write();
     let logger = ctx.logger();
     let checkouts = Checkouts::new(repo, worktrees)?;
 
