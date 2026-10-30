@@ -8,6 +8,7 @@
 use context::CoreContext;
 use itertools::Itertools;
 use metaconfig_types::CommitIdentityScheme;
+use mononoke_api::DenyingRestriction;
 use mononoke_api::RestrictedPathsPolicy;
 use source_control as thrift;
 
@@ -38,33 +39,44 @@ pub(crate) mod tree;
 pub(crate) fn partial_response_info(
     policy: &RestrictedPathsPolicy,
 ) -> Option<thrift::PartialResponseInfo> {
-    let omitted_restricted_paths_count = policy.omitted_count()?;
-    let omitted_by_restriction = policy
-        .omitted_groups()
-        .map(|collected| {
-            collected
-                .into_iter()
-                .map(
-                    |(restriction, omitted_count)| thrift::OmittedRestrictionGroup {
-                        restriction_root: restriction.restriction_root.map(|root| root.to_string()),
-                        repo_region_acl: restriction.repo_region_acl.to_string(),
-                        permission_request_group: restriction
-                            .permission_request_group
-                            .id_data()
-                            .to_string(),
-                        omitted_count: omitted_count as i64,
-                        ..Default::default()
-                    },
-                )
-                .collect::<Vec<_>>()
-        })
-        .filter(|groups| !groups.is_empty());
-    Some(thrift::PartialResponseInfo {
-        partial: omitted_restricted_paths_count > 0,
-        omitted_restricted_paths_count: Some(omitted_restricted_paths_count as i64),
-        omitted_by_restriction,
+    Some(partial_response_info_from_omissions(
+        policy.omitted_count()? as u64,
+        policy
+            .omitted_groups()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(restriction, count)| (restriction, count as u64)),
+    ))
+}
+
+/// Partial-response verdict from a count of omitted paths and its breakdown
+/// by denying restriction. `omitted_by_restriction` stays unset when there
+/// are no groups.
+pub(crate) fn partial_response_info_from_omissions(
+    omitted_count: u64,
+    groups: impl IntoIterator<Item = (DenyingRestriction, u64)>,
+) -> thrift::PartialResponseInfo {
+    let groups = groups
+        .into_iter()
+        .map(
+            |(restriction, omitted_count)| thrift::OmittedRestrictionGroup {
+                restriction_root: restriction.restriction_root.map(|root| root.to_string()),
+                repo_region_acl: restriction.repo_region_acl.to_string(),
+                permission_request_group: restriction
+                    .permission_request_group
+                    .id_data()
+                    .to_string(),
+                omitted_count: omitted_count as i64,
+                ..Default::default()
+            },
+        )
+        .collect::<Vec<_>>();
+    thrift::PartialResponseInfo {
+        partial: omitted_count > 0,
+        omitted_restricted_paths_count: Some(omitted_count as i64),
+        omitted_by_restriction: (!groups.is_empty()).then_some(groups),
         ..Default::default()
-    })
+    }
 }
 
 impl SourceControlServiceImpl {
