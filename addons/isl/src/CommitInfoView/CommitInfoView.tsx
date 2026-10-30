@@ -204,7 +204,6 @@ function useFetchActiveDiffDetails(diffId?: string) {
 }
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
-  const rollbackFeatureEnabled = useFeatureFlagSync(Internal.featureFlags?.ShowRollbackPlan);
   const aiCodeReviewUpsellEnabled = useFeatureFlagSync(Internal.featureFlags?.AICodeReviewUpsell);
   const aiFirstPassCodeReviewEnabled = useFeatureFlagSync(
     Internal.featureFlags?.AIFirstPassCodeReview,
@@ -350,10 +349,6 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         {schema
           .filter(field => !isCommitMode || field.type !== 'read-only')
           .map(field => {
-            if (!rollbackFeatureEnabled && field.type === 'custom') {
-              return;
-            }
-
             let editedFieldValue = editedMessage?.[field.key];
             if (editedFieldValue == null && isCommitMode) {
               // If the field is supposed to edited but not in the editedMessage,
