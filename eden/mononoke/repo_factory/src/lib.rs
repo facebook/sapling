@@ -1876,6 +1876,12 @@ impl RepoFactory {
                         .metadata_cache_config
                         .as_ref()
                         .is_some_and(|config| config.wbc_process_bookmark_notifications),
+                )
+                .with_event_router_batching_enabled(
+                    repo_config
+                        .metadata_cache_config
+                        .as_ref()
+                        .is_some_and(|config| config.wbc_event_router_batching_enabled),
                 );
 
                 match effective_derived_data {

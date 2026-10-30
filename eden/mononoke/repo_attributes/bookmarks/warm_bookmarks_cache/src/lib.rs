@@ -393,6 +393,7 @@ pub struct WarmBookmarksCacheBuilder {
     repo_identity: ArcRepoIdentity,
     repo_event_publisher: ArcRepoEventPublisher,
     event_router_coordinator_enabled: bool,
+    event_router_batching_enabled: bool,
     warmers: Vec<Warmer>,
     init_mode: InitMode,
     default_warmer_requirement: WarmerRequirement,
@@ -422,6 +423,7 @@ impl WarmBookmarksCacheBuilder {
             repo_identity,
             repo_event_publisher,
             event_router_coordinator_enabled: false,
+            event_router_batching_enabled: false,
             warmers: vec![],
             init_mode: InitMode::Rewind,
             default_warmer_requirement: warmer_requirement,
@@ -431,6 +433,13 @@ impl WarmBookmarksCacheBuilder {
     /// Selects EventRouter notifications as the WBC coordinator input.
     pub fn with_event_router_coordinator_enabled(mut self, enabled: bool) -> Self {
         self.event_router_coordinator_enabled = enabled;
+        self
+    }
+
+    /// Enables batched EventRouter processing with JK-controlled concurrency and retention.
+    /// Requires the EventRouter coordinator to be enabled.
+    pub fn with_event_router_batching_enabled(mut self, enabled: bool) -> Self {
+        self.event_router_batching_enabled = enabled;
         self
     }
 
@@ -658,18 +667,7 @@ impl WarmBookmarksCacheBuilder {
     }
 
     pub async fn build(self) -> Result<WarmBookmarksCache, Error> {
-        WarmBookmarksCache::new(
-            &self.ctx,
-            &self.bookmarks,
-            &self.bookmark_update_log,
-            &self.repo_identity,
-            &self.repo_event_publisher,
-            self.event_router_coordinator_enabled,
-            self.warmers,
-            self.init_mode,
-            self.default_warmer_requirement,
-        )
-        .await
+        WarmBookmarksCache::from_builder(self).await
     }
 }
 
@@ -776,6 +774,41 @@ impl WarmBookmarksCache {
         init_mode: InitMode,
         default_warmer_requirement: WarmerRequirement,
     ) -> Result<Self, Error> {
+        WarmBookmarksCacheBuilder {
+            ctx: ctx.clone(),
+            bookmarks: bookmarks.clone(),
+            bookmark_update_log: bookmark_update_log.clone(),
+            repo_identity: repo_identity.clone(),
+            repo_event_publisher: repo_event_publisher.clone(),
+            event_router_coordinator_enabled,
+            event_router_batching_enabled: false,
+            warmers,
+            init_mode,
+            default_warmer_requirement,
+        }
+        .build()
+        .await
+    }
+
+    async fn from_builder(builder: WarmBookmarksCacheBuilder) -> Result<Self, Error> {
+        let WarmBookmarksCacheBuilder {
+            ctx,
+            bookmarks,
+            bookmark_update_log,
+            repo_identity,
+            repo_event_publisher,
+            event_router_coordinator_enabled,
+            event_router_batching_enabled,
+            warmers,
+            init_mode,
+            default_warmer_requirement,
+        } = builder;
+        if event_router_batching_enabled && !event_router_coordinator_enabled {
+            return Err(anyhow!(
+                "WBC batching requires EventRouter notification processing"
+            ));
+        }
+        let ctx = &ctx;
         let warmers = Arc::new(warmers);
         let (sender, receiver) = oneshot::channel();
         let notify_sync_start = Arc::new(Notify::new());
@@ -834,8 +867,8 @@ impl WarmBookmarksCache {
             coordinator.spawn_event_router(
                 ctx.clone(),
                 receiver,
-                notify_sync_start.clone(),
-                notify_sync_complete.clone(),
+                (notify_sync_start.clone(), notify_sync_complete.clone()),
+                event_router_batching_enabled,
             );
         } else {
             coordinator.spawn(
@@ -1810,16 +1843,11 @@ impl BookmarksCoordinator {
         mut self,
         ctx: CoreContext,
         terminate: oneshot::Receiver<()>,
-        notify_sync_start: Arc<Notify>,
-        notify_sync_complete: Arc<Notify>,
+        (notify_sync_start, notify_sync_complete): (Arc<Notify>, Arc<Notify>),
+        batching_enabled: bool,
     ) {
         let repo_name = self.repo.repo_identity().name().to_owned();
-        let batch_settings = justknobs::eval(
-            "scm/mononoke:wbc_event_router_executor",
-            Some(&repo_name),
-            Some(&repo_name),
-        )
-        .then(|| {
+        let batch_settings = batching_enabled.then(|| {
             let concurrency = justknobs::get(
                 "scm/mononoke:wbc_event_router_batch_concurrency",
                 Some(&repo_name),
