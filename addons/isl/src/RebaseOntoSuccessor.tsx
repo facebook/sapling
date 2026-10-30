@@ -12,9 +12,7 @@ import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
-import {Internal} from './Internal';
 import {tracker} from './analytics';
-import {useFeatureFlagSync} from './featureFlags';
 import {t, T} from './i18n';
 import {atomFamilyWeak} from './jotaiUtils';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -28,13 +26,8 @@ export const orphanedChildrenForStack = atomFamilyWeak((hash: Hash) =>
 );
 
 export function RebaseOrphanedStackButton({hash}: {hash: Hash}) {
-  const featureEnabled = useFeatureFlagSync(Internal.featureFlags?.RebaseOntoSuccessor);
   const info = useAtomValue(orphanedChildrenForStack(hash));
   const runOperation = useRunOperation();
-
-  if (!featureEnabled) {
-    return null;
-  }
 
   if (info == null) {
     return null;
