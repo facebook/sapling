@@ -204,7 +204,6 @@ function useFetchActiveDiffDetails(diffId?: string) {
 }
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
-  const aiCodeReviewUpsellEnabled = useFeatureFlagSync(Internal.featureFlags?.AICodeReviewUpsell);
   const aiFirstPassCodeReviewEnabled = useFeatureFlagSync(
     Internal.featureFlags?.AIFirstPassCodeReview,
   );
@@ -376,15 +375,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 extra={
                   field.key === 'Title' ? (
                     <>
-                      {aiCodeReviewUpsellEnabled &&
-                        Internal.aiCodeReview?.enabled &&
-                        commit.isDot &&
-                        !isPublic && (
-                          <AICodeReviewUpsell
-                            isCommitMode={isCommitMode}
-                            hasUncommittedChanges={uncommittedChanges.length > 0}
-                          />
-                        )}
+                      {Internal.aiCodeReview?.enabled && commit.isDot && !isPublic && (
+                        <AICodeReviewUpsell
+                          isCommitMode={isCommitMode}
+                          hasUncommittedChanges={uncommittedChanges.length > 0}
+                        />
+                      )}
                       {!isCommitMode ? (
                         <>
                           <CommitTitleByline commit={commit} />
@@ -487,7 +483,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <FoldPreviewActions />
           ) : (
             <>
-              {aiCodeReviewUpsellEnabled && aiFirstPassCodeReviewEnabled && <AICodeReviewStatus />}
+              {aiFirstPassCodeReviewEnabled && <AICodeReviewStatus />}
               <ActionsBar
                 commit={commit}
                 latestMessage={parsedFields}

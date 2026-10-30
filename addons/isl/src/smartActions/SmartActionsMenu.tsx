@@ -131,9 +131,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     actions.push(<ValidateChangesButton key="validate-changes" dismiss={dismiss} />);
   }
 
-  const aiCodeReviewUpsellEnabled = useFeatureFlagAsync(Internal.featureFlags?.AICodeReviewUpsell);
   // For now, only support this in VS Code
-  if (aiCodeReviewUpsellEnabled && platform.platformName === 'vscode') {
+  if (platform.platformName === 'vscode') {
     const enabled = !commit || commit.isDot; // Enabled for `uncommitted changes` or the `current commit`.
     actions.push(
       <ReviewCodeButton
