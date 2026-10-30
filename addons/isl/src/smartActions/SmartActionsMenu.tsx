@@ -125,9 +125,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     actions.push(<FillCommitInfoButton key="fill-commit-info" dismiss={dismiss} />);
   }
 
-  const aiValidateChangesEnabled = useFeatureFlagAsync(Internal.featureFlags?.AIValidateChanges);
   // For now, only support this in VS Code
-  if (!commit && aiValidateChangesEnabled && platform.platformName === 'vscode') {
+  if (!commit && platform.platformName === 'vscode') {
     actions.push(<ValidateChangesButton key="validate-changes" dismiss={dismiss} />);
   }
 
