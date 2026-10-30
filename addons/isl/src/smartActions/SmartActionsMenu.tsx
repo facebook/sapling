@@ -101,11 +101,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const aiGenerateTestsForModifiedCodeEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.AIGenerateTestsForModifiedCode,
-  );
   // For now, only support this in VS Code
-  if (aiGenerateTestsForModifiedCodeEnabled && platform.platformName === 'vscode') {
+  if (platform.platformName === 'vscode') {
     const enabled = !commit || commit.isDot; // Enabled for `uncommitted changes` or the `current commit`.
     actions.push(
       <GenerateTestsForModifiedCodeButton
