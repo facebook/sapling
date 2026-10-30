@@ -22,6 +22,9 @@ pub struct Changelist {
     /// Seconds since the epoch at which the changelist was submitted.
     pub time: u64,
     pub description: String,
+    /// The description as p4 sent it, only when that isn't UTF-8 and `description` has
+    /// replacement characters instead.
+    pub description_bytes: Option<Vec<u8>>,
     pub files: Vec<FileRevision>,
 }
 

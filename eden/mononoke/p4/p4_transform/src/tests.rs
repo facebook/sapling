@@ -379,6 +379,7 @@ fn changelist(files: Vec<FileRevision>) -> Changelist {
         user: "jdoe".to_owned(),
         time: 1_700_000_000,
         description: "Fix the build\n".to_owned(),
+        description_bytes: None,
         files,
     }
 }

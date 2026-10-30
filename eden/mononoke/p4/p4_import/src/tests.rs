@@ -368,6 +368,7 @@ impl FakeSource {
             user: "alice".to_owned(),
             time: 1_760_000_000 + number,
             description: format!("change {number}\n"),
+            description_bytes: None,
             files,
         };
         self.changelists.insert(number, changelist);
@@ -415,6 +416,7 @@ async fn test_changelist_contents_are_stored_by_depot_path(fb: FacebookInit) -> 
         user: "alice".to_owned(),
         time: 0,
         description: "mixed".to_owned(),
+        description_bytes: None,
         files: vec![
             revision("//test1/add.txt", Action::Add, "text", Some(6)),
             revision("//test1/run.sh", Action::Edit, "text+x", Some(10)),
