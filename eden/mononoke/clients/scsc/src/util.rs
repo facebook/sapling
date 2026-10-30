@@ -125,24 +125,27 @@ pub(crate) fn byte_count_short(size: i64) -> String {
 }
 
 pub(crate) fn convert_to_ts(date_str: Option<&str>) -> Result<Option<i64>> {
-    if let Some(date_str) = date_str {
-        let ts = if let Ok(date) = DateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S %:z") {
-            date.timestamp()
+    date_str
+        .map(|date_str| parse_date(date_str).map(|(timestamp, _offset)| timestamp))
+        .transpose()
+}
+
+/// Parse a date given as "YYYY-MM-DD HH:MM:SS +HH:MM", as "YYYY-MM-DD HH:MM:SS"
+/// (UTC) or as a UNIX timestamp, into the timestamp and the offset east of
+/// UTC in seconds. The date must be after 1970-01-01 00:00:00 UTC.
+pub(crate) fn parse_date(date_str: &str) -> Result<(i64, i32)> {
+    let (timestamp, offset) =
+        if let Ok(date) = DateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S %:z") {
+            (date.timestamp(), date.offset().local_minus_utc())
         } else if let Ok(naive) = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
-            naive.and_utc().timestamp()
+            (naive.and_utc().timestamp(), 0)
         } else {
-            date_str.parse::<i64>()?
+            (date_str.parse::<i64>()?, 0)
         };
-
-        if ts > 0 {
-            return Ok(Some(ts));
-        }
-        anyhow::bail!(
-            "The given date or timestamp must be after 1970-01-01 00:00:00 UTC: {date_str:?}"
-        )
+    if timestamp > 0 {
+        return Ok((timestamp, offset));
     }
-
-    Ok(None)
+    anyhow::bail!("The given date or timestamp must be after 1970-01-01 00:00:00 UTC: {date_str:?}")
 }
 
 #[cfg(test)]
@@ -197,5 +200,22 @@ mod tests {
             group(Some("tent"), "REPO_REGION:acl", "group_two", 1),
         ]);
         assert_eq!(merged.len(), 2);
+    }
+
+    /// What it tests: the accepted date formats.
+    /// Expected: an explicit offset is kept (seconds east of UTC); a naive
+    /// date and a timestamp are UTC; dates before the epoch and anything else
+    /// fail.
+    #[mononoke::test]
+    fn test_parse_date() -> Result<()> {
+        assert_eq!(
+            parse_date("2026-10-30 10:00:00 +01:00")?,
+            (1_793_350_800, 3600)
+        );
+        assert_eq!(parse_date("2026-10-30 09:00:00")?, (1_793_350_800, 0));
+        assert_eq!(parse_date("1793350800")?, (1_793_350_800, 0));
+        assert!(parse_date("0").is_err());
+        assert!(parse_date("yesterday").is_err());
+        Ok(())
     }
 }
