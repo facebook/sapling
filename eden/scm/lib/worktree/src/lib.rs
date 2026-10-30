@@ -602,17 +602,24 @@ pub fn with_registry_lock<T>(
     let _lock = PathLock::exclusive(&lock_path)?;
     let (mut registry, old_content) = read_registry(shared_store_path)?;
     let result = f(&mut registry)?;
-    // `sl worktree list` runs this on every call, usually without changing
-    // anything, so skip writes that would leave the file as it was.
-    let new_content = serialize_registry(&registry)?;
-    let unchanged = match &old_content {
-        Some(old_content) => *old_content == new_content,
-        None => registry.groups.is_empty(),
-    };
-    if !unchanged {
+    if let Some(new_content) = changed_registry_content(old_content.as_deref(), &registry)? {
         write_registry(shared_store_path, &new_content)?;
     }
     Ok(result)
+}
+
+/// Serialize `registry` if that changes the registry file, whose content is
+/// `old_content` (`None` if there is no file).
+fn changed_registry_content(
+    old_content: Option<&str>,
+    registry: &Registry,
+) -> Result<Option<String>> {
+    let new_content = serialize_registry(registry)?;
+    let unchanged = match old_content {
+        Some(old_content) => old_content == new_content,
+        None => registry.groups.is_empty(),
+    };
+    Ok((!unchanged).then_some(new_content))
 }
 
 // --- Reservation Persistence ---

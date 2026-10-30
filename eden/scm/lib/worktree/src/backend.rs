@@ -25,10 +25,12 @@ use crate::Registry;
 use crate::Reservations;
 use crate::WORKTREE_NAME_FILE;
 use crate::WorktreeEntry;
+use crate::changed_registry_content;
 use crate::dissolve_group;
 use crate::dissolve_group_if_empty;
 use crate::group_id_for_main_path;
 use crate::load_registry;
+use crate::read_registry;
 use crate::with_registry_lock;
 use crate::write_worktree_name_marker;
 
@@ -70,6 +72,16 @@ impl EdenBackend {
             util::path::canonicalize_best_effort(&self.repo_path)
                 .with_context(|| format!("failed to canonicalize {}", self.repo_path.display()))?,
         );
+
+        // `worktrees.json` is replaced atomically, so reading it doesn't need the
+        // registry lock. Taking the lock only to prune means a listing neither
+        // waits for other worktree commands nor holds them up while it checks
+        // whether worktrees exist.
+        if let Some(listed) = list_unlocked(&self.shared_store_path, &current)
+            .context("failed to list EdenFS worktrees")?
+        {
+            return Ok(listed);
+        }
 
         with_registry_lock(&self.shared_store_path, |registry| {
             list_and_prune_group(registry, &current)
@@ -465,6 +477,16 @@ impl Worktrees {
     }
 }
 
+/// List `current`'s group from the registry read without the lock, or return
+/// `None` if listing would change the registry.
+fn list_unlocked(shared_store_path: &Path, current: &Path) -> Result<Option<Vec<ListedWorktree>>> {
+    let (mut registry, content) = read_registry(shared_store_path)?;
+    let listed = list_and_prune_group(&mut registry, current)?;
+    Ok(changed_registry_content(content.as_deref(), &registry)?
+        .is_none()
+        .then_some(listed))
+}
+
 /// List the worktrees in `current`'s group, first removing worktrees that no
 /// longer exist from `registry`, and the group itself if its main worktree no
 /// longer exists or no linked worktrees remain.
@@ -657,9 +679,58 @@ mod tests {
             let _ = tx.send(backend.list().map(|listed| listed.len()));
         });
 
-        // FIXME: listing waits for the registry lock.
-        assert!(rx.recv_timeout(Duration::from_millis(500)).is_err());
+        // Listing doesn't wait for the registry lock.
+        assert_eq!(
+            rx.recv_timeout(Duration::from_secs(60)).unwrap().unwrap(),
+            1
+        );
         drop(lock);
-        assert_eq!(rx.recv().unwrap().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_list_prunes_missing_worktrees() {
+        let store_dir = tempfile::tempdir().unwrap();
+        let checkouts_dir = tempfile::tempdir().unwrap();
+        let main_path = checkouts_dir.path().join("main");
+        let linked_path = checkouts_dir.path().join("linked");
+        std::fs::create_dir(&main_path).unwrap();
+        std::fs::create_dir(&linked_path).unwrap();
+        let main_path =
+            util::path::strip_unc_prefix(util::path::canonicalize_best_effort(&main_path).unwrap());
+        let linked_path = util::path::strip_unc_prefix(
+            util::path::canonicalize_best_effort(&linked_path).unwrap(),
+        );
+        let missing_path = checkouts_dir.path().join("missing");
+
+        let mut group = Group::new(main_path.clone());
+        for path in [&linked_path, &missing_path] {
+            group.worktrees.insert(
+                path.clone(),
+                WorktreeEntry {
+                    added: "2025-01-01T00:00:00Z".to_string(),
+                    label: None,
+                },
+            );
+        }
+        let mut registry = Registry::new();
+        registry.groups.insert("test-group-id".to_string(), group);
+        save_registry(store_dir.path(), &registry).unwrap();
+
+        let backend = EdenBackend {
+            repo_path: main_path.clone(),
+            shared_store_path: store_dir.path().to_path_buf(),
+            ident: identity::default(),
+        };
+        let listed: Vec<PathBuf> = backend
+            .list()
+            .unwrap()
+            .into_iter()
+            .map(|listed| listed.path)
+            .collect();
+        assert_eq!(listed, vec![linked_path.clone(), main_path.clone()]);
+
+        let registry = load_registry(store_dir.path()).unwrap();
+        let stored: Vec<&PathBuf> = registry.groups["test-group-id"].worktrees.keys().collect();
+        assert_eq!(stored, vec![&linked_path, &main_path]);
     }
 }
