@@ -135,6 +135,7 @@ members = [
   "lib/http-client",
   "lib/identity",
   "lib/indexedlog",
+  "lib/indexedlog/benches",
   "lib/indexedlog/config",
   "lib/io",
   "lib/io/term/logger",

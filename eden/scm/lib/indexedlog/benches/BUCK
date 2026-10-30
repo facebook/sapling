@@ -1,0 +1,41 @@
+load("//eden/scm:targets.bzl", "sl_rust_binary")
+
+oncall("sapling")
+
+BENCH_DEPS = [
+    "fbsource//third-party/rust:tempfile",
+    "//eden/scm/lib/indexedlog:indexedlog",
+    "//eden/scm/lib/minibench:minibench",
+]
+
+sl_rust_binary(
+    name = "index",
+    srcs = ["src/bin/index.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Benchmarks for indexedlog storage and indexes.",
+                "name": "indexedlog-benches",
+                "publish": False,
+            },
+        },
+    },
+    crate_root = "src/bin/index.rs",
+    deps = ["fbsource//third-party/rust:rand_chacha"] + BENCH_DEPS,
+)
+
+sl_rust_binary(
+    name = "log",
+    srcs = ["src/bin/log.rs"],
+    autocargo = {},
+    crate_root = "src/bin/log.rs",
+    deps = ["fbsource//third-party/rust:rand_chacha"] + BENCH_DEPS,
+)
+
+sl_rust_binary(
+    name = "misc",
+    srcs = ["src/bin/misc.rs"],
+    autocargo = {},
+    crate_root = "src/bin/misc.rs",
+    deps = BENCH_DEPS,
+)

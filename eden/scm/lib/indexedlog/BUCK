@@ -8,20 +8,6 @@ sl_rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "index",
-                },
-                {
-                    "harness": False,
-                    "name": "misc",
-                },
-                {
-                    "harness": False,
-                    "name": "log",
-                },
-            ],
             "dependencies_override": {
                 "dependencies": {
                     "sapling-minibytes": {
@@ -33,19 +19,13 @@ sl_rust_library(
                     },
                 },
             },
-            # Cargo bench deps.
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:rand_chacha",
-                    "//eden/scm/lib/minibench:minibench",
-                ],
-            },
             "features": {
                 "btrfs": ["sapling-btrfs"],
                 "metrics": ["sapling-metrics"],
                 "sigbus-handler": [],
             },
             "package": {
+                "autobenches": False,
                 "description": "Append-only on-disk storage with integrity checks and radix tree indexing.",
             },
         },

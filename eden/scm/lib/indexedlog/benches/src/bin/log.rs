@@ -103,7 +103,7 @@ fn main() {
     bench("log sync (write 1, not update index)", || {
         let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
-        let mut log = log_with_index(dir.path(), u64::max_value());
+        let mut log = log_with_index(dir.path(), u64::MAX);
         log.append(&buf[0..20]).unwrap();
         log.sync().unwrap();
         log.append(&buf[20..40]).unwrap();
@@ -129,7 +129,7 @@ fn main() {
     bench("log sync (read, new log 0, index lag N)", || {
         let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
-        let mut log = log_with_index(dir.path(), u64::max_value());
+        let mut log = log_with_index(dir.path(), u64::MAX);
         for i in 0..(N / 2) {
             log.append(&buf[20 * i..20 * (i + 1)]).unwrap();
         }
@@ -142,12 +142,12 @@ fn main() {
     bench("log sync (read, new log 1, index lag N)", || {
         let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
-        let mut log = log_with_index(dir.path(), u64::max_value());
+        let mut log = log_with_index(dir.path(), u64::MAX);
         for i in 1..(N / 2) {
             log.append(&buf[20 * i..20 * (i + 1)]).unwrap();
         }
         log.sync().unwrap();
-        let mut log2 = log_with_index(dir.path(), u64::max_value());
+        let mut log2 = log_with_index(dir.path(), u64::MAX);
         log2.append(&buf[0..20]).unwrap();
         log2.sync().unwrap();
         MeasureSync::measure(|| {
@@ -172,8 +172,8 @@ fn main() {
     bench("log sync (read, new log N, index lag N)", || {
         let dir = tempdir().unwrap();
         let buf = gen_buf(N * 20);
-        let mut log = log_with_index(dir.path(), u64::max_value());
-        let mut log2 = log_with_index(dir.path(), u64::max_value());
+        let mut log = log_with_index(dir.path(), u64::MAX);
+        let mut log2 = log_with_index(dir.path(), u64::MAX);
         for i in 0..N {
             log.append(&buf[20 * i..20 * (i + 1)]).unwrap();
         }

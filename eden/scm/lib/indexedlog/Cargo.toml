@@ -10,6 +10,7 @@ homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"
 exclude = ["BUCK"]
+autobenches = false
 
 [lib]
 name = "indexedlog"
@@ -21,18 +22,6 @@ path = "tests/low_fileno_limit.rs"
 [[test]]
 name = "sigbus_truncate_rlock_noop_sync_test"
 path = "tests/sigbus_truncate_rlock_noop_sync.rs"
-
-[[bench]]
-name = "index"
-harness = false
-
-[[bench]]
-name = "log"
-harness = false
-
-[[bench]]
-name = "misc"
-harness = false
 
 [dependencies]
 byteorder = "1.5"
@@ -50,9 +39,7 @@ twox-hash = { version = "2.1.5", features = ["std", "xxhash32", "xxhash64"], def
 [dev-dependencies]
 ctor = "1.0.13"
 quickcheck = "1.1"
-rand_chacha = "0.10"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
-sapling-minibench = { version = "0.1.0", path = "../minibench" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 hex = { version = "0.4.3", features = ["alloc"] }
