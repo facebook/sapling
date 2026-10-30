@@ -74,8 +74,13 @@ jobs:
     - name: Build
       run: cmake --build _build -j "$(nproc)"
 
+    # The PrivHelper tests that call runInMountNamespace() set up a user and
+    # mount namespace, which Ubuntu 24.04's AppArmor doesn't allow unprivileged
+    # processes to do.
     - name: Test
-      run: ctest --test-dir _build --output-on-failure
+      run: |
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        ctest --test-dir _build --output-on-failure
 
     - name: Install
       run: DESTDIR="$PWD/_artifacts/linux" cmake --install _build
