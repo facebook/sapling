@@ -10,6 +10,7 @@ use mononoke_types::hash::Blake3;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 use super::*;
@@ -56,7 +57,7 @@ fn change_of(
     action: Action,
     content: Option<&ContentMetadataV2>,
 ) -> Result<Option<(NonRootMPath, FileChange)>, TransformError> {
-    file_change(DEPOT, &revision(depot_path, action), content)
+    file_change(DEPOT, &revision(depot_path, action), content, None)
 }
 
 fn path_of(depot_path: &str) -> String {
@@ -126,7 +127,12 @@ fn test_files_in_other_depots_have_no_change() {
 #[mononoke::test]
 fn test_depot_root_that_is_not_one_depot_is_an_error() {
     for depot_root in ["//test1", "//", "///", "//a/b/", "test1/"] {
-        let result = file_change(depot_root, &revision("//test1/a.txt", Action::Delete), None);
+        let result = file_change(
+            depot_root,
+            &revision("//test1/a.txt", Action::Delete),
+            None,
+            None,
+        );
         assert!(
             matches!(&result, Err(TransformError::InvalidDepotRoot(d)) if d == depot_root),
             "{result:?}"
@@ -186,7 +192,7 @@ fn test_file_type_reaches_the_file_change() {
         ("symlink", FileType::Symlink),
     ] {
         let revision = typed_revision("//test1/a", Action::Add, p4_type);
-        let (_, change) = file_change(DEPOT, &revision, Some(&content()))
+        let (_, change) = file_change(DEPOT, &revision, Some(&content()), None)
             .unwrap()
             .unwrap();
         assert_eq!(tracked(file_type), change, "{p4_type}");
@@ -225,4 +231,143 @@ fn test_file_type_from_base_type_modifiers_and_legacy_names() {
     ] {
         assert_eq!(expected, file_type(p4_type), "{p4_type}");
     }
+}
+
+fn integration(how: IntegrationHow, file: &str) -> Integration {
+    Integration {
+        how,
+        file: file.to_owned(),
+        start_rev: None,
+        end_rev: 1,
+    }
+}
+
+fn source_of(action: Action, integrations: &[Integration]) -> CopySource {
+    copy_source(DEPOT, &revision("//test1/new.txt", action), integrations).unwrap()
+}
+
+fn copied_from(path: &str) -> CopySource {
+    CopySource::From(NonRootMPath::new(path).unwrap())
+}
+
+#[mononoke::test]
+fn test_new_paths_from_one_source_are_copies() {
+    for (action, how) in [
+        (Action::Branch, IntegrationHow::BranchFrom),
+        (Action::Branch, IntegrationHow::CopyFrom),
+        (Action::MoveAdd, IntegrationHow::MovedFrom),
+    ] {
+        let source = source_of(action, &[integration(how.clone(), "//test1/dir/old.txt")]);
+        assert_eq!(copied_from("dir/old.txt"), source, "{action:?} {how:?}");
+    }
+}
+
+#[mononoke::test]
+fn test_other_actions_are_not_copies() {
+    for action in [
+        Action::Add,
+        Action::Edit,
+        Action::Integrate,
+        Action::Import,
+        Action::Delete,
+        Action::MoveDelete,
+        Action::Purge,
+        Action::Archive,
+    ] {
+        for how in [IntegrationHow::BranchFrom, IntegrationHow::CopyFrom] {
+            let source = source_of(action, &[integration(how, "//test1/old.txt")]);
+            assert_eq!(CopySource::NotACopy, source, "{action:?}");
+        }
+    }
+}
+
+#[mononoke::test]
+fn test_records_that_do_not_start_a_file_are_not_sources() {
+    for how in [
+        IntegrationHow::MergeFrom,
+        IntegrationHow::EditFrom,
+        IntegrationHow::IntegrateFrom,
+        IntegrationHow::Ignored,
+        IntegrationHow::DeleteFrom,
+        IntegrationHow::AddFrom,
+        IntegrationHow::Undid,
+        IntegrationHow::BranchInto,
+        IntegrationHow::Other("future from".to_owned()),
+    ] {
+        let source = source_of(Action::Branch, &[integration(how, "//test1/old.txt")]);
+        assert_eq!(CopySource::NotACopy, source);
+    }
+}
+
+#[mononoke::test]
+fn test_several_sources_are_ambiguous() {
+    let source = source_of(
+        Action::Branch,
+        &[
+            integration(IntegrationHow::BranchFrom, "//test1/a.txt"),
+            integration(IntegrationHow::BranchFrom, "//test1/b.txt"),
+        ],
+    );
+    assert_eq!(CopySource::Ambiguous, source);
+}
+
+#[mononoke::test]
+fn test_no_source_is_not_a_copy() {
+    assert_eq!(CopySource::NotACopy, source_of(Action::Branch, &[]));
+}
+
+#[mononoke::test]
+fn test_one_source_among_other_records_is_a_copy() {
+    let source = source_of(
+        Action::Branch,
+        &[
+            integration(IntegrationHow::BranchFrom, "//test1/old.txt"),
+            integration(IntegrationHow::BranchInto, "//test1/later.txt"),
+        ],
+    );
+    assert_eq!(copied_from("old.txt"), source);
+}
+
+#[mononoke::test]
+fn test_sources_in_other_depots_are_not_copies() {
+    for file in ["//other/old.txt", "//test10/old.txt"] {
+        let source = source_of(
+            Action::Branch,
+            &[integration(IntegrationHow::BranchFrom, file)],
+        );
+        assert_eq!(CopySource::OtherDepot, source, "{file}");
+    }
+}
+
+#[mononoke::test]
+fn test_source_paths_are_unescaped() {
+    let source = source_of(
+        Action::MoveAdd,
+        &[integration(
+            IntegrationHow::MovedFrom,
+            "//test1/foo%402x.png",
+        )],
+    );
+    assert_eq!(copied_from("foo@2x.png"), source);
+}
+
+#[mononoke::test]
+fn test_copy_from_reaches_the_file_change() {
+    let from = NonRootMPath::new("old.txt").unwrap();
+    let (_, change) = file_change(
+        DEPOT,
+        &revision("//test1/new.txt", Action::Branch),
+        Some(&content()),
+        Some((from.clone(), ONES_CSID)),
+    )
+    .unwrap()
+    .unwrap();
+    let expected = FileChange::tracked(
+        ONES_CTID,
+        FileType::Regular,
+        3,
+        Some((from, ONES_CSID)),
+        GitLfs::FullContent,
+    );
+    assert_eq!(expected, change);
 }

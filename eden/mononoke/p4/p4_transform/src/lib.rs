@@ -8,6 +8,7 @@
 //! Turns what Perforce reports about a changelist into Bonsai. The caller does all the
 //! I/O, so the same inputs always give the same result.
 
+use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
@@ -15,6 +16,8 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use p4_types::Action;
 use p4_types::FileRevision;
+use p4_types::Integration;
+use p4_types::IntegrationHow;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -33,30 +36,18 @@ pub enum TransformError {
 
 /// The change a file revision makes in the depot at `depot_root` (like `//test1/`), or
 /// `None` if the file is in another depot. `content` is the revision's content, already in
-/// the filestore, and is required for actions that leave content behind.
+/// the filestore, and is required for actions that leave content behind. `copy_from` is
+/// the `copy_source` path in the parent changeset.
 pub fn file_change(
     depot_root: &str,
     revision: &FileRevision,
     content: Option<&ContentMetadataV2>,
+    copy_from: Option<(NonRootMPath, ChangesetId)>,
 ) -> Result<Option<(NonRootMPath, FileChange)>, TransformError> {
-    // Exactly one depot: //test1 would also take //test10's files, and // every depot's.
-    let depot_name = depot_root
-        .strip_prefix("//")
-        .and_then(|rest| rest.strip_suffix('/'));
-    if !depot_name.is_some_and(|name| !name.is_empty() && !name.contains('/')) {
-        return Err(TransformError::InvalidDepotRoot(depot_root.to_owned()));
-    }
-    let Some(path) = revision.depot_path.strip_prefix(depot_root) else {
+    let Some(path) = repo_path(depot_root, &revision.depot_path)? else {
         return Ok(None);
     };
-    let path =
-        NonRootMPath::new(unescape_path(path)).map_err(|source| TransformError::InvalidPath {
-            depot_path: revision.depot_path.clone(),
-            source,
-        })?;
     let change = match revision.action {
-        // Branch and MoveAdd are copies, but carry no copy_from until the caller can
-        // resolve their source from filelog.
         Action::Add
         | Action::Edit
         | Action::Import
@@ -69,7 +60,7 @@ pub fn file_change(
                 content.content_id,
                 file_type(&revision.file_type),
                 content.total_size,
-                None,
+                copy_from,
                 GitLfs::FullContent,
             )
         }
@@ -79,6 +70,67 @@ pub fn file_change(
         }
     };
     Ok(Some((path, change)))
+}
+
+/// The repo path a revision was copied from, or why it has none.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CopySource {
+    From(NonRootMPath),
+    /// Not a file starting life at a new path, or filelog records no source.
+    NotACopy,
+    /// Several sources: picking one would be a guess.
+    Ambiguous,
+    OtherDepot,
+}
+
+/// The source of a revision of a file that starts life at a new path, given that
+/// revision's filelog `integrations`.
+pub fn copy_source(
+    depot_root: &str,
+    revision: &FileRevision,
+    integrations: &[Integration],
+) -> Result<CopySource, TransformError> {
+    // Onto an existing path, copy_from would read as that file being replaced, hiding
+    // its own history.
+    if !matches!(revision.action, Action::Branch | Action::MoveAdd) {
+        return Ok(CopySource::NotACopy);
+    }
+    let mut sources = integrations.iter().filter(|integration| {
+        matches!(
+            integration.how,
+            IntegrationHow::BranchFrom | IntegrationHow::CopyFrom | IntegrationHow::MovedFrom
+        )
+    });
+    let source = match (sources.next(), sources.next()) {
+        (None, _) => return Ok(CopySource::NotACopy),
+        (Some(source), None) => source,
+        (Some(_), Some(_)) => return Ok(CopySource::Ambiguous),
+    };
+    Ok(match repo_path(depot_root, &source.file)? {
+        Some(path) => CopySource::From(path),
+        None => CopySource::OtherDepot,
+    })
+}
+
+/// `depot_path` in the repo for the depot at `depot_root`, or `None` if it is in another
+/// depot.
+fn repo_path(depot_root: &str, depot_path: &str) -> Result<Option<NonRootMPath>, TransformError> {
+    // Exactly one depot: //test1 would also take //test10's files, and // every depot's.
+    let depot_name = depot_root
+        .strip_prefix("//")
+        .and_then(|rest| rest.strip_suffix('/'));
+    if !depot_name.is_some_and(|name| !name.is_empty() && !name.contains('/')) {
+        return Err(TransformError::InvalidDepotRoot(depot_root.to_owned()));
+    }
+    let Some(path) = depot_path.strip_prefix(depot_root) else {
+        return Ok(None);
+    };
+    NonRootMPath::new(unescape_path(path))
+        .map(Some)
+        .map_err(|source| TransformError::InvalidPath {
+            depot_path: depot_path.to_owned(),
+            source,
+        })
 }
 
 /// The executable ones among the old type names `p4 help filetypes` lists, like `xtext`
