@@ -18,7 +18,6 @@ import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
 import {clipboardLinkHtml} from '../clipboard';
-import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {IconStack} from '../icons/IconStack';
@@ -141,7 +140,6 @@ function DiffInfoInner({
   const info = useAtomSelect(allDiffSummaries, all => all.value?.get(diffId), [diffId]);
   const fetchError = useAtomSelect(allDiffSummaries, all => diffFetchError(all, diffId), [diffId]);
   const syncStatus = useAtomGet(syncStatusAtom, commit.hash);
-  const startTestsEnabled = useFeatureFlagSync(Internal.featureFlags?.StartTestsButton);
   const isInMergeConflicts = useAtomValue(inMergeConflicts);
   if (info == null && fetchError != null) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
@@ -186,8 +184,7 @@ function DiffInfoInner({
         <provider.DiffLandButtonContent diff={info} commit={commit} />
       )}
       {/* Show Start Tests button when deferred (fb-only) */}
-      {startTestsEnabled &&
-        isDeferred &&
+      {isDeferred &&
         Internal.StartDeferredTestsButton != null &&
         deferredTestingInfo?.submitQueueRequestFBID && (
           <Suspense fallback={null}>
