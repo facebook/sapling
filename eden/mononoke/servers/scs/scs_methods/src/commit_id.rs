@@ -13,6 +13,7 @@ use anyhow::Result;
 use cloned::cloned;
 use futures_util::FutureExt;
 use futures_util::future;
+use maplit::btreemap;
 use maplit::btreeset;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::ChangesetContext;
@@ -21,6 +22,23 @@ use mononoke_api::MononokeError;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use source_control as thrift;
+
+type IdMap = BTreeMap<ChangesetId, BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>;
+
+/// Ids in the requested schemes, or just the bonsai id if the lookup
+/// produced nothing for this commit.
+pub(crate) fn ids_for(
+    map: &IdMap,
+    cs_id: ChangesetId,
+) -> BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId> {
+    match map.get(&cs_id) {
+        Some(ids) => ids.clone(),
+        None => btreemap! {
+            thrift::CommitIdentityScheme::BONSAI =>
+                thrift::CommitId::bonsai(cs_id.as_ref().into()),
+        },
+    }
+}
 
 /// Generate a mapping for a commit's identity into the requested identity
 /// schemes.
