@@ -84,11 +84,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const aiResolveFailedSignalsEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.AIResolveFailedSignals,
-  );
   // For now, only support this in VS Code
-  if (aiResolveFailedSignalsEnabled && commit?.diffId && platform.platformName === 'vscode') {
+  if (commit?.diffId && platform.platformName === 'vscode') {
     actions.push(
       <ResolveFailedSignalsButton
         key="resolve-failed-signals"
