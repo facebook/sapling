@@ -997,10 +997,6 @@ export class Repository {
   refreshWorktreeInfo = serializeAsyncCall(async () => {
     try {
       const ctx = this.initialConnectionContext;
-      const gkEnabled = await Internal.fetchFeatureFlag?.(ctx, 'isl_worktrees');
-      if (gkEnabled === false) {
-        return;
-      }
       const [sharedRoot, worktrees] = await Promise.all([findSharedRoot(ctx), listWorktrees(ctx)]);
       const repoRoot = this.info.repoRoot;
       const worktreeEntries =

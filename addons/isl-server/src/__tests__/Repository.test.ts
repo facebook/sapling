@@ -21,7 +21,6 @@ import * as ejeca from 'shared/ejeca';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger} from 'shared/testUtils';
 import {nextTick} from 'shared/utils';
-import {Internal} from '../Internal';
 import {absolutePathForFileInRepo, Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {
@@ -1402,12 +1401,6 @@ describe('fetchSubmoduleMap', () => {
   describe('worktree discovery', () => {
     beforeEach(() => {
       setConfigOverrideForTests([['paths.default', 'https://github.com/owner/repo.git']]);
-      Internal.fetchFeatureFlag = jest.fn().mockImplementation((_ctx, flag) => {
-        if (flag === 'isl_worktrees') {
-          return Promise.resolve(true);
-        }
-        return Promise.resolve(undefined);
-      });
     });
 
     it('populates worktreeInfo when multiple worktrees exist', async () => {

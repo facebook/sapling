@@ -10,8 +10,6 @@ import type {Hash, WorktreeEntry} from './types';
 import {atom} from 'jotai';
 import {basename, guessPathSep, isHexHash, pathsAreIdentical} from 'shared/utils';
 import {focusMode} from './atoms/FocusModeState';
-import {featureFlagLoadable} from './featureFlags';
-import {Internal} from './Internal';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
 import {repositoryInfo, worktreeInfoData} from './serverAPIState';
 
@@ -19,18 +17,12 @@ import {repositoryInfo, worktreeInfoData} from './serverAPIState';
 export const showWorktreeLabels = localStorageBackedAtom<boolean>('isl.show-worktree-labels', true);
 
 /**
- * `{info, worktreeInfo}` when the worktrees feature is enabled and worktree data
- * has loaded -- `undefined` otherwise, so flag-off repos never pay for the extra reads.
+ * `{info, worktreeInfo}` when worktree data has loaded -- `undefined` otherwise.
  */
 const loadedWorktreeInfo = atom(get => {
   const info = get(repositoryInfo);
   const worktreeInfo = get(worktreeInfoData);
   if (info == null || worktreeInfo == null) {
-    return undefined;
-  }
-
-  const flag = get(featureFlagLoadable(Internal.featureFlags?.Worktrees));
-  if (flag.state !== 'hasData' || flag.data !== true) {
     return undefined;
   }
 
