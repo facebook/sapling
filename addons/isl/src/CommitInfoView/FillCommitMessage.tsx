@@ -19,7 +19,6 @@ import {layout} from '../../../components/theme/layout';
 import {spacing} from '../../../components/theme/tokens';
 import {tracker} from '../analytics';
 import {FlexSpacer} from '../ComponentUtils';
-import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {Internal} from '../Internal';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -172,15 +171,13 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
   ]);
   const supportsAgentPrompts = useSupportsAgentPrompts();
   const showDevmate =
-    useFeatureFlagSync(Internal.featureFlags?.AIGenerateCommitMessage) &&
-    (platform.platformName === 'vscode' ||
-      platform.platformName === 'browser' ||
-      supportsAgentPrompts);
+    platform.platformName === 'vscode' ||
+    platform.platformName === 'browser' ||
+    supportsAgentPrompts;
 
   const methods = (
     <>
       {fillCommitMessageMethods
-        // Only show Agent option if allowlisted in GK
         .filter(method => method.key !== 'devmate' || showDevmate)
         .map(method => (
           <Tooltip

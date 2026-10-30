@@ -117,11 +117,8 @@ function SmartActions({commit, dismiss}: {commit?: CommitInfo; dismiss: () => vo
     );
   }
 
-  const aiGenerateCommitMessageEnabled = useFeatureFlagAsync(
-    Internal.featureFlags?.AIGenerateCommitMessage,
-  );
   // For now, only support this in VS Code
-  if (!commit && aiGenerateCommitMessageEnabled && platform.platformName === 'vscode') {
+  if (!commit && platform.platformName === 'vscode') {
     actions.push(<FillCommitInfoButton key="fill-commit-info" dismiss={dismiss} />);
   }
 
