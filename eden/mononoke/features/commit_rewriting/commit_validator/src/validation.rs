@@ -43,11 +43,13 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::Diff;
 use manifest::Entry;
-use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::FileType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::sharded_augmented_manifest::find_hg_entry;
+use mercurial_types::sharded_augmented_manifest::hg_manifest_diff;
+use mercurial_types::sharded_augmented_manifest::list_all_hg_entries;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use mononoke_macros::mononoke;
@@ -58,6 +60,7 @@ use movers::Mover;
 use movers::get_movers;
 use ref_cast::RefCast;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
@@ -306,13 +309,14 @@ impl ValidationHelper {
         match payload {
             Added(_, _) | Removed => Ok(true),
             ChangedTo(new_file_type, new_filenode_id) => {
-                let maybe_entry_in_p1 = p1_root_mf_id
-                    .find_entry(
-                        ctx.clone(),
-                        repo.repo_blobstore().clone(),
-                        mpath.clone().into(),
-                    )
-                    .await?;
+                let maybe_entry_in_p1 = find_hg_entry(
+                    ctx,
+                    repo.repo_blobstore().clone(),
+                    repo.repo_identity().name(),
+                    *p1_root_mf_id,
+                    mpath.clone().into(),
+                )
+                .await?;
 
                 let (p1_file_type, p1_filenode_id) = match maybe_entry_in_p1 {
                     None => {
@@ -606,11 +610,16 @@ impl ValidationHelpers {
         let (cs_root_mf_id, p1_root_mf_id): (HgManifestId, HgManifestId) =
             try_join!(cs_root_mf_id_fut, p1_root_mf_id_fut)?;
 
-        let r: Vec<Result<_, Error>> = p1_root_mf_id
-            .diff(ctx.clone(), repo.repo_blobstore().clone(), cs_root_mf_id)
-            .filter_map(|diff| async move { diff.map(FilenodeDiff::from_diff).transpose() })
-            .collect()
-            .await;
+        let r: Vec<Result<_, Error>> = hg_manifest_diff(
+            ctx,
+            repo.repo_blobstore().clone(),
+            repo.repo_identity().name(),
+            p1_root_mf_id,
+            cs_root_mf_id,
+        )
+        .filter_map(|diff| async move { diff.map(FilenodeDiff::from_diff).transpose() })
+        .collect()
+        .await;
 
         r.into_iter().collect()
     }
@@ -1441,7 +1450,7 @@ pub async fn validate_entry(
 
 async fn fetch_root_mf_id(
     ctx: &CoreContext,
-    repo: &Repo,
+    repo: &(impl RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
     cs_id: ChangesetId,
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
@@ -1451,24 +1460,28 @@ async fn fetch_root_mf_id(
 
 async fn list_all_filenode_ids(
     ctx: &CoreContext,
-    repo: &Repo,
+    repo: &(impl RepoBlobstoreRef + RepoIdentityRef),
     mf_id: HgManifestId,
 ) -> Result<PathToFileNodeIdMapping, Error> {
     let repoid = repo.repo_identity().id();
     info!("fetching filenode ids for {:?} in {}", mf_id, repoid,);
-    let res = mf_id
-        .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .try_filter_map(move |(path, entry)| {
-            let res = match entry {
-                Entry::Leaf(leaf_payload) => {
-                    Option::<NonRootMPath>::from(path).map(|path| (path, leaf_payload))
-                }
-                Entry::Tree(_) => None,
-            };
-            future::ready(Ok(res))
-        })
-        .try_collect::<HashMap<_, _>>()
-        .await?;
+    let res = list_all_hg_entries(
+        ctx,
+        repo.repo_blobstore().clone(),
+        repo.repo_identity().name(),
+        mf_id,
+    )
+    .try_filter_map(move |(path, entry)| {
+        let res = match entry {
+            Entry::Leaf(leaf_payload) => {
+                Option::<NonRootMPath>::from(path).map(|path| (path, leaf_payload))
+            }
+            Entry::Tree(_) => None,
+        };
+        future::ready(Ok(res))
+    })
+    .try_collect::<HashMap<_, _>>()
+    .await?;
 
     debug!("fetched {} filenode ids for {}", res.len(), repoid,);
     Ok(res)
@@ -1531,15 +1544,30 @@ async fn verify_filenodes_have_same_contents<
 
 #[cfg(test)]
 mod tests {
+    use blobstore::KeyedBlobstore;
     use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::test_utils::init_small_large_repo;
     use cross_repo_sync::test_utils::xrepo_mapping_version_with_small_repo;
     use cross_repo_sync::update_mapping_with_version;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use maplit::hashmap;
+    use memblob::Memblob;
+    use mercurial_derivation::RootHgAugmentedManifestId;
+    use mercurial_types::HgAugmentedManifestId;
+    use mercurial_types::NULL_HASH;
     use mononoke_macros::mononoke;
+    use mononoke_types::MPath;
+    use repo_derived_data::RepoDerivedDataRef;
+    use test_repo_factory::TestRepoFactory;
+    use tests_utils::BasicTestRepo;
     use tests_utils::CommitIdentifier;
     use tests_utils::CreateCommitContext;
+    use tests_utils::hg_manifest_reads::HgManifestReadBlocker;
 
     use super::*;
 
@@ -1739,6 +1767,242 @@ mod tests {
         )
         .await;
         assert!(validation_result.is_err());
+        Ok(())
+    }
+
+    const READ_FROM_AUGMENTED: &str = "scm/mononoke:hgmanifest_read_from_augmented";
+
+    fn read_from_augmented(on: bool) -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            READ_FROM_AUGMENTED.to_string() => KnobVal::Bool(on),
+        })
+    }
+
+    fn no_augmented_with_hg_changeset() -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+        })
+    }
+
+    struct Fixture {
+        repo: BasicTestRepo,
+        blocker: Arc<HgManifestReadBlocker>,
+        child: ChangesetId,
+        root_mf_id: HgManifestId,
+        child_mf_id: HgManifestId,
+    }
+
+    /// A repo whose Hg manifest reads fail once the blocker is armed, with a
+    /// root commit holding `a` and `dir/b`, and a child that removes `a`,
+    /// changes `dir/b` and adds `c`. Only the root commit has an augmented
+    /// manifest.
+    async fn fixture(ctx: &CoreContext) -> Result<Fixture, Error> {
+        let (blobstore, blocker) = HgManifestReadBlocker::wrap(Memblob::default());
+        let repo: BasicTestRepo = TestRepoFactory::new(ctx.fb)?
+            .with_blobstore(blobstore)
+            .build()
+            .await?;
+        let root = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("a", "a")
+            .add_file("dir/b", "b")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(ctx, &repo, vec![root])
+            .delete_file("a")
+            .add_file("dir/b", "b2")
+            .add_file("c", "c")
+            .commit()
+            .await?;
+        // Derive the hg changesets without their augmented manifests.
+        let (root_mf_id, child_mf_id) = with_just_knobs_async(
+            no_augmented_with_hg_changeset(),
+            async {
+                anyhow::Ok((
+                    fetch_root_mf_id(ctx, &repo, root).await?,
+                    fetch_root_mf_id(ctx, &repo, child).await?,
+                ))
+            }
+            .boxed(),
+        )
+        .await?;
+        derive_augmented(ctx, &repo, root).await?;
+        Ok(Fixture {
+            repo,
+            blocker,
+            child,
+            root_mf_id,
+            child_mf_id,
+        })
+    }
+
+    async fn derive_augmented(
+        ctx: &CoreContext,
+        repo: &BasicTestRepo,
+        cs_id: ChangesetId,
+    ) -> Result<(), Error> {
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await?;
+        Ok(())
+    }
+
+    type ValidatorReads = (
+        PathToFileNodeIdMapping,
+        FullManifestDiff,
+        Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>,
+        Option<Entry<HgManifestId, (FileType, HgFileNodeId)>>,
+    );
+
+    /// What the validator reads from a pair of root manifests: all files of
+    /// the old one, the filenode diff between them, and the old one's entries
+    /// for a directory and a file.
+    async fn validator_reads(
+        ctx: &CoreContext,
+        repo: &BasicTestRepo,
+        old: HgManifestId,
+        new: HgManifestId,
+    ) -> Result<ValidatorReads, Error> {
+        let files = list_all_filenode_ids(ctx, repo, old).await?;
+        let blobstore = repo.repo_blobstore().clone();
+        let name = repo.repo_identity().name();
+        let diff = hg_manifest_diff(ctx, blobstore.clone(), name, old, new)
+            .try_filter_map(|diff| future::ok(FilenodeDiff::from_diff(diff)))
+            .try_collect()
+            .await?;
+        let dir = find_hg_entry(ctx, blobstore.clone(), name, old, MPath::new("dir")?).await?;
+        let file = find_hg_entry(ctx, blobstore, name, old, MPath::new("dir/b")?).await?;
+        Ok((files, diff, dir, file))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_manifest_reads_from_augmented(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = fixture(&ctx).await?;
+        derive_augmented(&ctx, &f.repo, f.child).await?;
+
+        // Given: what the validator reads from Hg manifests.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            validator_reads(&ctx, &f.repo, f.root_mf_id, f.child_mf_id).boxed(),
+        )
+        .await?;
+        let (files, diff, dir, file) = &from_hg;
+        assert_eq!(files.len(), 2, "the root commit has two files");
+        assert_eq!(diff.len(), 3, "the child removes, changes and adds a file");
+        assert!(matches!(dir, Some(Entry::Tree(_))));
+        assert!(matches!(file, Some(Entry::Leaf((FileType::Regular, _)))));
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: augmented manifests give the same results.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            validator_reads(&ctx, &f.repo, f.root_mf_id, f.child_mf_id).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifests are still read.
+        let knob_off = with_just_knobs_async(
+            read_from_augmented(false),
+            validator_reads(&ctx, &f.repo, f.root_mf_id, f.child_mf_id).boxed(),
+        )
+        .await;
+        assert!(knob_off.is_err(), "the knob off reads blocked Hg manifests");
+        assert!(f.blocker.reads() > 0);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_missing_augmented_manifest(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = fixture(&ctx).await?;
+        let child_key = HgAugmentedManifestId::from(f.child_mf_id).blobstore_key();
+        assert!(
+            f.repo
+                .repo_blobstore()
+                .get(&ctx, &child_key)
+                .await?
+                .is_none(),
+            "the child has no augmented manifest"
+        );
+        f.blocker.arm();
+
+        let err = with_just_knobs_async(
+            read_from_augmented(true),
+            validator_reads(&ctx, &f.repo, f.child_mf_id, f.root_mf_id).boxed(),
+        )
+        .await
+        .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains(&child_key),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
+    }
+
+    /// What the validator reads when one side of a diff has the null
+    /// manifest, which is empty: first as the old side, then as the new side.
+    async fn null_manifest_reads(
+        ctx: &CoreContext,
+        repo: &BasicTestRepo,
+        mf_id: HgManifestId,
+    ) -> Result<(ValidatorReads, ValidatorReads), Error> {
+        let null = HgManifestId::new(NULL_HASH);
+        Ok((
+            validator_reads(ctx, repo, null, mf_id).await?,
+            validator_reads(ctx, repo, mf_id, null).await?,
+        ))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_null_manifest_reads_from_augmented(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = fixture(&ctx).await?;
+
+        // Given: what the validator reads from Hg manifests, which treat the
+        // null manifest as empty.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            null_manifest_reads(&ctx, &f.repo, f.root_mf_id).boxed(),
+        )
+        .await?;
+        let ((files, added, dir, file), (_, removed, _, _)) = &from_hg;
+        assert!(files.is_empty(), "the null manifest has no files");
+        assert_eq!(added.len(), 2, "both files of the root commit are added");
+        assert_eq!(
+            removed.len(),
+            2,
+            "both files of the root commit are removed"
+        );
+        assert_eq!((dir, file), (&None, &None));
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: augmented manifests give the same results.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            null_manifest_reads(&ctx, &f.repo, f.root_mf_id).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
         Ok(())
     }
 }
