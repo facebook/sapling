@@ -10,7 +10,6 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::Path;
 use std::str;
 use std::sync::Arc;
 
@@ -20,7 +19,6 @@ use anyhow::anyhow;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use im::HashMap as ImHashMap;
-use metaconfig_types::AclRegionConfig;
 use metaconfig_types::AsyncRequestsConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
@@ -33,11 +31,8 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
 use metaconfig_types::StorageConfig;
 use mononoke_types::RepositoryId;
-use repos::RawAclRegionConfig;
 use repos::RawCommonConfig;
 use repos::RawRepoConfig;
-use repos::RawRepoConfigs;
-use repos::RawRepoDefinition;
 use repos::RawRestrictedPathsConfig;
 use repos::RawStorageConfig;
 use repos::RepoSpec;
@@ -83,19 +78,12 @@ pub fn configerator_repo_config_handle(
     config_store.get_config_handle::<RawRepoConfig>(config_path.to_owned())
 }
 
-/// Load configuration for repositories and storage.
-pub fn load_repo_configs(config_path: impl AsRef<Path>) -> Result<RepoConfigs> {
-    let raw_config = crate::raw::read_raw_configs(config_path.as_ref())?;
-    load_configs_from_raw(raw_config).map(|(repo_configs, _)| repo_configs)
-}
-
 /// Load repo configs for a `tier` by following its `TierManifest` to each
 /// per-repo `RepoSpec`, resolving tier overrides.
 ///
-/// This is the split-loading counterpart of [`load_repo_configs`] for callers
-/// whose `config_store` points at a manifest + per-repo `RepoSpec` layout (for
-/// example a file-backed store over a local `materialized_configs/` tree) rather
-/// than a local `RawRepoConfigs` directory or file. The manifest is read from
+/// `config_store` points at a manifest + per-repo `RepoSpec` layout (live
+/// configerator, or a file-backed store over a local `materialized_configs/`
+/// tree). The manifest is read from
 /// `scm/mononoke/repos/tiers/{tier}_manifest`; each entry's `config_path` is
 /// loaded as a `RepoSpec` and parsed for `tier`, with `common` and `storage`
 /// taken from the manifest itself.
@@ -173,56 +161,7 @@ pub fn load_empty_repo_configs() -> RepoConfigs {
     RepoConfigs::new(HashMap::new(), CommonConfig::default())
 }
 
-/// Load configuration based on the provided raw configs.
-pub fn load_configs_from_raw(
-    raw_repo_configs: RawRepoConfigs,
-) -> Result<(RepoConfigs, StorageConfigs)> {
-    let RawRepoConfigs {
-        commit_sync: _,
-        common,
-        repos,
-        storage,
-        acl_region_configs,
-        repo_definitions,
-    } = raw_repo_configs;
-    let repo_definitions = repo_definitions.repo_definitions;
-    let repo_configs = repos;
-    let storage_configs = storage;
-
-    let mut resolved_repo_configs = HashMap::new();
-    let mut repoids = HashSet::new();
-
-    for (reponame, raw_repo_definition) in repo_definitions.into_iter() {
-        let repo_config = parse_with_repo_definition(
-            raw_repo_definition,
-            &repo_configs,
-            &storage_configs,
-            &acl_region_configs,
-        )?;
-
-        if !repoids.insert(repo_config.repoid) {
-            return Err(ConfigurationError::DuplicatedRepoId(repo_config.repoid).into());
-        }
-
-        resolved_repo_configs.insert(reponame, repo_config);
-    }
-
-    let common = parse_common_config(common, &storage_configs)?;
-    let storage = storage_configs
-        .into_iter()
-        .map(|(k, v)| Ok((k, v.convert()?)))
-        .collect::<Result<_>>()?;
-    Ok((
-        RepoConfigs::new(resolved_repo_configs, common),
-        StorageConfigs { storage },
-    ))
-}
-
-/// Pre-resolved metadata for a repo configuration.
-///
-/// These fields come from different sources depending on the loading path:
-/// - In the monolithic path: extracted from `RawRepoDefinition`
-/// - In the per-repo split-loading path: taken from the `RepoSpec`
+/// Metadata a repo's `RepoSpec` carries outside its `RawRepoConfig`.
 struct RepoMetadata {
     repoid: RepositoryId,
     enabled: bool,
@@ -230,76 +169,6 @@ struct RepoMetadata {
     readonly: RepoReadOnly,
     default_commit_identity_scheme: CommitIdentityScheme,
     enable_git_bundle_uri: bool,
-    acl_region_config: Option<AclRegionConfig>,
-}
-
-fn parse_with_repo_definition(
-    repo_definition: RawRepoDefinition,
-    named_repo_configs: &HashMap<String, RawRepoConfig>,
-    named_storage_configs: &HashMap<String, RawStorageConfig>,
-    named_acl_region_configs: &HashMap<String, RawAclRegionConfig>,
-) -> Result<RepoConfig> {
-    let RawRepoDefinition {
-        repo_id: repoid,
-        repo_name,
-        repo_config,
-        hipster_acl,
-        enabled,
-        readonly,
-        needs_backup: _,
-        external_repo_id: _,
-        backup_source_repo_name: _,
-        acl_region_config,
-        default_commit_identity_scheme,
-        enable_git_bundle_uri,
-    } = repo_definition;
-
-    let repoid = RepositoryId::new(repoid.context("missing repoid from configuration")?);
-    let enabled = enabled.unwrap_or(true);
-    let enable_git_bundle_uri = enable_git_bundle_uri.unwrap_or(false);
-    let default_commit_identity_scheme = default_commit_identity_scheme
-        .convert()?
-        .unwrap_or_default();
-    let readonly = if readonly.unwrap_or_default() {
-        RepoReadOnly::ReadOnly("Set by config option".to_string())
-    } else {
-        RepoReadOnly::ReadWrite
-    };
-    let acl_region_config = acl_region_config
-        .map(|key| {
-            named_acl_region_configs.get(&key).cloned().ok_or_else(|| {
-                ConfigurationError::InvalidConfig(format!(
-                    "ACL region config \"{key}\" not defined"
-                ))
-            })
-        })
-        .transpose()?
-        .convert()?;
-
-    let named_repo_config_name = repo_config
-        .ok_or_else(|| ConfigurationError::InvalidConfig("No named_repo_config".to_string()))?;
-    let named_repo_config = named_repo_configs
-        .get(named_repo_config_name.as_str())
-        .ok_or_else(|| {
-            ConfigurationError::InvalidConfig(format!(
-                "no named_repo_config \"{named_repo_config_name}\" for repo \"{repo_name:?}\"."
-            ))
-        })?
-        .clone();
-
-    build_repo_config(
-        named_repo_config,
-        RepoMetadata {
-            repoid,
-            enabled,
-            hipster_acl,
-            readonly,
-            default_commit_identity_scheme,
-            enable_git_bundle_uri,
-            acl_region_config,
-        },
-        named_storage_configs,
-    )
 }
 
 /// Creates a ConfigHandle for a repo's RepoSpec from a Configerator path.
@@ -382,7 +251,6 @@ pub fn parse_repo_spec(
             readonly,
             default_commit_identity_scheme,
             enable_git_bundle_uri: repo_spec.enable_git_bundle_uri.unwrap_or(false),
-            acl_region_config: None,
         },
         named_storage_configs,
     )
@@ -583,7 +451,9 @@ fn build_repo_config(
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         phabricator_callsign,
-        acl_region_config: metadata.acl_region_config,
+        // Not expressible in a RepoSpec; the acl_regions feature is unconfigured
+        // everywhere and superseded by restricted_paths.
+        acl_region_config: None,
         walker_config,
         cross_repo_commit_validation_config,
         sparse_profiles_config,
@@ -622,12 +492,6 @@ fn build_repo_config(
 pub struct StorageConfigs {
     /// Configs for all storage
     pub storage: HashMap<String, StorageConfig>,
-}
-
-/// Load configuration for storage.
-pub fn load_storage_configs(config_path: impl AsRef<Path>) -> Result<StorageConfigs> {
-    let raw_config = crate::raw::read_raw_configs(config_path.as_ref())?;
-    load_configs_from_raw(raw_config).map(|(_, storage_configs)| storage_configs)
 }
 
 fn parse_common_config(
@@ -787,8 +651,7 @@ impl RepoConfigs {
 
 #[cfg(test)]
 mod test {
-    use std::fs::create_dir_all;
-    use std::fs::write;
+    use std::collections::BTreeSet;
     use std::num::NonZeroUsize;
     use std::sync::Arc;
     use std::time::Duration;
@@ -798,9 +661,6 @@ mod test {
     use maplit::btreemap;
     use maplit::hashmap;
     use maplit::hashset;
-    use metaconfig_types::AclRegion;
-    use metaconfig_types::AclRegionConfig;
-    use metaconfig_types::AclRegionRule;
     use metaconfig_types::Address;
     use metaconfig_types::BlameVersion;
     use metaconfig_types::BlobConfig;
@@ -864,18 +724,18 @@ mod test {
     use mononoke_macros::mononoke;
     use mononoke_types::DerivableType;
     use mononoke_types::NonRootMPath;
-    use mononoke_types::path::MPath;
-    use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use nonzero_ext::nonzero;
     use permission_checker::MononokeIdentity;
     use pretty_assertions::assert_eq;
+    use repos::RawCommitIdentityScheme;
     use repos::RawCommitSyncConfig;
-    use tempfile::TempDir;
+    use serde::Deserialize;
 
     use super::*;
 
     /// Parse a collection of raw commit sync config into commit sync config and validate it.
+    #[cfg(test)]
     fn parse_commit_sync_config(
         raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
     ) -> Result<HashMap<String, CommitSyncConfig>> {
@@ -888,26 +748,92 @@ mod test {
             .collect()
     }
 
-    fn write_files(
-        files: impl IntoIterator<Item = (impl AsRef<Path>, impl AsRef<[u8]>)>,
-    ) -> TempDir {
-        let tmp_dir = TempDir::with_prefix("mononoke_test_config.").expect("tmp_dir failed");
-
-        // Always create repos directory and repo_definitions directory
-        create_dir_all(tmp_dir.path().join("repos")).expect("create repos failed");
-        create_dir_all(tmp_dir.path().join("repo_definitions"))
-            .expect("create repo_definitions failed");
-
-        for (path, content) in files.into_iter() {
-            let path = path.as_ref();
-            let content = content.as_ref();
-
-            let dir = path.parent().expect("missing parent");
-            create_dir_all(tmp_dir.path().join(dir)).expect("create dir failed");
-            write(tmp_dir.path().join(path), content).expect("write failed");
+    /// Parse TOML into a thrift struct the way the old `RawRepoConfigs`
+    /// directory reader did: unknown keys are warned about, not fatal.
+    fn read_toml<T: serde::de::DeserializeOwned>(text: &str) -> Result<T> {
+        let mut unused = BTreeSet::new();
+        let de = toml::de::Deserializer::parse(text)?;
+        let t: T = serde_ignored::deserialize(de, |path| {
+            unused.insert(path.to_string());
+        })?;
+        if !unused.is_empty() {
+            tracing::warn!("unknown keys in config parsing: `{:?}`", unused);
         }
+        Ok(t)
+    }
 
-        tmp_dir
+    /// The per-repo half of the old `repo_definitions/<repo>/server.toml`.
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct TestRepoDefinition {
+        repo_id: Option<i32>,
+        repo_name: Option<String>,
+        repo_config: Option<String>,
+        hipster_acl: Option<String>,
+        enabled: Option<bool>,
+        readonly: Option<bool>,
+        default_commit_identity_scheme: Option<i32>,
+        enable_git_bundle_uri: Option<bool>,
+    }
+
+    const TEST_TIER: &str = "test";
+
+    /// Render the TOML fixture tree the tests are written in into what
+    /// production reads, a `TierManifest` plus one `RepoSpec` per repo, and
+    /// parse it through `parse_manifest_common_and_storage` + `parse_repo_spec`
+    /// (the same translation the `.t` harness performs).
+    fn load_test_configs(files: &BTreeMap<&str, &str>) -> Result<RepoConfigs> {
+        let common: RawCommonConfig = read_toml(files.get("common/common.toml").unwrap_or(&""))?;
+        let storage: HashMap<String, RawStorageConfig> =
+            read_toml(files.get("common/storage.toml").unwrap_or(&""))?;
+        let manifest = TierManifest {
+            common,
+            storage,
+            ..Default::default()
+        };
+
+        // Repos first, then common: the order the old directory loader used,
+        // which several fixtures with a minimal `common` rely on.
+        let mut repos = HashMap::new();
+        let mut seen_repo_ids = HashSet::new();
+        for (path, text) in files {
+            let Some(name) = path
+                .strip_prefix("repo_definitions/")
+                .and_then(|rest| rest.strip_suffix("/server.toml"))
+            else {
+                continue;
+            };
+            let def: TestRepoDefinition = read_toml(text)?;
+            let repo_name = def.repo_name.unwrap_or_else(|| name.to_string());
+            let config_key = def.repo_config.as_deref().unwrap_or(name);
+            let repo_config: RawRepoConfig = read_toml(
+                files
+                    .get(format!("repos/{config_key}/server.toml").as_str())
+                    .ok_or_else(|| anyhow!("no repos/{config_key}/server.toml"))?,
+            )?;
+            let spec = RepoSpec {
+                repo_id: def.repo_id.context("missing repoid from configuration")?,
+                repo_name: repo_name.clone(),
+                hipster_acl: def.hipster_acl.unwrap_or_default(),
+                enabled: def.enabled.unwrap_or(true),
+                readonly: def.readonly.unwrap_or(false),
+                default_commit_identity_scheme: def
+                    .default_commit_identity_scheme
+                    .map(RawCommitIdentityScheme)
+                    .unwrap_or(RawCommitIdentityScheme::HG),
+                enable_git_bundle_uri: def.enable_git_bundle_uri,
+                tiers: vec![TEST_TIER.to_string()],
+                repo_config: Some(repo_config),
+                ..Default::default()
+            };
+            let repo_config = parse_repo_spec(spec, TEST_TIER, &manifest.storage)?;
+            if !seen_repo_ids.insert(repo_config.repoid) {
+                return Err(ConfigurationError::DuplicatedRepoId(repo_config.repoid).into());
+            }
+            repos.insert(repo_name, repo_config);
+        }
+        let (common, _) = parse_manifest_common_and_storage(&manifest)?;
+        Ok(RepoConfigs::new(repos, common))
     }
 
     fn repo_config_with_id(id: i32) -> RepoConfig {
@@ -1037,13 +963,9 @@ mod test {
                     "p4" = "p5/p4"
         "#;
 
-        let paths = btreemap! {
-            "common/commitsyncmap.toml" => commit_sync_config
-        };
-        let tmp_dir = write_files(&paths);
-        let raw_config =
-            crate::raw::read_raw_configs(tmp_dir.path()).expect("expect to read configs");
-        let commit_sync = parse_commit_sync_config(raw_config.commit_sync)
+        let raw_commit_sync: HashMap<String, RawCommitSyncConfig> =
+            read_toml(commit_sync_config).expect("expect to read configs");
+        let commit_sync = parse_commit_sync_config(raw_commit_sync)
             .expect("expected to get a commit sync config");
 
         let expected = hashmap! {
@@ -1093,12 +1015,8 @@ mod test {
                     "p5" = "subdir"
         "#;
 
-        let paths = btreemap! {
-            "common/commitsyncmap.toml" => commit_sync_config
-        };
-        let tmp_dir = write_files(&paths);
-        let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path()).unwrap();
+        let commit_sync: HashMap<String, RawCommitSyncConfig> =
+            read_toml(commit_sync_config).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
             let msg = format!("{res:#?}");
@@ -1129,12 +1047,8 @@ mod test {
                 direction = "small_to_large"
         "#;
 
-        let paths = btreemap! {
-            "common/commitsyncmap.toml" => commit_sync_config
-        };
-        let tmp_dir = write_files(&paths);
-        let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path()).unwrap();
+        let commit_sync: HashMap<String, RawCommitSyncConfig> =
+            read_toml(commit_sync_config).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
             let msg = format!("{res:#?}");
@@ -1181,15 +1095,12 @@ mod test {
 
         let paths = btreemap! {
             "common/common.toml" => common_content,
-            "common/commitsyncmap.toml" => "",
             "repos/www1/server.toml" => www_content,
             "repos/www2/server.toml" => www_content,
             "repo_definitions/www1/server.toml" => www1_repo_def,
             "repo_definitions/www2/server.toml" => www2_repo_def,
         };
-
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path());
+        let res = load_test_configs(&paths);
         let msg = format!("{res:#?}");
         println!("res = {msg}");
         assert!(res.is_err());
@@ -1329,8 +1240,6 @@ mod test {
             repo_name="fbsource"
             hipster_acl="foo/test"
             repo_config="fbsource"
-            needs_backup=false
-            acl_region_config="fbsource"
         "#;
         let www_content = r#"
             scuba_table_hooks="scm_hooks"
@@ -1423,30 +1332,15 @@ mod test {
         path = "/tmp/www-ephemeral"
         "#;
 
-        let acl_region_configs = r#"
-        [[fbsource.allow_rules]]
-        name = "name_test"
-        hipster_acl = "acl_test"
-        [[fbsource.allow_rules.regions]]
-        roots = ["1111111111111111111111111111111111111111111111111111111111111111"]
-        heads = []
-        path_prefixes = ["test/prefix", ""]
-        "#;
-
         let paths = btreemap! {
             "common/storage.toml" => storage,
             "common/common.toml" => common_content,
-            "common/commitsyncmap.toml" => "",
-            "common/acl_regions.toml" => acl_region_configs,
             "repos/fbsource/server.toml" => fbsource_content,
             "repos/www/server.toml" => www_content,
             "repo_definitions/fbsource/server.toml" => fbsource_repo_def,
             "repo_definitions/www/server.toml" => www_repo_def,
-            "my_path/my_files" => "",
         };
-
-        let tmp_dir = write_files(&paths);
-        let repoconfig = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
+        let repoconfig = load_test_configs(&paths).expect("Read configs failed");
 
         let multiplex = BlobConfig::MultiplexedWal {
             multiplex_id: MultiplexId::new(1),
@@ -1725,17 +1619,7 @@ mod test {
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
                 phabricator_callsign: Some("FBS".to_string()),
-                acl_region_config: Some(AclRegionConfig {
-                    allow_rules: vec![AclRegionRule {
-                        name: "name_test".to_string(),
-                        regions: vec![AclRegion {
-                            roots: vec![ONES_CSID],
-                            heads: vec![],
-                            path_prefixes: vec![MPath::new("test/prefix").unwrap(), MPath::ROOT],
-                        }],
-                        hipster_acl: "acl_test".to_string(),
-                    }],
-                }),
+                acl_region_config: None,
                 walker_config: Some(WalkerConfig {
                     scrub_enabled: true,
                     validate_enabled: true,
@@ -2007,13 +1891,10 @@ mod test {
         "#;
 
         let paths = btreemap! {
-            "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content,
             "repo_definitions/fbsource/server.toml" => content_def,
         };
-
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path());
+        let res = load_test_configs(&paths);
         let msg = format!("{res:#?}");
         println!("res = {msg}");
         assert!(res.is_err());
@@ -2063,13 +1944,10 @@ mod test {
         let paths = btreemap! {
             "common/storage.toml" => storage,
             "common/common.toml" => common,
-            "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content.as_str(),
             "repo_definitions/fbsource/server.toml" => content_def,
         };
-
-        let tmp_dir = write_files(&paths);
-        load_repo_configs(tmp_dir.path())
+        load_test_configs(&paths)
     }
 
     #[mononoke::test]
@@ -2232,13 +2110,10 @@ mod test {
 
             let paths = btreemap! {
                 "common/common.toml" => common,
-                "common/commitsyncmap.toml" => "",
                 "repos/fbsource/server.toml" => content,
                 "repo_definitions/fbsource/server.toml" => content_def,
             };
-
-            let tmp_dir = write_files(&paths);
-            let res = load_repo_configs(tmp_dir.path());
+            let res = load_test_configs(&paths);
             println!("res = {res:?}");
             let msg = format!("{res:?}");
             assert!(res.is_err(), "unexpected success for {common}");
@@ -2329,13 +2204,10 @@ mod test {
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
             "common/common.toml" => COMMON,
-            "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
             "repo_definitions/test/server.toml" => REPO_DEF,
         };
-
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
+        let res = load_test_configs(&paths).expect("Read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -2526,13 +2398,10 @@ mod test {
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
             "common/common.toml" => COMMON,
-            "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
             "repo_definitions/test/server.toml" => REPO_DEF,
         };
-
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
+        let res = load_test_configs(&paths).expect("Read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -2628,13 +2497,10 @@ mod test {
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
             "common/common.toml" => COMMON,
-            "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
             "repo_definitions/test/server.toml" => REPO_DEF,
         };
-
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path()).expect("Read configs failed");
+        let res = load_test_configs(&paths).expect("Read configs failed");
 
         if let BlobConfig::MultiplexedWal { blobstores, .. } =
             &res.repos["test"].storage_config.blobstore

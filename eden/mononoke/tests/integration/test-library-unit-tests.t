@@ -13,7 +13,7 @@
   $ mononoke_admin invalid
   error: unrecognized subcommand 'invalid'
   
-  Usage: admin [OPTIONS] <--config-path <CONFIG_PATH>|--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
+  Usage: admin [OPTIONS] <--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
   
   For more information, try '--help'.
   [2]
@@ -32,7 +32,7 @@
   $ mononoke_testtool invalid
   error: unrecognized subcommand 'invalid'
   
-  Usage: testtool [OPTIONS] <--config-path <CONFIG_PATH>|--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
+  Usage: testtool [OPTIONS] <--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
   
   For more information, try '--help'.
   [2]

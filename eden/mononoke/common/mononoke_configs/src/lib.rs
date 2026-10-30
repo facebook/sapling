@@ -22,7 +22,6 @@ mod watcher;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -55,17 +54,6 @@ use crate::watcher::ConfigSource;
 use crate::watcher::RepoHandleEvent;
 use crate::watcher::liveness_updater;
 use crate::watcher::unified_config_watcher;
-
-/// Where `MononokeConfigs` reads its configuration from.
-#[derive(Clone, Copy, Debug)]
-pub enum ConfigLocation<'a> {
-    /// A configerator tier: `scm/mononoke/repos/tiers/<tier>_manifest` plus
-    /// the per-repo `RepoSpec` each manifest entry names. Hot-reloaded.
-    Tier(&'a str),
-    /// A local `RawRepoConfigs`: a TOML directory or a JSON file. Loaded once,
-    /// never reloaded.
-    Path(&'a Path),
-}
 
 /// The configerator path of a tier's manifest.
 pub fn tier_manifest_path(tier: &str) -> String {
@@ -129,73 +117,45 @@ pub struct MononokeConfigs {
 }
 
 impl MononokeConfigs {
-    /// Create a new instance of MononokeConfigs reading from `location` through
-    /// `config_store`. A tier is watched for changes; a local path is static.
-    pub fn new(
-        location: ConfigLocation<'_>,
-        config_store: &ConfigStore,
-        runtime_handle: Handle,
-    ) -> Result<Self> {
+    /// Create a new instance of MononokeConfigs for `tier`, read through
+    /// `config_store`: `scm/mononoke/repos/tiers/<tier>_manifest` plus the
+    /// per-repo `RepoSpec` each manifest entry names, all watched for changes.
+    pub fn new(tier: &str, config_store: &ConfigStore, runtime_handle: Handle) -> Result<Self> {
         let update_receivers = Arc::new(ArcSwap::from_pointee(vec![]));
 
-        let (tier_name, maybe_manifest_handle, resolved_repo_configs, storage) = match location {
-            ConfigLocation::Tier(tier) => {
-                let manifest_handle =
-                    configerator_manifest_handle(&tier_manifest_path(tier), config_store)?;
-                // The manifest is the sole source of common/storage; fail closed at startup.
-                let manifest = manifest_handle.get();
-                let (common, storage) = parse_manifest_common_and_storage(&manifest).context(
-                    "common/storage could not be parsed from the tier manifest; \
-                     refusing to start",
-                )?;
-                STATS::tier_blob_skipped.add_value(1);
-                // Repos load on demand.
-                (
-                    Some(tier.to_owned()),
-                    Some(manifest_handle),
-                    RepoConfigs::new(HashMap::new(), common),
-                    storage,
-                )
-            }
-            ConfigLocation::Path(path) => (
-                None,
-                None,
-                metaconfig_parser::load_repo_configs(path)?,
-                metaconfig_parser::load_storage_configs(path)?,
-            ),
-        };
+        let manifest_handle =
+            configerator_manifest_handle(&tier_manifest_path(tier), config_store)?;
+        // The manifest is the sole source of common/storage; fail closed at startup.
+        let manifest = manifest_handle.get();
+        let (common, storage) = parse_manifest_common_and_storage(&manifest).context(
+            "common/storage could not be parsed from the tier manifest; refusing to start",
+        )?;
+        STATS::tier_blob_skipped.add_value(1);
+        // Repos load on demand.
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage));
-        let repo_configs = Arc::new(ArcSwap::from_pointee(resolved_repo_configs));
+        let repo_configs = Arc::new(ArcSwap::from_pointee(RepoConfigs::new(
+            HashMap::new(),
+            common,
+        )));
+        let tier_name = Some(tier.to_owned());
+        let maybe_manifest_handle = Some(manifest_handle.clone());
 
         let repo_handles = Arc::new(RwLock::new(HashMap::new()));
 
-        // Control channel for the per-repo arm of unified_config_watcher.
-        // Only created when split-loading is active (manifest is set), since
-        // that's the only case where per-repo handles exist. Single registration
-        // channel: avoids the duplicate-registration race a seed loop would have.
-        let (repo_handle_event_tx, repo_handle_event_rx) = if maybe_manifest_handle.is_some() {
-            let (tx, rx) = mpsc::unbounded_channel();
-            (Some(tx), Some(rx))
-        } else {
-            (None, None)
+        // Control channel for the per-repo arm of unified_config_watcher: a
+        // single registration channel avoids the duplicate-registration race a
+        // seed loop would have.
+        let (repo_handle_event_tx, repo_handle_event_rx) = mpsc::unbounded_channel();
+        let repo_handle_event_tx = Some(repo_handle_event_tx);
+
+        let config_source = ConfigSource {
+            handle: manifest_handle,
+            tier: tier.to_owned(),
         };
 
-        // Only a tier has anything to watch; a local path is static.
-        let maybe_config_source = match (&maybe_manifest_handle, &tier_name) {
-            (Some(handle), Some(tier)) => Some(ConfigSource {
-                handle: handle.clone(),
-                tier: tier.clone(),
-            }),
-            _ => None,
-        };
+        let maybe_liveness_updater = Some(runtime_handle.spawn(liveness_updater()));
 
-        let maybe_liveness_updater = if maybe_config_source.is_some() {
-            Some(runtime_handle.spawn(liveness_updater()))
-        } else {
-            None
-        };
-
-        let maybe_config_updater = if let Some(config_source) = maybe_config_source {
+        let maybe_config_updater = {
             cloned!(
                 repo_handles,
                 repo_configs,
@@ -210,10 +170,8 @@ impl MononokeConfigs {
                 repo_configs,
                 storage_configs,
                 update_receivers,
-                repo_handle_event_rx,
+                Some(repo_handle_event_rx),
             )))
-        } else {
-            None
         };
 
         Ok(Self {

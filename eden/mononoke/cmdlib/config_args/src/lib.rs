@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,18 +14,13 @@ use cached_config::ConfigStore;
 use clap::ArgGroup;
 use clap::Args;
 use fbinit::FacebookInit;
-use mononoke_configs::ConfigLocation;
 use mononoke_configs::MononokeConfigs;
 use mononoke_configs::tier_manifest_path;
 use tokio::runtime::Handle;
 
 #[derive(Args, Debug)]
-#[clap(group(ArgGroup::new("config").args(&["config_path", "config_tier", "prod", "git_config"]).required(true)))]
+#[clap(group(ArgGroup::new("config").args(&["config_tier", "prod", "git_config"]).required(true)))]
 pub struct ConfigArgs {
-    /// Local Mononoke config: a TOML directory or a JSON file
-    #[clap(long, alias = "mononoke-config-path")]
-    pub config_path: Option<String>,
-
     /// Use configerator-based configuration for a specific tier
     #[clap(long)]
     pub config_tier: Option<String>,
@@ -45,32 +39,29 @@ pub struct ConfigArgs {
 }
 
 impl ConfigArgs {
-    /// The configerator tier, or `None` for a local `--config-path`.
-    pub fn tier_name(&self) -> Option<&str> {
+    /// The configerator tier; clap guarantees one of the three flags is set.
+    pub fn tier_name(&self) -> &str {
         if self.prod {
-            Some("prod")
+            "prod"
         } else if self.git_config {
-            Some("gitimport_content")
+            "gitimport_content"
         } else {
-            self.config_tier.as_deref()
+            self.config_tier
+                .as_deref()
+                .expect("clap requires one of --config-tier, --prod or --git-config")
         }
     }
 
-    /// Where the configs come from, for display: the tier manifest's
-    /// configerator path, or the local path.
+    /// The configerator path of the tier manifest, for display.
     pub fn config_path(&self) -> String {
-        match (self.tier_name(), &self.config_path) {
-            (Some(tier), _) => tier_manifest_path(tier),
-            (None, Some(path)) => path.clone(),
-            (None, None) => String::new(),
-        }
+        tier_manifest_path(self.tier_name())
     }
 
-    /// Production means live configerator: a tier read through the real
-    /// config store. A tier served from `--local-configerator-path` is a
-    /// development setup (the integration tests), as is any local path.
+    /// Production means live configerator. A tier served from
+    /// `--local-configerator-path` is a development setup (the integration
+    /// tests, mononoke-bootstrap, Mononoke-on-AWS).
     pub fn mode(&self) -> ConfigMode {
-        if self.tier_name().is_some() && self.local_configerator_path.is_none() {
+        if self.local_configerator_path.is_none() {
             ConfigMode::Production
         } else {
             ConfigMode::Development
@@ -98,15 +89,8 @@ impl ConfigArgs {
         handle: Handle,
         config_store: &ConfigStore,
     ) -> Result<Arc<MononokeConfigs>> {
-        let location = match (self.tier_name(), &self.config_path) {
-            (Some(tier), _) => ConfigLocation::Tier(tier),
-            (None, Some(path)) => ConfigLocation::Path(Path::new(path)),
-            (None, None) => anyhow::bail!(
-                "one of --config-path, --config-tier, --prod or --git-config is required"
-            ),
-        };
         Ok(Arc::new(MononokeConfigs::new(
-            location,
+            self.tier_name(),
             config_store,
             handle,
         )?))

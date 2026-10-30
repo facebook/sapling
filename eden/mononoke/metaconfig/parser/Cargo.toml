@@ -21,12 +21,8 @@ nonzero_ext = "0.2"
 permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 rusoto_core = "0.48.0"
-sapling-repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
-serde = { version = "1.0.229", features = ["derive", "rc"] }
-serde_ignored = "0.1.14"
 serde_json = { version = "1.0.154", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.21"
-toml = { version = "1.1.8", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
@@ -34,4 +30,6 @@ maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 pretty_assertions = { version = "1.4.1", features = ["alloc"], default-features = false }
-tempfile = "3.27.0"
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_ignored = "0.1.14"
+toml = { version = "1.1.8", features = ["preserve_order"] }

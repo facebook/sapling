@@ -29,7 +29,6 @@ use metaconfig_types::CommonConfig;
 use metaconfig_types::LazyLoadingConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
-use mononoke_configs::ConfigLocation;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_macros::mononoke;
@@ -633,12 +632,8 @@ fn manifest_configs(
     );
     let store = ConfigStore::new(source.clone(), Duration::from_secs(3600), None);
     let configs = Arc::new(
-        MononokeConfigs::new(
-            ConfigLocation::Tier(TIER),
-            &store,
-            tokio::runtime::Handle::current(),
-        )
-        .expect("manifest mode constructs"),
+        MononokeConfigs::new(TIER, &store, tokio::runtime::Handle::current())
+            .expect("manifest mode constructs"),
     );
     (configs, source, store)
 }
@@ -853,12 +848,8 @@ fn on_demand_fixture(
     }
     let store = ConfigStore::new(source, Duration::from_secs(3600), None);
     let configs = Arc::new(
-        MononokeConfigs::new(
-            ConfigLocation::Tier(TIER),
-            &store,
-            tokio::runtime::Handle::current(),
-        )
-        .expect("manifest mode constructs"),
+        MononokeConfigs::new(TIER, &store, tokio::runtime::Handle::current())
+            .expect("manifest mode constructs"),
     );
     let loader = Arc::new(CountingLoader::default());
     let repos = Arc::new(MononokeRepos::new_lazy(loader.clone()));

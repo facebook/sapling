@@ -12,7 +12,6 @@ use std::time::Duration;
 
 use cached_config::ModificationTime;
 use cached_config::TestSource;
-use metaconfig_parser::config::load_configs_from_raw;
 use metaconfig_types::CommonConfig;
 use mononoke_macros::mononoke;
 use repos::RawAllowlistIdentity;
@@ -24,7 +23,6 @@ use repos::RawDbLocal;
 use repos::RawMetadataConfig;
 use repos::RawRedactionConfig;
 use repos::RawRepoConfig;
-use repos::RawRepoConfigs;
 use repos::RawStorageConfig;
 use repos::TierRepoEntry;
 
@@ -528,35 +526,6 @@ fn parseable_manifest(trusted_tier: &str) -> TierManifest {
     manifest
 }
 
-/// The two parsers must agree; must hold while the file-backed `RawRepoConfigs` path exists.
-#[mononoke::test]
-fn test_manifest_and_blob_agree_on_common_and_storage() {
-    let common = test_raw_common_config("test_trusted_tier");
-
-    let (blob_configs, blob_storage) = load_configs_from_raw(RawRepoConfigs {
-        common: common.clone(),
-        storage: test_storage_map(),
-        ..Default::default()
-    })
-    .expect("blob parses");
-
-    let (manifest_common, manifest_storage) = parse_manifest_common_and_storage(&TierManifest {
-        common,
-        storage: test_storage_map(),
-        ..Default::default()
-    })
-    .expect("manifest parses");
-
-    assert_eq!(
-        blob_configs.common, manifest_common,
-        "common must be identical from either source"
-    );
-    assert_eq!(
-        blob_storage, manifest_storage,
-        "storage must be identical from either source"
-    );
-}
-
 // --- Manifest-mode startup semantics (manifest_path ⇒ manifest authoritative) ---
 
 const TEST_MANIFEST_PATH: &str = "scm/mononoke/repos/tiers/scs_manifest";
@@ -578,7 +547,7 @@ fn test_tier_mode_constructs_from_manifest() {
     let store = make_store(&[(TEST_MANIFEST_PATH, manifest_json.as_str())]);
     let rt = test_runtime();
 
-    let cfg = MononokeConfigs::new(ConfigLocation::Tier(TEST_TIER), &store, rt.handle().clone())
+    let cfg = MononokeConfigs::new(TEST_TIER, &store, rt.handle().clone())
         .expect("tier mode must construct from the manifest alone");
 
     assert_eq!(
@@ -616,7 +585,7 @@ fn test_tier_mode_fails_closed_on_unparsable_manifest() {
     let store = make_store(&[(TEST_MANIFEST_PATH, manifest_json.as_str())]);
     let rt = test_runtime();
 
-    let result = MononokeConfigs::new(ConfigLocation::Tier(TEST_TIER), &store, rt.handle().clone());
+    let result = MononokeConfigs::new(TEST_TIER, &store, rt.handle().clone());
 
     assert!(
         result.is_err(),
@@ -654,7 +623,7 @@ fn test_watcher_bootstrap_serves_manifest_repos_without_a_change() {
     ]);
     let rt = test_runtime();
 
-    let cfg = MononokeConfigs::new(ConfigLocation::Tier(TEST_TIER), &store, rt.handle().clone())
+    let cfg = MononokeConfigs::new(TEST_TIER, &store, rt.handle().clone())
         .expect("manifest mode must construct");
 
     // Poll: the bootstrap needs no config fire, only scheduling on the watcher task.
