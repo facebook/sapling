@@ -396,6 +396,7 @@ members = [
   "mononoke_types/serialization/clients",
   "mononoke_types/serialization/mocks",
   "mononoke_types/serialization/services",
+  "p4/p4_import",
   "p4/p4_types",
   "repo_attributes/bonsai_blob_mapping",
   "repo_attributes/bonsai_git_mapping",
