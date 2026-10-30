@@ -63,7 +63,6 @@ import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {expandCommitInfoView} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
-import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {DownwardArrow} from './icons/DownwardIcon';
 import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
@@ -102,7 +101,6 @@ import {
   uncommittedChangesFetchError,
 } from './serverAPIState';
 import {SmartActionsDropdown} from './smartActions/SmartActionsDropdown';
-import {SmartActionsMenu} from './smartActions/SmartActionsMenu';
 import {GeneratedStatus} from './types';
 import {showConfirmation, showInfoModal} from './useModal';
 
@@ -434,8 +432,6 @@ export function UncommittedChanges({place}: {place: Place}) {
 
   const runOperation = useRunOperation();
 
-  const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
-
   const openCommitForm = useCallback(
     (which: 'commit' | 'amend') => {
       // make sure view is expanded
@@ -675,7 +671,7 @@ export function UncommittedChanges({place}: {place: Place}) {
               </Button>
             </Tooltip>
             <AbsorbButton />
-            {useV2SmartActions && <SmartActionsDropdown key="smartActions" />}
+            <SmartActionsDropdown key="smartActions" />
           </>
         )}
       </div>
@@ -748,9 +744,6 @@ export function UncommittedChanges({place}: {place: Place}) {
                 <T>Shelve</T>
               </Button>
             </Tooltip>
-            <span className="show-on-hover">
-              {!useV2SmartActions && <SmartActionsMenu key="smartActions" />}
-            </span>
           </div>
           {canAmend && (
             <div className="button-row">
@@ -858,7 +851,6 @@ function MergeConflictButtons({
 
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
-  const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
   const branchMerge = Internal.getSubtreeContinueOperation?.(dagWithPreviews, conflicts);
 
   return (
@@ -898,16 +890,7 @@ function MergeConflictButtons({
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
       </Button>
-      {useV2SmartActions ? (
-        <SmartActionsDropdown />
-      ) : (
-        Internal.ResolveMergeConflictsWithAIButton && (
-          <Internal.ResolveMergeConflictsWithAIButton
-            conflicts={conflicts}
-            disabled={allConflictsResolved || shouldDisableButtons}
-          />
-        )
-      )}
+      <SmartActionsDropdown />
       {externalMergeTool == null ? (
         platform.upsellExternalMergeTool ? (
           <Tooltip

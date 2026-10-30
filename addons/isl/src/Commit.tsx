@@ -54,7 +54,7 @@ import {
 import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {submitAsDraft} from './codeReview/DraftCheckbox';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
-import {getQeFlag, useFeatureFlagSync} from './featureFlags';
+import {getQeFlag} from './featureFlags';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
@@ -97,7 +97,6 @@ import {
 } from './selection';
 import {applicationinfo, inMergeConflicts, mergeConflicts} from './serverAPIState';
 import {SmartActionsDropdown} from './smartActions/SmartActionsDropdown';
-import {SmartActionsMenu} from './smartActions/SmartActionsMenu';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
@@ -685,15 +684,8 @@ export const Commit = memo(
       );
     }
 
-    const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
-    if (!isPublic && !actionsPrevented) {
-      if (useV2SmartActions) {
-        if (commit.isDot && !hasUncommittedChanges && !inConflicts) {
-          inlineCommitActions.push(<SmartActionsDropdown key="smartActions" commit={commit} />);
-        }
-      } else {
-        inlineCommitActions.push(<SmartActionsMenu key="smartActions" commit={commit} />);
-      }
+    if (!isPublic && !actionsPrevented && commit.isDot && !hasUncommittedChanges && !inConflicts) {
+      inlineCommitActions.push(<SmartActionsDropdown key="smartActions" commit={commit} />);
     }
 
     if (!isPublic && !actionsPrevented) {

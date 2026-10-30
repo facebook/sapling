@@ -143,7 +143,7 @@ export function isSignalSummaryActionable(summary: DiffSignalSummary | undefined
 
 /**
  * Whether the diff for `diffId` has actionable signals, based on `diffSummary`.
- * Shared predicate for SmartActionsMenu, actionConfigs, and any other
+ * Shared predicate for smart action configs and any other
  * summary-based gating. Uses `readAtom` so it can be called outside React
  * (e.g. in `actionConfigs.shouldShow`).
  */
