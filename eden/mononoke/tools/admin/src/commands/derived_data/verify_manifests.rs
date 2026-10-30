@@ -26,6 +26,7 @@ use git_types::MappedGitCommitId;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_types::sharded_augmented_manifest::list_hg_leaf_entries;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -35,6 +36,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use tracing::trace;
 use unodes::RootUnodeManifestId;
@@ -212,17 +214,21 @@ async fn list_hg_manifest(
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let mfid = hg_cs.manifestid();
 
-    let map: HashMap<_, _> = mfid
-        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
-        .map_ok(|(path, (ty, filenode_id))| async move {
-            let filenode = filenode_id.load(ctx, repo.repo_blobstore()).await?;
-            let content_id = filenode.content_id();
-            let val = ManifestData::Hg(ty, content_id);
-            Ok((path, val))
-        })
-        .try_buffer_unordered(100)
-        .try_collect()
-        .await?;
+    let map: HashMap<_, _> = list_hg_leaf_entries(
+        ctx,
+        repo.repo_blobstore().clone(),
+        repo.repo_identity().name(),
+        mfid,
+    )
+    .map_ok(|(path, (ty, filenode_id))| async move {
+        let filenode = filenode_id.load(ctx, repo.repo_blobstore()).await?;
+        let content_id = filenode.content_id();
+        let val = ManifestData::Hg(ty, content_id);
+        Ok((path, val))
+    })
+    .try_buffer_unordered(100)
+    .try_collect()
+    .await?;
     trace!("Loaded hg manifests for {} paths", map.len());
     Ok((ManifestType::Hg, map))
 }
@@ -390,4 +396,90 @@ pub(super) async fn verify_manifests(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use blobstore::KeyedBlobstore;
+    use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use mercurial_types::HgAugmentedManifestId;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+    use crate::hg_manifest_test_fixture::HgManifestFixture;
+    use crate::hg_manifest_test_fixture::read_from_augmented;
+
+    #[mononoke::fbinit_test]
+    async fn test_list_hg_manifest_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        f.derive_augmented(&ctx, f.child).await?;
+        let repo: Repo = f.repo().await?;
+
+        // Given: the files listed from the Hg manifest.
+        let (_, from_hg) = with_just_knobs_async(
+            read_from_augmented(false),
+            list_hg_manifest(&ctx, &repo, f.child).boxed(),
+        )
+        .await?;
+        assert_eq!(from_hg.len(), 3, "the child has three files");
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: the augmented manifest lists the same files.
+        let (_, from_augmented) = with_just_knobs_async(
+            read_from_augmented(true),
+            list_hg_manifest(&ctx, &repo, f.child).boxed(),
+        )
+        .await?;
+        assert!(from_augmented == from_hg, "same files, types and contents");
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifest is still read.
+        let knob_off = with_just_knobs_async(
+            read_from_augmented(false),
+            list_hg_manifest(&ctx, &repo, f.child).boxed(),
+        )
+        .await;
+        assert!(
+            knob_off.is_err(),
+            "the knob off reads the blocked Hg manifest"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_list_hg_manifest_missing_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        let repo: Repo = f.repo().await?;
+        let child_key = HgAugmentedManifestId::from(f.child_mf).blobstore_key();
+        assert!(repo.repo_blobstore().get(&ctx, &child_key).await?.is_none());
+        f.blocker.arm();
+
+        let err = with_just_knobs_async(
+            read_from_augmented(true),
+            list_hg_manifest(&ctx, &repo, f.child).boxed(),
+        )
+        .await
+        .err()
+        .expect("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains(&child_key),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
+    }
 }

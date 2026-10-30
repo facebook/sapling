@@ -22,6 +22,7 @@ use clap::Parser;
 use clap::ValueEnum;
 use cmdlib_displaying::DisplayChangeset;
 use cmdlib_displaying::display_content;
+use cmdlib_displaying::display_hg_augmented_manifest;
 use cmdlib_displaying::display_hg_manifest;
 use cmdlib_displaying::display_manifest;
 use content_manifest_derivation::RootContentManifestId;
@@ -33,7 +34,11 @@ use ephemeral_blobstore::RepoEphemeralStoreRef;
 use filestore::FetchKey;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_types::HgChangesetId;
+use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgManifestId;
+use mercurial_types::NULL_HASH;
+use mercurial_types::blobs::hg_manifests_read_from_augmented;
+use mercurial_types::sharded_augmented_manifest::hg_entry_from_augmented;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
@@ -44,6 +49,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
 
 /// Fetch commit, tree or file data.
 #[derive(Parser)]
@@ -163,7 +169,14 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                     .await
                     .context("Failed to get corresponding Hg changeset")?
                     .ok_or_else(|| anyhow!("No Hg changeset for {changeset_id}"))?;
-                display_hg_entry(&ctx, &blobstore, hg_changeset_id, path).await?;
+                let root = hg_changeset_id
+                    .load(&ctx, &blobstore)
+                    .await
+                    .context("Failed to load Hg changeset")?
+                    .manifestid();
+                let read_from_augmented =
+                    hg_manifests_read_from_augmented(repo.repo_identity().name());
+                display_hg_entry(&ctx, &blobstore, root, path, read_from_augmented).await?;
             }
             ManifestKind::ContentManifest => {
                 display_content_manifest(&ctx, &repo, &blobstore, changeset_id, path).await?;
@@ -237,21 +250,26 @@ async fn display_content_manifest(
 async fn display_hg_entry(
     ctx: &CoreContext,
     blobstore: &RepoBlobstore,
-    hg_changeset_id: HgChangesetId,
+    root: HgManifestId,
     path: &str,
+    read_from_augmented: bool,
 ) -> Result<()> {
-    let hg_cs = hg_changeset_id
-        .load(ctx, blobstore)
-        .await
-        .context("Failed to load Hg changeset")?;
+    // The null manifest id has no augmented manifest. Hg manifest reads treat
+    // it as an empty tree without reading the blobstore.
+    let read_from_augmented = read_from_augmented && root.into_nodehash() != NULL_HASH;
     let entry = if path.is_empty() {
-        Entry::Tree(hg_cs.manifestid())
+        Entry::Tree(root)
     } else {
         let mpath = MPath::new(path).with_context(|| format!("Invalid path: {path}"))?;
-        hg_cs
-            .manifestid()
-            .find_entry(ctx.clone(), blobstore.clone(), mpath)
-            .await
+        let entry = if read_from_augmented {
+            HgAugmentedManifestId::from(root)
+                .find_entry(ctx.clone(), blobstore.clone(), mpath)
+                .await
+                .map(|entry| entry.map(hg_entry_from_augmented))
+        } else {
+            root.find_entry(ctx.clone(), blobstore.clone(), mpath).await
+        };
+        entry
             .context("Failed to traverse manifest")?
             .ok_or_else(|| anyhow!("Path does not exist: {path}"))?
     };
@@ -264,6 +282,13 @@ async fn display_hg_entry(
             writeln!(std::io::stdout(), "File-Type: {file_type}")?;
             display_content_info(ctx, blobstore, &envelope.content_id().into()).await?;
         }
+        Entry::Tree(id) if read_from_augmented => {
+            let manifest = HgAugmentedManifestId::from(id)
+                .load(ctx, blobstore)
+                .await
+                .context("Failed to load augmented manifest")?;
+            display_hg_augmented_manifest(ctx, blobstore, std::io::stdout(), &manifest).await?;
+        }
         Entry::Tree(id) => {
             let manifest = id
                 .load(ctx, blobstore)
@@ -273,4 +298,98 @@ async fn display_hg_entry(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+    use crate::hg_manifest_test_fixture::HgManifestFixture;
+
+    #[mononoke::fbinit_test]
+    async fn test_display_hg_entry_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        f.derive_augmented(&ctx, f.child).await?;
+        let repo: Repo = f.repo().await?;
+        let blobstore = repo.repo_blobstore();
+        let root = f.child_mf;
+        let mut hg_listing = Vec::new();
+        let hg_manifest = root.load(&ctx, blobstore).await?;
+        display_hg_manifest(&ctx, blobstore, &mut hg_listing, &hg_manifest).await?;
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: trees and files are still found and displayed from the
+        // augmented manifest, and a tree's listing is unchanged.
+        for path in ["", "dir", "dir/b", "e"] {
+            display_hg_entry(&ctx, blobstore, root, path, true).await?;
+        }
+        let mut augmented_listing = Vec::new();
+        let augmented_manifest = HgAugmentedManifestId::from(root)
+            .load(&ctx, blobstore)
+            .await?;
+        display_hg_augmented_manifest(&ctx, blobstore, &mut augmented_listing, &augmented_manifest)
+            .await?;
+        assert_eq!(
+            String::from_utf8(augmented_listing)?,
+            String::from_utf8(hg_listing)?
+        );
+        assert_eq!(f.blocker.reads(), 0, "no Hg manifest is read");
+
+        // And: reading Hg manifests still reads them.
+        assert!(
+            display_hg_entry(&ctx, blobstore, root, "dir", false)
+                .await
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_display_hg_entry_missing_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        let repo: Repo = f.repo().await?;
+        f.blocker.arm();
+
+        let err = display_hg_entry(&ctx, repo.repo_blobstore(), f.child_mf, "dir", true)
+            .await
+            .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_display_hg_entry_null_manifest(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        let repo: Repo = f.repo().await?;
+        let blobstore = repo.repo_blobstore();
+        let null = HgManifestId::new(NULL_HASH);
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: like an Hg manifest read, the null manifest is shown as an
+        // empty tree, and has no other path, without reading any Hg manifest.
+        display_hg_entry(&ctx, blobstore, null, "", true).await?;
+        let err = display_hg_entry(&ctx, blobstore, null, "dir", true)
+            .await
+            .expect_err("the null manifest has no `dir`");
+        assert_eq!(format!("{err:#}"), "Path does not exist: dir");
+        assert_eq!(f.blocker.reads(), 0, "no Hg manifest is read");
+        Ok(())
+    }
 }

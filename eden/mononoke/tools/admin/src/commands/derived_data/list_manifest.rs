@@ -39,7 +39,10 @@ use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::NULL_HASH;
+use mercurial_types::blobs::hg_manifests_read_from_augmented;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
+use mercurial_types::sharded_augmented_manifest::hg_entry_from_augmented;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
@@ -66,6 +69,7 @@ use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::typed_hash::AclManifestId;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use unodes::RootUnodeManifestId;
@@ -286,6 +290,9 @@ impl Listable for Entry<GitTreeId, GitLeaf> {
     }
 }
 
+type LeafOf<TreeId> =
+    <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf;
+
 async fn list<TreeId>(
     ctx: &CoreContext,
     repo: &Repo,
@@ -298,19 +305,41 @@ where
     TreeId: StoreLoadable<RepoBlobstore> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<RepoBlobstore>>::Value:
         Manifest<RepoBlobstore, TreeId = TreeId> + Send + Sync,
-    <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf:
-        Clone + Send + Eq + Unpin,
-    Entry<
-        TreeId,
-        <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf,
-    >: Listable,
+    LeafOf<TreeId>: Clone + Send + Eq + Unpin,
+    Entry<TreeId, LeafOf<TreeId>>: Listable,
+{
+    list_as(ctx, repo, root_id, path, directory, recursive, |entry| {
+        entry
+    })
+    .await
+}
+
+/// Like `list`, but each entry is listed as the entry `list_entry_as` maps it
+/// to.
+async fn list_as<TreeId, ListedTreeId, ListedLeaf>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root_id: TreeId,
+    path: MPath,
+    directory: bool,
+    recursive: bool,
+    list_entry_as: fn(Entry<TreeId, LeafOf<TreeId>>) -> Entry<ListedTreeId, ListedLeaf>,
+) -> Result<BoxStream<'static, Result<ListItem>>>
+where
+    TreeId: StoreLoadable<RepoBlobstore> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<RepoBlobstore>>::Value:
+        Manifest<RepoBlobstore, TreeId = TreeId> + Send + Sync,
+    LeafOf<TreeId>: Clone + Send + Eq + Unpin,
+    ListedTreeId: Send + 'static,
+    ListedLeaf: Send + 'static,
+    Entry<ListedTreeId, ListedLeaf>: Listable,
 {
     if directory {
         let entry = root_id
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
             .await?
             .ok_or_else(|| anyhow!("No manifest for path '{path}'"))?;
-        let item = ListItem::new(path, entry);
+        let item = ListItem::new(path, list_entry_as(entry));
         Ok(futures::stream::once(async move { Ok(item) }).boxed())
     } else if recursive {
         let stream = if let Some(path) = path.into_optional_non_root_path() {
@@ -318,7 +347,7 @@ where
         } else {
             root_id.list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         }
-        .map_ok(|(path, entry)| ListItem::new(path.into(), Entry::Leaf(entry)))
+        .map_ok(move |(path, entry)| ListItem::new(path.into(), list_entry_as(Entry::Leaf(entry))))
         .boxed();
         Ok(stream)
     } else {
@@ -335,15 +364,49 @@ where
                     let tree = tree_id.load(&ctx, &blobstore).await?;
                     let mut subentries = tree.list(&ctx, &blobstore).await?;
                     while let Some((elem, subentry)) = subentries.try_next().await? {
-                        yield ListItem::new(path.join_element(Some(&elem)), subentry);
+                        yield ListItem::new(path.join_element(Some(&elem)), list_entry_as(subentry));
                     }
                 }
                 .boxed())
             }
             Entry::Leaf(..) => {
-                Ok(futures::stream::once(async move { Ok(ListItem::new(path, entry)) }).boxed())
+                Ok(futures::stream::once(
+                    async move { Ok(ListItem::new(path, list_entry_as(entry))) },
+                )
+                .boxed())
             }
         }
+    }
+}
+
+/// Lists the Hg manifest `root_id`, from the augmented manifest stored under the
+/// same id when `scm/mononoke:hgmanifest_read_from_augmented` is on for the
+/// repo.
+async fn list_hg_manifest(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root_id: HgManifestId,
+    path: MPath,
+    directory: bool,
+    recursive: bool,
+) -> Result<BoxStream<'static, Result<ListItem>>> {
+    // The null manifest id has no augmented manifest. Hg manifest reads treat
+    // it as an empty tree without reading the blobstore.
+    if hg_manifests_read_from_augmented(repo.repo_identity().name())
+        && root_id.into_nodehash() != NULL_HASH
+    {
+        list_as(
+            ctx,
+            repo,
+            HgAugmentedManifestId::from(root_id),
+            path,
+            directory,
+            recursive,
+            hg_entry_from_augmented,
+        )
+        .await
+    } else {
+        list(ctx, repo, root_id, path, directory, recursive).await
     }
 }
 
@@ -940,7 +1003,7 @@ pub(super) async fn list_manifest(
                 .load(ctx, repo.repo_blobstore())
                 .await?
                 .manifestid();
-            list(ctx, repo, root_id, path, args.directory, args.recursive).await?
+            list_hg_manifest(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
         ListManifestType::HgAugmentedManifests => {
             let root_id =
@@ -993,4 +1056,121 @@ pub(super) async fn list_manifest(
         .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+    use crate::hg_manifest_test_fixture::HgManifestFixture;
+    use crate::hg_manifest_test_fixture::read_from_augmented;
+
+    async fn listed(items: BoxStream<'static, Result<ListItem>>) -> Result<Vec<String>> {
+        let mut listed: Vec<String> = items.map_ok(|item| item.to_string()).try_collect().await?;
+        listed.sort();
+        Ok(listed)
+    }
+
+    /// (path, directory, recursive)
+    const LISTINGS: [(&str, bool, bool); 6] = [
+        ("", false, false),
+        ("", false, true),
+        ("dir", true, false),
+        ("dir", false, false),
+        ("dir/b", false, false),
+        ("e", false, false),
+    ];
+
+    #[mononoke::fbinit_test]
+    async fn test_list_hg_manifests_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        f.derive_augmented(&ctx, f.child).await?;
+        let repo: Repo = f.repo().await?;
+
+        // Given: the listings of the Hg manifests.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            hg_listings(&ctx, &repo, f.child_mf).boxed(),
+        )
+        .await?;
+        assert!(
+            from_hg
+                .iter()
+                .all(|listing| listing != "[]" && !listing.starts_with("error")),
+            "every listing finds entries: {from_hg:?}"
+        );
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: with the knob on, listing the augmented manifests as Hg
+        // manifests gives the same output.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            hg_listings(&ctx, &repo, f.child_mf).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(f.blocker.reads(), 0, "no Hg manifest is read");
+        Ok(())
+    }
+
+    /// Every listing in `LISTINGS` of the Hg manifest `root`, as the sorted
+    /// items listed or the error.
+    async fn hg_listings(
+        ctx: &CoreContext,
+        repo: &Repo,
+        root: HgManifestId,
+    ) -> Result<Vec<String>> {
+        let mut listings = Vec::new();
+        for (path, directory, recursive) in LISTINGS {
+            let listing =
+                match list_hg_manifest(ctx, repo, root, MPath::new(path)?, directory, recursive)
+                    .await
+                {
+                    Ok(items) => listed(items).await.map(|items| format!("{items:?}")),
+                    Err(err) => Err(err),
+                };
+            listings.push(listing.unwrap_or_else(|err| format!("error: {err:#}")));
+        }
+        Ok(listings)
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_list_hg_manifests_null_manifest(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        let repo: Repo = f.repo().await?;
+        let null = HgManifestId::new(NULL_HASH);
+
+        // Given: the listings of the null manifest from Hg manifests, which
+        // read it as an empty tree.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            hg_listings(&ctx, &repo, null).boxed(),
+        )
+        .await?;
+        assert_eq!(from_hg[0], "[]", "the root lists nothing");
+        assert_eq!(from_hg[1], "[]", "there are no files");
+        assert_eq!(from_hg[3], "error: No manifest for path 'dir'");
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: with the knob on, the listings are the same, and no Hg
+        // manifest is read.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            hg_listings(&ctx, &repo, null).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(f.blocker.reads(), 0, "no Hg manifest is read");
+        Ok(())
+    }
 }

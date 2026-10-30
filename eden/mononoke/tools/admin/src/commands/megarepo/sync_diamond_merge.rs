@@ -52,11 +52,11 @@ use futures::stream::futures_unordered::FuturesUnordered;
 use futures::try_join;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::BonsaiDiffFileChange;
-use manifest::bonsai_diff;
 use maplit::hashmap;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::sharded_augmented_manifest::hg_manifest_bonsai_diff;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
@@ -564,13 +564,13 @@ fn find_bonsai_diff(
     .map_ok({
         cloned!(ctx, repo);
         move |(d_mf, a_mf)| {
-            bonsai_diff(
-                ctx.clone(),
+            hg_manifest_bonsai_diff(
+                &ctx,
                 repo.repo_blobstore().clone(),
+                repo.repo_identity().name(),
                 d_mf,
                 Some(a_mf).into_iter().collect(),
             )
-            .boxed()
         }
     })
     .try_flatten()
@@ -585,4 +585,102 @@ async fn id_to_manifestid(
     let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
     let cs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
     Ok(cs.manifestid())
+}
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+    use crate::hg_manifest_test_fixture::HgManifestFixture;
+    use crate::hg_manifest_test_fixture::read_from_augmented;
+
+    async fn sorted_diff(
+        ctx: &CoreContext,
+        repo: &Repo,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> Result<Vec<BonsaiDiffFileChange<(FileType, HgFileNodeId)>>> {
+        let mut diff: Vec<_> = find_bonsai_diff(ctx.clone(), repo, ancestor, descendant)
+            .try_collect()
+            .await?;
+        diff.sort();
+        Ok(diff)
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_find_bonsai_diff_from_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        f.derive_augmented(&ctx, f.child).await?;
+        let repo: Repo = f.repo().await?;
+
+        // Given: the diff of the Hg manifests.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            sorted_diff(&ctx, &repo, f.root, f.child).boxed(),
+        )
+        .await?;
+        assert_eq!(
+            from_hg.len(),
+            4,
+            "a removed, dir/b changed, dir/c and e added"
+        );
+
+        // When: Hg manifests can no longer be read.
+        f.blocker.arm();
+
+        // Then: the augmented manifests give the same diff.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            sorted_diff(&ctx, &repo, f.root, f.child).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifests are still read.
+        let knob_off = with_just_knobs_async(
+            read_from_augmented(false),
+            sorted_diff(&ctx, &repo, f.root, f.child).boxed(),
+        )
+        .await;
+        assert!(
+            knob_off.is_err(),
+            "the knob off reads the blocked Hg manifests"
+        );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_find_bonsai_diff_missing_augmented(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let f = HgManifestFixture::new(&ctx).await?;
+        let repo: Repo = f.repo().await?;
+        f.blocker.arm();
+
+        let err = with_just_knobs_async(
+            read_from_augmented(true),
+            sorted_diff(&ctx, &repo, f.root, f.child).boxed(),
+        )
+        .await
+        .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains("hgaugmentedmanifest.sha1."),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            f.blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
+    }
 }

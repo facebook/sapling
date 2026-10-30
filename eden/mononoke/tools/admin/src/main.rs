@@ -21,6 +21,8 @@ mod bookmark_log_entry;
 mod commands;
 #[cfg(fbcode_build)]
 mod facebook;
+#[cfg(test)]
+mod hg_manifest_test_fixture;
 mod user_ctx;
 
 /// Administrate Mononoke

@@ -17,6 +17,7 @@ pub use changeset::DisplayChangeset;
 pub use changeset::display_file_change;
 pub use content::display_content;
 pub use content_manifest::display_manifest;
+pub use mercurial::display_hg_augmented_manifest;
 pub use mercurial::display_hg_manifest;
 
 /// Hexdump a block of data to the output stream.

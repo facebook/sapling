@@ -35,6 +35,7 @@ rust_binary(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobstore:memblob",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/rust/justknobs_ext:justknobs",
         "//eden/mononoke/repo_factory:test_repo_factory",
