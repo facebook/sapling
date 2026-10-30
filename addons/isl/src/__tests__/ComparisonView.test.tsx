@@ -13,6 +13,7 @@ import path from 'node:path';
 import {ComparisonType} from 'shared/Comparison';
 import {nextTick, nullthrows} from 'shared/utils';
 import App from '../App';
+import {showComparison} from '../ComparisonView/atoms';
 import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
 import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';
 import {
@@ -277,6 +278,9 @@ describe('ComparisonView', () => {
       await nextTick();
     });
     expect(inComparisonView().getByText('This file is untracked')).toBeInTheDocument();
+    expect(
+      inComparisonView().queryByTestId('comparison-untracked-files-banner'),
+    ).not.toBeInTheDocument();
 
     resetTestMessages();
     act(() => {
@@ -306,6 +310,134 @@ describe('ComparisonView', () => {
       }),
     );
     unmountNow();
+  });
+
+  describe('untracked files banner', () => {
+    function simulateUntrackedFiles() {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: [
+            {path: 'src/file1.txt', status: 'M'},
+            {path: 'untracked1.txt', status: '?'},
+            {path: 'untracked2.txt', status: '?'},
+            {path: 'untracked3.txt', status: '?'},
+          ],
+        });
+      });
+    }
+
+    it('is not shown without untracked files', async () => {
+      await openUncommittedChangesComparison();
+      expect(
+        inComparisonView().queryByTestId('comparison-untracked-files-banner'),
+      ).not.toBeInTheDocument();
+      unmountNow();
+    });
+
+    it('says how many untracked files are not shown', async () => {
+      simulateUntrackedFiles();
+      await openUncommittedChangesComparison();
+      expect(
+        inComparisonView().getByText('3 untracked files are not shown in this comparison'),
+      ).toBeInTheDocument();
+      unmountNow();
+    });
+
+    it('names the file when there is only one untracked file', async () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: [
+            {path: 'src/file1.txt', status: 'M'},
+            {path: 'untracked1.txt', status: '?'},
+          ],
+        });
+      });
+      await openUncommittedChangesComparison();
+      expect(
+        inComparisonView().getByText(
+          'untracked1.txt is untracked and not included in this comparison',
+        ),
+      ).toBeInTheDocument();
+      expect(inComparisonView().getByText('Track file')).toBeInTheDocument();
+      unmountNow();
+    });
+
+    it('is shown even when there are no tracked changes', async () => {
+      simulateUntrackedFiles();
+      await openUncommittedChangesComparison('');
+      expect(inComparisonView().getByText('No Changes')).toBeInTheDocument();
+      expect(
+        inComparisonView().getByTestId('comparison-untracked-files-banner'),
+      ).toBeInTheDocument();
+      unmountNow();
+    });
+
+    it('is not shown for comparisons that are not against head', async () => {
+      simulateUntrackedFiles();
+      await act(async () => {
+        showComparison({type: ComparisonType.Committed, hash: 'a'});
+        await nextTick();
+      });
+      await waitFor(
+        () =>
+          expectMessageSentToServer({
+            type: 'requestComparison',
+            comparison: {type: ComparisonType.Committed, hash: 'a'},
+            ignoreWhitespace: true,
+          }),
+        {timeout: 10_000},
+      );
+      await act(async () => {
+        simulateMessageFromServer({
+          type: 'comparison',
+          comparison: {type: ComparisonType.Committed, hash: 'a'},
+          data: {diff: {value: UNCOMMITTED_CHANGES_DIFF}},
+          ignoreWhitespace: true,
+        });
+        await nextTick();
+      });
+      expect(inComparisonView().getByText('someFile.txt')).toBeInTheDocument();
+      expect(
+        inComparisonView().queryByTestId('comparison-untracked-files-banner'),
+      ).not.toBeInTheDocument();
+      unmountNow();
+    });
+
+    it('tracks the untracked files and reloads the comparison', async () => {
+      simulateUntrackedFiles();
+      await openUncommittedChangesComparison();
+
+      resetTestMessages();
+      act(() => {
+        fireEvent.click(inComparisonView().getByTestId('comparison-track-untracked-files'));
+      });
+      const message = await waitFor(() =>
+        nullthrows(getLastMessageOfTypeSentToServer('runOperation')),
+      );
+      expect(message.operation.args).toEqual([
+        'addremove',
+        {type: 'repo-relative-file', path: 'untracked1.txt'},
+        {type: 'repo-relative-file', path: 'untracked2.txt'},
+        {type: 'repo-relative-file', path: 'untracked3.txt'},
+      ]);
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: message.operation.id,
+          kind: 'exit',
+          exitCode: 0,
+          timestamp: 1234,
+        });
+      });
+      await waitFor(() =>
+        expectMessageSentToServer({
+          type: 'requestComparison',
+          comparison: {type: ComparisonType.UncommittedChanges},
+          ignoreWhitespace: true,
+        }),
+      );
+      unmountNow();
+    });
   });
 
   it('invalidates cached remaining lines when the head commit changes', async () => {

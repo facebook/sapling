@@ -11,6 +11,7 @@ import type {Result} from '../types';
 import type {Context} from './SplitDiffView/types';
 
 import deepEqual from 'fast-deep-equal';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
@@ -34,6 +35,7 @@ import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import {AddOperation} from '../operations/AddOperation';
+import {AddRemoveOperation} from '../operations/AddRemoveOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
@@ -136,6 +138,68 @@ const focusedFileIsUntrackedAtom = atomFamilyWeak((path: string) =>
   ),
 );
 
+/**
+ * Untracked files in the working copy, which are left out of every comparison against head.
+ * Like {@link focusedFileIsUntrackedAtom}, this ignores optimistic state.
+ */
+const untrackedFilesAtom = atom(get =>
+  get(latestUncommittedChanges)
+    .filter(file => file.status === '?')
+    .map(file => file.path),
+);
+
+const MAX_UNTRACKED_FILES_IN_TOOLTIP = 20;
+
+function UntrackedFilesBanner({
+  paths,
+  onTracked,
+}: {
+  paths: Array<string>;
+  onTracked: () => unknown;
+}) {
+  const runOperation = useRunOperation();
+  const [isTracking, setIsTracking] = useState(false);
+  const shownPaths = paths.slice(0, MAX_UNTRACKED_FILES_IN_TOOLTIP);
+  const hiddenCount = paths.length - shownPaths.length;
+  const tooltip = [
+    ...shownPaths,
+    ...(hiddenCount > 0 ? [t('andMoreFiles', {count: hiddenCount})] : []),
+  ].join('\n');
+  return (
+    <Banner
+      className="comparison-view-untracked-files-banner"
+      kind={BannerKind.warning}
+      icon={<Icon icon="warning" />}
+      alwaysShowButtons
+      buttons={
+        <Button
+          data-testid="comparison-track-untracked-files"
+          disabled={isTracking}
+          onClick={async () => {
+            setIsTracking(true);
+            await runOperation(new AddRemoveOperation(paths));
+            setIsTracking(false);
+            onTracked();
+          }}>
+          <Icon icon={isTracking ? 'loading' : 'add'} slot="start" />
+          <T count={paths.length}>trackUntrackedFiles</T>
+        </Button>
+      }>
+      {paths.length === 1 ? (
+        <span data-testid="comparison-untracked-files-banner">
+          <T replace={{$path: paths[0]}}>$path is untracked and not included in this comparison</T>
+        </span>
+      ) : (
+        <Tooltip title={tooltip} placement="bottom">
+          <span data-testid="comparison-untracked-files-banner">
+            <T count={paths.length}>untrackedFilesNotShownInComparison</T>
+          </span>
+        </Tooltip>
+      )}
+    </Banner>
+  );
+}
+
 function UntrackedFileNotice({path, onTracked}: {path: string; onTracked: () => unknown}) {
   const runOperation = useRunOperation();
   const [isTracking, setIsTracking] = useState(false);
@@ -187,6 +251,9 @@ export default function ComparisonView({
       focusedFile != null && comparisonIsAgainstHead(comparison) ? focusedFile : '',
     ),
   );
+  const untrackedFiles = useAtomValue(untrackedFilesAtom);
+  const showUntrackedFilesBanner =
+    focusedFile == null && comparisonIsAgainstHead(comparison) && untrackedFiles.length > 0;
 
   const displayMode = useComparisonDisplayMode();
 
@@ -285,7 +352,12 @@ export default function ComparisonView({
         dismiss={dismiss}
         focusedFile={focusedFile}
       />
-      <div className="comparison-view-details">{content}</div>
+      <div className="comparison-view-details">
+        {showUntrackedFilesBanner && (
+          <UntrackedFilesBanner paths={untrackedFiles} onTracked={reloadComparison} />
+        )}
+        {content}
+      </div>
     </div>
   );
 }

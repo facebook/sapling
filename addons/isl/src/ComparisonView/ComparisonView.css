@@ -45,6 +45,11 @@
   /* height: calc(100% - 41px); */
 }
 
+.comparison-view-details > .comparison-view-untracked-files-banner {
+  align-self: stretch;
+  margin: 0;
+}
+
 .comparison-view .split-diff-view {
   border-top-width: 0;
   border-radius: 0;

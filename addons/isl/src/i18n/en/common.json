@@ -28,5 +28,10 @@
   "moreCommandsToRun_other": "$count more commands",
   "whetherToSubmitDiffAsDraft_one": "Whether to submit this diff as a draft",
   "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft",
-  "publishWhenReadyTooltip": "Submit as draft and automatically publish for review when all CI signals pass. Publishing will request reviewers and notify them. CI validation starts immediately."
+  "publishWhenReadyTooltip": "Submit as draft and automatically publish for review when all CI signals pass. Publishing will request reviewers and notify them. CI validation starts immediately.",
+  "untrackedFilesNotShownInComparison_other": "$count untracked files are not shown in this comparison",
+  "trackUntrackedFiles_one": "Track file",
+  "trackUntrackedFiles_other": "Track $count files",
+  "andMoreFiles_one": "...and 1 more file",
+  "andMoreFiles_other": "...and $count more files"
 }
