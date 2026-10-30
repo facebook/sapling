@@ -9,7 +9,6 @@ use std::task::Poll;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use blobstore::Loadable;
 use bonsai_p4_mapping::AddP4MappingErrorKind;
 use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
@@ -588,6 +587,7 @@ async fn test_import_moves_the_bookmark_and_maps_each_changelist(fb: FacebookIni
         Some(imported[1].1),
         bookmark_target(&ctx, &repo, &master).await?
     );
+    assert_eq!(Some(9), resume_point(&ctx, &repo, &master).await?);
     for (change, cs_id) in imported {
         assert_eq!(Some(cs_id), mapped(&ctx, &repo, change).await?);
         assert_eq!(
@@ -606,6 +606,7 @@ async fn test_next_batch_continues_from_the_bookmark(fb: FacebookInit) -> Result
     let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
     let master = BookmarkKey::new("master")?;
     let source = two_changelists();
+    assert_eq!(None, resume_point(&ctx, &repo, &master).await?);
 
     let first = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[7], &[]).await?;
     let second = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[9], &[]).await?;
@@ -616,6 +617,35 @@ async fn test_next_batch_continues_from_the_bookmark(fb: FacebookInit) -> Result
         Some(second[0].1),
         bookmark_target(&ctx, &repo, &master).await?
     );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_batch_not_after_the_checkpoint_is_rejected(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let master = BookmarkKey::new("master")?;
+    let source = two_changelists();
+    import_changelists(&ctx, &repo, &source, DEPOT, &master, &[7, 9], &[]).await?;
+    let head = bookmark_target(&ctx, &repo, &master).await?;
+
+    for batch in [&[9, 11][..], &[8]] {
+        let error = import_changelists(&ctx, &repo, &source, DEPOT, &master, batch, &[])
+            .await
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("already at changelist 9"),
+            "{error:?}"
+        );
+    }
+    let error = import_changelists(&ctx, &repo, &source, DEPOT, &master, &[11, 10], &[])
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("not in increasing order"),
+        "{error:?}"
+    );
+    assert_eq!(head, bookmark_target(&ctx, &repo, &master).await?);
     Ok(())
 }
 

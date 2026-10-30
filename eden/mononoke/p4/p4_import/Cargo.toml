@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.104"
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_p4_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_p4_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 bytes = { version = "1.12.1", features = ["serde"] }
@@ -26,7 +27,6 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 
 [dev-dependencies]
 async-trait = "0.1.92"
-blobstore = { version = "0.1.0", path = "../../blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", features = ["impl_never_type"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

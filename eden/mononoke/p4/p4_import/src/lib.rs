@@ -14,6 +14,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
+use blobstore::Loadable;
 use bonsai_p4_mapping::BonsaiP4Mapping;
 use bonsai_p4_mapping::BonsaiP4MappingArc;
 use bonsai_p4_mapping::BonsaiP4MappingEntry;
@@ -234,8 +235,37 @@ pub async fn build_changesets(
     Ok(changesets)
 }
 
+/// The bookmark's changeset and the changelist it was imported from, or `None` before
+/// the first import.
+async fn head(
+    ctx: &CoreContext,
+    repo: &(impl BookmarksRef + RepoBlobstoreRef),
+    bookmark: &BookmarkKey,
+) -> Result<Option<(ChangesetId, u64)>> {
+    let Some(cs_id) = repo
+        .bookmarks()
+        .get(ctx.clone(), bookmark, Freshness::MostRecent)
+        .await?
+    else {
+        return Ok(None);
+    };
+    let changeset = cs_id.load(ctx, repo.repo_blobstore()).await?;
+    Ok(Some((cs_id, P4ChangelistId::from_bcs(&changeset)?.id())))
+}
+
+/// The last changelist imported onto `bookmark`: the next import starts after it. The
+/// bookmark is the checkpoint, so nothing else needs to record it.
+pub async fn resume_point(
+    ctx: &CoreContext,
+    repo: &(impl BookmarksRef + RepoBlobstoreRef),
+    bookmark: &BookmarkKey,
+) -> Result<Option<u64>> {
+    Ok(head(ctx, repo, bookmark).await?.map(|(_, change)| change))
+}
+
 /// Imports `changes`, in order, onto `bookmark` (created by the first import), deriving
-/// the types in `derive` that the repo has enabled, and returns their changesets.
+/// the types in `derive` that the repo has enabled, and returns their changesets. The
+/// batch must start after the `resume_point`, so nothing is imported twice.
 ///
 /// A changelist has no parent field, unlike a git commit: its parent is whatever the
 /// bookmark points at, so the bookmark is the only record of where the import is. That is
@@ -265,10 +295,19 @@ pub async fn import_changelists(
     let Some(&last) = changes.last() else {
         return Ok(Vec::new());
     };
-    let old = repo
-        .bookmarks()
-        .get(ctx.clone(), bookmark, Freshness::MostRecent)
-        .await?;
+    ensure!(
+        changes.is_sorted_by(|a, b| a < b),
+        "changelists to import are not in increasing order"
+    );
+    let head = head(ctx, repo, bookmark).await?;
+    if let Some((_, checkpoint)) = head {
+        ensure!(
+            changes[0] > checkpoint,
+            "{bookmark} is already at changelist {checkpoint}, but the batch starts at {}",
+            changes[0]
+        );
+    }
+    let old = head.map(|(cs_id, _)| cs_id);
     let (imported, changesets): (Vec<_>, Vec<_>) =
         build_changesets(ctx, repo, source, depot_root, old, changes)
             .await?
