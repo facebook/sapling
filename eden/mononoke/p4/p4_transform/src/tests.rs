@@ -11,6 +11,7 @@ use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types_mocks::changesetid::ONES_CSID;
+use mononoke_types_mocks::changesetid::TWOS_CSID;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 use super::*;
@@ -370,4 +371,182 @@ fn test_copy_from_reaches_the_file_change() {
         GitLfs::FullContent,
     );
     assert_eq!(expected, change);
+}
+
+fn changelist(files: Vec<FileRevision>) -> Changelist {
+    Changelist {
+        number: 42,
+        user: "jdoe".to_owned(),
+        time: 1_700_000_000,
+        description: "Fix the build\n".to_owned(),
+        files,
+    }
+}
+
+fn contents(depot_paths: &[&str]) -> HashMap<String, ContentMetadataV2> {
+    depot_paths
+        .iter()
+        .map(|depot_path| (depot_path.to_string(), content()))
+        .collect()
+}
+
+fn changes_of(bcs: &BonsaiChangeset) -> Vec<(String, FileChange)> {
+    bcs.file_changes()
+        .map(|(path, change)| (path.to_string(), change.clone()))
+        .collect()
+}
+
+#[mononoke::test]
+fn test_changelist_becomes_a_changeset_on_its_parent() {
+    let changelist = changelist(vec![
+        revision("//test1/a.txt", Action::Edit),
+        revision("//test1/b.txt", Action::Delete),
+        revision("//other/c.txt", Action::Edit),
+    ]);
+    let contents = contents(&["//test1/a.txt"]);
+    let bcs = changeset(
+        DEPOT,
+        &changelist,
+        Some(ONES_CSID),
+        &contents,
+        &HashMap::new(),
+    )
+    .unwrap();
+    assert_eq!(vec![ONES_CSID], bcs.parents().collect::<Vec<_>>());
+    assert_eq!("jdoe", bcs.author());
+    assert_eq!(
+        &DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+        bcs.author_date()
+    );
+    assert_eq!(None, bcs.committer());
+    assert_eq!("Fix the build\n", bcs.message());
+    assert_eq!(42, P4ChangelistId::from_bcs(&bcs).unwrap().id());
+    assert_eq!(
+        vec![
+            ("a.txt".to_owned(), tracked(FileType::Regular)),
+            ("b.txt".to_owned(), FileChange::Deletion),
+        ],
+        changes_of(&bcs)
+    );
+}
+
+#[mononoke::test]
+fn test_first_changeset_has_no_parent_and_no_copies() {
+    let changelist = changelist(vec![revision("//test1/new.txt", Action::Branch)]);
+    let contents = contents(&["//test1/new.txt"]);
+    let copy_sources = HashMap::from([(
+        "//test1/new.txt".to_owned(),
+        NonRootMPath::new("old.txt").unwrap(),
+    )]);
+    let bcs = changeset(DEPOT, &changelist, None, &contents, &copy_sources).unwrap();
+    assert_eq!(0, bcs.parents().count());
+    assert_eq!(
+        vec![("new.txt".to_owned(), tracked(FileType::Regular))],
+        changes_of(&bcs)
+    );
+}
+
+#[mononoke::test]
+fn test_copies_are_from_the_parent() {
+    let changelist = changelist(vec![revision("//test1/new.txt", Action::MoveAdd)]);
+    let contents = contents(&["//test1/new.txt"]);
+    let from = NonRootMPath::new("old.txt").unwrap();
+    let copy_sources = HashMap::from([("//test1/new.txt".to_owned(), from.clone())]);
+    let bcs = changeset(
+        DEPOT,
+        &changelist,
+        Some(TWOS_CSID),
+        &contents,
+        &copy_sources,
+    )
+    .unwrap();
+    let (_, change) = bcs.file_changes().next().unwrap();
+    assert_eq!(Some(&(from, TWOS_CSID)), change.copy_from());
+}
+
+#[mononoke::test]
+fn test_file_replacing_a_directory_drops_the_directory_deletions() {
+    let changelist = changelist(vec![
+        revision("//test1/a", Action::Add),
+        revision("//test1/a/b", Action::Delete),
+        revision("//test1/a/c/d", Action::MoveDelete),
+        revision("//test1/ab", Action::Delete),
+    ]);
+    let contents = contents(&["//test1/a"]);
+    let bcs = changeset(
+        DEPOT,
+        &changelist,
+        Some(ONES_CSID),
+        &contents,
+        &HashMap::new(),
+    )
+    .unwrap();
+    assert_eq!(
+        vec![
+            ("a".to_owned(), tracked(FileType::Regular)),
+            ("ab".to_owned(), FileChange::Deletion),
+        ],
+        changes_of(&bcs)
+    );
+}
+
+#[mononoke::test]
+fn test_directory_replacing_a_deleted_file_keeps_the_deletion() {
+    let changelist = changelist(vec![
+        revision("//test1/a", Action::Delete),
+        revision("//test1/a/b", Action::Add),
+    ]);
+    let contents = contents(&["//test1/a/b"]);
+    let bcs = changeset(
+        DEPOT,
+        &changelist,
+        Some(ONES_CSID),
+        &contents,
+        &HashMap::new(),
+    )
+    .unwrap();
+    assert_eq!(
+        vec![
+            ("a".to_owned(), FileChange::Deletion),
+            ("a/b".to_owned(), tracked(FileType::Regular)),
+        ],
+        changes_of(&bcs)
+    );
+}
+
+#[mononoke::test]
+fn test_file_and_a_file_under_it_both_changed_is_an_error() {
+    let changelist = changelist(vec![
+        revision("//test1/a", Action::Edit),
+        revision("//test1/a/b", Action::Add),
+    ]);
+    let contents = contents(&["//test1/a", "//test1/a/b"]);
+    let result = changeset(
+        DEPOT,
+        &changelist,
+        Some(ONES_CSID),
+        &contents,
+        &HashMap::new(),
+    );
+    assert!(
+        matches!(
+            &result,
+            Err(TransformError::InvalidChangeset { changelist: 42, .. })
+        ),
+        "{result:?}"
+    );
+}
+
+#[mononoke::test]
+fn test_user_with_a_newline_is_an_error() {
+    let mut changelist = changelist(vec![revision("//test1/a.txt", Action::Delete)]);
+    changelist.user = "jdoe\nFake: header".to_owned();
+    let result = changeset(DEPOT, &changelist, None, &HashMap::new(), &HashMap::new());
+    assert!(
+        matches!(
+            &result,
+            Err(TransformError::NewlineInAuthor { changelist: 42, .. })
+        ),
+        "{result:?}"
+    );
 }

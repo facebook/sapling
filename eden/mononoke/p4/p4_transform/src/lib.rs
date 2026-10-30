@@ -8,13 +8,21 @@
 //! Turns what Perforce reports about a changelist into Bonsai. The caller does all the
 //! I/O, so the same inputs always give the same result.
 
+use std::collections::HashMap;
+
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
+use mononoke_types::P4ChangelistId;
+use mononoke_types::PrefixTrie;
 use p4_types::Action;
+use p4_types::Changelist;
 use p4_types::FileRevision;
 use p4_types::Integration;
 use p4_types::IntegrationHow;
@@ -32,6 +40,79 @@ pub enum TransformError {
     },
     #[error("no stored content for {0}")]
     MissingContent(String),
+    #[error("changelist {changelist}'s user {user:?} contains a newline")]
+    NewlineInAuthor { changelist: u64, user: String },
+    #[error("changelist {changelist} is not a valid changeset")]
+    InvalidChangeset {
+        changelist: u64,
+        #[source]
+        source: anyhow::Error,
+    },
+}
+
+/// Builds the commit for one changelist: author, date and message from the changelist,
+/// parent `parent`, and a file change for each of its files under `depot_root`
+/// (files in other depots are skipped). `contents` and `copy_sources` are looked up
+/// by full Perforce path, e.g. `//non-stream-depot/docs/readme.txt`.
+pub fn changeset(
+    depot_root: &str,
+    changelist: &Changelist,
+    parent: Option<ChangesetId>,
+    contents: &HashMap<String, ContentMetadataV2>,
+    copy_sources: &HashMap<String, NonRootMPath>,
+) -> Result<BonsaiChangeset, TransformError> {
+    if changelist.user.contains('\n') {
+        return Err(TransformError::NewlineInAuthor {
+            changelist: changelist.number,
+            user: changelist.user.clone(),
+        });
+    }
+    let invalid = |source| TransformError::InvalidChangeset {
+        changelist: changelist.number,
+        source,
+    };
+    let author_date = i64::try_from(changelist.time)
+        .map_err(anyhow::Error::from)
+        .and_then(|secs| DateTime::from_timestamp(secs, 0))
+        .map_err(invalid)?;
+    let mut file_changes = Vec::new();
+    for revision in &changelist.files {
+        // Without a parent the source can't be in it, so the copy is dropped.
+        let copy_from = parent
+            .and_then(|parent| Some((copy_sources.get(&revision.depot_path)?.clone(), parent)));
+        let content = contents.get(&revision.depot_path);
+        file_changes.extend(file_change(depot_root, revision, content, copy_from)?);
+    }
+    BonsaiChangesetMut {
+        parents: parent.into_iter().collect(),
+        author: changelist.user.clone(),
+        author_date,
+        message: changelist.description.clone(),
+        hg_extra: P4ChangelistId::new(changelist.number)
+            .to_hg_extras()
+            .into_iter()
+            .collect(),
+        file_changes: without_shadowed_deletions(file_changes).collect(),
+        ..Default::default()
+    }
+    .freeze()
+    .map_err(invalid)
+}
+
+/// When a file replaces a directory, Perforce also lists the directory's files as
+/// deleted. Adding the file already removes them, and `freeze` rejects the pair.
+fn without_shadowed_deletions(
+    changes: Vec<(NonRootMPath, FileChange)>,
+) -> impl Iterator<Item = (NonRootMPath, FileChange)> {
+    let mut changed = PrefixTrie::new();
+    for (path, change) in &changes {
+        if change.is_changed() {
+            changed.add(path);
+        }
+    }
+    changes
+        .into_iter()
+        .filter(move |(path, change)| change.is_changed() || !changed.contains_prefix(path))
 }
 
 /// The change a file revision makes in the depot at `depot_root` (like `//test1/`), or
