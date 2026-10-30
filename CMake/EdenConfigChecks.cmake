@@ -142,6 +142,14 @@ find_package(gflags CONFIG REQUIRED)
 find_package(BLAKE3 CONFIG QUIET)
 if (NOT BLAKE3_FOUND)
   fb_fetch_from_manifest(BLAKE3 blake3)
+  # On arm64, the Rust blake3 crate exports its own
+  # blake3_compress_in_place_portable() for its NEON code, and binaries link
+  # both libraries.
+  target_compile_definitions(
+    blake3
+    PRIVATE
+    blake3_compress_in_place_portable=eden_blake3_c_compress_in_place_portable
+  )
 endif()
 include_directories(${BLAKE3_INCLUDE_DIR})
 
