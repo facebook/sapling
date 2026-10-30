@@ -17,7 +17,7 @@ import {cn} from 'shared/cn';
 import {contextMenuState, useContextMenu} from 'shared/ContextMenu';
 import {tracker} from '../analytics';
 import serverAPI from '../ClientToServerAPI';
-import {bulkFetchFeatureFlags, useFeatureFlagSync} from '../featureFlags';
+import {bulkFetchFeatureFlags} from '../featureFlags';
 import {t} from '../i18n';
 import {Internal} from '../Internal';
 import platform from '../platform';
@@ -86,7 +86,6 @@ const smartActionFeatureFlagsAtom = atom<Promise<Record<string, boolean>>>(async
 const loadableFeatureFlagsAtom = loadable(smartActionFeatureFlagsAtom);
 
 export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
-  const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
   const repo = useAtomValue(repositoryInfo);
   const conflicts = useAtomValue(optimisticMergeConflicts);
   const featureFlagsLoadable = useAtomValue(loadableFeatureFlagsAtom);
@@ -178,7 +177,6 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   }
 
   if (
-    !smartActionsMenuEnabled ||
     !Internal.smartActions?.showSmartActions ||
     sortedActionItems.length === 0 ||
     !selectedAction

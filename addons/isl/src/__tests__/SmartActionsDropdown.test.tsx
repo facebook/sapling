@@ -13,10 +13,8 @@ const mockBumpSmartAction = jest.fn();
 const mockGetMessagePayloadA = jest.fn();
 const mockGetMessagePayloadB = jest.fn();
 
-const TEST_FEATURE_FLAG_NAME = 'isl_smart_actions_menu_test';
-
 // Mock `Internal` so that `smartActionsConfig` (read at module load) contains two
-// test actions and the SmartActionsMenu feature flag has a known name.
+// test actions.
 jest.mock('../Internal', () => ({
   Internal: {
     smartActions: {
@@ -35,9 +33,6 @@ jest.mock('../Internal', () => ({
           getMessagePayload: (...args: Array<unknown>) => mockGetMessagePayloadB(...args),
         },
       ],
-    },
-    featureFlags: {
-      SmartActionsMenu: TEST_FEATURE_FLAG_NAME,
     },
   },
 }));
@@ -63,7 +58,6 @@ jest.mock('shared/ContextMenu', () => {
   };
 });
 
-import {__TEST__ as featureFlagsTest} from '../featureFlags';
 import {SmartActionsDropdown} from '../smartActions/SmartActionsDropdown';
 
 /*
@@ -81,12 +75,10 @@ describe('SmartActionsDropdown menu item click handler', () => {
     mockBumpSmartAction.mockClear();
     mockGetMessagePayloadA.mockClear();
     mockGetMessagePayloadB.mockClear();
-    featureFlagsTest.overrideFeatureFlag(TEST_FEATURE_FLAG_NAME, true);
     dispatchEventSpy = jest.spyOn(EventTarget.prototype, 'dispatchEvent');
   });
 
   afterEach(() => {
-    featureFlagsTest.clearFeatureFlagOverrides();
     dispatchEventSpy.mockRestore();
     jest.useRealTimers();
   });

@@ -7,7 +7,6 @@
 
 import {act, fireEvent, render, screen} from '@testing-library/react';
 
-const TEST_FEATURE_FLAG_NAME = 'isl_smart_actions_menu_test';
 const onAgentResponse = jest.fn();
 
 jest.mock('../Internal', () => ({
@@ -33,9 +32,6 @@ jest.mock('../Internal', () => ({
         },
       ],
     },
-    featureFlags: {
-      SmartActionsMenu: TEST_FEATURE_FLAG_NAME,
-    },
   },
 }));
 
@@ -44,7 +40,6 @@ jest.mock('../smartActions/smartActionsOrdering', () => ({
   useSortedActions: <T,>(items: T) => items,
 }));
 
-import {__TEST__ as featureFlagsTest} from '../featureFlags';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {reconnectingStatus} from '../serverAPIState';
@@ -60,11 +55,9 @@ describe('SmartActionsDropdown on agent prompt hosts', () => {
     originals = overriddenKeys.map(key => [key, Object.getOwnPropertyDescriptor(platform, key)]);
     resetTestMessages();
     onAgentResponse.mockReset();
-    featureFlagsTest.overrideFeatureFlag(TEST_FEATURE_FLAG_NAME, true);
   });
 
   afterEach(() => {
-    featureFlagsTest.clearFeatureFlagOverrides();
     for (const [key, descriptor] of originals) {
       if (descriptor == null) {
         delete (platform as unknown as Record<string, unknown>)[key];
