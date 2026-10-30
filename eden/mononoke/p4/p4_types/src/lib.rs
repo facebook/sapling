@@ -380,6 +380,13 @@ pub enum DepotType {
 /// sees nothing but these domain types.
 #[async_trait]
 pub trait ChangeSource: Send + Sync {
+    /// The newest submitted changelist on the server.
+    async fn latest_change(&self) -> Result<u64>;
+
+    /// The submitted changelists with files in the depot at `depot_root` (like `//test1/`)
+    /// in `(after, upto]`, oldest first.
+    async fn submitted_changes(&self, depot_root: &str, after: u64, upto: u64) -> Result<Vec<u64>>;
+
     async fn describe(&self, change: u64) -> Result<Changelist>;
 
     /// The revision's content. The stream ends only after the content has been checked

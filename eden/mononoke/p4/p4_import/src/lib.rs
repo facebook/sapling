@@ -351,6 +351,31 @@ pub async fn build_changesets(
     Ok(built)
 }
 
+/// How many changelist numbers one `ChangeSource::submitted_changes` call covers.
+pub const CHANGES_WINDOW: u64 = 10_000;
+
+/// The first `limit` changelists of the depot after `after`, listed `window` changelist
+/// numbers at a time up to the server's latest, so no listing grows with the depot.
+pub async fn next_changes(
+    source: &impl ChangeSource,
+    depot_root: &str,
+    after: Option<u64>,
+    limit: usize,
+    window: u64,
+) -> Result<Vec<u64>> {
+    ensure!(window > 0, "the changelist window must not be empty");
+    let latest = source.latest_change().await?;
+    let mut changes = Vec::new();
+    let mut from = after.unwrap_or(0);
+    while changes.len() < limit && from < latest {
+        let upto = from.saturating_add(window).min(latest);
+        changes.extend(source.submitted_changes(depot_root, from, upto).await?);
+        from = upto;
+    }
+    changes.truncate(limit);
+    Ok(changes)
+}
+
 /// The bookmark's changeset and the changelist it was imported from, or `None` before
 /// the first import.
 async fn head(

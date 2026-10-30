@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Mutex;
 use std::task::Poll;
 
 use anyhow::anyhow;
@@ -306,6 +307,10 @@ struct FakeSource {
     contents: HashMap<String, &'static [u8]>,
     /// Keyed by `path#rev`.
     integrations: HashMap<String, Vec<Integration>>,
+    /// The server's latest changelist, if not its newest one here.
+    latest: Option<u64>,
+    /// Each `(after, upto]` listed.
+    listed: Mutex<Vec<(u64, u64)>>,
 }
 
 fn key(file: &FileRevision) -> String {
@@ -314,6 +319,29 @@ fn key(file: &FileRevision) -> String {
 
 #[async_trait]
 impl ChangeSource for FakeSource {
+    async fn latest_change(&self) -> Result<u64> {
+        let newest = self.changelists.keys().max().copied().unwrap_or(0);
+        Ok(self.latest.unwrap_or(newest))
+    }
+
+    /// Every changelist it has in the range, whatever its depot.
+    async fn submitted_changes(
+        &self,
+        _depot_root: &str,
+        after: u64,
+        upto: u64,
+    ) -> Result<Vec<u64>> {
+        self.listed.lock().unwrap().push((after, upto));
+        let mut changes: Vec<_> = self
+            .changelists
+            .keys()
+            .copied()
+            .filter(|change| (after + 1..=upto).contains(change))
+            .collect();
+        changes.sort();
+        Ok(changes)
+    }
+
     async fn describe(&self, change: u64) -> Result<Changelist> {
         self.changelists
             .get(&change)
@@ -896,5 +924,64 @@ async fn test_types_the_repo_does_not_enable_are_not_derived(fb: FacebookInit) -
         .await?;
     assert!(unodes.is_some());
     assert_eq!(Some(head), bookmark_target(&ctx, &repo, &master).await?);
+    Ok(())
+}
+
+fn with_changelists(numbers: &[u64]) -> FakeSource {
+    numbers
+        .iter()
+        .fold(FakeSource::default(), |source, &number| {
+            source.with_changelist(number, &[])
+        })
+}
+
+#[mononoke::fbinit_test]
+async fn test_next_changes_walk_windows_past_sparse_changelists(_fb: FacebookInit) -> Result<()> {
+    let source = with_changelists(&[3, 25, 26, 61]);
+
+    let changes = next_changes(&source, DEPOT, None, 10, 10).await?;
+
+    assert_eq!(vec![3, 25, 26, 61], changes);
+    assert_eq!(
+        vec![
+            (0, 10),
+            (10, 20),
+            (20, 30),
+            (30, 40),
+            (40, 50),
+            (50, 60),
+            (60, 61)
+        ],
+        *source.listed.lock().unwrap()
+    );
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_next_changes_stop_at_the_window_that_reaches_the_limit(
+    _fb: FacebookInit,
+) -> Result<()> {
+    let source = with_changelists(&[3, 4, 5, 12, 25]);
+
+    let changes = next_changes(&source, DEPOT, Some(3), 2, 10).await?;
+
+    assert_eq!(vec![4, 5], changes);
+    assert_eq!(vec![(3, 13)], *source.listed.lock().unwrap());
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_next_changes_stop_at_the_latest_changelist(_fb: FacebookInit) -> Result<()> {
+    let source = FakeSource {
+        latest: Some(30),
+        ..with_changelists(&[3, 25, 26])
+    };
+
+    let changes = next_changes(&source, DEPOT, Some(26), 10, 10).await?;
+    let none_after_latest = next_changes(&source, DEPOT, Some(30), 10, 10).await?;
+
+    assert_eq!(Vec::<u64>::new(), changes);
+    assert_eq!(Vec::<u64>::new(), none_after_latest);
+    assert_eq!(vec![(26, 30)], *source.listed.lock().unwrap());
     Ok(())
 }
