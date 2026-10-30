@@ -443,6 +443,47 @@ commit at `m/main`:
   │
   ~
 
+`manifest_repo` tests
+
+`manifest_repo` opens `.repo/manifests` as a Sapling repo. `.` of that repo is
+the same commit as `.` of the workspace:
+
+  $ sl debugshell -c "
+  > from sapling import grepo
+  > print(grepo.manifest_repo(repo)['.'].hex() == repo['.'].hex())
+  > "
+  True
+
+`read_manifest_repo CTX` prints the revisions in `static.xml` of CTX in the
+manifests repo. `'.'` reads the file in `.`. `None` reads the file on disk:
+
+  $ read_manifest_repo() {
+  >   sl debugshell -c "
+  > from sapling import grepo
+  > print(grepo.manifest_repo(repo)[$1]['static/static.xml'].data().decode())
+  > " | read_manifest_revs
+  > }
+
+Edit the revision of `vendor/a/sub/c` in `static.xml` on disk. The file in `.`
+does not change. The file on disk has the edit. `manifest_repo` does not change
+the manifests HEAD, the manifests index, or the file on disk:
+
+  $ sed -i "s/$C2_REV/$C_REV/" .repo/manifests/static/static.xml
+  $ read_manifest_repo "'.'"
+  vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  $ read_manifest_repo None
+  vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  $ workspace_state
+  sl_workingcopy_parent: bump vendor/a/sub/c
+  manifests HEAD: refs/heads/default REV_AFTER_BUMP_C
+  static.xml index: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C2_REV
+  static.xml disk: vendor/a=A2_REV frameworks/b=B2_REV vendor/a/sub/c=C_REV
+  manifests:  M static/static.xml
+  vendor/a: A2_REV
+  frameworks/b: B2_REV
+  vendor/a/sub/c: C2_REV
+  $ reset_workspace
+
 `diff` tests: dirty manifest
 
 The two tests below start clean at `$REV_AFTER_BUMP_C`. The first test edits
