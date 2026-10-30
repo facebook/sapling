@@ -20,17 +20,13 @@ bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_g
 bonsai_tag_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_movement" }
-bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 bytes = { version = "1.12.1", features = ["serde"] }
-changesets_creation = { version = "0.1.0", path = "../../features/changesets_creation" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
-derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 encoding_rs = "0.8.42"
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 futures = { version = "0.3.34", features = ["async-await", "compat"] }
-futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
@@ -42,6 +38,7 @@ http-body-util = "0.1.5"
 hyper-openssl = { version = "0.10", features = ["client-legacy", "tokio"] }
 hyper-proxy2 = { version = "0.1", features = ["rustls"], default-features = false }
 hyper-util = { version = "0.1.21", features = ["client-legacy", "http1", "http2", "server-auto", "service", "tokio"] }
+import_common = { version = "0.1.0", path = "../../features/import_common" }
 lfs_protocol = { version = "0.1.0", path = "../../common/lfs_protocol" }
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 manifest = { version = "0.1.0", path = "../../manifest" }

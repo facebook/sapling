@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -17,9 +16,7 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
-use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
-use changesets_creation::save_changesets;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
@@ -28,9 +25,10 @@ use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::Stream;
 use futures::stream;
-use futures_retry::retry;
-use futures_stats::TimedTryFutureExt;
 use gix_hash::ObjectId;
+use import_common::derive_batch;
+use import_common::retry_with_backoff;
+use import_common::save_and_derive_batch;
 use mononoke_api::repo::git::TagMappingWrite;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -56,9 +54,6 @@ use crate::HGGIT_COMMIT_ID_EXTRA;
 use crate::HGGIT_MARKER_EXTRA;
 use crate::HGGIT_MARKER_VALUE;
 use crate::TagMetadata;
-
-const BASE_RETRY_DELAY: Duration = Duration::from_secs(1);
-const RETRY_ATTEMPTS: usize = 4;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ReuploadCommits {
@@ -213,14 +208,8 @@ pub async fn preload_uploaded_commits(
             .map(|oid| hash::GitSha1::from_bytes(oid.as_bytes()))
             .collect::<Result<Vec<_>, _>>()?,
     );
-    let (result, _) = retry(
-        |_| repo.bonsai_git_mapping().get(ctx, git_sha1s.clone()),
-        BASE_RETRY_DELAY,
-    )
-    .binary_exponential_backoff()
-    .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
-    .await?;
+    let (result, _) =
+        retry_with_backoff(|_| repo.bonsai_git_mapping().get(ctx, git_sha1s.clone())).await?;
     let map = result
         .into_iter()
         .map(|entry| {
@@ -402,29 +391,6 @@ pub async fn finalize_batch(
         .map(|entry| (entry.git_sha1, entry.bcs_id))
         .collect();
 
-    // We know that the commits are in order (this is guaranteed by the Walk), so we
-    // can insert them as-is, one by one, without extra dependency / ordering checks.
-    let ((stats, ()), num_attempts) = retry(
-        |_| save_changesets(ctx, repo, vbcs.clone()).try_timed(),
-        BASE_RETRY_DELAY,
-    )
-    .binary_exponential_backoff()
-    .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
-    .await?;
-
-    debug!(
-        "save_changesets for {} commits in {:?} after {} attempts",
-        oid_to_bcsid.len(),
-        stats.completion_time,
-        num_attempts
-    );
-
-    let csids = oid_to_bcsid
-        .iter()
-        .map(|entry| entry.bcs_id)
-        .collect::<Vec<_>>();
-    let batch_size = csids.len() as u64;
     let config = repo.repo_derived_data().active_config();
 
     // Derive all types that don't depend on GitCommit
@@ -438,27 +404,7 @@ pub async fn finalize_batch(
             _ => true,
         })
         .collect::<Vec<_>>();
-    // Retry derivation on transient errors (e.g. blobstore/MySQL read timeouts).
-    // First-time derivation is idempotent, so re-running after a partial timeout
-    // only re-derives what didn't complete. Mirrors the save_changesets/bulk_add
-    // retries above.
-    retry(
-        |_| {
-            repo.repo_derived_data().manager().derive_bulk_locally(
-                ctx,
-                &csids,
-                None,
-                &non_git_types,
-                Some(batch_size),
-                None,
-            )
-        },
-        BASE_RETRY_DELAY,
-    )
-    .binary_exponential_backoff()
-    .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
-    .await?;
+    let csids = save_and_derive_batch(ctx, repo, vbcs, &non_git_types).await?;
 
     // Upload all bonsai git mappings.
     // This is done instead of deriving git commits. It is not equivalent as roundtrip from
@@ -468,14 +414,7 @@ pub async fn finalize_batch(
     // it is safe to proceed from there.
     // We can't actually do it last as it must be done before deriving `GitDeltaManifest`
     // since that depends on git commits.
-    retry(
-        |_| repo.bonsai_git_mapping().bulk_add(ctx, &oid_to_bcsid),
-        BASE_RETRY_DELAY,
-    )
-    .binary_exponential_backoff()
-    .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
-    .await?;
+    retry_with_backoff(|_| repo.bonsai_git_mapping().bulk_add(ctx, &oid_to_bcsid)).await?;
     // derive git delta manifests: note: GitCommit don't need to be explicitly
     // derived as they were already imported
     let delta_manifests = backfill_derivation
@@ -486,25 +425,7 @@ pub async fn finalize_batch(
             _ => false,
         })
         .collect::<Vec<_>>();
-    // Retry derivation on transient errors (see note on the non-git-types
-    // derivation above).
-    retry(
-        |_| {
-            repo.repo_derived_data().manager().derive_bulk_locally(
-                ctx,
-                &csids,
-                None,
-                &delta_manifests,
-                Some(batch_size),
-                None,
-            )
-        },
-        BASE_RETRY_DELAY,
-    )
-    .binary_exponential_backoff()
-    .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
-    .await?;
+    derive_batch(ctx, repo, &csids, &delta_manifests).await?;
 
     Ok(ret)
 }

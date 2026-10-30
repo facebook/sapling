@@ -325,6 +325,7 @@ members = [
   "features/diff",
   "features/history_traversal",
   "features/hooks",
+  "features/import_common",
   "features/microwave/builder",
   "features/microwave/features/microwave",
   "features/microwave/if",

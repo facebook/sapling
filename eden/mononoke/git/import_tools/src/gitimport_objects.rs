@@ -20,7 +20,6 @@ use async_trait::async_trait;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data_manager::DerivableType;
 use encoding_rs::Encoding;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -30,6 +29,7 @@ use futures::stream::TryStreamExt;
 use gix_hash::ObjectId;
 use gix_object::bstr::BString;
 use gix_object::tree;
+use import_common::BackfillDerivation;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::Manifest;
@@ -657,27 +657,6 @@ impl ExtractedCommit {
         } else {
             self.diff_root_for_submodules::<false>(ctx, reader)
                 .right_stream()
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum BackfillDerivation {
-    AllConfiguredTypes,
-    OnlySpecificTypes(Vec<DerivableType>),
-    No,
-}
-
-impl BackfillDerivation {
-    pub fn types(&self, configured_types: &HashSet<DerivableType>) -> Vec<DerivableType> {
-        match self {
-            BackfillDerivation::AllConfiguredTypes => configured_types.iter().cloned().collect(),
-            BackfillDerivation::OnlySpecificTypes(derived_data_types) => derived_data_types
-                .iter()
-                .filter(|ty| configured_types.contains(ty))
-                .cloned()
-                .collect(),
-            BackfillDerivation::No => Vec::new(),
         }
     }
 }
