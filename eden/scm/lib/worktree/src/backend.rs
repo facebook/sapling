@@ -72,43 +72,7 @@ impl EdenBackend {
         );
 
         with_registry_lock(&self.shared_store_path, |registry| {
-            let Some(group_id) = registry.find_group_for_path(&current) else {
-                return Ok(Vec::new());
-            };
-
-            let Some(group) = registry.groups.get(&group_id) else {
-                anyhow::bail!("worktree group '{group_id}' disappeared from the registry");
-            };
-
-            if !group.main.exists() {
-                dissolve_group(registry, &group_id);
-                return Ok(Vec::new());
-            }
-
-            if group.worktrees.keys().any(|path| !path.exists()) {
-                let Some(group) = registry.groups.get_mut(&group_id) else {
-                    anyhow::bail!("worktree group '{group_id}' disappeared from the registry");
-                };
-                group.worktrees.retain(|path, _| path.exists());
-                dissolve_group_if_empty(registry, &group_id);
-            }
-
-            Ok(registry
-                .groups
-                .get(&group_id)
-                .map(|group| {
-                    group
-                        .worktrees
-                        .iter()
-                        .map(|(path, entry)| ListedWorktree {
-                            path: path.clone(),
-                            is_main: *path == group.main,
-                            label: entry.label.clone(),
-                            current: *path == current,
-                        })
-                        .collect()
-                })
-                .unwrap_or_default())
+            list_and_prune_group(registry, &current)
         })
         .context("failed to list EdenFS worktrees")
     }
@@ -499,6 +463,49 @@ impl Worktrees {
             WorktreeBackend::Git(backend) => Some(&backend.git),
         }
     }
+}
+
+/// List the worktrees in `current`'s group, first removing worktrees that no
+/// longer exist from `registry`, and the group itself if its main worktree no
+/// longer exists or no linked worktrees remain.
+fn list_and_prune_group(registry: &mut Registry, current: &Path) -> Result<Vec<ListedWorktree>> {
+    let Some(group_id) = registry.find_group_for_path(current) else {
+        return Ok(Vec::new());
+    };
+
+    let Some(group) = registry.groups.get(&group_id) else {
+        anyhow::bail!("worktree group '{group_id}' disappeared from the registry");
+    };
+
+    if !group.main.exists() {
+        dissolve_group(registry, &group_id);
+        return Ok(Vec::new());
+    }
+
+    if group.worktrees.keys().any(|path| !path.exists()) {
+        let Some(group) = registry.groups.get_mut(&group_id) else {
+            anyhow::bail!("worktree group '{group_id}' disappeared from the registry");
+        };
+        group.worktrees.retain(|path, _| path.exists());
+        dissolve_group_if_empty(registry, &group_id);
+    }
+
+    Ok(registry
+        .groups
+        .get(&group_id)
+        .map(|group| {
+            group
+                .worktrees
+                .iter()
+                .map(|(path, entry)| ListedWorktree {
+                    path: path.clone(),
+                    is_main: *path == group.main,
+                    label: entry.label.clone(),
+                    current: *path == current,
+                })
+                .collect()
+        })
+        .unwrap_or_default())
 }
 
 /// Git labels live in each checkout's admin directory, which Git keeps attached
