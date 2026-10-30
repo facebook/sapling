@@ -7,6 +7,7 @@
 
 //! Imports a Perforce depot into a repo.
 
+use std::collections::HashMap;
 use std::pin::pin;
 
 use anyhow::Context;
@@ -21,6 +22,8 @@ use futures::TryStreamExt;
 use futures::stream;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileType;
+use p4_types::ChangeSource;
+use p4_types::Changelist;
 use repo_blobstore::RepoBlobstoreRef;
 
 /// Stores a file revision's content in the repo's filestore. `size` is the size
@@ -98,6 +101,37 @@ fn symlink_target(size: u64, mut printed: Vec<u8>) -> Result<Bytes> {
         "symlink content ends with more than one newline"
     );
     Ok(Bytes::from(printed))
+}
+
+/// Stores the content of every revision in `changelist` that leaves content in the depot
+/// at `depot_root`, keyed by depot path as `p4_transform::changeset` takes it.
+pub async fn upload_changelist_contents(
+    ctx: &CoreContext,
+    repo: &(impl RepoBlobstoreRef + FilestoreConfigRef),
+    source: &impl ChangeSource,
+    depot_root: &str,
+    changelist: &Changelist,
+) -> Result<HashMap<String, ContentMetadataV2>> {
+    let mut contents = HashMap::new();
+    // One file at a time for now.
+    for revision in &changelist.files {
+        if !revision.action.has_content()
+            || p4_transform::repo_path(depot_root, &revision.depot_path)?.is_none()
+        {
+            continue;
+        }
+        let name = || format!("{}#{}", revision.depot_path, revision.revision);
+        let size = revision
+            .size
+            .with_context(|| format!("describe gave no size for {}", name()))?;
+        let content = source.print(revision).await?;
+        let file_type = p4_transform::file_type(&revision.file_type);
+        let metadata = upload_file_content(ctx, repo, file_type, size, content)
+            .await
+            .with_context(|| format!("storing {}", name()))?;
+        contents.insert(revision.depot_path.clone(), metadata);
+    }
+    Ok(contents)
 }
 
 #[cfg(test)]

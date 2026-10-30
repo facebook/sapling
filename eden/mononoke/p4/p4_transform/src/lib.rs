@@ -195,7 +195,10 @@ pub fn copy_source(
 
 /// `depot_path` in the repo for the depot at `depot_root`, or `None` if it is in another
 /// depot.
-fn repo_path(depot_root: &str, depot_path: &str) -> Result<Option<NonRootMPath>, TransformError> {
+pub fn repo_path(
+    depot_root: &str,
+    depot_path: &str,
+) -> Result<Option<NonRootMPath>, TransformError> {
     // Exactly one depot: //test1 would also take //test10's files, and // every depot's.
     let depot_name = depot_root
         .strip_prefix("//")
@@ -223,7 +226,7 @@ const LEGACY_EXECUTABLE_TYPES: [&str; 10] = [
 
 /// A Perforce type is a base type and modifiers, like `text+kx`. Only `x` makes it
 /// executable (`X` is the archive modifier).
-fn file_type(p4_type: &str) -> FileType {
+pub fn file_type(p4_type: &str) -> FileType {
     let (base, modifiers) = p4_type.split_once('+').unwrap_or((p4_type, ""));
     if base == "symlink" {
         FileType::Symlink

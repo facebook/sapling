@@ -7,11 +7,18 @@
 
 use std::task::Poll;
 
+use anyhow::anyhow;
+use async_trait::async_trait;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
+use futures::StreamExt;
 use futures::stream;
+use futures::stream::BoxStream;
 use metaconfig_types::FilestoreParams;
 use mononoke_macros::mononoke;
+use p4_types::Action;
+use p4_types::FileRevision;
+use p4_types::Integration;
 use repo_blobstore::RepoBlobstore;
 use test_repo_factory::TestRepoFactory;
 
@@ -262,5 +269,89 @@ async fn test_regular_file_of_the_wrong_size_is_rejected(fb: FacebookInit) -> Re
         .unwrap_err();
 
     assert!(format!("{error:#}").contains("Invalid size"), "{error:?}");
+    Ok(())
+}
+
+/// Prints only the revisions in `contents`: printing any other fails the test.
+struct FakeSource {
+    contents: HashMap<String, &'static [u8]>,
+}
+
+#[async_trait]
+impl ChangeSource for FakeSource {
+    async fn describe(&self, change: u64) -> Result<Changelist> {
+        Err(anyhow!("unexpected describe of {change}"))
+    }
+
+    async fn print(&self, file: &FileRevision) -> Result<BoxStream<'static, Result<Bytes>>> {
+        let content = self
+            .contents
+            .get(&file.depot_path)
+            .ok_or_else(|| anyhow!("unexpected print of {}", file.depot_path))?;
+        Ok(chunks(&[content]).boxed())
+    }
+
+    async fn integrations(
+        &self,
+        files: &[&FileRevision],
+    ) -> Result<HashMap<String, Vec<Integration>>> {
+        Err(anyhow!("unexpected filelog of {files:?}"))
+    }
+}
+
+fn revision(depot_path: &str, action: Action, file_type: &str, size: Option<u64>) -> FileRevision {
+    FileRevision {
+        depot_path: depot_path.to_owned(),
+        action,
+        file_type: file_type.to_owned(),
+        revision: 1,
+        size,
+        digest: None,
+    }
+}
+
+#[mononoke::fbinit_test]
+async fn test_changelist_contents_are_stored_by_depot_path(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
+    let source = FakeSource {
+        contents: HashMap::from([
+            ("//test1/add.txt".to_owned(), &b"hello\n"[..]),
+            ("//test1/run.sh".to_owned(), &b"#!/bin/sh\n"[..]),
+            ("//test1/link".to_owned(), &b"add.txt\n"[..]),
+        ]),
+    };
+    let changelist = Changelist {
+        number: 42,
+        user: "alice".to_owned(),
+        time: 0,
+        description: "mixed".to_owned(),
+        files: vec![
+            revision("//test1/add.txt", Action::Add, "text", Some(6)),
+            revision("//test1/run.sh", Action::Edit, "text+x", Some(10)),
+            revision("//test1/gone.txt", Action::Delete, "text", None),
+            revision("//test1/link", Action::Add, "symlink", Some(8)),
+            revision("//other/add.txt", Action::Add, "text", Some(6)),
+        ],
+    };
+
+    let contents =
+        upload_changelist_contents(&ctx, &repo, &source, "//test1/", &changelist).await?;
+
+    let mut stored = Vec::new();
+    for (path, metadata) in &contents {
+        let content =
+            filestore::fetch_concat(repo.repo_blobstore(), &ctx, metadata.content_id).await?;
+        stored.push((path.as_str(), content));
+    }
+    stored.sort();
+    assert_eq!(
+        vec![
+            ("//test1/add.txt", Bytes::from_static(b"hello\n")),
+            ("//test1/link", Bytes::from_static(b"add.txt")),
+            ("//test1/run.sh", Bytes::from_static(b"#!/bin/sh\n")),
+        ],
+        stored
+    );
     Ok(())
 }
