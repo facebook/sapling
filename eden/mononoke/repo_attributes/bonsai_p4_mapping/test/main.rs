@@ -10,6 +10,7 @@ use std::slice::from_ref;
 use std::sync::Arc;
 
 use anyhow::Error;
+use bonsai_p4_mapping::AddP4MappingErrorKind;
 use bonsai_p4_mapping::BonsaiP4Mapping;
 use bonsai_p4_mapping::BonsaiP4MappingEntry;
 use bonsai_p4_mapping::BonsaisOrP4ChangelistIds;
@@ -330,6 +331,93 @@ async fn test_repo_factory_builds_facet(fb: FacebookInit) -> Result<(), Error> {
             .get_bonsai_from_p4_changelist_id(&ctx, P4_CHANGELIST_ONE)
             .await?,
         Some(bonsai::ONES_CSID)
+    );
+    Ok(())
+}
+
+/// Entries written in a transaction appear only if it commits, so they can share one with a
+/// bookmark move.
+#[mononoke::fbinit_test]
+async fn test_bulk_import_in_transaction(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let factory = TestRepoFactory::new(fb)?;
+    let repo: P4Repo = factory.build().await?;
+    let start = || {
+        factory
+            .metadata_db()
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+    };
+    let rolled_back = BonsaiP4MappingEntry::new(bonsai::ONES_CSID, P4_CHANGELIST_ONE);
+    let committed = BonsaiP4MappingEntry::new(bonsai::TWOS_CSID, P4_CHANGELIST_TWO);
+
+    repo.bonsai_p4_mapping
+        .bulk_import_in_transaction(&ctx, from_ref(&rolled_back), start().await?)
+        .await?
+        .rollback()
+        .await?;
+    repo.bonsai_p4_mapping
+        .bulk_import_in_transaction(&ctx, from_ref(&committed), start().await?)
+        .await?
+        .commit()
+        .await?;
+
+    assert_eq!(
+        repo.bonsai_p4_mapping
+            .get(
+                &ctx,
+                BonsaisOrP4ChangelistIds::P4ChangelistId(vec![
+                    P4_CHANGELIST_ONE,
+                    P4_CHANGELIST_TWO
+                ])
+            )
+            .await?,
+        vec![committed]
+    );
+    Ok(())
+}
+
+/// A conflict fails the write without committing any of it, so the caller's transaction can
+/// be dropped to roll everything back.
+#[mononoke::fbinit_test]
+async fn test_conflict_in_transaction_writes_nothing(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let factory = TestRepoFactory::new(fb)?;
+    let repo: P4Repo = factory.build().await?;
+    let existing = BonsaiP4MappingEntry::new(bonsai::ONES_CSID, P4_CHANGELIST_ONE);
+    repo.bonsai_p4_mapping
+        .bulk_import(&ctx, from_ref(&existing))
+        .await?;
+    let transaction = factory
+        .metadata_db()
+        .write_connection
+        .start_transaction(ctx.sql_query_telemetry())
+        .await?;
+
+    let result = repo
+        .bonsai_p4_mapping
+        .bulk_import_in_transaction(
+            &ctx,
+            &[
+                BonsaiP4MappingEntry::new(bonsai::TWOS_CSID, P4_CHANGELIST_TWO),
+                BonsaiP4MappingEntry::new(bonsai::THREES_CSID, P4_CHANGELIST_ONE),
+            ],
+            transaction,
+        )
+        .await;
+
+    assert!(matches!(
+        result,
+        Err(AddP4MappingErrorKind::Conflict {
+            conflicting: 1,
+            total: 2
+        })
+    ));
+    assert_eq!(
+        repo.bonsai_p4_mapping
+            .get_bonsai_from_p4_changelist_id(&ctx, P4_CHANGELIST_TWO)
+            .await?,
+        None
     );
     Ok(())
 }

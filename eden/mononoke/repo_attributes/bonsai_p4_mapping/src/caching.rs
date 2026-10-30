@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use ::sql_ext::Transaction;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -34,6 +35,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::P4ChangelistId;
 use mononoke_types::RepositoryId;
 
+use super::AddP4MappingErrorKind;
 use super::BonsaiP4Mapping;
 use super::BonsaiP4MappingEntry;
 use super::BonsaisOrP4ChangelistIds;
@@ -134,6 +136,18 @@ impl BonsaiP4Mapping for CachingBonsaiP4Mapping {
         entries: &[BonsaiP4MappingEntry],
     ) -> Result<(), Error> {
         self.inner.as_ref().bulk_import(ctx, entries).await
+    }
+
+    async fn bulk_import_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiP4MappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddP4MappingErrorKind> {
+        self.inner
+            .as_ref()
+            .bulk_import_in_transaction(ctx, entries, transaction)
+            .await
     }
 
     async fn get(

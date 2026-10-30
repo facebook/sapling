@@ -8,6 +8,7 @@
 mod caching;
 mod sql;
 
+use ::sql_ext::Transaction;
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -33,6 +34,14 @@ impl BonsaiP4MappingEntry {
             p4_changelist_id,
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AddP4MappingErrorKind {
+    #[error("{conflicting} of {total} p4 mapping entries conflict with existing ones")]
+    Conflict { conflicting: u64, total: usize },
+    #[error("internal error while inserting p4 mapping entries")]
+    InternalError(#[from] Error),
 }
 
 pub enum BonsaisOrP4ChangelistIds {
@@ -99,6 +108,15 @@ pub trait BonsaiP4Mapping: Send + Sync {
         ctx: &CoreContext,
         entries: &[BonsaiP4MappingEntry],
     ) -> Result<(), Error>;
+
+    /// `bulk_import` as part of `transaction`, so the mapping commits or rolls back with
+    /// whatever else the transaction writes, such as a bookmark move.
+    async fn bulk_import_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiP4MappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddP4MappingErrorKind>;
 
     async fn get(
         &self,

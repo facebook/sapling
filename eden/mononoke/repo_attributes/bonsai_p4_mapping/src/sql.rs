@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 
 use ::sql_ext::Connection;
+use ::sql_ext::Transaction;
 use ::sql_ext::mononoke_queries;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -24,6 +25,7 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
+use super::AddP4MappingErrorKind;
 use super::BonsaiP4Mapping;
 use super::BonsaiP4MappingEntry;
 use super::BonsaisOrP4ChangelistIds;
@@ -34,8 +36,8 @@ mononoke_queries! {
         bcs_id: ChangesetId,
         p4_changelist_id: P4ChangelistId,
     )) {
-        none,
-        "INSERT INTO bonsai_p4_mapping (repo_id, bcs_id, p4_changelist_id) VALUES {values}"
+        insert_or_ignore,
+        "{insert_or_ignore} INTO bonsai_p4_mapping (repo_id, bcs_id, p4_changelist_id) VALUES {values}"
     }
 
     read SelectMappingByBonsai(
@@ -110,6 +112,23 @@ impl BonsaiP4Mapping for SqlBonsaiP4Mapping {
         ctx: &CoreContext,
         entries: &[BonsaiP4MappingEntry],
     ) -> Result<(), Error> {
+        let transaction = self
+            .connections
+            .write_connection
+            .start_transaction(ctx.sql_query_telemetry())
+            .await?;
+        self.bulk_import_in_transaction(ctx, entries, transaction)
+            .await?
+            .commit()
+            .await
+    }
+
+    async fn bulk_import_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiP4MappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddP4MappingErrorKind> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
@@ -118,14 +137,23 @@ impl BonsaiP4Mapping for SqlBonsaiP4Mapping {
             .map(|entry| (&self.repo_id, &entry.bcs_id, &entry.p4_changelist_id))
             .collect();
 
-        DangerouslyAddP4ChangelistIds::query(
-            &self.connections.write_connection,
-            ctx.sql_query_telemetry(),
-            &entries[..],
-        )
-        .await?;
-
-        Ok(())
+        // A conflict is found from the affected rows, as `add_globalrevs` does, not from a
+        // failed write. A failed write would also leak on SQLite through the `sql` crate's shim
+        // (`sqlite_exec_query_with_transaction` in common/rust/shed/sql/src/lib.rs): it inserts
+        // one row at a time and, on error, returns with the connection already taken out of the
+        // `Transaction`, so drop has nothing to roll back and the connection goes back to the
+        // pool mid-transaction.
+        let (transaction, result) =
+            DangerouslyAddP4ChangelistIds::query_with_transaction(transaction, &entries[..])
+                .await?;
+        let conflicting = (entries.len() as u64).saturating_sub(result.affected_rows());
+        if conflicting > 0 {
+            return Err(AddP4MappingErrorKind::Conflict {
+                conflicting,
+                total: entries.len(),
+            });
+        }
+        Ok(transaction)
     }
 
     async fn get(
