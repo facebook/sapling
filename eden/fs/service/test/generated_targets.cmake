@@ -80,6 +80,26 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR WIN32)
   )
 endif ()
 
+eden_add_test(eden_fs_service_test_glob_recurse_lifetime_test
+  SRCS
+    GlobRecurseLifetimeTest.cpp
+  DEPS
+    ${LIBGMOCK_LIBRARIES}
+    Folly::folly_coro_invoke
+    Folly::folly_coro_task
+    Folly::folly_executors_cpu_thread_pool_executor
+    Folly::folly_executors_thread_factory_named_thread_factory
+    Folly::folly_futures_core
+    eden_fs_inodes
+    eden_fs_service_thrift_glob_impl
+    eden_fs_store_context
+    eden_fs_testharness_fake_backing_store_and_tree_builder
+    eden_fs_testharness_test_mount
+    eden_service_thrift_cpp
+    edencommon::edencommon_utils
+    fmt::fmt
+)
+
 eden_add_test(eden_fs_service_test_pretty_printers_test
   SRCS
     PrettyPrintersTest.cpp
