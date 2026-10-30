@@ -24,6 +24,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
         "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/repo_attributes/mutable_counters:mutable_counters",
+        "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",

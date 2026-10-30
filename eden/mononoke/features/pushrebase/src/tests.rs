@@ -16,6 +16,7 @@ use anyhow::Context;
 use anyhow::format_err;
 use async_trait::async_trait;
 use blobrepo_hg::BlobRepoHg;
+use blobrepo_hg::CreateChangeset;
 use blobstore::BlobstoreGetData;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -46,6 +47,8 @@ use maplit::hashmap;
 use maplit::hashset;
 use memblob::Memblob;
 use mercurial_derivation::RootHgAugmentedManifestId;
+use mercurial_types::NULL_HASH;
+use mercurial_types::blobs::ChangesetMetadata;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::FileType;
@@ -63,6 +66,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsArc;
 use samplingblob::SamplingBlobstore;
 use samplingblob::SamplingHandler;
 use sql_ext::Transaction;
@@ -133,6 +138,9 @@ pub(super) struct PushrebaseTestRepo {
     commit_graph_writer: dyn CommitGraphWriter,
     #[facet]
     pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+    #[facet]
+    restricted_paths: RestrictedPaths,
 }
 
 fn queued_pushrebase_request(
@@ -4241,6 +4249,121 @@ async fn pushrebase_of_branch_merge_reports_missing_augmented_manifest(
         Some(branch_merge.onto),
         "master should not move"
     );
+    Ok(())
+}
+
+/// Upload a root commit with no files, as commit upload does: it sends no root
+/// tree, so the commit has the null manifest id.
+async fn upload_commit_without_files(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+) -> Result<ChangesetId, Error> {
+    let (bonsai, _) = CreateChangeset {
+        expected_nodeid: None,
+        expected_files: Some(Vec::new()),
+        p1: None,
+        p2: None,
+        subtree_changes: None,
+        root_manifest: future::ok(None).boxed(),
+        sub_entries: stream::empty().boxed(),
+        cs_metadata: ChangesetMetadata {
+            user: "author <author@fb.com>".into(),
+            time: DateTime::from_timestamp(0, 0)?,
+            extra: Default::default(),
+            message: "commit without files".into(),
+        },
+        upload_to_blobstore_only: false,
+        acl_file_validation: None,
+    }
+    .create(
+        ctx.clone(),
+        repo,
+        repo.restricted_paths_arc().config_based().clone(),
+        None,
+        MononokeScubaSampleBuilder::with_discard(),
+    )
+    .get_completed_changeset()
+    .await?;
+    Ok(bonsai.get_changeset_id())
+}
+
+async fn sorted_bonsai_diff(
+    ctx: &CoreContext,
+    repo: &PushrebaseTestRepo,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+) -> Result<Vec<BonsaiDiffFileChange<(FileType, HgFileNodeId)>>, Error> {
+    let mut diff: Vec<_> = find_bonsai_diff(ctx, repo, ancestor, descendant)
+        .await?
+        .try_collect()
+        .await?;
+    diff.sort();
+    Ok(diff)
+}
+
+#[mononoke::fbinit_test]
+async fn find_bonsai_diff_across_null_manifest_reads_augmented_manifests(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    init_just_knobs_for_augmented_read_test(false);
+    let hg_reads = Arc::new(HgManifestReads::default());
+    let repo: PushrebaseTestRepo = TestRepoFactory::new(fb)?
+        .with_blobstore(Arc::new(SamplingBlobstore::new(
+            Memblob::default(),
+            hg_reads.clone(),
+        )))
+        .build()
+        .await?;
+    let empty = upload_commit_without_files(&ctx, &repo).await?;
+    let files = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("a", "a")
+        .add_file("dir/b", "b")
+        .commit()
+        .await?;
+    repo.derive_hg_changeset(&ctx, files).await?;
+    repo.repo_derived_data()
+        .derive::<RootHgAugmentedManifestId>(&ctx, files, DerivationPriority::LOW)
+        .await?;
+    let empty_mf = repo
+        .derive_hg_changeset(&ctx, empty)
+        .await?
+        .load(&ctx, repo.repo_blobstore())
+        .await?
+        .manifestid();
+    assert_eq!(empty_mf, HgManifestId::new(NULL_HASH));
+
+    // Given: the diffs from and to the commit without files, from Hg manifests.
+    let added = sorted_bonsai_diff(&ctx, &repo, empty, files).await?;
+    let deleted = sorted_bonsai_diff(&ctx, &repo, files, empty).await?;
+    let added_paths: Vec<_> = added
+        .iter()
+        .map(|change| match change {
+            BonsaiDiffFileChange::Changed(path, _) => Ok(path.to_string()),
+            other => Err(format_err!("expected an added file, got {other:?}")),
+        })
+        .collect::<Result<_, _>>()?;
+    assert_eq!(added_paths, vec!["a", "dir/b"]);
+    assert_eq!(
+        deleted,
+        vec![
+            BonsaiDiffFileChange::Deleted(NonRootMPath::new("a")?),
+            BonsaiDiffFileChange::Deleted(NonRootMPath::new("dir/b")?),
+        ]
+    );
+
+    // When: every Hg manifest read fails and the knob is on.
+    hg_reads.deny.store(true, Ordering::Relaxed);
+    init_just_knobs_for_augmented_read_test(true);
+
+    // Then: augmented manifests give the same diffs, and no Hg manifest is
+    // read.
+    assert_eq!(sorted_bonsai_diff(&ctx, &repo, empty, files).await?, added);
+    assert_eq!(
+        sorted_bonsai_diff(&ctx, &repo, files, empty).await?,
+        deleted
+    );
+    assert_eq!(hg_reads.denied.load(Ordering::Relaxed), 0);
     Ok(())
 }
 

@@ -91,7 +91,6 @@ use futures::stream;
 use manifest::BonsaiDiffFileChange;
 use manifest::ManifestOps;
 use manifest::bonsai_diff;
-use manifest::bonsai_diff_sharded;
 use maplit::hashmap;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgAugmentedManifestId;
@@ -100,6 +99,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::NonRootMPath;
 use mercurial_types::blobs::hg_manifests_read_from_augmented;
+use mercurial_types::sharded_augmented_manifest::hg_manifest_bonsai_diff;
 use metaconfig_types::MergeResolutionOverride;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfigRef;
@@ -2552,26 +2552,13 @@ pub async fn find_bonsai_diff<T: Repo>(
     )
     .await?;
 
-    if !hg_manifests_read_from_augmented(repo.repo_identity().name()) {
-        return Ok(bonsai_diff(
-            ctx.clone(),
-            repo.repo_blobstore().clone(),
-            d_mf,
-            Some(a_mf).into_iter().collect(),
-        )
-        .left_stream());
-    }
-
-    Ok(bonsai_diff_sharded(
-        ctx.clone(),
+    Ok(hg_manifest_bonsai_diff(
+        ctx,
         repo.repo_blobstore().clone(),
-        HgAugmentedManifestId::new(d_mf.into_nodehash()),
-        Some(HgAugmentedManifestId::new(a_mf.into_nodehash()))
-            .into_iter()
-            .collect(),
-    )
-    .map_ok(|diff| diff.map_leaf(|leaf| (leaf.file_type, HgFileNodeId::new(leaf.filenode))))
-    .right_stream())
+        repo.repo_identity().name(),
+        d_mf,
+        Some(a_mf).into_iter().collect(),
+    ))
 }
 
 async fn id_to_manifestid(
