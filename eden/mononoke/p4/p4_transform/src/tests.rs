@@ -550,3 +550,80 @@ fn test_user_with_a_newline_is_an_error() {
         "{result:?}"
     );
 }
+
+fn extra<'a>(bcs: &'a BonsaiChangeset, key: &str) -> Option<&'a [u8]> {
+    bcs.hg_extra()
+        .find_map(|(extra_key, value)| (extra_key == key).then_some(value))
+}
+
+#[mononoke::test]
+fn test_file_revs_list_every_file_change_by_repo_path() {
+    let numbered = |depot_path, action, rev| FileRevision {
+        revision: rev,
+        ..revision(depot_path, action)
+    };
+    let changelist = changelist(vec![
+        numbered("//test1/z.txt", Action::Edit, 3),
+        numbered("//test1/b.txt", Action::Delete, 2),
+        numbered("//test1/img/foo%402x.png", Action::Add, 1),
+        numbered("//other/c.txt", Action::Edit, 7),
+    ]);
+    let contents = contents(&["//test1/z.txt", "//test1/img/foo%402x.png"]);
+    let bcs = changeset(DEPOT, &changelist, None, &contents, &HashMap::new()).unwrap();
+    assert_eq!(
+        Some(&b"2\tb.txt\n1\timg/foo@2x.png\n3\tz.txt\n"[..]),
+        extra(&bcs, FILE_REVS_EXTRA)
+    );
+    assert_eq!(42, P4ChangelistId::from_bcs(&bcs).unwrap().id());
+}
+
+#[mononoke::test]
+fn test_file_revs_list_deletions_a_file_shadows() {
+    let numbered = |depot_path, action, rev| FileRevision {
+        revision: rev,
+        ..revision(depot_path, action)
+    };
+    let changelist = changelist(vec![
+        numbered("//test1/ab", Action::Delete, 2),
+        numbered("//test1/a/b", Action::Delete, 3),
+        numbered("//test1/a", Action::Add, 1),
+    ]);
+    let contents = contents(&["//test1/a"]);
+    let bcs = changeset(
+        DEPOT,
+        &changelist,
+        Some(ONES_CSID),
+        &contents,
+        &HashMap::new(),
+    )
+    .unwrap();
+    assert_eq!(
+        vec!["a".to_owned(), "ab".to_owned()],
+        changes_of(&bcs)
+            .into_iter()
+            .map(|(path, _)| path)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        Some(&b"1\ta\n3\ta/b\n2\tab\n"[..]),
+        extra(&bcs, FILE_REVS_EXTRA)
+    );
+}
+
+#[mononoke::test]
+fn test_file_revs_key_is_not_a_changelist_id_key() {
+    for (key, _) in P4ChangelistId::new(42).to_hg_extras() {
+        assert!(!key.starts_with("p4-"), "{key}");
+    }
+    assert!(FILE_REVS_EXTRA.starts_with("p4-"));
+}
+
+#[mononoke::test]
+fn test_path_with_a_newline_is_an_error() {
+    let changelist = changelist(vec![revision("//test1/a\nb", Action::Delete)]);
+    let result = changeset(DEPOT, &changelist, None, &HashMap::new(), &HashMap::new());
+    assert!(
+        matches!(&result, Err(TransformError::NewlineInPath(path)) if path == "a\nb"),
+        "{result:?}"
+    );
+}

@@ -42,6 +42,8 @@ pub enum TransformError {
     MissingContent(String),
     #[error("changelist {changelist}'s user {user:?} contains a newline")]
     NewlineInAuthor { changelist: u64, user: String },
+    #[error("{0:?} contains a newline")]
+    NewlineInPath(String),
     #[error("changelist {changelist} is not a valid changeset")]
     InvalidChangeset {
         changelist: u64,
@@ -49,6 +51,12 @@ pub enum TransformError {
         source: anyhow::Error,
     },
 }
+
+/// The revision number of each of the changelist's files in the depot, one
+/// `<rev>\t<repo path>\n` line each, in `file_changes`' path order. Deletions are revisions
+/// too, including those Bonsai drops because a file replaced their directory. `p4-` keeps
+/// the transform's extras apart from the `convert_*` changelist id ones.
+pub const FILE_REVS_EXTRA: &str = "p4-file-revs";
 
 /// Builds the commit for one changelist: author, date and message from the changelist,
 /// parent `parent`, and a file change for each of its files under `depot_root`
@@ -76,14 +84,18 @@ pub fn changeset(
         .and_then(|secs| DateTime::from_timestamp(secs, 0))
         .map_err(invalid)?;
     let mut file_changes = Vec::new();
+    let mut revisions = Vec::new();
     for revision in &changelist.files {
         // Without a parent the source can't be in it, so the copy is dropped.
         let copy_from = parent
             .and_then(|parent| Some((copy_sources.get(&revision.depot_path)?.clone(), parent)));
         let content = contents.get(&revision.depot_path);
-        file_changes.extend(file_change(depot_root, revision, content, copy_from)?);
+        if let Some((path, change)) = file_change(depot_root, revision, content, copy_from)? {
+            revisions.push((path.clone(), revision.revision));
+            file_changes.push((path, change));
+        }
     }
-    BonsaiChangesetMut {
+    let mut bonsai = BonsaiChangesetMut {
         parents: parent.into_iter().collect(),
         author: changelist.user.clone(),
         author_date,
@@ -94,9 +106,25 @@ pub fn changeset(
             .collect(),
         file_changes: without_shadowed_deletions(file_changes).collect(),
         ..Default::default()
+    };
+    bonsai
+        .hg_extra
+        .insert(FILE_REVS_EXTRA.to_owned(), file_revs(revisions)?);
+    bonsai.freeze().map_err(invalid)
+}
+
+fn file_revs(mut revisions: Vec<(NonRootMPath, u32)>) -> Result<Vec<u8>, TransformError> {
+    revisions.sort_unstable();
+    let mut lines = String::new();
+    for (path, rev) in revisions {
+        let path = path.to_string();
+        // A newline would end the line early; a tab is fine after the first.
+        if path.contains('\n') {
+            return Err(TransformError::NewlineInPath(path));
+        }
+        lines.push_str(&format!("{rev}\t{path}\n"));
     }
-    .freeze()
-    .map_err(invalid)
+    Ok(lines.into_bytes())
 }
 
 /// When a file replaces a directory, Perforce also lists the directory's files as
