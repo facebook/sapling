@@ -8,4 +8,10 @@ rust_library(
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+    ],
 )

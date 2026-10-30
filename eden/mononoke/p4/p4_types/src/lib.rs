@@ -7,7 +7,13 @@
 
 //! Perforce's data model, independent of how it is read.
 
+use std::collections::HashMap;
 use std::fmt;
+
+use anyhow::Result;
+use async_trait::async_trait;
+use bytes::Bytes;
+use futures::stream::BoxStream;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Changelist {
@@ -365,6 +371,26 @@ pub enum DepotType {
     /// Any other type: one added by a newer server, or `extension` and `trait`, which only
     /// the server's hidden depots have.
     Other(String),
+}
+
+/// Where the importer reads Perforce from. Only the implementation knows how: the importer
+/// sees nothing but these domain types.
+#[async_trait]
+pub trait ChangeSource: Send + Sync {
+    async fn describe(&self, change: u64) -> Result<Changelist>;
+
+    /// The revision's content. The stream ends only after the content has been checked
+    /// against the revision's `size` and `digest`; any failure, a mismatch included, is its
+    /// last item.
+    async fn print(&self, file: &FileRevision) -> Result<BoxStream<'static, Result<Bytes>>>;
+
+    /// The integration records of each of these revisions, not of the files' other
+    /// revisions, keyed by depot path: every file is in the result. One round trip per batch
+    /// (the CLI source splits a large one into a few), so ask for a changelist's files at once.
+    async fn integrations(
+        &self,
+        files: &[&FileRevision],
+    ) -> Result<HashMap<String, Vec<Integration>>>;
 }
 
 #[cfg(test)]

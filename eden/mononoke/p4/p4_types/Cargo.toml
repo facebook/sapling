@@ -7,5 +7,11 @@ authors = ["Facebook"]
 edition = "2024"
 license = "GPLv2+"
 
+[dependencies]
+anyhow = "1.0.104"
+async-trait = "0.1.92"
+bytes = { version = "1.12.1", features = ["serde"] }
+futures = { version = "0.3.34", features = ["async-await", "compat"] }
+
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
