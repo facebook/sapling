@@ -15,9 +15,24 @@ rust_library(
             # wezterm-dynamic that this workspace patches in.
             "extra_buck_dependencies": {
                 "dependencies": ["fbsource//third-party/rust:wezterm-dynamic"],
+                "target": {
+                    "'cfg(target_os = \"macos\")'": {
+                        "dependencies": ["fbsource//third-party/rust:blake3"],
+                    },
+                },
             },
             "features": {
                 "fb": ["sapling-backingstore/fb"],
+            },
+            # A packaged C BLAKE3 cannot receive EdenConfigChecks' symbol rename.
+            "dependencies_override": {
+                "target": {
+                    "'cfg(target_os = \"macos\")'": {
+                        "dependencies": {
+                            "blake3": {"features": ["pure"]},
+                        },
+                    },
+                },
             },
         },
     },
