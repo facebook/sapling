@@ -45,12 +45,13 @@ use futures_ext::BoxStream;
 use futures_ext::StreamExt as OldStreamExt;
 use manifest::Diff;
 use manifest::Entry;
-use manifest::ManifestOps;
 use mercurial_derivation::derive_hg_changeset;
 use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::sharded_augmented_manifest::hg_manifest_diff;
+use mercurial_types::sharded_augmented_manifest::list_hg_leaf_entries;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::OptRepoArgs;
@@ -364,18 +365,22 @@ pub async fn get_statistics_from_changeset(
     info!("Started calculating statistics for changeset {}", hg_cs_id);
 
     let manifest_id = get_manifest_from_changeset(ctx, repo, hg_cs_id).await?;
-    let statistics = manifest_id
-        .list_leaf_entries(ctx.clone(), blobstore.clone())
-        .map(move |result| match result {
-            Ok((_, leaf)) => get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf)).boxed(),
-            Err(e) => async move { Err(e) }.boxed(),
-        })
-        .buffered(100usize)
-        .try_fold(
-            RepoStatistics::default(),
-            |statistics, new_stat| async move { Ok::<_, Error>(statistics + new_stat) },
-        )
-        .await?;
+    let statistics = list_hg_leaf_entries(
+        ctx,
+        blobstore.clone(),
+        repo.repo_identity().name(),
+        manifest_id,
+    )
+    .map(move |result| match result {
+        Ok((_, leaf)) => get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf)).boxed(),
+        Err(e) => async move { Err(e) }.boxed(),
+    })
+    .buffered(100usize)
+    .try_fold(
+        RepoStatistics::default(),
+        |statistics, new_stat| async move { Ok::<_, Error>(statistics + new_stat) },
+    )
+    .await?;
 
     info!("Finished calculating statistics for changeset {}", hg_cs_id);
 
@@ -523,10 +528,15 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                     ctx,
                     repo,
                     old_stats,
-                    old_manifest
-                        .diff(ctx.clone(), blobstore.clone(), manifest.clone())
-                        .compat()
-                        .boxify(),
+                    hg_manifest_diff(
+                        ctx,
+                        blobstore.clone(),
+                        repo.repo_identity().name(),
+                        old_manifest,
+                        manifest,
+                    )
+                    .compat()
+                    .boxify(),
                 )
                 .await?;
 
@@ -635,10 +645,15 @@ async fn run_statistics(
                 &ctx,
                 &repo,
                 statistics,
-                prev_manifest_id
-                    .diff(ctx.clone(), blobstore.clone(), cur_manifest_id.clone())
-                    .compat()
-                    .boxify(),
+                hg_manifest_diff(
+                    &ctx,
+                    blobstore.clone(),
+                    repo.repo_identity().name(),
+                    prev_manifest_id,
+                    cur_manifest_id,
+                )
+                .compat()
+                .boxify(),
             )
             .await?;
 
@@ -717,13 +732,26 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMappingRef;
     use borrowed::borrowed;
     use bytes::Bytes;
+    use derivation_queue_thrift::DerivationPriority;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::future;
     use futures::stream;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use manifest::ManifestOps;
     use maplit::btreemap;
+    use maplit::hashmap;
+    use memblob::Memblob;
+    use mercurial_derivation::RootHgAugmentedManifestId;
+    use mercurial_types::HgAugmentedManifestId;
+    use mercurial_types::NULL_HASH;
     use mononoke_macros::mononoke;
+    use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
     use tests_utils::create_commit;
+    use tests_utils::hg_manifest_reads::HgManifestReadBlocker;
     use tests_utils::store_files;
 
     use super::Repo as MyRepo;
@@ -930,5 +958,244 @@ mod tests {
 
         // (num_files, total_file_size, num_lines)
         assert_eq!(new_stats, RepoStatistics::new(3, 8, 4));
+    }
+
+    const READ_FROM_AUGMENTED: &str = "scm/mononoke:hgmanifest_read_from_augmented";
+
+    fn read_from_augmented(on: bool) -> JustKnobsInMemory {
+        JustKnobsInMemory::new(hashmap! {
+            READ_FROM_AUGMENTED.to_string() => KnobVal::Bool(on),
+        })
+    }
+
+    /// A repo whose Hg manifest reads fail once the returned blocker is armed,
+    /// with the hg changesets of a root commit and a child that removes,
+    /// changes and adds a file.
+    async fn repo_with_blocked_hg_manifests(
+        ctx: &CoreContext,
+    ) -> Result<
+        (
+            MyRepo,
+            Arc<HgManifestReadBlocker>,
+            HgChangesetId,
+            HgChangesetId,
+        ),
+        Error,
+    > {
+        let (blobstore, blocker) = HgManifestReadBlocker::wrap(Memblob::default());
+        let repo: MyRepo = TestRepoFactory::new(ctx.fb)?
+            .with_blobstore(blobstore)
+            .build()
+            .await?;
+        let root = CreateCommitContext::new_root(ctx, &repo)
+            .add_file("a", "1\n")
+            .add_file("dir/b", "1\n2\n")
+            .commit()
+            .await?;
+        let child = CreateCommitContext::new(ctx, &repo, vec![root])
+            .delete_file("a")
+            .add_file("dir/b", "1\n")
+            .add_file("c", "1\n2\n3\n")
+            .commit()
+            .await?;
+        // Derive the hg changesets without their augmented manifests.
+        let (root_hg, child_hg) = with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap! {
+                "scm/mononoke:derive_hg_augmented_manifest_with_hg_changeset".to_string() => KnobVal::Bool(false),
+            }),
+            async {
+                anyhow::Ok((
+                    derive_hg_changeset(ctx, repo.repo_derived_data(), root).await?,
+                    derive_hg_changeset(ctx, repo.repo_derived_data(), child).await?,
+                ))
+            }
+            .boxed(),
+        )
+        .await?;
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(ctx, root, DerivationPriority::LOW)
+            .await?;
+        Ok((repo, blocker, root_hg, child_hg))
+    }
+
+    async fn root_and_child_statistics(
+        ctx: &CoreContext,
+        repo: &MyRepo,
+        root: HgChangesetId,
+        child: HgChangesetId,
+    ) -> Result<(RepoStatistics, RepoStatistics), Error> {
+        let blobstore = repo.repo_blobstore();
+        let root_stats = get_statistics_from_changeset(ctx, repo, blobstore, &root).await?;
+        let (root_mf, child_mf) = try_join!(
+            get_manifest_from_changeset(ctx, repo, &root),
+            get_manifest_from_changeset(ctx, repo, &child),
+        )?;
+        let child_stats = update_statistics(
+            ctx,
+            repo,
+            root_stats,
+            hg_manifest_diff(
+                ctx,
+                blobstore.clone(),
+                repo.repo_identity().name(),
+                root_mf,
+                child_mf,
+            )
+            .compat()
+            .boxify(),
+        )
+        .await?;
+        Ok((root_stats, child_stats))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_statistics_read_from_augmented(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, root, child) = repo_with_blocked_hg_manifests(&ctx).await?;
+        let child_bcs = repo
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, child)
+            .await?
+            .expect("child has a bonsai changeset");
+        repo.repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(&ctx, child_bcs, DerivationPriority::LOW)
+            .await?;
+
+        // Given: statistics computed from Hg manifests.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            root_and_child_statistics(&ctx, &repo, root, child).boxed(),
+        )
+        .await?;
+        // (num_files, total_file_size, num_lines)
+        assert_eq!(
+            from_hg,
+            (RepoStatistics::new(2, 6, 3), RepoStatistics::new(2, 8, 4)),
+        );
+
+        // When: Hg manifests can no longer be read.
+        blocker.arm();
+
+        // Then: augmented manifests give the same statistics.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            root_and_child_statistics(&ctx, &repo, root, child).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+
+        // And: with the knob off, the Hg manifests are still read.
+        let knob_off = with_just_knobs_async(
+            read_from_augmented(false),
+            root_and_child_statistics(&ctx, &repo, root, child).boxed(),
+        )
+        .await;
+        assert!(knob_off.is_err(), "the knob off reads blocked Hg manifests");
+        assert!(blocker.reads() > 0);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_statistics_missing_augmented_manifest(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, root, child) = repo_with_blocked_hg_manifests(&ctx).await?;
+        let child_mf = get_manifest_from_changeset(&ctx, &repo, &child).await?;
+        let child_key = HgAugmentedManifestId::from(child_mf).blobstore_key();
+        assert!(
+            repo.repo_blobstore().get(&ctx, &child_key).await?.is_none(),
+            "the child has no augmented manifest"
+        );
+        blocker.arm();
+
+        let err = with_just_knobs_async(
+            read_from_augmented(true),
+            root_and_child_statistics(&ctx, &repo, root, child).boxed(),
+        )
+        .await
+        .expect_err("a missing augmented manifest is an error");
+        assert!(
+            format!("{err:#}").contains(&child_key),
+            "the error names the missing augmented manifest: {err:#}"
+        );
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "there is no fallback to the Hg manifest"
+        );
+        Ok(())
+    }
+
+    /// The statistics after the diff from the null manifest, which an hg
+    /// changeset uploaded with no files has, to `mf_id`, and after the diff
+    /// back.
+    async fn statistics_across_null_manifest(
+        ctx: &CoreContext,
+        repo: &MyRepo,
+        mf_id: HgManifestId,
+    ) -> Result<(RepoStatistics, RepoStatistics), Error> {
+        let null = HgManifestId::new(NULL_HASH);
+        let blobstore = repo.repo_blobstore();
+        let name = repo.repo_identity().name();
+        let added = update_statistics(
+            ctx,
+            repo,
+            RepoStatistics::default(),
+            hg_manifest_diff(ctx, blobstore.clone(), name, null, mf_id)
+                .compat()
+                .boxify(),
+        )
+        .await?;
+        let removed = update_statistics(
+            ctx,
+            repo,
+            added,
+            hg_manifest_diff(ctx, blobstore.clone(), name, mf_id, null)
+                .compat()
+                .boxify(),
+        )
+        .await?;
+        Ok((added, removed))
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_statistics_across_null_manifest(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, blocker, root, _child) = repo_with_blocked_hg_manifests(&ctx).await?;
+        let root_mf = get_manifest_from_changeset(&ctx, &repo, &root).await?;
+
+        // Given: statistics from Hg manifests, which read the null manifest as
+        // empty.
+        let from_hg = with_just_knobs_async(
+            read_from_augmented(false),
+            statistics_across_null_manifest(&ctx, &repo, root_mf).boxed(),
+        )
+        .await?;
+        // (num_files, total_file_size, num_lines)
+        assert_eq!(
+            from_hg,
+            (RepoStatistics::new(2, 6, 3), RepoStatistics::default()),
+        );
+
+        // When: Hg manifests can no longer be read.
+        blocker.arm();
+
+        // Then: augmented manifests give the same statistics.
+        let from_augmented = with_just_knobs_async(
+            read_from_augmented(true),
+            statistics_across_null_manifest(&ctx, &repo, root_mf).boxed(),
+        )
+        .await?;
+        assert_eq!(from_augmented, from_hg);
+        assert_eq!(
+            blocker.reads(),
+            0,
+            "no Hg manifest is read with the knob on"
+        );
+        Ok(())
     }
 }
