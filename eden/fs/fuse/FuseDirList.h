@@ -9,6 +9,7 @@
 #include <folly/Range.h>
 #include <sys/stat.h>
 #include <memory>
+#include <vector>
 #include "eden/common/utils/DirType.h"
 
 namespace facebook::eden {

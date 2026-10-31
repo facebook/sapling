@@ -18,5 +18,8 @@ sapling-backingstore = { version = "0.1.0", path = "../../../scm/lib/backingstor
 sapling-edenfs_ffi = { version = "0.1.0", path = "../../../scm/lib/edenfs_ffi" }
 wezterm-dynamic = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331", features = ["std"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+blake3 = { version = "=1.8.6", features = ["pure"] }
+
 [features]
 fb = ["sapling-backingstore/fb"]

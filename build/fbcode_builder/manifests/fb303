@@ -31,6 +31,9 @@ BUILD_TESTS=OFF
 [cmake.defines.os=linux]
 FB303_THRIFT_PYTHON=ON
 
+[cmake.defines.os=darwin]
+FB303_THRIFT_PYTHON=ON
+
 [shipit.pathmap]
 fbcode/fb303/github = .
 fbcode/fb303/public_autocargo = fb303

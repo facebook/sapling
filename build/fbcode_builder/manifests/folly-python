@@ -10,8 +10,12 @@ repo_url = https://github.com/facebook/folly.git
 [build]
 builder = cmake
 job_weight_mib = 1024
+patchfile = folly_python_darwin.patch
 
-[build.not(os=linux)]
+[build.os=darwin]
+builder = cmake
+
+[build.os=windows]
 builder = nop
 
 [dependencies]
@@ -20,15 +24,9 @@ gflags
 # copy of glog.
 glog = shared_libs
 googletest
-boost-python
-libdwarf-python
-libevent-python
 libsodium
 fast_float
-fmt-python
-lz4-python
 snappy
-zstd-python
 # no openssl or zlib in the linux case, why?
 # these are usually installed on the system
 # and are the easiest system deps to pull in.
@@ -41,6 +39,12 @@ zstd-python
 # to build our own.
 [dependencies.os=darwin]
 openssl
+boost
+libdwarf
+libevent
+fmt
+lz4
+zstd
 
 # Windows has neither openssl nor zlib, so we get
 # to provide both
@@ -49,6 +53,12 @@ openssl
 zlib
 
 [dependencies.os=linux]
+boost-python
+libdwarf-python
+libevent-python
+fmt-python
+lz4-python
+zstd-python
 libaio-python
 libiberty-python
 libunwind
@@ -69,6 +79,11 @@ fbcode/folly = folly
 [cmake.defines.os=linux]
 PYTHON_EXTENSIONS=ON
 BUILD_SHARED_LIBS=ON
+
+[cmake.defines.os=darwin]
+PYTHON_EXTENSIONS=ON
+BUILD_SHARED_LIBS=ON
+CMAKE_CXX_FLAGS=-DGLOG_USE_GLOG_EXPORT
 
 [cmake.defines.not(os=windows)]
 BOOST_LINK_STATIC=ON

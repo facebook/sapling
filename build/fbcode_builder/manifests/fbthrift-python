@@ -16,8 +16,12 @@ fbthrift = thrift/lib/rust
 [build]
 builder = cmake
 job_weight_mib = 3072
+patchfile = fbthrift_python_darwin.patch
 
-[build.not(os=linux)]
+[build.os=darwin]
+builder = cmake
+
+[build.os=windows]
 builder = nop
 
 [cmake.defines]
@@ -34,24 +38,34 @@ THRIFT_TESTS=OFF
 [cmake.defines.os=linux]
 THRIFT_PYTHON=ON
 
+[cmake.defines.os=darwin]
+THRIFT_PYTHON=ON
+
 [dependencies]
 benchmark
-fizz-python
-fmt-python
 folly-python
 googletest
 libsodium
-wangle-python
-zstd-python
-mvfst-python
 xxhash
 # Thrift also depends on openssl but since the latter requires a platform-
 # specific configuration we rely on the folly manifest to provide this
 # dependency to avoid duplication.
 
 [dependencies.os=linux]
+fizz-python
+fmt-python
+wangle-python
+zstd-python
+mvfst-python
 libaio-python
 libevent-python
+
+[dependencies.os=darwin]
+fizz
+fmt
+wangle
+zstd
+mvfst
 
 [shipit.pathmap]
 xplat/thrift/public_tld = .

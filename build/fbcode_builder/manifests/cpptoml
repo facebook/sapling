@@ -14,3 +14,6 @@ subdir = cpptoml-0.1.2
 
 [cmake.defines.os=freebsd]
 ENABLE_LIBCXX=NO
+
+[cmake.defines.os=darwin]
+ENABLE_LIBCXX=NO
