@@ -5,14 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Error;
-use anyhow::Result;
 use anyhow::anyhow;
 use bytes::BytesMut;
 use bytesize::ByteSize;
@@ -21,7 +19,6 @@ use context::CoreContext;
 use edenapi_types::AnyFileContentId;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use futures::channel::oneshot;
 use futures::stream;
 use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
@@ -32,6 +29,8 @@ use stats::prelude::*;
 use tokio::sync::mpsc;
 use tokio::time::interval;
 
+use super::pipeline::DoneSenders;
+use super::pipeline::FlushPipeline;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ContentMessage;
 use crate::sender::manager::LoopAction;
@@ -79,7 +78,8 @@ struct ContentRunner {
     max_blob_bytes: u64,
     config: ModernSyncChannelConfig,
     repo_blobstore: RepoBlobstore,
-    pending_messages: VecDeque<oneshot::Sender<Result<()>>>,
+    pipeline: FlushPipeline,
+    pending_senders: DoneSenders,
     current_batch: Vec<ContentId>,
     current_batch_size: u64,
 }
@@ -93,6 +93,7 @@ impl ContentRunner {
         max_blob_bytes: u64,
         config: ModernSyncChannelConfig,
         repo_blobstore: RepoBlobstore,
+        pipeline: FlushPipeline,
     ) -> Self {
         Self {
             ctx,
@@ -102,7 +103,8 @@ impl ContentRunner {
             max_blob_bytes,
             config,
             repo_blobstore,
-            pending_messages: VecDeque::new(),
+            pipeline,
+            pending_senders: Vec::new(),
             current_batch: Vec::new(),
             current_batch_size: 0,
         }
@@ -117,6 +119,12 @@ impl ContentRunner {
                     self.handle_message(msg).await
                 }
                 _ = flush_timer.tick() => self.handle_tick().await,
+                completion = self.pipeline.wait_for_completion() => {
+                    match completion {
+                        Some(err) => self.fail(err),
+                        None => LoopAction::Continue,
+                    }
+                }
             };
             match action {
                 LoopAction::Continue => {}
@@ -132,88 +140,144 @@ impl ContentRunner {
                 self.current_batch.push(ct_id);
             }
             Some(ContentMessage::ContentDone(files_sender, tree_sender)) => {
-                self.pending_messages.push_back(files_sender);
-                self.pending_messages.push_back(tree_sender);
+                self.pending_senders.push(files_sender);
+                self.pending_senders.push(tree_sender);
             }
-            None => return LoopAction::Exit,
+            None => return self.drain().await,
         }
 
-        if self.current_batch_size >= self.max_blob_bytes
-            || self.current_batch.len() >= self.config.batch_size as usize
+        // Only non-empty batches may spawn an upload; degenerate
+        // configs (zero blob or batch cap) must not trigger
+        // empty ones.
+        if !self.current_batch.is_empty()
+            && (self.current_batch_size >= self.max_blob_bytes
+                || self.current_batch.len() >= self.config.batch_size as usize)
         {
-            if let Err(e) = self.flush_batch().await {
-                tracing::error!("Error processing content: {:?}", e);
-                return LoopAction::Exit;
+            if let Err(err) = self.flush_current_batch().await {
+                return self.fail(err);
             }
         }
-        LoopAction::Continue
+        self.poll_completions()
     }
 
     async fn handle_tick(&mut self) -> LoopAction {
-        if self.current_batch_size > 0 || !self.pending_messages.is_empty() {
-            if let Err(e) = self.flush_batch().await {
+        if !self.current_batch.is_empty() {
+            if let Err(err) = self.flush_current_batch().await {
+                return self.fail(err);
+            }
+        } else if !self.pending_senders.is_empty() {
+            // Signal-only tick: no data, so wait for
+            // in-flight flushes, then release the signals.
+            let senders = std::mem::take(&mut self.pending_senders);
+            if let Err(e) = self.pipeline.barrier(senders).await {
                 tracing::error!("Error processing content: {:?}", e);
                 return LoopAction::Exit;
             }
         }
-        LoopAction::Continue
+        self.poll_completions()
     }
 
-    async fn flush_batch(&mut self) -> Result<(), anyhow::Error> {
-        let current_batch_len = self.current_batch.len();
-        let current_batch_size = self.current_batch_size;
-        let start = std::time::Instant::now();
+    async fn drain(&mut self) -> LoopAction {
+        // On cancellation, stop without draining: the
+        // pipeline Drop aborts in-flight uploads and
+        // drops held signals.
+        if self.cancelled() {
+            return LoopAction::Exit;
+        }
+        if !self.current_batch.is_empty() {
+            if let Err(err) = self.flush_current_batch().await {
+                return self.fail(err);
+            }
+        }
+        let senders = std::mem::take(&mut self.pending_senders);
+        if let Err(e) = self.pipeline.barrier(senders).await {
+            tracing::error!("Error processing content: {:?}", e);
+            return LoopAction::Exit;
+        }
+        LoopAction::Exit
+    }
 
-        if current_batch_len > 0 {
-            let contents = std::mem::take(&mut self.current_batch);
-            let repo_blobstore = self.repo_blobstore.clone();
-            let ctx = &self.ctx;
+    async fn flush_current_batch(&mut self) -> anyhow::Result<()> {
+        let batch = std::mem::take(&mut self.current_batch);
+        let bytes = std::mem::replace(&mut self.current_batch_size, 0);
+        let senders = std::mem::take(&mut self.pending_senders);
+        self.spawn_flush(batch, bytes, senders).await
+    }
 
-            let full_items = stream::iter(contents)
-                .map(|id| {
-                    cloned!(repo_blobstore);
-                    async move {
-                        let bytes = filestore::fetch(repo_blobstore, ctx, &id.into())
-                            .await?
-                            .ok_or(anyhow!("Content is not found (which should never happen"))?
-                            .try_collect::<BytesMut>()
-                            .await?;
-                        Ok::<_, Error>((
-                            AnyFileContentId::ContentId(id.into()),
-                            bytes.freeze().into(),
-                        ))
-                    }
-                })
-                .buffer_unordered(current_batch_len)
-                .try_collect::<Vec<(AnyFileContentId, minibytes::Bytes)>>()
-                .await?;
+    async fn spawn_flush(
+        &mut self,
+        batch: Vec<ContentId>,
+        batch_bytes: u64,
+        senders: DoneSenders,
+    ) -> anyhow::Result<()> {
+        let batch_len = batch.len();
+        let ctx = self.ctx.clone();
+        let repo_blobstore = self.repo_blobstore.clone();
+        let content_es = self.content_es.clone();
+        let reponame = self.reponame.clone();
+        self.pipeline
+            .spawn_flush(batch_bytes, senders, async move {
+                let start = std::time::Instant::now();
+                let full_items = stream::iter(batch)
+                    .map(|id| {
+                        cloned!(repo_blobstore);
+                        let ctx = ctx.clone();
+                        async move {
+                            let bytes = filestore::fetch(repo_blobstore, &ctx, &id.into())
+                                .await?
+                                .ok_or(anyhow!("Content is not found (which should never happen)"))?
+                                .try_collect::<BytesMut>()
+                                .await?;
+                            Ok::<_, Error>((
+                                AnyFileContentId::ContentId(id.into()),
+                                bytes.freeze().into(),
+                            ))
+                        }
+                    })
+                    // Fetch concurrency is batch_len per flush, so at most
+                    // batch_size x max_concurrent_flushes fetches run at once;
+                    // total buffered bytes stay within the byte pool.
+                    .buffer_unordered(batch_len)
+                    .try_collect::<Vec<(AnyFileContentId, minibytes::Bytes)>>()
+                    .await?;
 
-            if let Err(e) = self.content_es.upload_contents(full_items).await {
-                tracing::error!("Error processing content: {:?}", e);
-                return Err(e);
-            } else {
+                // Log upload failures at the point of failure; the loop logs
+                // the same line again when the watermark surfaces it.
+                if let Err(e) = content_es.upload_contents(full_items).await {
+                    tracing::error!("Error processing content: {:?}", e);
+                    return Err(e);
+                }
                 tracing::info!(
                     "Uploaded {} contents with size {} in {}ms",
-                    current_batch_len,
-                    ByteSize::b(current_batch_size).to_string(),
+                    batch_len,
+                    ByteSize::b(batch_bytes).to_string(),
                     start.elapsed().as_millis(),
                 );
 
-                let elapsed = start.elapsed().as_millis() / current_batch_len as u128;
-                STATS::content_upload_time_s.add_value(elapsed as i64, (self.reponame.clone(),));
-                STATS::synced_contents
-                    .add_value(current_batch_len as i64, (self.reponame.clone(),));
-            }
-        }
+                let elapsed = start.elapsed().as_millis() / batch_len as u128;
+                STATS::content_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
+                STATS::synced_contents.add_value(batch_len as i64, (reponame.clone(),));
+                Ok(())
+            })
+            .await
+    }
 
-        while let Some(sender) = self.pending_messages.pop_front() {
-            let res = sender.send(Ok(()));
-            if let Err(e) = res {
-                return Err(anyhow::anyhow!("Error sending content ready: {e:?}"));
-            }
+    fn fail(&mut self, err: anyhow::Error) -> LoopAction {
+        tracing::error!("Error processing content: {:?}", err);
+        // This channel already logged the failure; drop locally
+        // queued signals so downstream winds down silently
+        // instead of logging the same failure again per signal.
+        self.pipeline.abort(err);
+        LoopAction::Exit
+    }
+
+    // Drain completions after every select event so the watermark keeps
+    // advancing even when no new flush spawns.
+    fn poll_completions(&mut self) -> LoopAction {
+        match self.pipeline.poll_completions() {
+            Some(err) => self.fail(err),
+            None => LoopAction::Continue,
         }
-        self.current_batch_size = 0;
-        Ok(())
     }
 
     fn record_queue_stats(&self, content_recv: &mpsc::Receiver<ContentMessage>) {
@@ -256,6 +320,14 @@ impl Manager for ContentManager {
                 mut content_recv,
                 repo_blobstore,
             } = self;
+            // One flush in flight: uploads stay serial while the pipeline
+            // sequencing and error handling take over.
+            let pipeline = FlushPipeline::new(
+                reponame.clone(),
+                "content",
+                1,
+                Some(config.max_bytes_in_flight),
+            );
             let mut runner = ContentRunner::new(
                 ctx,
                 reponame,
@@ -264,6 +336,7 @@ impl Manager for ContentManager {
                 max_blob_bytes,
                 config,
                 repo_blobstore,
+                pipeline,
             );
             runner.run(&mut content_recv).await;
         });

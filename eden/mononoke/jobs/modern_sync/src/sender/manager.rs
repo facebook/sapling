@@ -39,6 +39,7 @@ use crate::sender::manager::tree::TreeManager;
 mod changeset;
 mod content;
 mod filenode;
+mod pipeline;
 mod tree;
 
 pub(crate) const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
