@@ -310,6 +310,13 @@ trait Manager {
     );
 }
 
+/// What a manager loop should do after handling one select event.
+pub(crate) enum LoopAction {
+    Continue,
+    /// Stop the loop and exit the runner.
+    Exit,
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
