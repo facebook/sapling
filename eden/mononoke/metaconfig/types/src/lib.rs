@@ -2332,6 +2332,11 @@ pub struct ModernSyncChannelConfig {
     pub channel_size: i64,
     /// Interval between flushes in milliseconds.
     pub flush_interval_ms: i64,
+    /// Max EdenAPI flushes in flight per channel. 1 means serial flushes.
+    pub max_concurrent_flushes: i64,
+    /// Max bytes held by in-flight flushes. Only the content channel tracks
+    /// bytes (trees and filenodes carry bare IDs); other channels ignore it.
+    pub max_bytes_in_flight: i64,
 }
 
 /// Destination for telemetry logging.

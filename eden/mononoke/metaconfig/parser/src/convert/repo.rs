@@ -1153,30 +1153,77 @@ impl Convert for RawModernSyncConfig {
     type Output = ModernSyncConfig;
 
     fn convert(self) -> Result<Self::Output> {
+        if self.max_blob_bytes < 1 {
+            // Channels without an explicit max_bytes_in_flight fall back to
+            // max_blob_bytes; clamping that fallback to 1 makes every batch
+            // oversized, so the affected channels' flushes run exclusively.
+            tracing::warn!(
+                "modern_sync max_blob_bytes={} is not positive; max_bytes_in_flight fallbacks clamp to 1",
+                self.max_blob_bytes,
+            );
+        }
+        // Channels without an explicit max_bytes_in_flight fall back to
+        // max_blob_bytes; store the clamped value so downstream users see
+        // the same bound the fallback uses.
+        let max_blob_bytes = self.max_blob_bytes.max(1);
         Ok(ModernSyncConfig {
             url: self.url,
             chunk_size: self.chunk_size,
             single_db_query_entries_limit: self.single_db_query_entries_limit,
             changeset_concurrency: self.changeset_concurrency,
-            max_blob_bytes: self.max_blob_bytes,
-            content_channel_config: self.content_channel_config.convert()?,
-            filenodes_channel_config: self.filenodes_channel_config.convert()?,
-            trees_channel_config: self.trees_channel_config.convert()?,
-            changesets_channel_config: self.changesets_channel_config.convert()?,
+            max_blob_bytes,
+            content_channel_config: convert_channel_config(
+                self.content_channel_config,
+                max_blob_bytes,
+            )?,
+            filenodes_channel_config: convert_channel_config(
+                self.filenodes_channel_config,
+                max_blob_bytes,
+            )?,
+            trees_channel_config: convert_channel_config(
+                self.trees_channel_config,
+                max_blob_bytes,
+            )?,
+            changesets_channel_config: convert_channel_config(
+                self.changesets_channel_config,
+                max_blob_bytes,
+            )?,
         })
     }
 }
 
-impl Convert for RawModernSyncChannelConfig {
-    type Output = ModernSyncChannelConfig;
-
-    fn convert(self) -> Result<Self::Output> {
-        Ok(ModernSyncChannelConfig {
-            batch_size: self.batch_size,
-            channel_size: self.channel_size,
-            flush_interval_ms: self.flush_interval_ms,
-        })
+fn warn_if_nonpositive(field: &str, value: Option<i64>) {
+    if let Some(v) = value {
+        if v < 1 {
+            tracing::warn!("modern_sync {field}={v} is not positive; clamping to 1");
+        }
     }
+}
+
+fn convert_channel_config(
+    raw: RawModernSyncChannelConfig,
+    default_max_bytes_in_flight: i64,
+) -> Result<ModernSyncChannelConfig> {
+    // Returns Result to compose with the surrounding `Convert::convert`
+    // via `?`; currently infallible since out-of-range bounds clamp.
+    // Clamp instead of rejecting: this runs in the shared metaconfig parser,
+    // so a hard error would make the whole repo config unloadable for every
+    // binary, not just modern_sync. Non-positive values can only come from
+    // explicit misconfiguration or a non-positive max_blob_bytes fallback.
+    warn_if_nonpositive("max_concurrent_flushes", raw.max_concurrent_flushes);
+    warn_if_nonpositive("max_bytes_in_flight", raw.max_bytes_in_flight);
+    let max_concurrent_flushes = raw.max_concurrent_flushes.unwrap_or(1).max(1);
+    let max_bytes_in_flight = raw
+        .max_bytes_in_flight
+        .unwrap_or(default_max_bytes_in_flight)
+        .max(1);
+    Ok(ModernSyncChannelConfig {
+        batch_size: raw.batch_size,
+        channel_size: raw.channel_size,
+        flush_interval_ms: raw.flush_interval_ms,
+        max_concurrent_flushes,
+        max_bytes_in_flight,
+    })
 }
 
 impl Convert for RawLoggingDestination {
