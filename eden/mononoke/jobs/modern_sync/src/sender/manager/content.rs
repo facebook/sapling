@@ -320,12 +320,10 @@ impl Manager for ContentManager {
                 mut content_recv,
                 repo_blobstore,
             } = self;
-            // One flush in flight: uploads stay serial while the pipeline
-            // sequencing and error handling take over.
             let pipeline = FlushPipeline::new(
                 reponame.clone(),
                 "content",
-                1,
+                config.max_concurrent_flushes,
                 Some(config.max_bytes_in_flight),
             );
             let mut runner = ContentRunner::new(
