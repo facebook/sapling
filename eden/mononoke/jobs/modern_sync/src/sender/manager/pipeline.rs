@@ -396,13 +396,6 @@ impl FlushPipeline {
     /// queued locally but never attached to a spawned flush. Used on
     /// wind-down so downstream receives the error payload for every
     /// queued signal instead of a bare dropped channel.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "used by the tree and filenode pipeline conversions later in this stack"
-        )
-    )]
     pub(crate) fn abort_with_pending(&mut self, err: anyhow::Error, extra: DoneSenders) {
         self.fail_all_pending(err, extra);
     }
