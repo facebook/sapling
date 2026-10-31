@@ -37,6 +37,7 @@ cpp_unittest(
         "fbsource//xplat/folly/coro:task",
         "fbsource//xplat/folly/coro:timeout",
         "fbsource//xplat/folly/executors:cpu_thread_pool_executor",
+        "fbsource//xplat/folly/executors:inline_executor",
         "fbsource//xplat/folly/logging:logging",
         "fbsource//xplat/folly/testing:test_util",
         "//eden/common/telemetry:telemetry",
@@ -60,7 +61,6 @@ cpp_unittest(
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_config_source",
         "//eden/scm/lib/backingstore:sapling_backingstore_error",
-        "//folly/executors:inline_executor",
     ],
 )
 
